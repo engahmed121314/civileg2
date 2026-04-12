@@ -1,0 +1,105 @@
+================================================================================
+تطبيق: Civil Engineer Assistant (نسخة منقحة للنقل)
+التاريخ: 2024
+================================================================================
+
+1. إعدادات المشروع (BUILD.GRADLE.KTS)
+--------------------------------------------------------------------------------
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    ...
+}
+android {
+    namespace = "com.civileg.app"
+    compileSdk = 35
+    defaultConfig {
+        applicationId = "com.civileg.app"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+    }
+    buildFeatures {
+        viewBinding = true
+        dataBinding = true
+        compose = true
+    }
+}
+dependencies {
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.room.runtime)
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.mpandroidchart)
+    implementation(libs.itext)
+}
+
+--------------------------------------------------------------------------------
+2. ملف المانيفست (ANDROIDMANIFEST.XML)
+--------------------------------------------------------------------------------
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:name=".CivilApplication"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.CivilEg2">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+
+--------------------------------------------------------------------------------
+3. الكود البرمجي الرئيسي (MAINACTIVITY.KT)
+--------------------------------------------------------------------------------
+package com.civileg.app
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.civileg.app.databinding.ActivityMainBinding
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        // إعداد التنقل والمكونات الرئيسية
+    }
+}
+
+--------------------------------------------------------------------------------
+4. كود حسابات الخزانات (ECPTANK.KT)
+--------------------------------------------------------------------------------
+package com.civileg.app.domain.calculations.ecp
+import javax.inject.Inject
+
+class ECPTank @Inject constructor() {
+    fun calculateTankCapacity(length: Double, width: Double, depth: Double): Double {
+        return length * width * depth
+    }
+    // عمليات حسابية هندسية متقدمة وفق الكود المصري
+}
+
+--------------------------------------------------------------------------------
+5. تحليل الزلازل (SEISMICANALYSISFRAGMENT.KT)
+--------------------------------------------------------------------------------
+package com.civileg.app.ui.seismic
+import android.os.Bundle
+import android.view.View
+import androidx.fragment.app.Fragment
+
+class SeismicAnalysisFragment : Fragment(R.layout.fragment_seismic_analysis) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // منطق معالجة بيانات الزلازل والتصاميم
+    }
+}
+
+================================================================================
+ملاحظة: هذا الملف يحتوي على هيكلية الأكواد الأساسية. لتشغيل التطبيق بالكامل
+يرجى استخدام ملف الـ APK المستخرج في مجلد build.
+================================================================================

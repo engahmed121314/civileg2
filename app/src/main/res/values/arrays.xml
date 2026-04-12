@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="concrete_grades">
+        <item>C20</item>
+        <item>C25</item>
+        <item>C30</item>
+        <item>C35</item>
+        <item>C40</item>
+        <item>C45</item>
+        <item>C50</item>
+    </string-array>
+
+    <string-array name="steel_grades">
+        <item>B400B</item>
+        <item>B500B</item>
+        <item>Fe 360</item>
+        <item>Fe 500</item>
+    </string-array>
+
+    <string-array name="design_codes">
+        <item>Egyptian Code (ECP)</item>
+        <item>ACI 318-19</item>
+        <item>Saudi Building Code (SBC)</item>
+    </string-array>
+
+    <string-array name="slab_types">
+        <item>Solid Slab</item>
+        <item>Flat Slab</item>
+        <item>Waffle Slab</item>
+        <item>Ribbed Slab</item>
+        <item>Hollow Block</item>
+    </string-array>
+
+    <string-array name="soil_types">
+        <item>Rock</item>
+        <item>Dense Sand</item>
+        <item>Medium Sand</item>
+        <item>Loose Sand</item>
+        <item>Stiff Clay</item>
+        <item>Soft Clay</item>
+    </string-array>
+
+    <string-array name="seismic_zones">
+        <item>Zone 1 (Very Low)</item>
+        <item>Zone 2A (Low)</item>
+        <item>Zone 2B (Moderate)</item>
+        <item>Zone 3 (High)</item>
+        <item>Zone 4 (Very High)</item>
+    </string-array>
+</resources>

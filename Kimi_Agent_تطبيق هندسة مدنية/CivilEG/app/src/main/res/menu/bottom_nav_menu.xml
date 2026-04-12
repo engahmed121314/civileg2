@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Home -->
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="@string/nav_home" />
+    
+    <!-- Design Tools -->
+    <item
+        android:id="@+id/nav_design"
+        android:icon="@drawable/ic_design"
+        android:title="@string/nav_design" />
+    
+    <!-- Project Builder -->
+    <item
+        android:id="@+id/nav_project_builder"
+        android:icon="@drawable/ic_building"
+        android:title="@string/project_builder" />
+    
+    <!-- Tools -->
+    <item
+        android:id="@+id/nav_tools"
+        android:icon="@drawable/ic_tools"
+        android:title="@string/nav_tools" />
+    
+    <!-- Settings -->
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/nav_settings" />
+</menu>

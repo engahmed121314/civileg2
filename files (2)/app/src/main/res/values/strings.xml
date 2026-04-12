@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Civil Engineer Assistant</string>
+    
+    <!-- Main Screen -->
+    <string name="home">Home</string>
+    <string name="columns">Columns</string>
+    <string name="slabs">Slabs</string>
+    <string name="footings">Footings</string>
+    <string name="walls">Retaining Walls</string>
+    
+    <!-- Column Design -->
+    <string name="column_design">Concrete Column Design</string>
+    <string name="column_info">Column Information</string>
+    <string name="column_name">Column Name</string>
+    <string name="column_dimensions">Column Dimensions</string>
+    <string name="column_length">Length (m)</string>
+    <string name="column_width">Width (m)</string>
+    <string name="column_height">Height (m)</string>
+    
+    <!-- Loads -->
+    <string name="axial_load">Axial Load (kN)</string>
+    <string name="bending_moment">Bending Moment (kN.m)</string>
+    <string name="dead_load">Dead Load</string>
+    <string name="live_load">Live Load</string>
+    
+    <!-- Materials -->
+    <string name="concrete_grade">Concrete Grade</string>
+    <string name="steel_grade">Steel Grade</string>
+    
+    <!-- Codes -->
+    <string name="egyptian_code">Egyptian Code</string>
+    <string name="saudi_code">Saudi Code</string>
+    <string name="american_code">American Code (ACI)</string>
+    
+    <!-- Results -->
+    <string name="design_safe">Design is Safe</string>
+    <string name="design_unsafe">Design is Unsafe</string>
+    <string name="safety_factor">Safety Factor</string>
+    <string name="total_capacity">Total Capacity</string>
+    
+    <!-- Calculations -->
+    <string name="calculate">Calculate</string>
+    <string name="calculate_design">Calculate Design</string>
+    <string name="calculate_steel">Calculate Required Steel</string>
+    
+    <!-- Export -->
+    <string name="export_pdf">Export to PDF</string>
+    <string name="export_excel">Export to Excel</string>
+    <string name="export_complete">Exported Successfully</string>
+    
+    <!-- Messages -->
+    <string name="error_invalid_input">Invalid Input</string>
+    <string name="error_calculation">Calculation Error</string>
+    <string name="success">Success</string>
+    <string name="delete_confirm">Are you sure you want to delete this item?</string>
+    
+</resources>

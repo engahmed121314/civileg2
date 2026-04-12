@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modern Material 3 Palette -->
+    <color name="primary">#005FB0</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="primaryContainer">#D1E4FF</color>
+    <color name="onPrimaryContainer">#001D36</color>
+
+    <color name="secondary">#535F70</color>
+    <color name="onSecondary">#FFFFFF</color>
+    <color name="secondaryContainer">#D7E3F7</color>
+    <color name="onSecondaryContainer">#101C2B</color>
+
+    <color name="tertiary">#FFB900</color>
+    <color name="onTertiary">#FFFFFF</color>
+    <color name="tertiaryContainer">#FFDEA1</color>
+    <color name="onTertiaryContainer">#261900</color>
+
+    <color name="accent">#FF8F00</color>
+
+    <!-- Backgrounds -->
+    <color name="background">#FBFCFF</color>
+    <color name="onBackground">#1A1C1E</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="onSurface">#1A1C1E</color>
+    <color name="surfaceVariant">#DFE2EB</color>
+    <color name="onSurfaceVariant">#43474E</color>
+
+    <!-- Status Colors -->
+    <color name="success">#00893D</color>
+    <color name="success_green">#2E7D32</color>
+    <color name="onSuccess">#FFFFFF</color>
+    <color name="danger">#BA1A1A</color>
+    <color name="error_red">#C62828</color>
+    <color name="onError">#FFFFFF</color>
+    <color name="warning">#FF8F00</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#1A1C1E</color>
+    <color name="text_secondary">#43474E</color>
+    <color name="text_muted">#73777F</color>
+
+    <!-- Common -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="divider">#C3C7CF</color>
+</resources>

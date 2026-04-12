@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_home">
+
+    <fragment
+        android:id="@+id/nav_home"
+        android:name="com.civileg.app.ui.home.HomeFragment"
+        android:label="@string/nav_home"
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_home_to_projects"
+            app:destination="@id/nav_projects" />
+        <action
+            android:id="@+id/action_home_to_my_designs"
+            app:destination="@id/nav_my_designs" />
+        <action
+            android:id="@+id/action_home_to_slab"
+            app:destination="@id/nav_slab" />
+        <action
+            android:id="@+id/action_home_to_beam"
+            app:destination="@id/nav_beam" />
+        <action
+            android:id="@+id/action_home_to_column"
+            app:destination="@id/nav_column" />
+        <action
+            android:id="@+id/action_home_to_footing"
+            app:destination="@id/nav_footing" />
+        <action
+            android:id="@+id/action_home_to_stairs"
+            app:destination="@id/nav_stairs" />
+        <action
+            android:id="@+id/action_home_to_converter"
+            app:destination="@id/nav_converter" />
+        <action
+            android:id="@+id/action_home_to_gallery"
+            app:destination="@id/nav_gallery" />
+        <action
+            android:id="@+id/action_home_to_settings"
+            app:destination="@id/nav_settings" />
+        <action
+            android:id="@+id/action_home_to_retaining"
+            app:destination="@id/nav_retaining" />
+        <action
+            android:id="@+id/action_home_to_quantity"
+            app:destination="@id/nav_quantity" />
+        <action
+            android:id="@+id/action_home_to_watertank"
+            app:destination="@id/nav_watertank" />
+        <action
+            android:id="@+id/action_home_to_pile"
+            app:destination="@id/nav_pile" />
+        <action
+            android:id="@+id/action_home_to_seismic"
+            app:destination="@id/nav_seismic" />
+        <action
+            android:id="@+id/action_home_to_calculator"
+            app:destination="@id/nav_calculator" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_projects"
+        android:name="com.civileg.app.ui.project.ProjectListFragment"
+        android:label="Projects"
+        tools:layout="@layout/fragment_project_list">
+        <action
+            android:id="@+id/action_projects_to_detail"
+            app:destination="@id/nav_project_detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_project_detail"
+        android:name="com.civileg.app.ui.project.ProjectDetailFragment"
+        android:label="Project Details"
+        tools:layout="@layout/fragment_project_detail">
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_detail_to_beam"
+            app:destination="@id/nav_beam" />
+        <action
+            android:id="@+id/action_detail_to_column"
+            app:destination="@id/nav_column" />
+        <action
+            android:id="@+id/action_detail_to_footing"
+            app:destination="@id/nav_footing" />
+        <action
+            android:id="@+id/action_detail_to_slab"
+            app:destination="@id/nav_slab" />
+        <action
+            android:id="@+id/action_detail_to_stairs"
+            app:destination="@id/nav_stairs" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_beam"
+        android:name="com.civileg.app.ui.beam.BeamDesignFragment"
+        android:label="@string/beam_design"
+        tools:layout="@layout/fragment_beam_design">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_column"
+        android:name="com.civileg.app.ui.column.ColumnDesignFragment"
+        android:label="@string/column_design"
+        tools:layout="@layout/fragment_column_design">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_footing"
+        android:name="com.civileg.app.ui.footing.FootingDesignFragment"
+        android:label="@string/footing_design"
+        tools:layout="@layout/fragment_footing_design">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_slab"
+        android:name="com.civileg.app.ui.slab.SlabDesignFragment"
+        android:label="@string/slab_design"
+        tools:layout="@layout/fragment_slab_design">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_stairs"
+        android:name="com.civileg.app.ui.stairs.StaircaseDesignFragment"
+        android:label="Staircase Design"
+        tools:layout="@layout/fragment_staircase_design">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_retaining"
+        android:name="com.civileg.app.ui.retaining.RetainingWallFragment"
+        android:label="Retaining Wall"
+        tools:layout="@layout/fragment_retaining_wall">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_watertank"
+        android:name="com.civileg.app.ui.watertank.WaterTankFragment"
+        android:label="Water Tank"
+        tools:layout="@layout/fragment_water_tank">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_my_designs"
+        android:name="com.civileg.app.ui.project.MyDesignsFragment"
+        android:label="My Designs"
+        tools:layout="@layout/fragment_my_designs" />
+
+    <fragment
+        android:id="@+id/nav_quantity"
+        android:name="com.civileg.app.ui.quantity.QuantitySurveyingFragment"
+        android:label="Quantity Surveying"
+        tools:layout="@layout/fragment_quantity_surveying" />
+
+    <fragment
+        android:id="@+id/nav_pile"
+        android:name="com.civileg.app.ui.pile.PileFoundationFragment"
+        android:label="Pile Foundation"
+        tools:layout="@layout/fragment_pile_foundation" />
+
+    <fragment
+        android:id="@+id/nav_seismic"
+        android:name="com.civileg.app.ui.seismic.SeismicAnalysisFragment"
+        android:label="Seismic Analysis"
+        tools:layout="@layout/fragment_seismic_analysis">
+        <argument
+            android:name="projectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_calculator"
+        android:name="com.civileg.app.ui.calculator.ScientificCalculatorFragment"
+        android:label="Scientific Calculator"
+        tools:layout="@layout/fragment_scientific_calculator" />
+
+    <fragment
+        android:id="@+id/nav_converter"
+        android:name="com.civileg.app.ui.converter.UnitConverterFragment"
+        android:label="@string/unit_converter"
+        tools:layout="@layout/fragment_unit_converter" />
+
+    <fragment
+        android:id="@+id/nav_gallery"
+        android:name="com.civileg.app.ui.gallery.GalleryFragment"
+        android:label="@string/gallery"
+        tools:layout="@layout/fragment_gallery" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.civileg.app.ui.settings.SettingsFragment"
+        android:label="@string/nav_settings"
+        tools:layout="@layout/fragment_settings" />
+
+</navigation>

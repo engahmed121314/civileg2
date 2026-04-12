@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources dir="rtl">
+    <!-- App Info -->
+    <string name="app_name">Civil EG</string>
+    <string name="app_subtitle">مساعد المهندس المدني</string>
+    <string name="app_version">الإصدار ١.٠.٠</string>
+    <string name="app_description">حل متكامل للتصميم الإنشائي يدعم الأكواد المصرية والأمريكية والسعودية</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_design">التصميم</string>
+    <string name="nav_tools">الأدوات</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_projects">المشاريع</string>
+    <string name="nav_calculator">الحاسبة</string>
+    <string name="nav_gallery">معرض التفاصيل</string>
+    <string name="nav_history">السجل</string>
+    
+    <!-- Home Screen -->
+    <string name="active_projects">المشاريع النشطة</string>
+    <string name="estimates">التقديرات</string>
+    <string name="reports">التقارير</string>
+    <string name="view_all">عرض الكل</string>
+    <string name="concrete_design">تصميم الخرسانة</string>
+    <string name="management_surveying">الإدارة والمساحة</string>
+    <string name="search_hint">البحث في الصيغ والأدوات والمشاريع…</string>
+    <string name="this_week">+٥ هذا الأسبوع</string>
+    <string name="next">التالي: %1$s</string>
+    
+    <!-- Design Modules -->
+    <string name="beam_design">تصميم الكمرات</string>
+    <string name="column_design">تصميم الأعمدة</string>
+    <string name="footing_design">تصميم القواعد</string>
+    <string name="slab_design">تصميم البلاطات</string>
+    <string name="staircase_design">تصميم الدرج</string>
+    <string name="retaining_wall">الجدران الاستنادية</string>
+    <string name="water_tank">خزانات المياه</string>
+    <string name="pile_foundation">الأساسات الركازية</string>
+    <string name="seismic_analysis">التحليل الزلزالي</string>
+    <string name="project_design">المشروع الكامل</string>
+    <string name="more_tools">المزيد من الأدوات</string>
+    
+    <!-- Slab Types -->
+    <string name="solid_slab">بلاطة صلبة</string>
+    <string name="flat_slab">بلاطة مسطحة</string>
+    <string name="waffle_slab">بلاطة وافل</string>
+    <string name="ribbed_slab">بلاطة أضلاع</string>
+    <string name="hollow_block">بلاطة بلوكات فارغة</string>
+    
+    <!-- Design Codes -->
+    <string name="code_egyptian">الكود المصري (ECP)</string>
+    <string name="code_aci">ACI 318-19 (أمريكي)</string>
+    <string name="code_saudi">الكود السعودي (SBC)</string>
+    <string name="select_code">اختيار كود التصميم</string>
+    
+    <!-- Common Actions -->
+    <string name="calculate">حساب</string>
+    <string name="recalculate">إعادة الحساب</string>
+    <string name="reset">إعادة تعيين</string>
+    <string name="save">حفظ</string>
+    <string name="save_design">حفظ التصميم</string>
+    <string name="export_pdf">تصدير PDF</string>
+    <string name="export_excel">تصدير Excel</string>
+    <string name="share">مشاركة</string>
+    <string name="print">طباعة</string>
+    <string name="delete">حذف</string>
+    <string name="edit">تعديل</string>
+    <string name="cancel">إلغاء</string>
+    <string name="ok">موافق</string>
+    <string name="done">تم</string>
+    <string name="close">إغلاق</string>
+    <string name="back">رجوع</string>
+    <string name="next_step">التالي</string>
+    <string name="previous">السابق</string>
+    <string name="continue_text">متابعة</string>
+    <string name="add">إضافة</string>
+    <string name="add_element">إضافة عنصر</string>
+    <string name="clear">مسح</string>
+    <string name="clear_all">مسح الكل</string>
+    <string name="open">فتح</string>
+    
+    <!-- Input Labels -->
+    <string name="input_parameters">البيانات المدخلة</string>
+    <string name="geometry">الأبعاد الهندسية</string>
+    <string name="loading">الأحمال</string>
+    <string name="materials">المواد</string>
+    <string name="results">النتائج</string>
+    <string name="design_results">نتائج التصميم</string>
+    <string name="section_properties">خصائص المقطع</string>
+    <string name="reinforcement">التسليح</string>
+    
+    <!-- Beam Specific -->
+    <string name="width">العرض (b)</string>
+    <string name="height">الارتفاع (h)</string>
+    <string name="depth">العمق</string>
+    <string name="span">المspan (L)</string>
+    <string name="clear_span">المspan الصافي</string>
+    <string name="effective_depth">العمق الفعال (d)</string>
+    <string name="cover">الغطاء الخرساني</string>
+    <string name="moment">عزم الانحناء (Mu)</string>
+    <string name="shear_force">قوة القص (Vu)</string>
+    <string name="top_steel">حديد الضغط</string>
+    <string name="bottom_steel">حديد الشد</string>
+    <string name="stirrups">الأوار الخرسانية</string>
+    <string name="cross_section">المقطع العرضي</string>
+    <string name="elevation">المنظر الجانبي</string>
+    <string name="stress_distribution">توزيع الإجهادات</string>
+    
+    <!-- Column Specific -->
+    <string name="column_type">نوع العمود</string>
+    <string name="rectangular">مستطيل</string>
+    <string name="circular">دائري</string>
+    <string name="axial_load">الحمل المحوري (Pu)</string>
+    <string name="axial_capacity">قدرة التحمل المحورية</string>
+    <string name="moment_capacity">قدرة تحمل العزوم</string>
+    <string name="corner_bars">حديد الزوايا</string>
+    <string name="side_bars">حديد الأوجه</string>
+    <string name="ties">الأوار</string>
+    <string name="spiral">الحلزون</string>
+    <string name="steel_ratio">نسبة التسليح (ρ)</string>
+    
+    <!-- Slab Specific -->
+    <string name="slab_thickness">سمك البلاطة (h)</string>
+    <string name="span_x">المspan X (Lx)</string>
+    <string name="span_y">المspan Y (Ly)</string>
+    <string name="one_way">اتجاه واحد</string>
+    <string name="two_way">اتجاهين</string>
+    <string name="column_strip">شريحة العمود</string>
+    <string name="middle_strip">الشريحة الوسطى</string>
+    <string name="drop_panel">لوحة الإسقاط</string>
+    <string name="rib_width">عرض الضلع</string>
+    <string name="rib_spacing">تباعد الأضلاع</string>
+    <string name="plan_view">المخطط الأفقي</string>
+    <string name="section_view">المقطع العرضي</string>
+    
+    <!-- Footing Specific -->
+    <string name="footing_size">أبعاد القاعدة</string>
+    <string name="footing_thickness">سمك القاعدة</string>
+    <string name="column_size">أبعاد العمود</string>
+    <string name="soil_pressure">ضغط التربة</string>
+    <string name="allowable_pressure">ضغط التربة المسموح</string>
+    <string name="punching_shear">قص الثقب</string>
+    <string name="punching_perimeter">محيط القص (u₁)</string>
+    <string name="pedestal">القاعدة العلوية</string>
+    
+    <!-- Staircase Specific -->
+    <string name="riser">ارتفاع الدرجة (R)</string>
+    <string name="tread">عرض الدرجة (T)</string>
+    <string name="num_steps">عدد الدرجات</string>
+    <string name="waist_thickness">سمك السواعد</string>
+    <string name="total_rise">الارتفاع الكلي</string>
+    <string name="total_going">الطول الكلي</string>
+    <string name="stair_length">طول الدرج</string>
+    <string name="stair_angle">زاوية الميل</string>
+    <string name="comfort_check">فحص الراحة</string>
+    <string name="comfortable">مريح</string>
+    <string name="not_comfortable">غير مريح</string>
+    <string name="dog_legged">درج متكسر</string>
+    <string name="open_well">درج بفتحة وسطية</string>
+    <string name="quarter_turn">درج بمنعطف ربع دورة</string>
+    <string name="bifurcated">درج متشعب</string>
+    
+    <!-- Material Properties -->
+    <string name="concrete_strength">مقاومة الخرسانة (f\'c)</string>
+    <string name="steel_strength">مقاومة الحديد (fy)</string>
+    <string name="concrete_grade">درجة الخرسانة</string>
+    <string name="steel_grade">درجة الحديد</string>
+    <string name="unit_weight_concrete">الوزن النوعي للخرسانة</string>
+    <string name="unit_weight_steel">الوزن النوعي للحديد</string>
+    
+    <!-- Loads -->
+    <string name="dead_load">الحمل الميت</string>
+    <string name="live_load">الحمل الحي</string>
+    <string name="finishing_load">حمل التشطيبات</string>
+    <string name="total_load">الحمل الكلي</string>
+    <string name="factored_load">الحمل المعامل</string>
+    <string name="ultimate_moment">عزم الانحناء الأقصى (Mu)</string>
+    
+    <!-- Results -->
+    <string name="required_steel">مساحة الحديد المطلوبة (As)</string>
+    <string name="provided_steel">الحديد المتوفر</string>
+    <string name="bar_diameter">قطر السيخ</string>
+    <string name="bar_spacing">تباعد الأسياخ</string>
+    <string name="number_of_bars">عدد الأسياخ</string>
+    <string name="development_length">طول التطويل</string>
+    <string name="lap_length">طربقة الربط</string>
+    
+    <!-- Status -->
+    <string name="safe">آمن</string>
+    <string name="unsafe">غير آمن</string>
+    <string name="pass">مقبول</string>
+    <string name="fail">غير مقبول</string>
+    <string name="review_required">يحتاج مراجعة</string>
+    <string name="design_status">حالة التصميم</string>
+    <string name="utilization">نسبة الاستخدام</string>
+    <string name="code_compliant">مطابق للكود</string>
+    
+    <!-- Unit Converter -->
+    <string name="unit_converter">محول الوحدات</string>
+    <string name="length">الطول</string>
+    <string name="area">المساحة</string>
+    <string name="volume">الحجم</string>
+    <string name="weight">الوزن</string>
+    <string name="force">القوة</string>
+    <string name="pressure">الضغط</string>
+    <string name="moment">العزم</string>
+    <string name="from">من</string>
+    <string name="to">إلى</string>
+    <string name="convert">تحويل</string>
+    <string name="precision">الدقة</string>
+    <string name="recent_conversions">التحويلات الأخيرة</string>
+    
+    <!-- Calculator -->
+    <string name="scientific_calculator">الحاسبة العلمية</string>
+    <string name="delete">حذف</string>
+    
+    <!-- Projects -->
+    <string name="my_projects">مشاريعي</string>
+    <string name="new_project">مشروع جديد</string>
+    <string name="project_name">اسم المشروع</string>
+    <string name="project_location">الموقع</string>
+    <string name="client_name">اسم العميل</string>
+    <string name="description">الوصف</string>
+    <string name="create_project">إنشاء مشروع</string>
+    <string name="no_projects">لا توجد مشاريع</string>
+    <string name="create_first_project">اضغط + لإنشاء مشروعك الأول</string>
+    <string name="project_details">تفاصيل المشروع</string>
+    <string name="project_builder">بناء المشروع</string>
+    <string name="elements">العناصر</string>
+    <string name="no_elements">لم تتم إضافة عناصر بعد</string>
+    <string name="edit_element">تعديل العنصر</string>
+    
+    <!-- Quantity Surveying -->
+    <string name="quantity_surveying">حصر الكميات</string>
+    <string name="bill_of_quantities">جدول الكميات</string>
+    <string name="generate_boq">إنشاء جدول الكميات</string>
+    <string name="concrete_volume">حجم الخرسانة</string>
+    <string name="steel_weight">وزن الحديد</string>
+    <string name="formwork_area">مساحة الشدة</string>
+    <string name="total_cost">التكلفة الإجمالية</string>
+    <string name="material_cost">تكلفة المواد</string>
+    <string name="labor_cost">تكلفة العمالة</string>
+    
+    <!-- Gallery -->
+    <string name="detail_gallery">معرض التفاصيل</string>
+    <string name="all">الكل</string>
+    <string name="beams">الكمرات</string>
+    <string name="columns">الأعمدة</string>
+    <string name="slabs">البلاطات</string>
+    <string name="footings">القواعد</string>
+    <string name="stairs">الدرج</string>
+    
+    <!-- Settings -->
+    <string name="appearance">المظهر</string>
+    <string name="dark_mode">الوضع الليلي</string>
+    <string name="dark_mode_desc">استخدام الثيم الداكن في التطبيق</string>
+    <string name="language">اللغة</string>
+    <string name="select_language">اختيار اللغة</string>
+    <string name="english">English</string>
+    <string name="arabic">العربية</string>
+    <string name="default_settings">الإعدادات الافتراضية</string>
+    <string name="default_code">كود التصميم الافتراضي</string>
+    <string name="default_materials">المواد الافتراضية</string>
+    <string name="about">عن التطبيق</string>
+    <string name="privacy_policy">سياسة الخصوصية</string>
+    <string name="help_support">المساعدة والدعم</string>
+    
+    <!-- Price Settings -->
+    <string name="price_settings">إعدادات الأسعار</string>
+    <string name="currency">العملة</string>
+    <string name="select_country">اختيار الدولة</string>
+    <string name="last_update">آخر تحديث</string>
+    <string name="update_success">تم تحديث الأسعار بنجاح</string>
+    <string name="auto_update">التحديث التلقائي</string>
+    
+    <!-- Messages -->
+    <string name="error">خطأ</string>
+    <string name="check_inputs">يرجى التحقق من القيم المدخلة</string>
+    <string name="save_success">تم الحفظ بنجاح</string>
+    <string name="export_success">تم التصدير بنجاح</string>
+    <string name="delete_confirm">هل أنت متأكد من الحذف؟</string>
+    <string name="no_internet">لا يوجد اتصال بالإنترنت</string>
+    <string name="loading">جاري التحميل…</string>
+    
+    <!-- Units -->
+    <string name="unit_mm">مم</string>
+    <string name="unit_cm">سم</string>
+    <string name="unit_m">م</string>
+    <string name="unit_m2">م²</string>
+    <string name="unit_m3">م³</string>
+    <string name="unit_kg">كجم</string>
+    <string name="unit_ton">طن</string>
+    <string name="unit_kn">ك.ن</string>
+    <string name="unit_knm">ك.ن.م</string>
+    <string name="unit_mpa">م.با</string>
+    <string name="unit_kpa">ك.با</string>
+    <string name="unit_egp">ج.م</string>
+    <string name="unit_usd">دولار</string>
+    
+    <!-- Placeholders -->
+    <string name="ph_width">٣٠٠</string>
+    <string name="ph_height">٦٠٠</string>
+    <string name="ph_span">٦.٥</string>
+    <string name="ph_moment">١٨٥</string>
+    <string name="ph_concrete">٢٥</string>
+    <string name="ph_steel">٣٦٠</string>
+</resources>

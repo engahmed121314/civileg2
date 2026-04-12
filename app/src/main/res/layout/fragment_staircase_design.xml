@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/stairs_design"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Stair Visualization -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="12dp">
+            <com.civileg.app.ui.custom.StaircaseView
+                android:id="@+id/stairView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="16dp"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Stair Type -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stair_type" android:textStyle="bold" android:textColor="@color/primary" android:layout_marginBottom="12dp"/>
+                <RadioGroup
+                    android:id="@+id/rgStairType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <RadioButton android:id="@+id/rbSingleFlight" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/single_flight" android:checked="true"/>
+                    <RadioButton android:id="@+id/rbDoubleFlight" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/double_flight"/>
+                    <RadioButton android:id="@+id/rbCantilever" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/cantilever_stair"/>
+                </RadioGroup>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Dimensions -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Geometry" android:textStyle="bold" android:textColor="@color/primary" android:layout_marginBottom="12dp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:hint="Riser (mm)">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRiser" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="150"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:hint="Tread (mm)">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etTread" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="300"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:hint="Stair Width (mm)">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etWidth" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="1200"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout android:id="@+id/layoutLandingWidth" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:hint="@string/landing_width" android:visibility="gone">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etLandingWidth" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="1.2"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout android:id="@+id/layoutSteps" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:hint="Steps Count">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etSteps" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" android:text="12"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Materials & Loading -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Materials &amp; Loading" android:textStyle="bold" android:textColor="@color/primary" android:layout_marginBottom="12dp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:hint="fcu (MPa)">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etConcreteStrength" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="25"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:hint="fy (MPa)">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etSteelStrength" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="360"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:hint="Live Load (kN/m²)">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etLiveLoad" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="3.0"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCalculate"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="CALCULATE DESIGN"
+            app:cornerRadius="12dp"
+            android:backgroundTint="@color/primary"/>
+
+        <!-- Results -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardResults"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            app:cardCornerRadius="16dp"
+            app:strokeColor="@color/accent"
+            app:strokeWidth="2dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Staircase Report" android:textColor="@color/accent" android:textSize="18sp" android:textStyle="bold" />
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginTop="12dp" android:layout_marginBottom="12dp"/>
+
+                <TextView
+                    android:id="@+id/tvOptimizationTip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/primary"
+                    android:textStyle="italic"
+                    android:layout_marginBottom="12dp"/>
+
+                <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="2">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_columnWeight="1" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Recommended Steel" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvMainReinforcement" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/success"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_columnWeight="1" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alternative Options" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvStairAlternatives" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_columnWeight="1" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Concrete Vol" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvMoment" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_columnWeight="1" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Estimated Cost" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvStairLength" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/primary"/>
+                    </LinearLayout>
+                </GridLayout>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnSave" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="SAVE TO PROJECT"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnExportPdf" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="EXPORT PDF"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>

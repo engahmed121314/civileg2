@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="56dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/water_tank"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="12dp">
+            <com.civileg.app.views.WaterTankSectionView
+                android:id="@+id/tankView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="16dp"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tank_type"
+                    android:textColor="@color/primary"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <RadioGroup
+                    android:id="@+id/rgTankType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="16dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <RadioButton
+                            android:id="@+id/rbRectangular"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/rectangular_tank"
+                            android:checked="true"/>
+                        <RadioButton
+                            android:id="@+id/rbCircular"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/circular_tank"/>
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <RadioButton
+                            android:id="@+id/rbElevated"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/elevated_tank"/>
+                        <RadioButton
+                            android:id="@+id/rbUnderground"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/underground_tank"/>
+                    </LinearLayout>
+                </RadioGroup>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dimensions &amp; Properties"
+                    android:textColor="@color/primary"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <LinearLayout
+                    android:id="@+id/layoutRectDimensions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:hint="Length (mm)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etLength"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:text="5000"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:hint="Width (mm)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etWidth"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:text="4000"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutDiameter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:hint="@string/diameter_m">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etDiameter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:text="5.0"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:hint="H (mm)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etHeight"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:text="3000"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:hint="Water (mm)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etWaterHeight"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:text="2500"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Wall Thickness (mm)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etWallThickness"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:text="250"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCalculate"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="CALCULATE TANK"
+            android:backgroundTint="@color/primary"
+            app:cornerRadius="12dp"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardResults"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            app:cardCornerRadius="16dp"
+            app:strokeColor="@color/accent"
+            app:strokeWidth="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tank Design Analysis"
+                        android:textColor="@color/accent"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <ImageButton
+                        android:id="@+id/btnCloseResults"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        app:tint="@color/text_secondary" />
+                </RelativeLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#EEEEEE"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"/>
+
+                <TextView
+                    android:id="@+id/tvSafetyCheck"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/danger"
+                    android:textStyle="italic"
+                    android:layout_marginBottom="12dp"/>
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:alignmentMode="alignMargins">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_columnWeight="1"
+                        android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Capacity" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvCapacity" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="50.0 m³" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_columnWeight="1"
+                        android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Recommended Steel" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvSteelArea" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="6Ø12/m" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/success"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_columnWeight="1"
+                        android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hydro Pressure" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvPressure" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="25.0 kPa" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_columnWeight="1"
+                        android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alternative Options" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvAlternatives" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="8Ø10 or 5Ø16" android:textStyle="normal" android:textSize="14sp" android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_columnWeight="1"
+                        android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Concrete Vol." android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvConcreteVol" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12.5 m³" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_columnWeight="1"
+                        android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Est. Total Cost" android:textSize="11sp" android:textColor="@color/text_secondary" android:textAllCaps="true"/>
+                        <TextView android:id="@+id/tvTotalCost" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="18,000 EGP" android:textStyle="bold" android:textSize="16sp" android:textColor="@color/primary"/>
+                    </LinearLayout>
+                </GridLayout>
+
+                <TextView
+                    android:id="@+id/tvWaterTightStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:padding="8dp"
+                    android:background="#F1F8E9"
+                    android:text="WATER-TIGHT SAFE"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSave"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="SAVE TO PROJECT"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExportPdf"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="EXPORT PDF REPORT"
+                    app:icon="@drawable/ic_design"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</ScrollView>

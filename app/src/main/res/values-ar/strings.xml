@@ -1,0 +1,129 @@
+<resources>
+    <string name="app_name">Civil Engineer Pro</string>
+    <string name="app_subtitle">مساعدك الهندسي الإنشائي الاحترافي</string>
+
+    <string name="disclaimer_title">⚠️ تنبيه هام</string>
+    <string name="disclaimer_text">
+        هذا التطبيق للأغراض التعليمية وللتصميم الأولي فقط.
+        يجب مراجعة جميع الحسابات من قبل مهندس إنشائي معتمد.
+        المطور غير مسؤول عن أي أخطاء أو أضرار تنتج عن استخدام هذا التطبيق.
+    </string>
+    <string name="accept">أتفهم ذلك</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_design">أدوات التصميم</string>
+    <string name="nav_projects">المشاريع</string>
+    <string name="nav_quantity">المقايسات والتكاليف</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_gallery">المعرض المرجعي</string>
+    <string name="nav_more">وحدات إضافية</string>
+    <string name="nav_tools">الأدوات المساعدة</string>
+    <string name="gallery">المعرض</string>
+
+    <!-- Design Modules -->
+    <string name="beam_design">تصميم الكمرات</string>
+    <string name="column_design">تصميم الأعمدة</string>
+    <string name="footing_design">تصميم القواعد</string>
+    <string name="slab_design">تصميم البلاطات</string>
+    <string name="stairs_design">تصميم السلالم</string>
+    <string name="retaining_wall">الحوائط الساندة</string>
+    <string name="water_tank">خزانات المياه</string>
+    <string name="pile_foundation">الخوازيق (Piles)</string>
+    <string name="seismic_analysis">التحليل الزلزالي</string>
+
+    <!-- Management -->
+    <string name="quantity_surveying">حصر الكميات</string>
+    <string name="project_costing">تحليل التكاليف</string>
+    <string name="unit_converter">محول الوحدات</string>
+
+    <!-- Design Codes -->
+    <string name="code_egyptian">الكود المصري (ECP)</string>
+    <string name="code_aci">الكود الأمريكي (ACI 318)</string>
+    <string name="code_saudi">الكود السعودي (SBC)</string>
+
+    <!-- Common Actions -->
+    <string name="calculate">تحليل وحساب</string>
+    <string name="reset">مسح المدخلات</string>
+    <string name="export_pdf">تصدير تقرير التصميم (PDF)</string>
+    <string name="save_to_project">حفظ في خزنة المشاريع</string>
+    <string name="add_to_boq">إضافة لقائمة الكميات</string>
+    <string name="share">مشاركة التقرير</string>
+
+    <!-- Results & Status -->
+    <string name="results_summary">ملخص التحليل</string>
+    <string name="input_parameters">بيانات المدخلات</string>
+    <string name="status_safe">حالة التصميم: آمن</string>
+    <string name="status_unsafe">حالة التصميم: غير آمن</string>
+    <string name="economic_selection">الاختيار الأمثل</string>
+
+    <!-- Professional Labels -->
+    <string name="concrete_vol">إجمالي حجم الخرسانة</string>
+    <string name="steel_weight">إجمالي وزن الحديد</string>
+    <string name="est_total_cost">تكلفة المشروع التقديرية</string>
+    <string name="design_moment">عزم التصميم الأقصى (Mu)</string>
+    <string name="axial_capacity">القدرة المحورية (ΦPn)</string>
+
+    <!-- Language & Theme -->
+    <string name="language_selection">اللغة / Language</string>
+    <string name="dark_mode">الوضع الليلي</string>
+
+    <!-- User Profile Placeholder -->
+    <string name="user_name">مهندس محترف</string>
+    <string name="user_role">مصمم إنشائي أول</string>
+    <string name="search_hint">ابحث عن أدوات، معادلات، أو مشاريع...</string>
+
+    <!-- New Strings from User Request -->
+    <string name="height_m">الارتفاع (m)</string>
+    <string name="depth_m">العمق (m)</string>
+    <string name="depth_value">العمق: %.2f م</string>
+    <string name="width_value">العرض: %.2f م</string>
+    <string name="column_reinforcement">حديد رئيسي: قطر %d مم، مسافة %.1f سم (%d سيخ)</string>
+    <string name="ties_reinforcement">كانات: قطر %d مم، مسافة %.1f سم</string>
+    <string name="ties_diameter">قطر الكانات (مم)</string>
+    <string name="ties_spacing">مسافة الكانات (سم)</string>
+    <string name="concrete_volume">حجم الخرسانة: %.2f م³</string>
+    <string name="steel_weight_val">وزن الحديد: %.1f كجم</string>
+    <string name="cost_value">التكلفة: %.2f</string>
+    <string name="error_no_project">لم يتم اختيار مشروع!</string>
+    <string name="enter_all_values">يرجى إدخال جميع القيم</string>
+    <string name="pdf_saved">تم حفظ تقرير PDF بنجاح</string>
+    <string name="pdf_failed">فشل حفظ تقرير PDF</string>
+    <string name="csv_saved">تم حفظ ملف Excel/CSV بنجاح</string>
+    <string name="csv_failed">فشل حفظ ملف Excel/CSV</string>
+    <string name="export_excel">تصدير Excel</string>
+    <string name="load">الحمل (kN)</string>
+    <string name="fcu">fcu (MPa)</string>
+    <string name="fy">fy (MPa)</string>
+    <string name="col_width">العرض (m)</string>
+    <string name="col_depth">العمق (m)</string>
+    <string name="width">العرض (m)</string>
+    <string name="rebar_diameter">قطر السيخ (مم)</string>
+    <string name="spacing">المسافة (سم)</string>
+    <string name="num_bars">عدد الأسياخ</string>
+    <string name="cost">التكلفة</string>
+    <string name="select_design">اختر التصميم</string>
+    <string name="footing">قاعدة</string>
+    <string name="column">عمود</string>
+    <string name="slab">بلاطة</string>
+    <string name="beam">كمرة</string>
+    <string name="stair">سلم</string>
+    <string name="retaining_wall_item">حائط ساند</string>
+    <string name="tank">خزان</string>
+
+    <!-- Tank Types -->
+    <string name="tank_type">نوع الخزان</string>
+    <string name="rectangular_tank">خزان مستطيل</string>
+    <string name="circular_tank">خزان دائري</string>
+    <string name="elevated_tank">خزان علوي</string>
+    <string name="underground_tank">خزان أرضي</string>
+    <string name="diameter_m">القطر (م)</string>
+
+    <!-- Stair Types -->
+    <string name="stair_type">نوع السلم</string>
+    <string name="single_flight">قلبة واحدة</string>
+    <string name="double_flight">قلبتين (صدفة وسطى)</string>
+    <string name="cantilever_stair">سلم كابولي</string>
+    <string name="landing_width">عرض الصدفة (م)</string>
+
+</resources>

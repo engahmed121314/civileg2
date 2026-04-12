@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_home"
+            android:icon="@drawable/ic_home"
+            android:title="Dashboard"/>
+
+        <item
+            android:id="@+id/nav_projects"
+            android:icon="@drawable/ic_folder"
+            android:title="Projects"/>
+    </group>
+
+    <item android:title="Design Tools">
+        <menu>
+            <item
+                android:id="@+id/nav_beam"
+                android:icon="@drawable/ic_beam"
+                android:title="Beam Design"/>
+            <item
+                android:id="@+id/nav_column"
+                android:icon="@drawable/ic_column"
+                android:title="Column Design"/>
+            <item
+                android:id="@+id/nav_slab"
+                android:icon="@drawable/ic_slab"
+                android:title="Slab Design"/>
+            <item
+                android:id="@+id/nav_footing"
+                android:icon="@drawable/ic_footing"
+                android:title="Footing Design"/>
+            <item
+                android:id="@+id/nav_retaining"
+                android:icon="@drawable/ic_wall"
+                android:title="Retaining Wall"/>
+            <item
+                android:id="@+id/nav_stairs"
+                android:icon="@drawable/ic_stairs"
+                android:title="Staircase"/>
+            <item
+                android:id="@+id/nav_watertank"
+                android:icon="@drawable/ic_water"
+                android:title="Water Tank"/>
+            <item
+                android:id="@+id/nav_pile"
+                android:icon="@drawable/ic_pile"
+                android:title="Pile Foundation"/>
+            <item
+                android:id="@+id/nav_seismic"
+                android:icon="@drawable/ic_search"
+                android:title="Seismic Analysis"/>
+        </menu>
+    </item>
+
+    <item android:title="Utilities">
+        <menu>
+            <item
+                android:id="@+id/nav_quantity"
+                android:icon="@drawable/ic_quantity"
+                android:title="Quantity Surveying"/>
+            <item
+                android:id="@+id/nav_converter"
+                android:icon="@drawable/ic_converter"
+                android:title="Unit Converter"/>
+            <item
+                android:id="@+id/nav_calculator"
+                android:icon="@drawable/ic_calculator"
+                android:title="Scientific Calculator"/>
+            <item
+                android:id="@+id/nav_gallery"
+                android:icon="@drawable/ic_image"
+                android:title="Detail Gallery"/>
+        </menu>
+    </item>
+
+    <item android:title="Preferences">
+        <menu>
+            <item
+                android:id="@+id/nav_settings"
+                android:icon="@drawable/ic_settings"
+                android:title="Settings"/>
+        </menu>
+    </item>
+</menu>

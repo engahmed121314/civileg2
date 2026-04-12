@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_s">8dp</dimen>
+    <dimen name="spacing_m">16dp</dimen>
+    <dimen name="spacing_l">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+
+    <dimen name="text_size_xs">12sp</dimen>
+    <dimen name="text_size_s">14sp</dimen>
+    <dimen name="text_size_m">16sp</dimen>
+    <dimen name="text_size_l">20sp</dimen>
+    <dimen name="text_size_xl">24sp</dimen>
+    <dimen name="text_size_xxl">32sp</dimen>
+
+    <dimen name="card_radius">12dp</dimen>
+    <dimen name="button_radius">12dp</dimen>
+    <dimen name="input_radius">8dp</dimen>
+</resources>
