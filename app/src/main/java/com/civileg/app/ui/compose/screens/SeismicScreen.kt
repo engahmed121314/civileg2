@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,8 @@ fun SeismicScreen(
     var importance by remember { mutableStateOf("1.0") }
     var height by remember { mutableStateOf("12.0") }
     var totalWeight by remember { mutableStateOf("5000") }
+    var reductionFactor by remember { mutableStateOf("5.0") }
+    var soilType by remember { mutableStateOf("C") }
     
     var result by remember { mutableStateOf<CalculatorEngine.SeismicResult?>(null) }
     
@@ -45,7 +48,12 @@ fun SeismicScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         }
     ) { padding ->
@@ -74,24 +82,33 @@ fun SeismicScreen(
             }
 
             item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SeismicInputField(reductionFactor, "معامل التعديل (R)", { reductionFactor = it }, Modifier.weight(1f))
+                    SeismicInputField(soilType, "نوع التربة (Soil)", { soilType = it }, Modifier.weight(1f))
+                }
+            }
+
+            item {
                 Button(
                     onClick = {
                         result = engine.calculateSeismicLoads(
                             CalculatorEngine.SeismicInput(
                                 zone = zone.toDoubleOrNull() ?: 0.15,
                                 importance = importance.toDoubleOrNull() ?: 1.0,
-                                soilType = "C",
+                                soilType = soilType,
                                 height = height.toDoubleOrNull() ?: 12.0,
-                                totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0
+                                totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
+                                reductionFactor = reductionFactor.toDoubleOrNull() ?: 5.0
                             )
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
                 ) {
                     Icon(Icons.Default.Calculate, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("حساب قوى القص القاعدي")
+                    Text("حساب قوى القص القاعدي", style = MaterialTheme.typography.titleMedium)
                 }
             }
 
@@ -100,27 +117,41 @@ fun SeismicScreen(
                 
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)),
-                        shape = RoundedCornerShape(16.dp)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             ResultRow("قوة القص القاعدي (Vb)", "${"%.2f".format(res.baseShear)} kN")
                             ResultRow("الزمن الدوري (T)", "${"%.3f".format(res.timePeriod)} sec")
                             ResultRow("عجلة التصميم (Sd)", "${"%.3f".format(res.spectralAcceleration)} g")
+                            ResultRow("إزاحة الدور (Drift)", "${"%.4f".format(res.storyDrift)} m")
                         }
                     }
                 }
 
                 item {
-                    Text("🏢 توزيع القوى على الأدوار", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    res.forcesPerFloor.forEach { (floor, force) ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("🏢 توزيع القوى على الأدوار", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                res.forcesPerFloor.forEach { (floor, force) ->
+                    item {
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                         ) {
-                            Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("الدور $floor")
-                                Text("${"%.2f".format(force)} kN", fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("الدور $floor", style = MaterialTheme.typography.bodyMedium)
+                                Text("${"%.2f".format(force)} kN", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -133,10 +164,15 @@ fun SeismicScreen(
 
 @Composable
 private fun SectionHeader(title: String, iconRes: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+        Icon(
+            painterResource(id = iconRes),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -148,14 +184,24 @@ private fun SeismicInputField(value: String, label: String, onValueChange: (Stri
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        )
     )
 }
 
 @Composable
 private fun ResultRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Text(value, fontWeight = FontWeight.Bold)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(value, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
     }
 }

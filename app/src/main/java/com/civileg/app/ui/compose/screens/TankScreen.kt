@@ -36,7 +36,8 @@ fun TankScreen(
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     
-    var selectedType by remember { mutableStateOf(CalculatorEngine.TankType.RECTANGULAR_GROUND) }
+    // تصحيح: تحديد النوع صراحة وحل مشكلة المسميات المفقودة
+    var selectedType by remember { mutableStateOf<CalculatorEngine.TankType>(CalculatorEngine.TankType.RECTANGULAR_GROUND) }
     var capacity by remember { mutableStateOf("50.0") }
     var height by remember { mutableStateOf("3.5") }
     var fcu by remember { mutableStateOf("30") }
@@ -45,7 +46,7 @@ fun TankScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تصميم خزانات المياه", fontWeight = FontWeight.Bold) },
+                title = { Text("تصميم خزانات المياه Pro", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -114,10 +115,10 @@ fun TankScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            ResultRow("سمك الحوائط", "${res.wallThick.toInt()} mm")
-                            ResultRow("سمك اللبشة (Base)", "${res.baseThick.toInt()} mm")
+                            ResultRow("سمك الحوائط", "${res.wallThickness.toInt()} mm")
+                            ResultRow("سمك اللبشة (Base)", "${res.baseThickness.toInt()} mm")
                             ResultRow("ضغط الماء الأقصى", "${"%.1f".format(res.waterPressure)} kN/m²")
-                            ResultRow("تسليح الحوائط", res.wallSteel.barString)
+                            ResultRow("تسليح الحوائط", res.wallReinforcement.barString)
                         }
                     }
                 }
@@ -179,7 +180,8 @@ private fun TankDrawingCanvas(type: CalculatorEngine.TankType, modifier: Modifie
             val w = size.width - 2*padding
             val h = size.height - 2*padding
             
-            if (type == CalculatorEngine.TankType.CIRCULAR_GROUND || type == CalculatorEngine.TankType.CIRCULAR_ELEVATED) {
+            // تصحيح مسميات النوع في الرسم
+            if (type == CalculatorEngine.TankType.CIRCULAR_GROUND || type == CalculatorEngine.TankType.CIRCULAR_ELEVATED || type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) {
                 drawCircle(Color.LightGray, radius = h/2, center = Offset(size.width/2, size.height/2))
                 drawCircle(Color.DarkGray, radius = h/2, center = Offset(size.width/2, size.height/2), style = Stroke(4f))
                 drawCircle(Color.Blue.copy(alpha = 0.2f), radius = h/2 - 10f, center = Offset(size.width/2, size.height/2))

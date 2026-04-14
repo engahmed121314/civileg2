@@ -142,8 +142,8 @@ class BeamDesignFragment : Fragment() {
             width = result.width.toFloat(),
             height = result.depth.toFloat(),
             coverValue = 40f,
-            topReinforcement = result.topBars.map { BeamSectionView.BarInfo(it.numBars, it.diameter) },
-            bottomReinforcement = result.bottomBars.map { BeamSectionView.BarInfo(it.numBars, it.diameter) },
+            topReinforcement = listOf(BeamSectionView.BarInfo(result.reinforcementTop.numBars, result.reinforcementTop.diameter)),
+            bottomReinforcement = listOf(BeamSectionView.BarInfo(result.reinforcementBottom.numBars, result.reinforcementBottom.diameter)),
             momentCap = result.momentCapacity,
             shearCap = result.shearCapacity,
             appMoment = result.appliedMoment,
@@ -156,8 +156,8 @@ class BeamDesignFragment : Fragment() {
 
     private fun displayResults(result: CalculatorEngine.BeamResult) {
         binding.resultsCard.visibility = View.VISIBLE
-        val bottomBar = result.bottomBars.firstOrNull()
-        binding.etBottomReinforcement.setText(if (bottomBar != null) "${bottomBar.numBars}Ø${bottomBar.diameter}" else "-")
+        val bottomBar = result.reinforcementBottom
+        binding.etBottomReinforcement.setText("${bottomBar.numBars}Ø${bottomBar.diameter}")
         binding.etTopReinforcement.setText(String.format(Locale.getDefault(), "Cost: %.2f %s", result.cost, settingsManager.currency))
         
         val stirrupsText = result.stirrups.description
@@ -188,8 +188,8 @@ class BeamDesignFragment : Fragment() {
             name = "Beam - ${System.currentTimeMillis() % 1000}",
             inputData = lastInputData.toString(),
             results = JSONObject().apply {
-                val bottomBar = result.bottomBars.firstOrNull()
-                put("mainSteel", if (bottomBar != null) "${bottomBar.numBars}Ø${bottomBar.diameter}" else "-")
+                val bottomBar = result.reinforcementBottom
+                put("mainSteel", "${bottomBar.numBars}Ø${bottomBar.diameter}")
                 put("concreteVol", result.concreteVolume)
                 put("cost", result.cost)
                 put("currency", settingsManager.currency)

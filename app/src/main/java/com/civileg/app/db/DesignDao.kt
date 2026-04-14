@@ -2,6 +2,7 @@ package com.civileg.app.db
 
 import androidx.room.*
 import androidx.lifecycle.LiveData
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DesignDao {
@@ -13,6 +14,9 @@ interface DesignDao {
 
     @Query("SELECT * FROM designs ORDER BY createdAt DESC")
     fun getAllDesigns(): LiveData<List<Design>>
+
+    @Query("SELECT * FROM designs WHERE name LIKE :query ORDER BY createdAt DESC")
+    fun searchDesigns(query: String): Flow<List<Design>>
 
     @Delete
     suspend fun deleteDesign(design: Design)

@@ -36,7 +36,6 @@ class ColumnViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ColumnUiState())
     val uiState: StateFlow<ColumnUiState> = _uiState.asStateFlow()
     
-    // Support for Legacy Activities
     val uiStateLiveData: LiveData<ColumnUiState> = _uiState.asLiveData()
     val result: LiveData<CalculatorEngine.ColumnResult?> = _uiState.map { it.result }.asLiveData()
 
@@ -75,7 +74,16 @@ class ColumnViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val res = calculatorEngine.designColumn(width, depth, height * 1000, fcu, fy, load, diameter, code)
+                // تصحيح: تمرير البارامترات حسب تعريف الدالة في CalculatorEngine
+                // الدالة تتوقع: (width, depth, pu, fcu, fy, code)
+                val res = calculatorEngine.designColumn(
+                    width = width,
+                    depth = depth,
+                    pu = load,
+                    fcu = fcu,
+                    fy = fy,
+                    code = code
+                )
                 _uiState.update { it.copy(result = res, isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errors = listOf(e.message ?: "Error")) }
@@ -87,10 +95,14 @@ class ColumnViewModel @Inject constructor(
         val state = _uiState.value
         viewModelScope.launch {
             try {
+                // تصحيح: استخدام البارامترات الصحيحة للدالة الحالية
                 val res = calculatorEngine.designColumn(
-                    state.width, state.depth, state.height * 1000.0,
-                    state.fcu, state.fy, state.axialLoad * state.loadCombination.factor, 16, 
-                    mapDesignCode(state.designCode)
+                    width = state.width,
+                    depth = state.depth,
+                    pu = state.axialLoad * state.loadCombination.factor,
+                    fcu = state.fcu,
+                    fy = state.fy,
+                    code = mapDesignCode(state.designCode)
                 )
                 _uiState.update { it.copy(result = res, errors = emptyList()) }
             } catch (e: Exception) {

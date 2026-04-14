@@ -131,11 +131,9 @@ class ColumnDesignFragment : Fragment() {
             val result = calculatorEngine.designColumn(
                 width = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else width,
                 depth = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else depth,
-                height = 3000.0,
+                pu = axialLoad,
                 fcu = fc,
                 fy = fy,
-                pu = axialLoad,
-                preferredDiameter = 16,
                 code = selectedCode
             )
             
@@ -150,7 +148,7 @@ class ColumnDesignFragment : Fragment() {
     private fun showResults(result: CalculatorEngine.ColumnResult) {
         binding.resultsCard.visibility = View.VISIBLE
         
-        binding.etLongitudinalBars.setText("${result.totalBars}Ø${result.barDiameter}")
+        binding.etLongitudinalBars.setText("${result.reinforcement.numBars}Ø${result.reinforcement.diameter}")
         
         val summary = String.format(Locale.US, "التكلفة: %.2f %s | خرسانة: %.2f m³", 
             result.cost, settingsManager.currency, result.concreteVolume)
@@ -161,8 +159,8 @@ class ColumnDesignFragment : Fragment() {
             this.columnWidth = result.width.toFloat()
             this.columnHeight = result.depth.toFloat()
             this.columnDiameter = result.width.toFloat()
-            this.cornerBars = result.totalBars
-            this.cornerBarDiameter = result.barDiameter
+            this.cornerBars = result.reinforcement.numBars
+            this.cornerBarDiameter = result.reinforcement.diameter
             invalidate()
         }
 
@@ -173,11 +171,11 @@ class ColumnDesignFragment : Fragment() {
         val details = StringBuilder()
         details.append("--- النوتة الحسابية ---\n")
         details.append("Design Code: ${result.code.displayName}\n")
-        details.append("Applied Axial: ${String.format("%.2f", result.pu)} kN\n")
+        details.append("Applied Axial: ${String.format(Locale.US, "%.2f", result.pu)} kN\n")
         
         details.append("\n--- حصر الكميات (BOQ) ---\n")
-        details.append("الخرسانة: ${String.format("%.2f", result.concreteVolume)} m³\n")
-        details.append("الحديد الكلي: ${String.format("%.1f", result.steelWeight)} kg\n")
+        details.append("الخرسانة: ${String.format(Locale.US, "%.2f", result.concreteVolume)} m³\n")
+        details.append("الحديد الكلي: ${String.format(Locale.US, "%.1f", result.steelWeight)} kg\n")
         
         details.append("\n--- فحص الأمان ---\n")
         details.append("${if (result.isSafe) "✅" else "❌"} ${if (result.isSafe) "Safe Design" else "Unsafe - Check Section"}\n")

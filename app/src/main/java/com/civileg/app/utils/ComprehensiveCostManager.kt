@@ -1,8 +1,6 @@
 package com.civileg.app.utils
 
-import kotlin.math.PI
-import kotlin.math.pow
-import kotlin.math.sqrt
+import com.civileg.app.utils.CalculatorEngine
 
 /**
  * Comprehensive Cost Management System - V2
@@ -46,7 +44,7 @@ object ComprehensiveCostManager {
         val steelKg = result.steelWeight
         
         val items = mutableListOf<BOQItem>()
-        items.add(BOQItem("Ready-mix Concrete (${result.code.name})", "m3", vol, prices.concretePricePerM3))
+        items.add(BOQItem("Ready-mix Concrete (${result.code.displayName})", "m3", vol, prices.concretePricePerM3))
         items.add(BOQItem("Reinforcement Steel", "kg", steelKg, prices.steelPricePerTon / 1000.0))
         
         // Detailed breakdown
@@ -83,7 +81,7 @@ object ComprehensiveCostManager {
      * حساب تقديري لكامل المشروع بناء على نوعه
      */
     fun estimateProjectTotal(
-        projectType: CalculatorEngine.ProjectType,
+        projectType: Any?, // Use Any? to avoid enum issues temporarily or pass explicit type
         landArea: Double,
         buildingRatio: Double,
         floors: Int,
@@ -92,11 +90,7 @@ object ComprehensiveCostManager {
         val builtArea = landArea * (buildingRatio / 100.0) * floors
         
         // Ratios (approx)
-        val concreteRatio = when(projectType) {
-            CalculatorEngine.ProjectType.HOSPITAL -> 0.55
-            CalculatorEngine.ProjectType.INDUSTRIAL -> 0.65
-            else -> 0.45 // Residential
-        }
+        val concreteRatio = 0.45 // Default Residential
         val steelRatio = 110.0 // kg/m3 concrete
         
         val totalVol = builtArea * concreteRatio

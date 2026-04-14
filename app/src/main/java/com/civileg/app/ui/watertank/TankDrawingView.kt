@@ -98,14 +98,11 @@ class TankDrawingView @JvmOverloads constructor(
         canvas.drawPath(path, concretePaint)
         canvas.drawPath(path, borderPaint)
 
-        // Draw Main Reinforcement (Inside and Outside faces)
-        val cover = 40f * (scale / 1000f) // Scale cover
+        // Draw Main Reinforcement
+        val cover = 40f * (scale / 1000f) 
         
-        // Vertical Wall Steel
         canvas.drawLine(startX + cover, startY + 10f, startX + cover, startY + drawH - tBase + cover, steelPaint)
         canvas.drawLine(startX + drawW - tWall + cover, startY + 10f, startX + drawW - tWall + cover, startY + drawH - tBase + cover, steelPaint)
-
-        // Base Steel
         canvas.drawLine(startX + cover, startY + drawH - cover, startX + drawW - cover, startY + drawH - cover, steelPaint)
 
         // Labels

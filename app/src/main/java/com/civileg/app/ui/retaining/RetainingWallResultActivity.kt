@@ -9,8 +9,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import com.civileg.app.R
 import com.civileg.app.databinding.ActivityRetainingWallResultBinding
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
@@ -59,9 +57,9 @@ class RetainingWallResultActivity : AppCompatActivity() {
     }
 
     private fun displayResult() {
-        binding.tvStem.text = String.format(Locale.getDefault(), "Stem Thickness: %.0f mm", result.stemThick)
+        binding.tvStem.text = String.format(Locale.getDefault(), "Stem Thickness: %.0f mm", result.stemThickness)
         binding.tvBase.text = String.format(Locale.getDefault(), "Base Width: %.2f m", result.baseWidth)
-        binding.tvReinforcement.text = "Main Steel: ${result.stemSteel.barString}"
+        binding.tvReinforcement.text = "Main Steel: ${result.stemReinforcement.barString}"
         binding.tvConcrete.text = String.format(Locale.getDefault(), "Concrete Vol: %.2f m³/m'", result.concreteVolume)
         binding.tvCost.text = String.format(Locale.getDefault(), "Est. Cost: %.2f /m'", result.cost)
         
@@ -73,10 +71,10 @@ class RetainingWallResultActivity : AppCompatActivity() {
     private fun setupDrawing() {
         binding.drawingView.setDetails(
             h = result.height.toFloat(),
-            stemT = result.stemThick.toFloat(),
+            stemT = result.stemThickness.toFloat(),
             baseW = result.baseWidth.toFloat(),
             baseT = 500f, // Approx base thickness
-            reinf = result.stemSteel.barString
+            reinf = result.stemReinforcement.barString
         )
     }
 
@@ -89,9 +87,9 @@ class RetainingWallResultActivity : AppCompatActivity() {
                     "Wall Height" to "${result.height} m"
                 )
                 val resultsMap = mapOf(
-                    "Stem Thickness" to "${result.stemThick} mm",
+                    "Stem Thickness" to "${result.stemThickness} mm",
                     "Base Width" to String.format("%.2f m", result.baseWidth),
-                    "Main Reinforcement" to result.stemSteel.barString,
+                    "Main Reinforcement" to result.stemReinforcement.barString,
                     "F.O.S Overturning" to String.format("%.2f", result.factorOfSafetyOverturning),
                     "F.O.S Sliding" to String.format("%.2f", result.factorOfSafetySliding),
                     "Concrete Volume" to String.format("%.2f m3/m", result.concreteVolume),

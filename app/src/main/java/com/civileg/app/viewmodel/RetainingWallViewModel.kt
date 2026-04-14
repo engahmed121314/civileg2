@@ -39,7 +39,14 @@ class RetainingWallViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val res = calculatorEngine.designRetainingWall(
-                    height, soilDensity, frictionAngle, surcharge, fcu, fy, preferredDiameter, code
+                    height = height,
+                    soilDensity = soilDensity,
+                    frictionAngle = frictionAngle,
+                    surcharge = surcharge,
+                    fcu = fcu,
+                    fy = fy,
+                    preferredDiameter = preferredDiameter,
+                    code = code
                 )
                 _result.value = res
                 _error.value = null
@@ -51,7 +58,7 @@ class RetainingWallViewModel @Inject constructor(
         }
     }
 
-    // Legacy method
+    // Legacy method for backward compatibility
     fun calculateRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double) {
         calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, CalculatorEngine.DesignCode.EGYPTIAN)
     }

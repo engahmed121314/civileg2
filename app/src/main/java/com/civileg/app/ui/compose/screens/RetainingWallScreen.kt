@@ -118,8 +118,8 @@ fun RetainingWallScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             ResultRow("عرض القاعدة (Base)", "${res.baseWidth.toInt()} mm")
                             ResultRow("سمك الحائط (Stem)", "${res.stemThickness.toInt()} mm")
-                            ResultRow("تسليح الظهر (Stem Steel)", res.stemSteel.barString)
-                            ResultRow("تسليح القاعدة (Base Steel)", res.baseSteel.barString)
+                            ResultRow("تسليح الظهر (Stem Steel)", res.stemReinforcement.barString)
+                            ResultRow("تسليح القاعدة (Base Steel)", res.baseReinforcement.barString)
                             
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
                             res.safetyChecks.forEach { check ->

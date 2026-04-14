@@ -26,7 +26,7 @@ class DesignReportView @JvmOverloads constructor(
             tvTitle.text = report.elementTitle
             tvDimensions.text = "الأبعاد: ${report.dimensions}"
             
-            // عرض الحصر
+            // عرض الحصر (BOQ)
             tvConcrete.text = String.format(Locale.US, "%.2f m³", report.boq.concreteM3)
             tvSteel.text = String.format(Locale.US, "%.1f kg", report.boq.steelKg)
             tvCost.text = String.format(Locale.US, "%.2f %s", report.boq.totalCost, report.boq.currency)
@@ -35,16 +35,17 @@ class DesignReportView @JvmOverloads constructor(
             layoutSteelDetails.removeAllViews()
             report.reinforcement.forEach { steel ->
                 val itemView = android.widget.TextView(context).apply {
-                    text = "• ${steel.type}: ${steel.description} (الوزن: ${String.format("%.1f", steel.weightKg)} كجم)"
+                    text = "• ${steel.type}: ${steel.description} (الوزن: ${String.format(Locale.US, "%.1f", steel.weightKg)} كجم)"
                     setTextColor(Color.DKGRAY)
+                    textSize = 14f
                     setPadding(0, 8, 0, 8)
                 }
                 layoutSteelDetails.addView(itemView)
             }
             
-            // عرض الأمان
+            // عرض حالة الأمان الإنشائي
             val isAllSafe = report.safetyChecks.all { it.isSafe }
-            tvSafetyStatus.text = if (isAllSafe) "آمن إنشائياً ✔" else "غير آمن ✖"
+            tvSafetyStatus.text = if (isAllSafe) "آمن إنشائياً ✅" else "غير آمن ⚠️"
             tvSafetyStatus.setTextColor(if (isAllSafe) Color.parseColor("#2E7D32") else Color.RED)
         }
     }
