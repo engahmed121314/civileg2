@@ -9,7 +9,9 @@ import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -25,6 +27,9 @@ class FootingViewModel @Inject constructor(
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _isExporting = MutableLiveData(false)
+    val isExporting: LiveData<Boolean> = _isExporting
+
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
@@ -38,7 +43,11 @@ class FootingViewModel @Inject constructor(
         colT: Double,
         code: CalculatorEngine.DesignCode,
         preferredDiameter: Int,
-        preferredSpacing: Double
+        preferredSpacing: Double,
+        p2: Double = 0.0,
+        distance: Double = 0.0,
+        maxLeft: Double? = null,
+        maxRight: Double? = null
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -53,7 +62,11 @@ class FootingViewModel @Inject constructor(
                     colT = colT,
                     code = code,
                     preferredDiameter = preferredDiameter,
-                    preferredSpacing = preferredSpacing
+                    preferredSpacing = preferredSpacing,
+                    p2 = p2,
+                    distance = distance,
+                    maxLeft = maxLeft,
+                    maxRight = maxRight
                 )
                 _result.value = res
                 _error.value = null
@@ -71,22 +84,35 @@ class FootingViewModel @Inject constructor(
         }
     }
 
-    fun exportToPdf(context: Context, onComplete: (String) -> Unit) {
+    fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val res = _result.value ?: return
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
-                // Note: Assuming ComprehensivePdfExporter has a method for Footings or generic reports
-                // For now, we simulate the logic similar to ColumnViewModel if specific method exists
                 val fileName = "Footing_Report_${System.currentTimeMillis()}.pdf"
-                val file = File(context.getExternalFilesDir(null), fileName)
+                val file = File(context.cacheDir, fileName)
                 
-                // Actual implementation depends on ComprehensivePdfExporter capabilities
-                // If it doesn't have exportFootingReport, we'd need to add it or use a generic one.
-                // Assuming it exists as per project goals.
+                val exporter = ComprehensivePdfExporter(context)
+                val exportedFile = exporter.exportFootingReport(
+                    projectName = "تقرير تصميم أساسات - ${res.type.displayName}",
+                    designCode = res.code,
+                    result = res,
+                    outputPath = file.absolutePath
+                )
                 
-                onComplete(file.absolutePath)
+                withContext(Dispatchers.Main) {
+                    exportedFile?.let {
+                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
+                    }
+                    onComplete(exportedFile)
+                    _isExporting.value = false
+                }
             } catch (e: Exception) {
-                _error.value = "PDF Export Error: ${e.message}"
+                withContext(Dispatchers.Main) {
+                    _error.value = "خطأ في تصدير PDF: ${e.message}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
             }
         }
     }

@@ -1,16 +1,18 @@
 package com.civileg.app.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.civileg.app.db.AppDatabase
-import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.db.DesignRepository
+import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 data class ColumnUiState(
@@ -24,12 +26,13 @@ data class ColumnUiState(
     val loadCombination: LoadCombination = LoadCombination.DEAD_LIVE,
     val result: CalculatorEngine.ColumnResult? = null,
     val isLoading: Boolean = false,
+    val isExporting: Boolean = false,
     val errors: List<String> = emptyList()
 )
 
 @HiltViewModel
 class ColumnViewModel @Inject constructor(
-    private val db: AppDatabase,
+    private val repository: DesignRepository,
     private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
 
@@ -102,12 +105,95 @@ class ColumnViewModel @Inject constructor(
                     pu = state.axialLoad * state.loadCombination.factor,
                     fcu = state.fcu,
                     fy = state.fy,
-                    code = mapDesignCode(state.designCode)
+                    code = mapDesignCode(state.designCode),
+                    clearHeight = state.height * 1000.0 // التحويل لـ mm
                 )
                 _uiState.update { it.copy(result = res, errors = emptyList()) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
             }
+        }
+    }
+
+    fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
+        val state = _uiState.value
+        val res = state.result ?: return
+        _uiState.update { it.copy(isExporting = true) }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val exporter = ComprehensivePdfExporter(context)
+                val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
+                val file = File(context.cacheDir, fileName)
+                
+                val colType = if (res.columnType == "CIRCULAR") ColumnType.Circular(res.width) else ColumnType.Rectangular(res.width, res.depth)
+                val advResult = AdvancedColumnResult(
+                    columnType = colType,
+                    axialCapacity = res.axialCapacity,
+                    momentCapacityX = 0.0,
+                    momentCapacityY = 0.0,
+                    slendernessRatio = res.slenderness,
+                    isSlender = res.isSlender,
+                    effectiveLength = state.height * 1000.0,
+                    reinforcementResult = ReinforcementResult(
+                        astRequired = res.reinforcementArea,
+                        astProvided = res.reinforcementArea,
+                        barDiameter = res.reinforcement.diameter.toDouble(),
+                        numberOfBars = res.reinforcement.numBars,
+                        tiesDiameter = res.stirrups.diameter.toDouble(),
+                        tiesSpacing = res.stirrups.spacing,
+                        isSafe = res.isSafe,
+                        utilizationRatio = (res.pu / (if(res.axialCapacity > 0) res.axialCapacity else 1.0)).coerceIn(0.0, 1.2)
+                    ),
+                    inventoryAnalysis = null,
+                    biaxialCheck = null,
+                    punchingCheck = PunchingCheckResult(res.pu, 1000.0, res.punchingSafe, false, 2000.0),
+                    warnings = emptyList(),
+                    codeNotes = listOf("تم التصدير من تطبيق Civil EG Pro"),
+                    steelWeightPerMeter = res.steelWeight / if(state.height > 0) state.height else 1.0,
+                    concreteVolumePerMeter = res.concreteVolume / if(state.height > 0) state.height else 1.0
+                )
+
+                val inputs = ColumnInputs(
+                    fcu = state.fcu,
+                    fy = state.fy,
+                    axialLoad = res.pu,
+                    momentX = 0.0,
+                    momentY = 0.0,
+                    loadCombination = state.loadCombination,
+                    unsupportedLength = state.height,
+                    columnType = colType
+                )
+
+                val exportedFile = exporter.exportColumnReport(
+                    projectName = "تقرير تصميم أعمدة",
+                    designCode = state.designCode,
+                    columnType = colType,
+                    inputs = inputs,
+                    result = advResult,
+                    inventoryAnalysis = null,
+                    alternatives = emptyList(),
+                    outputPath = file.absolutePath
+                )
+                
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiState.update { it.copy(isExporting = false) }
+                    exportedFile?.let {
+                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
+                    }
+                    onComplete(exportedFile)
+                }
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiState.update { it.copy(isExporting = false, errors = listOf("PDF Error: ${e.message}")) }
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    fun saveColumn(projectId: Long, name: String, result: CalculatorEngine.ColumnResult) {
+        viewModelScope.launch {
+            repository.saveColumnDesign(projectId, name, result)
         }
     }
 

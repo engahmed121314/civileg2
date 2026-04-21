@@ -22,53 +22,7 @@
             android:gravity="center"
             android:layout_marginBottom="16dp" />
 
-        <!-- Type Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/column_type"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
-
-                <RadioGroup
-                    android:id="@+id/rgColumnType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <RadioButton
-                        android:id="@+id/rbRectangular"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/rectangular"
-                        android:checked="true" />
-
-                    <RadioButton
-                        android:id="@+id/rbCircular"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/circular" />
-                </RadioGroup>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Code Card -->
+        <!-- Design Code Selection -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -95,35 +49,98 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     app:singleSelection="true"
-                    app:checkedButton="@id/btnEgyptianCode">
-
+                    app:checkedButton="@+id/btnEgyptianCode">
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnEgyptianCode"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/code_egyptian"
-                        android:textSize="12sp" />
-
+                        android:text="ECP" />
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAmericanCode"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/code_aci"
-                        android:textSize="12sp" />
-
+                        android:text="ACI" />
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSaudiCode"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/code_saudi"
-                        android:textSize="12sp" />
+                        android:text="SBC" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Type & Shape Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Column Shape &amp; Preferred Steel"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <RadioGroup
+                    android:id="@+id/rgColumnType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <RadioButton android:id="@+id/rbRectangular" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/rectangular" android:checked="true" />
+                    <RadioButton android:id="@+id/rbCircular" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/circular" />
+                </RadioGroup>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:hint="Preferred Bar Diameter (Ø)">
+                    <AutoCompleteTextView
+                        android:id="@+id/spinnerColBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:text="16" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Connected Slab (For Punching Check)"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/slabTypeToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true"
+                    app:checkedButton="@+id/btnSolidSlab">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnSolidSlab" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Solid" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnFlatSlab" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Flat" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnHordiSlab" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Hordi" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <CheckBox android:id="@+id/cbHasCap" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Column Head (Cap) / تاج العمود" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -151,22 +168,47 @@
                     android:layout_marginBottom="12dp" />
 
                 <LinearLayout
-                    android:id="@+id/layoutColumnWidth"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="12dp">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
                     <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        app:suffixText="mm">
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        app:suffixText="MPa">
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etColumnWidth"
+                            android:id="@+id/etConcreteStrength"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
-                            android:hint="@string/width_label"
-                            android:text="400" />
+                            android:hint="@string/fcu_label"
+                            android:text="25" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        app:suffixText="MPa">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSteelStrength"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:hint="@string/fy_label"
+                            android:text="360" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutColumnWidth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" app:suffixText="mm">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etColumnWidth" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:hint="@string/width_label" android:text="300" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -174,19 +216,9 @@
                     android:id="@+id/layoutColumnHeight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="12dp">
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:suffixText="mm">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etColumnHeight"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"
-                            android:hint="@string/height_label"
-                            android:text="400" />
+                    android:orientation="vertical">
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" app:suffixText="mm">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etColumnHeight" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:hint="@string/height_label" android:text="600" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -195,152 +227,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginBottom="12dp">
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:suffixText="mm">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etColumnDiameter"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"
-                            android:hint="@string/diameter_label"
-                            android:text="400" />
+                    android:visibility="gone">
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" app:suffixText="mm">
+                        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etColumnDiameter" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:hint="@string/diameter_label" android:text="400" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    app:suffixText="mm">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etColumnLength"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:hint="@string/length_label"
-                        android:text="3000" />
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" app:suffixText="kN">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etAxialLoad" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:hint="Ultimate Axial Load (Pu)" android:text="1500" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:suffixText="mm">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etConcreteCover"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:hint="@string/cover_label"
-                        android:text="40" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Material Properties Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/material_properties"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary"
-                    android:layout_marginBottom="12dp" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    app:suffixText="MPa">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etConcreteStrength"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:hint="@string/concrete_strength_label"
-                        android:text="25" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:suffixText="MPa">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etSteelStrength"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:hint="@string/steel_strength_label"
-                        android:text="360" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Loading Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/loading"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary"
-                    android:layout_marginBottom="12dp" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    app:suffixText="kN">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAxialLoad"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:hint="@string/axial_load_label"
-                        android:text="1500" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    app:suffixText="kN.m">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etMomentX"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:hint="@string/moment_x_label"
-                        android:text="50" />
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" app:suffixText="m">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/etClearHeight" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" android:hint="Clear Height (H) / الارتفاع الصافي" android:text="3.0" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -355,68 +253,36 @@
             app:cornerRadius="12dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- View Section -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
-            <com.google.android.material.tabs.TabItem android:text="Section" />
-            <com.google.android.material.tabs.TabItem android:text="Interaction" />
+            android:layout_height="wrap_content">
+            <com.google.android.material.tabs.TabItem android:text="Reinforcement Drawing" />
+            <com.google.android.material.tabs.TabItem android:text="Data Sheet &amp; Safety" />
         </com.google.android.material.tabs.TabLayout>
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="400dp"
+            android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="400dp">
-                <com.civileg.app.views.ColumnSectionView
-                    android:id="@+id/columnSectionView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@color/surface" />
-
-                <com.civileg.app.views.InteractionView
-                    android:id="@+id/interactionView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="gone"
-                    android:background="@color/surface" />
+            app:cardCornerRadius="12dp">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
+                <com.civileg.app.views.ColumnSectionView android:id="@+id/columnSectionView" android:layout_width="match_parent" android:layout_height="match_parent" />
+                <ScrollView android:id="@+id/layoutSafetyChecks" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" android:padding="16dp">
+                    <LinearLayout android:id="@+id/checksContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+                </ScrollView>
             </FrameLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Results Card -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/resultsCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
             app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/primary"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/results_summary"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary"
-                    android:gravity="center"
-                    android:layout_marginBottom="16dp" />
-
+            app:cardElevation="4dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -426,7 +292,7 @@
                         android:id="@+id/etLongitudinalBars"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/longitudinal_bars"
+                        android:hint="Longitudinal Reinforcement / التسليح الطولي"
                         android:textColor="@color/success" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -439,25 +305,25 @@
                         android:id="@+id/etCapacity"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Nominal Capacity (kN)"
-                        android:textColor="@color/success" />
+                        android:hint="Section Capacity &amp; Quantity"
+                        android:textColor="@color/primary" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSaveDesign"
+                    android:id="@+id/btnExportPdf"
+                    style="@style/Widget.Material3.Button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/save_to_project"
-                    app:cornerRadius="8dp" />
+                    android:text="@string/export_pdf"
+                    android:layout_marginBottom="8dp"
+                    app:icon="@drawable/ic_pdf" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnExportPdf"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:id="@+id/btnSaveDesign"
+                    style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/export_pdf"
-                    app:cornerRadius="8dp" />
+                    android:text="@string/save_design" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

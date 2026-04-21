@@ -1,47 +1,60 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.RetainingWallViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RetainingWallScreen(
     viewModel: RetainingWallViewModel = hiltViewModel(),
+    projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
-    
+    val isExporting by viewModel.isExporting.observeAsState(false)
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    var designName by remember { mutableStateOf("حائط ساند RW1") }
+
     var height by remember { mutableStateOf("4.0") }
     var soilDensity by remember { mutableStateOf("18.0") }
     var frictionAngle by remember { mutableStateOf("30.0") }
-    var surcharge by remember { mutableStateOf("0.0") }
+    var surcharge by remember { mutableStateOf("10.0") }
+    var fcu by remember { mutableStateOf("25") }
+    var fy by remember { mutableStateOf("400") }
+    
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -51,168 +64,214 @@ fun RetainingWallScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (isExporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).padding(end = 8.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        IconButton(onClick = {
+                            viewModel.exportToPdf(context) { /* Handle completion if needed */ }
+                        }) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "Export")
+                        }
+                    }
+                    IconButton(onClick = { showSaveDialog = true }, enabled = result != null) {
+                        Icon(Icons.Default.Save, contentDescription = "Save")
+                    }
                 }
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(16.dp)
+                .verticalScroll(scrollState)
         ) {
-            item { SectionHeader("📐 أبعاد الحائط وخصائص التربة", R.drawable.ic_wall) }
+            Text("إدخال البيانات الفنية", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(16.dp))
 
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RetainingInputField(height, "ارتفاع الحائط (m)", { height = it }, Modifier.weight(1f))
-                    RetainingInputField(soilDensity, "كثافة التربة (kN/m³)", { soilDensity = it }, Modifier.weight(1f))
-                }
+            OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text("ارتفاع الحائط (m)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text("كثافة التربة (kN/m³)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { Text("زاوية الاحتكاك Φ (deg)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text("حمل إضافي Surcharge (kN/m²)") }, modifier = Modifier.fillMaxWidth())
+            
+            Row(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text("fcu") }, modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text("fy") }, modifier = Modifier.weight(1f))
             }
 
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RetainingInputField(frictionAngle, "زاوية الاحتكاك (deg)", { frictionAngle = it }, Modifier.weight(1f))
-                    RetainingInputField(surcharge, "الحمل الإضافي (kN/m²)", { surcharge = it }, Modifier.weight(1f))
-                }
-            }
+            Spacer(modifier = Modifier.height(24.dp))
 
-            item {
-                Button(
-                    onClick = {
-                        viewModel.calculateRetainingWallPro(
-                            height = height.toDoubleOrNull() ?: 4.0,
-                            soilDensity = soilDensity.toDoubleOrNull() ?: 18.0,
-                            frictionAngle = frictionAngle.toDoubleOrNull() ?: 30.0,
-                            surcharge = surcharge.toDoubleOrNull() ?: 0.0,
-                            fcu = 25.0,
-                            fy = 360.0,
-                            preferredDiameter = 16,
-                            code = CalculatorEngine.DesignCode.EGYPTIAN
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Icon(Icons.Default.Calculate, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("تحليل وتصميم")
-                    }
+            Button(
+                onClick = {
+                    viewModel.calculateRetainingWallPro(
+                        height = height.toDoubleOrNull() ?: 4.0,
+                        soilDensity = soilDensity.toDoubleOrNull() ?: 18.0,
+                        frictionAngle = frictionAngle.toDoubleOrNull() ?: 30.0,
+                        surcharge = surcharge.toDoubleOrNull() ?: 10.0,
+                        fcu = fcu.toDoubleOrNull() ?: 25.0,
+                        fy = fy.toDoubleOrNull() ?: 400.0,
+                        preferredDiameter = 16,
+                        code = CalculatorEngine.DesignCode.EGYPTIAN
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                } else {
+                    Icon(Icons.Default.Calculate, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("تحليل الاستقرار وتصميم الحائط")
                 }
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التصميم", R.drawable.ic_calculator) }
-                
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            ResultRow("عرض القاعدة (Base)", "${res.baseWidth.toInt()} mm")
-                            ResultRow("سمك الحائط (Stem)", "${res.stemThickness.toInt()} mm")
-                            ResultRow("تسليح الظهر (Stem Steel)", res.stemReinforcement.barString)
-                            ResultRow("تسليح القاعدة (Base Steel)", res.baseReinforcement.barString)
-                            
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                            res.safetyChecks.forEach { check ->
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(check.name, fontSize = 12.sp)
-                                    Text(if (check.isSafe) "آمن ✅" else "غير آمن ❌", color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(24.dp))
+                val ecoColor = when {
+                    res.utilizationRatio > 1.0 -> Color.Red
+                    res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+                    res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+                    else -> Color(0xFF2196F3)
+                }
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        if (res.isSafe) Icons.Default.Verified else Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = ecoColor
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        if (res.isSafe) "الحائط آمن تماماً" else "الحائط غير آمن (حرِج)",
+                                        fontWeight = FontWeight.Bold,
+                                        color = ecoColor,
+                                        fontSize = 18.sp
+                                    )
+                                }
+                                Text(
+                                    "المستشار الإنشائي: نسبة الاستخدام",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Box(contentAlignment = Alignment.Center) {
+                                val animatedRatio by animateFloatAsState(
+                                    targetValue = res.utilizationRatio.toFloat(),
+                                    animationSpec = tween(1000), label = ""
+                                )
+                                CircularProgressIndicator(
+                                    progress = { animatedRatio.coerceIn(0f, 1.2f) },
+                                    modifier = Modifier.size(60.dp),
+                                    strokeWidth = 6.dp,
+                                    color = ecoColor,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                )
+                                Text(
+                                    "${(res.utilizationRatio * 100).toInt()}%",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        ResultRow("سمك الجذع (Stem)", "${res.stemThickness * 100} cm")
+                        ResultRow("عرض القاعدة", "${res.baseWidth} m")
+                        ResultRow("تسليح الجذع", res.stemReinforcement.barString)
+                        ResultRow("تسليح القاعدة", res.baseReinforcement.barString)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("حفظ التصميم في مشروع") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = designName,
+                        onValueChange = { designName = it },
+                        label = { Text("اسم الحائط (مثلاً: RW1)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    if (projects.isEmpty()) {
+                        Text("لا توجد مشاريع حالية.", color = Color.Gray, fontSize = 12.sp)
+                    } else {
+                        Column(modifier = Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState())) {
+                            projects.forEach { project ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedProjectId = project.id }
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedProjectId == project.id,
+                                        onClick = { selectedProjectId = project.id }
+                                    )
+                                    Text(project.name, modifier = Modifier.padding(start = 8.dp))
                                 }
                             }
                         }
                     }
                 }
-
-                item {
-                    Text("🎨 مخطط الحائط وتوزيع التسليح", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    WallReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(300.dp))
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val pId = if (selectedProjectId == -1L) (projects.firstOrNull()?.id ?: 1L) else selectedProjectId
+                    result?.let { viewModel.saveRetainingWall(pId, designName, it) }
+                    showSaveDialog = false
+                }) {
+                    Text("حفظ")
                 }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
             }
-            item { Spacer(modifier = Modifier.height(32.dp)) }
-        }
+        )
     }
-}
-
-@Composable
-private fun WallReinforcementDrawing(res: CalculatorEngine.RetainingWallResult, modifier: Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
-            val padding = 50f
-            val canvasW = size.width - 2*padding
-            val canvasH = size.height - 2*padding
-            
-            // Scaling factors
-            val wallH = res.height * 1000.0 // in mm
-            val baseW = res.baseWidth // in mm
-            val scale = minOf(canvasH / wallH, canvasW / baseW).toFloat()
-            
-            val drawWallH = (wallH * scale).toFloat()
-            val drawBaseW = (baseW * scale).toFloat()
-            val drawStemW = (res.stemThickness * scale).toFloat()
-            val drawBaseH = (500.0 * scale).toFloat() // Assume 500mm base height for drawing
-            
-            val startX = (size.width - drawBaseW) / 2
-            val startY = size.height - padding - drawBaseH
-            
-            // Draw Base
-            drawRect(Color.LightGray, Offset(startX, startY), Size(drawBaseW, drawBaseH))
-            drawRect(Color.DarkGray, Offset(startX, startY), Size(drawBaseW, drawBaseH), style = Stroke(3f))
-            
-            // Draw Stem
-            val stemX = startX + drawBaseW * 0.3f
-            val stemY = startY - drawWallH
-            drawRect(Color.LightGray, Offset(stemX, stemY), Size(drawStemW, drawWallH))
-            drawRect(Color.DarkGray, Offset(stemX, stemY), Size(drawStemW, drawWallH), style = Stroke(3f))
-            
-            // Draw Main Reinforcement (Stem) - Red Line
-            drawLine(Color.Red, Offset(stemX + drawStemW - 10f, stemY + 10f), Offset(stemX + drawStemW - 10f, startY + drawBaseH - 10f), strokeWidth = 4f)
-            
-            // Draw Base Reinforcement - Red Line
-            drawLine(Color.Red, Offset(startX + 10f, startY + drawBaseH - 15f), Offset(startX + drawBaseW - 10f, startY + drawBaseH - 15f), strokeWidth = 3f)
-            
-            // Dimensions
-            drawContext.canvas.nativeCanvas.apply {
-                val paint = android.graphics.Paint().apply { color = android.graphics.Color.BLACK; textSize = 25f; textAlign = android.graphics.Paint.Align.CENTER }
-                drawText("H=${res.height}m", stemX + drawStemW/2, stemY - 10f, paint)
-                drawText("B=${res.baseWidth.toInt()}mm", startX + drawBaseW/2, startY + drawBaseH + 30f, paint)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String, iconRes: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-    }
-}
-
-@Composable
-private fun RetainingInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    )
 }
 
 @Composable
 private fun ResultRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(label)
         Text(value, fontWeight = FontWeight.Bold)
     }

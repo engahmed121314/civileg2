@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -21,20 +22,33 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.TankViewModel
+import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.db.Project
+import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TankScreen(
     viewModel: TankViewModel = hiltViewModel(),
+    projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    var designName by remember { mutableStateOf("خزان مياه T1") }
     
     // تصحيح: تحديد النوع صراحة وحل مشكلة المسميات المفقودة
     var selectedType by remember { mutableStateOf<CalculatorEngine.TankType>(CalculatorEngine.TankType.RECTANGULAR_GROUND) }
@@ -51,6 +65,13 @@ fun TankScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (result != null) {
+                        IconButton(onClick = { showSaveDialog = true }) {
+                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
             )
         }
@@ -66,9 +87,47 @@ fun TankScreen(
             item { SectionHeader("📐 نوع الخزان والبيانات", R.drawable.ic_water) }
 
             item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TankTypeChip(CalculatorEngine.TankType.RECTANGULAR_GROUND, "أرضي مستطيل", selectedType) { selectedType = it }
-                    TankTypeChip(CalculatorEngine.TankType.CIRCULAR_GROUND, "أرضي دائري", selectedType) { selectedType = it }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("موقع الخزان:", style = MaterialTheme.typography.labelMedium)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val isGround = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_GROUND
+                        val isElevated = selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED
+                        val isUnderground = selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND
+
+                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { Text("أرضي") })
+                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { Text("علوي") })
+                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { Text("تحت الأرض") })
+                    }
+                    
+                    Text("شكل القطاع (هندسي):", style = MaterialTheme.typography.labelMedium)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val isRect = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.UNDERGROUND
+                        
+                        FilterChip(
+                            selected = isRect, 
+                            onClick = { 
+                                selectedType = when(selectedType) {
+                                    CalculatorEngine.TankType.CIRCULAR_GROUND -> CalculatorEngine.TankType.RECTANGULAR_GROUND
+                                    CalculatorEngine.TankType.CIRCULAR_ELEVATED -> CalculatorEngine.TankType.RECTANGULAR_ELEVATED
+                                    CalculatorEngine.TankType.CIRCULAR_UNDERGROUND -> CalculatorEngine.TankType.UNDERGROUND
+                                    else -> selectedType
+                                }
+                            }, 
+                            label = { Text("مستطيل (Bending)") }
+                        )
+                        FilterChip(
+                            selected = !isRect, 
+                            onClick = { 
+                                selectedType = when(selectedType) {
+                                    CalculatorEngine.TankType.RECTANGULAR_GROUND -> CalculatorEngine.TankType.CIRCULAR_GROUND
+                                    CalculatorEngine.TankType.RECTANGULAR_ELEVATED -> CalculatorEngine.TankType.CIRCULAR_ELEVATED
+                                    CalculatorEngine.TankType.UNDERGROUND -> CalculatorEngine.TankType.CIRCULAR_UNDERGROUND
+                                    else -> selectedType
+                                }
+                            }, 
+                            label = { Text("دائري (Hoop Tension)") }
+                        )
+                    }
                 }
             }
 
@@ -108,6 +167,72 @@ fun TankScreen(
 
             result?.let { res ->
                 item { SectionHeader("📊 نتائج التحليل المائي", R.drawable.ic_calculator) }
+
+                item {
+                    val ecoColor = when {
+                        res.utilizationRatio > 1.0 -> Color.Red
+                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+                        else -> Color(0xFF2196F3)
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            if (res.utilizationRatio <= 1.0) Icons.Default.Verified
+                                            else Icons.Default.Dangerous,
+                                            contentDescription = null,
+                                            tint = ecoColor
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            if (res.utilizationRatio > 1.0) "تصميم غير آمن! ❌"
+                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+                                            else if (res.utilizationRatio > 0.4) "خزان مثالي واقتصادي ✅"
+                                            else "قطاع كبير (غير اقتصادي) 🔵",
+                                            fontWeight = FontWeight.Bold,
+                                            color = ecoColor
+                                        )
+                                    }
+                                    Text(
+                                        "المستشار الإنشائي: نسبة الاستهلاك",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Box(contentAlignment = Alignment.Center) {
+                                    val animatedRatio by animateFloatAsState(
+                                        targetValue = res.utilizationRatio.toFloat(),
+                                        animationSpec = tween(1000), label = ""
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { animatedRatio },
+                                        modifier = Modifier.size(60.dp),
+                                        strokeWidth = 6.dp,
+                                        color = ecoColor,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    Text(
+                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 
                 item {
                     Card(
@@ -124,12 +249,87 @@ fun TankScreen(
                 }
 
                 item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("تقرير PDF")
+                        }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Icon(Icons.Default.Save, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("حفظ")
+                        }
+                    }
+                }
+
+                item {
                     Text("🎨 مخطط الخزان", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     TankDrawingCanvas(type = selectedType, modifier = Modifier.fillMaxWidth().height(200.dp))
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
+    }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("حفظ التصميم في مشروع") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = designName,
+                        onValueChange = { designName = it },
+                        label = { Text("اسم الخزان (مثلاً: T1)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    if (projects.isEmpty()) {
+                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                    } else {
+                        projects.forEach { project ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedProjectId == project.id,
+                                    onClick = { selectedProjectId = project.id }
+                                )
+                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                    result?.let { viewModel.saveTank(pId, designName, it) }
+                    showSaveDialog = false
+                }) {
+                    Text("حفظ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+            }
+        )
     }
 }
 
@@ -175,20 +375,53 @@ private fun ResultRow(label: String, value: String) {
 @Composable
 private fun TankDrawingCanvas(type: CalculatorEngine.TankType, modifier: Modifier) {
     Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
-            val padding = 50f
-            val w = size.width - 2*padding
-            val h = size.height - 2*padding
-            
-            // تصحيح مسميات النوع في الرسم
-            if (type == CalculatorEngine.TankType.CIRCULAR_GROUND || type == CalculatorEngine.TankType.CIRCULAR_ELEVATED || type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) {
-                drawCircle(Color.LightGray, radius = h/2, center = Offset(size.width/2, size.height/2))
-                drawCircle(Color.DarkGray, radius = h/2, center = Offset(size.width/2, size.height/2), style = Stroke(4f))
-                drawCircle(Color.Blue.copy(alpha = 0.2f), radius = h/2 - 10f, center = Offset(size.width/2, size.height/2))
-            } else {
-                drawRect(Color.LightGray, Offset(padding, padding), Size(w, h))
-                drawRect(Color.DarkGray, Offset(padding, padding), Size(w, h), style = Stroke(4f))
-                drawRect(Color.Blue.copy(alpha = 0.2f), Offset(padding + 10f, padding + 10f), Size(w - 20f, h - 20f))
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(16.dp)) {
+            val width = size.width
+            val height = size.height
+            val centerX = width / 2f
+            val centerY = height / 2f
+
+            when (type) {
+                CalculatorEngine.TankType.CIRCULAR_GROUND,
+                CalculatorEngine.TankType.CIRCULAR_ELEVATED,
+                CalculatorEngine.TankType.CIRCULAR_UNDERGROUND -> {
+                    val radius = (min(width, height) / 2.5f)
+                    // Outer wall
+                    drawCircle(Color.Gray, radius = radius + 15f, center = Offset(centerX, centerY), style = Stroke(10f))
+                    // Inner wall
+                    drawCircle(Color.LightGray, radius = radius, center = Offset(centerX, centerY), style = Stroke(5f))
+                    // Water
+                    drawCircle(Color(0xFF2196F3).copy(alpha = 0.3f), radius = radius - 5f, center = Offset(centerX, centerY))
+                    // Rebars (Conceptual)
+                    for (i in 0..12) {
+                        val angle = (i * 30).toDouble() * PI / 180.0
+                        val x = centerX + radius * cos(angle).toFloat()
+                        val y = centerY + radius * sin(angle).toFloat()
+                        drawCircle(Color.Red, radius = 4f, center = Offset(x, y))
+                    }
+                }
+                else -> {
+                    val rectW = width * 0.7f
+                    val rectH = height * 0.5f
+                    val topLeft = Offset(centerX - rectW / 2, centerY - rectH / 2)
+                    
+                    // Main body
+                    drawRect(Color.LightGray, topLeft, Size(rectW, rectH))
+                    drawRect(Color.DarkGray, topLeft, Size(rectW, rectH), style = Stroke(8f))
+                    
+                    // Foundation/Base
+                    drawRect(Color.Gray, Offset(topLeft.x - 20f, topLeft.y + rectH), Size(rectW + 40f, 30f))
+                    
+                    // Water level
+                    drawRect(Color(0xFF2196F3).copy(alpha = 0.3f), Offset(topLeft.x + 10f, topLeft.y + 40f), Size(rectW - 20f, rectH - 50f))
+                    
+                    // Reinforcement lines
+                    drawLine(Color.Red, Offset(topLeft.x + 15f, topLeft.y), Offset(topLeft.x + 15f, topLeft.y + rectH), strokeWidth = 3f)
+                    drawLine(Color.Red, Offset(topLeft.x + rectW - 15f, topLeft.y), Offset(topLeft.x + rectW - 15f, topLeft.y + rectH), strokeWidth = 3f)
+                }
             }
         }
     }

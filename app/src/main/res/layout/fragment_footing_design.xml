@@ -61,6 +61,13 @@
                     android:layout_marginBottom="12dp"/>
 
                 <Spinner
+                    android:id="@+id/spinnerFootingType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/spinner_background" />
+
+                <Spinner
                     android:id="@+id/spinnerCode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -78,6 +85,22 @@
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
                         android:text="1200"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Combined Footing Second Load -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilAxialLoad2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    android:hint="Axial Load P2 (kN)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etAxialLoad2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:text="1000"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
@@ -110,6 +133,62 @@
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
                             android:text="300"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <!-- Combined Footing Column Distance -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilColDistance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    android:hint="Distance between Columns (m)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etColDistance"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:text="3.5"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Boundary Constraints -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Boundary Constraints (m)"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:hint="Max Left">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etMaxLeft"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:hint="Max Right">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etMaxRight"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"/>
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 

@@ -5,6 +5,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
+import com.itextpdf.io.font.PdfEncodings
+import com.itextpdf.io.font.constants.StandardFonts
+import com.itextpdf.kernel.colors.DeviceRgb
+import com.itextpdf.kernel.font.PdfFont
+import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
@@ -12,6 +17,7 @@ import com.itextpdf.layout.element.Paragraph
 import com.itextpdf.layout.element.Table
 import com.itextpdf.layout.element.Cell
 import com.itextpdf.layout.element.Image as ITextImage
+import com.itextpdf.layout.properties.BaseDirection
 import com.itextpdf.layout.properties.HorizontalAlignment
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
@@ -24,9 +30,53 @@ import java.util.*
 
 /**
  * Advanced PDF Export System
- * يدير تصدير PDF متقدم مع صور وجداول
+ * يدير تصدير PDF متقدم مع صور وجداول مع دعم كامل للغة العربية
  */
 object AdvancedPdfExporter {
+
+    private val PRIMARY_COLOR = DeviceRgb(21, 101, 192)
+
+    // ==================== Arabic Support ====================
+    private fun getArabicFont(): PdfFont? {
+        val paths = arrayOf(
+            "/system/fonts/NotoNaskhArabic-Regular.ttf",
+            "/system/fonts/DroidSansArabic.ttf",
+            "/system/fonts/Arbutus-Regular.ttf"
+        )
+        for (path in paths) {
+            try {
+                if (File(path).exists()) {
+                    return PdfFontFactory.createFont(path, PdfEncodings.IDENTITY_H)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return try {
+            PdfFontFactory.createFont(StandardFonts.HELVETICA, PdfEncodings.CP1252)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun containsArabic(text: String): Boolean {
+        return text.any { it.code in 0x0600..0x06FF }
+    }
+
+    private fun createStyledParagraph(text: String, font: PdfFont?, fontSize: Float = 12f, isBold: Boolean = false): Paragraph {
+        val p = Paragraph(text).setFontSize(fontSize)
+        if (isBold) p.setBold()
+        if (font != null && containsArabic(text)) {
+            p.setFont(font)
+            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        }
+        return p
+    }
+
+    private fun addArabicCell(table: Table, text: String, font: PdfFont?, isBold: Boolean = false, fontSize: Float = 10f) {
+        val p = createStyledParagraph(text, font, fontSize, isBold)
+        table.addCell(Cell().add(p))
+    }
 
     // ==================== Report Header ====================
     data class ReportHeader(
@@ -55,14 +105,13 @@ object AdvancedPdfExporter {
     // ==================== Export Beam Report ====================
     fun exportBeamDesignReport(
         context: Context,
-        header: ReportHeader,
         beamWidth: Float,
         beamHeight: Float,
-        beamLength: Float,
-        steelInfo: String,
-        momentCapacity: Double,
-        appliedMoment: Double,
-        isSafe: Boolean,
+        mu: Double,
+        asReq: Double,
+        beamLength: Float = 5.0f,
+        isSafe: Boolean = true,
+        header: ReportHeader = ReportHeader("مشروع جديد", "تصميم كمرة"),
         drawingView: View? = null,
         fileName: String = "Beam_Design_Report"
     ): String? {
@@ -75,59 +124,50 @@ object AdvancedPdfExporter {
             val writer = PdfWriter(FileOutputStream(file))
             val pdf = PdfDocument(writer)
             val document = Document(pdf)
+            val arabicFont = getArabicFont()
 
             // Header
-            addReportHeader(document, header)
+            addReportHeader(document, header, arabicFont)
 
             // Project Info
-            document.add(Paragraph("معلومات المشروع - Project Information").setBold().setFontSize(14f))
+            document.add(createStyledParagraph("معلومات المشروع - Project Information", arabicFont, 14f, true))
             document.add(createInfoTable(mapOf(
                 "اسم المشروع" to header.projectName,
                 "نوع التصميم" to header.designType,
                 "المهندس" to header.engineer,
                 "الكود المستخدم" to header.code,
                 "التاريخ" to header.date
-            )))
+            ), arabicFont))
 
             // Design Parameters
-            document.add(Paragraph("\nمعاملات التصميم - Design Parameters").setBold().setFontSize(14f))
+            document.add(createStyledParagraph("\nمعاملات التصميم - Design Parameters", arabicFont, 14f, true))
             document.add(createInfoTable(mapOf(
                 "عرض الكمرة" to "${beamWidth.toInt()} mm",
                 "ارتفاع الكمرة" to "${beamHeight.toInt()} mm",
-                "طول الكمرة" to "${beamLength.toInt()} mm",
-                "التسليح" to steelInfo,
-                "القدرة (Moment)" to "${String.format(Locale.getDefault(), "%.2f", momentCapacity)} kN.m",
-                "العزم المطبق" to "${String.format(Locale.getDefault(), "%.2f", appliedMoment)} kN.m",
+                "طول الكمرة" to "${beamLength.toInt()} m",
+                "مساحة الحديد المطلوبة (As)" to "${asReq.toInt()} mm²",
+                "العزم التصميمي (Mu)" to "${String.format(Locale.getDefault(), "%.2f", mu)} kN.m",
                 "الحالة" to if (isSafe) "آمن ✓" else "غير آمن ✗"
-            )))
+            ), arabicFont))
 
             // Drawing
             if (drawingView != null) {
-                document.add(Paragraph("\nالرسم التفاعلي - Interactive Drawing").setBold().setFontSize(14f))
+                document.add(createStyledParagraph("\nالرسم التفاعلي - Interactive Drawing", arabicFont, 14f, true))
                 val bitmap = viewToBitmap(drawingView)
                 addBitmapToDocument(document, bitmap)
             }
 
-            // Safety Check
-            document.add(Paragraph("\nالتحقق من الأمان - Safety Check").setBold().setFontSize(14f))
-            val safetyTable = createSafetyCheckTable(
-                actualCapacity = momentCapacity,
-                requiredCapacity = appliedMoment,
-                ratio = momentCapacity / appliedMoment
-            )
-            document.add(safetyTable)
-
             // Recommendations
-            document.add(Paragraph("\nالتوصيات - Recommendations").setBold().setFontSize(14f))
+            document.add(createStyledParagraph("\nالتوصيات - Recommendations", arabicFont, 14f, true))
             val recommendations = if (isSafe) {
                 "✓ التصميم آمن ومطابق للكود\n✓ يمكن تنفيذ العمل"
             } else {
                 "✗ التصميم غير آمن\n✗ يجب مراجعة المقطع وزيادة التسليح"
             }
-            document.add(Paragraph(recommendations))
+            document.add(createStyledParagraph(recommendations, arabicFont))
 
             // Footer
-            addReportFooter(document)
+            addReportFooter(document, arabicFont)
 
             document.close()
             file.absolutePath
@@ -161,18 +201,19 @@ object AdvancedPdfExporter {
             val writer = PdfWriter(FileOutputStream(file))
             val pdf = PdfDocument(writer)
             val document = Document(pdf)
+            val arabicFont = getArabicFont()
 
-            addReportHeader(document, header)
+            addReportHeader(document, header, arabicFont)
 
-            document.add(Paragraph("معلومات المشروع - Project Information").setBold().setFontSize(14f))
+            document.add(createStyledParagraph("معلومات المشروع - Project Information", arabicFont, 14f, true))
             document.add(createInfoTable(mapOf(
                 "اسم المشروع" to header.projectName,
                 "نوع التصميم" to if (isCircular) "عمود دائري" else "عمود مربع",
                 "المهندس" to header.engineer,
                 "الكود المستخدم" to header.code
-            )))
+            ), arabicFont))
 
-            document.add(Paragraph("\nمعاملات التصميم - Design Parameters").setBold().setFontSize(14f))
+            document.add(createStyledParagraph("\nمعاملات التصميم - Design Parameters", arabicFont, 14f, true))
             val params = mutableMapOf(
                 "الارتفاع" to "${columnLength.toInt()} mm",
                 "التسليح" to steelInfo,
@@ -188,23 +229,24 @@ object AdvancedPdfExporter {
                 params["الارتفاع"] = "${columnHeight.toInt()} mm"
             }
             
-            document.add(createInfoTable(params))
+            document.add(createInfoTable(params, arabicFont))
 
             if (drawingView != null) {
-                document.add(Paragraph("\nالرسم التفاعلي - Interactive Drawing").setBold().setFontSize(14f))
+                document.add(createStyledParagraph("\nالرسم التفاعلي - Interactive Drawing", arabicFont, 14f, true))
                 val bitmap = viewToBitmap(drawingView)
                 addBitmapToDocument(document, bitmap)
             }
 
-            document.add(Paragraph("\nالتحقق من الأمان - Safety Check").setBold().setFontSize(14f))
+            document.add(createStyledParagraph("\nالتحقق من الأمان - Safety Check", arabicFont, 14f, true))
             val safetyTable = createSafetyCheckTable(
                 actualCapacity = capacity,
                 requiredCapacity = appliedLoad,
-                ratio = capacity / appliedLoad
+                ratio = capacity / appliedLoad,
+                font = arabicFont
             )
             document.add(safetyTable)
 
-            addReportFooter(document)
+            addReportFooter(document, arabicFont)
             document.close()
             file.absolutePath
         } catch (e: Exception) {
@@ -214,11 +256,10 @@ object AdvancedPdfExporter {
     }
 
     // ==================== Helper Functions ====================
-    private fun addReportHeader(document: Document, header: ReportHeader) {
-        val title = Paragraph("تطبيق مساعد المهندس المدني")
-            .setBold()
-            .setFontSize(24f)
+    private fun addReportHeader(document: Document, header: ReportHeader, font: PdfFont?) {
+        val title = createStyledParagraph("تطبيق مساعد المهندس المدني", font, 24f, true)
             .setTextAlignment(TextAlignment.CENTER)
+            .setFontColor(PRIMARY_COLOR)
         document.add(title)
 
         val subtitle = Paragraph("Civil EG - Advanced Design Calculator")
@@ -234,17 +275,17 @@ object AdvancedPdfExporter {
             "الكود" to header.code,
             "التاريخ" to header.date
         )
-        document.add(createInfoTable(headerInfo))
+        document.add(createInfoTable(headerInfo, font))
         document.add(Paragraph("\n"))
     }
 
-    private fun createInfoTable(info: Map<String, String>): Table {
+    private fun createInfoTable(info: Map<String, String>, font: PdfFont?): Table {
         val table = Table(UnitValue.createPercentArray(floatArrayOf(3f, 5f))).useAllAvailableWidth()
         table.setMarginBottom(10f)
 
         info.forEach { (key, value) ->
-            table.addCell(Cell().add(Paragraph(key).setBold()))
-            table.addCell(Cell().add(Paragraph(value)))
+            addArabicCell(table, key, font, isBold = true)
+            addArabicCell(table, value, font)
         }
 
         return table
@@ -253,13 +294,14 @@ object AdvancedPdfExporter {
     private fun createSafetyCheckTable(
         actualCapacity: Double,
         requiredCapacity: Double,
-        ratio: Double
+        ratio: Double,
+        font: PdfFont?
     ): Table {
         val table = Table(UnitValue.createPercentArray(floatArrayOf(2f, 2f, 2f))).useAllAvailableWidth()
 
-        table.addCell(Cell().add(Paragraph("القيمة الفعلية\n(Actual)").setBold()))
-        table.addCell(Cell().add(Paragraph("القيمة المطلوبة\n(Required)").setBold()))
-        table.addCell(Cell().add(Paragraph("نسبة الأمان\n(Ratio)").setBold()))
+        addArabicCell(table, "القيمة الفعلية (Actual)", font, isBold = true)
+        addArabicCell(table, "القيمة المطلوبة (Required)", font, isBold = true)
+        addArabicCell(table, "نسبة الأمان (Ratio)", font, isBold = true)
 
         table.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", actualCapacity))))
         table.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", requiredCapacity))))
@@ -268,7 +310,7 @@ object AdvancedPdfExporter {
         } else {
             String.format(Locale.getDefault(), "%.2f ✗", ratio)
         }
-        table.addCell(Cell().add(Paragraph(ratioText)))
+        addArabicCell(table, ratioText, font)
 
         return table
     }
@@ -293,10 +335,9 @@ object AdvancedPdfExporter {
         }
     }
 
-    private fun addReportFooter(document: Document) {
+    private fun addReportFooter(document: Document, font: PdfFont?) {
         document.add(Paragraph("\n"))
-        val footer = Paragraph("تم إنشاء هذا التقرير باستخدام تطبيق Civil EG\nGenerated by Civil EG Application")
-            .setFontSize(10f)
+        val footer = createStyledParagraph("تم إنشاء هذا التقرير باستخدام تطبيق Civil EG\nGenerated by Civil EG Application", font, 10f)
             .setTextAlignment(TextAlignment.CENTER)
             .setItalic()
         document.add(footer)
@@ -323,39 +364,40 @@ object AdvancedPdfExporter {
             val writer = PdfWriter(FileOutputStream(file))
             val pdf = PdfDocument(writer)
             val document = Document(pdf)
+            val arabicFont = getArabicFont()
 
-            addReportHeader(document, header)
+            addReportHeader(document, header, arabicFont)
 
-            document.add(Paragraph("جدول الكميات - Bill of Quantities").setBold().setFontSize(16f))
-            document.add(Paragraph("\nنوع العنصر: $itemType\nالوصف: $description\n"))
+            document.add(createStyledParagraph("جدول الكميات - Bill of Quantities", arabicFont, 16f, true))
+            document.add(createStyledParagraph("\nنوع العنصر: $itemType\nالوصف: $description\n", arabicFont))
 
             val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(3f, 3f))).useAllAvailableWidth()
-            summaryTable.addCell(Cell().add(Paragraph("الخرسانة (m³)").setBold()))
+            addArabicCell(summaryTable, "الخرسانة (m³)", arabicFont, isBold = true)
             summaryTable.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", totalConcrete))))
-            summaryTable.addCell(Cell().add(Paragraph("الحديد (kg)").setBold()))
+            addArabicCell(summaryTable, "الحديد (kg)", arabicFont, isBold = true)
             summaryTable.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", totalSteel))))
-            summaryTable.addCell(Cell().add(Paragraph("الدرجة").setBold()))
-            summaryTable.addCell(Cell().add(Paragraph(concreteGrade)))
-            summaryTable.addCell(Cell().add(Paragraph("الإجمالي (EGP)").setBold()))
+            addArabicCell(summaryTable, "الدرجة", arabicFont, isBold = true)
+            addArabicCell(summaryTable, concreteGrade, arabicFont)
+            addArabicCell(summaryTable, "الإجمالي (EGP)", arabicFont, isBold = true)
             summaryTable.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", totalCost))))
             document.add(summaryTable)
 
-            document.add(Paragraph("\nتفاصيل البنود - Detailed Items").setBold().setFontSize(12f))
+            document.add(createStyledParagraph("\nتفاصيل البنود - Detailed Items", arabicFont, 12f, true))
             val itemsTable = Table(UnitValue.createPercentArray(floatArrayOf(2f, 1f, 1f, 1f))).useAllAvailableWidth()
-            itemsTable.addCell(Cell().add(Paragraph("البند").setBold()))
-            itemsTable.addCell(Cell().add(Paragraph("الكمية").setBold()))
-            itemsTable.addCell(Cell().add(Paragraph("الوحدة").setBold()))
-            itemsTable.addCell(Cell().add(Paragraph("التكلفة").setBold()))
+            addArabicCell(itemsTable, "البند", arabicFont, isBold = true)
+            addArabicCell(itemsTable, "الكمية", arabicFont, isBold = true)
+            addArabicCell(itemsTable, "الوحدة", arabicFont, isBold = true)
+            addArabicCell(itemsTable, "التكلفة", arabicFont, isBold = true)
 
             items.forEach { item ->
-                itemsTable.addCell(Cell().add(Paragraph(item.name)))
+                addArabicCell(itemsTable, item.name, arabicFont)
                 itemsTable.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", item.quantity))))
-                itemsTable.addCell(Cell().add(Paragraph(item.unit)))
+                addArabicCell(itemsTable, item.unit, arabicFont)
                 itemsTable.addCell(Cell().add(Paragraph(String.format(Locale.getDefault(), "%.2f", item.totalCost))))
             }
             document.add(itemsTable)
 
-            addReportFooter(document)
+            addReportFooter(document, arabicFont)
             document.close()
             file.absolutePath
         } catch (e: Exception) {

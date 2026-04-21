@@ -32,6 +32,7 @@ data class Design(
     val inputData: String, // JSON string (contains specific input for each type)
     val results: String,   // JSON string (contains specific result for each type)
     val isSafe: Boolean,
+    val utilizationRatio: Double = 0.0,
     val codeUsed: String,
     val concreteVolume: Double = 0.0,
     val steelWeight: Double = 0.0,
@@ -40,7 +41,7 @@ data class Design(
 )
 
 enum class DesignType {
-    BEAM, COLUMN, FOOTING, SLAB, STAIRCASE, RETAINING_WALL, WATER_TANK, PILE, SEISMIC
+    BEAM, COLUMN, FOOTING, SLAB, STAIRCASE, RETAINING_WALL, WATER_TANK, PILE, SEISMIC, STEEL_MEMBER, STEEL_WAREHOUSE
 }
 
 @Entity(tableName = "footings")
@@ -61,7 +62,8 @@ data class Footing(
     val reinforcementTop: String?,   
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "columns_table")
@@ -77,7 +79,8 @@ data class ColumnEntity(
     val ties: String,          
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "slabs")
@@ -94,7 +97,8 @@ data class Slab(
     val reinforcement: String, 
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "beams")
@@ -111,7 +115,8 @@ data class Beam(
     val stirrups: String,      
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "stairs")
@@ -125,7 +130,8 @@ data class Stair(
     val reinforcement: String,
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "retaining_walls")
@@ -139,7 +145,8 @@ data class RetainingWall(
     val reinforcement: String,
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "tanks")
@@ -154,7 +161,8 @@ data class Tank(
     val reinforcement: String,
     val concreteVolume: Double,
     val steelWeight: Double,
-    val cost: Double
+    val cost: Double,
+    val utilizationRatio: Double = 0.0
 )
 
 @Entity(tableName = "materials")

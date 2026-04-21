@@ -11,7 +11,7 @@ import com.civileg.app.domain.entities.ShearCheckResult
 interface FootingDesign {
     
     /**
-     * تصميم قاعدة منفصلة تحت عمود
+     * تصميم قاعدة منفصلة تحت عمود مع مراعاة حدود الجار
      */
     fun designIsolatedFooting(
         fcu: Double,
@@ -22,8 +22,9 @@ interface FootingDesign {
         momentX: Double,          // kN.m
         momentY: Double,          // kN.m
         soilBearingCapacity: Double, // kPa
-        footingDepth: Double,     // mm - عمق التأسيس
-        loadCombination: LoadCombination
+        footingDepth: Double,     // mm
+        loadCombination: LoadCombination,
+        constraints: BoundaryConstraints = BoundaryConstraints()
     ): FootingDesignResult
 
     /**
@@ -51,11 +52,59 @@ interface FootingDesign {
         direction: FootingDirection
     ): ReinforcementResult
 
+    /**
+     * تصميم قاعدة مشتركة لعمودين
+     */
+    fun designCombinedFooting(
+        fcu: Double,
+        fy: Double,
+        axialLoad1: Double,
+        axialLoad2: Double,
+        distanceBetweenColumns: Double, // mm
+        soilBearingCapacity: Double,
+        footingDepth: Double,
+        loadCombination: LoadCombination
+    ): FootingDesignResult
+
+    /**
+     * تصميم لبشة (Raft Foundation)
+     */
+    fun designRaftFoundation(
+        fcu: Double,
+        fy: Double,
+        totalLoads: Double,
+        totalArea: Double,
+        moments: Pair<Double, Double>,
+        soilBearingCapacity: Double,
+        raftThickness: Double
+    ): FootingDesignResult
+
+    /**
+     * تصميم Pile Cap
+     */
+    fun designPileCap(
+        fcu: Double,
+        fy: Double,
+        pileLoad: Double,
+        numberOfPiles: Int,
+        pileDiameter: Double,
+        columnLoads: Double
+    ): FootingDesignResult
+
     // حدود الكود
     fun getMinFootingThickness(): Double
     fun getMinCover(): Double
     fun getPunchingShearCapacity(fcu: Double, perimeter: Double, effectiveDepth: Double): Double
 }
+
+data class BoundaryConstraints(
+    val maxLeft: Double? = null,   // mm (Distance from column center to left edge)
+    val maxRight: Double? = null,  // mm
+    val maxTop: Double? = null,    // mm
+    val maxBottom: Double? = null, // mm
+    val isCornerColumn: Boolean = false,
+    val isEdgeColumn: Boolean = false
+)
 
 data class FootingDesignResult(
     val requiredWidth: Double,          // mm

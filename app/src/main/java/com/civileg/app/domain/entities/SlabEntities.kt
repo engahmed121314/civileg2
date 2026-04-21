@@ -1,106 +1,81 @@
 package com.civileg.app.domain.entities
 
-import com.civileg.app.domain.calculations.base.*
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 /**
- * جميع أنواع البلاطات الخرسانية
+ * جميع أنواع البلاطات الخرسانية المدعومة في التطبيق
  */
-sealed class SlabType(val displayName: String, val codeReference: String) {
+sealed class SlabType(val displayName: String, val codeReference: String) : Parcelable {
     
-    /**
-     * بلاطة مصمتة Solid Slab
-     */
+    @Parcelize
     data class Solid(
-        val thickness: Double,    // mm
-        val shortSpan: Double,    // m
-        val longSpan: Double,     // m
-        val supportConditions: SlabSupportConditions
+        val thickness: Double,
+        val shortSpan: Double,
+        val longSpan: Double,
+        val supportConditions: @RawValue SlabSupportConditions
     ) : SlabType("Solid Slab", "ECP 203-6.2 / ACI 318-8.3")
     
-    /**
-     * بلاطة ذات اتجاه واحد One-Way Slab
-     */
+    @Parcelize
     data class OneWay(
         val thickness: Double,
         val span: Double,
         val width: Double
     ) : SlabType("One-Way Slab", "ECP 203-6.2.1 / ACI 318-8.3.1")
     
-    /**
-     * بلاطة ذات اتجاهين Two-Way Slab
-     */
+    @Parcelize
     data class TwoWay(
         val thickness: Double,
         val shortSpan: Double,
         val longSpan: Double,
-        val supportConditions: SlabSupportConditions,
+        val supportConditions: @RawValue SlabSupportConditions,
         val dropPanel: Boolean = false,
         val columnCapital: Boolean = false
     ) : SlabType("Two-Way Slab", "ECP 203-6.2.2 / ACI 318-8.4")
     
-    /**
-     * بلاطة هوردي Hollow Block Slab
-     */
+    @Parcelize
     data class Hordi(
-        val totalThickness: Double,   // mm
-        val ribWidth: Double,         // mm
-        val ribSpacing: Double,       // mm
-        val blockWidth: Double,       // mm
-        val blockHeight: Double,      // mm
+        val totalThickness: Double,
+        val ribWidth: Double,
+        val ribSpacing: Double,
+        val blockWidth: Double,
+        val blockHeight: Double,
         val span: Double,
-        val supportConditions: SlabSupportConditions
+        val supportConditions: @RawValue SlabSupportConditions
     ) : SlabType("Hollow Block (Hordi) Slab", "ECP 203-6.4 / SBC 304-8.4")
     
-    /**
-     * بلاطة وافل Waffle Slab
-     */
+    @Parcelize
     data class Waffle(
-        val totalThickness: Double,   // mm
-        val ribWidth: Double,         // mm
-        val ribDepth: Double,         // mm
-        val ribSpacing: Double,       // mm
-        val shortSpan: Double,        // m
-        val longSpan: Double,         // m
-        val supportConditions: SlabSupportConditions
+        val totalThickness: Double,
+        val ribWidth: Double,
+        val ribDepth: Double,
+        val ribSpacing: Double,
+        val shortSpan: Double,
+        val longSpan: Double,
+        val supportConditions: @RawValue SlabSupportConditions
     ) : SlabType("Waffle Slab", "ACI 318-8.4 / ECP 203-6.4")
     
-    /**
-     * بلاطة بوست تنشن Post-Tensioned Slab
-     */
+    @Parcelize
     data class PostTensioned(
         val thickness: Double,
         val shortSpan: Double,
         val longSpan: Double,
         val tendonType: TendonType,
-        val prestressForce: Double,   // kN/m
-        val eccentricity: Double,     // mm
-        val supportConditions: SlabSupportConditions
+        val prestressForce: Double,
+        val eccentricity: Double,
+        val supportConditions: @RawValue SlabSupportConditions
     ) : SlabType("Post-Tensioned Slab", "ACI 318-24 / ECP 203-9")
-    
-    /**
-     * بلاطة مسبقة الإجهاد Precast Slab
-     */
-    data class Precast(
-        val thickness: Double,
-        val width: Double,
-        val length: Double,
-        val toppingThickness: Double, // mm
-        val prestressType: PrestressType
-    ) : SlabType("Precast Slab", "ACI 318-16 / PCI Design Handbook")
-    
-    /**
-     * بلاطة مسطحة Flat Plate
-     */
+
+    @Parcelize
     data class FlatPlate(
         val thickness: Double,
         val panelLength: Double,
         val panelWidth: Double,
         val columnSize: Double
     ) : SlabType("Flat Plate", "ACI 318-8.4 / ECP 203-6.5")
-    
-    /**
-     * بلاطة مسطحة مع كمرات مخفية Flat Slab with Drop Panels
-     */
+
+    @Parcelize
     data class FlatSlab(
         val thickness: Double,
         val dropPanelThickness: Double,
@@ -109,22 +84,49 @@ sealed class SlabType(val displayName: String, val codeReference: String) {
         val panelWidth: Double,
         val columnSize: Double
     ) : SlabType("Flat Slab with Drop Panels", "ACI 318-8.4 / ECP 203-6.5")
+
+    @Parcelize
+    data class Precast(
+        val thickness: Double,
+        val width: Double,
+        val length: Double,
+        val toppingThickness: Double,
+        val prestressType: PrestressType
+    ) : SlabType("Precast Slab", "ACI 318-16 / PCI Design Handbook")
 }
 
-enum class TendonType(val displayName: String) {
-    BONDED("Bonded Tendons"),
-    UNBONDED("Unbonded Tendons"),
-    EXTERNAL("External Tendons")
-}
+@Parcelize
+enum class TendonType(val displayName: String) : Parcelable { BONDED("Bonded"), UNBONDED("Unbonded"), EXTERNAL("External") }
 
-enum class PrestressType(val displayName: String) {
-    PRETENSIONED("Pretensioned"),
-    POSTTENSIONED("Post-tensioned")
-}
+@Parcelize
+enum class PrestressType(val displayName: String) : Parcelable { PRETENSIONED("Pretensioned"), POSTTENSIONED("Post-tensioned") }
 
-/**
- * نتيجة تصميم متقدمة للبلاطات
- */
+@Parcelize
+data class SlabSupportConditions(
+    val edgeA: EdgeCondition,
+    val edgeB: EdgeCondition,
+    val edgeC: EdgeCondition,
+    val edgeD: EdgeCondition
+) : Parcelable
+
+@Parcelize
+enum class EdgeCondition : Parcelable { FIXED, SIMPLY_SUPPORTED, FREE, CONTINUOUS }
+
+@Parcelize
+data class SlabDesignResult(
+    val requiredReinforcement: Double,
+    val providedReinforcement: Double,
+    val barDiameter: Double,
+    val barSpacing: Double,
+    val minThickness: Double,
+    val shearCapacity: Double,
+    val isSafe: Boolean,
+    val utilizationRatio: Double,
+    val warnings: List<String> = emptyList(),
+    val codeNotes: List<String> = emptyList()
+) : Parcelable
+
+@Parcelize
 data class AdvancedSlabResult(
     val slabType: SlabType,
     val flexureResult: SlabDesignResult,
@@ -132,27 +134,30 @@ data class AdvancedSlabResult(
     val deflectionCheck: DeflectionCheckResult,
     val punchingShearCheck: PunchingShearCheckResult?,
     val reinforcementLayout: ReinforcementLayout,
-    val concreteVolume: Double,     // m³
-    val formworkArea: Double,       // m²
+    val concreteVolume: Double,
+    val formworkArea: Double,
     val inventoryAnalysis: InventoryAnalysisResult?,
     val postTensionCalculations: PostTensionCalculations?,
     val warnings: List<String>,
     val codeNotes: List<String>
-)
+) : Parcelable
 
+@Parcelize
 data class ReinforcementLayout(
     val topBars: BarLayout,
     val bottomBars: BarLayout,
     val distributionBars: BarLayout?,
     val additionalBars: List<BarLayout>
-)
+) : Parcelable
 
+@Parcelize
 data class BarLayout(
     val diameter: Double,
     val spacing: Double,
     val direction: BarDirection,
     val length: Double,
     val numberOfBars: Int
-)
+) : Parcelable
 
-enum class BarDirection { SHORT, LONG, BOTH, DIAGONAL }
+@Parcelize
+enum class BarDirection : Parcelable { SHORT, LONG, BOTH, DIAGONAL }

@@ -203,4 +203,10 @@
     <string name="cantilever_stair">Cantilever Stair</string>
     <string name="landing_width">Landing Width (m)</string>
 
+    <string name="fcu_label">Concrete Strength (fcu)</string>
+    <string name="fy_label">Steel Strength (fy)</string>
+    <string name="data_sheet_row">%1$s: %2$s</string>
+    <string name="reinforcement_format">%1$dØ%2$d</string>
+    <string name="waste_tons_format">Estimated Steel Waste: %.3f Tons</string>
+    <string name="pdf_beam_report_title">Beam Design Report</string>
 </resources>

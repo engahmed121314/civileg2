@@ -21,7 +21,7 @@ import com.civileg.app.data.local.entities.ProjectEntity
         Tank::class,
         ProjectEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

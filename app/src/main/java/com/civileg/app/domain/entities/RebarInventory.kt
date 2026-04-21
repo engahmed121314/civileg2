@@ -1,10 +1,13 @@
 package com.civileg.app.domain.entities
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import kotlin.math.abs
 
 /**
  * نظام إدارة مخزون حديد التسليح الفعلي المتوفر في الموقع
  */
+@Parcelize
 data class RebarInventory(
     val projectId: Int,
     val availableBars: List<RebarStock>,
@@ -12,8 +15,9 @@ data class RebarInventory(
     val wastePercentage: Double = 5.0,  // هالك افتراضي 5%
     val lapSpliceLength: Double = 50.0, // طول التراكب الافتراضي (قطر السيخ × 50)
     val lastUpdated: Long = System.currentTimeMillis()
-)
+) : Parcelable
 
+@Parcelize
 data class RebarStock(
     val diameter: Double,           // mm
     val availableLength: Double,    // m - الطول المتوفر لكل سيخ (عادة 12م)
@@ -22,7 +26,7 @@ data class RebarStock(
     val supplier: String = "",      // المورد
     val costPerTon: Double = 0.0,   // سعر الطن
     val isPreferred: Boolean = false // مفضل للاستخدام
-)
+) : Parcelable
 
 enum class StirrupType(val displayName: String, val codeReference: String) {
     CLOSED("Closed Stirrups (135° hooks)", "ECP 203-4.2.6 / ACI 318-25.7.1"),
@@ -72,6 +76,7 @@ enum class BarDiameter(val diameter: Double, val area: Double, val weight: Doubl
 /**
  * نتيجة تحليل المخزون والكميات المطلوبة
  */
+@Parcelize
 data class InventoryAnalysisResult(
     val requiredArea: Double,           // mm² - المساحة المطلوبة
     val providedArea: Double,           // mm² - المساحة المقدمة من المخزون
@@ -90,11 +95,12 @@ data class InventoryAnalysisResult(
     val cuttingOptimization: List<CuttingPlan>, // خطة القص المثلى
     val warnings: List<String>,
     val codeNotes: List<String>
-)
+) : Parcelable
 
+@Parcelize
 data class CuttingPlan(
     val stockLength: Double,        // m - طول السيخ من المخزون
     val requiredLengths: List<Double>, // m - الأطوال المطلوبة من هذا السيخ
     val wasteLength: Double,        // m - الهالك من هذا السيخ
     val utilizationPercentage: Double // % - نسبة الاستفادة
-)
+) : Parcelable

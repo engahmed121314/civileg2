@@ -22,6 +22,9 @@ class RetainingWallViewModel @Inject constructor(
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _isExporting = MutableLiveData(false)
+    val isExporting: LiveData<Boolean> = _isExporting
+
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
@@ -66,6 +69,35 @@ class RetainingWallViewModel @Inject constructor(
     fun saveRetainingWall(projectId: Long, name: String, result: CalculatorEngine.RetainingWallResult) {
         viewModelScope.launch {
             repository.saveRetainingWallDesign(projectId, name, result)
+        }
+    }
+
+    fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        val currentResult = _result.value ?: return
+        viewModelScope.launch {
+            _isExporting.value = true
+            try {
+                val exportedFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                    val fileName = "RetainingWall_Report_${System.currentTimeMillis()}.pdf"
+                    val file = java.io.File(context.cacheDir, fileName)
+                    exporter.exportRetainingWallReport(
+                        projectName = "تقرير تصميم حائط ساند",
+                        designCode = currentResult.code,
+                        result = currentResult,
+                        outputPath = file.absolutePath
+                    )
+                }
+                exportedFile?.let {
+                    com.civileg.app.utils.ExportUtils.openPdf(context, it)
+                }
+                onComplete(exportedFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            } finally {
+                _isExporting.value = false
+            }
         }
     }
 }

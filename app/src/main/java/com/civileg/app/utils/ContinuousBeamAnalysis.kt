@@ -1,11 +1,14 @@
 package com.civileg.app.utils
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.pow
 
 /**
  * محرك تحليل إنشائي للكمرات المستمرة
  */
-class ContinuousBeamAnalysis {
+@Singleton
+class ContinuousBeamAnalysis @Inject constructor() {
 
     data class Span(
         val length: Double,
@@ -79,13 +82,16 @@ class ContinuousBeamAnalysis {
             reactions[i+1] += vRight
             maxShears.add(maxOf(vLeft, vRight))
             
-            // توليد نقاط الرسم لكل بحر (كل 0.1 متر)
-            var stepX = 0.0
-            while (stepX <= l) {
-                val mx = mLeft * (1 - stepX/l) + mRight * (stepX/l) + (w * stepX / 2.0) * (l - stepX)
+            // Generate drawing points for each span
+            val steps = 50 // Points per span
+            for (step in 0..steps) {
+                val stepX = step * (l / steps)
+                // Moment at x: M(x) = M_left * (1 - x/L) + M_right * (x/L) + (w * x / 2) * (L - x)
+                // Note: The formula above assumes simple span moment is positive (downwards). 
+                // In engineering convention, positive moment is often drawn downwards.
+                val mx = mLeft * (1 - stepX / l) + mRight * (stepX / l) + (w * stepX / 2.0) * (l - stepX)
                 val vx = vLeft - w * stepX
                 points.add(DiagramPoint(currentX + stepX, mx, vx))
-                stepX += 0.1
             }
             currentX += l
         }

@@ -126,4 +126,10 @@
     <string name="cantilever_stair">سلم كابولي</string>
     <string name="landing_width">عرض الصدفة (م)</string>
 
+    <string name="fcu_label">مقاومة الخرسانة (fcu)</string>
+    <string name="fy_label">مقاومة الحديد (fy)</string>
+    <string name="data_sheet_row">%1$s: %2$s</string>
+    <string name="reinforcement_format">%1$dØ%2$d</string>
+    <string name="waste_tons_format">نسبة الهالك المقدرة: %.3f طن</string>
+    <string name="pdf_beam_report_title">تقرير تصميم الكمرة</string>
 </resources>

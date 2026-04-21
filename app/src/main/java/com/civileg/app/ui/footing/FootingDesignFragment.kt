@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -58,6 +60,7 @@ class FootingDesignFragment : Fragment() {
             projectsList = projects
         }
         
+        setupSpinners()
         setupCalculateButton()
         setupInitialDrawing()
         setupSaveButton()
@@ -65,6 +68,22 @@ class FootingDesignFragment : Fragment() {
         
         binding.btnCloseResults.setOnClickListener {
             binding.cardResults.visibility = View.GONE
+        }
+    }
+
+    private fun setupSpinners() {
+        val footingTypes = CalculatorEngine.FootingType.values()
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, footingTypes.map { it.displayName })
+        binding.spinnerFootingType.adapter = adapter
+        
+        binding.spinnerFootingType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val type = footingTypes[position]
+                val isCombined = type == CalculatorEngine.FootingType.COMBINED
+                binding.tilAxialLoad2.visibility = if (isCombined) View.VISIBLE else View.GONE
+                binding.tilColDistance.visibility = if (isCombined) View.VISIBLE else View.GONE
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
@@ -87,21 +106,52 @@ class FootingDesignFragment : Fragment() {
 
     private fun calculateFooting() {
         try {
+            val type = CalculatorEngine.FootingType.values()[binding.spinnerFootingType.selectedItemPosition]
             val cl = binding.etColLength.text.toString().toDoubleOrNull() ?: 600.0
             val cw = binding.etColWidth.text.toString().toDoubleOrNull() ?: 300.0
             val p = binding.etAxialLoad.text.toString().toDoubleOrNull() ?: throw Exception(getString(R.string.check_inputs))
             val sp = binding.etSoilCapacity.text.toString().toDoubleOrNull() ?: throw Exception(getString(R.string.check_inputs))
             val fc = binding.etFc.text.toString().toDoubleOrNull() ?: 25.0
             val fy = binding.etFy.text.toString().toDoubleOrNull() ?: 360.0
+            
+            val code = when(binding.spinnerCode.selectedItemPosition) {
+                0 -> CalculatorEngine.DesignCode.EGYPTIAN
+                1 -> CalculatorEngine.DesignCode.ACI
+                2 -> CalculatorEngine.DesignCode.SAUDI
+                else -> CalculatorEngine.DesignCode.EGYPTIAN
+            }
+
+            // Boundary Constraints
+            val maxL = binding.etMaxLeft.text.toString().toDoubleOrNull()
+            val maxR = binding.etMaxRight.text.toString().toDoubleOrNull()
+            val p2 = binding.etAxialLoad2.text.toString().toDoubleOrNull() ?: 0.0
+            val dist = (binding.etColDistance.text.toString().toDoubleOrNull() ?: 3.5) * 1000.0 // to mm
 
             val result = calculatorEngine.calculateFooting(
-                p = p, fcu = fc, fy = fy, soil = sp, colB = cw, colT = cl,
-                code = CalculatorEngine.DesignCode.EGYPTIAN
+                type = type,
+                p = p,
+                fcu = fc,
+                fy = fy,
+                soil = sp,
+                colB = cw,
+                colT = cl,
+                code = code,
+                p2 = p2,
+                distance = dist,
+                maxLeft = maxL,
+                maxRight = maxR
             )
 
             lastResult = result
             lastInputData = JSONObject().apply {
-                put("axialLoad", p); put("soilCapacity", sp); put("fc", fc); put("fy", fy); put("colL", cl); put("colW", cw)
+                put("type", type.name)
+                put("axialLoad", p)
+                put("soilCapacity", sp)
+                put("fc", fc)
+                put("fy", fy)
+                put("colL", cl)
+                put("colW", cw)
+                put("code", code.name)
             }
             
             showResults(result)

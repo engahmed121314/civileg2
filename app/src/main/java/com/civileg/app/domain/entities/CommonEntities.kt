@@ -113,3 +113,33 @@ data class PrestressLosses(
     val totalLoss: Double = 0.0,
     val totalLossPercentage: Double = 0.0
 ) : Parcelable
+
+/**
+ * شروط التثبيت (Support Conditions)
+ */
+@Parcelize
+enum class SupportCondition : Parcelable { 
+    SIMPLY_SUPPORTED, 
+    CONTINUOUS, 
+    CANTILEVER 
+}
+
+/**
+ * موقع سيخ التسليح (Bar Location)
+ */
+@Parcelize
+enum class BarLocation : Parcelable { 
+    TOP, 
+    BOTTOM, 
+    SIDE 
+}
+
+/**
+ * نوع طلاء الحديد (Coating Type)
+ */
+@Parcelize
+enum class CoatingType : Parcelable { 
+    UNCOATED, 
+    EPOXY_COATED, 
+    GALVANIZED 
+}

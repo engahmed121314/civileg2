@@ -17,7 +17,10 @@ interface TankDesign {
 }
 
 enum class TankType {
-    RECTANGULAR, CIRCULAR, ELEVATED, UNDERGROUND
+    RECTANGULAR_GROUND, CIRCULAR_GROUND,
+    RECTANGULAR_ELEVATED, CIRCULAR_ELEVATED,
+    RECTANGULAR_UNDERGROUND, CIRCULAR_UNDERGROUND,
+    RECTANGULAR, CIRCULAR
 }
 
 @Parcelize
@@ -32,5 +35,22 @@ data class TankResult(
     val cost: Double,
     val isSafe: Boolean,
     val pressure: Double, // kN/m²
+    val maxMomentWall: Double = 0.0,
+    val maxMomentBase: Double = 0.0,
+    val maxShearWall: Double = 0.0,
+    val factorOfSafetyUplift: Double = 0.0,
+    val structuralSystem: String = "",
+    val recommendations: List<String> = emptyList(),
+    val safetyChecks: List<TankSafetyCheck> = emptyList(),
     val warnings: List<String> = emptyList()
+) : Parcelable
+
+@Parcelize
+data class TankSafetyCheck(
+    val name: String,
+    val value: Double,
+    val limit: Double,
+    val unit: String,
+    val isSafe: Boolean,
+    val description: String = ""
 ) : Parcelable

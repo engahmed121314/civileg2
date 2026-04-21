@@ -88,6 +88,21 @@ class RetainingWallSectionView @JvmOverloads constructor(
 
         // 1. Draw Soil
         canvas.drawRect(startX + drawB - drawStem, startY + 50f, width.toFloat(), startY + drawH, soilPaint)
+        
+        // Draw Pressure Diagram (Triangle)
+        val pressurePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#FF5722")
+            alpha = 60
+            style = Paint.Style.FILL
+        }
+        val pressurePath = Path().apply {
+            moveTo(startX + drawB, startY)
+            lineTo(startX + drawB + (100f * scale), startY + drawH)
+            lineTo(startX + drawB, startY + drawH)
+            close()
+        }
+        canvas.drawPath(pressurePath, pressurePaint)
+        canvas.drawText("P_e (Earth Pressure)", startX + drawB + 10f, startY + drawH - 10f, dimensionPaint.apply { color = Color.parseColor("#FF5722"); textSize = 20f })
 
         // 2. Draw Wall Path
         val wallPath = Path().apply {
@@ -106,10 +121,19 @@ class RetainingWallSectionView @JvmOverloads constructor(
 
         // 3. Draw Reinforcement (Professional Detailing)
         val cover = 40f * scale
-        // Main Vertical Stem Rebar (Back face)
+        rebarPaint.strokeWidth = 5f
+        // Main Vertical Stem Rebar (Back face - Tension side)
         canvas.drawLine(startX + drawB - cover, startY + cover, startX + drawB - cover, startY + drawH - cover, rebarPaint)
-        // Main Horizontal Base Rebar
+        
+        // Hook for the rebar into the base
+        canvas.drawLine(startX + drawB - cover, startY + drawH - cover, startX + drawB - drawB/2, startY + drawH - cover, rebarPaint)
+        
+        // Main Horizontal Base Rebar (Bottom)
         canvas.drawLine(startX + cover, startY + drawH - cover, startX + drawB - cover, startY + drawH - cover, rebarPaint)
+        
+        // Secondary distribution bars (Front face)
+        val secondaryRebarPaint = Paint(rebarPaint).apply { alpha = 150; strokeWidth = 3f }
+        canvas.drawLine(startX + drawB - drawStem + cover, startY + drawH - drawBaseT + cover, startX + drawB - drawStem + cover, startY + drawH - cover, secondaryRebarPaint)
         
         // Distribution Bars (Dots)
         val dotRadius = 4f

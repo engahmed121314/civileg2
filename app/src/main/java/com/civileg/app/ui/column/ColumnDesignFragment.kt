@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -13,16 +14,22 @@ import com.civileg.app.R
 import com.civileg.app.databinding.FragmentColumnDesignBinding
 import com.civileg.app.db.*
 import com.civileg.app.db.Project as DbProject
+import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.entities.DesignCode as DomainDesignCode
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import com.civileg.app.views.ColumnSectionView
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.*
 import javax.inject.Inject
+import kotlin.math.*
 
 @AndroidEntryPoint
 class ColumnDesignFragment : Fragment() {
@@ -68,6 +75,26 @@ class ColumnDesignFragment : Fragment() {
         setupCalculateButton()
         updateInitialDrawing()
         setupSaveButton()
+        setupTabs()
+    }
+
+    private fun setupTabs() {
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> {
+                        binding.columnSectionView.visibility = View.VISIBLE
+                        binding.layoutSafetyChecks.visibility = View.GONE
+                    }
+                    1 -> {
+                        binding.columnSectionView.visibility = View.GONE
+                        binding.layoutSafetyChecks.visibility = View.VISIBLE
+                    }
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
 
     private fun setupTypeToggle() {
@@ -107,12 +134,12 @@ class ColumnDesignFragment : Fragment() {
 
     private fun updateInitialDrawing() {
         val width = binding.etColumnWidth.text.toString().toFloatOrNull() ?: 300f
-        val height = binding.etColumnHeight.text.toString().toFloatOrNull() ?: 300f
-        val diameter = binding.etColumnDiameter.text.toString().toFloatOrNull() ?: 300f
+        val height = binding.etColumnHeight.text.toString().toFloatOrNull() ?: 600f
+        val diameter = binding.etColumnDiameter.text.toString().toFloatOrNull() ?: 400f
         
         binding.columnSectionView.apply {
             this.columnType = colType
-            this.columnWidth = width
+            this.columnWidth = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else width
             this.columnHeight = height
             this.columnDiameter = diameter
             invalidate()
@@ -122,11 +149,20 @@ class ColumnDesignFragment : Fragment() {
     private fun calculateColumn() {
         try {
             val width = binding.etColumnWidth.text.toString().toDoubleOrNull() ?: 300.0
-            val depth = binding.etColumnHeight.text.toString().toDoubleOrNull() ?: 300.0
-            val diameter = binding.etColumnDiameter.text.toString().toDoubleOrNull() ?: 300.0
+            val depth = binding.etColumnHeight.text.toString().toDoubleOrNull() ?: 600.0
+            val diameter = binding.etColumnDiameter.text.toString().toDoubleOrNull() ?: 400.0
             val axialLoad = binding.etAxialLoad.text.toString().toDoubleOrNull() ?: throw Exception("برجاء إدخال الحمل المحوري")
             val fc = binding.etConcreteStrength.text.toString().toDoubleOrNull() ?: 25.0
             val fy = binding.etSteelStrength.text.toString().toDoubleOrNull() ?: 360.0
+            val preferredBar = binding.spinnerColBar.text.toString().toIntOrNull() ?: 16
+            val clearHeight = (binding.etClearHeight.text.toString().toDoubleOrNull() ?: 3.0) * 1000.0 // to mm
+            
+            val slabType = when (binding.slabTypeToggle.checkedButtonId) {
+                R.id.btnFlatSlab -> "FLAT"
+                R.id.btnHordiSlab -> "HORDI"
+                else -> "SOLID"
+            }
+            val hasCap = binding.cbHasCap.isChecked
 
             val result = calculatorEngine.designColumn(
                 width = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else width,
@@ -134,58 +170,156 @@ class ColumnDesignFragment : Fragment() {
                 pu = axialLoad,
                 fcu = fc,
                 fy = fy,
-                code = selectedCode
+                code = selectedCode,
+                isCircular = colType == ColumnSectionView.ColumnType.CIRCULAR,
+                connectedSlab = slabType,
+                hasCap = hasCap,
+                clearHeight = clearHeight
             )
             
-            lastResult = result
-            showResults(result)
+            // Override result diameter if user chose one
+            val finalResult = if (preferredBar != 16) {
+                val areaOneBar = PI * preferredBar.toDouble().pow(2.0) / 4.0
+                val n = ceil(result.reinforcementArea / areaOneBar).toInt().coerceAtLeast(if (colType == ColumnSectionView.ColumnType.CIRCULAR) 6 else 4)
+                result.copy(reinforcement = CalculatorEngine.ReinforcementBar(n, preferredBar))
+            } else result
+
+            lastResult = finalResult
+            showResults(finalResult)
+            populateSafetyChecks(finalResult)
+            showAlternatives(finalResult)
             Toast.makeText(requireContext(), "تم التصميم بنجاح", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             showError(e.message ?: "خطأ غير معروف")
         }
     }
     
+    private fun populateSafetyChecks(result: CalculatorEngine.ColumnResult) {
+        binding.checksContainer.removeAllViews()
+        result.safetyChecks.forEach { check ->
+            val view = TextView(requireContext()).apply {
+                text = getString(R.string.data_sheet_row, check.name, 
+                    String.format(Locale.US, "%.2f / %.2f %s -> %s", 
+                        check.value, check.limit, check.unit, 
+                        if(check.isSafe) "✅ Safe" else "❌ Unsafe"))
+                setPadding(0, 8, 0, 8)
+                setTextColor(if(check.isSafe) resources.getColor(R.color.success, null) else resources.getColor(R.color.error, null))
+            }
+            binding.checksContainer.addView(view)
+        }
+    }
+
     private fun showResults(result: CalculatorEngine.ColumnResult) {
         binding.resultsCard.visibility = View.VISIBLE
         
-        binding.etLongitudinalBars.setText("${result.reinforcement.numBars}Ø${result.reinforcement.diameter}")
+        binding.etLongitudinalBars.setText(getString(R.string.reinforcement_format, result.reinforcement.numBars, result.reinforcement.diameter))
         
-        val summary = String.format(Locale.US, "التكلفة: %.2f %s | خرسانة: %.2f m³", 
-            result.cost, settingsManager.currency, result.concreteVolume)
+        val summary = String.format(Locale.US, "Cap: %.1f kN | Ratio: %.2f%% | Conc: %.2f m³ | Steel: %.1f kg | Waste: %.1f kg", 
+            result.axialCapacity, result.reinforcementRatio, result.concreteVolume, result.steelWeight - result.steelWasteKg, result.steelWasteKg)
         binding.etCapacity.setText(summary)
         
-        binding.columnSectionView.apply {
-            this.columnType = colType
-            this.columnWidth = result.width.toFloat()
-            this.columnHeight = result.depth.toFloat()
-            this.columnDiameter = result.width.toFloat()
-            this.cornerBars = result.reinforcement.numBars
-            this.cornerBarDiameter = result.reinforcement.diameter
-            invalidate()
-        }
+        binding.columnSectionView.updateFromCalculation(
+            type = colType,
+            width = result.width.toFloat(),
+            height = result.depth.toFloat(),
+            diameter = result.width.toFloat(),
+            coverValue = 40f,
+            corners = result.reinforcement.numBars,
+            cornerDia = result.reinforcement.diameter,
+            sideX = 0, // simplified for now
+            sideY = 0,
+            sideDia = 0,
+            tieDia = result.stirrups.diameter,
+            spiral = false,
+            axialCap = result.axialCapacity,
+            mxCap = 0.0,
+            myCap = 0.0,
+            appAxial = result.pu,
+            appMx = 0.0,
+            appMy = 0.0,
+            safe = result.isSafe
+        )
 
-        binding.btnExportPdf.setOnClickListener { showDetailedReport(result) }
+        binding.btnExportPdf.setOnClickListener { exportToPdf(result) }
     }
 
-    private fun showDetailedReport(result: CalculatorEngine.ColumnResult) {
-        val details = StringBuilder()
-        details.append("--- النوتة الحسابية ---\n")
-        details.append("Design Code: ${result.code.displayName}\n")
-        details.append("Applied Axial: ${String.format(Locale.US, "%.2f", result.pu)} kN\n")
+    private fun showAlternatives(result: CalculatorEngine.ColumnResult) {
+        if (result.rebarAlternatives.isEmpty()) return
         
-        details.append("\n--- حصر الكميات (BOQ) ---\n")
-        details.append("الخرسانة: ${String.format(Locale.US, "%.2f", result.concreteVolume)} m³\n")
-        details.append("الحديد الكلي: ${String.format(Locale.US, "%.1f", result.steelWeight)} kg\n")
-        
-        details.append("\n--- فحص الأمان ---\n")
-        details.append("${if (result.isSafe) "✅" else "❌"} ${if (result.isSafe) "Safe Design" else "Unsafe - Check Section"}\n")
-        
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("نتائج تصميم العمود")
-            .setMessage(details.toString())
-            .setPositiveButton("إغلاق", null)
-            .setNeutralButton("حفظ التصميم") { _, _ -> saveDesign(result) }
-            .show()
+        val altStrings = result.rebarAlternatives.map { getString(R.string.reinforcement_format, it.numBars, it.diameter) }
+        // We could show this in a dialog or a horizontal scroll
+        binding.etLongitudinalBars.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Reinforcement Alternatives")
+                .setItems(altStrings.toTypedArray()) { _, which ->
+                    val chosen = result.rebarAlternatives[which]
+                    binding.etLongitudinalBars.setText(getString(R.string.reinforcement_format, chosen.numBars, chosen.diameter))
+                    // Update drawing with chosen alternative
+                    binding.columnSectionView.cornerBars = chosen.numBars
+                    binding.columnSectionView.cornerBarDiameter = chosen.diameter
+                    binding.columnSectionView.invalidate()
+                }
+                .show()
+        }
+    }
+
+    private fun exportToPdf(result: CalculatorEngine.ColumnResult) {
+        try {
+            val exporter = ComprehensivePdfExporter(requireContext())
+            val project = projectsList.firstOrNull { it.id == args.projectId }
+            val projectName = project?.name ?: "Unnamed Project"
+            
+            val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
+            val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
+            
+            // Convert CalculatorEngine result to AdvancedColumnResult for the exporter
+            val columnType = if (result.columnType == "CIRCULAR") ColumnType.Circular(result.width) else ColumnType.Rectangular(result.width, result.depth)
+            
+            val advResult = AdvancedColumnResult(
+                columnType = columnType,
+                axialCapacity = result.axialCapacity,
+                momentCapacityX = 0.0,
+                momentCapacityY = 0.0,
+                slendernessRatio = result.slenderness,
+                isSlender = result.isSlender,
+                effectiveLength = 3000.0,
+                reinforcementResult = ReinforcementResult(
+                    astRequired = result.reinforcement.area,
+                    astProvided = result.reinforcement.area,
+                    barDiameter = result.reinforcement.diameter.toDouble(),
+                    numberOfBars = result.reinforcement.numBars,
+                    tiesDiameter = result.stirrups.diameter.toDouble(),
+                    tiesSpacing = result.stirrups.spacing,
+                    isSafe = result.isSafe,
+                    utilizationRatio = result.pu / result.axialCapacity.coerceAtLeast(1.0)
+                ),
+                inventoryAnalysis = null,
+                biaxialCheck = null,
+                punchingCheck = PunchingCheckResult(result.pu, 1000.0, result.punchingSafe, false, 2000.0),
+                warnings = emptyList(),
+                codeNotes = listOf("Exported from Civil EG App")
+            )
+
+            val inputs = ColumnInputs(
+                fcu = 25.0, fy = 360.0, axialLoad = result.pu, momentX = 0.0, momentY = 0.0,
+                loadCombination = LoadCombination.DEAD_LIVE, columnType = columnType
+            )
+
+            exporter.exportColumnReport(
+                projectName = projectName,
+                designCode = DomainDesignCode.ECP,
+                columnType = columnType,
+                inputs = inputs,
+                result = advResult,
+                inventoryAnalysis = null,
+                alternatives = emptyList(),
+                outputPath = filePath
+            )
+            
+            Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            showError("PDF Export Error: ${e.message}")
+        }
     }
 
     private fun setupSaveButton() {
@@ -199,17 +333,27 @@ class ColumnDesignFragment : Fragment() {
         val projectId = if (args.projectId != -1L) args.projectId else projectsList.firstOrNull()?.id ?: -1L
         if (projectId != -1L) {
             lifecycleScope.launch {
+                val inputData = org.json.JSONObject().apply {
+                    put("width", result.width)
+                    put("depth", result.depth)
+                    put("pu", result.pu)
+                    put("isCircular", colType == ColumnSectionView.ColumnType.CIRCULAR)
+                }.toString()
+
                 val design = Design(
-                    projectId = projectId, type = DesignType.COLUMN,
-                    name = "Column - ${System.currentTimeMillis() % 1000}",
-                    inputData = "{}",
+                    projectId = projectId,
+                    type = DesignType.COLUMN,
+                    name = "Column ${result.width}x${result.depth}",
+                    inputData = inputData,
                     results = result.toString(),
-                    isSafe = result.isSafe, codeUsed = result.code.displayName,
-                    concreteVolume = result.concreteVolume, steelWeight = result.steelWeight,
+                    isSafe = result.isSafe,
+                    codeUsed = result.code.displayName,
+                    concreteVolume = result.concreteVolume,
+                    steelWeight = result.steelWeight,
                     totalCost = result.cost
                 )
                 viewModel.saveDesign(design)
-                Toast.makeText(requireContext(), "تم الحفظ في المشروع", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "تم حفظ التصميم بنجاح", Toast.LENGTH_SHORT).show()
             }
         } else {
             showError("يرجى اختيار أو إنشاء مشروع أولاً")

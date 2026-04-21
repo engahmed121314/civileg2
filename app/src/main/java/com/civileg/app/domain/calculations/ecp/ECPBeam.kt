@@ -1,11 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.CodeReference
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.domain.entities.ShearReinforcementResult
-import com.civileg.app.domain.entities.DeflectionCheckResult
+import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 class ECPBeam : BeamDesign {

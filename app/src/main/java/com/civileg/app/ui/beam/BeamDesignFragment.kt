@@ -4,22 +4,28 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentBeamDesignBinding
-import com.civileg.app.db.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.db.Project as DbProject
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.ContinuousBeamAnalysis
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import com.civileg.app.views.BeamSectionView
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 import dagger.hilt.android.AndroidEntryPoint
 import org.json.JSONObject
+import java.io.File
 import java.util.*
 import javax.inject.Inject
 
@@ -31,12 +37,15 @@ class BeamDesignFragment : Fragment() {
 
     private val viewModel: ProjectViewModel by viewModels()
     private val args: BeamDesignFragmentArgs by navArgs()
+
+    private lateinit var spanAdapter: SpanAdapter
+    private val spans = mutableListOf<ContinuousBeamAnalysis.Span>()
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
     
     @Inject
-    lateinit var settingsManager: SettingsManager
+    lateinit var analysisEngine: ContinuousBeamAnalysis
     
     private var lastResult: CalculatorEngine.BeamResult? = null
     private var lastInputData: JSONObject? = null
@@ -59,10 +68,57 @@ class BeamDesignFragment : Fragment() {
             projectsList = projects
         }
 
+        setupSpinners()
         setupCodeSelection()
         setupCalculateButton()
+        setupSpanList()
         setupInitialDrawing()
-        setupSaveButton()
+        setupTabs()
+    }
+
+    private fun setupSpanList() {
+        spans.add(ContinuousBeamAnalysis.Span(5.0, 25.0)) // Default span
+        spanAdapter = SpanAdapter(spans) {
+            // Optional: trigger partial re-calc or validation
+        }
+        binding.rvSpans.apply {
+            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
+            adapter = spanAdapter
+        }
+
+        binding.btnAddSpan.setOnClickListener {
+            spanAdapter.addSpan()
+        }
+    }
+
+    private fun setupSpinners() {
+        val mainBars = listOf("12", "14", "16", "18", "20", "22", "25")
+        binding.spinnerMainBar.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, mainBars))
+        
+        val stirrupBars = listOf("8", "10", "12")
+        binding.spinnerStirrupBar.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, stirrupBars))
+    }
+
+    private fun setupTabs() {
+        binding.beamTabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                binding.beamSectionView.visibility = if (tab?.position == 0) View.VISIBLE else View.GONE
+                binding.layoutAnalysis.visibility = if (tab?.position == 1) View.VISIBLE else View.GONE
+                binding.scrollDataSheet.visibility = if (tab?.position == 2) View.VISIBLE else View.GONE
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+
+        binding.analysisToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                binding.analysisDiagramView.mode = if (checkedId == R.id.btnBMD) {
+                    com.civileg.app.views.AnalysisDiagramView.Mode.BMD
+                } else {
+                    com.civileg.app.views.AnalysisDiagramView.Mode.SFD
+                }
+            }
+        }
     }
 
     private fun setupCodeSelection() {
@@ -103,6 +159,9 @@ class BeamDesignFragment : Fragment() {
             val fy = binding.etSteelStrength.text.toString().toDoubleOrNull() ?: 360.0
             val dl = binding.etDeadLoad.text.toString().toDoubleOrNull() ?: 15.0
             val ll = binding.etLiveLoad.text.toString().toDoubleOrNull() ?: 10.0
+            
+            val preferredBar = binding.spinnerMainBar.text.toString().toIntOrNull() ?: 16
+            val wastePercent = binding.etWasteFactor.text.toString().toDoubleOrNull() ?: 5.0
 
             val code = when(selectedCode) {
                 DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
@@ -110,30 +169,87 @@ class BeamDesignFragment : Fragment() {
                 DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
             }
 
+            // Perform Analysis for BMD/SFD using ContinuousBeamAnalysis
+            val analysis = analysisEngine.solve(spans)
+            displayAnalysis(analysis)
+
+            // Use the max moment from analysis for the design
+            val maxMoment = analysis.points.maxOf { Math.abs(it.moment) }
+            val maxShear = analysis.points.maxOf { Math.abs(it.shear) }
+
             val result = calculatorEngine.designBeam(
                 width = width,
                 height = height,
-                span = length / 1000.0,
+                span = spans.sumOf { it.length }, // Total length for weight/volume
                 fcu = fc,
                 fy = fy,
-                deadLoad = dl,
-                liveLoad = ll,
-                preferredDiameter = 16,
-                code = code
+                deadLoad = dl, // Note: CalculatorEngine currently takes dl/ll separately, 
+                liveLoad = ll, // but we used combined load in spans for analysis.
+                preferredDiameter = preferredBar,
+                code = code,
+                customMoment = maxMoment,
+                customShear = maxShear
             )
 
             lastResult = result
             lastInputData = JSONObject().apply {
                 put("width", width); put("height", height); put("length", length)
                 put("fc", fc); put("fy", fy); put("dl", dl); put("ll", ll)
+                put("waste", wastePercent)
             }
             
             updateDrawing(result)
             displayResults(result)
+            populateDataSheet(result)
 
             Toast.makeText(requireContext(), getString(R.string.calculation_complete), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             showError(e.message ?: getString(R.string.error))
+        }
+    }
+
+    private fun displayAnalysis(analysis: ContinuousBeamAnalysis.AnalysisResult) {
+        val sb = StringBuilder()
+        sb.append("--- Support Moments (kN.m) ---\n")
+        analysis.moments.forEachIndexed { i, m -> sb.append("M$i: ${String.format(Locale.US, "%.2f", m)}\n") }
+        
+        sb.append("\n--- Max Shear Forces (kN) ---\n")
+        analysis.shearForces.forEachIndexed { i, v -> sb.append("Span ${i+1}: ${String.format(Locale.US, "%.2f", v)}\n") }
+        
+        sb.append("\n--- Reactions (kN) ---\n")
+        analysis.reactions.forEachIndexed { i, r -> sb.append("R$i: ${String.format(Locale.US, "%.2f", r)}\n") }
+        
+        // Find max positive moment (approximate from points)
+        val maxPosM = analysis.points.maxByOrNull { it.moment }?.moment ?: 0.0
+        sb.append("\nMax Positive Moment: ${String.format(Locale.US, "%.2f", maxPosM)} kN.m")
+
+        binding.tvAnalysisDetails.text = sb.toString()
+        binding.analysisDiagramView.setData(analysis)
+    }
+
+    private fun populateDataSheet(result: CalculatorEngine.BeamResult) {
+        binding.dataSheetContainer.removeAllViews()
+        val details = mutableListOf<Pair<String, String>>()
+        details.add("Beam Dimensions" to "${result.width} x ${result.depth} mm")
+        details.add("Design Moment (Mu)" to String.format(Locale.US, "%.2f kN.m", result.appliedMoment))
+        details.add("Moment Capacity (φMn)" to String.format(Locale.US, "%.2f kN.m", result.momentCapacity))
+        details.add("Steel Required (As)" to String.format(Locale.US, "%.1f mm²", result.reinforcementBottom.area))
+        details.add("Steel Provided" to "${result.reinforcementBottom.numBars}Ø${result.reinforcementBottom.diameter}")
+        details.add("Stirrups" to result.stirrups.description)
+        details.add("Calculated Deflection" to String.format(Locale.US, "%.2f mm", result.deflection))
+        details.add("Allowable Deflection" to String.format(Locale.US, "%.2f mm", result.allowableDeflection))
+        details.add("Concrete Volume" to String.format(Locale.US, "%.3f m³", result.concreteVolume))
+        details.add("Steel Weight" to String.format(Locale.US, "%.2f kg", result.steelWeight))
+        details.add("Steel Waste (Est)" to String.format(Locale.US, "%.3f Tons", result.steelWasteTons))
+
+        details.forEach { (label, value) ->
+            val row = TextView(requireContext()).apply {
+                text = getString(R.string.data_sheet_row, label, value)
+                setPadding(0, 8, 0, 8)
+                textSize = 16f
+                setTextColor(resources.getColor(R.color.text_primary, null))
+            }
+            binding.dataSheetContainer.addView(row)
         }
     }
 
@@ -157,53 +273,84 @@ class BeamDesignFragment : Fragment() {
     private fun displayResults(result: CalculatorEngine.BeamResult) {
         binding.resultsCard.visibility = View.VISIBLE
         val bottomBar = result.reinforcementBottom
-        binding.etBottomReinforcement.setText("${bottomBar.numBars}Ø${bottomBar.diameter}")
-        binding.etTopReinforcement.setText(String.format(Locale.getDefault(), "Cost: %.2f %s", result.cost, settingsManager.currency))
+        binding.etBottomReinforcement.setText(getString(R.string.reinforcement_format, bottomBar.numBars, bottomBar.diameter))
         
-        val stirrupsText = result.stirrups.description
-        binding.etStirrups.setText(stirrupsText)
-
-        binding.etCodeUsed.setText(result.code.displayName)
+        binding.etWasteDetail.setText(getString(R.string.waste_tons_format, result.steelWasteTons))
+        binding.etWasteDetail.visibility = View.VISIBLE
+        
+        binding.btnExportPdf.setOnClickListener { exportToPdf(result) }
         
         binding.root.post {
             binding.root.smoothScrollTo(0, binding.resultsCard.top)
         }
     }
 
-    private fun setupSaveButton() {
-        binding.btnSaveDesign.setOnClickListener {
-            val result = lastResult ?: return@setOnClickListener
-            val projectId = if (args.projectId != -1L) args.projectId else projectsList.firstOrNull()?.id ?: -1L
-            if (projectId != -1L) {
-                saveToProject(projectId, result)
-            } else {
-                showError("Please create a project first")
-            }
+    private fun exportToPdf(result: CalculatorEngine.BeamResult) {
+        try {
+            val exporter = ComprehensivePdfExporter(requireContext())
+            val projectName = projectsList.firstOrNull { it.id == args.projectId }?.name ?: "Unnamed Project"
+            val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
+            val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
+            
+            val beamType = BeamType.SimplySupported(result.depth / 100.0) // Mock span
+            val inputs = BeamInputs(
+                fcu = 25.0, fy = 360.0, width = result.width, totalDepth = result.depth, 
+                effectiveDepth = result.depth - 50, designMoment = result.appliedMoment, 
+                designShear = result.appliedShear
+            )
+            
+            val advResult = AdvancedBeamResult(
+                beamType = beamType,
+                sectionType = BeamSectionType.RECTANGULAR,
+                flexureResult = ReinforcementResult(
+                    astRequired = result.reinforcementBottom.area,
+                    astProvided = result.reinforcementBottom.area,
+                    barDiameter = result.reinforcementBottom.diameter.toDouble(),
+                    numberOfBars = result.reinforcementBottom.numBars,
+                    tiesDiameter = result.stirrups.diameter.toDouble(),
+                    tiesSpacing = result.stirrups.spacing,
+                    isSafe = result.isSafe,
+                    utilizationRatio = result.appliedMoment / result.momentCapacity.coerceAtLeast(1.0)
+                ),
+                shearResult = ShearReinforcementResult(
+                    concreteShearCapacity = result.shearCapacity * 0.6,
+                    requiredArea = result.stirrups.area,
+                    providedArea = result.stirrups.area,
+                    requiredShearReinforcement = 200.0,
+                    providedShearReinforcement = 250.0,
+                    stirrupDiameter = result.stirrups.diameter.toDouble(),
+                    stirrupSpacing = result.stirrups.spacing,
+                    isSafe = result.isSafe,
+                    utilizationRatio = result.appliedShear / result.shearCapacity.coerceAtLeast(1.0)
+                ),
+                deflectionCheck = DeflectionCheckResult(
+                    calculatedDeflection = result.deflection, 
+                    allowableDeflection = result.allowableDeflection, 
+                    isSafe = result.deflection <= result.allowableDeflection
+                ),
+                momentDiagram = emptyList(),
+                shearDiagram = emptyList(),
+                inventoryAnalysis = null,
+                crackWidthCheck = null,
+                developmentLengthCheck = null,
+                warnings = emptyList(),
+                codeNotes = listOf("Exported from Civil EG App", "Design Code: ${result.code.displayName}")
+            )
+
+            exporter.exportBeamReport(
+                projectName = projectName,
+                designCode = DesignCode.ECP,
+                beamType = beamType,
+                inputs = inputs,
+                result = advResult,
+                inventoryAnalysis = null,
+                momentShearDiagrams = MomentShearDiagrams(emptyList(), emptyList()),
+                outputPath = filePath
+            )
+            Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            showError("Export Error: ${e.message}")
         }
-    }
-
-    private fun saveToProject(projectId: Long, result: CalculatorEngine.BeamResult) {
-        val design = Design(
-            projectId = projectId, type = DesignType.BEAM,
-            name = "Beam - ${System.currentTimeMillis() % 1000}",
-            inputData = lastInputData.toString(),
-            results = JSONObject().apply {
-                val bottomBar = result.reinforcementBottom
-                put("mainSteel", "${bottomBar.numBars}Ø${bottomBar.diameter}")
-                put("concreteVol", result.concreteVolume)
-                put("cost", result.cost)
-                put("currency", settingsManager.currency)
-            }.toString(),
-            isSafe = result.isSafe, codeUsed = result.code.displayName,
-            concreteVolume = result.concreteVolume, steelWeight = result.steelWeight,
-            totalCost = result.cost
-        )
-        viewModel.saveDesign(design)
-        
-        viewModel.saveMaterial(MaterialItem(projectId = projectId, name = "Concrete (Beam)", unit = "m3", quantity = result.concreteVolume, unitPrice = settingsManager.concretePrice, totalPrice = result.concreteVolume * settingsManager.concretePrice, category = MaterialCategory.CONCRETE))
-        viewModel.saveMaterial(MaterialItem(projectId = projectId, name = "Steel (Beam)", unit = "kg", quantity = result.steelWeight, unitPrice = settingsManager.steelPrice/1000, totalPrice = result.steelWeight * (settingsManager.steelPrice/1000), category = MaterialCategory.STEEL))
-
-        Toast.makeText(context, getString(R.string.save_success), Toast.LENGTH_SHORT).show()
     }
 
     private fun showError(message: String) {

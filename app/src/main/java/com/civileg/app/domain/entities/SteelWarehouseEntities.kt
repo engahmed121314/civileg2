@@ -39,7 +39,13 @@ data class SteelWarehouseAnalysisResult(
     val safetyStatus: Boolean,
     val recommendations: List<String>,
     val materialTakeoff: Map<String, Double>, // Section Name to Quantity/Weight
-    val loadDiagram: LoadDiagramData? = null
+    val loadDiagram: LoadDiagramData? = null,
+    
+    // Feasibility Data
+    val estimatedTotalCost: Double = 0.0,
+    val costPerM2: Double = 0.0,
+    val roi: Double = 0.0,         // Percentage
+    val netProfit: Double = 0.0
 ) : Parcelable
 
 @Parcelize

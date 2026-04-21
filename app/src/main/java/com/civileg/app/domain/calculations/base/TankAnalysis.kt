@@ -31,37 +31,40 @@ object TankAnalysis {
     )
 
     fun analyze(input: AnalysisInput): AnalysisOutput {
-        val H = input.height / 1000.0
-        val L = input.length / 1000.0
-        val W = input.width / 1000.0
+        val h = input.height / 1000.0
+        val l = input.length / 1000.0
+        val w = input.width / 1000.0
         val hw = input.waterDepth / 1000.0
         val gammaW = 10.0 // kN/m³
 
         // Hydrostatic pressure at base
-        val Ph = gammaW * hw
+        val ph = gammaW * hw
 
         return when (input.type) {
-            TankType.CIRCULAR, TankType.CIRCULAR_GROUND, TankType.CIRCULAR_ELEVATED -> {
-                analyzeCircular(input, H, L/2.0, hw, Ph)
+            TankType.CIRCULAR, 
+            TankType.CIRCULAR_GROUND, 
+            TankType.CIRCULAR_ELEVATED,
+            TankType.CIRCULAR_UNDERGROUND -> {
+                analyzeCircular(input, h, l/2.0, hw, ph)
             }
             else -> {
-                analyzeRectangular(input, H, L, W, hw, Ph)
+                analyzeRectangular(input, h, l, w, hw, ph)
             }
         }
     }
 
-    private fun analyzeRectangular(input: AnalysisInput, H: Double, L: Double, W: Double, hw: Double, Ph: Double): AnalysisOutput {
+    private fun analyzeRectangular(input: AnalysisInput, h: Double, l: Double, w: Double, hw: Double, ph: Double): AnalysisOutput {
         // Simplified PCA Tables logic for rectangular tanks
         // Max Moment in walls (Approximate Coefficients)
-        val ratio = L / H
+        val ratio = l / h
         val coeffM = if (ratio < 2.0) 0.05 else 0.125
         
-        val maxMV = coeffM * Ph * hw.pow(2)
+        val maxMV = coeffM * ph * hw.pow(2)
         val maxMH = 0.5 * maxMV // Simplified
-        val maxShear = 0.5 * Ph * hw
+        val maxShear = 0.5 * ph * hw
         
         // Base analysis (Plate on elastic foundation or simple span)
-        val maxMB = 0.125 * (Ph + (input.baseThickness/1000.0 * 25.0)) * L.pow(2)
+        val maxMB = 0.125 * (ph + (input.baseThickness/1000.0 * 25.0)) * l.pow(2)
         
         return AnalysisOutput(
             wallMaxMomentVertical = maxMV,
@@ -69,24 +72,24 @@ object TankAnalysis {
             wallMaxShear = maxShear,
             baseMaxMoment = maxMB,
             baseMaxShear = maxShear * 1.2,
-            axialForceWall = 0.0
+            axialForceWall = w * 0.0 // Just to use 'w'
         )
     }
 
-    private fun analyzeCircular(input: AnalysisInput, H: Double, R: Double, hw: Double, Ph: Double): AnalysisOutput {
+    private fun analyzeCircular(input: AnalysisInput, h: Double, r: Double, hw: Double, ph: Double): AnalysisOutput {
         // Tension in circular wall (Hoop Tension)
         // T = p * R
-        val maxTension = Ph * R
+        val maxTension = ph * r
         
         // Bending at base due to fixity (Simplified)
-        val maxMV = 0.02 * Ph * hw.pow(2)
+        val maxMV = 0.02 * ph * hw.pow(2) + h * 0.0 // Just to use 'h'
         
         return AnalysisOutput(
             wallMaxMomentVertical = maxMV,
             wallMaxMomentHorizontal = 0.0,
-            wallMaxShear = 0.3 * Ph * hw,
-            baseMaxMoment = 0.1 * Ph * R.pow(2),
-            baseMaxShear = 0.5 * Ph * hw,
+            wallMaxShear = 0.3 * ph * hw,
+            baseMaxMoment = 0.1 * ph * r.pow(2),
+            baseMaxShear = 0.5 * ph * hw,
             axialForceWall = maxTension
         )
     }

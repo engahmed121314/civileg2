@@ -11,8 +11,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
+import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.db.Project
+import kotlin.math.pow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -24,6 +28,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,11 +42,19 @@ import kotlin.math.min
 @Composable
 fun BeamScreen(
     viewModel: BeamViewModel = hiltViewModel(),
+    projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val isExporting by viewModel.isExporting.observeAsState(false)
     val error by viewModel.error.observeAsState()
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    var designName by remember { mutableStateOf("كمرة B1") }
     
     var width by remember { mutableStateOf("250") }
     var height by remember { mutableStateOf("600") }
@@ -49,6 +63,8 @@ fun BeamScreen(
     var liveLoad by remember { mutableStateOf("10.0") }
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
+    var barDiameter by remember { mutableStateOf("16") }
+    var numBars by remember { mutableStateOf("4") }
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
 
@@ -122,6 +138,14 @@ fun BeamScreen(
             }
 
             item {
+                Text("اختيار حديد التسليح (لتقييم التوفير)", fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BeamInputField(numBars, "عدد الأسياخ", { numBars = it }, Modifier.weight(1f))
+                    BeamInputField(barDiameter, "القطر Ø (mm)", { barDiameter = it }, Modifier.weight(1f))
+                }
+            }
+
+            item {
                 Button(
                     onClick = {
                         viewModel.calculateBeamPro(
@@ -132,7 +156,7 @@ fun BeamScreen(
                             liveLoad.toDoubleOrNull() ?: 0.0,
                             fcu.toDoubleOrNull() ?: 25.0,
                             fy.toDoubleOrNull() ?: 360.0,
-                            16,
+                            barDiameter.toIntOrNull() ?: 16,
                             CalculatorEngine.DesignCode.EGYPTIAN,
                             selectedSupport
                         )
@@ -152,9 +176,110 @@ fun BeamScreen(
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التحليل الإنشائي", R.drawable.ic_calculator) }
+                item { SectionHeader("📊 نتائج التحليل والإقتصاد", R.drawable.ic_calculator) }
                 
-                item { BeamResultCard(res) }
+                item {
+                    val ecoColor = when {
+                        res.utilizationRatio > 1.0 -> Color.Red
+                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+                        else -> Color(0xFF2196F3)
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            if (res.isSafe) Icons.Default.Verified 
+                                            else Icons.Default.Dangerous, 
+                                            contentDescription = null, 
+                                            tint = ecoColor
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            if (res.utilizationRatio > 1.0) "المقطع غير آمن إنشائياً! ❌"
+                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+                                            else if (res.utilizationRatio > 0.4) "تصميم مثالي واقتصادي ✅"
+                                            else "القطاع كبير (غير اقتصادي) 🔵",
+                                            fontWeight = FontWeight.Bold,
+                                            color = ecoColor
+                                        )
+                                    }
+                                    Text(
+                                        "المستشار الإنشائي: نسبة الاستخدام",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                
+                                Box(contentAlignment = Alignment.Center) {
+                                    val animatedRatio by animateFloatAsState(
+                                        targetValue = res.utilizationRatio.toFloat(),
+                                        animationSpec = tween(1000), label = ""
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { animatedRatio },
+                                        modifier = Modifier.size(60.dp),
+                                        strokeWidth = 6.dp,
+                                        color = ecoColor,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    Text(
+                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                viewModel.exportToPdf(context) { file ->
+                                    if (file == null) {
+                                        // Handle error
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isExporting
+                        ) {
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("تقرير PDF")
+                            }
+                        }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("حفظ")
+                        }
+                    }
+                }
 
                 item {
                     Text("📉 مخطط العزوم (B.M.D)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -171,9 +296,56 @@ fun BeamScreen(
                     BeamSectionDrawing(res, modifier = Modifier.fillMaxWidth().height(280.dp))
                 }
             }
-            
-            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
+    }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("حفظ التصميم في مشروع") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = designName,
+                        onValueChange = { designName = it },
+                        label = { Text("اسم الكمرة (مثلاً: B1)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    if (projects.isEmpty()) {
+                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                    } else {
+                        projects.forEach { project ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedProjectId == project.id,
+                                    onClick = { selectedProjectId = project.id }
+                                )
+                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                    result?.let { viewModel.saveBeam(pId, designName, it) }
+                    showSaveDialog = false
+                }) {
+                    Text("حفظ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+            }
+        )
     }
 }
 

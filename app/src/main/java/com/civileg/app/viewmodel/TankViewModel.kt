@@ -6,8 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -21,6 +24,9 @@ class TankViewModel @Inject constructor(
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
+
+    private val _isExporting = MutableLiveData(false)
+    val isExporting: LiveData<Boolean> = _isExporting
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
@@ -56,6 +62,39 @@ class TankViewModel @Inject constructor(
     fun saveTank(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
         viewModelScope.launch {
             repository.saveTankDesign(projectId, name, result)
+        }
+    }
+
+    fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
+        val res = _result.value ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val fileName = "Tank_Report_${System.currentTimeMillis()}.pdf"
+                val file = File(context.cacheDir, fileName)
+                
+                val exporter = ComprehensivePdfExporter(context)
+                val exportedFile = exporter.exportTankReport(
+                    projectName = "تقرير تصميم خزان",
+                    designCode = res.code,
+                    result = res,
+                    outputPath = file.absolutePath
+                )
+                
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    exportedFile?.let {
+                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
+                    }
+                    onComplete(exportedFile)
+                    _isExporting.value = false
+                }
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _error.value = "PDF Export Error: ${e.message}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
         }
     }
 }

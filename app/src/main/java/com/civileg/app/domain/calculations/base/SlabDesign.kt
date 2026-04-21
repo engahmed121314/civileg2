@@ -1,6 +1,6 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.domain.entities.*
 
 /**
  * واجهة موحدة لتصميم البلاطات حسب أي كود إنشائي
@@ -52,20 +52,6 @@ interface SlabDesign {
     fun getMinCover(): Double
 }
 
-// نتيجة تصميم البلاطة
-data class SlabDesignResult(
-    val requiredReinforcement: Double,    // mm²/m
-    val providedReinforcement: Double,    // mm²/m
-    val barDiameter: Double,              // mm
-    val barSpacing: Double,               // mm
-    val minThickness: Double,             // mm
-    val shearCapacity: Double,            // kN/m
-    val isSafe: Boolean,
-    val utilizationRatio: Double,
-    val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
-)
-
 // نتيجة البلاطة ذات الاتجاهين
 data class TwoWaySlabResult(
     val shortDirection: SlabDesignResult,
@@ -88,12 +74,3 @@ data class ThicknessCheckResult(
     val deflectionRatio: Double,
     val recommendation: String
 )
-
-data class SlabSupportConditions(
-    val edgeA: EdgeCondition,
-    val edgeB: EdgeCondition,
-    val edgeC: EdgeCondition,
-    val edgeD: EdgeCondition
-)
-
-enum class EdgeCondition { FIXED, SIMPLY_SUPPORTED, FREE, CONTINUOUS }

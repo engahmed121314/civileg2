@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +33,9 @@ fun SeismicScreen(
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
     val engine = remember { CalculatorEngine(settingsManager) }
+    val exporter = remember { ComprehensivePdfExporter(context) }
     
+    var projectName by remember { mutableStateOf("New Project") }
     var zone by remember { mutableStateOf("0.15") }
     var importance by remember { mutableStateOf("1.0") }
     var height by remember { mutableStateOf("12.0") }
@@ -127,6 +132,36 @@ fun SeismicScreen(
                             ResultRow("عجلة التصميم (Sd)", "${"%.3f".format(res.spectralAcceleration)} g")
                             ResultRow("إزاحة الدور (Drift)", "${"%.4f".format(res.storyDrift)} m")
                         }
+                    }
+                }
+
+                item {
+                    Button(
+                        onClick = {
+                            val seismicInput = CalculatorEngine.SeismicInput(
+                                zone = zone.toDoubleOrNull() ?: 0.15,
+                                importance = importance.toDoubleOrNull() ?: 1.0,
+                                soilType = soilType,
+                                height = height.toDoubleOrNull() ?: 12.0,
+                                totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
+                                reductionFactor = reductionFactor.toDoubleOrNull() ?: 5.0
+                            )
+                            val file = exporter.exportSeismicReport(
+                                projectName = projectName,
+                                designCode = res.code,
+                                inputs = seismicInput,
+                                result = res,
+                                outputPath = File(context.cacheDir, "Seismic_Report.pdf").absolutePath
+                            )
+                            // TODO: Open PDF file or show success message
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("تصدير تقرير PDF")
                     }
                 }
 

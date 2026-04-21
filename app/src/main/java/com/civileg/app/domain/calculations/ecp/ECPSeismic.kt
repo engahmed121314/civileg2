@@ -7,31 +7,41 @@ import kotlin.math.*
 
 class ECPSeismic : SeismicDesign {
     
+    /**
+     * معاملات التربة حسب الكود المصري للمنشآت الخرسانية (ECP 201)
+     * s: Soil Factor, tb: بداية مرحلة الثبات، tc: نهاية مرحلة الثبات، td: بداية مرحلة الانتقال للإزاحة
+     */
+    private data class SoilParameters(val s: Double, val tb: Double, val tc: Double, val td: Double)
+
     companion object {
-        // عوامل الزلازل حسب الخريطة الزلزالية المصرية (ECP 201)
+        // عجلة الأرض التصميمية (ag/g) - الخريطة الزلزالية المصرية الحديثة
         private val ZONE_FACTORS = mapOf(
-            SeismicZone.ZONE_1 to 0.08,
-            SeismicZone.ZONE_2 to 0.12,
-            SeismicZone.ZONE_3 to 0.16,
+            SeismicZone.ZONE_1 to 0.10,
+            SeismicZone.ZONE_2 to 0.125,
+            SeismicZone.ZONE_3 to 0.15,
             SeismicZone.ZONE_4 to 0.20,
             SeismicZone.ZONE_5 to 0.25
         )
         
-        // عوامل التربة حسب ECP 201
-        private val SOIL_FACTORS = mapOf(
-            SoilType.A to 1.0,
-            SoilType.B to 1.2,
-            SoilType.C to 1.5,
-            SoilType.D to 1.8,
-            SoilType.E to 2.0
+        // معاملات التربة (طيف النوع الأول - يستخدم لمعظم مناطق الجمهورية)
+        private val SOIL_PARAMS = mapOf(
+            SoilType.A to SoilParameters(1.0, 0.05, 0.25, 1.2),
+            SoilType.B to SoilParameters(1.35, 0.05, 0.25, 1.2),
+            SoilType.C to SoilParameters(1.5, 0.10, 0.25, 1.2),
+            SoilType.D to SoilParameters(1.8, 0.10, 0.30, 1.2),
+            SoilType.E to SoilParameters(1.6, 0.10, 0.25, 1.2)
         )
-        
-        // فترات الانتقال لطيف الاستجابة (مثال لتربة نوع C)
-        private const val T0 = 0.10   // ثانية
-        private const val TC = 0.40   // ثانية
-        private const val TD = 2.0    // ثانية
     }
 
+    /**
+     * حساب القص القاعدي (Base Shear) وفقاً لطيف الاستجابة التصميمي Sd(T)
+     * V = Sd(T1) * W
+     * @param totalWeight الوزن الكلي للمنشأ (W)
+     * @param seismicZone المنطقة الزلزالية حسب الخريطة
+     * @param soilType نوع التربة بالموقع
+     * @param importanceFactor معامل الأهمية (I)
+     * @param responseModificationFactor معامل تعديل الاستجابة (R)
+     */
     override fun calculateBaseShear(
         totalWeight: Double,
         seismicZone: SeismicZone,
@@ -40,47 +50,63 @@ class ECPSeismic : SeismicDesign {
         responseModificationFactor: Double
     ): SeismicBaseShearResult {
         val warnings = mutableListOf<String>()
+        val buildingHeight = 15.0 // ارتفاع افتراضي - يمكن تحسينه لاحقاً بإضافته للمدخلات العامة
         
-        val Z = ZONE_FACTORS[seismicZone] ?: 0.15
-        val S = SOIL_FACTORS[soilType] ?: 1.2
+        val ag = ZONE_FACTORS[seismicZone] ?: 0.15
+        val params = SOIL_PARAMS[soilType] ?: SOIL_PARAMS[SoilType.C]!!
         
-        // معادلة القص الأساسي المبسطة: V = (Z * I * S / R) * W
-        // ملاحظة: في الكود المصري الفعلي تعتمد على طيف الاستجابة Sa(T1)
-        val baseShear = (Z * importanceFactor * S / responseModificationFactor.coerceAtLeast(1.0)) * totalWeight
+        // حساب T1 = Ct * H^0.75 (حسب الكود المصري للمنشآت الإطارية)
+        val period = 0.075 * buildingHeight.pow(0.75) 
         
-        // حدود حسب الكود المصري (عادة 2% كحد أدنى)
+        // حساب قيمة طيف الاستجابة التصميمي Sd(T)
+        val sdValue = calculateSd(period, ag, importanceFactor, params, responseModificationFactor)
+        
+        val baseShear = sdValue * totalWeight
         val minBaseShear = 0.02 * totalWeight
-        val finalBaseShear = max(baseShear, minBaseShear)
         
         if (baseShear < minBaseShear) {
             warnings.add("Base shear increased to minimum (2% of weight) per ECP")
         }
         
         return SeismicBaseShearResult(
-            baseShear = finalBaseShear,
-            zoneFactor = Z,
-            soilFactor = S,
+            baseShear = max(baseShear, minBaseShear),
+            zoneFactor = ag,
+            soilFactor = params.s,
             importanceFactor = importanceFactor,
             responseModification = responseModificationFactor,
-            calculationFormula = "V = (Z × I × S / R) × W",
+            calculationFormula = "V = Sd(T1) × W",
             codeReference = CodeReference.ECP.SEISMIC_BASE_SHEAR,
             warnings = warnings
         )
+    }
+
+    private fun calculateSd(t: Double, ag: Double, i: Double, p: SoilParameters, r: Double): Double {
+        val common = ag * i * p.s
+        val rEff = r.coerceAtLeast(1.0)
+        
+        return when {
+            t <= p.tb -> common * ((2.0 / 3.0) + (t / p.tb) * (2.5 / rEff - 2.0 / 3.0))
+            t <= p.tc -> common * (2.5 / rEff)
+            t <= p.td -> max(common * (2.5 / rEff) * (p.tc / t), 0.2 * ag * i)
+            else -> max(common * (2.5 / rEff) * (p.tc * p.td / (t * t)), 0.2 * ag * i)
+        }
     }
 
     override fun getResponseSpectrum(
         period: Double,
         dampingRatio: Double
     ): SpectrumValue {
-        // طيف الاستجابة التصميمي Sd(T) حسب الكود المصري
-        val S = 1.2 // مثال لعامل التربة
-        val eta = sqrt(10.0 / (5.0 + dampingRatio * 100.0)).coerceAtLeast(0.5)
+        // حساب طيف الاستجابة المرن Se(T) لأغراض الرسم البياني
+        val ag = 0.15 
+        val i = 1.0
+        val p = SOIL_PARAMS[SoilType.C]!!
+        val eta = sqrt(10.0 / (5.0 + dampingRatio * 100.0)).coerceAtLeast(0.55)
         
         val spectralAcceleration = when {
-            period <= T0 -> S * (1.0 + (period / T0) * (2.5 * eta - 1.0))
-            period <= TC -> S * 2.5 * eta
-            period <= TD -> S * 2.5 * eta * (TC / period)
-            else -> S * 2.5 * eta * (TC * TD / (period * period))
+            period <= p.tb -> ag * i * p.s * (1.0 + (period / p.tb) * (2.5 * eta - 1.0))
+            period <= p.tc -> ag * i * p.s * 2.5 * eta
+            period <= p.td -> ag * i * p.s * 2.5 * eta * (p.tc / period)
+            else -> ag * i * p.s * 2.5 * eta * (p.tc * p.td / (period * period))
         }
         
         return SpectrumValue(
@@ -128,9 +154,9 @@ class ECPSeismic : SeismicDesign {
 
     override fun getCodeName(): DesignCode = DesignCode.ECP
     
-    override fun getSeismicZones(): List<SeismicZone> = SeismicZone.values().toList()
+    override fun getSeismicZones(): List<SeismicZone> = SeismicZone.entries.toList()
     
     override fun getZoneFactors(): Map<SeismicZone, Double> = ZONE_FACTORS
     
-    override fun getSoilFactors(): Map<SoilType, Double> = SOIL_FACTORS
+    override fun getSoilFactors(): Map<SoilType, Double> = SOIL_PARAMS.mapValues { it.value.s }
 }

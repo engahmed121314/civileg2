@@ -24,21 +24,33 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.StairViewModel
+import com.civileg.app.viewmodel.ProjectViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StairScreen(
     viewModel: StairViewModel = hiltViewModel(),
+    projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val isExporting by viewModel.isExporting.observeAsState(false)
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    var designName by remember { mutableStateOf("سلم S1") }
     
     var selectedType by remember { mutableStateOf(CalculatorEngine.StairType.SINGLE_FLIGHT) }
     var span by remember { mutableStateOf("4.0") }
@@ -55,6 +67,26 @@ fun StairScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isExporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).padding(end = 8.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        if (result != null) {
+                            IconButton(onClick = { viewModel.exportToPdf(context) {} }) {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    if (result != null) {
+                        IconButton(onClick = { showSaveDialog = true }) {
+                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             )
@@ -143,6 +175,72 @@ fun StairScreen(
                 item { SectionHeader("📊 نتائج التصميم الإنشائي", R.drawable.ic_calculator) }
                 
                 item {
+                    val ecoColor = when {
+                        res.utilizationRatio > 1.0 -> Color.Red
+                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+                        else -> Color(0xFF2196F3)
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            if (res.utilizationRatio <= 1.0) Icons.Default.Verified
+                                            else Icons.Default.Dangerous,
+                                            contentDescription = null,
+                                            tint = ecoColor
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            if (res.utilizationRatio > 1.0) "تصميم غير آمن! ❌"
+                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+                                            else if (res.utilizationRatio > 0.4) "تصميم مثالي واقتصادي ✅"
+                                            else "قطاع كبير (غير اقتصادي) 🔵",
+                                            fontWeight = FontWeight.Bold,
+                                            color = ecoColor
+                                        )
+                                    }
+                                    Text(
+                                        "المستشار الإنشائي: نسبة الاستهلاك",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Box(contentAlignment = Alignment.Center) {
+                                    val animatedRatio by animateFloatAsState(
+                                        targetValue = res.utilizationRatio.toFloat(),
+                                        animationSpec = tween(1000), label = ""
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { animatedRatio },
+                                        modifier = Modifier.size(60.dp),
+                                        strokeWidth = 6.dp,
+                                        color = ecoColor,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    Text(
+                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f)),
                         shape = RoundedCornerShape(16.dp)
@@ -151,6 +249,37 @@ fun StairScreen(
                             ResultRow("سمك البلاطة ts", "${res.thickness.toInt()} mm")
                             ResultRow("التسليح الرئيسي", res.reinforcement.barString)
                             ResultRow("تسليح التوزيع", res.distributionReinforcement.barString)
+                        }
+                    }
+                }
+
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isExporting
+                        ) {
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("تقرير PDF")
+                            }
+                        }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Icon(Icons.Default.Save, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("حفظ")
                         }
                     }
                 }
@@ -167,6 +296,55 @@ fun StairScreen(
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
+    }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("حفظ التصميم في مشروع") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = designName,
+                        onValueChange = { designName = it },
+                        label = { Text("اسم السلم (مثلاً: S1)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    if (projects.isEmpty()) {
+                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                    } else {
+                        projects.forEach { project ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedProjectId == project.id,
+                                    onClick = { selectedProjectId = project.id }
+                                )
+                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                    result?.let { viewModel.saveStair(pId, designName, it) }
+                    showSaveDialog = false
+                }) {
+                    Text("حفظ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+            }
+        )
     }
 }
 

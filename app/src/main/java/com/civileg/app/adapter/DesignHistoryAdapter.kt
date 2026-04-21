@@ -41,7 +41,9 @@ class DesignHistoryAdapter(
                 DesignType.RETAINING_WALL -> R.drawable.ic_wall
                 DesignType.WATER_TANK -> R.drawable.ic_water
                 DesignType.PILE -> R.drawable.ic_pile
-                DesignType.SEISMIC -> R.drawable.ic_search // Or specific seismic icon
+                DesignType.SEISMIC -> R.drawable.ic_search
+                DesignType.STEEL_MEMBER -> R.drawable.ic_tools
+                DesignType.STEEL_WAREHOUSE -> R.drawable.ic_tools
             }
             binding.ivDesignType.setImageResource(iconRes)
 

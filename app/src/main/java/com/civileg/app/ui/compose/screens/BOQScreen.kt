@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.domain.calculations.ecp.TrialRunManager
 import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.BOQViewModel
@@ -95,6 +96,8 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
     var sellingPrice by remember { mutableStateOf("") }
     var selectedCurrency by remember { mutableStateOf("EGP") }
     var showCurrencyMenu by remember { mutableStateOf(false) }
+    
+    var trialRunLog by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
@@ -157,9 +160,26 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                 val lp = landPrice.toDoubleOrNull() ?: 0.0
                 val sp = sellingPrice.toDoubleOrNull() ?: 0.0
                 viewModel.estimateFullProject(projectType, a, f, hasBasement, factoryType, lp, sp, selectedCurrency)
+                
+                // تشغيل المحرك التجريبي وتخزين النتائج للعرض
+                trialRunLog = TrialRunManager.runFullProjectSimulation()
             }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 else Text("إصدار كشف الكميات والجدوى الاستثمارية", fontWeight = FontWeight.Bold)
+            }
+        }
+
+        trialRunLog?.let { log ->
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("🛡️ تقرير سلامة البيانات (Trial Run)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(log, fontSize = 10.sp, color = Color.DarkGray)
+                    }
+                }
             }
         }
 

@@ -1,7 +1,6 @@
 package com.civileg.app.utils
 
 import com.civileg.app.domain.entities.SteelGrade
-import com.civileg.app.domain.entities.SteelSectionType
 
 /**
  * قاموس المنشآت المعدنية الشامل
@@ -34,29 +33,33 @@ object SteelDictionary {
     /**
      * معادلات تصميمية سريعة
      */
-    fun getDesignFormulas(code: String) = when(code) {
-        "ECP" -> listOf(
-            "Allowable Axial Stress (F_c): Depends on λ (Slenderness).",
-            "Allowable Bending Stress (F_bc): 0.64 Fy for compact sections.",
-            "Shear Stress (q): 0.35 Fy."
-        )
-        "AISC" -> listOf(
-            "Available Tensile Strength: φPn = φ Fy Ag (LRFD).",
-            "Nominal Flexural Strength: Mn = Fy Zx.",
-            "Shear Strength: Vn = 0.6 Fy Aw Cv."
-        )
-        else -> emptyList()
-    )
+    fun getDesignFormulas(code: String): List<String> {
+        return when(code) {
+            "ECP" -> listOf(
+                "Allowable Axial Stress (F_c): Depends on λ (Slenderness).",
+                "Allowable Bending Stress (F_bc): 0.64 Fy for compact sections.",
+                "Shear Stress (q): 0.35 Fy."
+            )
+            "AISC" -> listOf(
+                "Available Tensile Strength: φPn = φ Fy Ag (LRFD).",
+                "Nominal Flexural Strength: Mn = Fy Zx.",
+                "Shear Strength: Vn = 0.6 Fy Aw Cv."
+            )
+            else -> emptyList()
+        }
+    }
 
     /**
      * مكتبة القطاعات المركبة (Built-up Sections)
      */
-    fun getBuiltUpDescription() = """
-        القطاعات المركبة (Built-up Sections):
-        تستخدم عندما لا تكفي القطاعات المدرفلة (Hot-rolled) للأحمال الكبيرة.
-        - يتم تصميمها باستخدام ألواح (Plates) للحصول على Web و Flanges بأبعاد مخصصة.
-        - يجب التحقق من اللحام الطولي (Longitudinal Weld) بين العصب والشفة.
-    """.trimIndent()
+    fun getBuiltUpDescription(): String {
+        return """
+            القطاعات المركبة (Built-up Sections):
+            تستخدم عندما لا تكفي القطاعات المدرفلة (Hot-rolled) للأحمال الكبيرة.
+            - يتم تصميمها باستخدام ألواح (Plates) للحصول على Web و Flanges بأبعاد مخصصة.
+            - يجب التحقق من اللحام الطولي (Longitudinal Weld) بين العصب والشفة.
+        """.trimIndent()
+    }
 
     /**
      * أنواع الوصلات الشائعة

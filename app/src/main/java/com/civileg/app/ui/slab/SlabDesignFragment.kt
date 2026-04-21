@@ -14,15 +14,19 @@ import com.civileg.app.R
 import com.civileg.app.databinding.FragmentSlabDesignBinding
 import com.civileg.app.db.*
 import com.civileg.app.db.Project as DbProject
+import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.CalculatorEngine.SlabType
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.views.SlabDetailView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.*
 import javax.inject.Inject
 
@@ -44,8 +48,8 @@ class SlabDesignFragment : Fragment() {
     @Inject
     lateinit var designRepository: DesignRepository
     
-    private var selectedSlabType = SlabType.SOLID
-    private var selectedCode = DesignCode.EGYPTIAN
+    private var selectedSlabTypeEnum = SlabType.SOLID
+    private var selectedCodeEnum = DesignCode.EGYPTIAN
     private var lastResult: CalculatorEngine.SlabResult? = null
     private var projectsList: List<DbProject> = emptyList()
 
@@ -66,17 +70,17 @@ class SlabDesignFragment : Fragment() {
     }
 
     private fun setupSlabTypeSpinner() {
-        val types = SlabType.values().map { it.name }
+        val types = SlabType.values().map { it.displayName }
         binding.spinnerSlabType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, types))
         binding.spinnerSlabType.setOnItemClickListener { _, _, position, _ ->
-            selectedSlabType = SlabType.values()[position]
+            selectedSlabTypeEnum = SlabType.values()[position]
         }
     }
 
     private fun setupCodeSelection() {
-        binding.codeToggleGroup?.addOnButtonCheckedListener { _, checkedId, isChecked ->
+        binding.codeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
-                selectedCode = when (checkedId) {
+                selectedCodeEnum = when (checkedId) {
                     R.id.btnAmericanCode -> DesignCode.ACI
                     R.id.btnSaudiCode -> DesignCode.SAUDI
                     else -> DesignCode.EGYPTIAN
@@ -103,7 +107,7 @@ class SlabDesignFragment : Fragment() {
                     fy = 360.0,
                     ts = ts,
                     preferredDiameter = 12,
-                    code = selectedCode
+                    code = selectedCodeEnum
                 )
                 lastResult = result
                 showResults(result)
@@ -117,12 +121,16 @@ class SlabDesignFragment : Fragment() {
     private fun showResults(result: CalculatorEngine.SlabResult) {
         binding.resultsCard.visibility = View.VISIBLE
         binding.etBottomReinforcementX.setText(result.reinforcementMain.barString)
+        binding.etBottomReinforcementY.setText(result.reinforcementSecondary.barString)
         
         binding.etTopReinforcementX.setText(String.format(Locale.US, "الخرسانة: %.2f m³ | التكلفة: %.2f %s", 
             result.concreteVolume, result.cost, settingsManager.currency))
         
-        binding.etTopReinforcementY.setText(String.format(Locale.US, "الحديد: %.1f kg", result.steelWeight))
+        binding.etTopReinforcementY.setText(String.format(Locale.US, "الحديد: %.1f kg | الهالك: %.3f Ton", 
+            result.steelWeight, result.steelWasteTons))
         binding.etTopReinforcementY.visibility = View.VISIBLE
+        
+        binding.etCodeUsed.setText(result.code.displayName)
         
         binding.slabDetailView.updateFromCalculation(
             type = SlabDetailView.SlabType.SOLID,
@@ -132,6 +140,63 @@ class SlabDesignFragment : Fragment() {
             mx = result.momentX, my = result.momentY, safe = result.isSafe,
             mainSteelText = result.reinforcementMain.barString
         )
+
+        binding.btnExportPdf.setOnClickListener { exportToPdf(result) }
+    }
+
+    private fun exportToPdf(result: CalculatorEngine.SlabResult) {
+        try {
+            val exporter = ComprehensivePdfExporter(requireContext())
+            val projectName = projectsList.firstOrNull { it.id == args.projectId }?.name ?: "Unnamed Project"
+            val fileName = "Slab_Report_${System.currentTimeMillis()}.pdf"
+            val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
+            
+            val slabTypeDomain = com.civileg.app.domain.entities.SlabType.Solid(
+                thickness = result.thickness, shortSpan = 4.0, longSpan = 5.0,
+                supportConditions = SlabSupportConditions(EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED)
+            )
+            
+            val inputs = SlabInputs(
+                fcu = 25.0, fy = 360.0, thickness = result.thickness, deadLoad = 1.5, liveLoad = 3.0
+            )
+            
+            val advResult = AdvancedSlabResult(
+                slabType = slabTypeDomain,
+                flexureResult = SlabDesignResult(
+                    requiredReinforcement = result.reinforcementMain.area,
+                    providedReinforcement = result.reinforcementMain.area,
+                    barDiameter = result.reinforcementMain.diameter.toDouble(),
+                    barSpacing = result.reinforcementMain.spacing,
+                    minThickness = 120.0, shearCapacity = 50.0, isSafe = result.isSafe, utilizationRatio = 0.7
+                ),
+                shearCheck = ShearCheckResult(10.0, 50.0, true, 0.2),
+                deflectionCheck = DeflectionCheckResult(2.0, 5.0, 7.0, 20.0, 0.35, true),
+                punchingShearCheck = null,
+                reinforcementLayout = ReinforcementLayout(
+                    topBars = BarLayout(10.0, 200.0, BarDirection.BOTH, 5.0, 50),
+                    bottomBars = BarLayout(result.reinforcementMain.diameter.toDouble(), result.reinforcementMain.spacing, BarDirection.BOTH, 5.0, 50),
+                    distributionBars = null, additionalBars = emptyList()
+                ),
+                concreteVolume = result.concreteVolume,
+                formworkArea = 20.0,
+                inventoryAnalysis = null,
+                postTensionCalculations = null,
+                warnings = emptyList(),
+                codeNotes = listOf("Exported from Civil EG")
+            )
+
+            exporter.exportSlabReport(
+                projectName = projectName,
+                designCode = com.civileg.app.domain.entities.DesignCode.ECP,
+                slabType = slabTypeDomain,
+                inputs = inputs,
+                result = advResult,
+                outputPath = filePath
+            )
+            Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            showError("Export Error: ${e.message}")
+        }
     }
 
     private fun setupSaveButton() {

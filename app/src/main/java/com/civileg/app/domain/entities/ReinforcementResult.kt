@@ -14,8 +14,12 @@ data class ReinforcementResult(
     val isSafe: Boolean,            // هل التصميم آمن؟
     val utilizationRatio: Double,   // نسبة الاستغلال
     val warnings: List<String> = emptyList(), // تحذيرات إن وجدت
-    val codeNotes: List<String> = emptyList() // ملاحظات خاصة بالكود
+    val codeNotes: List<String> = emptyList(), // ملاحظات خاصة بالكود
+    val spacing: Double = 0.0,
+    val description: String = ""
 ) : Parcelable {
+    val barString: String get() = if (numberOfBars > 0) "${numberOfBars}Ø${barDiameter.toInt()}" else if (spacing > 0) "${(1000/spacing).toInt()}Ø${barDiameter.toInt()}/m'" else description
+
     val safetyStatus: String
         get() = when {
             isSafe && utilizationRatio < 0.7 -> "Safe (Economical)"

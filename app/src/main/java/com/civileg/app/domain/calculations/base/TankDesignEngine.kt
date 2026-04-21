@@ -11,7 +11,10 @@ class TankDesignEngine @Inject constructor() {
     fun design(
         length: Double, width: Double, height: Double, 
         waterDepth: Double, fcu: Double, fy: Double, 
-        type: TankType, code: String
+        type: TankType, code: String,
+        wallT: Double = 250.0,
+        baseT: Double = 400.0,
+        waterTableDepth: Double = 0.0 // mm from ground level
     ): TankResult {
         
         // 1. Structural Analysis
@@ -21,79 +24,105 @@ class TankDesignEngine @Inject constructor() {
             width = width,
             height = height,
             waterDepth = waterDepth,
-            wallThickness = 250.0, // Initial guess
-            baseThickness = 400.0  // Initial guess
+            wallThickness = wallT,
+            baseThickness = baseT,
+            isUnderground = type == TankType.RECTANGULAR_UNDERGROUND || type == TankType.CIRCULAR_UNDERGROUND
         )
         val analysis = TankAnalysis.analyze(analysisInput)
 
-        // 2. Concrete Dimensioning (Simplified check for thickness)
-        var tWall = 250.0
-        val minT = height / 12.0
-        if (tWall < minT) tWall = ceil(minT / 50.0) * 50.0
-
-        // 3. Reinforcement Calculation (Simplified)
-        val asWall = calculateSteel(analysis.wallMaxMomentVertical, tWall, fy)
-        val asBase = calculateSteel(analysis.baseMaxMoment, 400.0, fy)
+        // 2. Reinforcement Calculation
+        val asWallV = calculateSteel(analysis.wallMaxMomentVertical, wallT, fy)
+        val asWallH = calculateSteel(analysis.wallMaxMomentHorizontal, wallT, fy)
+        val asBase = calculateSteel(analysis.baseMaxMoment, baseT, fy)
 
         val wallReinforcement = ReinforcementResult(
-            astRequired = asWall,
-            astProvided = ceil(asWall / 113.0) * 113.0, // Ø12 area
+            astRequired = asWallV,
+            astProvided = max(asWallV, 450.0), // Min steel
             barDiameter = 12.0,
-            numberOfBars = ceil(asWall / 113.0).toInt().coerceAtLeast(6),
+            numberOfBars = 0,
+            spacing = 150.0,
             tiesDiameter = 0.0,
             tiesSpacing = 150.0,
             isSafe = true,
-            utilizationRatio = 0.7
+            utilizationRatio = asWallV / ( (1000.0/150.0) * 113.0)
         )
 
         val baseReinforcement = ReinforcementResult(
             astRequired = asBase,
-            astProvided = ceil(asBase / 154.0) * 154.0, // Ø14 area
+            astProvided = max(asBase, 600.0),
             barDiameter = 14.0,
-            numberOfBars = ceil(asBase / 154.0).toInt().coerceAtLeast(7),
+            numberOfBars = 0,
+            spacing = 150.0,
             tiesDiameter = 0.0,
             tiesSpacing = 150.0,
             isSafe = true,
-            utilizationRatio = 0.65
+            utilizationRatio = asBase / ( (1000.0/150.0) * 154.0)
         )
+
+        // 3. Physical Properties
+        val capacity = (length / 1000.0) * (width / 1000.0) * (waterDepth / 1000.0)
+        val tankWeight = (((length * width * baseT) + (2 * (length + width) * height * wallT)) / 1e9) * 25.0 // kN
+        val waterWeight = capacity * 10.0 // kN
+        
+        val concVol = ((length * width * baseT) + (2 * (length + width) * height * wallT)) / 1e9
+        val steelWeight = concVol * 145.0 // kg/m3
 
         // 4. Safety Checks
         val checks = mutableListOf<TankSafetyCheck>()
-        checks.add(TankSafetyCheck("Wall Moment", analysis.wallMaxMomentVertical, 150.0, "kN.m", true))
-        checks.add(TankSafetyCheck("Base Shear", analysis.baseMaxShear, 250.0, "kN", true))
+        checks.add(TankSafetyCheck("Wall Vertical Moment", analysis.wallMaxMomentVertical, 120.0, "kN.m/m", analysis.wallMaxMomentVertical < 120.0))
+        checks.add(TankSafetyCheck("Wall Shear", analysis.wallMaxShear, 200.0, "kN/m", analysis.wallMaxShear < 200.0))
         
-        val capacity = (length / 1000.0) * (width / 1000.0) * (waterDepth / 1000.0)
-        val concVol = ((length * width * 400.0) + (2 * (length + width) * height * tWall)) / 1e9
-        val steelWeight = concVol * 140.0 // kg/m3
+        // Uplift Check for Underground
+        var upliftFS = 0.0
+        if (analysisInput.isUnderground && waterTableDepth < height) {
+            val displacedWaterVol = (length * width * (height - waterTableDepth)) / 1e9
+            val upliftForce = displacedWaterVol * 10.0
+            upliftFS = tankWeight / upliftForce
+            checks.add(TankSafetyCheck("Uplift Safety Factor", upliftFS, 1.2, "", upliftFS >= 1.2, "Stability against buoyancy"))
+        }
+
+        // Stability Check for Elevated
+        if (type == TankType.RECTANGULAR_ELEVATED || type == TankType.CIRCULAR_ELEVATED) {
+            val totalVertical = tankWeight + waterWeight
+            val overturningMoment = 50.0 * (height / 2000.0) // Mock wind load
+            val stabilityFS = (totalVertical * (min(length, width) / 2000.0)) / overturningMoment
+            checks.add(TankSafetyCheck("Overturning Stability", stabilityFS, 1.5, "", stabilityFS >= 1.5))
+        }
+
+        val isSafe = checks.all { it.isSafe }
 
         return TankResult(
-            wallThickness = tWall,
-            baseThickness = 400.0,
+            wallThickness = wallT,
+            baseThickness = baseT,
             wallReinforcement = wallReinforcement,
             baseReinforcement = baseReinforcement,
             capacityM3 = capacity,
             concreteVolume = concVol,
             steelWeight = steelWeight,
             cost = concVol * 6500.0 + (steelWeight / 1000.0 * 55000.0),
-            isSafe = true,
+            isSafe = isSafe,
             pressure = 10.0 * (waterDepth / 1000.0),
             maxMomentWall = analysis.wallMaxMomentVertical,
             maxMomentBase = analysis.baseMaxMoment,
             maxShearWall = analysis.wallMaxShear,
+            factorOfSafetyUplift = upliftFS,
             structuralSystem = when(type) {
-                TankType.RECTANGULAR_GROUND -> "Ground Rectangular - Fixed Base"
+                TankType.RECTANGULAR_GROUND -> "Ground Rectangular - PCA Coefficients"
                 TankType.CIRCULAR_GROUND -> "Ground Circular - Hoop Tension"
-                TankType.RECTANGULAR_ELEVATED -> "Elevated Rectangular on Columns"
+                TankType.RECTANGULAR_ELEVATED -> "Elevated Rectangular on RC Columns"
+                TankType.RECTANGULAR_UNDERGROUND -> "Underground Rectangular - Soil + Water"
                 else -> "Custom System"
             },
             recommendations = listOf(
-                "Use SBR or Water-stop at joints",
-                "Ensure minimum cover of 40mm",
-                "Curing for at least 7 days"
+                "Use SBR or Water-stop at all construction joints",
+                "Minimum concrete cover: 40mm (Water side), 25mm (Outer side)",
+                "Curing with clean water for at least 7 days",
+                "Testing for leakage before backfilling (for underground)"
             ),
             safetyChecks = checks
         )
     }
+
 
     private fun calculateSteel(mu: Double, t: Double, fy: Double): Double {
         val d = t - 50.0

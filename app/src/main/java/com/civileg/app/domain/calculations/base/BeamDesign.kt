@@ -1,9 +1,6 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.domain.entities.ShearReinforcementResult
-import com.civileg.app.domain.entities.DeflectionCheckResult
+import com.civileg.app.domain.entities.*
 
 /**
  * واجهة موحدة لتصميم الكمرات حسب أي كود إنشائي
@@ -68,8 +65,3 @@ interface BeamDesign {
     fun getMinCover(): Double
     fun getDeflectionLimit(span: Double): Double  // mm
 }
-
-// شروط التثبيت
-enum class SupportCondition { SIMPLY_SUPPORTED, CONTINUOUS, CANTILEVER }
-enum class BarLocation { TOP, BOTTOM, SIDE }
-enum class CoatingType { UNCOATED, EPOXY_COATED, GALVANIZED }

@@ -14,6 +14,9 @@ import com.civileg.app.R
 import com.civileg.app.databinding.FragmentWaterTankBinding
 import com.civileg.app.db.*
 import com.civileg.app.db.Project as DbProject
+import com.civileg.app.domain.calculations.base.TankDesignEngine
+import com.civileg.app.domain.calculations.base.TankType as DomainTankType
+import com.civileg.app.domain.calculations.base.TankResult as DomainTankResult
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfGenerator
@@ -36,15 +39,15 @@ class WaterTankFragment : Fragment() {
     private val args: WaterTankFragmentArgs by navArgs()
     
     @Inject
-    lateinit var calculatorEngine: CalculatorEngine
+    lateinit var tankDesignEngine: TankDesignEngine
     
     @Inject
     lateinit var settingsManager: SettingsManager
-    
-    private var lastResult: CalculatorEngine.TankResult? = null
+
+    private var lastResult: DomainTankResult? = null
     private var lastInputData: JSONObject? = null
     private var projectsList: List<DbProject> = emptyList()
-    private var selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND
+    private var selectedType = DomainTankType.RECTANGULAR_GROUND
     
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -75,13 +78,15 @@ class WaterTankFragment : Fragment() {
     private fun setupTypeSelector() {
         binding.rgTankType.setOnCheckedChangeListener { _, checkedId ->
             selectedType = when (checkedId) {
-                R.id.rbCircular -> CalculatorEngine.TankType.CIRCULAR_GROUND
-                R.id.rbElevated -> CalculatorEngine.TankType.RECTANGULAR_ELEVATED
-                R.id.rbUnderground -> CalculatorEngine.TankType.RECTANGULAR_GROUND // Assuming underground is rectangular ground for now
-                else -> CalculatorEngine.TankType.RECTANGULAR_GROUND
+                R.id.rbCircular -> DomainTankType.CIRCULAR_GROUND
+                R.id.rbElevated -> DomainTankType.RECTANGULAR_ELEVATED
+                R.id.rbUnderground -> DomainTankType.RECTANGULAR_UNDERGROUND
+                else -> DomainTankType.RECTANGULAR_GROUND
             }
             
-            if (selectedType == CalculatorEngine.TankType.CIRCULAR_GROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED) {
+            if (selectedType == DomainTankType.CIRCULAR_GROUND || 
+                selectedType == DomainTankType.CIRCULAR_ELEVATED ||
+                selectedType == DomainTankType.CIRCULAR_UNDERGROUND) {
                 binding.layoutRectDimensions.visibility = View.GONE
                 binding.layoutDiameter.visibility = View.VISIBLE
             } else {
@@ -99,24 +104,23 @@ class WaterTankFragment : Fragment() {
     
     private fun calculateWaterTank() {
         try {
-            val length = binding.etLength.text.toString().toDoubleOrNull() ?: 5.0
-            val width = binding.etWidth.text.toString().toDoubleOrNull() ?: 4.0
-            val diameter = binding.etDiameter.text.toString().toDoubleOrNull() ?: 5.0
-            val height = binding.etHeight.text.toString().toDoubleOrNull() ?: 3.0
-            val waterHeight = binding.etWaterHeight.text.toString().toDoubleOrNull() ?: 2.5
-            
-            val capacity = if (selectedType == CalculatorEngine.TankType.CIRCULAR_GROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED) {
-                PI * (diameter/2.0).pow(2) * waterHeight
-            } else {
-                length * width * waterHeight
-            }
+            val length = binding.etLength.text.toString().toDoubleOrNull() ?: 5000.0
+            val width = binding.etWidth.text.toString().toDoubleOrNull() ?: 4000.0
+            val diameter = binding.etDiameter.text.toString().toDoubleOrNull() ?: 5000.0
+            val height = binding.etHeight.text.toString().toDoubleOrNull() ?: 3000.0
+            val waterHeight = binding.etWaterHeight.text.toString().toDoubleOrNull() ?: 2500.0
+            val wallT = binding.etWallThickness.text.toString().toDoubleOrNull() ?: 250.0
 
-            val result = calculatorEngine.designTank(
-                type = selectedType,
-                capacity = capacity,
+            val result = tankDesignEngine.design(
+                length = if (selectedType.name.contains("CIRCULAR")) diameter else length,
+                width = width,
                 height = height,
+                waterDepth = waterHeight,
                 fcu = 25.0,
-                fy = 360.0
+                fy = 360.0,
+                type = selectedType,
+                code = settingsManager.defaultDesignCode.name,
+                wallT = wallT
             )
             
             lastResult = result
@@ -125,34 +129,50 @@ class WaterTankFragment : Fragment() {
                 put("length", length); put("width", width)
                 put("diameter", diameter)
                 put("height", height); put("waterHeight", waterHeight)
+                put("wallT", wallT)
             }
             
             showResults(result)
+            updateTankView(result)
             
             Toast.makeText(requireContext(), getString(R.string.calculation_complete), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             showError(e.message ?: getString(R.string.error))
         }
     }
+
+    private fun updateTankView(result: DomainTankResult) {
+        binding.tankView.update(
+            l = (lastInputData?.optDouble("length") ?: 5000.0).toFloat(),
+            h = (lastInputData?.optDouble("height") ?: 3000.0).toFloat(),
+            t = result.wallThickness.toFloat(),
+            bt = result.baseThickness.toFloat(),
+            wd = (lastInputData?.optDouble("waterHeight") ?: 2500.0).toFloat(),
+            type = if (selectedType.name.contains("CIRCULAR")) CalculatorEngine.TankType.CIRCULAR_GROUND else if (selectedType.name.contains("UNDERGROUND")) CalculatorEngine.TankType.UNDERGROUND else CalculatorEngine.TankType.RECTANGULAR_GROUND,
+            rebarText = result.wallReinforcement.barString,
+            baseRebar = result.baseReinforcement.barString,
+            safe = result.isSafe
+        )
+    }
     
-    private fun showResults(result: CalculatorEngine.TankResult) {
+    private fun showResults(result: DomainTankResult) {
         binding.cardResults.visibility = View.VISIBLE
         
         binding.tvCapacity.text = String.format(Locale.getDefault(), "%.1f m³", result.capacityM3)
-        binding.tvSteelArea.text = result.wallReinforcement?.barString ?: "N/A"
+        binding.tvSteelArea.text = result.wallReinforcement.barString
         binding.tvPressure.text = String.format(Locale.getDefault(), "%.1f kPa", result.pressure)
         binding.tvConcreteVol.text = String.format(Locale.getDefault(), "%.2f m³", result.concreteVolume)
         binding.tvTotalCost.text = String.format(Locale.getDefault(), "%.2f %s", result.cost, settingsManager.currency)
         
-        binding.tvSafetyCheck.text = result.safetyCheck
+        val safetyInfo = result.safetyChecks.joinToString("\n") { 
+            "${it.name}: ${String.format("%.2f", it.value)} / ${it.limit} ${it.unit} ${if(it.isSafe) "✓" else "✗"}"
+        }
+        binding.tvSafetyCheck.text = safetyInfo
         binding.tvSafetyCheck.setTextColor(if(result.isSafe) ContextCompat.getColor(requireContext(), R.color.success) else ContextCompat.getColor(requireContext(), R.color.danger))
         
-        // Alternatives
-        val alternativesText = result.alternatives
-            .joinToString(" or ") { it.wallReinforcement?.barString ?: "N/A" }
-        binding.tvAlternatives.text = if (alternativesText.isNotEmpty()) alternativesText else "No practical alternatives"
+        binding.tvAlternatives.text = result.structuralSystem
         
-        binding.tvWaterTightStatus.text = if (result.isSafe) getString(R.string.status_safe) else getString(R.string.status_unsafe)
+        binding.tvWaterTightStatus.text = if (result.isSafe) "DESIGN SAFE" else "UNSAFE DESIGN"
         val statusColor = if (result.isSafe) ContextCompat.getColor(requireContext(), R.color.success) else ContextCompat.getColor(requireContext(), R.color.danger)
         binding.tvWaterTightStatus.setTextColor(statusColor)
         binding.tvWaterTightStatus.setBackgroundColor(Color.argb(30, Color.red(statusColor), Color.green(statusColor), Color.blue(statusColor)))
@@ -172,7 +192,7 @@ class WaterTankFragment : Fragment() {
         }
     }
 
-    private fun saveToProject(projectId: Long, result: CalculatorEngine.TankResult) {
+    private fun saveToProject(projectId: Long, result: DomainTankResult) {
         val design = Design(
             projectId = projectId, type = DesignType.WATER_TANK,
             name = "Tank (${selectedType.name}) - ${System.currentTimeMillis() % 1000}",
@@ -199,20 +219,20 @@ class WaterTankFragment : Fragment() {
         binding.btnExportPdf.setOnClickListener {
             val res = lastResult ?: return@setOnClickListener
             val inputs = mutableMapOf<String, String>()
-            if (selectedType == CalculatorEngine.TankType.CIRCULAR_GROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED) {
-                inputs["Diameter"] = "${lastInputData?.optDouble("diameter")} m"
+            if (selectedType.name.contains("CIRCULAR")) {
+                inputs["Diameter"] = "${lastInputData?.optDouble("diameter")} mm"
             } else {
-                inputs["Length"] = "${lastInputData?.optDouble("length")} m"
-                inputs["Width"] = "${lastInputData?.optDouble("width")} m"
+                inputs["Length"] = "${lastInputData?.optDouble("length")} mm"
+                inputs["Width"] = "${lastInputData?.optDouble("width")} mm"
             }
-            inputs["Height"] = "${lastInputData?.optDouble("height")} m"
+            inputs["Height"] = "${lastInputData?.optDouble("height")} mm"
             
             val results = mapOf(
                 "Type" to selectedType.name,
                 "Capacity" to String.format(Locale.getDefault(), "%.1f m3", res.capacityM3),
                 "Concrete Vol" to String.format(Locale.getDefault(), "%.2f m3", res.concreteVolume),
                 "Estimated Cost" to String.format(Locale.getDefault(), "%.2f %s", res.cost, settingsManager.currency),
-                "Check" to res.safetyCheck
+                "Status" to if(res.isSafe) "SAFE" else "UNSAFE"
             )
             try {
                 val file = PdfGenerator.generateDesignReport(requireContext(), "Water Tank Report", "TANK", inputs, results, res.isSafe)
