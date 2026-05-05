@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "com.civileg.app"
+    namespace = "com.siteengineer.pro"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.civileg.app"
+        applicationId = "com.siteengineer.pro"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -28,6 +28,19 @@ android {
         // إعدادات Hilt مع KSP
         ksp {
             arg("hilt.projectLevelApp", "true")
+            arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
+            arg("dagger.fastInit", "enabled")
+            arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+        }
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += mapOf(
+                    "dagger.hilt.internal.useAggregatingRootProcessor" to "true",
+                    "dagger.fastInit" to "enabled",
+                    "dagger.hilt.android.internal.disableAndroidSuperclassValidation" to "true"
+                )
+            }
         }
     }
 
@@ -62,8 +75,8 @@ android {
 }
 
 // إخفاء تحذيرات الخيارات غير المعرفة في Hilt/KSP
-tasks.withType<JavaCompile> {
-    options.compilerArgs.addAll(listOf("-Xlint:-processing"))
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-Xlint:-processing")
 }
 
 dependencies {

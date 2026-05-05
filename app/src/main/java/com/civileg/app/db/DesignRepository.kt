@@ -21,9 +21,18 @@ class DesignRepository @Inject constructor(
     private val beamDao: BeamDao,
     private val stairDao: StairDao,
     private val retainingWallDao: RetainingWallDao,
-    private val tankDao: TankDao
+    private val tankDao: TankDao,
+    private val inventoryDao: InventoryDao
 ) {
     private val gson = Gson()
+
+    // --- Inventory Operations ---
+    fun getAllInventoryItems(): Flow<List<InventoryItem>> = inventoryDao.getAllItems()
+    fun getInventoryItemsByType(type: InventoryType): Flow<List<InventoryItem>> = inventoryDao.getItemsByType(type)
+    suspend fun saveInventoryItem(item: InventoryItem) = inventoryDao.insertItem(item)
+    suspend fun updateInventoryItem(item: InventoryItem) = inventoryDao.updateItem(item)
+    suspend fun deleteInventoryItem(item: InventoryItem) = inventoryDao.deleteItem(item)
+    fun getLowStockItems(): Flow<List<InventoryItem>> = inventoryDao.getLowStockItems()
 
     suspend fun saveFootingDesign(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
         saveGeneralDesign(projectId, DesignType.FOOTING, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName)

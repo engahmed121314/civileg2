@@ -29,19 +29,26 @@ class SpanAdapter(
 
         holder.binding.etSpanLength.doAfterTextChanged { 
             val newVal = it.toString().toDoubleOrNull() ?: 0.0
-            spans[holder.adapterPosition] = spans[holder.adapterPosition].copy(length = newVal)
-            onSpanChanged()
+            val pos = holder.bindingAdapterPosition
+            if (pos != RecyclerView.NO_POSITION) {
+                spans[pos] = spans[pos].copy(length = newVal)
+                onSpanChanged()
+            }
         }
 
         holder.binding.etSpanLoad.doAfterTextChanged {
             val newVal = it.toString().toDoubleOrNull() ?: 0.0
-            spans[holder.adapterPosition] = spans[holder.adapterPosition].copy(load = newVal)
-            onSpanChanged()
+            val pos = holder.bindingAdapterPosition
+            if (pos != RecyclerView.NO_POSITION) {
+                spans[pos] = spans[pos].copy(load = newVal)
+                onSpanChanged()
+            }
         }
 
         holder.binding.btnRemoveSpan.setOnClickListener {
-            if (spans.size > 1) {
-                spans.removeAt(holder.adapterPosition)
+            val pos = holder.bindingAdapterPosition
+            if (pos != RecyclerView.NO_POSITION && spans.size > 1) {
+                spans.removeAt(pos)
                 notifyDataSetChanged()
                 onSpanChanged()
             }

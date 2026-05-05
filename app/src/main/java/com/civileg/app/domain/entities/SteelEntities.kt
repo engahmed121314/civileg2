@@ -8,31 +8,37 @@ import kotlin.math.PI
 /**
  * جميع أنواع القطاعات المعدنية
  */
-sealed class SteelSectionType(val displayName: String, val codeReference: String) : Parcelable {
+sealed class SteelSectionType(
+    val displayName: String, 
+    val sectionName: String,
+    val codeReference: String
+) : Parcelable {
     
     /**
      * قطاع I أو H
      */
     @Parcelize
     data class ISection(
-        val depth: Double,        // mm - h
-        val flangeWidth: Double,  // mm - bf
-        val flangeThickness: Double, // mm - tf
-        val webThickness: Double, // mm - tw
-        val grade: SteelGrade
-    ) : SteelSectionType("I/H Section", "AISC 360-B4 / ECP 205-3")
+        val h: Double,            // mm - depth
+        val bf: Double,           // mm - flange width
+        val tf: Double,           // mm - flange thickness
+        val tw: Double,           // mm - web thickness
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("I/H Section", customName ?: "I ${h.toInt()}x${bf.toInt()}", "AISC 360-B4 / ECP 205-3")
     
     /**
      * قطاع C (Channel)
      */
     @Parcelize
     data class CSection(
-        val depth: Double,
-        val flangeWidth: Double,
-        val flangeThickness: Double,
-        val webThickness: Double,
-        val grade: SteelGrade
-    ) : SteelSectionType("C Channel", "AISC 360-B4 / ECP 205-3")
+        val h: Double,
+        val bf: Double,
+        val tf: Double,
+        val tw: Double,
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("C Channel", customName ?: "C ${h.toInt()}x${bf.toInt()}", "AISC 360-B4 / ECP 205-3")
     
     /**
      * قطاع L (Angle)
@@ -42,8 +48,9 @@ sealed class SteelSectionType(val displayName: String, val codeReference: String
         val legA: Double,
         val legB: Double,
         val thickness: Double,
-        val grade: SteelGrade
-    ) : SteelSectionType("L Angle", "AISC 360-B4 / ECP 205-3")
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("L Angle", customName ?: "L ${legA.toInt()}x${legB.toInt()}x${thickness.toInt()}", "AISC 360-B4 / ECP 205-3")
     
     /**
      * قطاع أنبوبي Circular Hollow
@@ -52,8 +59,9 @@ sealed class SteelSectionType(val displayName: String, val codeReference: String
     data class CHS(
         val outerDiameter: Double,
         val thickness: Double,
-        val grade: SteelGrade
-    ) : SteelSectionType("Circular Hollow Section", "AISC 360-B4 / ECP 205-3")
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("Circular Hollow Section", customName ?: "CHS Ø${outerDiameter.toInt()}x${thickness.toInt()}", "AISC 360-B4 / ECP 205-3")
     
     /**
      * قطاع مربع/مستطيل مجوف RHS/SHS
@@ -63,8 +71,9 @@ sealed class SteelSectionType(val displayName: String, val codeReference: String
         val width: Double,
         val height: Double,
         val thickness: Double,
-        val grade: SteelGrade
-    ) : SteelSectionType("Rectangular Hollow Section", "AISC 360-B4 / ECP 205-3")
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("Rectangular Hollow Section", customName ?: "RHS ${width.toInt()}x${height.toInt()}x${thickness.toInt()}", "AISC 360-B4 / ECP 205-3")
     
     /**
      * قطاع T
@@ -75,8 +84,9 @@ sealed class SteelSectionType(val displayName: String, val codeReference: String
         val flangeThickness: Double,
         val webDepth: Double,
         val webThickness: Double,
-        val grade: SteelGrade
-    ) : SteelSectionType("T Section", "AISC 360-B4")
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("T Section", customName ?: "T ${flangeWidth.toInt()}x${webDepth.toInt()}", "AISC 360-B4")
     
     /**
      * قطاع مركب Built-up
@@ -84,12 +94,13 @@ sealed class SteelSectionType(val displayName: String, val codeReference: String
     @Parcelize
     data class BuiltUp(
         val sections: List<SteelSectionType>,
-        val connectionType: @RawValue ConnectionType
-    ) : SteelSectionType("Built-up Section", "AISC 360-E6")
+        val connectionType: @RawValue ConnectionType,
+        val customName: String? = null
+    ) : SteelSectionType("Built-up Section", customName ?: "Built-up", "AISC 360-E6")
     
     fun getArea(): Double = when (this) {
-        is ISection -> 2 * flangeWidth * flangeThickness + (depth - 2 * flangeThickness) * webThickness
-        is CSection -> 2 * flangeWidth * flangeThickness + (depth - 2 * flangeThickness) * webThickness
+        is ISection -> 2 * bf * tf + (h - 2 * tf) * tw
+        is CSection -> 2 * bf * tf + (h - 2 * tf) * tw
         is LSection -> (legA + legB - thickness) * thickness
         is CHS -> PI * (outerDiameter * outerDiameter - (outerDiameter - 2 * thickness) * (outerDiameter - 2 * thickness)) / 4
         is RHS -> 2 * (width + height - 2 * thickness) * thickness
@@ -97,6 +108,59 @@ sealed class SteelSectionType(val displayName: String, val codeReference: String
         is BuiltUp -> sections.sumOf { it.getArea() }
     }
 }
+
+val SteelSectionType.depth: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> h
+        is SteelSectionType.CSection -> h
+        is SteelSectionType.LSection -> legA
+        is SteelSectionType.CHS -> outerDiameter
+        is SteelSectionType.RHS -> height
+        is SteelSectionType.TSection -> webDepth + flangeThickness
+        is SteelSectionType.BuiltUp -> sections.maxOfOrNull { it.depth } ?: 0.0
+    }
+
+val SteelSectionType.width: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> bf
+        is SteelSectionType.CSection -> bf
+        is SteelSectionType.LSection -> legB
+        is SteelSectionType.CHS -> outerDiameter
+        is SteelSectionType.RHS -> width
+        is SteelSectionType.TSection -> flangeWidth
+        is SteelSectionType.BuiltUp -> sections.maxOfOrNull { it.width } ?: 0.0
+    }
+
+val SteelSectionType.webThickness: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> tw
+        is SteelSectionType.CSection -> tw
+        is SteelSectionType.LSection -> thickness
+        is SteelSectionType.CHS -> thickness
+        is SteelSectionType.RHS -> thickness
+        is SteelSectionType.TSection -> webThickness
+        is SteelSectionType.BuiltUp -> 0.0
+    }
+
+val SteelSectionType.flangeThickness: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> tf
+        is SteelSectionType.CSection -> tf
+        is SteelSectionType.LSection -> thickness
+        is SteelSectionType.CHS -> thickness
+        is SteelSectionType.RHS -> thickness
+        is SteelSectionType.TSection -> flangeThickness
+        is SteelSectionType.BuiltUp -> 0.0
+    }
+
+val SteelSectionType.area: Double get() = getArea()
+val SteelSectionType.weight: Double get() = area * 7.85e-3 // kg/m (mm2 * 7.85e-6 kg/mm3 * 1000 mm/m)
+val SteelSectionType.ix: Double get() = 0.0
+val SteelSectionType.sx: Double get() = 0.0
+val SteelSectionType.rx: Double get() = 0.0
+val SteelSectionType.zx: Double get() = 0.0
+val SteelSectionType.rootRadius: Double get() = 0.0
+val SteelSectionType.flangeSlope: Double get() = 0.0
 
 @Parcelize
 enum class SteelGrade(val displayName: String, val fy: Double, val fu: Double, val codeReference: String) : Parcelable {

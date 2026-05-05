@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -16,14 +17,17 @@ import java.io.File
 import javax.inject.Inject
 
 data class ColumnUiState(
-    val width: Double = 300.0,
-    val depth: Double = 300.0,
-    val height: Double = 3.0,
-    val fcu: Double = 25.0,
-    val fy: Double = 400.0,
-    val axialLoad: Double = 1000.0,
+    val width: String = "300",
+    val depth: String = "300",
+    val height: String = "3.0",
+    val fcu: String = "25",
+    val fy: String = "400",
+    val axialLoad: String = "1000",
     val designCode: DesignCode = DesignCode.ECP,
     val loadCombination: LoadCombination = LoadCombination.DEAD_LIVE,
+    val preferredDiameter: String = "16",
+    val manualNumBars: String = "",
+    val autoOptimize: Boolean = true,
     val result: CalculatorEngine.ColumnResult? = null,
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
@@ -33,31 +37,64 @@ data class ColumnUiState(
 @HiltViewModel
 class ColumnViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine
+    private val calculatorEngine: CalculatorEngine,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ColumnUiState())
     val uiState: StateFlow<ColumnUiState> = _uiState.asStateFlow()
     
+    init {
+        // Initialize with default code from settings
+        _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }
+    }
+
     val uiStateLiveData: LiveData<ColumnUiState> = _uiState.asLiveData()
     val result: LiveData<CalculatorEngine.ColumnResult?> = _uiState.map { it.result }.asLiveData()
 
     fun updateInputs(
-        width: Double? = null,
-        depth: Double? = null,
-        height: Double? = null,
-        fcu: Double? = null,
-        fy: Double? = null,
-        axialLoad: Double? = null
+        width: String? = null,
+        depth: String? = null,
+        height: String? = null,
+        fcu: String? = null,
+        fy: String? = null,
+        axialLoad: String? = null,
+        preferredDiameter: String? = null,
+        manualNumBars: String? = null
     ) {
         _uiState.update { state ->
+            val newManualNumBars = manualNumBars ?: state.manualNumBars
+            val newPreferredDiameter = preferredDiameter ?: state.preferredDiameter
+            
+            // If user manually edits number of bars or diameter, disable auto-optimization
+            val shouldDisableAuto = manualNumBars != null || (preferredDiameter != null && !state.autoOptimize)
+
             state.copy(
                 width = width ?: state.width,
                 depth = depth ?: state.depth,
                 height = height ?: state.height,
                 fcu = fcu ?: state.fcu,
                 fy = fy ?: state.fy,
-                axialLoad = axialLoad ?: state.axialLoad
+                axialLoad = axialLoad ?: state.axialLoad,
+                preferredDiameter = newPreferredDiameter,
+                manualNumBars = newManualNumBars,
+                autoOptimize = if (shouldDisableAuto) false else state.autoOptimize
+            )
+        }
+    }
+
+    fun applyEconomicalDesign() {
+        _uiState.update { it.copy(autoOptimize = true) }
+        calculate()
+    }
+
+    fun applySafetyDesign() {
+        _uiState.update { state ->
+            val currentDia = state.preferredDiameter.toIntOrNull() ?: 16
+            state.copy(
+                autoOptimize = false,
+                preferredDiameter = (currentDia + 2).toString(), // Suggest larger bar
+                manualNumBars = ( (state.result?.reinforcement?.numBars ?: 4) + 2).toString()
             )
         }
         calculate()
@@ -73,12 +110,15 @@ class ColumnViewModel @Inject constructor(
         calculate()
     }
 
+    fun updateAutoOptimize(optimize: Boolean) {
+        _uiState.update { it.copy(autoOptimize = optimize) }
+        calculate()
+    }
+
     fun calculateColumnPro(width: Double, depth: Double, height: Double, fcu: Double, fy: Double, load: Double, diameter: Int, code: CalculatorEngine.DesignCode) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // تصحيح: تمرير البارامترات حسب تعريف الدالة في CalculatorEngine
-                // الدالة تتوقع: (width, depth, pu, fcu, fy, code)
                 val res = calculatorEngine.designColumn(
                     width = width,
                     depth = depth,
@@ -94,19 +134,34 @@ class ColumnViewModel @Inject constructor(
         }
     }
 
+    fun calculateManual() {
+        calculate()
+    }
+
     private fun calculate() {
         val state = _uiState.value
+        val w = state.width.toDoubleOrNull() ?: return
+        val d = state.depth.toDoubleOrNull() ?: return
+        val h = state.height.toDoubleOrNull() ?: 3.0
+        val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
+        val fyVal = state.fy.toDoubleOrNull() ?: 400.0
+        val load = state.axialLoad.toDoubleOrNull() ?: 0.0
+        val dia = state.preferredDiameter.toIntOrNull() ?: 16
+        val manualBars = state.manualNumBars.toIntOrNull()
+
         viewModelScope.launch {
             try {
-                // تصحيح: استخدام البارامترات الصحيحة للدالة الحالية
                 val res = calculatorEngine.designColumn(
-                    width = state.width,
-                    depth = state.depth,
-                    pu = state.axialLoad * state.loadCombination.factor,
-                    fcu = state.fcu,
-                    fy = state.fy,
+                    width = w,
+                    depth = d,
+                    pu = load * state.loadCombination.getFactorForCode(state.designCode),
+                    fcu = fcuVal,
+                    fy = fyVal,
                     code = mapDesignCode(state.designCode),
-                    clearHeight = state.height * 1000.0 // التحويل لـ mm
+                    clearHeight = h * 1000.0,
+                    preferredDiameter = dia,
+                    autoOptimize = state.autoOptimize,
+                    manualNumBars = manualBars
                 )
                 _uiState.update { it.copy(result = res, errors = emptyList()) }
             } catch (e: Exception) {
@@ -125,6 +180,10 @@ class ColumnViewModel @Inject constructor(
                 val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
                 
+                val h = state.height.toDoubleOrNull() ?: 3.0
+                val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
+                val fyVal = state.fy.toDoubleOrNull() ?: 400.0
+
                 val colType = if (res.columnType == "CIRCULAR") ColumnType.Circular(res.width) else ColumnType.Rectangular(res.width, res.depth)
                 val advResult = AdvancedColumnResult(
                     columnType = colType,
@@ -133,7 +192,7 @@ class ColumnViewModel @Inject constructor(
                     momentCapacityY = 0.0,
                     slendernessRatio = res.slenderness,
                     isSlender = res.isSlender,
-                    effectiveLength = state.height * 1000.0,
+                    effectiveLength = h * 1000.0,
                     reinforcementResult = ReinforcementResult(
                         astRequired = res.reinforcementArea,
                         astProvided = res.reinforcementArea,
@@ -149,18 +208,18 @@ class ColumnViewModel @Inject constructor(
                     punchingCheck = PunchingCheckResult(res.pu, 1000.0, res.punchingSafe, false, 2000.0),
                     warnings = emptyList(),
                     codeNotes = listOf("تم التصدير من تطبيق Civil EG Pro"),
-                    steelWeightPerMeter = res.steelWeight / if(state.height > 0) state.height else 1.0,
-                    concreteVolumePerMeter = res.concreteVolume / if(state.height > 0) state.height else 1.0
+                    steelWeightPerMeter = res.steelWeight / if(h > 0) h else 1.0,
+                    concreteVolumePerMeter = res.concreteVolume / if(h > 0) h else 1.0
                 )
 
                 val inputs = ColumnInputs(
-                    fcu = state.fcu,
-                    fy = state.fy,
+                    fcu = fcuVal,
+                    fy = fyVal,
                     axialLoad = res.pu,
                     momentX = 0.0,
                     momentY = 0.0,
                     loadCombination = state.loadCombination,
-                    unsupportedLength = state.height,
+                    unsupportedLength = h,
                     columnType = colType
                 )
 

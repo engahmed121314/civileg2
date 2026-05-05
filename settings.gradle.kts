@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "civil eg 2"
+rootProject.name = "SiteEngineerPro"
 include(":app")

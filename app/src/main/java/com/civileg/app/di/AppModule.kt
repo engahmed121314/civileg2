@@ -96,6 +96,11 @@ object AppModule {
     fun provideMaterialDao(database: AppDatabase): MaterialDao {
         return database.materialDao()
     }
+
+    @Provides
+    fun provideInventoryDao(database: AppDatabase): InventoryDao {
+        return database.inventoryDao()
+    }
     
     @Provides
     @Singleton

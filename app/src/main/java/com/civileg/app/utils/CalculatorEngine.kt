@@ -16,6 +16,17 @@ class CalculatorEngine @Inject constructor(
         EGYPTIAN("الكود المصري - ECP 203"),
         ACI("الكود الأمريكي - ACI 318"),
         SAUDI("الكود السعودي - SBC 304");
+
+        companion object {
+            fun fromDomain(code: com.civileg.app.domain.entities.DesignCode): DesignCode {
+                return when (code) {
+                    com.civileg.app.domain.entities.DesignCode.ECP -> EGYPTIAN
+                    com.civileg.app.domain.entities.DesignCode.ACI -> ACI
+                    com.civileg.app.domain.entities.DesignCode.SBC -> SAUDI
+                    else -> EGYPTIAN
+                }
+            }
+        }
     }
 
     enum class SlabType(val displayName: String) {
@@ -125,7 +136,7 @@ class CalculatorEngine @Inject constructor(
         STRIP("شريطية"),
         RAFT("لبشة خرسانية"),
         PILE_CAP("هامة خوازيق")
-    }
+        }
 
     @Parcelize
     data class FootingResult(
@@ -199,7 +210,7 @@ class CalculatorEngine @Inject constructor(
         val capacityM3: Double get() = capacity
         val pressure: Double get() = waterPressure
         val safetyCheck: String get() = if(isSafe) "SAFE" else "UNSAFE"
-    }
+        }
 
     @Parcelize
     data class RetainingWallResult(
@@ -220,9 +231,22 @@ class CalculatorEngine @Inject constructor(
 
     @Parcelize
     data class SteelWarehouseResult(
-        val span: Double, val eaveHeight: Double, val totalHeight: Double,
-        val columnSection: String, val rafterSection: String,
-        val isSafe: Boolean, val concreteVolume: Double, val steelWeight: Double, val cost: Double
+        val span: Double, 
+        val length: Double,
+        val eaveHeight: Double, 
+        val spacing: Double,
+        val totalHeight: Double,
+        val maxMoment: Double = 0.0,
+        val maxShear: Double = 0.0,
+        val columnSection: String, 
+        val rafterSection: String,
+        val purlinSection: String = "C100x50x2.5",
+        val boltType: String = "A325 M20",
+        val isSafe: Boolean = true, 
+        val concreteVolume: Double = 0.0, 
+        val steelWeight: Double = 0.0, 
+        val cost: Double = 0.0,
+        val code: DesignCode = DesignCode.EGYPTIAN
     ) : Parcelable
 
     @Parcelize
@@ -249,53 +273,53 @@ class CalculatorEngine @Inject constructor(
     fun getSteelSectionLibrary(): Map<String, List<SteelSectionType>> {
         val iSections = mutableListOf<SteelSectionType>()
         // IPE Standard Sections
-        val ipeSizes = listOf(100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400, 450, 500, 550, 600)
+        val ipeSizes = listOf(80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400, 450, 500, 550, 600)
         ipeSizes.forEach { h ->
             val bf = when {
                 h <= 100 -> 55.0; h <= 140 -> 73.0; h <= 200 -> 100.0; h <= 300 -> 150.0; else -> 200.0
-            }
+                }
             val tf = 7.0 + (h/100.0)*2.0
             val tw = 4.0 + (h/100.0)*1.5
-            iSections.add(SteelSectionType.ISection(h.toDouble(), bf, tf, tw, SteelGrade.ST37))
-        }
+            iSections.add(SteelSectionType.ISection(h.toDouble(), bf, tf, tw, SteelGrade.ST37, "IPE $h"))
+            }
 
         val hebSections = mutableListOf<SteelSectionType>()
         // HEB Standard Sections
         val hebSizes = listOf(100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300)
         hebSizes.forEach { h ->
-            hebSections.add(SteelSectionType.ISection(h.toDouble(), h.toDouble(), 10.0 + (h/50.0)*2.0, 6.0 + (h/50.0)*1.5, SteelGrade.ST37))
-        }
+            hebSections.add(SteelSectionType.ISection(h.toDouble(), h.toDouble(), 10.0 + (h/50.0)*2.0, 6.0 + (h/50.0)*1.5, SteelGrade.ST37, "HEB $h"))
+            }
 
         val angles = mutableListOf<SteelSectionType>()
         // L-Angles Standard (Equal Legs)
         listOf(40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 120.0).forEach { size ->
-            angles.add(SteelSectionType.LSection(size, size, size/10.0, SteelGrade.ST37))
-        }
+            angles.add(SteelSectionType.LSection(size, size, size/10.0, SteelGrade.ST37, "L ${size.toInt()}x${size.toInt()}"))
+            }
 
         val channels = mutableListOf<SteelSectionType>()
         // UPE/UPN Standard
         listOf(80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300).forEach { h ->
-            channels.add(SteelSectionType.CSection(h.toDouble(), h/2.0, 8.0 + h/100.0*2.0, 5.0 + h/100.0*1.5, SteelGrade.ST37))
-        }
+            channels.add(SteelSectionType.CSection(h.toDouble(), h/2.0, 8.0 + h/100.0*2.0, 5.0 + h/100.0*1.5, SteelGrade.ST37, "UPN $h"))
+            }
 
         val rhs = mutableListOf<SteelSectionType>()
         // Rectangular Hollow Sections
         listOf(50.0, 80.0, 100.0, 120.0, 150.0, 200.0).forEach { h ->
-            rhs.add(SteelSectionType.RHS(h, h/2.0, 4.0 + h/50.0, SteelGrade.S275))
-        }
+            rhs.add(SteelSectionType.RHS(h, h/2.0, 4.0 + h/50.0, SteelGrade.S275, "RHS ${h.toInt()}x${(h/2).toInt()}"))
+            }
 
         return mapOf(
             "IPE (European I-Beams)" to iSections,
             "HEB (European Wide Flange)" to hebSections,
             "HEA (European Light Wide Flange)" to hebSections.map { 
                 val s = it as SteelSectionType.ISection
-                s.copy(flangeThickness = s.flangeThickness * 0.7, webThickness = s.webThickness * 0.8) 
+                s.copy(tf = s.tf * 0.7, tw = s.tw * 0.8, customName = s.customName?.replace("HEB", "HEA")) 
             },
             "L-Angles (Equal)" to angles,
             "UPN Channels" to channels,
             "RHS (Hollow Sections)" to rhs
         )
-    }
+        }
 
     fun calculateSteelMember(
         section: SteelSectionType,
@@ -312,7 +336,7 @@ class CalculatorEngine @Inject constructor(
             is SteelSectionType.RHS -> section.grade.fy
             is SteelSectionType.TSection -> section.grade.fy
             else -> 240.0
-        }
+            }
         
         // 1. Axial Capacity (Nominal) - Simplified AISC/ECP
         val axialCapacity = (0.85 * fy * area) / 1000.0 // kN
@@ -320,28 +344,34 @@ class CalculatorEngine @Inject constructor(
         // 2. Flexural Capacity - Simplified Sx calculation for I/C/RHS
         val sx = when (section) {
             is SteelSectionType.ISection -> {
-                (section.webThickness * (section.depth - 2 * section.flangeThickness).pow(2) / 6) + 
-                (2 * section.flangeWidth * section.flangeThickness * (section.depth / 2 - section.flangeThickness / 2))
-            }
+                (section.tw * (section.h - 2 * section.tf).pow(2) / 6) + 
+                (2 * section.bf * section.tf * (section.h / 2 - section.tf / 2))
+                }
             is SteelSectionType.RHS -> {
                 (section.height.pow(2) * section.width / 6.0) - ((section.height - 2*section.thickness).pow(2) * (section.width - 2*section.thickness) / 6.0)
-            }
+                }
             else -> 1000.0 // Minimum placeholder
-        }
+            }
         val flexuralCapacity = (0.9 * fy * sx) / 1e6 // kN.m
 
         // 3. Shear Capacity
         val shearArea = when(section) {
-            is SteelSectionType.ISection -> section.depth * section.webThickness
+            is SteelSectionType.ISection -> section.h * section.tw
             else -> area * 0.6
-        }
+            }
         val shearCapacity = (0.6 * fy * shearArea) / 1000.0 // kN
 
         val utilAxial = inputs.axialLoad / axialCapacity.coerceAtLeast(1.0)
         val utilMoment = inputs.moment / flexuralCapacity.coerceAtLeast(1.0)
-        val totalUtil = utilAxial + utilMoment // Combined interaction (Simplified)
+        
+        // 4. Professional Interaction Equation (AISC 360-H1 / ECP 205)
+        val totalUtil = if (utilAxial >= 0.2) {
+            utilAxial + (8.0/9.0) * utilMoment
+        } else {
+            (utilAxial / 2.0) + utilMoment
+            }
 
-        val weight = (area / 1e6) * 7850.0 // kg/m
+        val weight = (area * 1e-6) * 7850.0 // kg/m (mm2 to m2 * density)
 
         val depth = when(section) {
             is SteelSectionType.ISection -> section.depth
@@ -351,7 +381,7 @@ class CalculatorEngine @Inject constructor(
             is SteelSectionType.LSection -> section.legA
             is SteelSectionType.TSection -> section.webDepth + section.flangeThickness
             else -> 100.0
-        }
+            }
         val slenderness = (inputs.unbracedLength / (depth * 0.28).coerceAtLeast(10.0))
 
         return SteelMemberResult(
@@ -375,7 +405,7 @@ class CalculatorEngine @Inject constructor(
             warnings = if (totalUtil > 0.9) listOf("Section close to capacity") else emptyList(),
             codeNotes = listOf("Design based on ${code.displayName}", "E = 210,000 MPa")
         )
-    }
+        }
 
     fun designSteelWarehouse(inputs: SteelWarehouseInputs): SteelWarehouseAnalysisResult {
         val span = inputs.span
@@ -384,14 +414,26 @@ class CalculatorEngine @Inject constructor(
         val maxMoment = (load * span.pow(2)) / 8.0
         val maxShear = (load * span) / 2.0
         
+        // Mezzanine Loads
+        val mezzanineArea = inputs.numberOfMezzanines * span * inputs.length
+        val mezzanineLoadPerColumn = if (inputs.numberOfMezzanines > 0) {
+            (inputs.mezzanineLiveLoad + 2.0) * (spacing * span / 2.0) * inputs.numberOfMezzanines
+        } else 0.0
+        
+        val totalAxialLoad = 50.0 + mezzanineLoadPerColumn
+        
         // Selection of Section (Simplistic search for optimal)
         val library = getSteelSectionLibrary()["IPE (European I-Beams)"] ?: emptyList()
         val selectedSection = library.firstOrNull { 
-            val res = calculateSteelMember(it, SteelMemberType.BEAM, SteelInputs(axialLoad = 20.0, moment = maxMoment, shear = maxShear, unbracedLength = spacing * 1000), DesignCode.EGYPTIAN)
+            val res = calculateSteelMember(it, SteelMemberType.BEAM, SteelInputs(axialLoad = totalAxialLoad, moment = maxMoment, shear = maxShear, unbracedLength = spacing * 1000), DesignCode.EGYPTIAN)
             res.isSafe
         } ?: library.last()
 
-        val totalWeight = (span * inputs.length * 5) * (selectedSection.getArea() / 1e6 * 7850) / 1000.0 // Tons (Estimated)
+        val mezzanineSteelWeight = if (inputs.numberOfMezzanines > 0) {
+            mezzanineArea * 45.0 / 1000.0 // Tons (Estimated 45kg/m2 for mezzanine steel)
+        } else 0.0
+
+        val totalWeight = (span * inputs.length * 5) * (selectedSection.getArea() / 1e6 * 7850) / 1000.0 + mezzanineSteelWeight // Tons (Estimated)
 
         // Feasibility Logic
         val estimatedTotalCost = totalWeight * (settingsManager.steelPrice) * 1.3 // 30% for erection/accessories
@@ -406,7 +448,7 @@ class CalculatorEngine @Inject constructor(
                 rafterSection = selectedSection,
                 maxMoment = maxMoment,
                 maxShear = maxShear,
-                maxAxial = 50.0,
+                maxAxial = totalAxialLoad,
                 maxDeflection = (5 * load * span.pow(4) * 1e12) / (384 * 210000 * 1e8), 
                 allowableDeflection = span * 1000 / 250.0,
                 isSafe = true,
@@ -425,25 +467,69 @@ class CalculatorEngine @Inject constructor(
             weightPerM2 = (totalWeight * 1000) / (span * inputs.length).coerceAtLeast(1.0),
             resultsByCode = "AISC-ASD / ECP 205",
             safetyStatus = true,
-            recommendations = listOf("Use Anchor Bolts M24", "Check lateral bracing"),
-            materialTakeoff = mapOf("IPE Sections" to totalWeight),
+            recommendations = listOf("Use Anchor Bolts M24", "Check lateral bracing", if (inputs.numberOfMezzanines > 0) "Verify Mezzanine Joists" else ""),
+            materialTakeoff = mapOf("IPE Sections" to totalWeight, "Mezzanine Steel" to mezzanineSteelWeight),
             estimatedTotalCost = estimatedTotalCost,
             costPerM2 = costPerM2,
             roi = roi,
-            netProfit = estimatedProfit
+            netProfit = estimatedProfit,
+            mezzanineArea = mezzanineArea,
+            mezzanineSteelWeight = mezzanineSteelWeight
         )
     }
 
     @Parcelize
     data class ColumnECPResult(val capacity: Double, val asMin: Double) : Parcelable
 
+    fun calculateSteelWarehousePro(inputs: SteelWarehouseInputs): SteelWarehouseProResult {
+        val codeName = inputs.code.displayName
+        val tributaryArea = inputs.baySpacing * inputs.length
+        val serviceLoad = inputs.deadLoad + inputs.liveLoad + inputs.windLoad + inputs.snowLoad + inputs.claddingWeight
+        val frameReaction = tributaryArea * serviceLoad / 2.0
+        val spanM = inputs.span
+        val maxMoment = frameReaction * spanM / 4.0
+        val maxShear = frameReaction / 2.0
+        val axial = frameReaction * 0.35 + inputs.windLoad * tributaryArea * 0.18
+        val baseShear = max(0.0, inputs.windLoad * tributaryArea * 0.33)
+        
+        val drift = when (CalculatorEngine.DesignCode.fromDomain(inputs.code)) {
+            CalculatorEngine.DesignCode.EGYPTIAN -> spanM * 1000.0 / 500.0
+            CalculatorEngine.DesignCode.ACI -> spanM * 1000.0 / 400.0
+            CalculatorEngine.DesignCode.SAUDI -> spanM * 1000.0 / 450.0
+            else -> spanM * 1000.0 / 500.0
+        } * 0.8
+
+        val utilization = min(1.0, (maxMoment / 300.0) + (axial / 700.0) + (maxShear / 200.0))
+        val notes = listOf(
+            "Selected code: $codeName",
+            "Report layout is bilingual and drawing-oriented.",
+            "This export is structured for professional PDF presentation."
+        )
+
+        return SteelWarehouseProResult(
+            codeName = codeName,
+            tributaryAreaM2 = tributaryArea,
+            serviceLoadKnM2 = serviceLoad,
+            frameReactionKn = frameReaction,
+            baseShearKn = baseShear,
+            maxMomentKnM = maxMoment,
+            maxAxialKn = axial,
+            maxShearKn = maxShear,
+            driftMm = drift,
+            utilization = utilization,
+            compressionZone = "Top flange / rafter compression zone",
+            tensionZone = "Bottom flange / column base tension zone",
+            notes = notes
+        )
+        }
+
     companion object {
         fun designColumnECP(w: Double, d: Double, p: Double, fcu: Double, fy: Double): ColumnECPResult {
             val ag = w * d
             val capacity = (0.35 * fcu * ag + 0.67 * fy * (0.008 * ag)) / 1000.0
             return ColumnECPResult(capacity, 0.008 * ag)
+            }
         }
-    }
 
     fun designColumn(
         width: Double,
@@ -455,7 +541,10 @@ class CalculatorEngine @Inject constructor(
         isCircular: Boolean = false,
         connectedSlab: String = "SOLID",
         hasCap: Boolean = false,
-        clearHeight: Double = 3000.0 // mm
+        clearHeight: Double = 3000.0, // mm
+        preferredDiameter: Int = 16,
+        autoOptimize: Boolean = true,
+        manualNumBars: Int? = null
     ): ColumnResult {
         val ag = if (isCircular) PI * width.pow(2.0) / 4.0 else width * depth
         
@@ -468,73 +557,92 @@ class CalculatorEngine @Inject constructor(
 
         when (code) {
             DesignCode.EGYPTIAN -> {
-                // ECP 203: Pu = 0.35*fcu*Ac + 0.67*fy*Asc
-                // Check slenderness λ = He/i or He/b
+                // ECP 203 (Art. 4-2-1-1): Pu = 0.35*fcu*Ac + 0.67*fy*Asc
+                // This formula is for short columns with minimum eccentricity.
                 val i = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
                 val lambda = (1.0 * clearHeight) / i
-                val lambdaLimit = if (isCircular) 8.0 else 10.0 // Simplified limits
+                val lambdaLimit = if (isCircular) 8.0 else 10.0
                 val isSlender = lambda > lambdaLimit
                 
-                asMin = 0.008 * ag
+                asMin = 0.008 * ag // ECP Min reinforcement 0.8%
                 val asReq = max(asMin, (pu * 1000.0 - 0.35 * fcu * ag) / (0.67 * fy))
                 capacity = (0.35 * fcu * (ag - asReq) + 0.67 * fy * asReq) / 1000.0
                 
-                safetyChecks.add(DesignSafetyCheck("Slenderness λ", lambda, lambdaLimit, "", lambda <= lambdaLimit))
+                safetyChecks.add(DesignSafetyCheck("Slenderness λ (ECP)", lambda, lambdaLimit, "", lambda <= lambdaLimit))
                 if (isSlender) {
-                    // Reduce capacity for slender columns (Simplified)
-                    capacity *= 0.8
+                    // Approximate reduction for slenderness if not using delta method
+                    capacity *= 0.8 
                 }
             }
-            DesignCode.ACI, DesignCode.SAUDI -> {
-                // ACI 318 / SBC 304: ΦPn,max = 0.8 * Φ * [0.85*fc'*(Ag - Ast) + fy*Ast]
-                // For tied columns Φ = 0.65
-                val phi = 0.65
-                asMin = 0.01 * ag
+            DesignCode.SAUDI -> {
+                // SBC 304 (Art. 10.3.6.2): ΦPn,max = 0.80 * Φ * [0.85*fc'*(Ag - Ast) + fy*Ast]
+                // Tied columns: Φ = 0.65, α = 0.80. Spiral: Φ = 0.75, α = 0.85
+                val phi = if (isCircular) 0.75 else 0.65
+                val alpha = if (isCircular) 0.85 else 0.80
+                
+                asMin = 0.01 * ag // SBC Min 1%
                 asMax = 0.08 * ag
-                val asReq = max(asMin, (pu * 1000.0 / (0.8 * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
-                capacity = (0.8 * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
+                
+                val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
+                capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
                 
                 val r = if (isCircular) 0.25 * width else min(width, depth) * 0.3
                 val slenderness = (1.0 * clearHeight) / r
-                safetyChecks.add(DesignSafetyCheck("Slenderness Ratio (kl/r)", slenderness, 22.0, "", slenderness <= 22.0))
+                safetyChecks.add(DesignSafetyCheck("SBC Slenderness (kl/r)", slenderness, 22.0, "", slenderness <= 22.0))
             }
+            DesignCode.ACI -> {
+                // ACI 318-19 (Table 22.4.2.1): Same as SBC
+                val phi = 0.65
+                val alpha = 0.80
+                asMin = 0.01 * ag
+                asMax = 0.08 * ag
+                val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
+                capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
+                
+                val r = if (isCircular) 0.25 * width else min(width, depth) * 0.3
+                val slenderness = (1.0 * clearHeight) / r
+                safetyChecks.add(DesignSafetyCheck("ACI Slenderness Ratio", slenderness, 22.0, "", slenderness <= 22.0))
+            }
+            }
+
+        val barDia = preferredDiameter.toDouble()
+        val areaOneBar = PI * barDia.pow(2.0) / 4.0
+        val asReqTotal = max(asMin, (pu * 1000.0 * 1.1) / fy)
+        
+        // --- Reinforcement Optimization / Manual Logic ---
+        val finalNumBars = if (autoOptimize) {
+            ceil(asReqTotal / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
+        } else {
+            manualNumBars ?: ceil(asMin / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
         }
 
-        val asReqFinal = max(asMin, (pu * 1000.0 / (capacity / (ag/1000.0)) ).takeIf { it.isFinite() } ?: asMin) // Reverse approx
-        // Note: Real design would iterate. Here we use asReq calculated above.
-        
-        val barDia = 16.0
-        val numBars = ceil(asMin / (PI * barDia.pow(2.0) / 4.0)).toInt().coerceAtLeast(if (isCircular) 6 else 4)
-        // Adjust numBars based on pu
-        val asProvided = max(asMin, (pu * 1000.0 * 1.2 / fy)) // Rough estimate for provided
-        val finalNumBars = ceil(asProvided / (PI * barDia.pow(2.0) / 4.0)).toInt().coerceAtLeast(numBars)
-        val finalAsProvided = finalNumBars * (PI * barDia.pow(2.0) / 4.0)
+        val finalAsProvided = finalNumBars * areaOneBar
         
         val rho = (finalAsProvided / ag) * 100.0
         val vol = (ag * clearHeight) / 1e9
         
         // Accurate Steel Weight Calculation
-        val mainBarWeightPerMeter = (16.0.pow(2.0) / 162.0) // 16mm used as base
+        val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
         val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
         
-        // Stirrups Weight (8mm @ 200mm)
+        // Stirrups Weight (8mm @ 200mm or code min)
         val stirrupLength = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
         val numStirrups = (clearHeight / 200.0) + 1
         val stirrupWeight = numStirrups * stirrupLength * (8.0.pow(2.0) / 162.0)
         
-        val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05 // 5% waste
+        val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05
         val steelWasteKg = totalSteelWeight * 0.05
         
         val utilizationRatio = (pu / capacity).coerceIn(0.0, 1.2)
         
         safetyChecks.add(DesignSafetyCheck("Axial Capacity", pu, capacity, "kN", capacity >= pu))
-        safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, 0.8, "%", rho >= 0.8))
+        safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, (asMin/ag)*100.0, "%", finalAsProvided >= asMin))
 
         return ColumnResult(
             width = width, depth = depth, pu = pu, 
-            reinforcement = ReinforcementBar(finalNumBars, 16), 
+            reinforcement = ReinforcementBar(finalNumBars, preferredDiameter), 
             stirrups = StirrupReinforcement(8, 200.0), 
-            safetyChecks = safetyChecks, isSafe = safetyChecks.all { it.isSafe } && rho <= 6.0,
+            safetyChecks = safetyChecks, isSafe = safetyChecks.all { it.isSafe } && rho <= (asMax/ag)*100.0,
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
             code = code,
@@ -546,11 +654,11 @@ class CalculatorEngine @Inject constructor(
             steelWasteKg = steelWasteKg,
             rebarAlternatives = listOf(12, 14, 16, 18, 20, 25).map { dia ->
                 val areaOne = PI * dia.toDouble().pow(2) / 4.0
-                ReinforcementBar(ceil(finalAsProvided/areaOne).toInt().coerceAtLeast(if(isCircular) 6 else 4), dia)
+                ReinforcementBar(ceil(asReqTotal/areaOne).toInt().coerceAtLeast(if(isCircular) 6 else 4), dia)
             },
             utilizationRatio = utilizationRatio
         )
-    }
+        }
 
     fun designBeam(
         width: Double,
@@ -566,14 +674,18 @@ class CalculatorEngine @Inject constructor(
         customMoment: Double? = null,
         customShear: Double? = null
     ): BeamResult {
-        val totalLoad = when(code) {
-            DesignCode.EGYPTIAN -> (1.4 * deadLoad + 1.6 * liveLoad)
-            else -> (1.2 * deadLoad + 1.6 * liveLoad) // ACI/SBC
+        // Ultimate Load Factors based on code
+        val domainCode = when(code) {
+            DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
+            DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+            DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
         }
+        val totalLoad = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
         
+        // Structural Analysis (Simple Beam Approximation)
         val mu = customMoment ?: (totalLoad * span.pow(2.0) / 8.0)
         val vu = customShear ?: (totalLoad * span / 2.0)
-        val d = height - 50.0
+        val d = height - 50.0 // Effective depth (Assuming 25mm cover + stirrup + bar/2)
         
         var asReq = 0.0
         var momentCapacity = 0.0
@@ -581,25 +693,24 @@ class CalculatorEngine @Inject constructor(
 
         when(code) {
             DesignCode.EGYPTIAN -> {
-                // R = Mu / (fcu/1.5 * b * d^2)
+                // ECP 203 (First Principles / Curve): R = Mu / (fcu/gc * b * d^2)
                 val R = (mu * 1e6) / ((fcu / 1.5) * width * d.pow(2))
                 val omega = 1.25 * (1 - sqrt(1 - 2.25 * R))
                 asReq = (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
-                if (asReq.isNaN()) asReq = (mu * 1e6) / (0.8 * fy * d) // Fallback
-                momentCapacity = mu // Simplified for successful design
-            }
+                if (asReq.isNaN()) asReq = (mu * 1e6) / (0.8 * fy * d) 
+                }
             DesignCode.ACI, DesignCode.SAUDI -> {
-                // Rn = Mu / (phi * b * d^2), phi=0.9
+                // ACI 318: Mn = As*fy(d - a/2), a = As*fy / (0.85*fc'*b)
                 val fcPrime = fcu * 0.8
                 val Rn = (mu * 1e6) / (0.9 * width * d.pow(2))
                 val rho = (0.85 * fcPrime / fy) * (1 - sqrt(1 - (2 * Rn) / (0.85 * fcPrime)))
                 asReq = rho * width * d
                 if (asReq.isNaN()) asReq = (mu * 1e6) / (0.9 * fy * 0.9 * d)
-                momentCapacity = mu
+                }
             }
-        }
         
-        val asMin = max(0.225 * sqrt(fcu * 0.8) / fy, 1.1 / fy) * width * d // ACI Min
+        // Minimum Reinforcement (ACI: 0.25*sqrt(fc')/fy * b*d | ECP: 0.225*sqrt(fcu)/fy * b*d)
+        val asMin = max(0.225 * sqrt(fcu * 0.8) / fy, 1.1 / fy) * width * d
         asReq = max(asReq, asMin)
         
         val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
@@ -610,13 +721,13 @@ class CalculatorEngine @Inject constructor(
         momentCapacity = when(code) {
             DesignCode.EGYPTIAN -> (actualAs * (fy/1.15) * (d - 0.4 * (actualAs * (fy/1.15) / (0.45 * fcu * width)))) / 1e6
             else -> (0.9 * actualAs * fy * (d - (actualAs * fy / (2 * 0.85 * fcu * 0.8 * width)))) / 1e6
-        }
+            }
 
         // --- Shear Design ---
         val vc = when(code) {
             DesignCode.EGYPTIAN -> 0.24 * sqrt(fcu / 1.5)
             else -> 0.17 * sqrt(fcu * 0.8) * 0.75 // ACI Phi*0.17*sqrt(fc')
-        }
+            }
         val v_stress = (vu * 1000.0) / (width * d)
         
         var stirrupSpacing = 200.0
@@ -631,8 +742,8 @@ class CalculatorEngine @Inject constructor(
                 val area10 = 2 * (PI * 10.0.pow(2) / 4.0)
                 stirrupSpacing = (area10 * (fy / 1.15) * d) / (vs * width)
                 stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
+                }
             }
-        }
         
         val vol = (width * height * span) / 1e6
         
@@ -656,7 +767,7 @@ class CalculatorEngine @Inject constructor(
         val e_concrete = when(code) {
             DesignCode.EGYPTIAN -> 4400 * sqrt(fcu)
             else -> 4700 * sqrt(fcu * 0.8)
-        }
+            }
         val deflection = (5 * totalLoad * (span * 1000).pow(4)) / (384 * e_concrete * (width * height.pow(3) / 12))
         val allowableDeflection = (span * 1000) / 250.0
         
@@ -679,7 +790,7 @@ class CalculatorEngine @Inject constructor(
             steelRatio = (actualAs / (width * d)) * 100,
             utilizationRatio = utilizationRatio
         )
-    }
+        }
 
     fun designSlab(
         lx: Double,
@@ -696,10 +807,12 @@ class CalculatorEngine @Inject constructor(
         dropPanelThickness: Double = 0.0,
         columnSize: Double = 400.0
     ): SlabResult {
-        val wu = when(code) {
-            DesignCode.EGYPTIAN -> 1.4 * deadLoad + 1.6 * liveLoad
-            else -> 1.2 * deadLoad + 1.6 * liveLoad
+        val domainCode = when(code) {
+            DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
+            DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+            DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
         }
+        val wu = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
         
         val shortSpan = min(lx, ly)
         val longSpan = max(lx, ly)
@@ -718,7 +831,7 @@ class CalculatorEngine @Inject constructor(
                 my = 0.25 * totalMoment // Middle strip moment approx
                 minTs = lx * 1000 / 32.0 // ACI/ECP limit for flat slabs
                 if (dropPanelThickness > 0) minTs *= 0.9
-            }
+                }
             SlabType.POST_TENSION -> {
                 // PT Slab: Balancing part of the dead load
                 val balancedLoad = (8 * prestressForce * 0.05) / shortSpan.pow(2) // 0.05 is approx drape
@@ -726,12 +839,12 @@ class CalculatorEngine @Inject constructor(
                 mx = netWu * shortSpan.pow(2) / 10.0
                 my = netWu * longSpan.pow(2) / 12.0
                 minTs = shortSpan * 1000 / 45.0 // PT slabs are thinner
-            }
+                }
             SlabType.HOLLOW_BLOCK -> {
                 mx = wu * shortSpan.pow(2) / 8.0
                 my = wu * longSpan.pow(2) / 24.0
                 minTs = shortSpan * 1000 / 25.0
-            }
+                }
             else -> {
                 // Solid Slab Grashoff
                 val alpha = if (r <= 2.0) r.pow(4) / (1 + r.pow(4)) else 1.0
@@ -739,8 +852,8 @@ class CalculatorEngine @Inject constructor(
                 mx = alpha * wu * shortSpan.pow(2) / 8.0
                 my = beta * wu * shortSpan.pow(2) / 8.0
                 minTs = shortSpan * 1000 / 35.0
+                }
             }
-        }
         
         val d = ts - 25.0
         
@@ -751,7 +864,7 @@ class CalculatorEngine @Inject constructor(
         val asMin = when(type) {
             SlabType.POST_TENSION -> 0.0012 * 1000.0 * ts
             else -> 0.0018 * 1000.0 * ts
-        }
+            }
         
         val finalAsX = max(asReqX, asMin)
         val finalAsY = max(asReqY, asMin)
@@ -779,12 +892,12 @@ class CalculatorEngine @Inject constructor(
         val v_punch = punchingLoad * 1000 / (critPerimeter * d)
         val v_limit = when(code) {
             DesignCode.EGYPTIAN -> 0.316 * sqrt(fcu / 1.5)
-            else -> 0.17 * sqrt(fcu * 0.8) * 2 // Simplified ACI limit
-        }
+            else -> 0.33 * 0.75 * sqrt(fcu * 0.8) // ACI 318 punching limit with Phi=0.75
+            }
         
         if (type == SlabType.FLAT) {
             safetyChecks.add(DesignSafetyCheck("Punching Shear", v_punch, v_limit, "MPa", v_punch <= v_limit))
-        }
+            }
 
         val efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100
         val utilizationRatio = maxOf(mx / (0.85 * fcu * 1000 * d * d / 1e6), v_punch / v_limit).coerceIn(0.0, 1.2)
@@ -809,7 +922,7 @@ class CalculatorEngine @Inject constructor(
             suggestions = suggestions,
             steelWasteTons = steelWeight * 0.05 / 1000.0
         )
-    }
+        }
 
     private fun calculateAs(mu: Double, fcu: Double, fy: Double, d: Double, width: Double, code: DesignCode): Double {
         return when(code) {
@@ -818,15 +931,15 @@ class CalculatorEngine @Inject constructor(
                 if (R > 0.2) return (mu * 1e6) / (0.8 * fy * d) // High moment fallback
                 val omega = 1.25 * (1 - sqrt(1 - 2.25 * R))
                 (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
-            }
+                }
             else -> { // ACI/SBC
                 val fcPrime = fcu * 0.8
                 val Rn = (mu * 1e6) / (0.9 * width * d.pow(2))
                 val rho = (0.85 * fcPrime / fy) * (1 - sqrt(1 - (2 * Rn) / (0.85 * fcPrime)))
                 rho * width * d
+                }
             }
         }
-    }
 
     fun calculateFooting(
         type: FootingType,
@@ -855,8 +968,8 @@ class CalculatorEngine @Inject constructor(
             FootingType.RAFT -> calculateRaftInternal(p, fcu, fy, soil, code, preferredDiameter)
             FootingType.PILE_CAP -> calculatePileCapInternal(p, numPiles, pileDia, pileCapacity, fcu, fy, colB, colT, code, preferredDiameter)
             else -> calculateIsolatedFootingInternal(p, fcu, fy, soil, colB, colT, code, preferredDiameter, maxLeft, maxRight, maxTop, maxBottom)
+            }
         }
-    }
 
     private fun calculateIsolatedFootingInternal(
         p: Double, fcu: Double, fy: Double, soil: Double, colB: Double, colT: Double,
@@ -871,10 +984,10 @@ class CalculatorEngine @Inject constructor(
         fL = sqrt(areaReq) + diff / 2.0
         fW = areaReq / fL
 
-        maxLeft?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW } }
-        maxRight?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW } }
-        maxTop?.let { if (fL / 2.0 > it / 1000.0) { fL = it * 2.0 / 1000.0; fW = areaReq / fL } }
-        maxBottom?.let { if (fL / 2.0 > it / 1000.0) { fL = it * 2.0 / 1000.0; fW = areaReq / fL } }
+        maxLeft?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW }     }
+        maxRight?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW }     }
+        maxTop?.let { if (fL / 2.0 > it / 1000.0) { fL = it * 2.0 / 1000.0; fW = areaReq / fL }     }
+        maxBottom?.let { if (fL / 2.0 > it / 1000.0) { fL = it * 2.0 / 1000.0; fW = areaReq / fL }     }
 
         fL = ceil(fL * 20.0) / 20.0 
         fW = ceil(fW * 20.0) / 20.0
@@ -892,7 +1005,11 @@ class CalculatorEngine @Inject constructor(
         var thickness = 500.0
         var d = thickness - 70.0
         var punchingStress: Double
-        val punchingLimit = if (code == DesignCode.EGYPTIAN) 0.316 * sqrt(fcu / 1.5) else 0.316 * sqrt(fcu * 0.8)
+        val punchingLimit = if (code == DesignCode.EGYPTIAN) {
+            0.316 * sqrt(fcu / 1.5) // ECP 203
+        } else {
+            0.33 * 0.75 * sqrt(fcu * 0.8) // ACI 318 (Phi = 0.75)
+        }
         
         do {
             d = thickness - 70.0
@@ -934,7 +1051,7 @@ class CalculatorEngine @Inject constructor(
             barsX = numBarsW, barsY = numBarsL, barDiameter = preferredDiameter, safetyChecks = safetyChecks,
             utilizationRatio = utilizationRatio
         )
-    }
+        }
 
     private fun calculateStripFootingInternal(
         p_per_m: Double, fcu: Double, fy: Double, soil: Double, colB: Double,
@@ -984,7 +1101,7 @@ class CalculatorEngine @Inject constructor(
             cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
             safetyChecks = safetyChecks
         )
-    }
+        }
 
     private fun calculateRaftInternal(
         totalP: Double, fcu: Double, fy: Double, soil: Double,
@@ -1011,7 +1128,7 @@ class CalculatorEngine @Inject constructor(
             safetyChecks = listOf(DesignSafetyCheck("Average Pressure", totalP / (side * side), soil, "kPa", true)),
             utilizationRatio = utilizationRatio
         )
-    }
+        }
 
     private fun calculatePileCapInternal(
         p: Double, numPiles: Int, pileDia: Double, pileCap: Double, fcu: Double, fy: Double,
@@ -1044,7 +1161,7 @@ class CalculatorEngine @Inject constructor(
             cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
             safetyChecks = listOf(DesignSafetyCheck("Load per Pile", p * 1.1 / numPiles, pileCap, "kN", true))
         )
-    }
+        }
 
 
     private fun calculateCombinedFootingInternal(
@@ -1084,7 +1201,7 @@ class CalculatorEngine @Inject constructor(
         
         if (max(stress1, stress2) > punchingLimit) {
             thickness = ceil((max(pu1, pu2) * 1000.0 / (2 * (colB + colT) * punchingLimit) + 70.0) / 50.0) * 50.0
-        }
+            }
         d = thickness - 70.0
 
         // Reinforcement (Simplified Beam Analogy)
@@ -1126,7 +1243,7 @@ class CalculatorEngine @Inject constructor(
             safetyChecks = safetyChecks,
             utilizationRatio = utilizationRatio
         )
-    }
+        }
 
 
     fun designStaircase(
@@ -1150,7 +1267,7 @@ class CalculatorEngine @Inject constructor(
         val wu = when(code) {
             DesignCode.EGYPTIAN -> 1.4 * deadLoad + 1.6 * liveLoad
             else -> 1.2 * deadLoad + 1.6 * liveLoad
-        }
+            }
         
         // 3. Moment calculation (Simple span)
         val mu = (wu * span.pow(2)) / 8.0
@@ -1204,7 +1321,7 @@ class CalculatorEngine @Inject constructor(
             fcu = fcu,
             fy = fy
         )
-    }
+        }
 
     fun designTank(
         type: TankType,
@@ -1230,7 +1347,7 @@ class CalculatorEngine @Inject constructor(
         val allowableStress = when(code) {
             DesignCode.EGYPTIAN -> 170.0 // MPa for service load
             else -> 140.0 // MPa
-        }
+            }
         
         val d_wall = wallThickness - 50.0
         val ms = mu / 1.5 // Service moment approx
@@ -1279,7 +1396,7 @@ class CalculatorEngine @Inject constructor(
             safetyChecks = safetyChecks, utilizationRatio = utilization,
             fcu = fcu, fy = fy
         )
-    }
+        }
 
     fun designRetainingWall(
         height: Double,
@@ -1365,7 +1482,7 @@ class CalculatorEngine @Inject constructor(
             fcu = fcu,
             fy = fy
         )
-    }
+        }
 
     fun calculateSeismicLoads(input: SeismicInput): SeismicResult {
         val h = input.height
@@ -1388,5 +1505,16 @@ class CalculatorEngine @Inject constructor(
             totalWeight = input.totalWeight,
             height = input.height
         )
+    }
+
+    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: DesignCode): Double {
+        val phi = if (code == DesignCode.ACI) 0.75 else 0.70
+        return (phi * 0.60 * electrode.tensileStrength * 0.707 * size * length) / 1000.0 // kN
+    }
+
+    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: DesignCode): Double {
+        val area = PI * diameter.pow(2.0) / 4.0
+        val phi = if (code == DesignCode.ACI) 0.75 else 0.65
+        return (phi * 0.5 * grade.fu * area * count) / 1000.0 // kN
     }
 }

@@ -73,9 +73,18 @@ class ColumnDesignFragment : Fragment() {
         setupTypeToggle()
         setupCodeSelection()
         setupCalculateButton()
+        setupDiameterListener()
         updateInitialDrawing()
         setupSaveButton()
         setupTabs()
+    }
+
+    private fun setupDiameterListener() {
+        binding.spinnerColBar.setOnItemClickListener { _, _, _, _ ->
+            if (lastResult != null) {
+                calculateColumn()
+            }
+        }
     }
 
     private fun setupTabs() {
@@ -121,6 +130,9 @@ class ColumnDesignFragment : Fragment() {
                     R.id.btnAmericanCode -> DesignCode.ACI
                     R.id.btnSaudiCode -> DesignCode.SAUDI
                     else -> DesignCode.EGYPTIAN
+                }
+                if (lastResult != null) {
+                    calculateColumn()
                 }
             }
         }

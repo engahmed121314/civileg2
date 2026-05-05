@@ -1,0 +1,25 @@
+# Task Management
+
+- [/] Researching Existing Implementation
+	- [x] Analyze `MainActivity.kt` and screen structure
+	- [x] Review `CalculatorEngine.kt` for code-specific logic
+	- [x] Inspect `ComprehensivePdfExporter.kt` for Arabic issues
+	- [x] Analyze `ColumnScreen.kt` and `ColumnViewModel.kt` for input issues
+- [ ] Implement Entities & Settings Updates
+	- [ ] Update `LoadCombination` with code-specific factors
+	- [ ] Add `reportLanguage` to `AppSettings`
+	- [ ] Update `SettingsScreen` UI
+- [ ] Fix Column Design Module
+	- [ ] Update `ColumnUiState` to use `String` inputs
+	- [ ] Redesign `ColumnScreen` UI flow (Input -> Result -> Savings)
+- [ ] Enhance Professional PDF Reports
+	- [ ] Fix Arabic text rendering in `ComprehensivePdfExporter`
+	- [ ] Implement bilingual report support
+	- [ ] Add Steel section catalog and detailed drawings to Steel PDF
+- [ ] Global Code & Load Combination Synchronization
+	- [ ] Ensure all ViewModels observe global settings
+	- [ ] Update `CalculatorEngine` to use separate Dead/Live loads correctly
+- [ ] Verification
+	- [ ] Verify input erasability
+	- [ ] Verify global code propagation
+	- [ ] Verify PDF report quality and bilingual support

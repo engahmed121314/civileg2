@@ -203,6 +203,7 @@ private val designModules = listOf(
 
 private val toolModules = listOf(
     ModuleItem(AppScreen.BOQ, "حساب كميات وتكلفة المشروع", listOf()),
+    ModuleItem(AppScreen.Inventory, "إدارة مخزن الموقع والخامات", listOf()),
     ModuleItem(AppScreen.UnitConverter, "محول الوحدات الهندسية", listOf()),
     ModuleItem(AppScreen.Projects, "أرشيف المشاريع المحفوظة", listOf())
 )

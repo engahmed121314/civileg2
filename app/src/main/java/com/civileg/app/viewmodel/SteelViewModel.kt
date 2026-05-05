@@ -14,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SteelViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine
+    private val calculatorEngine: CalculatorEngine,
+    private val settingsManager: com.civileg.app.utils.SettingsManager
 ) : ViewModel() {
 
     private val _result = MutableLiveData<SteelMemberResult?>()
@@ -22,6 +23,11 @@ class SteelViewModel @Inject constructor(
 
     private val _warehouseResult = MutableLiveData<SteelWarehouseAnalysisResult?>()
     val warehouseResult: LiveData<SteelWarehouseAnalysisResult?> = _warehouseResult
+
+    private val _warehouseProResult = MutableLiveData<SteelWarehouseProResult?>()
+    val warehouseProResult: LiveData<SteelWarehouseProResult?> = _warehouseProResult
+
+    private var lastWarehouseInputs: SteelWarehouseInputs? = null
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -68,17 +74,53 @@ class SteelViewModel @Inject constructor(
     }
 
     fun calculateWarehouse(inputs: SteelWarehouseInputs) {
+        lastWarehouseInputs = inputs
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             try {
                 val res = calculatorEngine.designSteelWarehouse(inputs)
                 _warehouseResult.value = res
+                
+                // Also trigger the Pro calculation for better drawings/report
+                val proRes = calculatorEngine.calculateSteelWarehousePro(inputs)
+                _warehouseProResult.value = proRes
             } catch (e: Exception) {
                 _warehouseResult.value = null
                 _errorMessage.value = "Error in Warehouse calculation: ${e.localizedMessage}"
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun exportWarehouseProToPdf(
+        context: android.content.Context,
+        clientAr: String, clientEn: String, projAr: String, projEn: String,
+        onComplete: (java.io.File?) -> Unit
+    ) {
+        val res = _warehouseProResult.value ?: return
+        val inputs = lastWarehouseInputs ?: return
+        
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val exporter = com.civileg.app.utils.exporters.SteelWarehouseProPdfExporter(context)
+                val file = exporter.exportToDownload(
+                    inputs, res, clientAr, clientEn, projAr, projEn
+                )
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    com.civileg.app.utils.ExportUtils.openPdf(context, file)
+                    onComplete(file)
+                    _isExporting.value = false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
             }
         }
     }
@@ -115,16 +157,19 @@ class SteelViewModel @Inject constructor(
 
                 val domainCode = DesignCode.ECP // Default, ideally should come from UI
 
-                val exportedFile = exporter.exportSteelReport(
-                    projectName = "Steel Design Report",
-                    designCode = domainCode,
-                    sectionType = res.sectionType,
-                    memberType = res.memberType,
-                    inputs = inputs,
-                    result = res,
-                    connectionDesign = res.connectionDesign,
-                    outputPath = file.absolutePath
-                )
+                val exportedFile = exporter.run {
+                    setLanguage(settingsManager.language)
+                    exportSteelReport(
+                        projectName = "Steel Design Report",
+                        designCode = domainCode,
+                        sectionType = res.sectionType,
+                        memberType = res.memberType,
+                        inputs = inputs,
+                        result = res,
+                        connectionDesign = res.connectionDesign,
+                        outputPath = file.absolutePath
+                    )
+                }
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     if (exportedFile != null) {
@@ -147,5 +192,13 @@ class SteelViewModel @Inject constructor(
         _result.value = null
         _warehouseResult.value = null
         _errorMessage.value = null
+    }
+
+    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode): Double {
+        return calculatorEngine.calculateWeldCapacity(size, length, electrode, code)
+    }
+
+    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode): Double {
+        return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
 }

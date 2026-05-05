@@ -38,14 +38,11 @@ class ColumnInputActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         binding.btnCalculate.setOnClickListener {
-            val load = binding.etLoad.text.toString().toDoubleOrNull()
-            val fcu = binding.etFcu.text.toString().toDoubleOrNull()
-            val fy = binding.etFy.text.toString().toDoubleOrNull()
-            val width = binding.etWidth.text.toString().toDoubleOrNull()
-            val depth = binding.etDepth.text.toString().toDoubleOrNull()
-            val height = binding.etHeight.text.toString().toDoubleOrNull() ?: 3.0
-
-            if (load == null || fcu == null || fy == null || width == null || depth == null) {
+            if (binding.etLoad.text.isNullOrEmpty() || 
+                binding.etFcu.text.isNullOrEmpty() || 
+                binding.etFy.text.isNullOrEmpty() || 
+                binding.etWidth.text.isNullOrEmpty() || 
+                binding.etDepth.text.isNullOrEmpty()) {
                 Toast.makeText(this, "برجاء إدخال كافة الحقول المطلوبة", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -55,12 +52,13 @@ class ColumnInputActivity : AppCompatActivity() {
 
             // التحديث لدعم المعاملات الجديدة في الـ ViewModel
             viewModel.updateInputs(
-                width = width,
-                depth = depth,
-                height = height,
-                fcu = fcu,
-                fy = fy,
-                axialLoad = load
+                width = binding.etWidth.text.toString(),
+                depth = binding.etDepth.text.toString(),
+                height = binding.etHeight.text.toString(),
+                fcu = binding.etFcu.text.toString(),
+                fy = binding.etFy.text.toString(),
+                axialLoad = binding.etLoad.text.toString(),
+                preferredDiameter = diameter.toString()
             )
             // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
             val domainCode = when(code) {

@@ -19,6 +19,7 @@ class PreferencesManager(private val context: Context) {
         val DEFAULT_CODE = stringPreferencesKey("default_design_code")
         val UNIT_SYSTEM = stringPreferencesKey("unit_system")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val REPORT_LANGUAGE = stringPreferencesKey("report_language")
     }
     
     val concretePrice: Flow<Double> = context.dataStore.data
@@ -41,6 +42,9 @@ class PreferencesManager(private val context: Context) {
 
     val themeMode: Flow<String> = context.dataStore.data
         .map { it[THEME_MODE] ?: "SYSTEM" }
+    
+    val reportLanguage: Flow<String> = context.dataStore.data
+        .map { it[REPORT_LANGUAGE] ?: "ar" }
     
     suspend fun setConcretePrice(price: Double) {
         context.dataStore.edit { it[CONCRETE_PRICE] = price }
@@ -68,5 +72,9 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setThemeMode(mode: String) {
         context.dataStore.edit { it[THEME_MODE] = mode }
+    }
+
+    suspend fun setReportLanguage(lang: String) {
+        context.dataStore.edit { it[REPORT_LANGUAGE] = lang }
     }
 }

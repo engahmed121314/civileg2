@@ -20,4 +20,5 @@ sealed class AppScreen(val route: String, val title: String, val iconRes: Int) {
     object UnitConverter : AppScreen("converter", "محول الوحدات", R.drawable.ic_converter)
     object Projects : AppScreen("projects", "مشاريعي", R.drawable.ic_folder)
     object Settings : AppScreen("settings", "الإعدادات", R.drawable.ic_settings)
+    object Inventory : AppScreen("inventory", "مخزن الموقع", R.drawable.ic_tools)
 }

@@ -182,3 +182,21 @@ data class MaterialItem(
 enum class MaterialCategory {
     CONCRETE, STEEL, FORMWORK, FINISHING, MECHANICAL, ELECTRICAL
 }
+
+@Entity(tableName = "inventory")
+data class InventoryItem(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val name: String,
+    val type: InventoryType,
+    val quantity: Double,
+    val unit: String,
+    val registrationDate: Date = Date(),
+    val alertQuantity: Double = 0.0,
+    val lastUpdated: Date = Date(),
+    val notes: String = ""
+)
+
+enum class InventoryType {
+    EQUIPMENT, TOOLS, RAW_MATERIAL, ACCESSORIES
+}

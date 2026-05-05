@@ -22,6 +22,7 @@
     <color name="onErrorContainer">#410002</color>
 
     <color name="outline">#73777F</color>
+    <color name="gray">#757575</color>
     <color name="background">#FBFCFF</color>
     <color name="onBackground">#1A1C1E</color>
     <color name="surface">#FFFFFF</color>

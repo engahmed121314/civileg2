@@ -9,13 +9,18 @@ import androidx.appcompat.app.AppCompatActivity
 import com.civileg.app.databinding.ActivityBeamInputBinding
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.BeamViewModel
+import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class BeamInputActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBeamInputBinding
     private val viewModel: BeamViewModel by viewModels()
+
+    @Inject
+    lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +30,8 @@ class BeamInputActivity : AppCompatActivity() {
         setupSpinners()
         setupObservers()
         setupListeners()
+        
+        setDefaultSelections()
     }
 
     private fun setupSpinners() {
@@ -33,7 +40,17 @@ class BeamInputActivity : AppCompatActivity() {
 
         val diameters = listOf(10, 12, 14, 16, 18, 20, 22, 25)
         binding.spinnerDiameter.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, diameters.map { "$it mm" })
-        binding.spinnerDiameter.setSelection(3)
+    }
+
+    private fun setDefaultSelections() {
+        val defaultCode = settingsManager.defaultDesignCode
+        val codeIndex = when(defaultCode) {
+            com.civileg.app.domain.entities.DesignCode.ECP -> 0
+            com.civileg.app.domain.entities.DesignCode.ACI -> 1
+            com.civileg.app.domain.entities.DesignCode.SBC -> 2
+        }
+        binding.spinnerCode.setSelection(codeIndex)
+        binding.spinnerDiameter.setSelection(3) // 16mm default
     }
 
     private fun setupListeners() {

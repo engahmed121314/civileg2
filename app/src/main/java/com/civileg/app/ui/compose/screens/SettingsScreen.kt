@@ -112,6 +112,22 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            // Report Language
+            item {
+                SettingsSection(title = "📄 Report Language (PDF)") {
+                    RadioButtonRow(
+                        label = "Arabic (العربية)",
+                        selected = settings.reportLanguage == "ar",
+                        onClick = { viewModel.setReportLanguage("ar") }
+                    )
+                    RadioButtonRow(
+                        label = "English",
+                        selected = settings.reportLanguage == "en",
+                        onClick = { viewModel.setReportLanguage("en") }
+                    )
+                }
+            }
             
             // About
             item {

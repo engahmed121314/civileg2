@@ -14,7 +14,9 @@ import com.civileg.app.R
 import com.civileg.app.databinding.ActivitySlabInputBinding
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.SlabViewModel
+import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SlabInputActivity : AppCompatActivity() {
@@ -22,6 +24,9 @@ class SlabInputActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySlabInputBinding
     private val viewModel: SlabViewModel by viewModels()
     private var projectId: Long = -1
+
+    @Inject
+    lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,8 +44,20 @@ class SlabInputActivity : AppCompatActivity() {
         setupSpinners()
         setupListeners()
         
+        setDefaultSelections()
+
         // Initial calculation
         triggerCalculation()
+    }
+
+    private fun setDefaultSelections() {
+        val defaultCode = settingsManager.defaultDesignCode
+        val codeIndex = when(defaultCode) {
+            com.civileg.app.domain.entities.DesignCode.ECP -> 0
+            com.civileg.app.domain.entities.DesignCode.ACI -> 1
+            com.civileg.app.domain.entities.DesignCode.SBC -> 2
+        }
+        binding.spinnerCode.setSelection(codeIndex)
     }
 
     private fun triggerCalculation() {

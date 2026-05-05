@@ -42,9 +42,16 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.SteelViewModel
 import java.io.File
+import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,8 +111,8 @@ fun SteelDesignScreen(
             when (selectedTab) {
                 0 -> SteelWarehouseTab(viewModel, warehouseResult, isLoading)
                 1 -> SteelSectionTab(viewModel, result, isLoading)
-                2 -> WeldDesignTab()
-                3 -> BoltDesignTab()
+                2 -> WeldDesignTab(viewModel)
+                3 -> BoltDesignTab(viewModel)
             }
         }
     }
@@ -210,16 +217,20 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             item {
                 Button(
                     onClick = {
-                        val bitmap = createWarehouseBitmap(currentInputs, res)
-                        val file = PdfGenerator.generateSteelWarehouseReport(context, currentInputs, res, bitmap)
-                        openPdf(context, file)
+                        viewModel.exportWarehouseProToPdf(
+                            context = context,
+                            clientAr = "عميل افتراضي",
+                            clientEn = "Default Client",
+                            projAr = "مشروع مستودع معدني",
+                            projEn = "Steel Warehouse Project"
+                        ) { /* handled by VM */ }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
                     Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("إصدار التقرير الفني المعتمد (PDF)")
+                    Text("إصدار التقرير الفني الهندسي (Pro Drawings)")
                 }
             }
 
@@ -699,7 +710,7 @@ fun SectionResultCard(title: String, section: SteelSectionType) {
                 Text(title, fontWeight = FontWeight.Bold)
                 Text(section.displayName, style = MaterialTheme.typography.bodyMedium)
                 if (section is SteelSectionType.ISection) {
-                    Text("h=${section.depth}, bf=${section.flangeWidth}, tw=${section.webThickness}, tf=${section.flangeThickness} (mm)", fontSize = 11.sp)
+                    Text("h=${section.depth.toInt()}, b=${section.width.toInt()}, tw=${section.webThickness}, tf=${section.flangeThickness} (mm)", fontSize = 11.sp)
                 }
             }
         }
@@ -764,6 +775,14 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     var expandedCategory by remember { mutableStateOf(false) }
     var expandedSection by remember { mutableStateOf(false) }
     
+    // User Inputs
+    var axialLoad by remember { mutableStateOf("500") }
+    var moment by remember { mutableStateOf("100") }
+    var shear by remember { mutableStateOf("50") }
+    var length by remember { mutableStateOf("3") }
+    var selectedMemberType by remember { mutableStateOf(SteelMemberType.COLUMN) }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    
     val searchResults by viewModel.searchResults.observeAsState(emptyList())
     val library = viewModel.sectionLibrary
     val categories = library.keys.toList()
@@ -802,21 +821,27 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             item {
                 Text("نتائج البحث:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    searchResults.take(5).forEach { section ->
+                    searchResults.take(8).forEach { section ->
                         Surface(
                             onClick = { 
-                                selectedSection = section
-                                searchQuery = "" // Clear search after selection
+                                searchQuery = "" // Clear search first
                                 viewModel.searchSections("")
+                                // Find which category this section belongs to
+                                categories.find { cat -> library[cat]?.any { s -> s.sectionName == section.sectionName } == true }?.let { cat ->
+                                    selectedCategory = cat
+                                    // Give Compose a chance to update the list before setting the section
+                                    selectedSection = section
+                                }
                             },
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                         ) {
                             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Architecture, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(section.displayName, fontWeight = FontWeight.Medium)
+                                Text(section.displayName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
@@ -825,66 +850,68 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         }
         
         item {
-            Column {
-                Text("اختر فئة القطاع", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
-                ExposedDropdownMenuBox(
-                    expanded = expandedCategory,
-                    onExpandedChange = { expandedCategory = !expandedCategory }
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategory,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    ExposedDropdownMenu(
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("فئة القطاع", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    ExposedDropdownMenuBox(
                         expanded = expandedCategory,
-                        onDismissRequest = { expandedCategory = false }
+                        onExpandedChange = { expandedCategory = !expandedCategory }
                     ) {
-                        categories.forEach { category ->
-                            DropdownMenuItem(
-                                text = { Text(category) },
-                                onClick = {
-                                    selectedCategory = category
-                                    selectedSection = library[category]?.firstOrNull()
-                                    expandedCategory = false
-                                }
-                            )
+                        OutlinedTextField(
+                            value = selectedCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedCategory,
+                            onDismissRequest = { expandedCategory = false }
+                        ) {
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        selectedSection = library[category]?.firstOrNull()
+                                        expandedCategory = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            }
-        }
-
-        item {
-            Column {
-                Text("اختر القطاع المحدد", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
-                ExposedDropdownMenuBox(
-                    expanded = expandedSection,
-                    onExpandedChange = { expandedSection = !expandedSection }
-                ) {
-                    OutlinedTextField(
-                        value = selectedSection?.displayName ?: "اختر قطاعاً",
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    ExposedDropdownMenu(
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("القطاع المحدد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    ExposedDropdownMenuBox(
                         expanded = expandedSection,
-                        onDismissRequest = { expandedSection = false }
+                        onExpandedChange = { expandedSection = !expandedSection }
                     ) {
-                        library[selectedCategory]?.forEach { section ->
-                            DropdownMenuItem(
-                                text = { Text(section.displayName) },
-                                onClick = {
-                                    selectedSection = section
-                                    expandedSection = false
-                                }
-                            )
+                        OutlinedTextField(
+                            value = selectedSection?.sectionName ?: "اختر قطاعاً",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedSection,
+                            onDismissRequest = { expandedSection = false }
+                        ) {
+                            library[selectedCategory]?.forEach { section ->
+                                DropdownMenuItem(
+                                    text = { Text(section.sectionName) },
+                                    onClick = {
+                                        selectedSection = section
+                                        expandedSection = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -893,15 +920,79 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
 
         selectedSection?.let { section ->
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("خصائص القطاع المختارة:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        ResultRow("المساحة (Area)", "%.2f cm²".format(section.getArea()/100.0))
-                        if (section is SteelSectionType.ISection) {
-                            ResultRow("الارتفاع h", "${section.depth} mm")
-                            ResultRow("عرض الشفة bf", "${section.flangeWidth} mm")
-                            ResultRow("سمك الشفة tf", "${section.flangeThickness} mm")
-                            ResultRow("سمك العصب tw", "${section.webThickness} mm")
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("الخصائص الهندسية للقطاع:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                PropertyLine("المساحة (A)", "%.2f cm²".format(section.getArea()/100.0))
+                                PropertyLine("الوزن (W)", "%.1f kg/m".format(section.weight))
+                                PropertyLine("الارتفاع (h)", "${section.depth} mm")
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                PropertyLine("الشفة (bf)", "${section.width} mm")
+                                PropertyLine("سمك الشفة (tf)", "${section.flangeThickness} mm")
+                                PropertyLine("سمك العصب (tw)", "${section.webThickness} mm")
+                            }
+                        }
+                        
+                        if (section.area > 0) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Inertia Ix", "%.0f cm⁴".format(section.ix))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Modulus Sx", "%.1f cm³".format(section.sx))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("مدخلات التصميم", fontWeight = FontWeight.Bold)
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        SteelMemberType.entries.forEach { type ->
+                            FilterChip(
+                                selected = selectedMemberType == type,
+                                onClick = { selectedMemberType = type },
+                                label = { Text(type.name, fontSize = 10.sp) }
+                            )
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SteelInputField(axialLoad, "Pu (kN)", { axialLoad = it }, Modifier.weight(1f))
+                        SteelInputField(moment, "Mu (kN.m)", { moment = it }, Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SteelInputField(shear, "Vu (kN)", { shear = it }, Modifier.weight(1f))
+                        SteelInputField(length, "L (m)", { length = it }, Modifier.weight(1f))
+                    }
+
+                    Text("كود التصميم", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        CalculatorEngine.DesignCode.entries.forEach { code ->
+                            FilterChip(
+                                selected = selectedCode == code,
+                                onClick = { selectedCode = code },
+                                label = { Text(code.name, fontSize = 10.sp) }
+                            )
                         }
                     }
                 }
@@ -914,9 +1005,15 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     selectedSection?.let { sec ->
                         viewModel.calculateSteelMember(
                             section = sec,
-                            memberType = SteelMemberType.COLUMN,
-                            inputs = SteelInputs(axialLoad = 500.0, moment = 100.0, shear = 50.0, unbracedLength = 3.0),
-                            code = CalculatorEngine.DesignCode.EGYPTIAN
+                            memberType = selectedMemberType,
+                            inputs = SteelInputs(
+                                axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
+                                moment = moment.toDoubleOrNull() ?: 0.0,
+                                shear = shear.toDoubleOrNull() ?: 0.0,
+                                unbracedLength = length.toDoubleOrNull() ?: 1.0,
+                                length = length.toDoubleOrNull() ?: 1.0
+                            ),
+                            code = selectedCode
                         )
                     }
                 },
@@ -924,7 +1021,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 enabled = !isLoading && selectedSection != null
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("تحليل وتصنيف القطاع")
+                else Text("تحليل وتصميم القطاع")
             }
         }
 
@@ -959,16 +1056,17 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun WeldDesignTab() {
+fun WeldDesignTab(viewModel: SteelViewModel) {
     var size by remember { mutableStateOf("6") }
     var length by remember { mutableStateOf("200") }
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
     var capacity by remember { mutableDoubleStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔥 تصميم وصلات اللحام", R.drawable.ic_tools) }
+        item { SectionHeader("🔥 تصميم وصلات اللحام الاحترافي", R.drawable.ic_tools) }
         
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -978,14 +1076,27 @@ fun WeldDesignTab() {
         }
         
         item {
-            Text("نوع الإلكترود")
-            Row {
+            Text("نوع الإلكترود (Electrode)", fontWeight = FontWeight.Bold)
+            FlowRow {
                 ElectrodeType.entries.forEach { type ->
                     FilterChip(
                         selected = selectedElectrode == type,
                         onClick = { selectedElectrode = type },
-                        label = { Text(type.displayName) },
+                        label = { Text(type.displayName, fontSize = 10.sp) },
                         modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+            }
+        }
+
+        item {
+            Text("كود التصميم", fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                CalculatorEngine.DesignCode.entries.forEach { code ->
+                    FilterChip(
+                        selected = selectedCode == code,
+                        onClick = { selectedCode = code },
+                        label = { Text(code.name, fontSize = 11.sp) }
                     )
                 }
             }
@@ -995,9 +1106,9 @@ fun WeldDesignTab() {
             Button(onClick = {
                 val s = size.toDoubleOrNull() ?: 6.0
                 val l = length.toDoubleOrNull() ?: 200.0
-                capacity = 0.707 * s * l * 0.4 * selectedElectrode.tensileStrength / 1000.0
+                capacity = viewModel.calculateWeldCapacity(s, l, selectedElectrode, selectedCode)
             }, modifier = Modifier.fillMaxWidth()) {
-                Text("حساب مقاومة اللحام")
+                Text("حساب مقاومة القص (Design Rn)")
             }
         }
 
@@ -1005,8 +1116,10 @@ fun WeldDesignTab() {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("مقاومة القص التصميمية (Rn):", fontWeight = FontWeight.Bold)
-                        Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium)
+                        Text("مقاومة اللحام التصميمية (Design Capacity):", fontWeight = FontWeight.Bold)
+                        Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Throat Area: ${"%.1f".format(0.707 * (size.toDoubleOrNull() ?: 0.0) * (length.toDoubleOrNull() ?: 0.0))} mm²", fontSize = 12.sp)
                     }
                 }
             }
@@ -1014,29 +1127,47 @@ fun WeldDesignTab() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun BoltDesignTab() {
+fun BoltDesignTab(viewModel: SteelViewModel) {
     var diameter by remember { mutableStateOf("16") }
     var selectedGrade by remember { mutableStateOf(BoltGrade.GRADE_8_8) }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var numBolts by remember { mutableStateOf("1") }
     var capacity by remember { mutableDoubleStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔩 تصميم وصلات المسامير", R.drawable.ic_tools) }
+        item { SectionHeader("🔩 تصميم وصلات المسامير الاحترافي", R.drawable.ic_tools) }
         
         item {
-            SteelInputField(diameter, "قطر المسمار (mm)", { diameter = it }, Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SteelInputField(diameter, "قطر المسمار M (mm)", { diameter = it }, Modifier.weight(1f))
+                SteelInputField(numBolts, "عدد المسامير", { numBolts = it }, Modifier.weight(1f))
+            }
         }
 
         item {
-            Text("رتبة المسمار (Grade)")
-            Row {
+            Text("رتبة المسمار (Grade)", fontWeight = FontWeight.Bold)
+            FlowRow {
                 BoltGrade.entries.forEach { grade ->
                     FilterChip(
                         selected = selectedGrade == grade,
                         onClick = { selectedGrade = grade },
-                        label = { Text(grade.displayName) },
+                        label = { Text(grade.displayName, fontSize = 10.sp) },
                         modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+            }
+        }
+
+        item {
+            Text("كود التصميم", fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                CalculatorEngine.DesignCode.entries.forEach { code ->
+                    FilterChip(
+                        selected = selectedCode == code,
+                        onClick = { selectedCode = code },
+                        label = { Text(code.name, fontSize = 11.sp) }
                     )
                 }
             }
@@ -1045,10 +1176,10 @@ fun BoltDesignTab() {
         item {
             Button(onClick = {
                 val d = diameter.toDoubleOrNull() ?: 16.0
-                val area = 3.14159 * (d*d) / 4.0
-                capacity = 0.6 * selectedGrade.fu * area / 1000.0
+                val n = numBolts.toIntOrNull() ?: 1
+                capacity = viewModel.calculateBoltCapacity(d, selectedGrade, n, selectedCode)
             }, modifier = Modifier.fillMaxWidth()) {
-                Text("حساب مقاومة المسمار")
+                Text("حساب مقاومة القص للمجموعة")
             }
         }
 
@@ -1056,8 +1187,10 @@ fun BoltDesignTab() {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("مقاومة المسمار الواحد (Rn):", fontWeight = FontWeight.Bold)
-                        Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium)
+                        Text("مقاومة القص الكلية (Total Rn):", fontWeight = FontWeight.Bold)
+                        Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.secondary)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Single Bolt Rn: ${"%.1f".format(capacity / (numBolts.toIntOrNull() ?: 1))} kN", fontSize = 12.sp)
                     }
                 }
             }
@@ -1092,8 +1225,8 @@ fun SteelSectionDrawing(section: SteelSectionType) {
                 when (section) {
                     is SteelSectionType.ISection -> {
                         val tf = (section.flangeThickness / section.depth * h).toFloat().coerceIn(5f, 25f)
-                        val tw = (section.webThickness / section.flangeWidth * w).toFloat().coerceIn(5f, 20f)
-                        val bf = (section.flangeWidth / section.depth * w).toFloat().coerceAtMost(w)
+                        val tw = (section.webThickness / section.width * w).toFloat().coerceIn(5f, 20f)
+                        val bf = (section.width / section.depth * w).toFloat().coerceAtMost(w)
                         val offsetBF = (w - bf) / 2
                         
                         // Top Flange
@@ -1155,5 +1288,16 @@ private fun ResultRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label)
         Text(value, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun PropertyLine(label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Box(modifier = Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)))
+        Spacer(Modifier.width(6.dp))
+        Text(label, fontSize = 11.sp, color = Color.Gray)
+        Spacer(Modifier.weight(1f))
+        Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }

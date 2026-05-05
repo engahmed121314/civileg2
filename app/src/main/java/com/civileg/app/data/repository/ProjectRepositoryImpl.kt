@@ -53,6 +53,7 @@ class ProjectRepositoryImpl @Inject constructor(
     override fun getDefaultDesignCode(): Flow<String> = preferencesManager.defaultDesignCode
     override fun getUnitSystem(): Flow<String> = preferencesManager.unitSystem
     override fun getThemeMode(): Flow<String> = preferencesManager.themeMode
+    override fun getReportLanguage(): Flow<String> = preferencesManager.reportLanguage
     
     override suspend fun updatePrices(concrete: Double?, steel: Double?, formwork: Double?) {
         concrete?.let { preferencesManager.setConcretePrice(it) }
@@ -74,5 +75,9 @@ class ProjectRepositoryImpl @Inject constructor(
 
     override suspend fun setThemeMode(mode: String) {
         preferencesManager.setThemeMode(mode)
+    }
+
+    override suspend fun setReportLanguage(lang: String) {
+        preferencesManager.setReportLanguage(lang)
     }
 }

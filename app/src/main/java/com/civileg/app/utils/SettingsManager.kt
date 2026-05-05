@@ -28,6 +28,10 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         get() = prefs.getString(KEY_LANGUAGE, "ar") ?: "ar"
         set(value) = prefs.edit().putString(KEY_LANGUAGE, value).apply()
 
+    var userName: String
+        get() = prefs.getString(KEY_USER_NAME, "Civil Engineer") ?: "Civil Engineer"
+        set(value) = prefs.edit().putString(KEY_USER_NAME, value).apply()
+
     var defaultDesignCode: DesignCode
         get() = DesignCode.valueOf(prefs.getString(KEY_DESIGN_CODE, DesignCode.ECP.name) ?: DesignCode.ECP.name)
         set(value) = prefs.edit().putString(KEY_DESIGN_CODE, value.name).apply()
@@ -53,6 +57,7 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         private const val KEY_CURRENCY_RATE = "currency_rate"
         private const val KEY_UNIT_SYSTEM = "unit_system"
         private const val KEY_LANGUAGE = "language"
+        private const val KEY_USER_NAME = "user_name"
         private const val KEY_DESIGN_CODE = "design_code"
         private const val KEY_STEEL_PRICE = "steel_price"
         private const val KEY_CONCRETE_PRICE = "concrete_price"

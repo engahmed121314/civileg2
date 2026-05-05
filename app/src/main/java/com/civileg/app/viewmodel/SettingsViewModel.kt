@@ -20,7 +20,8 @@ data class AppSettings(
     val formworkPrice: Double = 300.0,
     val currency: String = "EGP",
     val unitSystem: String = "SI",
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val reportLanguage: String = "ar"
 )
 
 @HiltViewModel
@@ -40,7 +41,8 @@ class SettingsViewModel @Inject constructor(
                 repository.getFormworkPrice(),
                 repository.getCurrency(),
                 repository.getUnitSystem(),
-                repository.getThemeMode()
+                repository.getThemeMode(),
+                repository.getReportLanguage()
             ) { args: Array<*> ->
                 val code = args[0] as String
                 val concrete = args[1] as Double
@@ -49,6 +51,7 @@ class SettingsViewModel @Inject constructor(
                 val currency = args[4] as String
                 val unitSystem = args[5] as String
                 val theme = args[6] as String
+                val reportLang = args[7] as String
 
                 AppSettings(
                     defaultCode = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP },
@@ -57,7 +60,8 @@ class SettingsViewModel @Inject constructor(
                     formworkPrice = formwork,
                     currency = currency,
                     unitSystem = unitSystem,
-                    themeMode = try { ThemeMode.valueOf(theme) } catch (e: Exception) { ThemeMode.SYSTEM }
+                    themeMode = try { ThemeMode.valueOf(theme) } catch (e: Exception) { ThemeMode.SYSTEM },
+                    reportLanguage = reportLang
                 )
             }.collect { _settings.value = it }
         }
@@ -66,6 +70,12 @@ class SettingsViewModel @Inject constructor(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             repository.setThemeMode(mode.name)
+        }
+    }
+
+    fun setReportLanguage(lang: String) {
+        viewModelScope.launch {
+            repository.setReportLanguage(lang)
         }
     }
 

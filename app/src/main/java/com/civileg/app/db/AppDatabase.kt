@@ -19,9 +19,10 @@ import com.civileg.app.data.local.entities.ProjectEntity
         Stair::class,
         RetainingWall::class,
         Tank::class,
+        InventoryItem::class,
         ProjectEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -37,6 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stairDao(): StairDao
     abstract fun retainingWallDao(): RetainingWallDao
     abstract fun tankDao(): TankDao
+    abstract fun inventoryDao(): InventoryDao
     
     companion object {
         @Volatile

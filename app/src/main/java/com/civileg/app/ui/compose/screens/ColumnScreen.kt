@@ -28,6 +28,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
@@ -113,6 +116,15 @@ fun ColumnScreen(
                             selected = uiState.loadCombination,
                             onSelected = { viewModel.updateLoadCombination(it) }
                         )
+                        
+                        Text(
+                            text = if (uiState.loadCombination == LoadCombination.DEAD_ONLY) 
+                                "💡 Dead Load Only: يستخدم عادة في المنشآت المؤقتة أو تحت ظروف خاصة حيث لا يوجد أحمال حية مؤثرة."
+                                else "💡 Dead + Live: المزيج التصميمي الأكثر شيوعاً وأماناً، يشمل وزن المنشأ والأثاث والأشخاص.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
                 }
             }
@@ -121,30 +133,35 @@ fun ColumnScreen(
             
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(uiState.width.toString(), "العرض b (mm)", { viewModel.updateInputs(width = it.toDoubleOrNull() ?: 0.0) }, Modifier.weight(1f))
-                    ColumnInputField(uiState.depth.toString(), "العمق t (mm)", { viewModel.updateInputs(depth = it.toDoubleOrNull() ?: 0.0) }, Modifier.weight(1f))
-                }
-            }
-
-            item {
-                Text("تخصيص التسليح (لتحقيق التوفير)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(uiState.result?.reinforcement?.numBars?.toString() ?: "4", "عدد الأسياخ", { /* Manual override could be added to ViewModel */ }, Modifier.weight(1f))
-                    ColumnInputField(uiState.result?.reinforcement?.diameter?.toString() ?: "16", "القطر Ø (mm)", { /* Manual override */ }, Modifier.weight(1f))
+                    ColumnInputField(uiState.width, "العرض b (mm)", { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
+                    ColumnInputField(uiState.depth, "العمق t (mm)", { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(uiState.fcu.toString(), "fcu (MPa)", { viewModel.updateInputs(fcu = it.toDoubleOrNull() ?: 0.0) }, Modifier.weight(1f))
-                    ColumnInputField(uiState.fy.toString(), "fy (MPa)", { viewModel.updateInputs(fy = it.toDoubleOrNull() ?: 0.0) }, Modifier.weight(1f))
+                    ColumnInputField(uiState.fcu, "fcu (MPa)", { viewModel.updateInputs(fcu = it) }, Modifier.weight(1f))
+                    ColumnInputField(uiState.fy, "fy (MPa)", { viewModel.updateInputs(fy = it) }, Modifier.weight(1f))
                 }
             }
 
             item { SectionHeader("⚡ الأحمال المطبقة", R.drawable.ic_design) }
             
             item {
-                ColumnInputField(uiState.axialLoad.toString(), "الحمل المحوري Pu (kN)", { viewModel.updateInputs(axialLoad = it.toDoubleOrNull() ?: 0.0) }, Modifier.fillMaxWidth())
+                ColumnInputField(uiState.axialLoad, "الحمل المحوري Pu (kN)", { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
+            }
+
+            item {
+                Button(
+                    onClick = { viewModel.calculateManual() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Calculate, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("حساب المقطع (Design Now)", fontWeight = FontWeight.Bold)
+                }
             }
 
             uiState.result?.let { result ->
@@ -217,6 +234,76 @@ fun ColumnScreen(
                 }
 
                 item { ColumnResultCard(result) }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.applyEconomicalDesign() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("خيار موفر 💰", fontSize = 12.sp)
+                        }
+                        Button(
+                            onClick = { viewModel.applySafetyDesign() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("الأكثر أماناً 🛡️", fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                Text("تخصيص التسليح (لتحقيق التوفير)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = uiState.autoOptimize,
+                                    onCheckedChange = { viewModel.updateAutoOptimize(it) },
+                                    thumbContent = { if (uiState.autoOptimize) Icon(Icons.Default.Check, null, modifier = Modifier.size(12.dp)) }
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ColumnInputField(
+                                    value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (result.reinforcement.numBars.toString()) else uiState.manualNumBars,
+                                    label = "عدد الأسياخ",
+                                    onValueChange = { viewModel.updateInputs(manualNumBars = it) },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = true
+                                )
+                                ColumnInputField(
+                                    value = uiState.preferredDiameter,
+                                    label = "القطر Ø (mm)",
+                                    onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = true
+                                )
+                            }
+                            if (!uiState.autoOptimize) {
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = { viewModel.calculateManual() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                ) {
+                                    Text("تحديث التسليح المخصص")
+                                }
+                            }
+                        }
+                    }
+                }
 
                 item {
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -468,14 +555,23 @@ private fun SectionHeader(title: String, iconRes: Int) {
 }
 
 @Composable
-private fun ColumnInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
+private fun ColumnInputField(
+    value: String,
+    label: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier,
+    enabled: Boolean = true
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { Text(label, fontSize = 12.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
+        enabled = enabled,
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
     )
 }
 
@@ -500,14 +596,32 @@ private fun FormulaItem(formula: String) {
 
 @Composable
 private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (DesignCode) -> Unit) {
-    Text("اختر كود التصميم", style = MaterialTheme.typography.labelMedium)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Text("اختر كود التصميم", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         DesignCode.values().forEach { code ->
-            FilterChip(
-                selected = code == selectedCode,
-                onClick = { onCodeSelected(code) },
-                label = { Text(code.displayName) }
-            )
+            val isSelected = code == selectedCode
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(45.dp)
+                    .clickable { onCodeSelected(code) },
+                shape = RoundedCornerShape(8.dp),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (code == DesignCode.SBC) "SAUDI Code" else if (code == DesignCode.ECP) "ECP Code" else "ACI Code",
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }

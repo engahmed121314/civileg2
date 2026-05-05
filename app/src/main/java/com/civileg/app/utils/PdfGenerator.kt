@@ -22,7 +22,9 @@ import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
+import java.util.*
 import java.util.Locale
 
 object PdfGenerator {
@@ -31,6 +33,8 @@ object PdfGenerator {
     private val SECONDARY_COLOR = DeviceRgb(69, 90, 100)
     private val SUCCESS_COLOR = DeviceRgb(46, 125, 50)
     private val ERROR_COLOR = DeviceRgb(198, 40, 40)
+    
+    // ... (rest of the file until generateBOQReport)
 
     private fun getArabicFont(): PdfFont? {
         val paths = arrayOf(
@@ -434,10 +438,10 @@ object PdfGenerator {
         
         val section = result.sectionType
         if (section is SteelSectionType.ISection) {
-            propTable.addCell(createDataCell("Depth (h)", "${section.depth} mm", arabicFont))
-            propTable.addCell(createDataCell("Flange Width (bf)", "${section.flangeWidth} mm", arabicFont))
-            propTable.addCell(createDataCell("Web Thickness (tw)", "${section.webThickness} mm", arabicFont))
-            propTable.addCell(createDataCell("Flange Thickness (tf)", "${section.flangeThickness} mm", arabicFont))
+            propTable.addCell(createDataCell("Depth (h)", "${section.h} mm", arabicFont))
+            propTable.addCell(createDataCell("Flange Width (bf)", "${section.bf} mm", arabicFont))
+            propTable.addCell(createDataCell("Web Thickness (tw)", "${section.tw} mm", arabicFont))
+            propTable.addCell(createDataCell("Flange Thickness (tf)", "${section.tf} mm", arabicFont))
         }
         document.add(propTable)
 
@@ -511,72 +515,88 @@ object PdfGenerator {
         val fileName = "CivilEngPro_BOQ_${System.currentTimeMillis()}.pdf"
         val file = File(context.getExternalFilesDir(null), fileName)
         
-        val writer = PdfWriter(file)
-        val pdf = PdfDocument(writer)
-        val document = Document(pdf)
-        val arabicFont = getArabicFont()
+        val pdf = android.graphics.pdf.PdfDocument()
+        val helper = PdfLayoutHelper(context)
+        helper.startNewDocument(pdf)
+        helper.startNewPage()
         
-        // --- Header ---
-        val appNamePara = createStyledParagraph(context.getString(R.string.app_name), arabicFont, 24f, true)
-            .setTextAlignment(TextAlignment.CENTER).setFontColor(PRIMARY_COLOR)
-        document.add(appNamePara)
+        val canvas = helper.currentPage!!.canvas
+        var y = helper.currentY + 20f
         
-        val boqTitlePara = createStyledParagraph("Comprehensive BOQ Report (كشف كميات وتكاليف)", arabicFont, 14f)
-            .setTextAlignment(TextAlignment.CENTER)
-        document.add(boqTitlePara)
-        
-        document.add(LineSeparator(SolidLine(1f)))
-        document.add(Paragraph("\n"))
-
-        // --- Project Info ---
-        val projectTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-        
-        fun addInfoRow(label: String, value: String) {
-            projectTable.addCell(Cell().add(createStyledParagraph(label, arabicFont, 10f, true)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER))
-            projectTable.addCell(Cell().add(createStyledParagraph(value, arabicFont, 10f, true).setFontColor(SECONDARY_COLOR)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER))
+        val titlePaint = android.graphics.Paint().apply {
+            color = helper.colorPrimary
+            textSize = 24f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
         }
-
-        addInfoRow("Project Name (اسم المشروع)", projectName)
-        addInfoRow("Report Date (التاريخ)", java.util.Date().toString())
-        document.add(projectTable)
-        document.add(Paragraph("\n"))
-
-        // --- Summary Card ---
-        val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-        summaryTable.setBackgroundColor(DeviceRgb(245, 245, 245))
+        helper.drawText(canvas, "Comprehensive BOQ Report", PdfLayoutHelper.PAGE_WIDTH / 2f, y, titlePaint)
+        y += 30f
         
-        summaryTable.addCell(Cell().add(Paragraph("Total Estimated Budget")).setBold())
-        summaryTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.2f EGP", totalBudget)).setBold().setFontColor(PRIMARY_COLOR)))
-        
-        summaryTable.addCell(Cell().add(Paragraph("Total Concrete Volume")))
-        summaryTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.2f m³", concreteVol))))
-        
-        summaryTable.addCell(Cell().add(Paragraph("Total Steel Weight")))
-        summaryTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.2f Tons", steelWeight / 1000.0))))
-        document.add(summaryTable)
-        
-        // --- Detailed Breakdown ---
-        document.add(createStyledParagraph("\nDETAILED COST BREAKDOWN (تفاصيل التكاليف)", arabicFont, 14f, true).setFontColor(PRIMARY_COLOR))
-        
-        val itemTable = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
-        
-        fun addHeader(text: String) {
-            val p = createStyledParagraph(text, arabicFont, 10f, true).setFontColor(ColorConstants.WHITE)
-            itemTable.addHeaderCell(Cell().add(p).setBackgroundColor(PRIMARY_COLOR))
+        val subTitlePaint = android.graphics.Paint().apply {
+            color = helper.colorSecondary
+            textSize = 14f
+            textAlign = android.graphics.Paint.Align.CENTER
         }
+        helper.drawText(canvas, "(كشف كميات وتكاليف تقديري)", PdfLayoutHelper.PAGE_WIDTH / 2f, y, subTitlePaint)
+        y += 40f
         
-        addHeader("Item / Design Name")
-        addHeader("Cost (EGP)")
+        canvas.drawLine(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 1f })
+        y += 30f
         
+        val labelPaint = android.graphics.Paint().apply { textSize = 11f; color = helper.colorGray }
+        val valuePaint = android.graphics.Paint().apply { textSize = 11f; isFakeBoldText = true; color = helper.colorText }
+        
+        helper.drawInfoRow(canvas, "Project Name (اسم المشروع)", projectName, y, labelPaint, valuePaint); y += 25f
+        helper.drawInfoRow(canvas, "Report Date (التاريخ)", SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()), y, labelPaint, valuePaint); y += 40f
+        
+        // Summary Table
+        val bgPaint = android.graphics.Paint().apply { color = helper.colorLightGray }
+        canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + 80f, bgPaint)
+        y += 20f
+        
+        val mainLabelPaint = android.graphics.Paint().apply { textSize = 12f; isFakeBoldText = true; color = helper.colorText }
+        val mainValuePaint = android.graphics.Paint().apply { textSize = 16f; isFakeBoldText = true; color = helper.colorPrimary }
+        
+        helper.drawInfoRow(canvas, "Total Estimated Budget", String.format(Locale.US, "%,.2f EGP", totalBudget), y, mainLabelPaint, mainValuePaint); y += 30f
+        
+        val normalLabelPaint = android.graphics.Paint().apply { textSize = 11f; color = helper.colorText }
+        helper.drawInfoRow(canvas, "Total Concrete Volume", String.format(Locale.US, "%.2f m³", concreteVol), y, normalLabelPaint, normalLabelPaint); y += 20f
+        helper.drawInfoRow(canvas, "Total Steel Weight", String.format(Locale.US, "%.2f Tons", steelWeight / 1000.0), y, normalLabelPaint, normalLabelPaint); y += 60f
+        
+        // Detailed Breakdown
+        val sectionPaint = android.graphics.Paint().apply { textSize = 14f; isFakeBoldText = true; color = helper.colorPrimary }
+        helper.drawText(canvas, "DETAILED COST BREAKDOWN (تفاصيل التكاليف)", PdfLayoutHelper.MARGIN, y, sectionPaint)
+        y += 30f
+        
+        val headerBgPaint = android.graphics.Paint().apply { color = helper.colorPrimary }
+        canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + 25f, headerBgPaint)
+        
+        val headerTextPaint = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 10f; isFakeBoldText = true }
+        helper.drawText(canvas, "Item / Design Name", PdfLayoutHelper.MARGIN + 10f, y + 17f, headerTextPaint)
+        headerTextPaint.textAlign = android.graphics.Paint.Align.RIGHT
+        helper.drawText(canvas, "Cost (EGP)", PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN - 10f, y + 17f, headerTextPaint)
+        y += 35f
+        
+        val itemPaint = android.graphics.Paint().apply { textSize = 10f; color = helper.colorText }
         items.forEach { (name, price) ->
-            addArabicCell(itemTable, name, arabicFont, fontSize = 10f)
-            itemTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.0f", price)).setBold().setFontSize(10f)))
+            if (y > PdfLayoutHelper.PAGE_HEIGHT - PdfLayoutHelper.MARGIN - 40f) {
+                helper.finishCurrentPage()
+                helper.startNewPage()
+                y = helper.currentY + 20f
+            }
+            val currentCanvas = helper.currentPage!!.canvas
+            helper.drawText(currentCanvas, name, PdfLayoutHelper.MARGIN + 10f, y, itemPaint)
+            itemPaint.textAlign = android.graphics.Paint.Align.RIGHT
+            helper.drawText(currentCanvas, String.format(Locale.US, "%,.0f", price), PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN - 10f, y, itemPaint)
+            itemPaint.textAlign = android.graphics.Paint.Align.LEFT
+            
+            currentCanvas.drawLine(PdfLayoutHelper.MARGIN, y + 5f, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + 5f, android.graphics.Paint().apply { color = android.graphics.Color.LTGRAY; strokeWidth = 0.5f })
+            y += 25f
         }
-        document.add(itemTable)
         
-        // --- Footer ---
-        document.add(Paragraph("\n\nEnd of BOQ Report").setFontSize(8f).setItalic().setTextAlignment(TextAlignment.CENTER).setFontColor(ColorConstants.GRAY))
-        document.close()
+        helper.finishCurrentPage()
+        pdf.writeTo(FileOutputStream(file))
+        pdf.close()
         return file
     }
 
@@ -587,96 +607,111 @@ object PdfGenerator {
         val fileName = "CivilEngPro_Estimation_${System.currentTimeMillis()}.pdf"
         val file = File(context.getExternalFilesDir(null), fileName)
 
-        val writer = PdfWriter(file)
-        val pdf = PdfDocument(writer)
-        val document = Document(pdf)
-        val arabicFont = getArabicFont()
-
-        // --- Header Section ---
-        val header = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
-        val appNamePara = createStyledParagraph(context.getString(R.string.app_name), arabicFont, 26f, true)
-            .setFontColor(PRIMARY_COLOR)
-        header.addCell(Cell().add(appNamePara).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER))
+        val pdf = android.graphics.pdf.PdfDocument()
+        val helper = PdfLayoutHelper(context)
+        helper.startNewDocument(pdf)
+        helper.startNewPage()
         
-        header.addCell(Cell().add(Paragraph("ESTIMATION REPORT")
-            .setTextAlignment(TextAlignment.RIGHT).setFontSize(10f).setFontColor(ColorConstants.GRAY)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER))
-        document.add(header)
+        val canvas = helper.currentPage!!.canvas
+        var y = helper.currentY + 20f
         
-        document.add(LineSeparator(SolidLine(1f)))
-        document.add(Paragraph("\n"))
-
-        // --- Summary ---
-        document.add(createStyledParagraph("Total Project Cost Estimate (تقدير إجمالي التكلفة)", arabicFont, 12f).setFontColor(ColorConstants.GRAY))
-        
-        document.add(Paragraph(String.format(Locale.US, "%,.0f %s", result.totalCost, result.currencySymbol))
-            .setFontSize(28f).setBold().setFontColor(PRIMARY_COLOR))
-        
-        document.add(Paragraph("\n"))
-
-        // --- Detailed Items Table ---
-        document.add(createStyledParagraph("DETAILED QUANTITIES & COSTS (كشف البنود)", arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
-        
-        val itemTable = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
-        
-        fun addHeader(text: String) {
-            val p = createStyledParagraph(text, arabicFont, 10f, true).setFontColor(ColorConstants.WHITE)
-            itemTable.addHeaderCell(Cell().add(p).setBackgroundColor(PRIMARY_COLOR))
+        val titlePaint = android.graphics.Paint().apply {
+            color = helper.colorPrimary
+            textSize = 24f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
         }
-
-        addHeader("Description")
-        addHeader("Quantity")
-        addHeader("Unit Price")
-        addHeader("Total")
-
+        helper.drawText(canvas, "ESTIMATION & FEASIBILITY REPORT", PdfLayoutHelper.PAGE_WIDTH / 2f, y, titlePaint)
+        y += 30f
+        
+        val subTitlePaint = android.graphics.Paint().apply {
+            color = helper.colorSecondary
+            textSize = 14f
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        helper.drawText(canvas, "(تقرير تقدير التكاليف ودراسة الجدوى)", PdfLayoutHelper.PAGE_WIDTH / 2f, y, subTitlePaint)
+        y += 40f
+        
+        canvas.drawLine(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 1f })
+        y += 40f
+        
+        val summaryLabelPaint = android.graphics.Paint().apply { textSize = 14f; color = helper.colorGray }
+        helper.drawText(canvas, "Total Project Cost Estimate (تقدير إجمالي التكلفة)", PdfLayoutHelper.MARGIN, y, summaryLabelPaint)
+        y += 40f
+        
+        val totalCostPaint = android.graphics.Paint().apply { textSize = 32f; isFakeBoldText = true; color = helper.colorPrimary }
+        helper.drawText(canvas, String.format(Locale.US, "%,.0f %s", result.totalCost, result.currencySymbol), PdfLayoutHelper.MARGIN, y, totalCostPaint)
+        y += 60f
+        
+        // Items Table
+        val sectionPaint = android.graphics.Paint().apply { textSize = 14f; isFakeBoldText = true; color = helper.colorPrimary }
+        helper.drawText(canvas, "DETAILED QUANTITIES & COSTS (كشف البنود)", PdfLayoutHelper.MARGIN, y, sectionPaint)
+        y += 30f
+        
+        val headerBgPaint = android.graphics.Paint().apply { color = helper.colorPrimary }
+        canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + 25f, headerBgPaint)
+        
+        val headerTextPaint = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 9f; isFakeBoldText = true }
+        helper.drawText(canvas, "Description", PdfLayoutHelper.MARGIN + 10f, y + 17f, headerTextPaint)
+        helper.drawText(canvas, "Quantity", PdfLayoutHelper.MARGIN + 180f, y + 17f, headerTextPaint)
+        helper.drawText(canvas, "Unit Price", PdfLayoutHelper.MARGIN + 280f, y + 17f, headerTextPaint)
+        headerTextPaint.textAlign = android.graphics.Paint.Align.RIGHT
+        helper.drawText(canvas, "Total", PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN - 10f, y + 17f, headerTextPaint)
+        y += 35f
+        
+        val itemPaint = android.graphics.Paint().apply { textSize = 9f; color = helper.colorText }
         result.items.forEach { item ->
-            addArabicCell(itemTable, item.name, arabicFont, fontSize = 9f)
-            addArabicCell(itemTable, String.format(Locale.US, "%.1f %s", item.quantity, item.unit), arabicFont, fontSize = 9f)
-            itemTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.0f", item.unitPrice)).setFontSize(9f)))
-            itemTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.0f", item.totalPrice)).setFontSize(9f).setBold()))
+            if (y > PdfLayoutHelper.PAGE_HEIGHT - PdfLayoutHelper.MARGIN - 100f) {
+                helper.finishCurrentPage()
+                helper.startNewPage()
+                y = helper.currentY + 20f
+            }
+            val currentCanvas = helper.currentPage!!.canvas
+            helper.drawText(currentCanvas, item.name, PdfLayoutHelper.MARGIN + 10f, y, itemPaint)
+            helper.drawText(currentCanvas, String.format(Locale.US, "%.1f %s", item.quantity, item.unit), PdfLayoutHelper.MARGIN + 180f, y, itemPaint)
+            helper.drawText(currentCanvas, String.format(Locale.US, "%,.0f", item.unitPrice), PdfLayoutHelper.MARGIN + 280f, y, itemPaint)
+            itemPaint.textAlign = android.graphics.Paint.Align.RIGHT
+            helper.drawText(currentCanvas, String.format(Locale.US, "%,.0f", item.totalPrice), PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN - 10f, y, itemPaint)
+            itemPaint.textAlign = android.graphics.Paint.Align.LEFT
+            
+            currentCanvas.drawLine(PdfLayoutHelper.MARGIN, y + 5f, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + 5f, android.graphics.Paint().apply { color = android.graphics.Color.LTGRAY; strokeWidth = 0.5f })
+            y += 25f
         }
-        document.add(itemTable)
-
-        // --- Investment Analysis Section ---
+        
+        // Investment Section
         result.investmentData?.let { invest ->
-            document.add(Paragraph("\n"))
-            document.add(createStyledParagraph("FEASIBILITY & INVESTMENT ANALYSIS (دراسة الجدوى)", arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
-            
-            val investTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-            
-            fun addRow(label: String, value: String) {
-                investTable.addCell(Cell().add(createStyledParagraph(label, arabicFont, 10f)))
-                investTable.addCell(Cell().add(createStyledParagraph(value, arabicFont, 10f, true)))
+            y += 30f
+            if (y > PdfLayoutHelper.PAGE_HEIGHT - PdfLayoutHelper.MARGIN - 200f) {
+                helper.finishCurrentPage()
+                helper.startNewPage()
+                y = helper.currentY + 20f
             }
-
-            if (invest.landCost > 0) addRow("Land Cost (سعر الأرض)", String.format(Locale.US, "%,.0f %s", invest.landCost, result.currencySymbol))
-            addRow("Construction Cost (تكلفة البناء)", String.format(Locale.US, "%,.0f %s", invest.constructionCost, result.currencySymbol))
-            addRow("Expected Net Profit (صافي الربح)", String.format(Locale.US, "%,.0f %s", invest.netProfit, result.currencySymbol))
-            addRow("ROI (Return on Investment)", String.format(Locale.US, "%.1f %%", invest.roi))
-            addRow("Profit Margin (هامش الربح)", String.format(Locale.US, "%.1f %%", invest.profitMargin))
-            addRow("Construction Duration", "${invest.constructionDurationMonths} Months")
+            val currentCanvas = helper.currentPage!!.canvas
+            helper.drawText(currentCanvas, "FEASIBILITY & INVESTMENT ANALYSIS (دراسة الجدوى)", PdfLayoutHelper.MARGIN, y, sectionPaint)
+            y += 30f
             
-            document.add(investTable)
+            val labelPaint = android.graphics.Paint().apply { textSize = 11f; color = helper.colorGray }
+            val valuePaint = android.graphics.Paint().apply { textSize = 11f; isFakeBoldText = true; color = helper.colorText }
+            
+            if (invest.landCost > 0) {
+                helper.drawInfoRow(currentCanvas, "Land Cost (سعر الأرض)", String.format(Locale.US, "%,.0f %s", invest.landCost, result.currencySymbol), y, labelPaint, valuePaint)
+                y += 25f
+            }
+            helper.drawInfoRow(currentCanvas, "Construction Cost (تكلفة البناء)", String.format(Locale.US, "%,.0f %s", invest.constructionCost, result.currencySymbol), y, labelPaint, valuePaint); y += 25f
+            helper.drawInfoRow(currentCanvas, "Expected Net Profit (صافي الربح)", String.format(Locale.US, "%,.0f %s", invest.netProfit, result.currencySymbol), y, labelPaint, valuePaint); y += 25f
+            
+            val roiPaint = android.graphics.Paint(valuePaint).apply { color = helper.colorSuccess }
+            helper.drawInfoRow(currentCanvas, "ROI (Return on Investment)", String.format(Locale.US, "%.1f %%", invest.roi), y, labelPaint, roiPaint); y += 25f
+            helper.drawInfoRow(currentCanvas, "Profit Margin (هامش الربح)", String.format(Locale.US, "%.1f %%", invest.profitMargin), y, labelPaint, valuePaint); y += 25f
+            helper.drawInfoRow(currentCanvas, "Construction Duration", "${invest.constructionDurationMonths} Months", y, labelPaint, valuePaint); y += 25f
         }
 
-        // --- Technical Details ---
-        if (result.technicalDetails.isNotEmpty()) {
-            document.add(createStyledParagraph("\nTECHNICAL NOTES (ملاحظات فنية)", arabicFont, 12f, true))
-            
-            result.technicalDetails.forEach { detail ->
-                document.add(createStyledParagraph("• $detail", arabicFont, 10f))
-            }
-        }
-
-        // --- Footer ---
-        document.add(Paragraph("\n\n"))
-        document.add(Paragraph("Generated by Civil Engineer Pro - Professional Estimation Module")
-            .setFontSize(8f).setItalic().setFontColor(ColorConstants.GRAY).setTextAlignment(TextAlignment.CENTER))
-        document.add(Paragraph(java.util.Date().toString())
-            .setFontSize(8f).setTextAlignment(TextAlignment.RIGHT))
-
-        document.close()
+        helper.finishCurrentPage()
+        pdf.writeTo(FileOutputStream(file))
+        pdf.close()
         return file
     }
+
 
     // Adding legacy methods for compatibility
     fun generateDesignReport(

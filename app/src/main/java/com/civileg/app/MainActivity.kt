@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Folder
@@ -14,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -107,6 +107,12 @@ fun AppNavigation(drawerState: DrawerState) {
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Settings.route) }
                 )
+                NavigationDrawerItem(
+                    icon = { Icon(painterResource(id = R.drawable.ic_tools), null) },
+                    label = { Text("مخزن الموقع") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Inventory.route) }
+                )
             }
         }
     ) {
@@ -162,7 +168,7 @@ fun AppNavigation(drawerState: DrawerState) {
             composable(AppScreen.Projects.route) {
                 ArchiveScreen(
                     viewModel = hiltViewModel(),
-                    onProjectClick = { project ->
+                    onProjectClick = {
                         // Handle project click if needed
                     },
                     onNavigateBack = { navController.popBackStack() }
@@ -180,30 +186,11 @@ fun AppNavigation(drawerState: DrawerState) {
             composable(AppScreen.SteelDesign.route) {
                 SteelDesignScreen(onNavigateBack = { navController.popBackStack() })
             }
+
+            composable(AppScreen.Inventory.route) {
+                InventoryScreen(onNavigateBack = { navController.popBackStack() })
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PlaceholderScreen(title: String, onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("شاشة $title قيد التطوير الاحترافي.\nجاهزة قريباً في التحديث القادم.")
-        }
-    }
-}

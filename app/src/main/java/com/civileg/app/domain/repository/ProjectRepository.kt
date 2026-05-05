@@ -19,10 +19,12 @@ interface ProjectRepository {
     fun getDefaultDesignCode(): Flow<String>
     fun getUnitSystem(): Flow<String>
     fun getThemeMode(): Flow<String>
+    fun getReportLanguage(): Flow<String>
     
     suspend fun updatePrices(concrete: Double?, steel: Double?, formwork: Double?)
     suspend fun setCurrency(currency: String)
     suspend fun setDefaultDesignCode(code: String)
     suspend fun setUnitSystem(system: String)
     suspend fun setThemeMode(mode: String)
+    suspend fun setReportLanguage(lang: String)
 }

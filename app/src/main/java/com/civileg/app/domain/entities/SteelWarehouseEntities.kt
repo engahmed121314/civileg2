@@ -13,13 +13,19 @@ data class SteelWarehouseInputs(
     val numberOfStories: Int = 1,
     val slope: Double = 0.1,       // tan(theta)
     val code: DesignCode = DesignCode.ECP,
+    val deadLoad: Double = 0.2,    // kN/m2
     val liveLoad: Double = 0.5,    // kN/m2
-    val windSpeed: Double = 33.0,  // m/s
+    val windLoad: Double = 0.6,    // kN/m2
     val snowLoad: Double = 0.0,    // kN/m2
     val claddingWeight: Double = 0.15, // kN/m2
     val usePurlins: Boolean = true,
     val purlinSpacing: Double = 1.5, // m
     val useBracing: Boolean = true,
+    
+    // Mezzanine / Multi-story
+    val numberOfMezzanines: Int = 0,
+    val mezzanineHeight: Double = 3.5, // m
+    val mezzanineLiveLoad: Double = 3.0, // kN/m2
     
     // Manual Overrides
     val overrideColumnSection: SteelSectionType? = null,
@@ -45,7 +51,11 @@ data class SteelWarehouseAnalysisResult(
     val estimatedTotalCost: Double = 0.0,
     val costPerM2: Double = 0.0,
     val roi: Double = 0.0,         // Percentage
-    val netProfit: Double = 0.0
+    val netProfit: Double = 0.0,
+    
+    // Mezzanine Result
+    val mezzanineArea: Double = 0.0,
+    val mezzanineSteelWeight: Double = 0.0
 ) : Parcelable
 
 @Parcelize
