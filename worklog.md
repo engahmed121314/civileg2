@@ -52,3 +52,38 @@ Stage Summary:
 - InteractionDiagram.kt: تمت إعادة الكتابة ✅
 - SteelDesignEngine.kt: مكتمل ✅
 - لا ملفات مكررة ✅
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: إكمال ودمج جميع التعديلات - الجلسة الثانية
+
+Work Log:
+- إصلاح خطأ ترجمة حرج: ECPFooting.kt سطر 220 — criticalSection كان String بدلاً من Double
+- تحسين ACIFooting.kt designIsolatedFooting:
+  - إضافة التسليح التوزيعي (20% من As الرئيسي) حسب ACI 318-13.3.4
+  - إصلاح loadCombination.factor → getFactorForCode(DesignCode.ACI) في designCombinedFooting
+  - إزالة import CodeReference غير المستخدم
+  - إزالة متغير distReinf غير المستخدم
+- تحسين SBCFooting.kt designIsolatedFooting:
+  - إضافة فحص القص الأحادي (one-way shear) عند بعد d/2
+  - إضافة حساب التسليح في الاتجاهين (X و Y)
+  - إضافة التسليح التوزيعي (20%) حسب ACI/SBC
+  - إصلاح loadCombination.factor → getFactorForCode(DesignCode.SBC) في designIsolatedFooting و designCombinedFooting
+- إصلاح ECPFooting.kt: loadCombination.factor → getFactorForCode(DesignCode.ECP)
+- إصلاح ACISlab.kt:
+  - تصحيح أسماء معاملات MomentCoefficients (negativeShort, positiveShort, negativeLong, positiveLong)
+  - إزالة warnings و codeNotes من TwoWaySlabResult (غير موجودة في data class)
+- إصلاح SBCSlab.kt:
+  - تصحيح ترتيب معاملات MomentCoefficients
+  - إزالة codeNotes من TwoWaySlabResult
+- إصلاح ECPAdvancedSlab.kt: loadCombination.factor → getFactorForCode(DesignCode.ECP)
+- إصلاح ECPAdvancedBeam.kt: loadCombination.factor → getFactorForCode(DesignCode.ECP)
+- تحديث ACISeismic.kt: SeismicZone.values() → SeismicZone.entries() (Kotlin 1.9+ deprecation)
+- تحديث SBCSeismic.kt: SeismicZone.values() → SeismicZone.entries()
+
+Stage Summary:
+- 5 أخطاء ترجمة حرجة تم إصلاحها ✅
+- 3 تحذيرات تم حلها ✅
+- جميع ملفات calculations تستخدم getFactorForCode() بشكل متسق ✅
+- لم تبقَ أي loadCombination.factor أو createEmptyResult أو fcu=25.0 hardcoded ✅
