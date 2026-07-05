@@ -94,7 +94,10 @@ class ACIAdvancedBeam {
 
         // === تحديد العمق الفعال ===
         // d = h - cover - stirrup_dia/2 - main_bar_dia/2 (تقريبي)
-        val effectiveDepth = depth - DEFAULT_COVER - 10.0 - 12.0  // mm (خصم الغطاء والكانة ونصف السيخ)
+        // نستخدم قطر الكانة المقدر (10 مم) وقطر الحديد الرئيسي المقدر (16 مم) كافتراض أولي
+        val estimatedStirrupDia = 10.0  // mm
+        val estimatedMainBarDia = 16.0  // mm
+        val effectiveDepth = depth - DEFAULT_COVER - estimatedStirrupDia - estimatedMainBarDia / 2.0  // mm
 
         // === تصميم الانحناء (Flexure Design) - ACI 318-19 الفصل التاسع ===
         val flexureResult = baseBeam.calculateFlexureReinforcement(
@@ -238,7 +241,9 @@ class ACIAdvancedBeam {
         beamWidth: Double,
         effectiveDepth: Double,
         astProvided: Double,
-        beamType: BeamType
+        beamType: BeamType,
+        xi: Double = 2.0,
+        rhoPrime: Double = 0.0
     ): DeflectionCheckResult {
         val deflectionWarnings = mutableListOf<String>()
 
@@ -321,11 +326,8 @@ class ACIAdvancedBeam {
 
         // === معامل الزيادة طويل المدى - ACI 24.2.4.1 ===
         // λΔ = ξ / (1 + 50 × ρ')
-        // حيث:
-        //   ξ = 2.0 للرطوبة المتوسطة (ACI Table 24.2.4.1)
-        //   ρ' = نسبة التسليح المضغوط (نأخذها = 0 لتصميم محافظ)
-        val xi = 2.0  // عامل الزمن للرطوبة المتوسطة - ACI Table 24.2.4.1
-        val rhoPrime = 0.0  // نسبة تسليح الضغط (افتراض محافظ: لا يوجد تسليح ضغط)
+        // ξ = عامل الزمن حسب الرطوبة (معلمة بإفتراض 2.0 - ACI Table 24.2.4.1)
+        // ρ' = نسبة التسليح المضغوط (معلمة بإفتراض 0.0)
         val longTermMultiplier = if (rhoPrime >= 0) {
             xi / (1.0 + 50.0 * rhoPrime)
         } else {

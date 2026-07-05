@@ -55,8 +55,8 @@ class ECPBeam : BeamDesign {
         
         // تطبيق حدود التسليح
         val Ag = width * effectiveDepth
-        val minSteel = getMinReinforcementRatio() * Ag
-        val maxSteel = getMaxReinforcementRatio() * Ag
+        val minSteel = getMinReinforcementRatioDynamic(fcu, fy) * Ag
+        val maxSteel = getMaxReinforcementRatioDynamic(fcu, fy) * Ag
         
         if (astRequired < minSteel) {
             astRequired = minSteel
@@ -70,26 +70,14 @@ class ECPBeam : BeamDesign {
             ceil(astRequired / area) <= 6  // أقصى 6 أسياخ في صف واحد
         } ?: 16.0
         
-        // حساب البدائل (اقتصادية + آمنة إضافية)
-        val alternatives = mutableListOf<String>()
-        for (dia in availableBars) {
-            val area = PI * dia * dia / 4
-            val numBars = ceil(astRequired / area).toInt().coerceIn(2, 12)
-            val asProv = numBars * area
-            val util = if (capacity > 0) designMoment / (asProv * fs * leverArm / 1e6) else 2.0
-            if (util in 0.5..1.0 && dia != selectedBarDia) {
-                alternatives.add("${numBars}Ø${dia.toInt()} (${(util*100).toInt()}%)")
-            }
-        }
-        if (alternatives.size >= 2) {
-            codeNotes.add("Economical: ${alternatives.first()}")
-            codeNotes.add("Safest: ${alternatives.last()}")
-        }
-        
         val barArea = PI * selectedBarDia * selectedBarDia / 4
         val numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(2, 12)
         val astProvided = numberOfBars * barArea
         val barDiameter = selectedBarDia
+        
+        // نسبة الاستغلال - يجب حساب capacity قبل البدائل
+        val capacity = calculateMomentCapacity(fcu, fy, width, effectiveDepth, astProvided)
+        val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
         
         // التحقق من التباعد بين الأسياخ
         val clearSpacing = if (numberOfBars > 1) {
@@ -102,9 +90,22 @@ class ECPBeam : BeamDesign {
             warnings.add("Bar spacing may be insufficient - consider two layers")
         }
         
-        // نسبة الاستغلال
-        val capacity = calculateMomentCapacity(fcu, fy, width, effectiveDepth, astProvided)
-        val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
+        // حساب البدائل (اقتصادية + آمنة إضافية)
+        val alternatives = mutableListOf<String>()
+        for (dia in availableBars) {
+            val area = PI * dia * dia / 4
+            val numBars = ceil(astRequired / area).toInt().coerceIn(2, 12)
+            val asProv = numBars * area
+            val altCapacity = calculateMomentCapacity(fcu, fy, width, effectiveDepth, asProv)
+            val util = if (altCapacity > 0) designMoment / altCapacity else 2.0
+            if (util in 0.5..1.0 && dia != selectedBarDia) {
+                alternatives.add("${numBars}Ø${dia.toInt()} (${(util*100).toInt()}%)")
+            }
+        }
+        if (alternatives.size >= 2) {
+            codeNotes.add("Economical: ${alternatives.first()}")
+            codeNotes.add("Safest: ${alternatives.last()}")
+        }
         
         codeNotes.add(CodeReference.ECP.BEAM_FLEXURE)
         codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MIN)
@@ -138,8 +139,8 @@ class ECPBeam : BeamDesign {
         val Vu = designShear * 1000  // N (القوة القصية التصميمية)
         
         // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu/γc) MPa
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa
+        // qcu = 0.24 × √(fcu) ثم يُقسم على γc عند حساب القدرة
+        val qcu = 0.24 * sqrt(fcu) / GAMMA_C  // MPa
         val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
         
         // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
@@ -202,8 +203,14 @@ class ECPBeam : BeamDesign {
             SupportCondition.CANTILEVER -> 7.0
         }
         
-        // تعديل النسبة حسب نسبة التسليح
-        val modificationFactor = 0.55 + 0.0075 * (400.0 / reinforcementRatio.coerceAtLeast(0.01)).coerceIn(0.0, 10.0)
+        // تعديل النسبة حسب نسبة التسليح - ECP 203: MF = 0.55 + (0.45 × M/bd²) / (ρ × fy) أساساً
+        // طريقة مبسطة: MF = 0.55 + 0.45 × (basicRatio × d / span) × (1000 / (ρ% × 100))
+        // الأبسط والأكثر دقة حسب ECP: MF = 0.55 + 0.45 × (K_bal / K) عند K ≤ K_bal
+        // نستخدم الطريقة المباشرة: MF = 0.55 + (477 / (fy × ρ%)) × sqrt(basicRatio × d / span)
+        // النسخة المبسطة المعتمدة: MF = 0.55 + 0.0075 × fs / (ρ × fy) 
+        // حيث fs = 0.58 × fy → MF = 0.55 + 0.0075 / ρ
+        val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
+        val modificationFactor = 0.55 + 0.45 / rhoPercent
         val allowableRatio = basicRatio * modificationFactor
         
         val actualRatio = (span * 1000) / totalDepth  // تحويل span إلى مم
@@ -240,12 +247,10 @@ class ECPBeam : BeamDesign {
         // حيث fb = إجهاد التماسك
         
         val fs = fy / GAMMA_S
-        val fb = when {
-            fcu <= 30 -> 1.0 + 0.25 * (fcu - 20) / 10
-            else -> 1.5 + 0.1 * (fcu - 30) / 40
-        } * sqrt(fcu / GAMMA_C) / 10  // MPa
+        // fbd = 0.3 × √(fcu) per ECP 203 §5-2-2
+        val fbd = 0.3 * sqrt(fcu)  // MPa
         
-        var Ld = fs * barDiameter / (4 * fb.coerceAtLeast(0.1))
+        var Ld = fs * barDiameter / (4 * fbd.coerceAtLeast(0.1))
         
         // عوامل التعديل
         if (barLocation == BarLocation.TOP) Ld *= 1.3  // حديد علوي
@@ -258,7 +263,18 @@ class ECPBeam : BeamDesign {
         return ceil(Ld / 50) * 50
     }
 
-    override fun getMinReinforcementRatio(): Double = 0.005  // 0.5% للكمرات
+    // ECP 203 §4-2-2-3: ρ_min = max(0.26 × fcu / fy, 0.0013)
+    private fun getMinReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
+        return max(0.26 * (fcu / fy), 0.0013)
+    }
+    // ECP 203 §4-2-2-1: عندما K يقترب من K_bal، نحد ρ إلى ~75% من النسبة المتوازنة
+    private fun getMaxReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
+        val kBal = calculateKBal(fcu, fy)
+        val fs = fy / GAMMA_S
+        val rhoBal = if (fs > 0) kBal * 1.25 * fcu / fs else 0.04
+        return min(0.75 * rhoBal, 0.04)
+    }
+    override fun getMinReinforcementRatio(): Double = 0.0013  // حد أدنى آمن بدون fcu/fy
     override fun getMaxReinforcementRatio(): Double = 0.04   // 4%
     override fun getMinShearReinforcementRatio(): Double = 0.0015  // 0.15%
     override fun getMaxShearSpacing(): Double = 200.0  // 200 مم كحد أقصى للكانات

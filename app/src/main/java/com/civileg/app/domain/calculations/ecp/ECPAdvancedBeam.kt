@@ -236,8 +236,8 @@ class ECPAdvancedBeam {
                 val leverArm_web = if (0.25 - K_web / 1.25 > 0) {
                     d * (0.5 + sqrt(0.25 - K_web / 1.25))
                 } else {
-                    d * 0.7
                     warnings.add("تحذير: المقطع شبه مفرط التسليح - فكر في زيادة الأبعاد")
+                    d * 0.7
                 }
                 val As_web = M_web / (fs * leverArm_web)
 
@@ -420,8 +420,8 @@ class ECPAdvancedBeam {
                 val leverArm_web = if (0.25 - K_web / 1.25 > 0) {
                     d * (0.5 + sqrt(0.25 - K_web / 1.25))
                 } else {
-                    d * 0.7
                     warnings.add("تحذير: المقطع شبه مفرط التسليح - فكر في زيادة الأبعاد")
+                    d * 0.7
                 }
                 val As_web = M_web / (fsDesign * leverArm_web)
                 As_flange + As_web
@@ -758,7 +758,7 @@ class ECPAdvancedBeam {
                 // إذا كان المقطع يتحكم بالشد (K ≤ 0.156) يسمح بإعادة التوزيع
                 val K = (absMoment * 1e6) / (fcu * width * d * d)
                 val K_bal = calculateKBal(fcu, fy)
-                val isTensionControlled = K <= 0.156
+                val isTensionControlled = K <= K_bal
 
                 var redistributionFactor = 1.0
                 if (!isPositive && isTensionControlled && K > 0) {
@@ -1045,7 +1045,8 @@ class ECPAdvancedBeam {
         fcu: Double,
         load: Double,
         beamWidth: Double = 250.0,
-        flexResult: ReinforcementResult? = null
+        flexResult: ReinforcementResult? = null,
+        xi: Double = 2.0
     ): DeflectionCheckResult {
         // Ec = 4400 × √(fcu) MPa (ECP 203)
         val Ec = 4400.0 * sqrt(fcu)
@@ -1105,8 +1106,7 @@ class ECPAdvancedBeam {
         val immediate = 5.0 * w * L.pow(4) / (384.0 * Ec * Ie)  // mm
 
         // ── 7. الانحراف طويل المدى (Long-Term Deflection) ──
-        // δLT = δi × (1 + ξ) حيث ξ = 2.0 حسب ECP 203
-        val xi = 2.0
+        // δLT = δi × (1 + ξ) حيث ξ معامل الزيادة طويل المدى حسب ECP 203
         val longTerm = immediate * (1.0 + xi)
 
         // ── 8. الحد المسموح: L/250 ──

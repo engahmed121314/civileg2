@@ -11,6 +11,7 @@ class ACIBeam : BeamDesign {
         private const val PHI_SHEAR = 0.75       // معامل الاختزال للقص
         private const val BETA_1 = 0.85          // عامل كتلة الإجهاد (لـ fc' ≤ 28 MPa)
         private const val LAMBDA = 1.0           // عامل الوزن للخرسانة العادية
+        private var ACI_MIN_DEVELOPMENT_LENGTH = 300.0  // mm - قابل للتعديل حسب المتطلبات
     }
 
     override fun calculateFlexureReinforcement(
@@ -41,19 +42,14 @@ class ACIBeam : BeamDesign {
             0.0
         }
         
-        // Check maximum reinforcement (tension-controlled limit) - ACI 318-21.2.2
+        // Check maximum reinforcement (tension-controlled limit) - ACI 21.2.2
         val beta1 = calculateBeta1(fc)
-        // ρ_max للمنطقة المقبولة (tension-controlled): εt ≥ 0.005 → c/d ≤ 0.375
-        // ρ_max = 0.85β1(fc'/fy) × (εcu/(εcu+0.005))
-        val rho_max = 0.85 * beta1 * (fc / fy) * (0.003 / (0.003 + 0.005))
-        // أيضاً: ρ_max_tension_ctrl = 0.85β1(fc'/fy) × (3/8) للمقطع المربع
-        val rho_max_tc = 0.85 * beta1 * (fc / fy) * 0.375
-        if (rho > rho_max_tc) {
-            warnings.add("Section exceeds tension-controlled limit (ρ > ρmax) - εt < 0.005")
+        // ρ_max_tc (tension-controlled): εt ≥ 0.005 → c/d ≤ 0.375
+        // ρ_max_tc = 0.85β1(fc'/fy) × 0.375
+        val rhoMaxTc = 0.85 * beta1 * (fc / fy) * 0.375
+        if (rho > rhoMaxTc) {
+            warnings.add("Section exceeds tension-controlled limit (ρ > ρmax_tc) - εt < 0.005")
             codeNotes.add(CodeReference.ACI.BEAM_REINFORCEMENT_MAX)
-            if (rho > rho_max) {
-                warnings.add("Section in compression zone (ρ > compression limit)!")
-            }
         }
         
         // Required reinforcement area
@@ -127,7 +123,7 @@ class ACIBeam : BeamDesign {
             numberOfBars = numberOfBars,
             tiesDiameter = 0.0,
             tiesSpacing = 0.0,
-            isSafe = utilizationRatio <= 1.0 && rho <= rho_max,
+            isSafe = utilizationRatio <= 1.0 && rho <= rhoMaxTc,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes
@@ -282,7 +278,7 @@ class ACIBeam : BeamDesign {
         
         var Ld = (numerator / denominator) * barDiameter
         
-        Ld = max(Ld, 300.0)
+        Ld = max(Ld, ACI_MIN_DEVELOPMENT_LENGTH)
         return ceil(Ld / 25) * 25
     }
 

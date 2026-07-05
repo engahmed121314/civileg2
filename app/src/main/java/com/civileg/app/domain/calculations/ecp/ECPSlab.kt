@@ -33,8 +33,13 @@ class ECPSlab : SlabDesign {
         val fs = fy / GAMMA_S
         
         // K = Mu / (fcu × b × d²) - نستخدم fcu مباشرة وليس fc
-        // K_bal = 0.186 لـ fcu=25, fy=360 (الحد الأقصى للمنطقة المقبولة)
-        val K_bal = 0.186
+        // K_bal محسوب ديناميكياً حسب fcu و fy - ECP 203 البند 4-2-2-1
+        // K_bal = (0.67/γc) × (a/d) × (1 - a/(2d))
+        // حيث a/d = 0.9 × εcu/(εcu + fy/(Es×γs))
+        val epsilonCu = 0.003
+        val epsilonY = fy / (200000.0 * GAMMA_S)
+        val aOverD = 0.9 * epsilonCu / (epsilonCu + epsilonY)
+        val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
         val K = if (fcu > 0 && effectiveDepth > 0) Mu / (fcu * width * effectiveDepth * effectiveDepth) else 0.0
         
         if (K > K_bal) {
@@ -71,8 +76,8 @@ class ECPSlab : SlabDesign {
         val astProvided = barArea * 1000 / barSpacing
         
         // التحقق من القص - ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu/γc) MPa - قدرة الخرسانة على القص
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa
+        // qcu = 0.24 × √(fcu) / γc per ECP 203 §4-3-1-2
+        val qcu = 0.24 * sqrt(fcu) / GAMMA_C  // MPa
         val shearCapacity = qcu * width * effectiveDepth / 1000.0  // kN/m
         
         // designShear بالفعل هو القوة القصية التصميمية (kN/m)

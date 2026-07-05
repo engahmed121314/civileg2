@@ -29,6 +29,9 @@ import com.civileg.app.domain.calculations.sbc.SBCAdvancedBeam
 import com.civileg.app.domain.calculations.ecp.SteelDesignEngine
 import com.civileg.app.domain.calculations.aci.AISCSteelDesignEngine
 import com.civileg.app.domain.calculations.sbc.SBCSteelDesignEngine
+import com.civileg.app.domain.calculations.ecp.ECPAdvancedSlab
+import com.civileg.app.domain.calculations.aci.ACIAdvancedSlab
+import com.civileg.app.domain.calculations.sbc.SBCAdvancedSlab
 import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
 import com.civileg.app.domain.calculations.ecp.ECPWaffleSlabDesign
 import com.civileg.app.domain.entities.DesignCode
@@ -92,4 +95,12 @@ object CalculationFactory {
     fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = ECPHordiSlabDesign()
 
     fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = ECPWaffleSlabDesign()
+
+    // ========== البلاطات المتقدمة (Advanced Slab Design) ==========
+
+    fun getAdvancedSlabDesign(code: DesignCode) = when (code) {
+        DesignCode.ECP -> ECPAdvancedSlab()
+        DesignCode.ACI -> ACIAdvancedSlab()
+        DesignCode.SBC -> SBCAdvancedSlab()
+    }
 }

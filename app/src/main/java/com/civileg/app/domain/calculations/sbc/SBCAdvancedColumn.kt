@@ -147,7 +147,7 @@ class SBCAdvancedColumn : ColumnDesign {
         val seismicConfinement = if (isSeismicZone) {
             designSeismicConfinement(
                 columnType, reinforcementResult.barDiameter,
-                reinforcementResult.numberOfBars, isSpiral, fy
+                reinforcementResult.numberOfBars, isSpiral, fy, fcu
             )
         } else {
             null
@@ -178,7 +178,7 @@ class SBCAdvancedColumn : ColumnDesign {
         val biaxialCheck = if (abs(magnifiedMomentX) > 0.1 && abs(magnifiedMomentY) > 0.1) {
             checkBiaxialLoading(
                 columnType, axialLoad, magnifiedMomentX, magnifiedMomentY,
-                axialCapacity, fy, reinforcementResult.astProvided, isSpiral
+                axialCapacity, fcu, fy, reinforcementResult.astProvided, isSpiral
             )
         } else {
             null
@@ -313,7 +313,8 @@ class SBCAdvancedColumn : ColumnDesign {
         mainBarDiameter: Double,
         numberOfBars: Int,
         isSpiral: Boolean,
-        fy: Double
+        fy: Double,
+        fcu: Double = 40.0
     ): SeismicConfinementResult {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -339,7 +340,13 @@ class SBCAdvancedColumn : ColumnDesign {
         // where bc = core dimension (b - 2×cover - 2×stirrup)
         val stirrupDia = if (db <= 25.0) 10.0 else 12.0
         val bc = b - 2.0 * cover - 2.0 * stirrupDia // بُعد النواة
-        val fcPrime = 0.0 // سيُمرر من الخارج — نحسبه هنا بتقدير
+        // BUG FIX: compute actual fc' from fcu instead of leaving as 0.0
+        val fcPrime = 0.8 * fcu
+        val fyt = fy // yield stress of transverse reinforcement
+
+        // SBC 21.6.4.2: Ash/s = 0.3 × bc × (Ag/bc² - 1) × fc' / fyt
+        val ashPerSpacing = 0.3 * bc * (Ag / (bc * bc) - 1.0) * fcPrime / fyt
+        codeNotes.add("SBC 21.6.4.2: Ash/s = 0.3×bc×(Ag/bc²-1)×fc'/fyt = ${"%.2f".format(ashPerSpacing)} mm²/mm")
 
         codeNotes.add("SBC 21.6.4.1: تباعد الكانات في منطقة المفصل اللدن = min(d/4, 6×db, 100mm)")
         codeNotes.add("SBC 21.6.4.1: s = min(${"%.0f".format(s1)}, ${"%.0f".format(s2)}, ${"%.0f".format(s3)}) = ${"%.0f".format(hoopSpacingHingeZone)} mm")
@@ -352,7 +359,7 @@ class SBCAdvancedColumn : ColumnDesign {
         val columnLength = max(b, h)
 
         // حساب طول التطوير ld (SBC 304 Section 12 / ACI 318 Chapter 25)
-        val ld = calculateDevelopmentLength(db, fy, cover, isSeismic = true)
+        val ld = calculateDevelopmentLength(db, fy, cover, isSeismic = true, fcu = fcu)
 
         val confinementZoneLength = max(columnLength, max(ld, 450.0))
 
@@ -665,13 +672,15 @@ class SBCAdvancedColumn : ColumnDesign {
         Mx: Double,
         My: Double,
         PnCapacity: Double,
+        fcu: Double = 40.0,
         fy: Double = 420.0,
         As: Double = 0.0,
         isSpiral: Boolean = false
     ): BiaxialCheckResult {
         val (b, h) = getColumnDimensions(type)
         val Ag = b * h
-        val fcPrime = PnCapacity * 1000.0 / 0.65 // استرجاع تقريبي لـ fc'×Ag
+        // BUG FIX: use actual fc' from fcu conversion instead of recovering from PnCapacity
+        val fcPrime = 0.8 * fcu
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
 
         val ast = if (As > 0.0) As else 0.01 * Ag
@@ -700,8 +709,8 @@ class SBCAdvancedColumn : ColumnDesign {
         // و Po هي القدرة المحورية الخالصة
 
         // حساب Po (قدرة الضغط الخالص)
-        val fcPrimeApprox = 30.0 // تقدير
-        val Po = (0.85 * fcPrimeApprox * (Ag - ast) + fy * ast) / 1000.0 // kN
+        // BUG FIX: use actual fcPrime instead of hardcoded 30.0
+        val Po = (0.85 * fcPrime * (Ag - ast) + fy * ast) / 1000.0 // kN
         val phiPo = phi * Po
 
         // تحويل العزوم إلى قوى محورية مكافئة تقريباً
@@ -780,9 +789,10 @@ class SBCAdvancedColumn : ColumnDesign {
         fy: Double,
         cover: Double,
         isEpoxyCoated: Boolean = true,
-        isSeismicZone: Boolean = false
+        isSeismicZone: Boolean = false,
+        fcu: Double = 40.0
     ): Double {
-        val ldBase = calculateDevelopmentLength(barDiameter, fy, cover, isSeismicZone)
+        val ldBase = calculateDevelopmentLength(barDiameter, fy, cover, isSeismicZone, fcu = fcu)
 
         if (!isEpoxyCoated) return ldBase
 
@@ -866,13 +876,9 @@ class SBCAdvancedColumn : ColumnDesign {
         val vc1 = 0.17 * (1.0 + 2.0 / beta) * lambda * sqrt(fcPrime)
 
         // ACI Eq. 22.6.5.2(b): vc = 0.083 × (αs × d/bo + 2) × λ × √fc'
-        val alphaS = when (type) {
-            is ColumnType.Rectangular -> {
-                if (type.width == type.depth) 30.0 else 40.0 // Corner=20, Edge=30, Interior=40
-            }
-            is ColumnType.Circular -> 40.0 // Interior
-            else -> 30.0
-        }
+        // BUG FIX: αs based on column position per ACI 22.6.5.2
+        // Interior=40, Edge=30, Corner=20. Default to interior (most common).
+        val alphaS = 40.0  // interior; add columnPosition parameter for edge/corner cases
         val vc2 = 0.083 * (alphaS * d / criticalPerimeter + 2.0) * lambda * sqrt(fcPrime)
 
         // ACI Eq. 22.6.5.2(c): vc = 0.33 × λ × √fc'
@@ -1167,10 +1173,11 @@ class SBCAdvancedColumn : ColumnDesign {
         barDiameter: Double,
         fy: Double,
         cover: Double,
-        isSeismic: Boolean = false
+        isSeismic: Boolean = false,
+        fcu: Double = 40.0
     ): Double {
-        // fc' تقديري لحساب طول التطوير
-        val fcPrime = 30.0 // تقدير محافظ
+        // BUG FIX: compute actual fc' from fcu instead of hardcoded 30.0
+        val fcPrime = 0.8 * fcu
 
         // معاملات التعديل (ACI 25.4.2.4)
         val psiT = 1.0  // أسياخ سفلية (ليست علوية)

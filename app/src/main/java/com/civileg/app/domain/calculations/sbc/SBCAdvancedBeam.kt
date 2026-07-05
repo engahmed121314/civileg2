@@ -82,7 +82,8 @@ class SBCAdvancedBeam {
         width: Double,        // mm
         depth: Double,        // mm
         inventory: RebarInventory?,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        isCorrosiveEnvironment: Boolean = false
     ): AdvancedBeamResult {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -95,10 +96,9 @@ class SBCAdvancedBeam {
         codeNotes.add("Load Combination: ${loadCombination.description}")
 
         // === تحديد الغطاء الخرساني حسب البيئة ===
-        val isCorrosive = loadCombination == LoadCombination.DEAD_LIVE_EARTHQUAKE ||
-                loadCombination == LoadCombination.DEAD_LIVE_WIND
-        val cover = if (isCorrosive) SBC_COVER_CORROSIVE else SBC_COVER_NORMAL
-        codeNotes.add("Concrete cover: ${cover.toInt()}mm ${if (isCorrosive) "(SBC 304 §7.7 - corrosive/coastal)" else "(SBC 304 §7.7 - normal)"}")
+        // البيئة التآكلية (كما السواحل) معلمة مستقلة عن نوع مجموعة التحميل
+        val cover = if (isCorrosiveEnvironment) SBC_COVER_CORROSIVE else SBC_COVER_NORMAL
+        codeNotes.add("Concrete cover: ${cover.toInt()}mm ${if (isCorrosiveEnvironment) "(SBC 304 §7.7 - corrosive/coastal)" else "(SBC 304 §7.7 - normal)"}")
 
         // === حساب معاملات التحميل حسب SBC 304-2018 (يتبع ACI 5.3) ===
         val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
@@ -583,7 +583,7 @@ class SBCAdvancedBeam {
         // === حساب الأحمال ===
         val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
         val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
-        val Vu = totalLoad * span  // kN - القوة القصية القصوى عند الدعامة
+        val Vu = totalLoad * span / 2.0  // kN - القوة القصية القصوى عند الدعامة (wL/2 لبسيطة الدعم)
 
         // === تصميم نموذج العارضة والشد (Strut-and-Tie Model) ===
         // SBC 304 §18.10.2: تصرف القوى عبر العوارض المائلة
@@ -1513,15 +1513,16 @@ class SBCAdvancedBeam {
 
         // شرط 1: bw + 16hf
         val bf1 = webWidth + 16.0 * flangeThickness
-        // شرط 2: bw + Ln/8
-        val bf2 = webWidth + Ln / 8.0
+        // شرط 2: bw + L/8 (center-to-center span) للكمرات الداخلية - ACI/SBC Table 6.3.2.1
+        val L_center = span * 1000.0  // center-to-center span ≈ clear span (بمقربة)
+        val bf2 = webWidth + L_center / 8.0
         // شرط 3: المسافة المركزية (نفترض أن flangeWidth = المسافة المركزية)
         val bf3 = flangeWidth
 
         val effectiveBf = minOf(bf1, bf2, bf3)
 
         notes.add("Rule 1: bw + 16hf = ${webWidth.toInt()} + 16×${flangeThickness.toInt()} = ${bf1.toInt()}mm")
-        notes.add("Rule 2: bw + Ln/8 = ${webWidth.toInt()} + ${"%.0f".format(Ln / 8.0)} = ${bf2.toInt()}mm")
+        notes.add("Rule 2: bw + L/8 = ${webWidth.toInt()} + ${"%.0f".format(L_center / 8.0)} = ${bf2.toInt()}mm")
         notes.add("Rule 3: Center-to-center = ${flangeWidth.toInt()}mm")
         notes.add("Effective bf = min(${bf1.toInt()}, ${bf2.toInt()}, ${flangeWidth.toInt()}) = ${effectiveBf.toInt()}mm")
 

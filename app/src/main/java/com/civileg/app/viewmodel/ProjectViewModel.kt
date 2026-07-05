@@ -8,10 +8,13 @@ import com.civileg.app.data.local.dao.ProjectDao as ArchiveProjectDao
 import com.civileg.app.db.*
 import com.civileg.app.data.local.entities.ProjectEntity
 import com.civileg.app.domain.entities.Project as DomainProject
+import com.civileg.app.utils.CalculatorEngine
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
@@ -81,5 +84,23 @@ class ProjectViewModel @Inject constructor(
 
     fun getMaterialsForProject(projectId: Long): LiveData<List<MaterialItem>> {
         return materialDao.getMaterialsForProject(projectId)
+    }
+
+    fun saveSeismic(projectId: Long, name: String, result: CalculatorEngine.SeismicResult) {
+        viewModelScope.launch {
+            val gson = Gson()
+            val design = Design(
+                projectId = projectId,
+                type = DesignType.SEISMIC,
+                name = name,
+                inputData = "{}",
+                results = gson.toJson(result),
+                isSafe = result.isSafe,
+                utilizationRatio = 0.0,
+                codeUsed = result.code.displayName,
+                createdAt = Date()
+            )
+            designDao.insertDesign(design)
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.base.ColumnDesign
+import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
@@ -107,7 +108,17 @@ class ACIColumn : ColumnDesign {
         // fc' = 0.8 × fcu (cube to cylinder)
         val fc_prime = 0.8 * fcu
         val phi = 0.65
-        val requiredSteelArea = (Pu / phi - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
+        var requiredSteelArea = (Pu / phi - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
+        
+        // ── Moment consideration: increase As when eccentricity is significant ──
+        val Mu = sqrt(momentX.pow(2) + momentY.pow(2)) * 1e6 // N.mm
+        val eccentricity = if (Pu > 0) Mu / Pu else 0.0
+        val h = max(width, depth)
+        if (eccentricity > 0.05 * h) {
+            val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
+            requiredSteelArea *= momentFactor
+            codeNotes.add("ACI 318: Significant moment (e=${"%.1f".format(eccentricity)}mm > 0.05h), As increased by factor ${"%.2f".format(momentFactor)}")
+        }
         
         // Reinforcement limits per ACI
         val minSteel = getMinReinforcementRatio() * Ag
@@ -184,4 +195,108 @@ class ACIColumn : ColumnDesign {
     override fun getMinSpacing(): Double = 40.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0
+
+    // ── Shear Design per ACI 318-19 §22.5 ─────────────────────────────────────
+
+    /**
+     * Column shear reinforcement design — ACI 318-19 §22.5
+     * @param Vu     factored shear force (kN)
+     * @param width  column width b (mm)
+     * @param depth  column depth h (mm)
+     * @param fcu    concrete cube strength (MPa);  f'c = 0.8 × fcu
+     * @param fy     steel yield strength (MPa)
+     * @param cover  concrete cover (mm), default 40
+     */
+    fun calculateShearDesign(
+        Vu: Double,
+        width: Double,
+        depth: Double,
+        fcu: Double,
+        fy: Double,
+        cover: Double = 40.0
+    ): ColumnShearDesignResult {
+        val b = width
+        val d = depth - cover
+        val fc = 0.8 * fcu  // cylinder strength
+        val phi = 0.75
+        val codeNotes = mutableListOf<String>()
+
+        // Vc = 0.17 × √(f'c) × b × d   (ACI 318-22.5.5.1)
+        val Vc = 0.17 * sqrt(fc) * b * d / 1000.0  // kN
+        val phiVc = phi * Vc
+
+        val needsStirrups = Vu > phiVc
+
+        // Asv/s = (Vu - φVc) / (φ × fy × d)
+        val requiredAsvPerS = if (needsStirrups) {
+            (Vu - phiVc) * 1000.0 / (phi * fy * d)  // mm²/mm
+        } else 0.0
+
+        // Max spacing = min(d/2, 48×db_tie, 300mm) for columns
+        val dbTie = 10.0
+        val maxSpacing = minOf(d / 2.0, 48.0 * dbTie, 300.0)
+
+        // Min Asv per ACI 22.5.10.1: Av,min = 0.062√f'c × b×s / fy  (but not less than 0.35×b×s/fy)
+        // As Av/s:  minAvPerS = max(0.062√f'c × b / fy,  0.35 × b / fy)
+        val minAsvPerS = max(0.062 * sqrt(fc) * b / fy, 0.35 * b / fy)
+
+        val designAsvPerS = max(requiredAsvPerS, if (needsStirrups) minAsvPerS else 0.0)
+
+        // Select stirrup diameter and spacing
+        val availableTies = listOf(9.5, 12.7, 15.9, 19.1)  // #3, #4, #5, #6
+        var selectedDia = 9.5
+        var selectedSpacing = maxSpacing
+
+        if (designAsvPerS > 0) {
+            for (dia in availableTies) {
+                val asv = 2.0 * PI * dia * dia / 4.0
+                val spacing = asv / designAsvPerS
+                if (spacing <= maxSpacing && spacing >= getMinSpacing()) {
+                    selectedDia = dia
+                    selectedSpacing = min(spacing, maxSpacing)
+                    break
+                }
+                if (spacing < getMinSpacing()) {
+                    selectedDia = dia
+                    selectedSpacing = getMinSpacing()
+                }
+            }
+        }
+
+        val providedAsvPerS = if (designAsvPerS > 0) {
+            2.0 * PI * selectedDia * selectedDia / 4.0 / selectedSpacing
+        } else 0.0
+
+        val totalCapacity = phiVc + if (needsStirrups) phi * fy * providedAsvPerS * d / 1000.0 else 0.0
+        val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
+
+        codeNotes.add("ACI 318-19 §22.5: Column Shear Design")
+        codeNotes.add("f'c = 0.8×fcu = ${"%.0f".format(fc)} MPa")
+        codeNotes.add("Vc = 0.17√f'c·b·d = ${"%.1f".format(Vc)} kN")
+        codeNotes.add("φVc = ${"%.1f".format(phiVc)} kN  (φ=$phi)")
+        if (needsStirrups) {
+            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) > φVc → Stirrups required")
+            codeNotes.add("Asv/s = ${"%.3f".format(designAsvPerS)} mm²/mm")
+            codeNotes.add("%.1fmm ties @ %.0fmm c/c".format(selectedDia, selectedSpacing))
+        } else {
+            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) ≤ φVc → Concrete alone sufficient")
+        }
+
+        return ColumnShearDesignResult(
+            Vu = Vu,
+            Vc = Vc,
+            phiVc = phiVc,
+            asvPerS = requiredAsvPerS,
+            minAsvPerS = minAsvPerS,
+            designAsvPerS = designAsvPerS,
+            stirrupDiameter = selectedDia,
+            stirrupSpacing = selectedSpacing,
+            providedAsvPerS = providedAsvPerS,
+            maxSpacing = maxSpacing,
+            needsStirrups = needsStirrups,
+            isSafe = Vu <= totalCapacity,
+            utilizationRatio = utilizationRatio,
+            codeNotes = codeNotes
+        )
+    }
 }

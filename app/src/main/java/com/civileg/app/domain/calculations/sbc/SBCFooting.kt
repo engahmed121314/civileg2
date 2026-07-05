@@ -204,8 +204,11 @@ class SBCFooting : FootingDesign {
         val fc_prime = 0.67 * fcu / GAMMA_C
         val K = Mu / (fc_prime * b * d * d)
         
-        // K_bal ≈ 0.375 for ACI tension-controlled section
-        val K_bal = 0.375
+        // K_bal calculated dynamically using Rn method (ACI/SBC tension-controlled max)
+        val fc = 0.67 * fcu / GAMMA_C
+        val beta1 = if (fc <= 28.0) 0.85 else max(0.65, 0.85 - 0.05 * (fc - 28.0) / 7.0)
+        val rho_bal = 0.85 * beta1 * (fc / fy) * (0.003 / (0.003 + fy / 200000.0))
+        val K_bal = rho_bal * fy * (1.0 - 0.5 * rho_bal * fy / (0.85 * fc))
         
         if (K > K_bal) {
             warnings.add("SBC: K=%.3f > K_bal=%.3f - increase depth".format(K, K_bal))
@@ -266,7 +269,9 @@ class SBCFooting : FootingDesign {
         distanceBetweenColumns: Double,
         soilBearingCapacity: Double,
         footingDepth: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        columnWidth: Double,
+        columnDepth: Double
     ): FootingDesignResult {
         // SBC 304 closely follows ACI 318
         val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.SBC)
@@ -295,7 +300,7 @@ class SBCFooting : FootingDesign {
             maxMoment, FootingDirection.LONG
         )
         
-        val punching1 = checkPunchingShear(fcu, 500.0, 500.0, effectiveDepth, axialLoad1, loadCombination)
+        val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
         
         return FootingDesignResult(
             requiredWidth = footingWidth,

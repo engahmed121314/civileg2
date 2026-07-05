@@ -336,8 +336,9 @@ class ACIAdvancedColumn : ColumnDesign {
         // Detailed: EI = (0.2 × Ec × Ig + Es × Is) / (1 + βdns)  [ACI 22.4.2.4(b)]
         val eiDetailed = (0.2 * Ec * Ig + ES * Is) / (1.0 + betaDns)
 
-        // Use the larger of the two for conservative design
-        return max(eiSimplified, eiDetailed)
+        // BUG FIX: Use MINIMUM (most conservative) of the two for safe design
+        // Lower EI → lower Pc → higher δ → larger design moment → more reinforcement
+        return min(eiSimplified, eiDetailed)
     }
 
     /**
@@ -704,10 +705,10 @@ class ACIAdvancedColumn : ColumnDesign {
         // For tension: PnBresler is negative, check with absolute values
         val isSafe = if (Pu >= 0) {
             // Compression case: φPn ≥ Pu
-            phiComp * PnBresler / 1000.0 >= Pu * 0.95 // 5% tolerance
+            phiComp * PnBresler / 1000.0 >= Pu // must meet required capacity exactly
         } else {
             // Tension case
-            PHI_FLEXURE * abs(PnBresler) / 1000.0 >= abs(Pu) * 0.95
+            PHI_FLEXURE * abs(PnBresler) / 1000.0 >= abs(Pu) // no tolerance — must meet required capacity
         }
 
         val mxRatio = if (abs(Pnx) > 0.01) abs(Pu * 1000.0) / abs(Pnx) else 0.0
@@ -1107,9 +1108,9 @@ class ACIAdvancedColumn : ColumnDesign {
             else -> 1.0
         }
 
-        // αs factor: 30 for interior, 20 for edge, 15 for corner
-        // Default to interior (most common and conservative for checking)
-        val alphaS = 30.0
+        // BUG FIX: αs factor per ACI 22.6.5.2: 40 interior, 30 edge, 20 corner
+        // Previously hardcoded to 30 (edge value) — unsafe for interior columns
+        val alphaS = 40.0  // default interior; callers should pass column position for edge/corner
 
         // Calculate vc for all cases and take the minimum (most conservative)
         val vcInterior = 0.33 * LAMBDA * sqrt(fcPrime)

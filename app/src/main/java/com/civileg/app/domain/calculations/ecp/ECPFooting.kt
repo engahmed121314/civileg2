@@ -312,7 +312,9 @@ class ECPFooting : FootingDesign {
         distanceBetweenColumns: Double,
         soilBearingCapacity: Double,
         footingDepth: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        columnWidth: Double,
+        columnDepth: Double
     ): FootingDesignResult {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -382,8 +384,8 @@ class ECPFooting : FootingDesign {
         }
 
         // 11. فحص قص الاختراق عند كل عمود
-        val punching1 = checkPunchingShear(fcu, 400.0, 400.0, d, axialLoad1, loadCombination)
-        val punching2 = checkPunchingShear(fcu, 400.0, 400.0, d, axialLoad2, loadCombination)
+        val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad1, loadCombination)
+        val punching2 = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad2, loadCombination)
 
         codeNotes.add("ECP 203: Combined Footing Design")
         codeNotes.add("Resultant from Col-1: %.0f mm".format(xR * 1000))

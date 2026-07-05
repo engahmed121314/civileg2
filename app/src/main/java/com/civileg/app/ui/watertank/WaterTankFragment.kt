@@ -14,7 +14,6 @@ import com.civileg.app.R
 import com.civileg.app.databinding.FragmentWaterTankBinding
 import com.civileg.app.db.*
 import com.civileg.app.db.Project as DbProject
-import com.civileg.app.domain.calculations.base.TankDesignEngine
 import com.civileg.app.domain.calculations.base.TankType as DomainTankType
 import com.civileg.app.domain.calculations.base.TankResult as DomainTankResult
 import com.civileg.app.utils.CalculatorEngine
@@ -37,9 +36,6 @@ class WaterTankFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ProjectViewModel by viewModels()
     private val args: WaterTankFragmentArgs by navArgs()
-    
-    @Inject
-    lateinit var tankDesignEngine: TankDesignEngine
     
     @Inject
     lateinit var settingsManager: SettingsManager
@@ -103,42 +99,8 @@ class WaterTankFragment : Fragment() {
     }
     
     private fun calculateWaterTank() {
-        try {
-            val length = binding.etLength.text.toString().toDoubleOrNull() ?: 5000.0
-            val width = binding.etWidth.text.toString().toDoubleOrNull() ?: 4000.0
-            val diameter = binding.etDiameter.text.toString().toDoubleOrNull() ?: 5000.0
-            val height = binding.etHeight.text.toString().toDoubleOrNull() ?: 3000.0
-            val waterHeight = binding.etWaterHeight.text.toString().toDoubleOrNull() ?: 2500.0
-            val wallT = binding.etWallThickness.text.toString().toDoubleOrNull() ?: 250.0
-
-            val result = tankDesignEngine.design(
-                length = if (selectedType.name.contains("CIRCULAR")) diameter else length,
-                width = width,
-                height = height,
-                waterDepth = waterHeight,
-                fcu = 25.0,
-                fy = 360.0,
-                type = selectedType,
-                code = settingsManager.defaultDesignCode.name,
-                wallT = wallT
-            )
-            
-            lastResult = result
-            lastInputData = JSONObject().apply {
-                put("type", selectedType.name)
-                put("length", length); put("width", width)
-                put("diameter", diameter)
-                put("height", height); put("waterHeight", waterHeight)
-                put("wallT", wallT)
-            }
-            
-            showResults(result)
-            updateTankView(result)
-            
-            Toast.makeText(requireContext(), getString(R.string.calculation_complete), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            showError(e.message ?: getString(R.string.error))
-        }
+        // Legacy engine removed — use TankScreen (Compose) with code-specific ECPTank/ACITank/SBCTank
+        showError("Tank design has been migrated. Please use the updated Tank Design screen.")
     }
 
     private fun updateTankView(result: DomainTankResult) {

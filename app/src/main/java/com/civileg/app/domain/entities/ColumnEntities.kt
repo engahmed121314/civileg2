@@ -53,7 +53,7 @@ sealed class ColumnType(val displayName: String, val codeReference: String) : Pa
         is Circular -> PI * diameter * diameter / 4
         is LShaped -> (legWidth * thickness) + (legDepth - thickness) * thickness
         is TShaped -> flangeWidth * flangeThickness + webWidth * webDepth
-        is Composite -> concreteWidth * concreteDepth + steelArea
+        is Composite -> concreteWidth * concreteDepth
         is Tubular -> PI * (outerDiameter * outerDiameter - innerDiameter * innerDiameter) / 4
     }
 }
@@ -106,6 +106,27 @@ data class AdvancedColumnResult(
     val codeNotes: List<String>,
     val steelWeightPerMeter: Double = 0.0,
     val concreteVolumePerMeter: Double = 0.0
+) : Parcelable
+
+/**
+ * Column shear design result — used by ECPColumn, ACIColumn, SBCColumn
+ */
+@Parcelize
+data class ColumnShearDesignResult(
+    val Vu: Double,                   // factored shear force (kN)
+    val Vc: Double,                   // concrete shear capacity (kN)
+    val phiVc: Double,                // φ×Vc (kN)
+    val asvPerS: Double,              // required Asv/s (mm²/mm)
+    val minAsvPerS: Double,           // minimum Asv/s (mm²/mm)
+    val designAsvPerS: Double,        // design Asv/s = max(required, min) (mm²/mm)
+    val stirrupDiameter: Double,      // selected stirrup dia (mm)
+    val stirrupSpacing: Double,       // selected spacing (mm)
+    val providedAsvPerS: Double,      // provided Asv/s (mm²/mm)
+    val maxSpacing: Double,           // max allowed spacing (mm)
+    val needsStirrups: Boolean,       // whether stirrups are required
+    val isSafe: Boolean,
+    val utilizationRatio: Double = 0.0,
+    val codeNotes: List<String> = emptyList()
 ) : Parcelable
 
 @Parcelize

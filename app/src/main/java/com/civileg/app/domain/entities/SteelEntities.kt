@@ -89,6 +89,35 @@ sealed class SteelSectionType(
     ) : SteelSectionType("T Section", customName ?: "T ${flangeWidth.toInt()}x${webDepth.toInt()}", "AISC 360-B4")
     
     /**
+     * قطاع جسر لوح ملحوم Plate Girder
+     * Supports different top/bottom flanges (asymmetric girders)
+     */
+    @Parcelize
+    data class PlateGirder(
+        val h: Double,              // mm - overall depth
+        val bfTop: Double,          // mm - top flange width
+        val bfBot: Double,          // mm - bottom flange width
+        val tfTop: Double,          // mm - top flange thickness
+        val tfBot: Double,          // mm - bottom flange thickness
+        val tw: Double,             // mm - web thickness
+        val stiffenerSpacing: Double = 0.0,  // mm - transverse stiffener spacing (0 = none)
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("Plate Girder", customName ?: "PG ${h.toInt()}x${tw.toInt()}", "AISC 360-F / ECP 205")
+
+    /**
+     * أنبوب حديدي ASTM Pipe (Std, XS, XXS wall thicknesses)
+     */
+    @Parcelize
+    data class Pipe(
+        val outerDiameter: Double,  // mm (nominal)
+        val wallThickness: Double, // mm
+        val pipeSchedule: String = "Std",  // Std, XS, XXS, Sch40, Sch80, etc.
+        val grade: SteelGrade,
+        val customName: String? = null
+    ) : SteelSectionType("Pipe", customName ?: "Pipe Ø${outerDiameter.toInt()} ${pipeSchedule}", "ASTM A53 / A106")
+
+    /**
      * قطاع مركب Built-up
      */
     @Parcelize
@@ -105,6 +134,8 @@ sealed class SteelSectionType(
         is CHS -> PI * (outerDiameter * outerDiameter - (outerDiameter - 2 * thickness) * (outerDiameter - 2 * thickness)) / 4
         is RHS -> 2 * (width + height - 2 * thickness) * thickness
         is TSection -> flangeWidth * flangeThickness + webDepth * webThickness
+        is PlateGirder -> bfTop * tfTop + bfBot * tfBot + (h - tfTop - tfBot) * tw
+        is Pipe -> PI * (outerDiameter * outerDiameter - (outerDiameter - 2 * wallThickness) * (outerDiameter - 2 * wallThickness)) / 4
         is BuiltUp -> sections.sumOf { it.getArea() }
     }
 }
@@ -117,6 +148,8 @@ val SteelSectionType.depth: Double
         is SteelSectionType.CHS -> outerDiameter
         is SteelSectionType.RHS -> height
         is SteelSectionType.TSection -> webDepth + flangeThickness
+        is SteelSectionType.PlateGirder -> h
+        is SteelSectionType.Pipe -> outerDiameter
         is SteelSectionType.BuiltUp -> sections.maxOfOrNull { it.depth } ?: 0.0
     }
 
@@ -128,6 +161,8 @@ val SteelSectionType.width: Double
         is SteelSectionType.CHS -> outerDiameter
         is SteelSectionType.RHS -> width
         is SteelSectionType.TSection -> flangeWidth
+        is SteelSectionType.PlateGirder -> maxOf(bfTop, bfBot)
+        is SteelSectionType.Pipe -> outerDiameter
         is SteelSectionType.BuiltUp -> sections.maxOfOrNull { it.width } ?: 0.0
     }
 
@@ -139,6 +174,8 @@ val SteelSectionType.webThickness: Double
         is SteelSectionType.CHS -> thickness
         is SteelSectionType.RHS -> thickness
         is SteelSectionType.TSection -> webThickness
+        is SteelSectionType.PlateGirder -> tw
+        is SteelSectionType.Pipe -> wallThickness
         is SteelSectionType.BuiltUp -> 0.0
     }
 
@@ -150,6 +187,8 @@ val SteelSectionType.flangeThickness: Double
         is SteelSectionType.CHS -> thickness
         is SteelSectionType.RHS -> thickness
         is SteelSectionType.TSection -> flangeThickness
+        is SteelSectionType.PlateGirder -> maxOf(tfTop, tfBot)
+        is SteelSectionType.Pipe -> wallThickness
         is SteelSectionType.BuiltUp -> 0.0
     }
 
@@ -164,6 +203,8 @@ val SteelSectionType.ix: Double
         is SteelSectionType.CHS -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * thickness).pow(4))
         is SteelSectionType.LSection -> calculateIxAngle(legA, legB, thickness)
         is SteelSectionType.TSection -> calculateIxTSection(flangeWidth, flangeThickness, webDepth, webThickness)
+        is SteelSectionType.PlateGirder -> calculateIxPlateGirder(h, bfTop, bfBot, tfTop, tfBot, tw)
+        is SteelSectionType.Pipe -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * wallThickness).pow(4))
         is SteelSectionType.BuiltUp -> 0.0
     }
 
@@ -176,6 +217,8 @@ val SteelSectionType.sx: Double
         is SteelSectionType.CHS -> ix / (outerDiameter / 2.0)
         is SteelSectionType.LSection -> ix / (legA / 2.0)
         is SteelSectionType.TSection -> ix / (webDepth + flangeThickness) * 2.0
+        is SteelSectionType.PlateGirder -> ix / (h / 2.0)  // approximate using max depth
+        is SteelSectionType.Pipe -> ix / (outerDiameter / 2.0)
         is SteelSectionType.BuiltUp -> 0.0
     }
 
@@ -192,6 +235,8 @@ val SteelSectionType.zx: Double
         is SteelSectionType.CHS -> sx * 1.12
         is SteelSectionType.LSection -> sx * 1.05
         is SteelSectionType.TSection -> sx * 1.05
+        is SteelSectionType.PlateGirder -> sx * 1.12  // welded I-section shape factor
+        is SteelSectionType.Pipe -> sx * 1.12
         is SteelSectionType.BuiltUp -> 0.0
     }
 
@@ -229,6 +274,24 @@ private fun calculateIxAngle(a: Double, b: Double, t: Double): Double {
     val yBar = (a * a + (b - t) * t / 2.0) / (2.0 * (a + b - t))
     return (a * t * (t / 2.0).pow(2) + (b - t) * t * (t / 2.0 + t / 2.0).pow(2) + 
             t * a.pow(3) / 12.0 + (b - t) * t.pow(3) / 12.0)  // مبسط
+}
+
+/** حساب عزم القصور لقطاع Plate Girder (ممكن غير متماثل) - mm⁴ */
+private fun calculateIxPlateGirder(h: Double, bfTop: Double, bfBot: Double, tfTop: Double, tfBot: Double, tw: Double): Double {
+    val Aft = bfTop * tfTop
+    val Afb = bfBot * tfBot
+    val Aweb = (h - tfTop - tfBot) * tw
+    val Atotal = Aft + Afb + Aweb
+
+    // Neutral axis from bottom
+    val yBar = if (Atotal > 0) {
+        (Afb * tfBot / 2.0 + Aweb * (tfBot + (h - tfTop - tfBot) / 2.0) + Aft * (h - tfTop / 2.0)) / Atotal
+    } else 0.0
+
+    val IxTop = bfTop * tfTop.pow(3) / 12.0 + Aft * (h - tfTop / 2.0 - yBar).pow(2)
+    val IxWeb = tw * (h - tfTop - tfBot).pow(3) / 12.0 + Aweb * (tfBot + (h - tfTop - tfBot) / 2.0 - yBar).pow(2)
+    val IxBot = bfBot * tfBot.pow(3) / 12.0 + Afb * (tfBot / 2.0 - yBar).pow(2)
+    return IxTop + IxWeb + IxBot
 }
 
 /** حساب عزم القصور لمقطع T - mm⁴ */

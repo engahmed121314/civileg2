@@ -63,7 +63,9 @@ interface FootingDesign {
         distanceBetweenColumns: Double, // mm
         soilBearingCapacity: Double,
         footingDepth: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        columnWidth: Double = 400.0,   // mm
+        columnDepth: Double = 400.0    // mm
     ): FootingDesignResult
 
     /**

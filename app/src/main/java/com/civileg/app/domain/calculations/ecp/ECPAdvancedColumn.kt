@@ -117,19 +117,35 @@ class ECPAdvancedColumn : ColumnDesign {
         // حساب القدرة المحورية القصوى
         val axialCapacity = calculateAxialCapacity(fcu, fy, columnType, Ag)
         
+        // ── BUG FIX: حساب تكبير العزوم للأعمدة النحيفة قبل حساب التسليح ──
+        val (designMomentX, designMomentY) = if (isSlender) {
+            val (w, d) = when (columnType) {
+                is ColumnType.Rectangular -> columnType.width to columnType.depth
+                is ColumnType.Circular -> columnType.diameter to columnType.diameter
+                else -> sqrt(Ag) to sqrt(Ag)
+            }
+            val estAs = 0.01 * Ag
+            val magX = calculateMomentMagnification(axialLoad, momentX, unsupportedLength, k, w, d, fcu, fy, estAs)
+            val magY = calculateMomentMagnification(axialLoad, momentY, unsupportedLength, k, w, d, fcu, fy, estAs)
+            codeNotes.add("Moment magnification applied: δx=${"%.2f".format(magX.delta)}, δy=${"%.2f".format(magY.delta)}")
+            magX.magnifiedMoment to magY.magnifiedMoment
+        } else {
+            momentX to momentY
+        }
+        
         // حساب التسليح
         val reinforcementResult = when(columnType) {
             is ColumnType.Rectangular -> baseDesign.calculateReinforcement(
-                fcu, fy, columnType.width, columnType.depth, axialLoad, momentX, momentY, loadCombination
+                fcu, fy, columnType.width, columnType.depth, axialLoad, designMomentX, designMomentY, loadCombination
             )
             is ColumnType.Circular -> {
                 // تقريب دائري لمربع مكافئ
                 val side = sqrt(Ag)
-                baseDesign.calculateReinforcement(fcu, fy, side, side, axialLoad, momentX, momentY, loadCombination)
+                baseDesign.calculateReinforcement(fcu, fy, side, side, axialLoad, designMomentX, designMomentY, loadCombination)
             }
             else -> {
                 val side = sqrt(Ag)
-                baseDesign.calculateReinforcement(fcu, fy, side, side, axialLoad, momentX, momentY, loadCombination)
+                baseDesign.calculateReinforcement(fcu, fy, side, side, axialLoad, designMomentX, designMomentY, loadCombination)
             }
         }
         
@@ -210,8 +226,10 @@ class ECPAdvancedColumn : ColumnDesign {
         
         // ضغط القص المطبق = Vu / (bo × d)
         val punchingStress = (pu * 0.90 * 1000.0) / (perimeter * d)
-        // قدرة قص الاختراق: qp = 0.316 × √(fcu/γc) (ECP 203)
-        val capacity = (if (hasCap) 1.5 else 1.0) * 0.316 * sqrt(fcu / 1.5)
+        // BUG FIX: قدرة قص الاختراق: qp = 0.316 × √(fcu) / γc (ECP 203)
+        // Previously was 0.316 * sqrt(fcu/1.5) which incorrectly embeds γc inside the sqrt
+        val GAMMA_C = 1.5
+        val capacity = (if (hasCap) 1.5 else 1.0) * 0.316 * sqrt(fcu) / GAMMA_C
         
         return PunchingCheckResult(
             appliedShear = pu,
@@ -418,7 +436,7 @@ class ECPAdvancedColumn : ColumnDesign {
 
             // a = β1 × c, β1 per ECP ≈ 0.85 for fcu ≤ 40, linearly decreasing
             val beta1 = if (fcu <= 30.0) 0.85
-                        else if (fcu <= 55.0) 0.85 - 0.05 * (fcu - 30.0) / 25.0
+                        else if (fcu <= 55.0) 0.85 - 0.05 * (fcu - 30.0) / 5.0
                         else 0.80
             val a = beta1 * c
 
@@ -540,8 +558,9 @@ class ECPAdvancedColumn : ColumnDesign {
         val Is = totalAs * leverArm * leverArm   // mm⁴
 
         // ── Effective Flexural Rigidity per ECP 203 (simplified) ──
-        // EI = 0.2 × Ec × Ig + Es × Is
-        val EI = 0.2 * Ec * Ig + ES * Is        // N.mm²
+        // BUG FIX: ECP uses 0.4×Ec×Ig/(1+βdns) instead of ACI 0.2×Ec×Ig + Es×Is
+        val betaDns = 0.6  // ratio of max sustained axial load to max factored axial load
+        val EI = 0.4 * Ec * Ig / (1.0 + betaDns)   // N.mm²
 
         // ── Critical Buckling Load (Euler) ──
         val effectiveLength = K * L             // mm
@@ -896,6 +915,7 @@ class ECPAdvancedColumn : ColumnDesign {
         Mx: Double,
         My: Double,
         Pn: Double,
+        fcu: Double,
         fy: Double = 360.0
     ): BiaxialCheckResult {
         // ── Section dimensions ──
@@ -912,8 +932,9 @@ class ECPAdvancedColumn : ColumnDesign {
         val ast = 0.01 * Ag
 
         // ── Generate interaction diagrams for both axes ──
+        // BUG FIX: pass actual fcu instead of hardcoded 25.0
         val diagramX = generateInteractionDiagram(
-            fcu = 25.0,  // default assumption when fcu not passed
+            fcu = fcu,
             fy = fy,
             width = b,
             depth = h,
@@ -923,7 +944,7 @@ class ECPAdvancedColumn : ColumnDesign {
 
         val diagramY = if (type is ColumnType.Rectangular && abs(b - h) > 10.0) {
             generateInteractionDiagram(
-                fcu = 25.0,
+                fcu = fcu,
                 fy = fy,
                 width = h,   // swapped
                 depth = b,

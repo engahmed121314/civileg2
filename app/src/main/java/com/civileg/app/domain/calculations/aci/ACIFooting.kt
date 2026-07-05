@@ -100,17 +100,35 @@ class ACIFooting : FootingDesign {
         val Mu_x = q_avg * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
         val Mu_y = q_avg * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 10. فحص قص الاختراق
+        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ACI 318-22.5)
+        val Vu_x = q_avg * (L / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
+        val Vu_y = q_avg * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
+        // One-way shear capacity: Vc = φ × 0.17√f'c × b × d (ACI 318-22.5.5.1)
+        val fc_prime = 0.8 * fcu
+        val vc_oneWay = 0.17 * sqrt(fc_prime)  // MPa
+        val Vc_x = PHI_SHEAR * vc_oneWay * (L / 1000.0) * d / 1000.0 * 1000.0  // kN
+        val Vc_y = PHI_SHEAR * vc_oneWay * (B / 1000.0) * d / 1000.0 * 1000.0  // kN
+
+        if (Vu_x > Vc_x) {
+            warnings.add("ACI: One-way shear X exceeds capacity - increase thickness")
+        }
+        if (Vu_y > Vc_y) {
+            warnings.add("ACI: One-way shear Y exceeds capacity - increase thickness")
+        }
+
+        codeNotes.add("One-way shear capacity: %.2f MPa".format(vc_oneWay))
+
+        // 11. فحص قص الاختراق
         val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad, loadCombination)
 
-        // 11. تصميم التسليح في الاتجاهين
+        // 12. تصميم التسليح في الاتجاهين
         val reinfX = calculateFootingReinforcement(fcu, fy, B, L, d, Mu_x / (L / 1000.0), FootingDirection.SHORT)
         val reinfY = calculateFootingReinforcement(fcu, fy, B, L, d, Mu_y / (B / 1000.0), FootingDirection.LONG)
 
-        // 12. التسليح الرئيسي = الأكبر
+        // 13. التسليح الرئيسي = الأكبر
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
-        // 13. التسليح التوزيعي - ACI 318-13.3.4: لا يقل عن 20% من التسليح الرئيسي
+        // 14. التسليح التوزيعي - ACI 318-13.3.4: لا يقل عن 20% من التسليح الرئيسي
         // في الاتجاه الطويل يتم وضع تسليح توزيعي = 20% من As الرئيسي
         val mainAs = max(reinfX.astRequired, reinfY.astRequired)
         val distAs = 0.20 * mainAs
@@ -150,6 +168,7 @@ class ACIFooting : FootingDesign {
             punchingShearCheck = punchingCheck,
             isSafe = q_max <= soilBearingCapacity
                 && q_min >= 0
+                && Vu_x <= Vc_x && Vu_y <= Vc_y
                 && punchingCheck.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
@@ -272,7 +291,9 @@ class ACIFooting : FootingDesign {
         distanceBetweenColumns: Double,
         soilBearingCapacity: Double,
         footingDepth: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        columnWidth: Double,
+        columnDepth: Double
     ): FootingDesignResult {
         val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.ACI)
         val p2Working = axialLoad2 / loadCombination.getFactorForCode(DesignCode.ACI)
@@ -300,7 +321,7 @@ class ACIFooting : FootingDesign {
             maxMoment, FootingDirection.LONG
         )
         
-        val punching1 = checkPunchingShear(fcu, 500.0, 500.0, effectiveDepth, axialLoad1, loadCombination)
+        val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
         
         return FootingDesignResult(
             requiredWidth = footingWidth,

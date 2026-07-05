@@ -127,8 +127,8 @@ class ECPTank : TankDesign {
             cost = cost,
             isSafe = isSafe,
             pressure = maxPressure,
-            maxMomentWall = wallDesignResult.astRequired * 0.15, // تقريبي
-            maxMomentBase = baseDesignResult.astRequired * 0.12,
+            maxMomentWall = if (isCircular) GAMMA_W * hW * hW * hW / 15.0 else GAMMA_W * hW * hW * hW / 6.0,
+            maxMomentBase = { val baseSelfWeight = baseThickness / 1000.0 * CONCRETE_DENSITY; val waterPressureOnBase = GAMMA_W * hW; val totalPressure = waterPressureOnBase + baseSelfWeight; val projection = if (isCircular) min(L, B) / 2.0 else min(L, B) / 2.0 - wallThickness / 2000.0; totalPressure * projection * projection / 2.0 }(),
             maxShearWall = GAMMA_W * hW * hW / 2.0,
             factorOfSafetyUplift = upliftFS,
             structuralSystem = when(type) {
