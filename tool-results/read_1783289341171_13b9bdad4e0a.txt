@@ -1,0 +1,1138 @@
+     1→package com.civileg.app.utils
+     2→
+     3→import android.content.Context
+     4→import android.graphics.*
+     5→import kotlin.math.*
+     6→
+     7→/**
+     8→ * Generates engineering drawing Bitmaps for PDF report embedding.
+     9→ * Uses Android Canvas API (not Compose) for direct bitmap generation.
+    10→ * Drawing style matches the Professional*Drawing Compose components.
+    11→ */
+    12→object PdfDrawingGenerator {
+    13→
+    14→    // Color palette matching Compose drawings
+    15→    private val BG_COLOR = Color.parseColor("#1A1A2E")
+    16→    private val CONCRETE = Color.parseColor("#6B6B6B")
+    17→    private val CONCRETE_TOP = Color.parseColor("#8A8A8A")
+    18→    private val CONCRETE_SIDE = Color.parseColor("#505050")
+    19→    private val REBAR_BLUE = Color.parseColor("#4A90D9")
+    20→    private val TOP_REBAR = Color.parseColor("#7EC8E3")
+    21→    private val STIRRUP = Color.parseColor("#9B59B6")
+    22→    private val SECONDARY_RED = Color.parseColor("#E74C3C")
+    23→    private val DIM_TEXT = Color.WHITE
+    24→    private val DIM_LINE = Color.parseColor("#AAAAAA")
+    25→    private val HATCH = Color.parseColor("#99AAAAAA")
+    26→    private val SUPPORT = Color.parseColor("#CCCCCC")
+    27→    private val TABLE_HEADER = Color.parseColor("#33FFFFFF")
+    28→    private val TABLE_ALT = Color.parseColor("#1AFFFFFF")
+    29→    private val SOIL_BROWN = Color.parseColor("#8B6914")
+    30→    private val WATER_BLUE = Color.parseColor("#1A5276")
+    31→
+    32→    private fun createCanvas(width: Int, height: Int): Pair<Bitmap, Canvas> {
+    33→        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    34→        val canvas = Canvas(bitmap)
+    35→        canvas.drawColor(BG_COLOR)
+    36→        return Pair(bitmap, canvas)
+    37→    }
+    38→
+    39→    private fun createPaint(color: Int, strokeWidth: Float = 1f, textSize: Float = 20f, bold: Boolean = false): Paint {
+    40→        return Paint().apply {
+    41→            this.color = color
+    42→            this.strokeWidth = strokeWidth
+    43→            this.textSize = textSize
+    44→            this.isAntiAlias = true
+    45→            this.style = Paint.Style.STROKE
+    46→            if (bold) this.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+    47→        }
+    48→    }
+    49→
+    50→    private fun fillPaint(color: Int): Paint {
+    51→        return Paint().apply {
+    52→            this.color = color
+    53→            this.isAntiAlias = true
+    54→            this.style = Paint.Style.FILL
+    55→        }
+    56→    }
+    57→
+    58→    private fun textPaint(color: Int = DIM_TEXT, size: Float = 20f, bold: Boolean = false): Paint {
+    59→        return Paint().apply {
+    60→            this.color = color
+    61→            this.textSize = size
+    62→            this.isAntiAlias = true
+    63→            this.style = Paint.Style.FILL
+    64→            if (bold) this.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+    65→        }
+    66→    }
+    67→
+    68→    // ========== TEXT HELPER ==========
+    69→    private fun Canvas.drawTextCentered(text: String, x: Float, y: Float, paint: Paint) {
+    70→        paint.textAlign = Paint.Align.CENTER
+    71→        drawText(text, x, y, paint)
+    72→        paint.textAlign = Paint.Align.LEFT // reset
+    73→    }
+    74→
+    75→    // ========== DIMENSION LINES ==========
+    76→    private fun Canvas.drawHDim(x1: Float, x2: Float, y: Float, text: String, offset: Float = 20f, paint: Paint? = null) {
+    77→        val p = paint ?: createPaint(DIM_TEXT, 1f)
+    78→        val dimY = y + offset
+    79→        val extLen = 8f
+    80→        val arrowSize = 5f
+    81→
+    82→        drawLine(x1, y + 2f, x1, dimY + extLen, p)
+    83→        drawLine(x2, y + 2f, x2, dimY + extLen, p)
+    84→        drawLine(x1 + arrowSize, dimY, x2 - arrowSize, dimY, p)
+    85→
+    86→        // Left arrow
+    87→        drawPath(Path().apply {
+    88→            moveTo(x1, dimY); lineTo(x1 + arrowSize * 2, dimY - arrowSize); lineTo(x1 + arrowSize * 2, dimY + arrowSize); close()
+    89→        }, p)
+    90→        // Right arrow
+    91→        drawPath(Path().apply {
+    92→            moveTo(x2, dimY); lineTo(x2 - arrowSize * 2, dimY - arrowSize); lineTo(x2 - arrowSize * 2, dimY + arrowSize); close()
+    93→        }, p)
+    94→
+    95→        val tp = textPaint(DIM_TEXT, 18f)
+    96→        drawTextCentered(text, (x1 + x2) / 2f, dimY + extLen + 16f, tp)
+    97→    }
+    98→
+    99→    private fun Canvas.drawVDim(y1: Float, y2: Float, x: Float, text: String, offset: Float = 20f) {
+   100→        val p = createPaint(DIM_TEXT, 1f)
+   101→        val dimX = x + offset
+   102→        val extLen = 8f
+   103→        val arrowSize = 5f
+   104→
+   105→        drawLine(x + 2f, y1, dimX + extLen, y1, p)
+   106→        drawLine(x + 2f, y2, dimX + extLen, y2, p)
+   107→        drawLine(dimX, y1 + arrowSize, dimX, y2 - arrowSize, p)
+   108→
+   109→        val tp = textPaint(DIM_TEXT, 18f)
+   110→        drawText(text, dimX + extLen + 4f, (y1 + y2) / 2f + 6f, tp)
+   111→    }
+   112→
+   113→    // ========== REBAR CIRCLE ==========
+   114→    private fun Canvas.drawRebar(cx: Float, cy: Float, r: Float, color: Int = REBAR_BLUE) {
+   115→        drawCircle(cx, cy, r, fillPaint(color))
+   116→        drawCircle(cx, cy, r * 0.35f, fillPaint(Color.argb(128, Color.red(color), Color.green(color), Color.blue(color))))
+   117→    }
+   118→
+   119→    // ========== HATCH PATTERN ==========
+   120→    private fun Canvas.drawHatch(x: Float, y: Float, w: Float, h: Float, spacing: Float = 12f) {
+   121→        val p = createPaint(HATCH, 0.8f)
+   122→        var i = 0
+   123→        while (i * spacing < w + h) {
+   124→            val sx = x + i * spacing
+   125→            val sy = y + h
+   126→            val ex = sx + h
+   127→            val ey = y
+   128→            drawLine(
+   129→                sx.coerceIn(x, x + w), maxOf(y, sy - (sx - x).coerceAtLeast(0f)).coerceAtMost(y + h),
+   130→                ex.coerceIn(x, x + w), minOf(y + h, ey + (x + w - ex).coerceAtLeast(0f)).coerceAtLeast(y),
+   131→                p
+   132→            )
+   133→            i++
+   134→        }
+   135→    }
+   136→
+   137→    // ========== GENERATE BEAM DRAWING ==========
+   138→    fun generateBeamDrawing(
+   139→        beamWidth: Double, beamDepth: Double, span: Double,
+   140→        mainRebarDia: Double, mainRebarCount: Int,
+   141→        stirrupDia: Double, stirrupSpacing: Double,
+   142→        cover: Double = 50.0,
+   143→        hasTopSteel: Boolean = false, topRebarDia: Double = 0.0, topRebarCount: Int = 0
+   144→    ): Bitmap {
+   145→        val W = 1200; val H = 700
+   146→        val (bitmap, canvas) = createCanvas(W, H)
+   147→
+   148→        // Layout
+   149→        val marginL = 80f; val marginR = 80f; val marginT = 50f
+   150→        val mainBottom = H * 0.55f
+   151→        val availW = W - marginL - marginR - 60f
+   152→        val availH = mainBottom - marginT - 40f
+   153→        val scaleW = availW / span.toFloat()
+   154→        val scaleH = availH / beamDepth.toFloat()
+   155→        val scale = min(scaleW, scaleH) * 0.75f
+   156→
+   157→        val bDrawW = span.toFloat() * scale
+   158→        val bDrawH = beamDepth.toFloat() * scale
+   159→        val bDrawD = beamWidth.toFloat() * scale * 0.3f
+   160→        val bLeft = marginL + 40f
+   161→        val bTop = marginT + 40f + bDrawD * 0.2f
+   162→        val bRight = bLeft + bDrawW
+   163→        val bBottom = bTop + bDrawH
+   164→
+   165→        // 3D beam body
+   166→        // Front face
+   167→        canvas.drawRect(bLeft, bTop, bRight, bBottom, fillPaint(CONCRETE))
+   168→        // Top face (3D)
+   169→        canvas.drawPath(Path().apply {
+   170→            moveTo(bLeft, bTop); lineTo(bLeft + bDrawD * 0.3f, bTop - bDrawD * 0.2f)
+   171→            lineTo(bRight + bDrawD * 0.3f, bTop - bDrawD * 0.2f); lineTo(bRight, bTop); close()
+   172→        }, fillPaint(CONCRETE_TOP))
+   173→        // Right side face
+   174→        canvas.drawPath(Path().apply {
+   175→            moveTo(bRight, bTop); lineTo(bRight + bDrawD * 0.3f, bTop - bDrawD * 0.2f)
+   176→            lineTo(bRight + bDrawD * 0.3f, bBottom - bDrawD * 0.2f); lineTo(bRight, bBottom); close()
+   177→        }, fillPaint(CONCRETE_SIDE))
+   178→
+   179→        // Outline
+   180→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   181→        canvas.drawRect(bLeft, bTop, bRight, bBottom, outlineP)
+   182→
+   183→        // Supports (pin left, roller right)
+   184→        val supportSize = 20f
+   185→        // Left pin
+   186→        canvas.drawPath(Path().apply {
+   187→            moveTo(bLeft - supportSize/2, bBottom); lineTo(bLeft + supportSize/2, bBottom)
+   188→            lineTo(bLeft, bBottom + supportSize); close()
+   189→        }, fillPaint(SUPPORT))
+   190→        canvas.drawLine(bLeft - supportSize, bBottom + supportSize, bLeft + supportSize, bBottom + supportSize, outlineP)
+   191→
+   192→        // Right roller
+   193→        canvas.drawPath(Path().apply {
+   194→            moveTo(bRight - supportSize/2, bBottom); lineTo(bRight + supportSize/2, bBottom)
+   195→            lineTo(bRight, bBottom + supportSize * 0.7f); close()
+   196→        }, fillPaint(SUPPORT))
+   197→        canvas.drawCircle(bRight - 6f, bBottom + supportSize * 0.7f + 4f, 3f, fillPaint(SUPPORT))
+   198→        canvas.drawCircle(bRight + 6f, bBottom + supportSize * 0.7f + 4f, 3f, fillPaint(SUPPORT))
+   199→        canvas.drawLine(bRight - supportSize, bBottom + supportSize, bRight + supportSize, bBottom + supportSize, outlineP)
+   200→
+   201→        // Main reinforcement (bottom)
+   202→        val rebarR = maxOf(mainRebarDia.toFloat() / 2f * scale * 0.5f, 3f)
+   203→        val rebarY = bBottom - cover.toFloat() * scale - rebarR
+   204→        val spacing = (bDrawW - 2 * cover.toFloat() * scale) / maxOf(mainRebarCount - 1, 1)
+   205→        for (i in 0 until mainRebarCount) {
+   206→            val rx = bLeft + cover.toFloat() * scale + i * spacing
+   207→            canvas.drawRebar(rx, rebarY, rebarR, REBAR_BLUE)
+   208→        }
+   209→
+   210→        // Stirrups
+   211→        val stirrupP = createPaint(STIRRUP, 1.5f)
+   212→        val stirrupY1 = bTop + cover.toFloat() * scale
+   213→        val stirrupY2 = bBottom - cover.toFloat() * scale
+   214→        val stirrupX1 = bLeft + cover.toFloat() * scale
+   215→        val stirrupX2 = bRight - cover.toFloat() * scale
+   216→        val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+   217→        var sx = bLeft + stirrupSpacingPx
+   218→        while (sx < bRight - stirrupSpacingPx) {
+   219→            canvas.drawRect(sx - 2f, stirrupY1, sx + 2f, stirrupY2, stirrupP)
+   220→            sx += stirrupSpacingPx
+   221→        }
+   222→
+   223→        // Top reinforcement
+   224→        if (hasTopSteel && topRebarCount > 0) {
+   225→            val topR = maxOf(topRebarDia.toFloat() / 2f * scale * 0.5f, 3f)
+   226→            val topY = bTop + cover.toFloat() * scale + topR
+   227→            val topSpacing = (bDrawW - 2 * cover.toFloat() * scale) / maxOf(topRebarCount - 1, 1)
+   228→            for (i in 0 until topRebarCount) {
+   229→                val rx = bLeft + cover.toFloat() * scale + i * topSpacing
+   230→                canvas.drawRebar(rx, topY, topR, TOP_REBAR)
+   231→            }
+   232→        }
+   233→
+   234→        // Dimensions
+   235→        canvas.drawHDim(bLeft, bRight, bBottom + supportSize + 20f, "${span.toInt()} mm")
+   236→        canvas.drawVDim(bTop, bBottom, bLeft - 20f, "${beamDepth.toInt()} mm")
+   237→        canvas.drawVDim(bTop, bTop + cover.toFloat() * scale, bRight + 20f, "cover=${cover.toInt()}")
+   238→
+   239→        // Title
+   240→        val titleP = textPaint(Color.WHITE, 24f, true)
+   241→        canvas.drawTextCentered("BEAM SECTION & ELEVATION", W / 2f, 30f, titleP)
+   242→
+   243→        // Cross-section inset (bottom-left)
+   244→        val csX = 80f; val csY = H * 0.60f; val csScale = 0.4f
+   245→        val csW = beamWidth.toFloat() * scale * csScale
+   246→        val csH = beamDepth.toFloat() * scale * csScale
+   247→
+   248→        canvas.drawRect(csX, csY, csX + csW, csY + csH, fillPaint(CONCRETE))
+   249→        canvas.drawRect(csX, csY, csX + csW, csY + csH, outlineP)
+   250→
+   251→        // Cross-section stirrup
+   252→        val csCover = cover.toFloat() * scale * csScale
+   253→        canvas.drawRect(csX + csCover, csY + csCover, csX + csW - csCover, csY + csH - csCover, createPaint(STIRRUP, 1.5f))
+   254→
+   255→        // Cross-section bars
+   256→        val csRebarR = maxOf(mainRebarDia.toFloat() * csScale * 0.3f, 3f)
+   257→        val csBarY = csY + csH - csCover - csRebarR
+   258→        for (i in 0 until minOf(mainRebarCount, 6)) {
+   259→            val rx = if (mainRebarCount <= 2) {
+   260→                csX + csW / 2f
+   261→            } else {
+   262→                csX + csCover + csRebarR + i * (csW - 2 * csCover - 2 * csRebarR) / maxOf(mainRebarCount - 1, 1)
+   263→            }
+   264→            canvas.drawRebar(rx, csBarY, csRebarR, REBAR_BLUE)
+   265→        }
+   266→
+   267→        // Section label
+   268→        canvas.drawTextCentered("Section A-A", csX + csW / 2f, csY - 8f, textPaint(DIM_TEXT, 16f))
+   269→
+   270→        // Reinforcement table (bottom-right)
+   271→        drawRebarTable(canvas, 
+   272→            x = W * 0.5f, y = H * 0.60f,
+   273→            data = listOf(
+   274→                listOf("Mark", "Dia", "No.", "Spacing", "Length"),
+   275→                listOf("B1", "${mainRebarDia.toInt()}mm", "$mainRebarCount", "-", "${span.toInt()}mm"),
+   276→                listOf("S1", "${stirrupDia.toInt()}mm", "-", "${stirrupSpacing.toInt()}mm", "-")
+   277→            ) + if (hasTopSteel && topRebarCount > 0) listOf(listOf("T1", "${topRebarDia.toInt()}mm", "$topRebarCount", "-", "${(span*0.3).toInt()}mm")) else emptyList()
+   278→        )
+   279→
+   280→        // Title block
+   281→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Beam Detail")
+   282→
+   283→        return bitmap
+   284→    }
+   285→
+   286→    // ========== GENERATE COLUMN DRAWING ==========
+   287→    fun generateColumnDrawing(
+   288→        columnWidth: Double, columnDepth: Double, columnHeight: Double,
+   289→        numBars: Int, barDia: Double, tieDia: Double, tieSpacing: Double,
+   290→        cover: Double = 40.0
+   291→    ): Bitmap {
+   292→        val W = 1200; val H = 800
+   293→        val (bitmap, canvas) = createCanvas(W, H)
+   294→
+   295→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   296→        val titleP = textPaint(Color.WHITE, 24f, true)
+   297→
+   298→        // 3D Elevation (left side)
+   299→        val elevLeft = 100f; val elevW = 200f
+   300→        val elevTop = 80f; val elevH = min(columnHeight.toFloat(), 500f)
+   301→        val depth3D = 40f
+   302→
+   303→        // Front face
+   304→        canvas.drawRect(elevLeft, elevTop, elevLeft + elevW, elevTop + elevH, fillPaint(CONCRETE))
+   305→        // Top face
+   306→        canvas.drawPath(Path().apply {
+   307→            moveTo(elevLeft, elevTop); lineTo(elevLeft + depth3D, elevTop - depth3D * 0.3f)
+   308→            lineTo(elevLeft + elevW + depth3D, elevTop - depth3D * 0.3f); lineTo(elevLeft + elevW, elevTop); close()
+   309→        }, fillPaint(CONCRETE_TOP))
+   310→        // Side face
+   311→        canvas.drawPath(Path().apply {
+   312→            moveTo(elevLeft + elevW, elevTop); lineTo(elevLeft + elevW + depth3D, elevTop - depth3D * 0.3f)
+   313→            lineTo(elevLeft + elevW + depth3D, elevTop + elevH - depth3D * 0.3f); lineTo(elevLeft + elevW, elevTop + elevH); close()
+   314→        }, fillPaint(CONCRETE_SIDE))
+   315→
+   316→        canvas.drawRect(elevLeft, elevTop, elevLeft + elevW, elevTop + elevH, outlineP)
+   317→
+   318→        // Visible bars on front face
+   319→        val barR = maxOf(barDia.toFloat() * 0.4f, 3f)
+   320→        val coverPx = cover.toFloat()
+   321→        // Corner bars (front face - 4 bars)
+   322→        val corners = listOf(
+   323→            Offset(elevLeft + coverPx, elevTop + coverPx),
+   324→            Offset(elevLeft + elevW - coverPx, elevTop + coverPx),
+   325→            Offset(elevLeft + coverPx, elevTop + elevH - coverPx),
+   326→            Offset(elevLeft + elevW - coverPx, elevTop + elevH - coverPx)
+   327→        )
+   328→        corners.forEach { canvas.drawRebar(it.x, it.y, barR, REBAR_BLUE) }
+   329→
+   330→        // Ties
+   331→        val tieP = createPaint(STIRRUP, 1.5f)
+   332→        var ty = elevTop + coverPx + 20f
+   333→        while (ty < elevTop + elevH - coverPx) {
+   334→            canvas.drawRect(elevLeft + coverPx, ty, elevLeft + elevW - coverPx, ty + 3f, tieP)
+   335→            ty += tieSpacing.toFloat() * (elevH / columnHeight.toFloat())
+   336→        }
+   337→
+   338→        // Floor slabs at top/bottom
+   339→        canvas.drawRect(elevLeft - 60f, elevTop - 15f, elevLeft + elevW + depth3D + 60f, elevTop, fillPaint(CONCRETE_TOP))
+   340→        canvas.drawRect(elevLeft - 60f, elevTop - 15f, elevLeft + elevW + depth3D + 60f, elevTop, outlineP)
+   341→        canvas.drawRect(elevLeft - 60f, elevTop + elevH, elevLeft + elevW + depth3D + 60f, elevTop + elevH + 15f, fillPaint(CONCRETE_TOP))
+   342→        canvas.drawRect(elevLeft - 60f, elevTop + elevH, elevLeft + elevW + depth3D + 60f, elevTop + elevH + 15f, outlineP)
+   343→
+   344→        canvas.drawTextCentered("COLUMN ELEVATION", elevLeft + elevW / 2f, elevTop - 30f, titleP)
+   345→
+   346→        // Cross-section (right side)
+   347→        val csCx = W * 0.65f; val csCy = H * 0.35f
+   348→        val csW2 = columnWidth.toFloat() * 0.8f
+   349→        val csH2 = columnDepth.toFloat() * 0.8f
+   350→        val csLeft = csCx - csW2 / 2f; val csTop2 = csCy - csH2 / 2f
+   351→
+   352→        canvas.drawRect(csLeft, csTop2, csLeft + csW2, csTop2 + csH2, fillPaint(CONCRETE))
+   353→        canvas.drawRect(csLeft, csTop2, csLeft + csW2, csTop2 + csH2, outlineP)
+   354→
+   355→        // Tie in section
+   356→        val csCover = cover.toFloat()
+   357→        canvas.drawRect(csLeft + csCover, csTop2 + csCover, csLeft + csW2 - csCover, csTop2 + csH2 - csCover, createPaint(STIRRUP, 1.5f))
+   358→
+   359→        // Bars in section
+   360→        val effW = csW2 - 2 * csCover
+   361→        val effH = csH2 - 2 * csCover
+   362→        val barsPerSide = maxOf(2, (numBars - 4) / 4)
+   363→        // 4 corners always
+   364→        val csBarR = maxOf(barDia.toFloat() * 0.5f, 4f)
+   365→        val barPositions = mutableListOf<Offset>()
+   366→        barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR))
+   367→        barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR))
+   368→        barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csH2 - csCover - csBarR))
+   369→        barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csH2 - csCover - csBarR))
+   370→
+   371→        val remaining = numBars - 4
+   372→        if (remaining > 0) {
+   373→            val perSide = remaining / 4
+   374→            val extra = remaining % 4
+   375→            for (side in 0 until 4) {
+   376→                val count = perSide + if (side < extra) 1 else 0
+   377→                for (i in 1..count) {
+   378→                    val t = i.toFloat() / (count + 1)
+   379→                    when (side) {
+   380→                        0 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csCover + csBarR))
+   381→                        1 -> barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+   382→                        2 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csH2 - csCover - csBarR))
+   383→                        3 -> barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+   384→                    }
+   385→                }
+   386→            }
+   387→        }
+   388→
+   389→        barPositions.forEachIndexed { idx, pos ->
+   390→            canvas.drawRebar(pos.x, pos.y, csBarR, REBAR_BLUE)
+   391→            // Bar mark number
+   392→            val mark = getCircleNumber(idx + 1)
+   393→            canvas.drawTextCentered(mark, pos.x, pos.y - csBarR - 6f, textPaint(DIM_TEXT, 14f, true))
+   394→        }
+   395→
+   396→        // Section dimensions
+   397→        canvas.drawHDim(csLeft, csLeft + csW2, csTop2 + csH2 + 15f, "${columnWidth.toInt()} mm", 20f)
+   398→        canvas.drawVDim(csTop2, csTop2 + csH2, csLeft + csW2 + 15f, "${columnDepth.toInt()} mm", 20f)
+   399→        canvas.drawTextCentered("SECTION A-A", csCx, csTop2 - 20f, titleP)
+   400→
+   401→        // Rebar table
+   402→        drawRebarTable(canvas, 
+   403→            x = 100f, y = H * 0.65f,
+   404→            data = listOf(
+   405→                listOf("Mark", "Dia", "No.", "Type", "Spacing"),
+   406→                listOf("M1", "${barDia.toInt()}mm", "$numBars", "Main", "-"),
+   407→                listOf("T1", "${tieDia.toInt()}mm", "-", "Ties", "${tieSpacing.toInt()}mm")
+   408→            )
+   409→        )
+   410→
+   411→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Column Detail")
+   412→
+   413→        return bitmap
+   414→    }
+   415→
+   416→    // ========== GENERATE SLAB DRAWING ==========
+   417→    fun generateSlabDrawing(
+   418→        spanX: Double, spanY: Double, thickness: Double,
+   419→        mainDia: Double, mainSpacing: Double,
+   420→        distDia: Double, distSpacing: Double
+   421→    ): Bitmap {
+   422→        val W = 1200; val H = 700
+   423→        val (bitmap, canvas) = createCanvas(W, H)
+   424→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   425→
+   426→        // Plan view (top-left)
+   427→        val planL = 80f; val planT = 70f
+   428→        val scale = min(400f / spanX.toFloat(), 300f / spanY.toFloat()) * 0.8f
+   429→        val planW = spanX.toFloat() * scale; val planH = spanY.toFloat() * scale
+   430→
+   431→        canvas.drawRect(planL, planT, planL + planW, planT + planH, fillPaint(CONCRETE))
+   432→        canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
+   433→
+   434→        // Hatch
+   435→        canvas.drawHatch(planL, planT, planW, planH, 15f)
+   436→
+   437→        // Main bars (along X - vertical blue lines)
+   438→        val mainP = createPaint(REBAR_BLUE, 2f)
+   439→        var mx = planL + 30f
+   440→        while (mx < planL + planW - 10f) {
+   441→            canvas.drawLine(mx, planT + 10f, mx, planT + planH - 10f, mainP)
+   442→            mx += mainSpacing.toFloat() * scale / 5f  // scale down for visibility
+   443→        }
+   444→
+   445→        // Distribution bars (along Y - horizontal purple lines)
+   446→        val distP = createPaint(STIRRUP, 1.5f)
+   447→        var dy = planT + 30f
+   448→        while (dy < planT + planH - 10f) {
+   449→            canvas.drawLine(planL + 10f, dy, planL + planW - 10f, dy, distP)
+   450→            dy += distSpacing.toFloat() * scale / 5f
+   451→        }
+   452→
+   453→        canvas.drawHDim(planL, planL + planW, planT + planH + 15f, "${spanX.toInt()} mm (Lx)")
+   454→        canvas.drawVDim(planT, planT + planH, planL + planW + 15f, "${spanY.toInt()} mm (Ly)")
+   455→
+   456→        val titleP = textPaint(Color.WHITE, 24f, true)
+   457→        canvas.drawTextCentered("SLAB REINFORCEMENT PLAN", planL + planW / 2f, planT - 20f, titleP)
+   458→
+   459→        // Cross-section (right side)
+   460→        val secL = W * 0.55f; val secT = 100f
+   461→        val secW = planW * 0.8f; val secH = thickness.toFloat() * scale * 2f
+   462→        canvas.drawRect(secL, secT, secL + secW, secT + secH, fillPaint(CONCRETE))
+   463→        canvas.drawRect(secL, secT, secL + secW, secT + secH, outlineP)
+   464→
+   465→        // Bars in section
+   466→        val barR = maxOf(mainDia.toFloat() * 0.3f, 3f)
+   467→        var bx = secL + 20f
+   468→        while (bx < secL + secW - 10f) {
+   469→            canvas.drawRebar(bx, secT + secH - 10f, barR, REBAR_BLUE)
+   470→            bx += 25f
+   471→        }
+   472→
+   473→        canvas.drawHDim(secL, secL + secW, secT + secH + 15f, "${spanX.toInt()} mm")
+   474→        canvas.drawVDim(secT, secT + secH, secL + secW + 15f, "t=${thickness.toInt()}mm")
+   475→        canvas.drawTextCentered("SECTION B-B", secL + secW / 2f, secT - 15f, textPaint(DIM_TEXT, 18f, true))
+   476→
+   477→        // Table
+   478→        drawRebarTable(canvas,
+   479→            x = 80f, y = H * 0.55f,
+   480→            data = listOf(
+   481→                listOf("Mark", "Dia", "Direction", "Spacing"),
+   482→                listOf("M1", "${mainDia.toInt()}mm", "Short span", "${mainSpacing.toInt()}mm c/c"),
+   483→                listOf("D1", "${distDia.toInt()}mm", "Long span", "${distSpacing.toInt()}mm c/c")
+   484→            )
+   485→        )
+   486→
+   487→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Slab Detail")
+   488→        return bitmap
+   489→    }
+   490→
+   491→    // ========== GENERATE FOOTING DRAWING ==========
+   492→    fun generateFootingDrawing(
+   493→        footingLX: Double, footingLY: Double, footingThickness: Double,
+   494→        colW: Double, colD: Double,
+   495→        rebarXCount: Int, rebarXDia: Double, rebarXSpacing: Double,
+   496→        rebarYCount: Int, rebarYDia: Double, rebarYSpatial: Double
+   497→    ): Bitmap {
+   498→        val W = 1200; val H = 700
+   499→        val (bitmap, canvas) = createCanvas(W, H)
+   500→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   501→
+   502→        // Plan view
+   503→        val scale = min(450f / footingLX.toFloat(), 300f / footingLY.toFloat()) * 0.7f
+   504→        val planL = 80f; val planT = 80f
+   505→        val fW = footingLX.toFloat() * scale; val fH = footingLY.toFloat() * scale
+   506→        val cW = colW.toFloat() * scale; val cH = colD.toFloat() * scale
+   507→
+   508→        canvas.drawRect(planL, planT, planL + fW, planT + fH, fillPaint(CONCRETE))
+   509→        canvas.drawRect(planL, planT, planL + fW, planT + fH, outlineP)
+   510→        canvas.drawHatch(planL, planT, fW, fH)
+   511→
+   512→        // Column outline in center
+   513→        val colL = planL + (fW - cW) / 2f; val colT = planT + (fH - cH) / 2f
+   514→        canvas.drawRect(colL, colT, colL + cW, colT + cH, fillPaint(CONCRETE_SIDE))
+   515→        canvas.drawRect(colL, colT, colL + cW, colT + cH, outlineP)
+   516→
+   517→        // X-direction bars (vertical blue)
+   518→        val barP = createPaint(REBAR_BLUE, 2f)
+   519→        for (i in 0 until rebarXCount.coerceAtMost(10)) {
+   520→            val bx = planL + 30f + i * (fW - 60f) / maxOf(rebarXCount - 1, 1)
+   521→            canvas.drawLine(bx, planT + 5f, bx, planT + fH - 5f, barP)
+   522→        }
+   523→
+   524→        // Y-direction bars (horizontal light blue)
+   525→        val barP2 = createPaint(TOP_REBAR, 1.5f)
+   526→        for (i in 0 until rebarYCount.coerceAtMost(8)) {
+   527→            val by = planT + 30f + i * (fH - 60f) / maxOf(rebarYCount - 1, 1)
+   528→            canvas.drawLine(planL + 5f, by, planL + fW - 5f, by, barP2)
+   529→        }
+   530→
+   531→        // Dimensions
+   532→        canvas.drawHDim(planL, planL + fW, planT + fH + 15f, "${footingLX.toInt()} mm (Lx)")
+   533→        canvas.drawVDim(planT, planT + fH, planL + fW + 15f, "${footingLY.toInt()} mm (Ly)")
+   534→
+   535→        val titleP = textPaint(Color.WHITE, 22f, true)
+   536→        canvas.drawTextCentered("FOOTING PLAN", planL + fW / 2f, planT - 20f, titleP)
+   537→
+   538→        // Section (right side)
+   539→        val secL = W * 0.52f; val secT = 80f
+   540→        val secW2 = fW * 0.7f; val secH2 = footingThickness.toFloat() * scale * 1.5f
+   541→
+   542→        // Soil
+   543→        canvas.drawRect(secL - 20f, secT + secH2, secL + secW2 + 20f, secT + secH2 + 30f, fillPaint(Color.parseColor("#8B6914")))
+   544→        // Concrete
+   545→        canvas.drawRect(secL, secT, secL + secW2, secT + secH2, fillPaint(CONCRETE))
+   546→        canvas.drawRect(secL, secT, secL + secW2, secT + secH2, outlineP)
+   547→        // Column above
+   548→        val colW2 = cW * 0.8f
+   549→        canvas.drawRect(secL + (secW2 - colW2) / 2f, secT - 40f, secL + (secW2 + colW2) / 2f, secT, fillPaint(CONCRETE_TOP))
+   550→        canvas.drawRect(secL + (secW2 - colW2) / 2f, secT - 40f, secL + (secW2 + colW2) / 2f, secT, outlineP)
+   551→
+   552→        // Bottom bars in section
+   553→        val bR = maxOf(rebarXDia.toFloat() * 0.3f, 3f)
+   554→        for (i in 0 until rebarXCount.coerceAtMost(8)) {
+   555→            val bx = secL + 15f + i * (secW2 - 30f) / maxOf(rebarXCount - 1, 1)
+   556→            canvas.drawRebar(bx, secT + secH2 - 12f, bR, REBAR_BLUE)
+   557→        }
+   558→
+   559→        canvas.drawTextCentered("SECTION A-A", secL + secW2 / 2f, secT - 55f, textPaint(DIM_TEXT, 18f, true))
+   560→
+   561→        // Table
+   562→        drawRebarTable(canvas,
+   563→            x = 80f, y = H * 0.55f,
+   564→            data = listOf(
+   565→                listOf("Mark", "Dia", "No.", "Spacing", "Dir"),
+   566→                listOf("X1", "${rebarXDia.toInt()}mm", "$rebarXCount", "${rebarXSpacing.toInt()}mm", "X"),
+   567→                listOf("Y1", "${rebarYDia.toInt()}mm", "$rebarYCount", "${rebarYSpatial.toInt()}mm", "Y")
+   568→            )
+   569→        )
+   570→
+   571→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Footing Detail")
+   572→        return bitmap
+   573→    }
+   574→
+   575→    // ========== GENERATE STAIR DRAWING ==========
+   576→    fun generateStairDrawing(
+   577→        totalHeight: Double, totalLength: Double, stairWidth: Double,
+   578→        riserHeight: Double, treadWidth: Double, slabThickness: Double,
+   579→        mainDia: Double, mainSpacing: Double, distDia: Double = 8.0, distSpacing: Double = 200.0
+   580→    ): Bitmap {
+   581→        val W = 1200; val H = 700
+   582→        val (bitmap, canvas) = createCanvas(W, H)
+   583→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   584→
+   585→        val nRisers = (totalHeight / riserHeight).toInt().coerceAtLeast(3)
+   586→        val nTreads = nRisers - 1
+   587→        val angle = atan2(totalHeight.toFloat(), totalLength.toFloat())
+   588→
+   589→        // Elevation
+   590→        val elevL = 80f; val elevT = 80f
+   591→        val scale = min(500f / totalLength.toFloat(), 350f / totalHeight.toFloat()) * 0.8f
+   592→        val drawL = totalLength.toFloat() * scale; val drawH = totalHeight.toFloat() * scale
+   593→        val treadH = riserHeight.toFloat() * scale; val treadW = treadWidth.toFloat() * scale
+   594→
+   595→        // Stair outline
+   596→        val path = Path()
+   597→        path.moveTo(elevL, elevT + drawH) // bottom-left
+   598→        for (i in 0 until nRisers) {
+   599→            path.lineTo(elevL + i * treadW, elevT + drawH - (i + 1) * treadH)
+   600→            if (i < nTreads) path.lineTo(elevL + (i + 1) * treadW, elevT + drawH - (i + 1) * treadH)
+   601→        }
+   602→        // Soffit line
+   603→        val soffitOffset = slabThickness.toFloat() * scale
+   604→        path.lineTo(elevL + drawL + soffitOffset * sin(angle), elevT + drawH - drawH - soffitOffset * cos(angle))
+   605→        path.lineTo(elevL - soffitOffset * sin(angle), elevT + drawH - soffitOffset)
+   606→        path.close()
+   607→
+   608→        canvas.drawPath(path, fillPaint(CONCRETE))
+   609→        canvas.drawPath(path, outlineP)
+   610→
+   611→        // Main reinforcement (following slope)
+   612→        val rebarP = createPaint(REBAR_BLUE, 2f)
+   613→        val nBars = 4
+   614→        for (i in 0 until nBars) {
+   615→            val offset = (i + 1) * soffitOffset / (nBars + 1)
+   616→            val yOff = offset * cos(angle)
+   617→            val xOff = offset * sin(angle)
+   618→            canvas.drawLine(
+   619→                elevL + xOff + 15f, elevT + drawH - yOff - 15f,
+   620→                elevL + drawL - xOff - 15f, elevT + drawH - drawH + yOff + 15f, rebarP
+   621→            )
+   622→        }
+   623→
+   624→        canvas.drawHDim(elevL, elevL + drawL, elevT + drawH + 20f, "${totalLength.toInt()} mm")
+   625→        canvas.drawVDim(elevT, elevT + drawH, elevL - 25f, "${totalHeight.toInt()} mm")
+   626→
+   627→        val titleP = textPaint(Color.WHITE, 22f, true)
+   628→        canvas.drawTextCentered("STAIRCASE ELEVATION", elevL + drawL / 2f, elevT - 25f, titleP)
+   629→
+   630→        // Section (right side)
+   631→        val secL = W * 0.55f; val secT = 100f
+   632→        val secW2 = 250f; val secH2 = slabThickness.toFloat() * scale * 3f
+   633→        canvas.drawRect(secL, secT, secL + secW2, secT + secH2, fillPaint(CONCRETE))
+   634→        canvas.drawRect(secL, secT, secL + secW2, secT + secH2, outlineP)
+   635→
+   636→        val bR = maxOf(mainDia.toFloat() * 0.3f, 3f)
+   637→        for (i in 0 until 5) {
+   638→            canvas.drawRebar(secL + 30f + i * 40f, secT + secH2 - 10f, bR, REBAR_BLUE)
+   639→        }
+   640→
+   641→        canvas.drawTextCentered("SECTION A-A", secL + secW2 / 2f, secT - 15f, textPaint(DIM_TEXT, 18f, true))
+   642→
+   643→        // Table
+   644→        drawRebarTable(canvas,
+   645→            x = 80f, y = H * 0.58f,
+   646→            data = listOf(
+   647→                listOf("Mark", "Dia", "Spacing", "Length"),
+   648→                listOf("B1", "${mainDia.toInt()}mm", "${mainSpacing.toInt()}mm c/c", "-"),
+   649→                listOf("D1", "${distDia.toInt()}mm", "${distSpacing.toInt()}mm c/c", "-")
+   650→            )
+   651→        )
+   652→
+   653→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Stair Detail")
+   654→        return bitmap
+   655→    }
+   656→
+   657→    // ========== HELPER: Table ==========
+   658→    private fun drawRebarTable(canvas: Canvas, x: Float, y: Float, data: List<List<String>>) {
+   659→        if (data.isEmpty()) return
+   660→        val cols = data[0].size
+   661→        val colW = 130f
+   662→        val rowH = 28f
+   663→        val headerH = 32f
+   664→        val totalW = cols * colW
+   665→        val totalH = headerH + (data.size - 1) * rowH
+   666→
+   667→        // Background
+   668→        canvas.drawRect(x, y, x + totalW, y + totalH, fillPaint(Color.parseColor("#11FFFFFF")))
+   669→        // Header
+   670→        canvas.drawRect(x, y, x + totalW, y + headerH, fillPaint(TABLE_HEADER))
+   671→
+   672→        val tp = textPaint(DIM_TEXT, 16f)
+   673→        val boldTp = textPaint(DIM_TEXT, 16f, true)
+   674→
+   675→        // Headers
+   676→        for (c in 0 until cols) {
+   677→            canvas.drawTextCentered(data[0][c], x + c * colW + colW / 2f, y + headerH / 2f + 5f, boldTp)
+   678→        }
+   679→
+   680→        // Rows
+   681→        for (r in 1 until data.size) {
+   682→            val ry = y + headerH + (r - 1) * rowH
+   683→            if (r % 2 == 0) canvas.drawRect(x, ry, x + totalW, ry + rowH, fillPaint(TABLE_ALT))
+   684→            for (c in 0 until cols) {
+   685→                canvas.drawTextCentered(data[r][c], x + c * colW + colW / 2f, ry + rowH / 2f + 5f, tp)
+   686→            }
+   687→        }
+   688→
+   689→        // Border
+   690→        canvas.drawRect(x, y, x + totalW, y + totalH, createPaint(Color.parseColor("#66FFFFFF"), 1.5f))
+   691→    }
+   692→
+   693→    // ========== HELPER: Title Block ==========
+   694→    private fun drawTitleBlock(canvas: Canvas, x: Float, y: Float, w: Float, h: Float, title: String) {
+   695→        canvas.drawRect(x, y, x + w, y + h, fillPaint(Color.parseColor("#11FFFFFF")))
+   696→        canvas.drawRect(x, y, x + w, y + h, createPaint(DIM_LINE, 1.5f))
+   697→        canvas.drawLine(x, y + h * 0.33f, x + w, y + h * 0.33f, createPaint(DIM_LINE, 1f))
+   698→        canvas.drawLine(x, y + h * 0.66f, x + w, y + h * 0.66f, createPaint(DIM_LINE, 1f))
+   699→        canvas.drawLine(x + w * 0.4f, y, x + w * 0.4f, y + h, createPaint(DIM_LINE, 1f))
+   700→
+   701→        canvas.drawText("Project: CivilEG", x + 8f, y + h * 0.22f, textPaint(DIM_TEXT, 14f))
+   702→        canvas.drawText(title, x + w * 0.4f + 8f, y + h * 0.22f, textPaint(DIM_TEXT, 14f, true))
+   703→        canvas.drawText("Scale: NTS", x + 8f, y + h * 0.55f, textPaint(DIM_TEXT, 13f))
+   704→        canvas.drawText("Generated by Civil EG Pro", x + w * 0.4f + 8f, y + h * 0.55f, textPaint(DIM_TEXT, 13f))
+   705→        canvas.drawText("Sheet: 1/1", x + 8f, y + h * 0.88f, textPaint(DIM_TEXT, 13f))
+   706→    }
+   707→
+   708→    // ========== HELPER: Circle numbers ==========
+   709→    private fun getCircleNumber(n: Int): String {
+   710→        // Return numbers 1-20 as circled: ①②③④⑤⑥⑦⑧⑨⑩...
+   711→        return when (n) {
+   712→            1 -> "\u2460"; 2 -> "\u2461"; 3 -> "\u2462"; 4 -> "\u2463"; 5 -> "\u2464"
+   713→            6 -> "\u2465"; 7 -> "\u2466"; 8 -> "\u2467"; 9 -> "\u2468"; 10 -> "\u2469"
+   714→            else -> n.toString()
+   715→        }
+   716→    }
+   717→
+   718→    // ========== GENERATE TANK DRAWING ==========
+   719→    fun generateTankDrawing(
+   720→        tankType: String,
+   721→        length: Double, width: Double, height: Double,
+   722→        wallThickness: Double, baseThickness: Double,
+   723→        verticalRebarDia: Double, verticalRebarSpacing: Double,
+   724→        horizontalRebarDia: Double, horizontalRebarSpacing: Double,
+   725→        waterLevel: Double = 0.0,
+   726→        foundationDepth: Double = 0.0
+   727→    ): Bitmap {
+   728→        val W = 1200; val H = 900
+   729→        val (bitmap, canvas) = createCanvas(W, H)
+   730→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   731→        val titleP = textPaint(Color.WHITE, 22f, true)
+   732→
+   733→        // === LEFT SIDE: Cross-Section View ===
+   734→        val csLeft = 80f; val csTop = 80f
+   735→        val totalW = width + 2 * wallThickness
+   736→        val totalH = height + baseThickness
+   737→        val scale = min(420f / totalW.toFloat(), 350f / totalH.toFloat()) * 0.7f
+   738→
+   739→        val drawW = totalW.toFloat() * scale
+   740→        val drawH = totalH.toFloat() * scale
+   741→        val wtPx = wallThickness.toFloat() * scale
+   742→        val btPx = baseThickness.toFloat() * scale
+   743→        val hPx = height.toFloat() * scale
+   744→
+   745→        val baseBottom = csTop + drawH
+   746→        val baseTop = baseBottom - btPx
+   747→        val wallTop = baseTop - hPx
+   748→        val leftWallRight = csLeft + wtPx
+   749→        val rightWallLeft = csLeft + drawW - wtPx
+   750→
+   751→        // Soil outside/below
+   752→        canvas.drawRect(csLeft - 40f, wallTop - 10f, csLeft, baseBottom, fillPaint(SOIL_BROWN))
+   753→        canvas.drawRect(rightWallLeft, wallTop - 10f, rightWallLeft + 40f, baseBottom, fillPaint(SOIL_BROWN))
+   754→        if (foundationDepth > 0) {
+   755→            val fdPx = foundationDepth.toFloat() * scale
+   756→            canvas.drawRect(csLeft - 40f, baseBottom, csLeft + drawW + 40f, baseBottom + fdPx, fillPaint(SOIL_BROWN))
+   757→        }
+   758→
+   759→        // Base slab concrete
+   760→        canvas.drawRect(csLeft, baseTop, csLeft + drawW, baseBottom, fillPaint(CONCRETE))
+   761→        canvas.drawRect(csLeft, baseTop, csLeft + drawW, baseBottom, outlineP)
+   762→        canvas.drawHatch(csLeft, baseTop, drawW, btPx, 10f)
+   763→
+   764→        // Left wall concrete
+   765→        canvas.drawRect(csLeft, wallTop, leftWallRight, baseTop, fillPaint(CONCRETE))
+   766→        canvas.drawRect(csLeft, wallTop, leftWallRight, baseTop, outlineP)
+   767→        canvas.drawHatch(csLeft, wallTop, wtPx, hPx, 10f)
+   768→
+   769→        // Right wall concrete
+   770→        canvas.drawRect(rightWallLeft, wallTop, csLeft + drawW, baseTop, fillPaint(CONCRETE))
+   771→        canvas.drawRect(rightWallLeft, wallTop, csLeft + drawW, baseTop, outlineP)
+   772→        canvas.drawHatch(rightWallLeft, wallTop, wtPx, hPx, 10f)
+   773→
+   774→        // Water level inside
+   775→        if (waterLevel > 0) {
+   776→            val wlPx = (waterLevel / height).coerceIn(0.0, 1.0).toFloat() * hPx
+   777→            val waterTop = baseTop - wlPx
+   778→            canvas.drawRect(leftWallRight, waterTop, rightWallLeft, baseTop, fillPaint(WATER_BLUE))
+   779→        }
+   780→
+   781→        // Vertical rebar circles on walls (inner and outer faces)
+   782→        val vRebarR = maxOf(verticalRebarDia.toFloat() * 0.4f, 3f)
+   783→        val coverPx = 25f
+   784→        var vy = wallTop + coverPx + vRebarR
+   785→        while (vy < baseTop - coverPx) {
+   786→            // Left wall - inner and outer face
+   787→            canvas.drawRebar(csLeft + coverPx + vRebarR, vy, vRebarR, REBAR_BLUE)
+   788→            canvas.drawRebar(leftWallRight - coverPx - vRebarR, vy, vRebarR, REBAR_BLUE)
+   789→            // Right wall - inner and outer face
+   790→            canvas.drawRebar(rightWallLeft + coverPx + vRebarR, vy, vRebarR, REBAR_BLUE)
+   791→            canvas.drawRebar(csLeft + drawW - coverPx - vRebarR, vy, vRebarR, REBAR_BLUE)
+   792→            vy += maxOf(verticalRebarSpacing.toFloat() * scale / 3f, 20f)
+   793→        }
+   794→
+   795→        // Horizontal rebar lines across walls
+   796→        val hRebarP = createPaint(TOP_REBAR, 1.5f)
+   797→        var hy = wallTop + maxOf(horizontalRebarSpacing.toFloat() * scale / 3f, 20f)
+   798→        while (hy < baseTop - 10f) {
+   799→            canvas.drawLine(csLeft + coverPx, hy, leftWallRight - coverPx, hy, hRebarP)
+   800→            canvas.drawLine(rightWallLeft + coverPx, hy, csLeft + drawW - coverPx, hy, hRebarP)
+   801→            hy += maxOf(horizontalRebarSpacing.toFloat() * scale / 3f, 20f)
+   802→        }
+   803→
+   804→        // Horizontal rebar circles in base slab
+   805→        var bx = csLeft + coverPx
+   806→        while (bx < csLeft + drawW - coverPx) {
+   807→            canvas.drawRebar(bx, baseTop + btPx / 2f, vRebarR, TOP_REBAR)
+   808→            bx += maxOf(horizontalRebarSpacing.toFloat() * scale / 3f, 20f)
+   809→        }
+   810→
+   811→        // Cross-section dimensions
+   812→        canvas.drawHDim(csLeft, csLeft + drawW, baseBottom + 15f, "${totalW.toInt()} mm")
+   813→        canvas.drawVDim(wallTop, baseBottom, csLeft - 30f, "${totalH.toInt()} mm")
+   814→        canvas.drawHDim(csLeft, leftWallRight, wallTop - 15f, "${wallThickness.toInt()}", 20f)
+   815→        canvas.drawVDim(baseTop, baseBottom, csLeft + drawW + 15f, "${baseThickness.toInt()} mm", 20f)
+   816→
+   817→        canvas.drawTextCentered("TANK CROSS-SECTION", csLeft + drawW / 2f, csTop - 25f, titleP)
+   818→
+   819→        // === RIGHT SIDE: Plan View ===
+   820→        val planLeft = W * 0.52f; val planTop = 80f
+   821→        val planScale = min(400f / length.toFloat(), 280f / width.toFloat()) * 0.7f
+   822→        val pW = length.toFloat() * planScale
+   823→        val pH = width.toFloat() * planScale
+   824→        val pwt = wallThickness.toFloat() * planScale
+   825→
+   826→        // Outer wall outline
+   827→        canvas.drawRect(planLeft, planTop, planLeft + pW, planTop + pH, fillPaint(CONCRETE))
+   828→        canvas.drawRect(planLeft, planTop, planLeft + pW, planTop + pH, outlineP)
+   829→        canvas.drawHatch(planLeft, planTop, pW, pH, 15f)
+   830→
+   831→        // Inner opening (water area)
+   832→        canvas.drawRect(planLeft + pwt, planTop + pwt, planLeft + pW - pwt, planTop + pH - pwt, fillPaint(Color.parseColor("#11224466")))
+   833→
+   834→        // Reinforcement pattern along X (vertical blue lines)
+   835→        val rebarP = createPaint(REBAR_BLUE, 1.5f)
+   836→        var rx = planLeft + pwt + 15f
+   837→        while (rx < planLeft + pW - pwt - 5f) {
+   838→            canvas.drawLine(rx, planTop + 5f, rx, planTop + pH - 5f, rebarP)
+   839→            rx += maxOf(verticalRebarSpacing.toFloat() * planScale / 4f, 15f)
+   840→        }
+   841→
+   842→        // Reinforcement pattern along Y (horizontal light blue lines)
+   843→        val rebarP2 = createPaint(TOP_REBAR, 1.2f)
+   844→        var ry = planTop + pwt + 15f
+   845→        while (ry < planTop + pH - pwt - 5f) {
+   846→            canvas.drawLine(planLeft + 5f, ry, planLeft + pW - 5f, ry, rebarP2)
+   847→            ry += maxOf(horizontalRebarSpacing.toFloat() * planScale / 4f, 15f)
+   848→        }
+   849→
+   850→        canvas.drawHDim(planLeft, planLeft + pW, planTop + pH + 15f, "${length.toInt()} mm")
+   851→        canvas.drawVDim(planTop, planTop + pH, planLeft + pW + 15f, "${width.toInt()} mm")
+   852→
+   853→        canvas.drawTextCentered("PLAN VIEW", planLeft + pW / 2f, planTop - 25f, titleP)
+   854→
+   855→        // === Rebar Schedule Table ===
+   856→        drawRebarTable(canvas,
+   857→            x = 80f, y = H * 0.58f,
+   858→            data = listOf(
+   859→                listOf("Mark", "Dia", "Direction", "Spacing"),
+   860→                listOf("V1", "${verticalRebarDia.toInt()}mm", "Vertical", "${verticalRebarSpacing.toInt()}mm c/c"),
+   861→                listOf("H1", "${horizontalRebarDia.toInt()}mm", "Horizontal", "${horizontalRebarSpacing.toInt()}mm c/c")
+   862→            )
+   863→        )
+   864→
+   865→        // Title block
+   866→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Tank Detail")
+   867→
+   868→        return bitmap
+   869→    }
+   870→
+   871→    // ========== GENERATE RETAINING WALL DRAWING ==========
+   872→    fun generateRetainingWallDrawing(
+   873→        wallHeight: Double,
+   874→        wallTopThickness: Double, wallBottomThickness: Double,
+   875→        baseWidth: Double, baseThickness: Double,
+   876→        toeLength: Double, heelLength: Double,
+   877→        mainRebarDia: Double, mainRebarSpacing: Double,
+   878→        distRebarDia: Double, distRebarSpacing: Double,
+   879→        baseRebarDia: Double, baseRebarSpacing: Double,
+   880→        cover: Double = 50.0,
+   881→        backfillAngle: Double = 0.3,
+   882→        hasKey: Boolean = false, keyDepth: Double = 150.0
+   883→    ): Bitmap {
+   884→        val W = 1200; val H = 800
+   885→        val (bitmap, canvas) = createCanvas(W, H)
+   886→        val outlineP = createPaint(Color.WHITE, 1.5f)
+   887→        val titleP = textPaint(Color.WHITE, 22f, true)
+   888→
+   889→        val marginL = 100f; val marginT = 70f
+   890→        val totalH = wallHeight + baseThickness
+   891→        val scale = min(500f / baseWidth.toFloat(), 500f / totalH.toFloat()) * 0.65f
+   892→
+   893→        val bwPx = baseWidth.toFloat() * scale
+   894→        val bhPx = baseThickness.toFloat() * scale
+   895→        val whPx = wallHeight.toFloat() * scale
+   896→        val wttPx = wallTopThickness.toFloat() * scale
+   897→        val wbtPx = wallBottomThickness.toFloat() * scale
+   898→        val toePx = toeLength.toFloat() * scale
+   899→        val heelPx = heelLength.toFloat() * scale
+   900→
+   901→        // Base slab position
+   902→        val baseLeft = marginL
+   903→        val baseTop = marginT + whPx
+   904→        val baseRight = baseLeft + bwPx
+   905→        val baseBottom = baseTop + bhPx
+   906→
+   907→        // Wall position (stem sits on base; back face at toe-heel boundary)
+   908→        val wallBottomRight = baseLeft + toePx
+   909→        val wallBottomLeft = wallBottomRight - wbtPx
+   910→        val wallTopY = marginT
+   911→
+   912→        // Stem top width centered on bottom
+   913→        val wallTopLeft = wallBottomLeft + (wbtPx - wttPx) / 2f
+   914→        val wallTopRight = wallTopLeft + wttPx
+   915→
+   916→        // Ground line
+   917→        val groundY = baseTop
+   918→        val groundRight = baseRight + 80f
+   919→
+   920→        // Soil/backfill (right side, behind wall)
+   921→        canvas.drawRect(wallBottomRight, wallTopY - 10f, groundRight, groundY, fillPaint(SOIL_BROWN))
+   922→        canvas.drawHatch(wallBottomRight, maxOf(wallTopY, groundY - whPx - 30f), groundRight - wallBottomRight, groundY - maxOf(wallTopY, groundY - whPx - 30f), 12f)
+   923→
+   924→        // Soil pressure triangle (active earth pressure)
+   925→        val pressureP = fillPaint(Color.argb(80, 231, 76, 60))
+   926→        canvas.drawPath(Path().apply {
+   927→            moveTo(wallBottomRight, groundY)
+   928→            lineTo(wallBottomRight, wallTopY)
+   929→            lineTo(wallBottomRight + (groundY - wallTopY) * tan(backfillAngle.toFloat()), groundY)
+   930→            close()
+   931→        }, pressureP)
+   932→
+   933→        // Ground line
+   934→        canvas.drawLine(baseLeft - 30f, groundY, groundRight, groundY, createPaint(SUPPORT, 2f))
+   935→
+   936→        // Soil below base
+   937→        canvas.drawRect(baseLeft - 30f, baseBottom, baseRight + 30f, baseBottom + 40f, fillPaint(SOIL_BROWN))
+   938→
+   939→        // Base slab
+   940→        canvas.drawRect(baseLeft, baseTop, baseRight, baseBottom, fillPaint(CONCRETE))
+   941→        canvas.drawRect(baseLeft, baseTop, baseRight, baseBottom, outlineP)
+   942→        canvas.drawHatch(baseLeft, baseTop, bwPx, bhPx, 10f)
+   943→
+   944→        // Shear key
+   945→        if (hasKey) {
+   946→            val keyW = 30f
+   947→            val keyPx = min(keyDepth.toFloat() * scale * 0.5f, 40f)
+   948→            val keyX = wallBottomRight - keyW / 2f
+   949→            canvas.drawRect(keyX, baseBottom, keyX + keyW, baseBottom + keyPx, fillPaint(CONCRETE))
+   950→            canvas.drawRect(keyX, baseBottom, keyX + keyW, baseBottom + keyPx, outlineP)
+   951→        }
+   952→
+   953→        // Trapezoidal stem
+   954→        canvas.drawPath(Path().apply {
+   955→            moveTo(wallBottomLeft, baseTop)
+   956→            lineTo(wallBottomRight, baseTop)
+   957→            lineTo(wallTopRight, wallTopY)
+   958→            lineTo(wallTopLeft, wallTopY)
+   959→            close()
+   960→        }, fillPaint(CONCRETE))
+   961→        canvas.drawPath(Path().apply {
+   962→            moveTo(wallBottomLeft, baseTop)
+   963→            lineTo(wallBottomRight, baseTop)
+   964→            lineTo(wallTopRight, wallTopY)
+   965→            lineTo(wallTopLeft, wallTopY)
+   966→            close()
+   967→        }, outlineP)
+   968→        canvas.drawHatch(wallTopLeft, wallTopY, wttPx, whPx, 10f)
+   969→
+   970→        // Main rebar on tension side (inside face = right side of stem)
+   971→        val mRebarR = maxOf(mainRebarDia.toFloat() * 0.4f, 3f)
+   972→        val coverPx = cover.toFloat() * scale * 0.3f
+   973→        var my = wallTopY + coverPx + mRebarR
+   974→        while (my < baseTop - coverPx) {
+   975→            val t = (my - wallTopY) / whPx
+   976→            val faceX = wallTopRight + t * (wallBottomRight - wallTopRight) - coverPx - mRebarR
+   977→            canvas.drawRebar(faceX, my, mRebarR, REBAR_BLUE)
+   978→            my += maxOf(mainRebarSpacing.toFloat() * scale / 3f, 18f)
+   979→        }
+   980→
+   981→        // Distribution rebar (outside face = left side of stem)
+   982→        val dRebarR = maxOf(distRebarDia.toFloat() * 0.35f, 2.5f)
+   983→        my = wallTopY + coverPx + dRebarR
+   984→        while (my < baseTop - coverPx) {
+   985→            val t = (my - wallTopY) / whPx
+   986→            val faceX = wallTopLeft + t * (wallBottomLeft - wallTopLeft) + coverPx + dRebarR
+   987→            canvas.drawRebar(faceX, my, dRebarR, SECONDARY_RED)
+   988→            my += maxOf(distRebarSpacing.toFloat() * scale / 3f, 18f)
+   989→        }
+   990→
+   991→        // Base reinforcement (bottom bars)
+   992→        val bRebarR = maxOf(baseRebarDia.toFloat() * 0.35f, 2.5f)
+   993→        var bx = baseLeft + coverPx
+   994→        while (bx < baseRight - coverPx) {
+   995→            canvas.drawRebar(bx, baseBottom - coverPx - bRebarR, bRebarR, REBAR_BLUE)
+   996→            bx += maxOf(baseRebarSpacing.toFloat() * scale / 3f, 18f)
+   997→        }
+   998→
+   999→        // Dimensions
+  1000→        canvas.drawVDim(wallTopY, baseBottom, wallTopLeft - 35f, "${totalH.toInt()} mm")
+  1001→        canvas.drawHDim(baseLeft, baseRight, baseBottom + 20f, "${baseWidth.toInt()} mm")
+  1002→        canvas.drawHDim(baseLeft, baseLeft + toePx, baseBottom + 50f, "Toe: ${toeLength.toInt()}", 20f)
+  1003→        canvas.drawHDim(baseRight - heelPx, baseRight, baseBottom + 50f, "Heel: ${heelLength.toInt()}", 20f)
+  1004→        canvas.drawVDim(wallTopY, wallTopY + whPx, wallTopRight + 25f, "t=${wallTopThickness.toInt()}", 15f)
+  1005→
+  1006→        canvas.drawTextCentered("RETAINING WALL SECTION", (baseLeft + baseRight) / 2f, marginT - 25f, titleP)
+  1007→
+  1008→        // Rebar table
+  1009→        drawRebarTable(canvas,
+  1010→            x = 80f, y = H * 0.70f,
+  1011→            data = listOf(
+  1012→                listOf("Mark", "Dia", "Spacing", "Location"),
+  1013→                listOf("M1", "${mainRebarDia.toInt()}mm", "${mainRebarSpacing.toInt()}mm c/c", "Stem (inside face)"),
+  1014→                listOf("D1", "${distRebarDia.toInt()}mm", "${distRebarSpacing.toInt()}mm c/c", "Stem (outside face)"),
+  1015→                listOf("B1", "${baseRebarDia.toInt()}mm", "${baseRebarSpacing.toInt()}mm c/c", "Base (bottom)")
+  1016→            )
+  1017→        )
+  1018→
+  1019→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Retaining Wall Detail")
+  1020→
+  1021→        return bitmap
+  1022→    }
+  1023→
+  1024→    // ========== GENERATE STEEL DRAWING ==========
+  1025→    fun generateSteelDrawing(
+  1026→        sectionName: String,
+  1027→        sectionHeight: Double, flangeWidth: Double,
+  1028→        webThickness: Double, flangeThickness: Double,
+  1029→        memberLength: Double,
+  1030→        isSafe: Boolean,
+  1031→        utilizationRatio: Double = 0.0
+  1032→    ): Bitmap {
+  1033→        val W = 1200; val H = 700
+  1034→        val (bitmap, canvas) = createCanvas(W, H)
+  1035→        val outlineP = createPaint(Color.WHITE, 1.5f)
+  1036→        val titleP = textPaint(Color.WHITE, 22f, true)
+  1037→
+  1038→        // === LEFT SIDE: Elevation View of I-beam ===
+  1039→        val elevLeft = 80f; val elevTop = 80f
+  1040→        val elevScale = min(450f / memberLength.toFloat(), 350f / sectionHeight.toFloat()) * 0.7f
+  1041→        val mL = memberLength.toFloat() * elevScale
+  1042→        val mH = sectionHeight.toFloat() * elevScale
+  1043→        val mFW = flangeWidth.toFloat() * elevScale
+  1044→        val mFT = flangeThickness.toFloat() * elevScale * 2f
+  1045→        val mWT = webThickness.toFloat() * elevScale * 2f
+  1046→
+  1047→        val webLeft = elevLeft + (mFW - mWT) / 2f
+  1048→        val webRight = webLeft + mWT
+  1049→
+  1050→        // Top flange
+  1051→        canvas.drawRect(elevLeft, elevTop, elevLeft + mL, elevTop + mFT, fillPaint(REBAR_BLUE))
+  1052→        canvas.drawRect(elevLeft, elevTop, elevLeft + mL, elevTop + mFT, outlineP)
+  1053→
+  1054→        // Bottom flange
+  1055→        canvas.drawRect(elevLeft, elevTop + mH - mFT, elevLeft + mL, elevTop + mH, fillPaint(REBAR_BLUE))
+  1056→        canvas.drawRect(elevLeft, elevTop + mH - mFT, elevLeft + mL, elevTop + mH, outlineP)
+  1057→
+  1058→        // Web
+  1059→        canvas.drawRect(webLeft, elevTop + mFT, webRight, elevTop + mH - mFT, fillPaint(REBAR_BLUE))
+  1060→        canvas.drawRect(webLeft, elevTop + mFT, webRight, elevTop + mH - mFT, outlineP)
+  1061→
+  1062→        // Elevation dimensions
+  1063→        canvas.drawHDim(elevLeft, elevLeft + mL, elevTop + mH + 20f, "${memberLength.toInt()} mm")
+  1064→        canvas.drawVDim(elevTop, elevTop + mH, elevLeft + mL + 15f, "${sectionHeight.toInt()} mm")
+  1065→        canvas.drawHDim(elevLeft, elevLeft + mL, elevTop - 20f, "bf = ${flangeWidth.toInt()} mm", 20f, outlineP)
+  1066→
+  1067→        // Status indicator
+  1068→        if (isSafe) {
+  1069→            canvas.drawText("\u2713", elevLeft + mL + 50f, elevTop + mH / 2f + 10f, textPaint(Color.parseColor("#2ECC71"), 36f, true))
+  1070→            canvas.drawText("SAFE", elevLeft + mL + 50f, elevTop + mH / 2f + 35f, textPaint(Color.parseColor("#2ECC71"), 18f, true))
+  1071→        } else {
+  1072→            canvas.drawText("\u2717", elevLeft + mL + 50f, elevTop + mH / 2f + 10f, textPaint(SECONDARY_RED, 36f, true))
+  1073→            canvas.drawText("UNSAFE", elevLeft + mL + 50f, elevTop + mH / 2f + 35f, textPaint(SECONDARY_RED, 18f, true))
+  1074→        }
+  1075→
+  1076→        canvas.drawTextCentered("STEEL MEMBER - $sectionName", elevLeft + mL / 2f, elevTop - 40f, titleP)
+  1077→
+  1078→        // === RIGHT SIDE: Cross-Section View ===
+  1079→        val secCx = W * 0.72f; val secCy = H * 0.35f
+  1080→        val secScale = min(250f / flangeWidth.toFloat(), 300f / sectionHeight.toFloat()) * 0.8f
+  1081→        val sH = sectionHeight.toFloat() * secScale
+  1082→        val sFW = flangeWidth.toFloat() * secScale
+  1083→        val sFT = flangeThickness.toFloat() * secScale * 2f
+  1084→        val sWT = webThickness.toFloat() * secScale * 2f
+  1085→
+  1086→        val secLeft = secCx - sFW / 2f
+  1087→        val secTop = secCy - sH / 2f
+  1088→        val secWebLeft = secCx - sWT / 2f
+  1089→        val secWebRight = secCx + sWT / 2f
+  1090→
+  1091→        // Top flange
+  1092→        canvas.drawRect(secLeft, secTop, secLeft + sFW, secTop + sFT, fillPaint(REBAR_BLUE))
+  1093→        canvas.drawRect(secLeft, secTop, secLeft + sFW, secTop + sFT, outlineP)
+  1094→
+  1095→        // Bottom flange
+  1096→        canvas.drawRect(secLeft, secTop + sH - sFT, secLeft + sFW, secTop + sH, fillPaint(REBAR_BLUE))
+  1097→        canvas.drawRect(secLeft, secTop + sH - sFT, secLeft + sFW, secTop + sH, outlineP)
+  1098→
+  1099→        // Web
+  1100→        canvas.drawRect(secWebLeft, secTop + sFT, secWebRight, secTop + sH - sFT, fillPaint(REBAR_BLUE))
+  1101→        canvas.drawRect(secWebLeft, secTop + sFT, secWebRight, secTop + sH - sFT, outlineP)
+  1102→
+  1103→        // Center lines (dashed)
+  1104→        val centerP = createPaint(DIM_LINE, 0.8f).apply {
+  1105→            pathEffect = DashPathEffect(floatArrayOf(8f, 4f), 0f)
+  1106→        }
+  1107→        canvas.drawLine(secCx, secTop - 20f, secCx, secTop + sH + 20f, centerP)
+  1108→        canvas.drawLine(secLeft - 20f, secCy, secLeft + sFW + 20f, secCy, centerP)
+  1109→
+  1110→        // Cross-section dimensions
+  1111→        canvas.drawHDim(secLeft, secLeft + sFW, secTop + sH + 15f, "bf=${flangeWidth.toInt()}")
+  1112→        canvas.drawVDim(secTop, secTop + sH, secLeft + sFW + 15f, "h=${sectionHeight.toInt()}")
+  1113→        canvas.drawText("tw=${webThickness.toInt()}", secWebRight + 20f, secCy + 5f, textPaint(DIM_TEXT, 16f))
+  1114→        canvas.drawText("tf=${flangeThickness.toInt()}", secLeft + sFW + 20f, secTop + sFT / 2f + 5f, textPaint(DIM_TEXT, 16f))
+  1115→
+  1116→        canvas.drawTextCentered("SECTION A-A", secCx, secTop - 30f, textPaint(DIM_TEXT, 18f, true))
+  1117→
+  1118→        // === Properties Table ===
+  1119→        drawRebarTable(canvas,
+  1120→            x = 80f, y = H * 0.55f,
+  1121→            data = listOf(
+  1122→                listOf("Property", "Value"),
+  1123→                listOf("Section", sectionName),
+  1124→                listOf("Height", "${sectionHeight.toInt()} mm"),
+  1125→                listOf("Flange Width", "${flangeWidth.toInt()} mm"),
+  1126→                listOf("Web Thickness", "${webThickness.toInt()} mm"),
+  1127→                listOf("Flange Thickness", "${flangeThickness.toInt()} mm"),
+  1128→                listOf("Length", "${memberLength.toInt()} mm"),
+  1129→                listOf("Utilization", "${"%.1f".format(utilizationRatio)}%"),
+  1130→                listOf("Status", if (isSafe) "SAFE" else "UNSAFE")
+  1131→            )
+  1132→        )
+  1133→
+  1134→        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Steel Detail")
+  1135→
+  1136→        return bitmap
+  1137→    }
+  1138→}

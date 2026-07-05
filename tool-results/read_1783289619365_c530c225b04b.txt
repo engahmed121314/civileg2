@@ -1,0 +1,637 @@
+     1→     1→package com.civileg.app.ui.compose.screens
+     2→     2→
+     3→     3→import androidx.compose.foundation.Canvas
+     4→     4→import androidx.compose.foundation.background
+     5→     5→import androidx.compose.foundation.layout.*
+     6→     6→import androidx.compose.foundation.lazy.LazyColumn
+     7→     7→import androidx.compose.foundation.shape.RoundedCornerShape
+     8→     8→import androidx.compose.foundation.text.KeyboardOptions
+     9→     9→import androidx.compose.material.icons.Icons
+    10→    10→import androidx.compose.material.icons.automirrored.filled.ArrowBack
+    11→    11→import androidx.compose.material.icons.filled.*
+    12→    12→import androidx.compose.material3.*
+    13→    13→import androidx.compose.runtime.collectAsState
+    14→    14→import androidx.compose.runtime.livedata.observeAsState
+    15→    15→import androidx.compose.ui.Alignment
+    16→    16→import com.civileg.app.viewmodel.ProjectViewModel
+    17→    17→import androidx.compose.material3.*
+    18→    18→import androidx.compose.runtime.*
+    19→    19→import androidx.compose.ui.platform.LocalContext
+    20→    20→import com.civileg.app.db.Project
+    21→    21→import androidx.compose.ui.Modifier
+    22→    22→import androidx.compose.ui.geometry.Offset
+    23→    23→import androidx.compose.ui.geometry.Size
+    24→    24→import androidx.compose.ui.graphics.Color
+    25→    25→import androidx.compose.ui.graphics.drawscope.Stroke
+    26→    26→import androidx.compose.ui.graphics.nativeCanvas
+    27→    27→import androidx.compose.ui.res.painterResource
+    28→    28→import androidx.compose.ui.text.font.FontFamily
+    29→    29→import androidx.compose.ui.text.font.FontWeight
+    30→    30→import androidx.compose.ui.text.input.KeyboardType
+    31→    31→import androidx.compose.ui.text.style.TextOverflow
+    32→    32→import androidx.compose.ui.graphics.ColorFilter
+    33→    33→import androidx.compose.foundation.clickable
+    34→    34→import androidx.compose.animation.core.animateFloatAsState
+    35→    35→import androidx.compose.animation.core.tween
+    36→    36→import androidx.compose.ui.unit.dp
+    37→    37→import androidx.compose.ui.unit.sp
+    38→    38→import androidx.hilt.navigation.compose.hiltViewModel
+    39→    39→import com.civileg.app.R
+    40→    40→import com.civileg.app.domain.entities.DesignCode
+    41→    41→import com.civileg.app.domain.entities.LoadCombination
+    42→    42→import com.civileg.app.utils.CalculatorEngine
+    43→    43→import com.civileg.app.viewmodel.ColumnViewModel
+    44→    44→import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
+    45→    45→import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
+    46→    46→import com.civileg.app.ui.compose.components.drawings.BarInfo
+    47→    47→import kotlin.math.max
+    48→    48→import kotlin.math.min
+    49→    49→
+    50→    50→@OptIn(ExperimentalMaterial3Api::class)
+    51→    51→@Composable
+    52→    52→fun ColumnScreen(
+    53→    53→    viewModel: ColumnViewModel = hiltViewModel(),
+    54→    54→    projectViewModel: ProjectViewModel = hiltViewModel(),
+    55→    55→    onNavigateBack: () -> Unit = {}
+    56→    56→) {
+    57→    57→    val context = LocalContext.current
+    58→    58→    val uiState by viewModel.uiState.collectAsState()
+    59→    59→    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    60→    60→
+    61→    61→    var showSaveDialog by remember { mutableStateOf(false) }
+    62→    62→    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    63→    63→    var designName by remember { mutableStateOf("عمود الدور الأرضي") }
+    64→    64→
+    65→    65→    Scaffold(
+    66→    66→        topBar = {
+    67→    67→            TopAppBar(
+    68→    68→                title = { Text("تصميم الأعمدة الخرسانية Pro", fontWeight = FontWeight.Bold) },
+    69→    69→                navigationIcon = {
+    70→    70→                    IconButton(onClick = onNavigateBack) {
+    71→    71→                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+    72→    72→                    }
+    73→    73→                },
+    74→    74→                actions = {
+    75→    75→                    if (uiState.result != null) {
+    76→    76→                        if (uiState.isExporting) {
+    77→    77→                            CircularProgressIndicator(
+    78→    78→                                modifier = Modifier.size(24.dp).padding(end = 8.dp),
+    79→    79→                                strokeWidth = 2.dp,
+    80→    80→                                color = MaterialTheme.colorScheme.primary
+    81→    81→                            )
+    82→    82→                        } else {
+    83→    83→                            IconButton(onClick = { viewModel.exportToPdf(context) {} }) {
+    84→    84→                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF", tint = MaterialTheme.colorScheme.primary)
+    85→    85→                            }
+    86→    86→                        }
+    87→    87→                        IconButton(onClick = { showSaveDialog = true }) {
+    88→    88→                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+    89→    89→                        }
+    90→    90→                    }
+    91→    91→                    IconButton(onClick = { viewModel.reset() }) {
+    92→    92→                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+    93→    93→                    }
+    94→    94→                }
+    95→    95→            )
+    96→    96→        }
+    97→    97→    ) { padding ->
+    98→    98→        LazyColumn(
+    99→    99→            modifier = Modifier
+   100→   100→                .fillMaxSize()
+   101→   101→                .padding(padding)
+   102→   102→                .background(MaterialTheme.colorScheme.background)
+   103→   103→                .padding(horizontal = 16.dp),
+   104→   104→            verticalArrangement = Arrangement.spacedBy(16.dp)
+   105→   105→        ) {
+   106→   106→            item {
+   107→   107→                Card(
+   108→   108→                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+   109→   109→                    elevation = CardDefaults.cardElevation(2.dp),
+   110→   110→                    shape = RoundedCornerShape(16.dp)
+   111→   111→                ) {
+   112→   112→                    Column(modifier = Modifier.padding(16.dp)) {
+   113→   113→                        DesignCodeSelector(
+   114→   114→                            selectedCode = uiState.designCode,
+   115→   115→                            onCodeSelected = { viewModel.updateDesignCode(it) }
+   116→   116→                        )
+   117→   117→                        Spacer(modifier = Modifier.height(12.dp))
+   118→   118→                        LoadCombinationSelector(
+   119→   119→                            selected = uiState.loadCombination,
+   120→   120→                            onSelected = { viewModel.updateLoadCombination(it) }
+   121→   121→                        )
+   122→   122→                        
+   123→   123→                        Text(
+   124→   124→                            text = if (uiState.loadCombination == LoadCombination.DEAD_ONLY) 
+   125→   125→                                "💡 Dead Load Only: يستخدم عادة في المنشآت المؤقتة أو تحت ظروف خاصة حيث لا يوجد أحمال حية مؤثرة."
+   126→   126→                                else "💡 Dead + Live: المزيج التصميمي الأكثر شيوعاً وأماناً، يشمل وزن المنشأ والأثاث والأشخاص.",
+   127→   127→                            style = MaterialTheme.typography.labelSmall,
+   128→   128→                            color = MaterialTheme.colorScheme.secondary,
+   129→   129→                            modifier = Modifier.padding(top = 8.dp)
+   130→   130→                        )
+   131→   131→                    }
+   132→   132→                }
+   133→   133→            }
+   134→   134→            
+   135→   135→            item { SectionHeader("📐 أبعاد المقطع والخصائص", R.drawable.ic_column) }
+   136→   136→            
+   137→   137→            item {
+   138→   138→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   139→   139→                    ColumnInputField(uiState.width, "العرض b (mm)", { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
+   140→   140→                    ColumnInputField(uiState.depth, "العمق t (mm)", { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
+   141→   141→                }
+   142→   142→            }
+   143→   143→
+   144→   144→            item {
+   145→   145→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   146→   146→                    ColumnInputField(uiState.fcu, "fcu (MPa)", { viewModel.updateInputs(fcu = it) }, Modifier.weight(1f))
+   147→   147→                    ColumnInputField(uiState.fy, "fy (MPa)", { viewModel.updateInputs(fy = it) }, Modifier.weight(1f))
+   148→   148→                }
+   149→   149→            }
+   150→   150→
+   151→   151→            item { SectionHeader("⚡ الأحمال المطبقة", R.drawable.ic_design) }
+   152→   152→            
+   153→   153→            item {
+   154→   154→                ColumnInputField(uiState.axialLoad, "الحمل المحوري Pu (kN)", { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
+   155→   155→            }
+   156→   156→
+   157→   157→            item {
+   158→   158→                Button(
+   159→   159→                    onClick = { viewModel.calculateManual() },
+   160→   160→                    modifier = Modifier.fillMaxWidth(),
+   161→   161→                    shape = RoundedCornerShape(12.dp),
+   162→   162→                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+   163→   163→                ) {
+   164→   164→                    Icon(Icons.Default.Calculate, contentDescription = null)
+   165→   165→                    Spacer(modifier = Modifier.width(8.dp))
+   166→   166→                    Text("حساب المقطع (Design Now)", fontWeight = FontWeight.Bold)
+   167→   167→                }
+   168→   168→            }
+   169→   169→
+   170→   170→            uiState.result?.let { result ->
+   171→   171→                item { SectionHeader("📊 نتائج التصميم ومؤشر التوفير", R.drawable.ic_calculator) }
+   172→   172→                
+   173→   173→                item {
+   174→   174→                    val ecoColor = when {
+   175→   175→                        result.utilizationRatio > 1.0 -> Color.Red
+   176→   176→                        result.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+   177→   177→                        result.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+   178→   178→                        else -> Color(0xFF2196F3)
+   179→   179→                    }
+   180→   180→                    
+   181→   181→                    Card(
+   182→   182→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+   183→   183→                        shape = RoundedCornerShape(16.dp)
+   184→   184→                    ) {
+   185→   185→                        Column(modifier = Modifier.padding(16.dp)) {
+   186→   186→                            Row(
+   187→   187→                                modifier = Modifier.fillMaxWidth(),
+   188→   188→                                verticalAlignment = Alignment.CenterVertically,
+   189→   189→                                horizontalArrangement = Arrangement.SpaceBetween
+   190→   190→                            ) {
+   191→   191→                                Column(modifier = Modifier.weight(1f)) {
+   192→   192→                                    Row(verticalAlignment = Alignment.CenterVertically) {
+   193→   193→                                        Icon(
+   194→   194→                                            if (result.utilizationRatio <= 1.0) Icons.Default.Verified 
+   195→   195→                                            else Icons.Default.Dangerous, 
+   196→   196→                                            contentDescription = null, 
+   197→   197→                                            tint = ecoColor
+   198→   198→                                        )
+   199→   199→                                        Spacer(Modifier.width(8.dp))
+   200→   200→                                        Text(
+   201→   201→                                            if (result.utilizationRatio > 1.0) "القطاع غير آمن إنشائياً! ❌"
+   202→   202→                                            else if (result.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+   203→   203→                                            else if (result.utilizationRatio > 0.4) "قطاع مثالي واقتصادي ✅"
+   204→   204→                                            else "قطاع كبير جداً (غير اقتصادي) 🔵",
+   205→   205→                                            fontWeight = FontWeight.Bold,
+   206→   206→                                            color = ecoColor
+   207→   207→                                        )
+   208→   208→                                    }
+   209→   209→                                    Text(
+   210→   210→                                        "المستشار الإنشائي: نسبة الاستخدام",
+   211→   211→                                        style = MaterialTheme.typography.labelSmall,
+   212→   212→                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+   213→   213→                                    )
+   214→   214→                                }
+   215→   215→                                
+   216→   216→                                Box(contentAlignment = Alignment.Center) {
+   217→   217→                                    val animatedRatio by animateFloatAsState(
+   218→   218→                                        targetValue = result.utilizationRatio.toFloat(),
+   219→   219→                                        animationSpec = tween(1000), label = ""
+   220→   220→                                    )
+   221→   221→                                    CircularProgressIndicator(
+   222→   222→                                        progress = { animatedRatio },
+   223→   223→                                        modifier = Modifier.size(60.dp),
+   224→   224→                                        strokeWidth = 6.dp,
+   225→   225→                                        color = ecoColor,
+   226→   226→                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+   227→   227→                                    )
+   228→   228→                                    Text(
+   229→   229→                                        "${(result.utilizationRatio * 100).toInt()}%",
+   230→   230→                                        fontWeight = FontWeight.Bold,
+   231→   231→                                        fontSize = 12.sp
+   232→   232→                                    )
+   233→   233→                                }
+   234→   234→                            }
+   235→   235→                        }
+   236→   236→                    }
+   237→   237→                }
+   238→   238→
+   239→   239→                item { ColumnResultCard(result) }
+   240→   240→
+   241→   241→                item {
+   242→   242→                    Row(
+   243→   243→                        modifier = Modifier.fillMaxWidth(),
+   244→   244→                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+   245→   245→                    ) {
+   246→   246→                        Button(
+   247→   247→                            onClick = { viewModel.applyEconomicalDesign() },
+   248→   248→                            modifier = Modifier.weight(1f),
+   249→   249→                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+   250→   250→                            shape = RoundedCornerShape(8.dp)
+   251→   251→                        ) {
+   252→   252→                            Text("خيار موفر 💰", fontSize = 12.sp)
+   253→   253→                        }
+   254→   254→                        Button(
+   255→   255→                            onClick = { viewModel.applySafetyDesign() },
+   256→   256→                            modifier = Modifier.weight(1f),
+   257→   257→                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+   258→   258→                            shape = RoundedCornerShape(8.dp)
+   259→   259→                        ) {
+   260→   260→                            Text("الأكثر أماناً 🛡️", fontSize = 12.sp)
+   261→   261→                        }
+   262→   262→                    }
+   263→   263→                }
+   264→   264→
+   265→   265→                item {
+   266→   266→                    Card(
+   267→   267→                        modifier = Modifier.fillMaxWidth(),
+   268→   268→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+   269→   269→                        shape = RoundedCornerShape(16.dp)
+   270→   270→                    ) {
+   271→   271→                        Column(modifier = Modifier.padding(16.dp)) {
+   272→   272→                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+   273→   273→                                Text("تخصيص التسليح (لتحقيق التوفير)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+   274→   274→                                Switch(
+   275→   275→                                    checked = uiState.autoOptimize,
+   276→   276→                                    onCheckedChange = { viewModel.updateAutoOptimize(it) },
+   277→   277→                                    thumbContent = { if (uiState.autoOptimize) Icon(Icons.Default.Check, null, modifier = Modifier.size(12.dp)) }
+   278→   278→                                )
+   279→   279→                            }
+   280→   280→                            Spacer(Modifier.height(12.dp))
+   281→   281→                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   282→   282→                                ColumnInputField(
+   283→   283→                                    value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (result.reinforcement.numBars.toString()) else uiState.manualNumBars,
+   284→   284→                                    label = "عدد الأسياخ",
+   285→   285→                                    onValueChange = { viewModel.updateInputs(manualNumBars = it) },
+   286→   286→                                    modifier = Modifier.weight(1f),
+   287→   287→                                    enabled = true
+   288→   288→                                )
+   289→   289→                                ColumnInputField(
+   290→   290→                                    value = uiState.preferredDiameter,
+   291→   291→                                    label = "القطر Ø (mm)",
+   292→   292→                                    onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
+   293→   293→                                    modifier = Modifier.weight(1f),
+   294→   294→                                    enabled = true
+   295→   295→                                )
+   296→   296→                            }
+   297→   297→                            if (!uiState.autoOptimize) {
+   298→   298→                                Spacer(Modifier.height(8.dp))
+   299→   299→                                Button(
+   300→   300→                                    onClick = { viewModel.calculateManual() },
+   301→   301→                                    modifier = Modifier.fillMaxWidth(),
+   302→   302→                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   303→   303→                                ) {
+   304→   304→                                    Text("تحديث التسليح المخصص")
+   305→   305→                                }
+   306→   306→                            }
+   307→   307→                        }
+   308→   308→                    }
+   309→   309→                }
+   310→   310→
+   311→   311→                item {
+   312→   312→                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   313→   313→                        Button(
+   314→   314→                            onClick = { viewModel.exportToPdf(context) { /* Handle completion */ } },
+   315→   315→                            modifier = Modifier.weight(1f),
+   316→   316→                            shape = RoundedCornerShape(12.dp),
+   317→   317→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+   318→   318→                        ) {
+   319→   319→                            Icon(painterResource(id = R.drawable.ic_pdf), contentDescription = null)
+   320→   320→                            Spacer(modifier = Modifier.width(8.dp))
+   321→   321→                            Text("تقرير PDF")
+   322→   322→                        }
+   323→   323→
+   324→   324→                        Button(
+   325→   325→                            onClick = { showSaveDialog = true },
+   326→   326→                            modifier = Modifier.weight(1f),
+   327→   327→                            shape = RoundedCornerShape(12.dp),
+   328→   328→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   329→   329→                        ) {
+   330→   330→                            Icon(Icons.Default.Save, contentDescription = null)
+   331→   331→                            Spacer(modifier = Modifier.width(8.dp))
+   332→   332→                            Text("حفظ")
+   333→   333→                        }
+   334→   334→                    }
+   335→   335→                }
+   336→   336→
+   337→   337→                item {
+   338→   338→                    Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   339→   339→                    EngineeringFormulasCard()
+   340→   340→                }
+   341→   341→
+   342→   342→                item {
+   343→   343→                    InteractiveDrawingScreen(
+   344→   344→                        title = "📐 الرسم الهندسي التفصيلي",
+   345→   345→                        subtitle = "Column Reinforcement Detail",
+   346→   346→                        viewModes = listOf("الكل", "المنظور", "المقطع العرضي", "جدول التسليح"),
+   347→   347→                        drawingContent = {
+   348→   348→                            ProfessionalColumnDrawing(
+   349→   349→                                columnWidth = result.width.toDouble(),
+   350→   350→                                columnDepth = result.depth.toDouble(),
+   351→   351→                                columnHeight = (result.clearHeight ?: 3000.0),
+   352→   352→                                longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
+   353→   353→                                tieDia = result.stirrups.diameter.toDouble(),
+   354→   354→                                tieSpacing = result.stirrups.spacing.toDouble(),
+   355→   355→                                cover = 40.0,
+   356→   356→                                isSpiral = false,
+   357→   357→                                sectionType = if (result.isCircular) "Circular" else "Rectangular",
+   358→   358→                                modifier = Modifier.fillMaxWidth()
+   359→   359→                            )
+   360→   360→                        }
+   361→   361→                    )
+   362→   362→                }
+   363→   363→            }
+   364→   364→        }
+   365→   365→    }
+   366→   366→
+   367→   367→    if (showSaveDialog) {
+   368→   368→        AlertDialog(
+   369→   369→            onDismissRequest = { showSaveDialog = false },
+   370→   370→            title = { Text("حفظ التصميم في مشروع") },
+   371→   371→            text = {
+   372→   372→                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+   373→   373→                    OutlinedTextField(
+   374→   374→                        value = designName,
+   375→   375→                        onValueChange = { designName = it },
+   376→   376→                        label = { Text("اسم العمود (مثلاً: C1)") },
+   377→   377→                        modifier = Modifier.fillMaxWidth()
+   378→   378→                    )
+   379→   379→                    
+   380→   380→                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+   381→   381→                    if (projects.isEmpty()) {
+   382→   382→                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+   383→   383→                    } else {
+   384→   384→                        projects.forEach { project ->
+   385→   385→                            Row(
+   386→   386→                                modifier = Modifier
+   387→   387→                                    .fillMaxWidth()
+   388→   388→                                    .padding(vertical = 4.dp),
+   389→   389→                                verticalAlignment = Alignment.CenterVertically
+   390→   390→                            ) {
+   391→   391→                                RadioButton(
+   392→   392→                                    selected = selectedProjectId == project.id,
+   393→   393→                                    onClick = { selectedProjectId = project.id }
+   394→   394→                                )
+   395→   395→                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+   396→   396→                            }
+   397→   397→                        }
+   398→   398→                    }
+   399→   399→                }
+   400→   400→            },
+   401→   401→            confirmButton = {
+   402→   402→                Button(onClick = {
+   403→   403→                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+   404→   404→                    uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
+   405→   405→                    showSaveDialog = false
+   406→   406→                }) {
+   407→   407→                    Text("حفظ")
+   408→   408→                }
+   409→   409→            },
+   410→   410→            dismissButton = {
+   411→   411→                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+   412→   412→            }
+   413→   413→        )
+   414→   414→    }
+   415→   415→}
+   416→   416→
+   417→   417→@Composable
+   418→   418→private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
+   419→   419→    Card(
+   420→   420→        colors = CardDefaults.cardColors(
+   421→   421→            containerColor = if (result.isSafe) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+   422→   422→        ),
+   423→   423→        shape = RoundedCornerShape(16.dp),
+   424→   424→        modifier = Modifier.fillMaxWidth()
+   425→   425→    ) {
+   426→   426→        Column(modifier = Modifier.padding(16.dp)) {
+   427→   427→            Row(verticalAlignment = Alignment.CenterVertically) {
+   428→   428→                Icon(
+   429→   429→                    if (result.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+   430→   430→                    contentDescription = null,
+   431→   431→                    tint = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+   432→   432→                )
+   433→   433→                Spacer(modifier = Modifier.width(8.dp))
+   434→   434→                Text(
+   435→   435→                    if (result.isSafe) "المقطع آمن (SAFE)" else "المقطع غير آمن (UNSAFE)",
+   436→   436→                    fontWeight = FontWeight.Bold,
+   437→   437→                    color = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+   438→   438→                )
+   439→   439→            }
+   440→   440→            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.Gray.copy(alpha = 0.2f))
+   441→   441→            
+   442→   442→            ResultDataRow("التسليح الموفر", result.reinforcement.barString)
+   443→   443→            ResultDataRow("الكانات", result.stirrups.description)
+   444→   444→            ResultDataRow("نسبة التسليح (μ)", String.format("%.2f %%", result.reinforcementRatio))
+   445→   445→            
+   446→   446→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
+   447→   447→            
+   448→   448→            Text("الكميات والتقديرات:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+   449→   449→            ResultDataRow("حجم الخرسانة", String.format("%.3f m³", result.concreteVolume))
+   450→   450→            ResultDataRow("وزن الحديد", String.format("%.2f kg", result.steelWeight))
+   451→   451→            ResultDataRow("التكلفة التقديرية", String.format("%.2f", result.cost))
+   452→   452→
+   453→   453→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
+   454→   454→            
+   455→   455→            Text("التحقق من الكود (Safety Checks):", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+   456→   456→            result.safetyChecks.forEach { check ->
+   457→   457→                ResultCheckRow(check)
+   458→   458→            }
+   459→   459→        }
+   460→   460→    }
+   461→   461→}
+   462→   462→
+   463→   463→@Composable
+   464→   464→private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
+   465→   465→    Row(
+   466→   466→        modifier = Modifier
+   467→   467→            .fillMaxWidth()
+   468→   468→            .padding(vertical = 4.dp),
+   469→   469→        verticalAlignment = Alignment.CenterVertically
+   470→   470→    ) {
+   471→   471→        Text(
+   472→   472→            if (check.isSafe) "آمن ✅" else "غير آمن ❌",
+   473→   473→            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+   474→   474→            fontWeight = FontWeight.Bold,
+   475→   475→            fontSize = 14.sp
+   476→   476→        )
+   477→   477→        Spacer(modifier = Modifier.width(16.dp))
+   478→   478→        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+   479→   479→            Text(check.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+   480→   480→            Text(
+   481→   481→                "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
+   482→   482→                fontSize = 11.sp,
+   483→   483→                color = Color.Gray
+   484→   484→            )
+   485→   485→        }
+   486→   486→    }
+   487→   487→}
+   488→   488→
+   489→   489→@Composable
+   490→   490→private fun EngineeringFormulasCard() {
+   491→   491→    Card(
+   492→   492→        modifier = Modifier.fillMaxWidth(),
+   493→   493→        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+   494→   494→    ) {
+   495→   495→        Column(modifier = Modifier.padding(16.dp)) {
+   496→   496→            FormulaItem("Pu_limit = 0.35 * fcu * Ac + 0.67 * fy * As")
+   497→   497→            FormulaItem("Shear Check: q_u = Pu / (b * d) < q_cu")
+   498→   498→            FormulaItem("Punching Check: q_p = Pu / (perimeter * d) < q_p_limit")
+   499→   499→            FormulaItem("As_min = 0.008 * Ac")
+   500→   500→        }
+   501→   501→    }
+   502→   502→}
+   503→   503→
+   504→   504→@Composable
+   505→   505→private fun SectionHeader(title: String, iconRes: Int) {
+   506→   506→    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+   507→   507→        Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+   508→   508→        Spacer(modifier = Modifier.width(8.dp))
+   509→   509→        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+   510→   510→    }
+   511→   511→}
+   512→   512→
+   513→   513→@Composable
+   514→   514→private fun ColumnInputField(
+   515→   515→    value: String,
+   516→   516→    label: String,
+   517→   517→    onValueChange: (String) -> Unit,
+   518→   518→    modifier: Modifier,
+   519→   519→    enabled: Boolean = true
+   520→   520→) {
+   521→   521→    OutlinedTextField(
+   522→   522→        value = value,
+   523→   523→        onValueChange = onValueChange,
+   524→   524→        label = { Text(label, fontSize = 12.sp) },
+   525→   525→        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+   526→   526→        modifier = modifier,
+   527→   527→        enabled = enabled,
+   528→   528→        shape = RoundedCornerShape(12.dp),
+   529→   529→        singleLine = true,
+   530→   530→        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+   531→   531→    )
+   532→   532→}
+   533→   533→
+   534→   534→@Composable
+   535→   535→private fun ResultDataRow(label: String, value: String) {
+   536→   536→    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+   537→   537→        Text(label, style = MaterialTheme.typography.bodyMedium)
+   538→   538→        Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+   539→   539→    }
+   540→   540→}
+   541→   541→
+   542→   542→@Composable
+   543→   543→private fun FormulaItem(formula: String) {
+   544→   544→    Text(
+   545→   545→        text = formula,
+   546→   546→        fontFamily = FontFamily.Monospace,
+   547→   547→        fontSize = 13.sp,
+   548→   548→        modifier = Modifier.padding(vertical = 2.dp),
+   549→   549→        color = MaterialTheme.colorScheme.secondary
+   550→   550→    )
+   551→   551→}
+   552→   552→
+   553→   553→@Composable
+   554→   554→private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (DesignCode) -> Unit) {
+   555→   555→    Text("اختر كود التصميم", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+   556→   556→    Row(
+   557→   557→        modifier = Modifier.fillMaxWidth(),
+   558→   558→        horizontalArrangement = Arrangement.spacedBy(4.dp)
+   559→   559→    ) {
+   560→   560→        DesignCode.values().forEach { code ->
+   561→   561→            val isSelected = code == selectedCode
+   562→   562→            Surface(
+   563→   563→                modifier = Modifier
+   564→   564→                    .weight(1f)
+   565→   565→                    .height(45.dp)
+   566→   566→                    .clickable { onCodeSelected(code) },
+   567→   567→                shape = RoundedCornerShape(8.dp),
+   568→   568→                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+   569→   569→            ) {
+   570→   570→                Box(contentAlignment = Alignment.Center) {
+   571→   571→                    Text(
+   572→   572→                        text = if (code == DesignCode.SBC) "SAUDI Code" else if (code == DesignCode.ECP) "ECP Code" else "ACI Code",
+   573→   573→                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+   574→   574→                        fontSize = 11.sp,
+   575→   575→                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+   576→   576→                        maxLines = 1,
+   577→   577→                        overflow = TextOverflow.Ellipsis
+   578→   578→                    )
+   579→   579→                }
+   580→   580→            }
+   581→   581→        }
+   582→   582→    }
+   583→   583→}
+   584→   584→
+   585→   585→@Composable
+   586→   586→private fun LoadCombinationSelector(selected: LoadCombination, onSelected: (LoadCombination) -> Unit) {
+   587→   587→    Text("تركيبة الأحمال", style = MaterialTheme.typography.labelMedium)
+   588→   588→    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   589→   589→        LoadCombination.values().take(2).forEach { combo ->
+   590→   590→            FilterChip(
+   591→   591→                selected = combo == selected,
+   592→   592→                onClick = { onSelected(combo) },
+   593→   593→                label = { Text(combo.description) }
+   594→   594→            )
+   595→   595→        }
+   596→   596→    }
+   597→   597→}
+   598→   598→
+   599→   599→private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double): List<BarInfo> {
+   600→   600→    val cover = 40.0
+   601→   601→    val cx = width / 2.0
+   602→   602→    val cy = depth / 2.0
+   603→   603→    val effectiveW = width - 2 * cover
+   604→   604→    val effectiveD = depth - 2 * cover
+   605→   605→    val positions = mutableListOf<BarInfo>()
+   606→   606→    val barsPerSide = maxOf(2, numBars / 4)
+   607→   607→    val corners = 4
+   608→   608→
+   609→   609→    // Corner bars
+   610→   610→    listOf(
+   611→   611→        BarInfo(cover + diameter/2, cover + diameter/2, diameter, isCorner = true),
+   612→   612→        BarInfo(width - cover - diameter/2, cover + diameter/2, diameter, isCorner = true),
+   613→   613→        BarInfo(cover + diameter/2, depth - cover - diameter/2, diameter, isCorner = true),
+   614→   614→        BarInfo(width - cover - diameter/2, depth - cover - diameter/2, diameter, isCorner = true)
+   615→   615→    ).forEach { positions.add(it) }
+   616→   616→
+   617→   617→    // Distribute remaining bars along sides
+   618→   618→    val remaining = numBars - 4
+   619→   619→    if (remaining > 0) {
+   620→   620→        val perSide = remaining / 4
+   621→   621→        for (side in 0 until 4) {
+   622→   622→            val count = if (side < remaining % 4) perSide + 1 else perSide
+   623→   623→            for (i in 1..count) {
+   624→   624→                val t = i.toDouble() / (count + 1)
+   625→   625→                val pos = when (side) {
+   626→   626→                    0 -> BarInfo(cover + diameter/2 + t * effectiveW, cover + diameter/2, diameter)
+   627→   627→                    1 -> BarInfo(width - cover - diameter/2, cover + diameter/2 + t * effectiveD, diameter)
+   628→   628→                    2 -> BarInfo(width - cover - diameter/2 - t * effectiveW, depth - cover - diameter/2, diameter)
+   629→   629→                    else -> BarInfo(cover + diameter/2, depth - cover - diameter/2 - t * effectiveD, diameter)
+   630→   630→                }
+   631→   631→                positions.add(pos)
+   632→   632→            }
+   633→   633→        }
+   634→   634→    }
+   635→   635→    return positions
+   636→   636→}
+   637→   637→
