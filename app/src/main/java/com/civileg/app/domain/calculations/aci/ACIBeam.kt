@@ -25,8 +25,9 @@ class ACIBeam : BeamDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        val Mu = designMoment * 1e6 / loadCombination.factor  // N.mm
-        val fc = fcu  // ACI uses fc' directly
+        val Mu = designMoment * 1e6  // N.mm - العزم التصميمي (مضروب في معامل التحميل بالفعل)
+        // ACI uses cylinder strength fc' ≈ 0.8 × fcu (cube strength)
+        val fc = 0.8 * fcu  // تحويل مقاومة المكعب لمقاومة الأسطوانة
         
         // Calculate Rn
         val denominator = PHI_FLEXURE * width * effectiveDepth * effectiveDepth
@@ -40,12 +41,19 @@ class ACIBeam : BeamDesign {
             0.0
         }
         
-        // Check maximum reinforcement (tension-controlled limit)
+        // Check maximum reinforcement (tension-controlled limit) - ACI 318-21.2.2
         val beta1 = calculateBeta1(fc)
-        val rho_max = 0.85 * beta1 * (fc / fy) * (0.003 / (0.003 + 0.004))
-        if (rho > rho_max) {
-            warnings.add("Section exceeds tension-controlled limit (ρ > ρmax)")
+        // ρ_max للمنطقة المقبولة (tension-controlled): εt ≥ 0.005 → c/d ≤ 0.375
+        // ρ_max = 0.85β1(fc'/fy) × (εcu/(εcu+0.005))
+        val rho_max = 0.85 * beta1 * (fc / fy) * (0.003 / (0.003 + 0.005))
+        // أيضاً: ρ_max_tension_ctrl = 0.85β1(fc'/fy) × (3/8) للمقطع المربع
+        val rho_max_tc = 0.85 * beta1 * (fc / fy) * 0.375
+        if (rho > rho_max_tc) {
+            warnings.add("Section exceeds tension-controlled limit (ρ > ρmax) - εt < 0.005")
             codeNotes.add(CodeReference.ACI.BEAM_REINFORCEMENT_MAX)
+            if (rho > rho_max) {
+                warnings.add("Section in compression zone (ρ > compression limit)!")
+            }
         }
         
         // Required reinforcement area
@@ -61,16 +69,36 @@ class ACIBeam : BeamDesign {
             warnings.add("Minimum reinforcement applied per ${CodeReference.ACI.BEAM_REINFORCEMENT_MIN}")
         }
         
-        // Choose bar diameter
-        val availableBars = listOf(16.0, 19.0, 22.0, 25.0, 29.0)  // No.5 to No.9
-        val barDiameter = availableBars.firstOrNull { 
+        // Choose bar diameter مع بدائل اقتصادية وآمنة
+        val availableBars = listOf(12.0, 16.0, 19.0, 22.0, 25.0, 29.0, 32.0)  // No.4 to No.10
+        var selectedBarDia = availableBars.firstOrNull { 
             val area = PI * it * it / 4
             ceil(astRequired / area) <= 6
         } ?: 19.0
         
-        val barArea = PI * barDiameter * barDiameter / 4
+        // حساب البدائل (اقتصادية + آمنة إضافية)
+        val alternatives = mutableListOf<String>()
+        for (dia in availableBars) {
+            val area = PI * dia * dia / 4
+            val numBars = ceil(astRequired / area).toInt().coerceIn(2, 12)
+            val asProv = numBars * area
+            val a_calc = if (fc > 0) asProv * fy / (0.85 * fc * width) else 0.0
+            val Mn_calc = asProv * fy * (effectiveDepth - a_calc / 2)
+            val cap = PHI_FLEXURE * Mn_calc / 1e6
+            val util = if (cap > 0) designMoment / cap else 2.0
+            if (util in 0.5..1.0 && dia != selectedBarDia) {
+                alternatives.add("${numBars}Ø${dia.toInt()} (${(util*100).toInt()}%)")
+            }
+        }
+        if (alternatives.size >= 2) {
+            codeNotes.add("Economical: ${alternatives.first()}")
+            codeNotes.add("Safest: ${alternatives.last()}")
+        }
+        
+        val barArea = PI * selectedBarDia * selectedBarDia / 4
         val numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(2, 12)
         val astProvided = numberOfBars * barArea
+        val barDiameter = selectedBarDia
         
         // Check spacing
         val clearSpacing = if (numberOfBars > 1) {
@@ -118,10 +146,11 @@ class ACIBeam : BeamDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        val Vu = designShear * 1000 / loadCombination.factor  // N
+        val Vu = designShear * 1000.0  // N - القوة القصية التصميمية
         
         // Concrete shear capacity per ACI 22.5.5.1
-        val Vc = 0.17 * LAMBDA * sqrt(fcu) * width * effectiveDepth  // N
+        val fc_prime = 0.8 * fcu  // تحويل مكعب لأسطوانة
+        val Vc = 0.17 * LAMBDA * sqrt(fc_prime) * width * effectiveDepth  // N
         
         // Check if reinforcement is needed
         val phiVc = PHI_SHEAR * Vc / 1000  // kN
@@ -130,7 +159,7 @@ class ACIBeam : BeamDesign {
         if (Vu / 1000 > phiVc / 2) {
             // Minimum reinforcement
             val minAv_s = max(
-                0.062 * sqrt(fcu) * width / fy,
+                0.062 * sqrt(fc_prime) * width / fy,
                 0.35 * width / fy
             ) * 1000  // mm²/m
             
@@ -153,7 +182,7 @@ class ACIBeam : BeamDesign {
         var stirrupSpacing = if (requiredStirrups > 0) stirrupArea * 1000 / requiredStirrups else getMaxShearSpacing()
         
         // Spacing limits per ACI 9.7.6.2
-        val maxVsLimit = 0.33 * sqrt(fcu) * width * effectiveDepth / 1000
+        val maxVsLimit = 0.33 * sqrt(fc_prime) * width * effectiveDepth / 1000
         val VsActual = if (Vu / 1000 > phiVc) (Vu / 1000 - phiVc) / PHI_SHEAR else 0.0
         
         val maxSpacing1 = if (VsActual <= maxVsLimit) {
@@ -165,7 +194,7 @@ class ACIBeam : BeamDesign {
         stirrupSpacing = max(stirrupSpacing, 50.0)
         
         // Maximum shear limit
-        val maxVs = 0.66 * sqrt(fcu) * width * effectiveDepth / 1000  // kN
+        val maxVs = 0.66 * sqrt(fc_prime) * width * effectiveDepth / 1000  // kN
         val maxShearCapacity = phiVc + PHI_SHEAR * maxVs
         val isSafe = (Vu / 1000) <= maxShearCapacity
         
@@ -202,8 +231,8 @@ class ACIBeam : BeamDesign {
             SupportCondition.CANTILEVER -> 8.0
         }
         
-        // Modification for fy ≠ 420 MPa
-        val fyFactor = 0.4 + 400.0 / 700.0 // Simplified for fy=400, or use exact
+        // Modification for fy (ACI Table 7.3.1.1)
+        val fyFactor = min(1.0, 0.4 + 420.0 / fy.coerceAtLeast(200.0))
         
         val actualRatio = (span * 1000) / totalDepth
         val allowableRatio = basicRatio * fyFactor
@@ -235,7 +264,8 @@ class ACIBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
-        // ACI 25.4.2: Ld = (fy * ψt * ψe * ψs * λ) / (1.7 * λ * sqrt(fc')) * db
+        // ACI 25.4.2: Ld = (fy * ψt * ψe * ψs) / (1.7 * λ * √(fc')) * db
+        // λ يظهر في المقام فقط (ليس في البسط)
         
         var psi_t = 1.0
         if (barLocation == BarLocation.TOP) psi_t = 1.3
@@ -245,9 +275,10 @@ class ACIBeam : BeamDesign {
         
         val psi_s = if (barDiameter <= 22.0) 1.0 else 0.8
         val lambda = LAMBDA
+        val fc_prime = 0.8 * fcu  // تحويل مكعب لأسطوانة
         
-        val numerator = fy * psi_t * psi_e * psi_s * lambda
-        val denominator = 1.7 * lambda * sqrt(fcu.coerceAtLeast(1.0))
+        val numerator = fy * psi_t * psi_e * psi_s
+        val denominator = 1.7 * lambda * sqrt(fc_prime.coerceAtLeast(1.0))
         
         var Ld = (numerator / denominator) * barDiameter
         

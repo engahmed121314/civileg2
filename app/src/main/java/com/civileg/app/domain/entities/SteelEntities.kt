@@ -155,12 +155,90 @@ val SteelSectionType.flangeThickness: Double
 
 val SteelSectionType.area: Double get() = getArea()
 val SteelSectionType.weight: Double get() = area * 7.85e-3 // kg/m (mm2 * 7.85e-6 kg/mm3 * 1000 mm/m)
-val SteelSectionType.ix: Double get() = 0.0
-val SteelSectionType.sx: Double get() = 0.0
-val SteelSectionType.rx: Double get() = 0.0
-val SteelSectionType.zx: Double get() = 0.0
-val SteelSectionType.rootRadius: Double get() = 0.0
-val SteelSectionType.flangeSlope: Double get() = 0.0
+/** عزم القصور حول المحور القوي (X) - mm⁴ */
+val SteelSectionType.ix: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> calculateIxISection(h, bf, tw, tf)
+        is SteelSectionType.CSection -> calculateIxISection(h, bf, tw, tf) * 0.85  // تقريبي للقناة
+        is SteelSectionType.RHS -> calculateIxRHS(width, height, thickness)
+        is SteelSectionType.CHS -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * thickness).pow(4))
+        is SteelSectionType.LSection -> calculateIxAngle(legA, legB, thickness)
+        is SteelSectionType.TSection -> calculateIxTSection(flangeWidth, flangeThickness, webDepth, webThickness)
+        is SteelSectionType.BuiltUp -> 0.0
+    }
+
+/** معامل المقطع المرن حول X - mm³ */
+val SteelSectionType.sx: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> ix / (h / 2.0)
+        is SteelSectionType.CSection -> ix / (h / 2.0)
+        is SteelSectionType.RHS -> ix / (height / 2.0)
+        is SteelSectionType.CHS -> ix / (outerDiameter / 2.0)
+        is SteelSectionType.LSection -> ix / (legA / 2.0)
+        is SteelSectionType.TSection -> ix / (webDepth + flangeThickness) * 2.0
+        is SteelSectionType.BuiltUp -> 0.0
+    }
+
+/** نصف القطر الدوراني حول X - mm */
+val SteelSectionType.rx: Double
+    get() = if (getArea() > 0) sqrt(ix / getArea()) else 0.0
+
+/** معامل المقطع اللدن حول X - mm³ (تقريبي: 1.12 × Sx للمقاطع المدمجة) */
+val SteelSectionType.zx: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> sx * 1.12  // تقريبي للمقاطع المدرفلة
+        is SteelSectionType.CSection -> sx * 1.10
+        is SteelSectionType.RHS -> sx * 1.08
+        is SteelSectionType.CHS -> sx * 1.12
+        is SteelSectionType.LSection -> sx * 1.05
+        is SteelSectionType.TSection -> sx * 1.05
+        is SteelSectionType.BuiltUp -> 0.0
+    }
+
+val SteelSectionType.rootRadius: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> if (h <= 300) 8.0 else if (h <= 500) 12.0 else 20.0
+        is SteelSectionType.CSection -> if (h <= 300) 6.0 else 10.0
+        else -> 0.0
+    }
+
+val SteelSectionType.flangeSlope: Double
+    get() = when (this) {
+        is SteelSectionType.ISection -> 0.08  // ~4.5° تقريبياً
+        is SteelSectionType.CSection -> 0.08
+        else -> 0.0
+    }
+
+/** حساب عزم القصور لمقطع I - mm⁴ */
+private fun calculateIxISection(h: Double, b: Double, tw: Double, tf: Double): Double {
+    val hw = h - 2 * tf  // ارتفاع الجذع الصافي
+    return (b * h.pow(3) - (b - tw) * hw.pow(3)) / 12.0
+}
+
+/** حساب عزم القصور لمقطع RHS - mm⁴ */
+private fun calculateIxRHS(w: Double, h: Double, t: Double): Double {
+    val hw = h - 2 * t
+    val bw = w - 2 * t
+    return (w * h.pow(3) - bw * hw.pow(3)) / 12.0
+}
+
+/** حساب عزم القصور لزاوية متساوية الساقين تقريباً - mm⁴ */
+private fun calculateIxAngle(a: Double, b: Double, t: Double): Double {
+    // حول محور موازي لساق b (المسطح العلوي)
+    val A = (a + b - t) * t
+    val yBar = (a * a + (b - t) * t / 2.0) / (2.0 * (a + b - t))
+    return (a * t * (t / 2.0).pow(2) + (b - t) * t * (t / 2.0 + t / 2.0).pow(2) + 
+            t * a.pow(3) / 12.0 + (b - t) * t.pow(3) / 12.0)  // مبسط
+}
+
+/** حساب عزم القصور لمقطع T - mm⁴ */
+private fun calculateIxTSection(bf: Double, tf: Double, dw: Double, tw: Double): Double {
+    val totalH = dw + tf
+    val yBar = (bf * tf * (totalH - tf / 2.0) + tw * dw * (dw / 2.0)) / (bf * tf + tw * dw)
+    val IxFlange = bf * tf.pow(3) / 12.0 + bf * tf * (totalH - tf / 2.0 - yBar).pow(2)
+    val IxWeb = tw * dw.pow(3) / 12.0 + tw * dw * (dw / 2.0 - yBar).pow(2)
+    return IxFlange + IxWeb
+}
 
 @Parcelize
 enum class SteelGrade(val displayName: String, val fy: Double, val fu: Double, val codeReference: String) : Parcelable {

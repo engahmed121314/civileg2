@@ -29,11 +29,12 @@ class SBCSeismic : SeismicDesign {
         seismicZone: SeismicZone,
         soilType: SoilType,
         importanceFactor: Double,
-        responseModificationFactor: Double
+        responseModificationFactor: Double,
+        buildingHeight: Double
     ): SeismicBaseShearResult {
         // SBC 301 يتبع ASCE 7 مع خريطة مخاطر سعودية
         val result = aciSeismic.calculateBaseShear(
-            totalWeight, seismicZone, soilType, importanceFactor, responseModificationFactor
+            totalWeight, seismicZone, soilType, importanceFactor, responseModificationFactor, buildingHeight
         )
         
         val saudiFactor = SAUDI_ZONE_FACTORS[seismicZone] ?: 0.10
@@ -47,10 +48,16 @@ class SBCSeismic : SeismicDesign {
 
     override fun getResponseSpectrum(
         period: Double,
-        dampingRatio: Double
+        dampingRatio: Double,
+        soilType: SoilType,
+        peakGroundAcceleration: Double,
+        importanceFactor: Double
     ): SpectrumValue {
-        return aciSeismic.getResponseSpectrum(period, dampingRatio).copy(
-            description = "SBC 301 Design Response Spectrum"
+        val result = aciSeismic.getResponseSpectrum(
+            period, dampingRatio, soilType, peakGroundAcceleration, importanceFactor
+        )
+        return result.copy(
+            description = "SBC 301 " + result.description.removePrefix("ASCE 7 ")
         )
     }
 
@@ -63,7 +70,7 @@ class SBCSeismic : SeismicDesign {
     }
 
     override fun getCodeName(): DesignCode = DesignCode.SBC
-    override fun getSeismicZones(): List<SeismicZone> = SeismicZone.values().toList()
+    override fun getSeismicZones(): List<SeismicZone> = SeismicZone.entries.toList()
     override fun getZoneFactors(): Map<SeismicZone, Double> = SAUDI_ZONE_FACTORS
     override fun getSoilFactors(): Map<SoilType, Double> = aciSeismic.getSoilFactors()
 }

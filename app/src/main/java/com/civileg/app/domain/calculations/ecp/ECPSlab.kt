@@ -27,23 +27,28 @@ class ECPSlab : SlabDesign {
         val width = 1000.0
         val effectiveDepth = slabThickness - getMinCover() - 6  // تقريب للحديد (يفترض سيخ 12 مم)
         
-        // حساب التسليح للانحناء
-        val Mu = designMoment * 1e6 / loadCombination.factor  // N.mm/m
-        val fc = 0.67 * fcu / GAMMA_C
+        // حساب التسليح للانحناء - K-method حسب ECP 203 البند 4-2-2-1
+        // Mu يجب أن يكون العزم التصميمي (Ultimate) بدون قسمة على معامل التحميل
+        val Mu = designMoment * 1e6  // N.mm/m (العزم التصميمي المطلق)
         val fs = fy / GAMMA_S
         
-        val K = if (fc > 0 && effectiveDepth > 0) Mu / (fc * width * effectiveDepth * effectiveDepth) else 0.0
+        // K = Mu / (fcu × b × d²) - نستخدم fcu مباشرة وليس fc
+        // K_bal = 0.186 لـ fcu=25, fy=360 (الحد الأقصى للمنطقة المقبولة)
+        val K_bal = 0.186
+        val K = if (fcu > 0 && effectiveDepth > 0) Mu / (fcu * width * effectiveDepth * effectiveDepth) else 0.0
         
-        if (K > 0.3) {
-            warnings.add("Section is over-reinforced - Consider increasing slab thickness")
+        if (K > K_bal) {
+            warnings.add("K=%.3f > K_bal=%.3f - Section is over-reinforced, increase slab thickness".format(K, K_bal))
         }
         
-        val leverArm = if (0.25 - K / 0.9 > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / 0.9))
+        // ذراع القوة: z = d × (0.5 + √(0.25 - K/1.25)) حسب ECP 203
+        val leverArm = if (0.25 - K / 1.25 > 0) {
+            effectiveDepth * (0.5 + sqrt(0.25 - K / 1.25))
         } else {
-            effectiveDepth * 0.7
+            effectiveDepth * 0.7  // تقريب آمن للحالات الحرجة
         }
         
+        // As = Mu / (fy/γs × z) حسب ECP 203
         var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0 // mm²/m
         
         // الحد الأدنى للتسليح للبلاطات (0.6/fy * b * d or 0.15% Ag)
@@ -65,15 +70,18 @@ class ECPSlab : SlabDesign {
         val barSpacing = if (astRequired > 0) (barArea * 1000 / astRequired).coerceIn(50.0, getMaxBarSpacing()) else getMaxBarSpacing()
         val astProvided = barArea * 1000 / barSpacing
         
-        // التحقق من القص
-        val Vu = designShear * 1000 / loadCombination.factor  // N/m
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C) / GAMMA_C
-        val shearCapacity = qcu * width * effectiveDepth / 1000  // kN/m
+        // التحقق من القص - ECP 203 البند 4-3-1-2
+        // qcu = 0.24 × √(fcu/γc) MPa - قدرة الخرسانة على القص
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa
+        val shearCapacity = qcu * width * effectiveDepth / 1000.0  // kN/m
         
+        // designShear بالفعل هو القوة القصية التصميمية (kN/m)
         val isShearSafe = designShear <= shearCapacity
         if (!isShearSafe) {
             warnings.add("Shear capacity exceeded - increase thickness")
         }
+        
+        codeNotes.add("ECP 203: qcu = %.2f MPa".format(qcu))
         
         // التحقق من السمك للانحراف
         val minThickness = getMinSlabThickness(clearSpan, SupportCondition.SIMPLY_SUPPORTED)
@@ -82,7 +90,8 @@ class ECPSlab : SlabDesign {
         }
         
         codeNotes.add(CodeReference.ECP.SLAB_ONE_WAY)
-        codeNotes.add("Min reinforcement: ${CodeReference.ECP.BEAM_REINFORCEMENT_MIN}")
+        codeNotes.add("K = %.3f, z = %.0f mm".format(K, leverArm))
+        codeNotes.add("As_req = %.0f mm²/m, As_prov = %.0f mm²/m".format(astRequired, astProvided))
         
         return SlabDesignResult(
             requiredReinforcement = astRequired,

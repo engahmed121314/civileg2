@@ -21,7 +21,7 @@ enum class DesignCode(val displayName: String, val version: String) : Parcelable
 
     companion object {
         fun fromDisplayName(name: String): DesignCode {
-            return values().find { it.displayName == name || name.contains(it.name) } ?: ECP
+            return entries.find { it.displayName == name || name.contains(it.name) } ?: ECP
         }
     }
 }

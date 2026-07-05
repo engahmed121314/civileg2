@@ -29,7 +29,8 @@ class ACISeismic : SeismicDesign {
         seismicZone: SeismicZone,
         soilType: SoilType,
         importanceFactor: Double,
-        responseModificationFactor: Double
+        responseModificationFactor: Double,
+        buildingHeight: Double
     ): SeismicBaseShearResult {
         val warnings = mutableListOf<String>()
         
@@ -64,11 +65,23 @@ class ACISeismic : SeismicDesign {
 
     override fun getResponseSpectrum(
         period: Double,
-        dampingRatio: Double
+        dampingRatio: Double,
+        soilType: SoilType,
+        peakGroundAcceleration: Double,
+        importanceFactor: Double
     ): SpectrumValue {
         // ASCE 7 Design Response Spectrum
-        val sds = DEFAULT_SDS
-        val sd1 = DEFAULT_SD1
+        // إذا لم يُمرر SDS/SD1، نستخدم ag لتقديرها
+        // SDS ≈ Fa × ag, SD1 ≈ Fv × ag (تقريبي)
+        val sds = if (peakGroundAcceleration > 0) {
+            val fa = SOIL_FACTORS[soilType] ?: 1.0
+            fa * peakGroundAcceleration
+        } else DEFAULT_SDS
+        val sd1 = if (peakGroundAcceleration > 0) {
+            val fv = SOIL_FACTORS[soilType] ?: 1.0
+            fv * peakGroundAcceleration * 0.5
+        } else DEFAULT_SD1
+
         val t0 = 0.2 * sd1 / sds
         val ts = sd1 / sds
         
@@ -79,11 +92,19 @@ class ACISeismic : SeismicDesign {
             else -> sd1 * 4.0 / (period * period)
         }
         
+        val usingDefaults = peakGroundAcceleration <= 0
+        val desc = if (usingDefaults) {
+            "ASCE 7 Response Spectrum [default SDS=%.2f, SD1=%.2f]".format(sds, sd1)
+        } else {
+            "ASCE 7 Response Spectrum [ag=%.2f, I=%.1f, %s]".format(
+                peakGroundAcceleration, importanceFactor, soilType.displayName)
+        }
+        
         return SpectrumValue(
             spectralAcceleration = sa,
             period = period,
             dampingRatio = dampingRatio,
-            description = "ASCE 7 Design Response Spectrum"
+            description = desc
         )
     }
 
@@ -103,11 +124,16 @@ class ACISeismic : SeismicDesign {
         
         val results = mutableListOf<SeismicForceDistribution>()
         var storyShear = baseShear
+        var accumulatedOTM = 0.0 // إصلاح: تجميع عزوم الانقلاب من الأعلى للأسفل / Fix: accumulate OTM from top to bottom
         
         for (i in n - 1 downTo 0) {
             val force = if (wh_sum > 0) {
                 (floorWeights[i] * floorHeights[i].pow(k) / wh_sum) * baseShear
             } else 0.0
+            
+            // إصلاح: حساب ارتفاع الطابق الحالي / Fix: compute current story height
+            val storyHeight = if (i > 0) floorHeights[i] - floorHeights[i-1] else floorHeights[i]
+            accumulatedOTM += storyShear * storyHeight // إصلاح: تجميع عزم الانقلاب التراكمي / Fix: cumulative OTM
             
             results.add(
                 SeismicForceDistribution(
@@ -116,7 +142,7 @@ class ACISeismic : SeismicDesign {
                     floorHeight = floorHeights[i],
                     lateralForce = force,
                     storyShear = storyShear,
-                    overturningMoment = storyShear * (if (i > 0) floorHeights[i] - floorHeights[i-1] else floorHeights[i])
+                    overturningMoment = accumulatedOTM
                 )
             )
             storyShear -= force
@@ -126,7 +152,15 @@ class ACISeismic : SeismicDesign {
     }
 
     override fun getCodeName(): DesignCode = DesignCode.ACI
-    override fun getSeismicZones(): List<SeismicZone> = SeismicZone.values().toList()
+    override fun getSeismicZones(): List<SeismicZone> = SeismicZone.entries.toList()
     override fun getZoneFactors(): Map<SeismicZone, Double> = ZONE_FACTORS
-    override fun getSoilFactors(): Map<SoilType, Double> = mapOf(SoilType.A to 1.0) // مبسط
+    // إصلاح: إضافة معاملات التربة Fa/Fv لجميع أنواع التربة حسب ASCE 7-16 الجدول 11.4-1
+    // Fix: Added Fa/Fv site coefficients for all soil types per ASCE 7-16 Table 11.4-1
+    override fun getSoilFactors(): Map<SoilType, Double> = mapOf(
+        SoilType.A to 1.0,
+        SoilType.B to 1.2,
+        SoilType.C to 1.2,
+        SoilType.D to 1.6,
+        SoilType.E to 2.5
+    )
 }

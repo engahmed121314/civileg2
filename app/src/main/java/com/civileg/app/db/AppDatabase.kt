@@ -5,7 +5,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.civileg.app.data.local.entities.ProjectEntity
 
 @Database(
     entities = [
@@ -19,8 +18,7 @@ import com.civileg.app.data.local.entities.ProjectEntity
         Stair::class,
         RetainingWall::class,
         Tank::class,
-        InventoryItem::class,
-        ProjectEntity::class
+        InventoryItem::class
     ],
     version = 6,
     exportSchema = false

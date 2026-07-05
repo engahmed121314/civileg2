@@ -47,16 +47,25 @@ class ECPSeismic : SeismicDesign {
         seismicZone: SeismicZone,
         soilType: SoilType,
         importanceFactor: Double,
-        responseModificationFactor: Double
+        responseModificationFactor: Double,
+        buildingHeight: Double
     ): SeismicBaseShearResult {
         val warnings = mutableListOf<String>()
-        val buildingHeight = 15.0 // ارتفاع افتراضي - يمكن تحسينه لاحقاً بإضافته للمدخلات العامة
+        
+        // ارتفاع المنشأ - يُقدر من الوزن إذا لم يُحدد
+        // تقدير: W ≈ 12 kN/m² × A_floor × n_floors, H ≈ 3m × n_floors
+        val h = if (buildingHeight > 0) buildingHeight else {
+            val estimatedFloors = max(1.0, totalWeight / 500.0).coerceAtMost(30.0)
+            val h_est = 3.0 * estimatedFloors
+            warnings.add("Estimated building height: %.1fm (from weight %.0f kN). Pass buildingHeight for accuracy.".format(h_est, totalWeight))
+            h_est
+        }
         
         val ag = ZONE_FACTORS[seismicZone] ?: 0.15
         val params = SOIL_PARAMS[soilType] ?: SOIL_PARAMS[SoilType.C]!!
         
         // حساب T1 = Ct * H^0.75 (حسب الكود المصري للمنشآت الإطارية)
-        val period = 0.075 * buildingHeight.pow(0.75) 
+        val period = 0.075 * h.pow(0.75) 
         
         // حساب قيمة طيف الاستجابة التصميمي Sd(T)
         val sdValue = calculateSd(period, ag, importanceFactor, params, responseModificationFactor)
@@ -94,12 +103,14 @@ class ECPSeismic : SeismicDesign {
 
     override fun getResponseSpectrum(
         period: Double,
-        dampingRatio: Double
+        dampingRatio: Double,
+        soilType: SoilType,
+        peakGroundAcceleration: Double,
+        importanceFactor: Double
     ): SpectrumValue {
-        // حساب طيف الاستجابة المرن Se(T) لأغراض الرسم البياني
-        val ag = 0.15 
-        val i = 1.0
-        val p = SOIL_PARAMS[SoilType.C]!!
+        val ag = if (peakGroundAcceleration > 0) peakGroundAcceleration else 0.15
+        val i = importanceFactor
+        val p = SOIL_PARAMS[soilType] ?: SOIL_PARAMS[SoilType.C]!!
         val eta = sqrt(10.0 / (5.0 + dampingRatio * 100.0)).coerceAtLeast(0.55)
         
         val spectralAcceleration = when {
@@ -109,11 +120,18 @@ class ECPSeismic : SeismicDesign {
             else -> ag * i * p.s * 2.5 * eta * (p.tc * p.td / (period * period))
         }
         
+        val usingDefaults = peakGroundAcceleration <= 0
+        val desc = if (usingDefaults) {
+            "ECP 201 Response Spectrum [default ag=0.15, I=%.1f, %s]".format(i, soilType.displayName)
+        } else {
+            "ECP 201 Response Spectrum [ag=%.2f, I=%.1f, %s]".format(ag, i, soilType.displayName)
+        }
+        
         return SpectrumValue(
             spectralAcceleration = spectralAcceleration,
             period = period,
             dampingRatio = dampingRatio,
-            description = "ECP 201 Response Spectrum"
+            description = desc
         )
     }
 

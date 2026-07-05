@@ -3,17 +3,18 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
-    alias(libs.plugins.navigation.safeargs)
+    // Safe Args not used with Compose navigation
+    // alias(libs.plugins.navigation.safeargs)
     alias(libs.plugins.compose.compiler)
     id("kotlin-parcelize")
 }
 
 android {
-    namespace = "com.siteengineer.pro"
+    namespace = "com.civileg.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.siteengineer.pro"
+        applicationId = "com.civileg.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

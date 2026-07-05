@@ -20,6 +20,17 @@ import com.civileg.app.domain.calculations.sbc.SBCTank
 import com.civileg.app.domain.calculations.ecp.ECPFooting
 import com.civileg.app.domain.calculations.aci.ACIFooting
 import com.civileg.app.domain.calculations.sbc.SBCFooting
+import com.civileg.app.domain.calculations.ecp.ECPAdvancedColumn
+import com.civileg.app.domain.calculations.aci.ACIAdvancedColumn
+import com.civileg.app.domain.calculations.sbc.SBCAdvancedColumn
+import com.civileg.app.domain.calculations.ecp.ECPAdvancedBeam
+import com.civileg.app.domain.calculations.aci.ACIAdvancedBeam
+import com.civileg.app.domain.calculations.sbc.SBCAdvancedBeam
+import com.civileg.app.domain.calculations.ecp.SteelDesignEngine
+import com.civileg.app.domain.calculations.aci.AISCSteelDesignEngine
+import com.civileg.app.domain.calculations.sbc.SBCSteelDesignEngine
+import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
+import com.civileg.app.domain.calculations.ecp.ECPWaffleSlabDesign
 import com.civileg.app.domain.entities.DesignCode
 
 object CalculationFactory {
@@ -53,4 +64,32 @@ object CalculationFactory {
         DesignCode.ACI -> ACIFooting()
         DesignCode.SBC -> SBCFooting()
     }
+
+    // ========== التصميم المتقدم (Advanced Design) ==========
+
+    fun getAdvancedColumnDesign(code: DesignCode) = when (code) {
+        DesignCode.ECP -> ECPAdvancedColumn()
+        DesignCode.ACI -> ACIAdvancedColumn()
+        DesignCode.SBC -> SBCAdvancedColumn()
+    }
+
+    fun getAdvancedBeamDesign(code: DesignCode) = when (code) {
+        DesignCode.ECP -> ECPAdvancedBeam()
+        DesignCode.ACI -> ACIAdvancedBeam()
+        DesignCode.SBC -> SBCAdvancedBeam()
+    }
+
+    // ========== المنشآت المعدنية (Steel Structures) ==========
+
+    fun getSteelDesignEngine(code: DesignCode) = when (code) {
+        DesignCode.ECP -> SteelDesignEngine()
+        DesignCode.ACI -> AISCSteelDesignEngine()
+        DesignCode.SBC -> SBCSteelDesignEngine()
+    }
+
+    // ========== البلاطات المتخصصة (Specialized Slabs) ==========
+
+    fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = ECPHordiSlabDesign()
+
+    fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = ECPWaffleSlabDesign()
 }

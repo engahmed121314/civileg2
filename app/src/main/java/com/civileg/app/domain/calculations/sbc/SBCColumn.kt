@@ -20,16 +20,17 @@ class SBCColumn : ColumnDesign {
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
         
-        // SBC 304: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
-        val concreteCapacity = 0.85 * fcu * (Ag - Ast)
+        // SBC 304 / ACI 318: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
+        // fc' = 0.8 × fcu (تحويل مقاومة المكعب لمقاومة الأسطوانة)
+        val fc_prime = 0.8 * fcu
+        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         
-        // Strength reduction factor phi for tied columns (SBC 304)
+        // معامل الاختزال للأعمدة المربوطة (SBC 304-10.6 / ACI 318-21.2.2)
         val phi = 0.65
-        
-        // Factor 0.80 for tied columns
-        return phi * 0.80 * nominalCapacity / 1000.0 // kN
+        // ملاحظة: معامل 0.80 تم إلغاؤه من ACI/SBC منذ نسخة 2002
+        return phi * nominalCapacity / 1000.0 // kN
     }
 
     override fun calculateReinforcement(
@@ -43,14 +44,16 @@ class SBCColumn : ColumnDesign {
         loadCombination: LoadCombination
     ): ReinforcementResult {
         val Ag = width * depth
-        val Pu = axialLoad * 1000.0 / loadCombination.factor
+        val Pu = axialLoad * 1000.0  // N - الحمل المحوري التصميمي
         
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // SBC 304/ACI 318 approach
+        // SBC 304 / ACI 318: حل معادلة القدرة المحورية لإيجاد Ast
+        // fc' = 0.8 × fcu
+        val fc_prime = 0.8 * fcu
         val phi = 0.65
-        val requiredSteelArea = (Pu / phi - 0.85 * fcu * Ag) / (fy - 0.85 * fcu)
+        val requiredSteelArea = (Pu / phi - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
         
         val minSteel = getMinReinforcementRatio() * Ag
         val maxSteel = getMaxReinforcementRatio() * Ag

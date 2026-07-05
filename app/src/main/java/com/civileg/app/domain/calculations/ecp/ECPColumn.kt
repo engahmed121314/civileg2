@@ -29,21 +29,14 @@ class ECPColumn : ColumnDesign {
         // مقاومة الحديد: fy / γs
         val steelStress = fy / GAMMA_S
         
-        // القدرة المحورية: α(0.67*fcu/γc * (Ag-Ast) + fy/γs * Ast)
+        // القدرة المحورية: Pu = α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
+        // ECP 203 يستخدم γc و γs فقط - لا يوجد معامل φ منفصل
         val concreteCapacity = concreteStress * (Ag - Ast)
         val steelCapacity = steelStress * Ast
-        val nominalCapacity = ALPHA * (concreteCapacity + steelCapacity)
-        
-        // معامل الاختزال φ حسب نوع التحميل
-        val phi = when (loadCombination) {
-            LoadCombination.DEAD_ONLY -> 0.65
-            LoadCombination.DEAD_LIVE -> 0.65
-            LoadCombination.DEAD_LIVE_EARTHQUAKE -> 0.75
-            else -> 0.65
-        }
+        val designCapacity = ALPHA * (concreteCapacity + steelCapacity)
         
         // التحويل من نيوتن إلى كيلو نيوتن
-        return phi * nominalCapacity / 1000.0
+        return designCapacity / 1000.0
     }
 
     override fun calculateReinforcement(
@@ -57,7 +50,8 @@ class ECPColumn : ColumnDesign {
         loadCombination: LoadCombination
     ): ReinforcementResult {
         val Ag = width * depth
-        val Pu = axialLoad * 1000.0 / loadCombination.factor // تحويل إلى نيوتن مع عامل التحميل
+        // Pu: الحمل المحوري التصميمي (N) - نستخدمه مباشرة بدون قسمة
+        val Pu = axialLoad * 1000.0  // N
         val Mu = sqrt(momentX.pow(2) + momentY.pow(2)) * 1e6 // N.mm
         
         val warnings = mutableListOf<String>()
@@ -65,17 +59,21 @@ class ECPColumn : ColumnDesign {
 
         // حساب العزم اللامركزي
         val eccentricity = if (Pu > 0) Mu / Pu else 0.0
-        val minEccentricity = max(20.0, width / 20) // أقل لا مركزية 20 مم أو b/20
+        // ECP 203: e_min = max(20mm, b/20, h/20)
+        val minEccentricity = maxOf(20.0, width / 20.0, depth / 20.0)
         
         // طريقة مبسطة لحساب التسليح (لأعمدة قصيرة)
-        val phi = 0.65
+        // ECP 203: Pu = α × [0.67×fcu/γc×(Ag-Ast) + fy/γs×Ast]
+        // بدون معامل φ إضافي (ECP يستخدم γ فقط)
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
         
-        // معادلة تقريبية: Pu = φ[α(0.67fcu/γc(Ag-Ast) + fy/γs*Ast)]
-        // نحلها لإيجاد Ast المطلوبة
-        val numerator = Pu / phi - ALPHA * concreteStress * Ag
-        val denominator = ALPHA * (steelStress - concreteStress)
+        // نحل المعادلة لإيجاد Ast المطلوبة
+        // Pu = α(concreteStress × (Ag-Ast) + steelStress × Ast)
+        // Pu/α = concreteStress×Ag - concreteStress×Ast + steelStress×Ast
+        // Pu/α - concreteStress×Ag = Ast×(steelStress - concreteStress)
+        val numerator = Pu / ALPHA - concreteStress * Ag
+        val denominator = steelStress - concreteStress
         var requiredSteelArea = if (denominator != 0.0) numerator / denominator else 0.0
         
         // تطبيق حدود التسليح
@@ -132,13 +130,13 @@ class ECPColumn : ColumnDesign {
     }
 
     private fun calculateTiesSpacing(barDiameter: Double, width: Double, depth: Double): Double {
-        // حسب الكود المصري: أقل من (15*قطر السيخ، أقل بعد في المقطع، 200 مم)
-        return minOf(15 * barDiameter, width, depth, 200.0).coerceIn(getMinSpacing(), getMaxSpacing())
+        // حسب الكود المصري ECP 203 البند 4-2-6: أقل من (16×قطر السيخ، أقل بعد في المقطع، 300 مم)
+        return minOf(16 * barDiameter, width, depth, 300.0).coerceIn(getMinSpacing(), getMaxSpacing())
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
-    override fun getMaxReinforcementRatio(): Double = 0.04   // 4% for interior columns
+    override fun getMaxReinforcementRatio(): Double = 0.08   // 8% per ECP 203-2020 Section 4-2-3 (4% typical, 6% at splices, 8% max)
     override fun getMinSpacing(): Double = 100.0
-    override fun getMaxSpacing(): Double = 200.0
+    override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0
 }

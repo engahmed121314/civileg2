@@ -11,21 +11,32 @@ interface SeismicDesign {
     /**
      * حساب قوة القص الأساسية للمبنى
      * حسب المعادلة العامة: V = (Z * I * S / R) * W
+     * @param buildingHeight m - ارتفاع المنشأ (يُستخدم لحساب الدور الذاتي T1).
+     *        إذا لم يُحدد يُحسب تقريبياً من أوزان الأدوار.
      */
     fun calculateBaseShear(
         totalWeight: Double,              // kN - الوزن الكلي للمبنى
         seismicZone: SeismicZone,
         soilType: SoilType,
         importanceFactor: Double,         // I
-        responseModificationFactor: Double // R
+        responseModificationFactor: Double, // R
+        buildingHeight: Double = 0.0      // m - ارتفاع المنشأ (0 = تقدير تلقائي)
     ): SeismicBaseShearResult
 
     /**
      * حساب طيف الاستجابة للعناصر
+     * @param period ثانية - الدور الذاتي
+     * @param dampingRatio نسبة التخميد (0.05 = 5%)
+     * @param soilType نوع التربة (افتراضي C)
+     * @param peakGroundAcceleration ag (g) - تسارع الذروة الأرضي (0 = افتراضي حسب الكود)
+     * @param importanceFactor I - معامل الأهمية (افتراضي 1.0)
      */
     fun getResponseSpectrum(
-        period: Double,                   // ثانية - الدور الذاتي
-        dampingRatio: Double              // نسبة التخميد
+        period: Double,
+        dampingRatio: Double,
+        soilType: SoilType = SoilType.C,
+        peakGroundAcceleration: Double = 0.0,
+        importanceFactor: Double = 1.0
     ): SpectrumValue
 
     /**

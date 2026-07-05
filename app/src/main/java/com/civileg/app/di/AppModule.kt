@@ -17,24 +17,8 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-    
-    // Database from com.civileg.app.data.local.database
-    @Provides
-    @Singleton
-    fun provideLocalDatabase(@ApplicationContext context: Context): com.civileg.app.data.local.database.AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            com.civileg.app.data.local.database.AppDatabase::class.java,
-            "civil_engineer_db"
-        ).build()
-    }
-    
-    @Provides
-    fun provideLocalProjectDao(database: com.civileg.app.data.local.database.AppDatabase): com.civileg.app.data.local.dao.ProjectDao {
-        return database.projectDao()
-    }
 
-    // Database from com.civileg.app.db (Main database for designs)
+    // قاعدة البيانات الرئيسية (الوحيدة)
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -46,72 +30,50 @@ object AppModule {
         .fallbackToDestructiveMigration()
         .build()
     }
-    
-    @Provides
-    fun provideProjectDao(database: AppDatabase): ProjectDao {
-        return database.projectDao()
-    }
 
     @Provides
-    fun provideDesignDao(database: AppDatabase): DesignDao {
-        return database.designDao()
-    }
+    fun provideProjectDao(database: AppDatabase): ProjectDao = database.projectDao()
 
     @Provides
-    fun provideFootingDao(database: AppDatabase): FootingDao {
-        return database.footingDao()
-    }
+    fun provideDesignDao(database: AppDatabase): DesignDao = database.designDao()
 
     @Provides
-    fun provideColumnDao(database: AppDatabase): ColumnDao {
-        return database.columnDao()
-    }
+    fun provideFootingDao(database: AppDatabase): FootingDao = database.footingDao()
 
     @Provides
-    fun provideSlabDao(database: AppDatabase): SlabDao {
-        return database.slabDao()
-    }
+    fun provideColumnDao(database: AppDatabase): ColumnDao = database.columnDao()
 
     @Provides
-    fun provideBeamDao(database: AppDatabase): BeamDao {
-        return database.beamDao()
-    }
+    fun provideSlabDao(database: AppDatabase): SlabDao = database.slabDao()
 
     @Provides
-    fun provideStairDao(database: AppDatabase): StairDao {
-        return database.stairDao()
-    }
+    fun provideBeamDao(database: AppDatabase): BeamDao = database.beamDao()
 
     @Provides
-    fun provideRetainingWallDao(database: AppDatabase): RetainingWallDao {
-        return database.retainingWallDao()
-    }
+    fun provideStairDao(database: AppDatabase): StairDao = database.stairDao()
 
     @Provides
-    fun provideTankDao(database: AppDatabase): TankDao {
-        return database.tankDao()
-    }
+    fun provideRetainingWallDao(database: AppDatabase): RetainingWallDao = database.retainingWallDao()
 
     @Provides
-    fun provideMaterialDao(database: AppDatabase): MaterialDao {
-        return database.materialDao()
-    }
+    fun provideTankDao(database: AppDatabase): TankDao = database.tankDao()
 
     @Provides
-    fun provideInventoryDao(database: AppDatabase): InventoryDao {
-        return database.inventoryDao()
-    }
-    
+    fun provideMaterialDao(database: AppDatabase): MaterialDao = database.materialDao()
+
+    @Provides
+    fun provideInventoryDao(database: AppDatabase): InventoryDao = database.inventoryDao()
+
     @Provides
     @Singleton
     fun providePreferencesManager(@ApplicationContext context: Context): PreferencesManager {
         return PreferencesManager(context)
     }
-    
+
     @Provides
     @Singleton
     fun provideProjectRepository(
-        projectDao: com.civileg.app.data.local.dao.ProjectDao,
+        projectDao: ProjectDao,
         preferencesManager: PreferencesManager
     ): ProjectRepository {
         return ProjectRepositoryImpl(projectDao, preferencesManager)

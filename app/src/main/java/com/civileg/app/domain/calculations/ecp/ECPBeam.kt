@@ -10,7 +10,8 @@ class ECPBeam : BeamDesign {
         private const val GAMMA_C = 1.5      // معامل أمان الخرسانة
         private const val GAMMA_S = 1.15     // معامل أمان الحديد
         private const val BETA_1 = 0.8       // عامل كتلة الإجهاد
-        private const val E_C = 4400.0       // معامل مرونة الخرسانة (تقريبي)
+        // Ec = 4400 * sqrt(fcu) per ECP 203 (MPa, fcu in MPa)
+        private fun ec(fcu: Double) = 4400.0 * sqrt(fcu)
         private const val E_S = 200000.0     // معامل مرونة الحديد
     }
 
@@ -26,16 +27,14 @@ class ECPBeam : BeamDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        // تحويل العزم إلى نيوتن.مم
-        val Mu = designMoment * 1e6 / loadCombination.factor
+        // تحويل العزم إلى نيوتن.مم (العزم التصميمي المطلق - بدون قسمة على factor)
+        val Mu = designMoment * 1e6
         
-        // معاملات التصميم حسب الكود المصري
-        val fc = 0.67 * fcu / GAMMA_C          // إجهاد الخرسانة المصمم
-        val fs = fy / GAMMA_S                   // إجهاد الحديد المصمم
-        
-        // حساب معامل K
-        val K = Mu / (fc * width * effectiveDepth * effectiveDepth)
-        val K_bal = 0.3                          // قيمة K المتوازنة تقريباً
+        // K-method حسب ECP 203 البند 4-2-2-1
+        // K = Mu / (fcu × b × d²) - نستخدم fcu مباشرة وليس fc
+        val K = Mu / (fcu * width * effectiveDepth * effectiveDepth)
+        // K_bal ديناميكي حسب fcu و fy (ECP 203 البند 4-2-2-1)
+        val K_bal = calculateKBal(fcu, fy)
         
         // التحقق من أن المقطع غير مفرط التسليح
         if (K > K_bal) {
@@ -43,14 +42,15 @@ class ECPBeam : BeamDesign {
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
         }
         
-        // حساب ذراع العزم الداخلي
-        val leverArm = if (0.25 - K / 0.9 > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / 0.9))
+        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/1.25)) حسب ECP 203
+        val leverArm = if (0.25 - K / 1.25 > 0) {
+            effectiveDepth * (0.5 + sqrt(0.25 - K / 1.25))
         } else {
             effectiveDepth * 0.7 // Fallback for over-reinforced
         }
         
-        // مساحة التسليح المطلوبة
+        // مساحة التسليح المطلوبة: As = Mu / (fy/γs × z) حسب ECP 203
+        val fs = fy / GAMMA_S
         var astRequired = Mu / (fs * leverArm)
         
         // تطبيق حدود التسليح
@@ -63,16 +63,33 @@ class ECPBeam : BeamDesign {
             warnings.add("Minimum reinforcement applied per ${CodeReference.ECP.BEAM_REINFORCEMENT_MIN}")
         }
         
-        // اختيار قطر حديد مناسب
-        val availableBars = listOf(12.0, 16.0, 20.0, 22.0, 25.0)
-        val barDiameter = availableBars.firstOrNull { 
+        // اختيار قطر حديد مناسب مع بدائل اقتصادية وآمنة
+        val availableBars = listOf(10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0, 28.0, 32.0)
+        var selectedBarDia = availableBars.firstOrNull { 
             val area = PI * it * it / 4
             ceil(astRequired / area) <= 6  // أقصى 6 أسياخ في صف واحد
         } ?: 16.0
         
-        val barArea = PI * barDiameter * barDiameter / 4
+        // حساب البدائل (اقتصادية + آمنة إضافية)
+        val alternatives = mutableListOf<String>()
+        for (dia in availableBars) {
+            val area = PI * dia * dia / 4
+            val numBars = ceil(astRequired / area).toInt().coerceIn(2, 12)
+            val asProv = numBars * area
+            val util = if (capacity > 0) designMoment / (asProv * fs * leverArm / 1e6) else 2.0
+            if (util in 0.5..1.0 && dia != selectedBarDia) {
+                alternatives.add("${numBars}Ø${dia.toInt()} (${(util*100).toInt()}%)")
+            }
+        }
+        if (alternatives.size >= 2) {
+            codeNotes.add("Economical: ${alternatives.first()}")
+            codeNotes.add("Safest: ${alternatives.last()}")
+        }
+        
+        val barArea = PI * selectedBarDia * selectedBarDia / 4
         val numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(2, 12)
         val astProvided = numberOfBars * barArea
+        val barDiameter = selectedBarDia
         
         // التحقق من التباعد بين الأسياخ
         val clearSpacing = if (numberOfBars > 1) {
@@ -118,11 +135,11 @@ class ECPBeam : BeamDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        val Vu = designShear * 1000 / loadCombination.factor  // N
+        val Vu = designShear * 1000  // N (القوة القصية التصميمية)
         
-        // قدرة الخرسانة على تحمل القص حسب الكود المصري
-        // qcu = 0.24 * sqrt(fcu/γc) / γc
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C) / GAMMA_C  // MPa
+        // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
+        // qcu = 0.24 × √(fcu/γc) MPa
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa
         val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
         
         // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
@@ -147,8 +164,8 @@ class ECPBeam : BeamDesign {
         var stirrupSpacing = if (requiredStirrups > 0) stirrupArea * 1000 / requiredStirrups else getMaxShearSpacing()
         stirrupSpacing = stirrupSpacing.coerceIn(50.0, getMaxShearSpacing())
         
-        // التحقق من الحد الأقصى للقص
-        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C) / GAMMA_C  // MPa
+        // الحد الأقصى لإجهاد القص: qcu_max = 0.7 × √(fcu/γc) (ECP 203)
+        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C)  // MPa
         val maxShearCapacity = maxShearStress * width * effectiveDepth / 1000  // kN
         val isSafe = (Vu / 1000) <= maxShearCapacity
         
@@ -248,8 +265,30 @@ class ECPBeam : BeamDesign {
     override fun getMinCover(): Double = 40.0
     
     override fun getDeflectionLimit(span: Double): Double {
-        // الانحراف المسموح: L/250 للأحمال الكلية
+        // الانحراف المسموح: L/250 للأحمال الكلية (ECP 203 البند 6-3)
         return (span * 1000) / 250
+    }
+    
+    /**
+     * حساب K_bal ديناميكياً حسب fcu و fy
+     * ECP 203 البند 4-2-2-1: يعتمد على نسبة المحور المحايد عند التوازن
+     * K_bal = (0.67/γc) × (a/d) × (1 - a/(2d))
+     * حيث a/d = 0.9 × εcu/(εcu + fy/(Es×γs))
+     * التحقيق: fcu=25, fy=360 → K_bal=0.186
+     */
+    private fun calculateKBal(fcu: Double, fy: Double): Double {
+        val Es = 200000.0  // معامل مرونة الحديد MPa
+        val epsilonCu = 0.003  // إجهاد الخرسانة الأقصى عند التوازن
+        val beta = 0.9  // معامل الكتلة الفعال في طريقة K (ECP 203)
+        
+        // إجهاد خضوع التصميم
+        val epsilonY = fy / (Es * GAMMA_S)
+        // نسبة عمق المحور المحايد عند التوازن
+        val cOverD = epsilonCu / (epsilonCu + epsilonY)
+        // نسبة عمق كتلة الإجهاد
+        val aOverD = beta * cOverD
+        // K_bal = (α/γc) × (a/d) × (1 - a/(2d))
+        return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
     
     // دالة مساعدة لحساب قدرة العزم
