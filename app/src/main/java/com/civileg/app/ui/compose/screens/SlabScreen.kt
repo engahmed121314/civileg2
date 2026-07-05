@@ -20,8 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -35,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfExportHelper
+import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -242,8 +241,22 @@ fun SlabScreen(
                 }
 
                 item {
-                    Text("🎨 مخطط التحليل والتسليح", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    SlabLayoutDrawing(lx = shortSpan.toDoubleOrNull() ?: 4.0, ly = longSpan.toDoubleOrNull() ?: 5.0, res = res)
+                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    ProfessionalSlabDrawing(
+                        slabType = selectedType.displayName,
+                        slabThickness = res.thickness.toDouble(),
+                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
+                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                        mainRebarDia = res.reinforcementMain.diameter.toDouble(),
+                        mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
+                        distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
+                        distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
+                        cover = 25.0,
+                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                        ribWidth = 0.0,
+                        ribSpacing = 0.0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
                 
                 item {
@@ -432,82 +445,6 @@ private fun SlabFormulasCard() {
             FormulaItem("3. ts_min = L / Factor (Deflection check)")
             FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
             FormulaItem("5. Check Punching: q_p = Wu * (Area) / (Perimeter * d) < q_p_limit")
-        }
-    }
-}
-
-@Composable
-private fun SlabLayoutDrawing(lx: Double, ly: Double, res: CalculatorEngine.SlabResult) {
-    Card(modifier = Modifier.fillMaxWidth().height(300.dp), shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
-            val scale = minOf((size.width - 120f)/lx, (size.height - 120f)/ly).toFloat()
-            val w = (lx * scale).toFloat()
-            val h = (ly * scale).toFloat()
-            val left = (size.width - w) / 2
-            val top = (size.height - h) / 2
-            
-            // Slab Boundary
-            drawRect(Color(0xFFF0F0F0), Offset(left, top), Size(w, h))
-            
-            // Draw Drop Panel if Flat Slab
-            if (res.type == CalculatorEngine.SlabType.FLAT) {
-                val panelSize = minOf(w, h) * 0.35f
-                drawRect(
-                    Color.LightGray.copy(alpha = 0.5f),
-                    Offset(left + w/2 - panelSize/2, top + h/2 - panelSize/2),
-                    Size(panelSize, panelSize)
-                )
-                drawRect(
-                    Color.Gray,
-                    Offset(left + w/2 - panelSize/2, top + h/2 - panelSize/2),
-                    Size(panelSize, panelSize),
-                    style = Stroke(2f)
-                )
-                
-                // Draw Column
-                val colSize = ((w / (lx * 1000f)) * 400f).toFloat() // Scale 400mm column
-                drawRect(
-                    Color.DarkGray,
-                    Offset((left + w/2 - colSize/2).toFloat(), (top + h/2 - colSize/2).toFloat()),
-                    Size(colSize, colSize)
-                )
-            }
-
-            // Draw PT Tendons if PT Slab
-            if (res.type == CalculatorEngine.SlabType.POST_TENSION) {
-                for (i in 1..4) {
-                    val y = top + i * (h / 5)
-                    drawLine(Color(0xFFFFA000), Offset(left, y), Offset(left + w, y), strokeWidth = 4f)
-                    // Anchor points
-                    drawCircle(Color.Black, 6f, Offset(left, y))
-                    drawCircle(Color.Black, 6f, Offset(left + w, y))
-                }
-            }
-
-            drawRect(Color.DarkGray, Offset(left, top), Size(w, h), style = Stroke(4f))
-            
-            // Draw Main Reinforcement Bars (X-Direction)
-            for (i in 1..8) {
-                val y = top + i * (h / 9)
-                drawLine(Color.Blue.copy(alpha = 0.5f), Offset(left + 20f, y), Offset(left + w - 20f, y), strokeWidth = 2f)
-            }
-            
-            // Draw Secondary Reinforcement Bars (Y-Direction)
-            for (i in 1..6) {
-                val x = left + i * (w / 7)
-                drawLine(Color.Red.copy(alpha = 0.5f), Offset(x, top + 20f), Offset(x, top + h - 20f), strokeWidth = 2f)
-            }
-            
-            // Analysis Labels
-            drawContext.canvas.nativeCanvas.apply {
-                val paint = android.graphics.Paint().apply { 
-                    color = android.graphics.Color.BLACK
-                    textSize = 28f
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                drawText("Lx = ${lx}m (Main: ${res.reinforcementMain.barString})", size.width/2, top - 20f, paint)
-                save(); rotate(-90f, left - 35f, size.height/2); drawText("Ly = ${ly}m (Sec: ${res.reinforcementSecondary.barString})", left - 35f, size.height/2, paint); restore()
-            }
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,10 +14,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,10 +25,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
 import com.civileg.app.viewmodel.TankViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
-import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -275,8 +271,22 @@ fun TankScreen(
                 }
 
                 item {
-                    Text("🎨 مخطط الخزان", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    TankDrawingCanvas(type = selectedType, modifier = Modifier.fillMaxWidth().height(200.dp))
+                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    ProfessionalTankDrawing(
+                        tankType = selectedType.displayName,
+                        length = res.length,
+                        width = res.width,
+                        height = res.height,
+                        wallThickness = res.wallThickness,
+                        baseThickness = res.baseThickness,
+                        waterLevel = res.height * 0.85,
+                        verticalRebarDia = res.wallReinforcement.diameter.toDouble(),
+                        verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
+                        horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
+                        horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
+                        foundationDepth = 0.0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -369,60 +379,5 @@ private fun ResultRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label)
         Text(value, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun TankDrawingCanvas(type: CalculatorEngine.TankType, modifier: Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
-        Canvas(modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp)) {
-            val width = size.width
-            val height = size.height
-            val centerX = width / 2f
-            val centerY = height / 2f
-
-            when (type) {
-                CalculatorEngine.TankType.CIRCULAR_GROUND,
-                CalculatorEngine.TankType.CIRCULAR_ELEVATED,
-                CalculatorEngine.TankType.CIRCULAR_UNDERGROUND -> {
-                    val radius = (min(width, height) / 2.5f)
-                    // Outer wall
-                    drawCircle(Color.Gray, radius = radius + 15f, center = Offset(centerX, centerY), style = Stroke(10f))
-                    // Inner wall
-                    drawCircle(Color.LightGray, radius = radius, center = Offset(centerX, centerY), style = Stroke(5f))
-                    // Water
-                    drawCircle(Color(0xFF2196F3).copy(alpha = 0.3f), radius = radius - 5f, center = Offset(centerX, centerY))
-                    // Rebars (Conceptual)
-                    for (i in 0..12) {
-                        val angle = (i * 30).toDouble() * PI / 180.0
-                        val x = centerX + radius * cos(angle).toFloat()
-                        val y = centerY + radius * sin(angle).toFloat()
-                        drawCircle(Color.Red, radius = 4f, center = Offset(x, y))
-                    }
-                }
-                else -> {
-                    val rectW = width * 0.7f
-                    val rectH = height * 0.5f
-                    val topLeft = Offset(centerX - rectW / 2, centerY - rectH / 2)
-                    
-                    // Main body
-                    drawRect(Color.LightGray, topLeft, Size(rectW, rectH))
-                    drawRect(Color.DarkGray, topLeft, Size(rectW, rectH), style = Stroke(8f))
-                    
-                    // Foundation/Base
-                    drawRect(Color.Gray, Offset(topLeft.x - 20f, topLeft.y + rectH), Size(rectW + 40f, 30f))
-                    
-                    // Water level
-                    drawRect(Color(0xFF2196F3).copy(alpha = 0.3f), Offset(topLeft.x + 10f, topLeft.y + 40f), Size(rectW - 20f, rectH - 50f))
-                    
-                    // Reinforcement lines
-                    drawLine(Color.Red, Offset(topLeft.x + 15f, topLeft.y), Offset(topLeft.x + 15f, topLeft.y + rectH), strokeWidth = 3f)
-                    drawLine(Color.Red, Offset(topLeft.x + rectW - 15f, topLeft.y), Offset(topLeft.x + rectW - 15f, topLeft.y + rectH), strokeWidth = 3f)
-                }
-            }
-        }
     }
 }

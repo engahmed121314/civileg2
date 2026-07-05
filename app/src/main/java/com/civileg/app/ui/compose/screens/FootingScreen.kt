@@ -1,6 +1,5 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,10 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.R
 import com.civileg.app.viewmodel.FootingViewModel
+import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.viewmodel.ProjectViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -305,14 +302,20 @@ fun FootingScreen(
                 }
 
                 item {
-                    Text("🎨 مخطط القاعدة والعمود", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    FootingProfessionalDrawing(
-                        fL = res.length,
-                        fW = res.width,
-                        thickness = res.thickness,
-                        cL = colLength.toDoubleOrNull() ?: 600.0,
-                        cW = colWidth.toDoubleOrNull() ?: 300.0,
-                        modifier = Modifier.fillMaxWidth().height(350.dp)
+                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    ProfessionalFootingDrawing(
+                        footingType = selectedType.displayName,
+                        footingLengthX = res.length.toDouble(),
+                        footingLengthY = res.width.toDouble(),
+                        footingThickness = res.thickness.toDouble(),
+                        columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                        columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                        rebarXDia = res.barDiameter.toDouble(),
+                        rebarXCount = res.barsX,
+                        rebarYDia = res.barDiameter.toDouble(),
+                        rebarYCount = res.barsY,
+                        cover = 75.0,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -399,49 +402,4 @@ private fun ResultRow(label: String, value: String) {
     }
 }
 
-@Composable
-private fun FootingProfessionalDrawing(fL: Double, fW: Double, thickness: Double, cL: Double, cW: Double, modifier: Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White).padding(16.dp)) {
-            val scale = minOf((size.width / 2.5f) / fL.toFloat(), (size.height / 2.5f) / fW.toFloat())
-            
-            // 1. Plan View (Top Left)
-            val pW = (fL * scale).toFloat()
-            val pH = (fW * scale).toFloat()
-            val pOffset = Offset(50f, 50f)
-            drawRect(Color(0xFFE0E0E0), pOffset, Size(pW, pH))
-            drawRect(Color.DarkGray, pOffset, Size(pW, pH), style = Stroke(2f))
-            
-            val pcW = (cL * scale).toFloat()
-            val pcH = (cW * scale).toFloat()
-            drawRect(Color.Gray, Offset(pOffset.x + (pW-pcW)/2, pOffset.y + (pH-pcH)/2), Size(pcW, pcH))
-            
-            // 2. Section View (Bottom/Right)
-            val sW = pW
-            val sH = (thickness * scale).toFloat()
-            val sOffset = Offset(50f, pH + 100f)
-            
-            // Draw Concrete
-            drawRect(Color(0xFFE0E0E0), sOffset, Size(sW, sH))
-            drawRect(Color.DarkGray, sOffset, Size(sW, sH), style = Stroke(2f))
-            
-            // Draw Column Neck
-            drawRect(Color.Gray, Offset(sOffset.x + (sW-pcW)/2, sOffset.y - 60f), Size(pcW, 60f))
-            
-            // Draw Reinforcement (Professional Look)
-            val cover = 50f * scale
-            // Bottom Main Bars
-            drawLine(Color.Red, Offset(sOffset.x + cover, sOffset.y + sH - cover), Offset(sOffset.x + sW - cover, sOffset.y + sH - cover), strokeWidth = 3f)
-            // Hooks
-            drawLine(Color.Red, Offset(sOffset.x + cover, sOffset.y + sH - cover), Offset(sOffset.x + cover, sOffset.y + sH - cover - 20f), strokeWidth = 3f)
-            drawLine(Color.Red, Offset(sOffset.x + sW - cover, sOffset.y + sH - cover), Offset(sOffset.x + sW - cover, sOffset.y + sH - cover - 20f), strokeWidth = 3f)
-            
-            // Distribution dots
-            var dx = sOffset.x + cover + 20f
-            while(dx < sOffset.x + sW - cover) {
-                drawCircle(Color.Red, radius = 3f, center = Offset(dx, sOffset.y + sH - cover - 8f))
-                dx += 30f * scale
-            }
-        }
-    }
-}
+

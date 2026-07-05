@@ -41,6 +41,8 @@ import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ColumnViewModel
+import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
+import com.civileg.app.ui.compose.components.drawings.BarInfo
 import kotlin.math.max
 import kotlin.math.min
 
@@ -337,8 +339,19 @@ fun ColumnScreen(
                 }
 
                 item {
-                    Text("🎨 الرسم الهندسي للقطاع", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    ColumnSectionCanvas(result)
+                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    ProfessionalColumnDrawing(
+                        columnWidth = result.width.toDouble(),
+                        columnDepth = result.depth.toDouble(),
+                        columnHeight = (result.clearHeight ?: 3000.0),
+                        longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
+                        tieDia = result.stirrups.diameter.toDouble(),
+                        tieSpacing = result.stirrups.spacing.toDouble(),
+                        cover = 40.0,
+                        isSpiral = false,
+                        sectionType = if (result.isCircular) "Circular" else "Rectangular",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -482,70 +495,6 @@ private fun EngineeringFormulasCard() {
 }
 
 @Composable
-private fun ColumnSectionCanvas(result: CalculatorEngine.ColumnResult) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().height(300.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
-            val padding = 60f
-            val scale = minOf((size.width - 2*padding)/result.width, (size.height - 2*padding)/result.depth).toFloat()
-            
-            val w = (result.width * scale).toFloat()
-            val h = (result.depth * scale).toFloat()
-            val left = (size.width - w) / 2
-            val top = (size.height - h) / 2
-            
-            // الخرسانة
-            drawRect(Color.LightGray, Offset(left, top), Size(w, h))
-            drawRect(Color.DarkGray, Offset(left, top), Size(w, h), style = Stroke(4f))
-            
-            // الكانات
-            val cover = 25f * scale
-            drawRect(Color.Blue.copy(alpha = 0.7f), Offset(left + cover, top + cover), Size(w - 2*cover, h - 2*cover), style = Stroke(3f))
-            
-            // حديد التسليح
-            val barRadius = 8f
-            val nBars = result.reinforcement.numBars
-            val barsSideX = max(2, (result.width / (result.width + result.depth) * nBars / 2).toInt() + 1)
-            val barsSideY = max(2, (result.depth / (result.width + result.depth) * nBars / 2).toInt() + 1)
-            
-            for (i in 0 until barsSideX) {
-                val x = left + cover + i * (w - 2*cover) / (barsSideX - 1)
-                drawCircle(Color.Black, barRadius, Offset(x, top + cover))
-                drawCircle(Color.Black, barRadius, Offset(x, top + h - cover))
-            }
-            for (i in 1 until barsSideY - 1) {
-                val y = top + cover + i * (h - 2*cover) / (barsSideY - 1)
-                drawCircle(Color.Black, barRadius, Offset(left + cover, y))
-                drawCircle(Color.Black, barRadius, Offset(left + w - cover, y))
-            }
-            
-            drawContext.canvas.nativeCanvas.apply {
-                val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.BLACK
-                    textSize = 35f
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                drawText("${result.width.toInt()} mm", size.width/2, top - 20f, paint)
-                
-                val midY = size.height/2
-                val paintVert = android.graphics.Paint().apply {
-                    color = android.graphics.Color.BLACK
-                    textSize = 35f
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                save()
-                rotate(-90f, left - 30f, midY)
-                drawText("${result.depth.toInt()} mm", left - 30f, midY, paintVert)
-                restore()
-            }
-        }
-    }
-}
-
-@Composable
 private fun SectionHeader(title: String, iconRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
@@ -638,4 +587,43 @@ private fun LoadCombinationSelector(selected: LoadCombination, onSelected: (Load
             )
         }
     }
+}
+
+private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double): List<BarInfo> {
+    val cover = 40.0
+    val cx = width / 2.0
+    val cy = depth / 2.0
+    val effectiveW = width - 2 * cover
+    val effectiveD = depth - 2 * cover
+    val positions = mutableListOf<BarInfo>()
+    val barsPerSide = maxOf(2, numBars / 4)
+    val corners = 4
+
+    // Corner bars
+    listOf(
+        BarInfo(cover + diameter/2, cover + diameter/2, diameter, isCorner = true),
+        BarInfo(width - cover - diameter/2, cover + diameter/2, diameter, isCorner = true),
+        BarInfo(cover + diameter/2, depth - cover - diameter/2, diameter, isCorner = true),
+        BarInfo(width - cover - diameter/2, depth - cover - diameter/2, diameter, isCorner = true)
+    ).forEach { positions.add(it) }
+
+    // Distribute remaining bars along sides
+    val remaining = numBars - 4
+    if (remaining > 0) {
+        val perSide = remaining / 4
+        for (side in 0 until 4) {
+            val count = if (side < remaining % 4) perSide + 1 else perSide
+            for (i in 1..count) {
+                val t = i.toDouble() / (count + 1)
+                val pos = when (side) {
+                    0 -> BarInfo(cover + diameter/2 + t * effectiveW, cover + diameter/2, diameter)
+                    1 -> BarInfo(width - cover - diameter/2, cover + diameter/2 + t * effectiveD, diameter)
+                    2 -> BarInfo(width - cover - diameter/2 - t * effectiveW, depth - cover - diameter/2, diameter)
+                    else -> BarInfo(cover + diameter/2, depth - cover - diameter/2 - t * effectiveD, diameter)
+                }
+                positions.add(pos)
+            }
+        }
+    }
+    return positions
 }

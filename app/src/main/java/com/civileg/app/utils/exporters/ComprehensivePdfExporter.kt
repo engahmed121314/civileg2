@@ -240,6 +240,23 @@ class ComprehensivePdfExporter(private val context: Context) {
         document.add(Paragraph(" "))
     }
 
+    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
+        if (bitmap == null) return
+        document.add(Paragraph(" "))
+        addSectionTitle(document, ar("الرسم الهندسي"), title)
+        try {
+            val stream = java.io.ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            val img = Image(ImageDataFactory.create(stream.toByteArray()))
+            img.setAutoScale(true)
+            img.setHorizontalAlignment(HorizontalAlignment.CENTER)
+            document.add(img)
+        } catch (e: Exception) {
+            document.add(styledParagraph("[Drawing not available]", 9f, color = ColorConstants.GRAY))
+        }
+        document.add(Paragraph(" "))
+    }
+
     private fun addFooter(document: Document) {
         document.add(Paragraph(" "))
         document.add(LineSeparator(SolidLine(0.5f)).setMarginTop(10f).setMarginBottom(5f))
@@ -263,7 +280,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         result: AdvancedBeamResult,
         inventoryAnalysis: InventoryAnalysisResult?,
         momentShearDiagrams: MomentShearDiagrams,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -339,6 +357,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 }
             }
 
+            addDrawingSection(document, drawingBitmap, "Beam Reinforcement Detail")
             addFooter(document)
             document.close()
             File(outputPath)
@@ -357,7 +376,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         result: AdvancedColumnResult,
         inventoryAnalysis: InventoryAnalysisResult?,
         alternatives: List<ColumnAlternative>,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -458,7 +478,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         slabType: SlabType,
         inputs: SlabInputs,
         result: AdvancedSlabResult,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -526,6 +547,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 }
             }
 
+            addDrawingSection(document, drawingBitmap, "Slab Reinforcement Layout")
             addFooter(document)
             document.close()
             File(outputPath)
@@ -544,7 +566,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         inputs: SteelInputs,
         result: SteelMemberResult,
         connectionDesign: ConnectionDesignResult?,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -606,6 +629,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 }
             }
 
+            addDrawingSection(document, drawingBitmap, "Steel Member Section")
             addFooter(document)
             document.close()
             File(outputPath)
@@ -620,7 +644,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         projectName: String,
         designCode: CalculatorEngine.DesignCode,
         result: CalculatorEngine.FootingResult,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -683,6 +708,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 document.add(table)
             }
 
+            addDrawingSection(document, drawingBitmap, "Footing Reinforcement Detail")
             addFooter(document)
             document.close()
             File(outputPath)
@@ -697,7 +723,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         projectName: String,
         designCode: CalculatorEngine.DesignCode,
         result: CalculatorEngine.TankResult,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -761,6 +788,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 document.add(table)
             }
 
+            addDrawingSection(document, drawingBitmap, "Tank Reinforcement Detail")
             addFooter(document)
             document.close()
             File(outputPath)
@@ -775,7 +803,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         projectName: String,
         designCode: CalculatorEngine.DesignCode,
         result: CalculatorEngine.StairResult,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -838,6 +867,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 document.add(table)
             }
 
+            addDrawingSection(document, drawingBitmap, "Stair Reinforcement Detail")
             addFooter(document)
             document.close()
             File(outputPath)
@@ -852,7 +882,8 @@ class ComprehensivePdfExporter(private val context: Context) {
         projectName: String,
         designCode: CalculatorEngine.DesignCode,
         result: CalculatorEngine.RetainingWallResult,
-        outputPath: String
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
     ): File? {
         return try {
             val (_, document, font) = createDocument(outputPath)
@@ -923,6 +954,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 document.add(table)
             }
 
+            addDrawingSection(document, drawingBitmap, "Retaining Wall Section")
             addFooter(document)
             document.close()
             File(outputPath)

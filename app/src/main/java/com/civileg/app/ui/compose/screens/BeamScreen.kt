@@ -1,6 +1,5 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,12 +17,7 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
 import kotlin.math.pow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.BeamViewModel
-import kotlin.math.min
+import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -282,18 +276,29 @@ fun BeamScreen(
                 }
 
                 item {
-                    Text("📉 مخطط العزوم (B.M.D)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    BeamDiagramCanvas(res, modifier = Modifier.fillMaxWidth().height(150.dp))
+                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    ProfessionalBeamDrawing(
+                        beamWidth = res.width.toDouble(),
+                        beamDepth = res.depth.toDouble(),
+                        span = (res.span ?: 5.0) * 1000.0,
+                        mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
+                        mainRebarCount = res.reinforcementBottom.numBars,
+                        stirrupDia = res.stirrups.diameter.toDouble(),
+                        stirrupSpacing = res.stirrups.spacing.toDouble(),
+                        cover = 50.0,
+                        developmentLength = res.developmentLength ?: 0.0,
+                        lapLength = 0.0,
+                        isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
+                        hasTopSteel = res.reinforcementTop.numBars > 0,
+                        topRebarDia = res.reinforcementTop.diameter.toDouble(),
+                        topRebarCount = res.reinforcementTop.numBars,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 item {
                     Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     BeamFormulasCard()
-                }
-
-                item {
-                    Text("🎨 رسم المقطع العرضي والتسليح", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    BeamSectionDrawing(res, modifier = Modifier.fillMaxWidth().height(280.dp))
                 }
             }
         }
@@ -384,142 +389,6 @@ private fun BeamFormulasCard() {
             FormulaItem("3. R = Mu / (fcu/gamma_c * b * d²)")
             FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
             FormulaItem("5. Check Shear: q_u = Vu / (b * d) < q_cu_limit")
-        }
-    }
-}
-
-@Composable
-private fun BeamDiagramCanvas(result: CalculatorEngine.BeamResult, modifier: Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White).padding(20.dp)) {
-            val w = size.width
-            val h = size.height
-            val baseline = h * 0.4f
-            
-            // Draw baseline
-            drawLine(Color.DarkGray, Offset(0f, baseline), Offset(w, baseline), strokeWidth = 3f)
-            
-            // Draw Supports based on type
-            drawSupport(result.supportType, 0f, baseline)
-            drawSupport(result.supportType, w, baseline, isEnd = true)
-
-            // Draw BMD Path
-            val path = Path()
-            path.moveTo(0f, baseline)
-            val segments = 50
-            for (i in 0..segments) {
-                val x = (i.toFloat() / segments) * w
-                val normX = i.toFloat() / segments
-                val y = when(result.supportType) {
-                    CalculatorEngine.SupportType.CANTILEVER -> baseline - (h * 0.5f * normX * normX)
-                    else -> baseline + (h * 0.5f * 4 * normX * (1 - normX))
-                }
-                path.lineTo(x, y)
-            }
-            drawPath(path, Color.Red, style = Stroke(4f))
-            
-            // Text for Max Moment
-            drawContext.canvas.nativeCanvas.drawText(
-                "M max = ${"%.1f".format(result.appliedMoment)} kN.m",
-                w/2, h - 5f,
-                android.graphics.Paint().apply {
-                    color = android.graphics.Color.RED
-                    textSize = 28f
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    isFakeBoldText = true
-                }
-            )
-        }
-    }
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSupport(type: CalculatorEngine.SupportType, x: Float, y: Float, isEnd: Boolean = false) {
-    val size = 20f
-    when (type) {
-        CalculatorEngine.SupportType.HINGED_HINGED, CalculatorEngine.SupportType.ROLLER_HINGED -> {
-            val path = Path()
-            path.moveTo(x, y)
-            path.lineTo(x - size, y + size)
-            path.lineTo(x + size, y + size)
-            path.close()
-            drawPath(path, Color.Black)
-            if (type == CalculatorEngine.SupportType.ROLLER_HINGED && isEnd) {
-                drawLine(Color.Black, Offset(x - size, y + size + 5f), Offset(x + size, y + size + 5f), strokeWidth = 2f)
-            }
-        }
-        CalculatorEngine.SupportType.FIXED_HINGED, CalculatorEngine.SupportType.FIXED_FIXED -> {
-            if ((!isEnd && (type == CalculatorEngine.SupportType.FIXED_HINGED || type == CalculatorEngine.SupportType.FIXED_FIXED)) || 
-                (isEnd && type == CalculatorEngine.SupportType.FIXED_FIXED)) {
-                drawLine(Color.Black, Offset(x, y - size), Offset(x, y + size), strokeWidth = 6f)
-                for (i in -2..2) {
-                    val offset = i * 8f
-                    drawLine(Color.Black, Offset(x, y + offset), Offset(x + (if(isEnd) -10f else 10f), y + offset - 10f), strokeWidth = 2f)
-                }
-            } else {
-                // Hinged part
-                val path = Path()
-                path.moveTo(x, y)
-                path.lineTo(x - size, y + size)
-                path.lineTo(x + size, y + size)
-                path.close()
-                drawPath(path, Color.Black)
-            }
-        }
-        CalculatorEngine.SupportType.CANTILEVER -> {
-            if (!isEnd) {
-                drawLine(Color.Black, Offset(x, y - size*2), Offset(x, y + size*2), strokeWidth = 8f)
-            }
-        }
-        else -> {}
-    }
-}
-
-@Composable
-private fun BeamSectionDrawing(result: CalculatorEngine.BeamResult, modifier: Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
-            val scale = minOf((size.width - 120f)/result.width, (size.height - 120f)/result.depth).toFloat()
-            val w = (result.width * scale).toFloat()
-            val h = (result.depth * scale).toFloat()
-            val left = (size.width - w) / 2
-            val top = (size.height - h) / 2
-            
-            // Concrete
-            drawRect(Color.LightGray, Offset(left, top), Size(w, h))
-            drawRect(Color.DarkGray, Offset(left, top), Size(w, h), style = Stroke(4f))
-            
-            // Stirrup (Ties)
-            val cover = 25f * scale
-            drawRect(Color.Blue.copy(alpha = 0.8f), Offset(left + cover, top + cover), Size(w - 2*cover, h - 2*cover), style = Stroke(3f))
-            
-            // Main Reinforcement (Bottom)
-            val barR = 8f
-            val nBarsBottom = result.reinforcementBottom.numBars
-            for (i in 0 until nBarsBottom) {
-                val x = left + cover + 20f + i * (w - 2*cover - 40f) / (if(nBarsBottom > 1) nBarsBottom - 1 else 1)
-                drawCircle(Color.Black, barR, Offset(x, top + h - cover - 20f))
-            }
-            
-            // Top Reinforcement (Hangers)
-            val nBarsTop = result.reinforcementTop.numBars
-            for (i in 0 until nBarsTop) {
-                val x = left + cover + 20f + i * (w - 2*cover - 40f) / (if(nBarsTop > 1) nBarsTop - 1 else 1)
-                drawCircle(Color.DarkGray, barR * 0.8f, Offset(x, top + cover + 20f))
-            }
-            
-            // Dimensions
-            drawContext.canvas.nativeCanvas.apply {
-                val paint = android.graphics.Paint().apply { 
-                    color = android.graphics.Color.BLACK
-                    textSize = 30f
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                drawText("${result.width.toInt()} mm", size.width/2, top - 15f, paint)
-                save()
-                rotate(-90f, left - 20f, size.height/2)
-                drawText("${result.depth.toInt()} mm", left - 20f, size.height/2, paint)
-                restore()
-            }
         }
     }
 }
