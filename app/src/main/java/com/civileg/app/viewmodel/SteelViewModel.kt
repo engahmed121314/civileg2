@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,6 +29,16 @@ class SteelViewModel @Inject constructor(
     val warehouseProResult: LiveData<SteelWarehouseProResult?> = _warehouseProResult
 
     private var lastWarehouseInputs: SteelWarehouseInputs? = null
+
+    // Store actual steel member inputs for PDF export
+    private var lastMemberInputs: SteelMemberStoredInputs? = null
+
+    private data class SteelMemberStoredInputs(
+        val section: SteelSectionType,
+        val memberType: SteelMemberType,
+        val inputs: SteelInputs,
+        val code: CalculatorEngine.DesignCode
+    )
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -58,6 +69,9 @@ class SteelViewModel @Inject constructor(
         inputs: SteelInputs,
         code: CalculatorEngine.DesignCode
     ) {
+        // Store actual inputs for PDF export
+        lastMemberInputs = SteelMemberStoredInputs(section, memberType, inputs, code)
+
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -81,7 +95,7 @@ class SteelViewModel @Inject constructor(
             try {
                 val res = calculatorEngine.designSteelWarehouse(inputs)
                 _warehouseResult.value = res
-                
+
                 // Also trigger the Pro calculation for better drawings/report
                 val proRes = calculatorEngine.calculateSteelWarehousePro(inputs)
                 _warehouseProResult.value = proRes
@@ -101,14 +115,12 @@ class SteelViewModel @Inject constructor(
     ) {
         val res = _warehouseProResult.value ?: return
         val inputs = lastWarehouseInputs ?: return
-        
+
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
                 val exporter = com.civileg.app.utils.exporters.SteelWarehouseProPdfExporter(context)
-                val file = exporter.exportToDownload(
-                    inputs, res, clientAr, clientEn, projAr, projEn
-                )
+                val file = exporter.exportToDownload(inputs, res, clientAr, clientEn, projAr, projEn)
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     com.civileg.app.utils.ExportUtils.openPdf(context, file)
@@ -124,21 +136,18 @@ class SteelViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun saveSteelMemberDesign(projectId: Long, name: String, result: SteelMemberResult) {
-        viewModelScope.launch {
-            repository.saveSteelMemberDesign(projectId, name, result)
-        }
+        viewModelScope.launch { repository.saveSteelMemberDesign(projectId, name, result) }
     }
 
     fun saveSteelWarehouseDesign(projectId: Long, name: String, result: SteelWarehouseAnalysisResult) {
-        viewModelScope.launch {
-            repository.saveSteelWarehouseDesign(projectId, name, result)
-        }
+        viewModelScope.launch { repository.saveSteelWarehouseDesign(projectId, name, result) }
     }
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
+        val stored = lastMemberInputs ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
@@ -146,28 +155,39 @@ class SteelViewModel @Inject constructor(
                 val file = java.io.File(context.cacheDir, fileName)
                 val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
 
-                // Use actual inputs from state if available, or reasonable defaults
-                val inputs = SteelInputs(
-                    axialLoad = 100.0,
-                    moment = 50.0,
-                    shear = 20.0,
-                    unbracedLength = 6000.0,
-                    length = 6000.0
-                )
+                // Generate steel drawing bitmap using actual section properties
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateSteelDrawing(
+                        sectionName = stored.section.displayName,
+                        sectionHeight = stored.section.h,
+                        flangeWidth = stored.section.bf,
+                        webThickness = stored.section.tw,
+                        flangeThickness = stored.section.tf,
+                        memberLength = stored.inputs.length,
+                        isSafe = res.isSafe,
+                        utilizationRatio = res.utilizationRatio * 100
+                    )
+                } catch (e: Exception) { e.printStackTrace(); null }
 
-                val domainCode = DesignCode.ECP // Default, ideally should come from UI
+                // Map to domain DesignCode
+                val domainCode = when (stored.code) {
+                    CalculatorEngine.DesignCode.ACI -> DesignCode.ACI
+                    CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+                    else -> DesignCode.ECP
+                }
 
                 val exportedFile = exporter.run {
                     setLanguage(settingsManager.language)
                     exportSteelReport(
-                        projectName = "Steel Design Report",
+                        projectName = "تقرير تصميم قطاع معدني - ${stored.section.displayName}",
                         designCode = domainCode,
-                        sectionType = res.sectionType,
-                        memberType = res.memberType,
-                        inputs = inputs,
+                        sectionType = stored.section,
+                        memberType = stored.memberType,
+                        inputs = stored.inputs,
                         result = res,
                         connectionDesign = res.connectionDesign,
-                        outputPath = file.absolutePath
+                        outputPath = file.absolutePath,
+                        drawingBitmap = drawingBitmap
                     )
                 }
 

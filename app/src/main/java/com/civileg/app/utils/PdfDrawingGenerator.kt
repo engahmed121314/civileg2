@@ -1135,4 +1135,346 @@ object PdfDrawingGenerator {
 
         return bitmap
     }
-}
+
+    // ========== GENERATE ADVANCED BEAM DRAWING WITH BMD/SFD ==========
+    fun generateBeamDrawingWithDiagrams(
+        beamWidth: Double, beamDepth: Double, span: Double,
+        mainRebarDia: Double, mainRebarCount: Int,
+        stirrupDia: Double, stirrupSpacing: Double,
+        cover: Double = 50.0,
+        hasTopSteel: Boolean = false, topRebarDia: Double = 0.0, topRebarCount: Int = 0,
+        momentPoints: List<Pair<Double, Double>> = emptyList(),
+        shearPoints: List<Pair<Double, Double>> = emptyList(),
+        maxMoment: Double = 0.0,
+        maxShear: Double = 0.0,
+        isSafe: Boolean = true
+    ): Bitmap {
+        val W = 1200; val H = 1400
+        val (bitmap, canvas) = createCanvas(W, H)
+
+        val outlineP = createPaint(Color.WHITE, 1.5f)
+        val titleP = textPaint(Color.WHITE, 22f, true)
+        val subtitleP = textPaint(DIM_TEXT, 16f, true)
+
+        // ============ PART 1: BEAM ELEVATION (top half) ============
+        canvas.drawTextCentered("BEAM REINFORCEMENT DETAIL", W / 2f, 30f, titleP)
+
+        val marginL = 80f; val marginR = 80f; val marginT = 60f
+        val mainBottom = 420f
+        val availW = W - marginL - marginR - 60f
+        val availH = mainBottom - marginT - 40f
+        val scaleW = availW / span.toFloat()
+        val scaleH = availH / beamDepth.toFloat()
+        val scale = min(scaleW, scaleH) * 0.75f
+
+        val bDrawW = span.toFloat() * scale
+        val bDrawH = beamDepth.toFloat() * scale
+        val bDrawD = beamWidth.toFloat() * scale * 0.3f
+        val bLeft = marginL + 40f
+        val bTop = marginT + 30f
+        val bRight = bLeft + bDrawW
+        val bBottom = bTop + bDrawH
+
+        // 3D beam body
+        canvas.drawRect(bLeft, bTop, bRight, bBottom, fillPaint(CONCRETE))
+        canvas.drawPath(Path().apply {
+            moveTo(bLeft, bTop); lineTo(bLeft + bDrawD * 0.3f, bTop - bDrawD * 0.2f)
+            lineTo(bRight + bDrawD * 0.3f, bTop - bDrawD * 0.2f); lineTo(bRight, bTop); close()
+        }, fillPaint(CONCRETE_TOP))
+        canvas.drawPath(Path().apply {
+            moveTo(bRight, bTop); lineTo(bRight + bDrawD * 0.3f, bTop - bDrawD * 0.2f)
+            lineTo(bRight + bDrawD * 0.3f, bBottom - bDrawD * 0.2f); lineTo(bRight, bBottom); close()
+        }, fillPaint(CONCRETE_SIDE))
+        canvas.drawRect(bLeft, bTop, bRight, bBottom, outlineP)
+
+        // Supports
+        val supportSize = 20f
+        canvas.drawPath(Path().apply {
+            moveTo(bLeft - supportSize/2, bBottom); lineTo(bLeft + supportSize/2, bBottom)
+            lineTo(bLeft, bBottom + supportSize); close()
+        }, fillPaint(SUPPORT))
+        canvas.drawLine(bLeft - supportSize, bBottom + supportSize, bLeft + supportSize, bBottom + supportSize, outlineP)
+        canvas.drawPath(Path().apply {
+            moveTo(bRight - supportSize/2, bBottom); lineTo(bRight + supportSize/2, bBottom)
+            lineTo(bRight, bBottom + supportSize * 0.7f); close()
+        }, fillPaint(SUPPORT))
+        canvas.drawCircle(bRight - 6f, bBottom + supportSize * 0.7f + 4f, 3f, fillPaint(SUPPORT))
+        canvas.drawCircle(bRight + 6f, bBottom + supportSize * 0.7f + 4f, 3f, fillPaint(SUPPORT))
+        canvas.drawLine(bRight - supportSize, bBottom + supportSize, bRight + supportSize, bBottom + supportSize, outlineP)
+
+        // Support labels
+        canvas.drawTextCentered("Pin", bLeft, bBottom + supportSize + 16f, textPaint(DIM_TEXT, 14f))
+        canvas.drawTextCentered("Roller", bRight, bBottom + supportSize + 16f, textPaint(DIM_TEXT, 14f))
+
+        // Load arrows (distributed)
+        val arrowP = createPaint(SECONDARY_RED, 1.2f)
+        val numArrows = 12
+        for (i in 0..numArrows) {
+            val ax = bLeft + i * bDrawW / numArrows
+            canvas.drawLine(ax, bTop - 25f, ax, bTop - 2f, arrowP)
+            // Arrowhead
+            canvas.drawPath(Path().apply {
+                moveTo(ax, bTop - 2f); lineTo(ax - 3f, bTop - 8f); lineTo(ax + 3f, bTop - 8f); close()
+            }, fillPaint(SECONDARY_RED))
+        }
+        canvas.drawLine(bLeft, bTop - 25f, bRight, bTop - 25f, arrowP)
+        canvas.drawTextCentered("w (UDL)", (bLeft + bRight) / 2f, bTop - 32f, textPaint(SECONDARY_RED, 16f, true))
+
+        // Main reinforcement (bottom)
+        val rebarR = maxOf(mainRebarDia.toFloat() / 2f * scale * 0.5f, 3f)
+        val rebarY = bBottom - cover.toFloat() * scale - rebarR
+        val spacing = (bDrawW - 2 * cover.toFloat() * scale) / maxOf(mainRebarCount - 1, 1)
+        for (i in 0 until mainRebarCount) {
+            val rx = bLeft + cover.toFloat() * scale + i * spacing
+            canvas.drawRebar(rx, rebarY, rebarR, REBAR_BLUE)
+        }
+
+        // Stirrups with spacing annotation
+        val stirrupP = createPaint(STIRRUP, 1.5f)
+        val stirrupY1 = bTop + cover.toFloat() * scale
+        val stirrupY2 = bBottom - cover.toFloat() * scale
+        val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+        var sx = bLeft + stirrupSpacingPx
+        var stirrupCount = 0
+        while (sx < bRight - stirrupSpacingPx) {
+            canvas.drawRect(sx - 2f, stirrupY1, sx + 2f, stirrupY2, stirrupP)
+            sx += stirrupSpacingPx
+            stirrupCount++
+        }
+
+        // Stirrup spacing dimension
+        if (stirrupCount > 1) {
+            val dimY = bTop - 5f
+            canvas.drawHDim(
+                bLeft + stirrupSpacingPx, bLeft + stirrupSpacingPx * 2,
+                dimY, "@${stirrupSpacing.toInt()}", -18f, createPaint(STIRRUP, 1f)
+            )
+        }
+
+        // Top reinforcement
+        if (hasTopSteel && topRebarCount > 0) {
+            val topR = maxOf(topRebarDia.toFloat() / 2f * scale * 0.5f, 3f)
+            val topY = bTop + cover.toFloat() * scale + topR
+            val topSpacing = (bDrawW - 2 * cover.toFloat() * scale) / maxOf(topRebarCount - 1, 1)
+            // Draw top bars at support zones only (L/3 each end)
+            val supportZone = bDrawW / 3f
+            for (i in 0 until topRebarCount) {
+                val rx = bLeft + cover.toFloat() * scale + i * topSpacing
+                // Left support zone
+                if (rx < bLeft + supportZone) canvas.drawRebar(rx, topY, topR, TOP_REBAR)
+                // Right support zone
+                if (rx > bRight - supportZone) canvas.drawRebar(rx, topY, topR, TOP_REBAR)
+            }
+            // Label
+            canvas.drawTextCentered("Top bars (L/3 zones)", (bLeft + bLeft + supportZone) / 2f, topY - rebarR - 8f, textPaint(TOP_REBAR, 13f))
+        }
+
+        // Dimensions
+        canvas.drawHDim(bLeft, bRight, bBottom + supportSize + 28f, "L = ${span.toInt()} mm")
+        canvas.drawVDim(bTop, bBottom, bLeft - 25f, "h=${beamDepth.toInt()}")
+        canvas.drawVDim(bTop, bTop + cover.toFloat() * scale, bRight + 25f, "c=${cover.toInt()}")
+
+        // Cross-section inset
+        val csX = 80f; val csY = 480f; val csScale = 0.45f
+        val csW = beamWidth.toFloat() * scale * csScale
+        val csH = beamDepth.toFloat() * scale * csScale
+
+        canvas.drawRect(csX, csY, csX + csW, csY + csH, fillPaint(CONCRETE))
+        canvas.drawRect(csX, csY, csX + csW, csY + csH, outlineP)
+
+        val csCover = cover.toFloat() * scale * csScale
+        canvas.drawRect(csX + csCover, csY + csCover, csX + csW - csCover, csY + csH - csCover, createPaint(STIRRUP, 1.5f))
+
+        val csRebarR = maxOf(mainRebarDia.toFloat() * csScale * 0.3f, 3f)
+        val csBarY = csY + csH - csCover - csRebarR
+        for (i in 0 until minOf(mainRebarCount, 6)) {
+            val rx = if (mainRebarCount <= 2) {
+                csX + csW / 2f
+            } else {
+                csX + csCover + csRebarR + i * (csW - 2 * csCover - 2 * csRebarR) / maxOf(mainRebarCount - 1, 1)
+            }
+            canvas.drawRebar(rx, csBarY, csRebarR, REBAR_BLUE)
+        }
+        if (hasTopSteel && topRebarCount > 0) {
+            val topR2 = maxOf(topRebarDia.toFloat() * csScale * 0.3f, 3f)
+            val topY2 = csY + csCover + topR2
+            for (i in 0 until minOf(topRebarCount, 4)) {
+                val rx = if (topRebarCount <= 2) {
+                    csX + csW / 2f
+                } else {
+                    csX + csCover + topR2 + i * (csW - 2 * csCover - 2 * topR2) / maxOf(topRebarCount - 1, 1)
+                }
+                canvas.drawRebar(rx, topY2, topR2, TOP_REBAR)
+            }
+        }
+
+        canvas.drawTextCentered("Section A-A", csX + csW / 2f, csY - 10f, textPaint(DIM_TEXT, 15f, true))
+        canvas.drawVDim(csY, csY + csH, csX + csW + 15f, "b=${beamWidth.toInt()}")
+        canvas.drawVDim(csY, csY + csH, csX - 20f, "h=${beamDepth.toInt()}")
+
+        // Reinforcement schedule table
+        drawRebarTable(canvas,
+            x = W * 0.35f, y = 470f,
+            data = listOf(
+                listOf("Mark", "Dia", "No.", "Spacing", "Length", "Type"),
+                listOf("B1", "${mainRebarDia.toInt()}", "$mainRebarCount", "-", "${span.toInt()} mm", "Main"),
+                listOf("S1", "${stirrupDia.toInt()}", "$stirrupCount", "@${stirrupSpacing.toInt()}", "-", "Stirrup")
+            ) + if (hasTopSteel && topRebarCount > 0)
+                listOf(listOf("T1", "${topRebarDia.toInt()}", "$topRebarCount", "-", "${(span/3).toInt()} mm", "Top"))
+            else emptyList()
+        )
+
+        // Status badge
+        val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
+        val statusText = if (isSafe) "SAFE" else "UNSAFE"
+        canvas.drawText(statusText, W - 130f, 480f, textPaint(statusColor, 24f, true))
+        canvas.drawText("UR: ${"%.0f".format(if (maxMoment > 0) 0.0 else 0.0)}%", W - 140f, 500f, textPaint(DIM_TEXT, 14f))
+
+        // ============ PART 2: BENDING MOMENT DIAGRAM ============
+        val bmdTop = 580f
+        val bmdHeight = 180f
+        val bmdLeft = marginL + 40f
+        val bmdWidth = bDrawW
+
+        // BMD background
+        canvas.drawRect(bmdLeft - 10f, bmdTop - 10f, bmdLeft + bmdWidth + 10f, bmdTop + bmdHeight + 10f,
+            fillPaint(Color.parseColor("#0D1117")))
+        canvas.drawRect(bmdLeft - 10f, bmdTop - 10f, bmdLeft + bmdWidth + 10f, bmdTop + bmdHeight + 10f,
+            createPaint(Color.parseColor("#333333"), 0.5f))
+
+        canvas.drawText("BENDING MOMENT DIAGRAM (BMD)", bmdLeft + bmdWidth / 2f, bmdTop - 2f,
+            textPaint(Color.parseColor("#4A90D9"), 14f, true))
+
+        // Baseline
+        canvas.drawLine(bmdLeft, bmdTop + bmdHeight, bmdLeft + bmdWidth, bmdTop + bmdHeight,
+            createPaint(DIM_LINE, 0.5f))
+
+        if (momentPoints.isNotEmpty()) {
+            val maxM = momentPoints.maxOfOrNull { it.second } ?: 1.0
+            val bmdScale = (bmdHeight - 30f) / maxM.toFloat()
+
+            // Filled area
+            val bmdFill = fillPaint(Color.parseColor("#1A3A5C"))
+            val bmdLine = createPaint(Color.parseColor("#4A90D9"), 2f)
+            val bmdPath = Path()
+            bmdPath.moveTo(bmdLeft, bmdTop + bmdHeight)
+
+            for (pt in momentPoints) {
+                val px = bmdLeft + pt.first.toFloat() / span.toFloat() * bmdWidth
+                val py = bmdTop + bmdHeight - pt.second.toFloat() * bmdScale
+                bmdPath.lineTo(px, py)
+            }
+            bmdPath.lineTo(bmdLeft + bmdWidth, bmdTop + bmdHeight)
+            bmdPath.close()
+            canvas.drawPath(bmdPath, bmdFill)
+
+            // Line
+            val linePath = Path()
+            for ((i, pt) in momentPoints.withIndex()) {
+                val px = bmdLeft + pt.first.toFloat() / span.toFloat() * bmdWidth
+                val py = bmdTop + bmdHeight - pt.second.toFloat() * bmdScale
+                if (i == 0) linePath.moveTo(px, py) else linePath.lineTo(px, py)
+            }
+            canvas.drawPath(linePath, bmdLine)
+
+            // Max moment annotation
+            val maxPt = momentPoints.maxByOrNull { it.second }
+            if (maxPt != null) {
+                val px = bmdLeft + maxPt.first.toFloat() / span.toFloat() * bmdWidth
+                val py = bmdTop + bmdHeight - maxPt.second.toFloat() * bmdScale
+                canvas.drawText("M_max = ${"%.1f".format(maxPt.second)} kN.m", px + 10f, py - 5f,
+                    textPaint(Color.parseColor("#4A90D9"), 14f, true))
+                // Dashed line from peak to baseline
+                canvas.drawLine(px, py, px, bmdTop + bmdHeight,
+                    createPaint(Color.parseColor("#4A90D9"), 0.8f).apply {
+                        pathEffect = DashPathEffect(floatArrayOf(4f, 3f), 0f)
+                    })
+            }
+        }
+
+        // ============ PART 3: SHEAR FORCE DIAGRAM ============
+        val sfdTop = bmdTop + bmdHeight + 40f
+        val sfdHeight = 180f
+
+        canvas.drawRect(bmdLeft - 10f, sfdTop - 10f, bmdLeft + bmdWidth + 10f, sfdTop + sfdHeight + 10f,
+            fillPaint(Color.parseColor("#0D1117")))
+        canvas.drawRect(bmdLeft - 10f, sfdTop - 10f, bmdLeft + bmdWidth + 10f, sfdTop + sfdHeight + 10f,
+            createPaint(Color.parseColor("#333333"), 0.5f))
+
+        canvas.drawText("SHEAR FORCE DIAGRAM (SFD)", bmdLeft + bmdWidth / 2f, sfdTop - 2f,
+            textPaint(Color.parseColor("#E74C3C"), 14f, true))
+
+        // Center line (zero line)
+        val sfdCenterY = sfdTop + sfdHeight / 2f
+        canvas.drawLine(bmdLeft, sfdCenterY, bmdLeft + bmdWidth, sfdCenterY,
+            createPaint(DIM_LINE, 0.5f).apply { pathEffect = DashPathEffect(floatArrayOf(4f, 3f), 0f) })
+
+        if (shearPoints.isNotEmpty()) {
+            val maxV = maxOf(
+                shearPoints.maxOfOrNull { kotlin.math.abs(it.second) } ?: 1.0,
+                1.0
+            )
+            val sfdScale = (sfdHeight / 2f - 20f) / maxV.toFloat()
+
+            // Positive area (fill above center line)
+            val sfdPosPath = Path()
+            sfdPosPath.moveTo(bmdLeft, sfdCenterY)
+            for (pt in shearPoints) {
+                val px = bmdLeft + pt.first.toFloat() / span.toFloat() * bmdWidth
+                val py = sfdCenterY - pt.second.toFloat() * sfdScale
+                sfdPosPath.lineTo(px, py.coerceIn(sfdTop + 5f, sfdTop + sfdHeight - 5f))
+            }
+            sfdPosPath.lineTo(bmdLeft + bmdWidth, sfdCenterY)
+            sfdPosPath.close()
+            canvas.drawPath(sfdPosPath, fillPaint(Color.parseColor("#3D1111")))
+
+            // Line
+            val sfdLine = createPaint(Color.parseColor("#E74C3C"), 2f)
+            val sfdPath = Path()
+            for ((i, pt) in shearPoints.withIndex()) {
+                val px = bmdLeft + pt.first.toFloat() / span.toFloat() * bmdWidth
+                val py = sfdCenterY - pt.second.toFloat() * sfdScale
+                if (i == 0) sfdPath.moveTo(px, py.coerceIn(sfdTop + 5f, sfdTop + sfdHeight - 5f))
+                else sfdPath.lineTo(px, py.coerceIn(sfdTop + 5f, sfdTop + sfdHeight - 5f))
+            }
+            canvas.drawPath(sfdPath, sfdLine)
+
+            // Max shear annotations
+            val maxVPt = shearPoints.maxByOrNull { kotlin.math.abs(it.second) }
+            if (maxVPt != null) {
+                val px = bmdLeft + maxVPt.first.toFloat() / span.toFloat() * bmdWidth
+                val py = sfdCenterY - maxVPt.second.toFloat() * sfdScale
+                canvas.drawText("V_max = ${"%.1f".format(maxVPt.second)} kN", px + 10f,
+                    py.coerceIn(sfdTop + 15f, sfdTop + sfdHeight - 5f),
+                    textPaint(Color.parseColor("#E74C3C"), 14f, true))
+            }
+        }
+
+        // Labels: + and - sides
+        canvas.drawText("+V", bmdLeft - 25f, sfdTop + 20f, textPaint(SECONDARY_RED, 14f, true))
+        canvas.drawText("-V", bmdLeft - 25f, sfdTop + sfdHeight - 5f, textPaint(SECONDARY_RED, 14f, true))
+
+        // ============ PART 4: SUMMARY BOX ============
+        val sumY = sfdTop + sfdHeight + 30f
+        canvas.drawRect(marginL, sumY, W - marginR, sumY + 90f, fillPaint(Color.parseColor("#0D1117")))
+        canvas.drawRect(marginL, sumY, W - marginR, sumY + 90f, createPaint(Color.parseColor("#444444"), 0.5f))
+
+        canvas.drawText("STRUCTURAL ANALYSIS SUMMARY", marginL + 20f, sumY + 20f,
+            textPaint(Color.WHITE, 16f, true))
+
+        val infoP = textPaint(DIM_TEXT, 14f)
+        canvas.drawText("Span: ${span.toInt()} mm  |  b x h: ${beamWidth.toInt()} x ${beamDepth.toInt()} mm",
+            marginL + 20f, sumY + 42f, infoP)
+        canvas.drawText("M_max: ${"%.1f".format(maxMoment)} kN.m  |  V_max: ${"%.1f".format(maxShear)} kN",
+            marginL + 20f, sumY + 60f, infoP)
+        canvas.drawText("Main: ${mainRebarCount}\u00D8${mainRebarDia.toInt()}  |  Stirrups: \u00D8${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()} mm",
+            marginL + 20f, sumY + 78f, infoP)
+
+        // Status badge
+        canvas.drawText(statusText, W - marginR - 80f, sumY + 50f, textPaint(statusColor, 28f, true))
+
+        drawTitleBlock(canvas, W - 280f, H - 55f, 280f, 55f, "Beam Analysis")
+        return bitmap
+    }
+
+    }

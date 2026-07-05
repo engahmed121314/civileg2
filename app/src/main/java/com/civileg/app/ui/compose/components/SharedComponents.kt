@@ -424,3 +424,218 @@ fun BeamAnalysisResultsCard(
         }
     }
 }
+
+// ============================================================================
+// DESIGN SYSTEM COLORS & HELPERS
+// ============================================================================
+
+object DesignSystem {
+    fun statusColor(ratio: Float): Color = when {
+        ratio > 1.0f -> Color(0xFFE53935)  // Red - unsafe
+        ratio > 0.9f -> Color(0xFFFF9800)  // Orange - high
+        ratio > 0.4f -> Color(0xFF2E7D32)  // Green - safe
+        else -> Color(0xFF1976D2)           // Blue - uneconomical
+    }
+
+    fun statusText(ratio: Float): String = when {
+        ratio > 1.0f -> "غير آمن"
+        ratio > 0.9f -> "تحميل عالي"
+        ratio > 0.4f -> "آمن ومقبول"
+        else -> "غير اقتصادي"
+    }
+}
+
+// ============================================================================
+// SAFETY CHECK ROW
+// ============================================================================
+
+/**
+ * Professional check row showing safety verification with icon.
+ */
+@Composable
+fun SafetyCheckRow(
+    label: String,
+    isSafe: Boolean,
+    detail: String = "",
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+    ) {
+        Icon(
+            if (isSafe) Icons.Default.Verified else Icons.Default.Dangerous,
+            contentDescription = null,
+            tint = if (isSafe) Color(0xFF2E7D32) else Color(0xFFE53935),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        if (detail.isNotEmpty()) {
+            Text(detail, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = if (isSafe) Color(0xFF2E7D32) else Color(0xFFE53935))
+        }
+    }
+}
+
+// ============================================================================
+// PROFESSIONAL ACTION BUTTON
+// ============================================================================
+
+/**
+ * Consistent styled action button for calculate/export actions.
+ */
+@Composable
+fun DesignActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    enabled: Boolean = true,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary
+) {
+    Card(
+        onClick = { if (!isLoading && enabled) onClick() },
+        enabled = enabled,
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) containerColor else containerColor.copy(alpha = 0.5f),
+            disabledContainerColor = containerColor.copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp)
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = contentColor,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+// ============================================================================
+// FORMULA DISPLAY CARD
+// ============================================================================
+
+/**
+ * Card showing engineering formulas with monospace font.
+ */
+@Composable
+fun FormulaCard(
+    title: String = "المعادلات التصميمية",
+    formulas: List<Pair<String, String>>,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null, modifier = Modifier.size(20.dp)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    formulas.forEach { (name, formula) ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(name, fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                Text(formula, fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
+// QUICK ACTIONS ROW
+// ============================================================================
+
+/**
+ * Horizontal row of quick action chips/buttons.
+ */
+@Composable
+fun QuickActionsRow(
+    actions: List<Pair<String, () -> Unit>>,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        actions.forEach { (text, onClick) ->
+            Card(
+                onClick = onClick,
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(vertical = 10.dp)
+                ) {
+                    Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+        }
+    }
+}
