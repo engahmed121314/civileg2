@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +28,9 @@ class SlabViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private var lastSpanX: Double = 5.0
+    private var lastSpanY: Double = 5.0
 
     fun calculateSlabPro(
         lx: Double,
@@ -63,6 +67,8 @@ class SlabViewModel @Inject constructor(
                 )
                 _result.value = res
                 _error.value = null
+                lastSpanX = lx
+                lastSpanY = ly
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
             } finally {
@@ -118,7 +124,23 @@ class SlabViewModel @Inject constructor(
                 val fileName = "Slab_Report_${System.currentTimeMillis()}.pdf"
                 val file = java.io.File(context.cacheDir, fileName)
                 val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
-                
+
+                // Generate drawing for PDF
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateSlabDrawing(
+                        spanX = lastSpanX,
+                        spanY = lastSpanY,
+                        thickness = res.thickness,
+                        mainDia = res.reinforcementMain.diameter.toDouble(),
+                        mainSpacing = res.reinforcementMain.spacing,
+                        distDia = res.reinforcementSecondary.diameter.toDouble(),
+                        distSpacing = res.reinforcementSecondary.spacing
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+
                 // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
                 val domainCode = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
@@ -171,7 +193,8 @@ class SlabViewModel @Inject constructor(
                         deadLoad = 2.0, liveLoad = 3.0, shortSpan = 5.0, longSpan = 5.0
                     ),
                     result = advResult,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
                 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

@@ -32,6 +32,8 @@ import com.civileg.app.domain.calculations.sbc.SBCSteelDesignEngine
 import com.civileg.app.domain.calculations.ecp.ECPAdvancedSlab
 import com.civileg.app.domain.calculations.aci.ACIAdvancedSlab
 import com.civileg.app.domain.calculations.sbc.SBCAdvancedSlab
+import com.civileg.app.domain.calculations.ecp.ECPDoublyReinforcedBeam
+import com.civileg.app.domain.calculations.ecp.ECPCombinedFooting
 import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
 import com.civileg.app.domain.calculations.ecp.ECPWaffleSlabDesign
 import com.civileg.app.domain.entities.DesignCode
@@ -95,6 +97,14 @@ object CalculationFactory {
     fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = ECPHordiSlabDesign()
 
     fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = ECPWaffleSlabDesign()
+
+    // ========== كمرات مزدوجة التسليح (Doubly Reinforced Beams) ==========
+
+    fun getDoublyReinforcedBeamDesign(code: DesignCode): ECPDoublyReinforcedBeam = ECPDoublyReinforcedBeam()
+
+    // ========== القواعد المركبة (Combined Footings) ==========
+
+    fun getCombinedFootingDesign(code: DesignCode): ECPCombinedFooting = ECPCombinedFooting()
 
     // ========== البلاطات المتقدمة (Advanced Slab Design) ==========
 

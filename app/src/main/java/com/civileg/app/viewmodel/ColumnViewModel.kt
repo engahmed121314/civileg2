@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -184,6 +185,23 @@ class ColumnViewModel @Inject constructor(
                 val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
                 val fyVal = state.fy.toDoubleOrNull() ?: 400.0
 
+                // Generate drawing for PDF
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateColumnDrawing(
+                        columnWidth = res.width,
+                        columnDepth = res.depth,
+                        columnHeight = h * 1000.0,
+                        numBars = res.reinforcement.numBars,
+                        barDia = res.reinforcement.diameter.toDouble(),
+                        tieDia = res.stirrups.diameter.toDouble(),
+                        tieSpacing = res.stirrups.spacing,
+                        cover = 40.0
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+
                 val colType = if (res.columnType == "CIRCULAR") ColumnType.Circular(res.width) else ColumnType.Rectangular(res.width, res.depth)
                 val advResult = AdvancedColumnResult(
                     columnType = colType,
@@ -231,7 +249,8 @@ class ColumnViewModel @Inject constructor(
                     result = advResult,
                     inventoryAnalysis = null,
                     alternatives = emptyList(),
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
                 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

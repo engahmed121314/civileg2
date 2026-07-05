@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -93,11 +94,33 @@ class FootingViewModel @Inject constructor(
                 val file = File(context.cacheDir, fileName)
                 
                 val exporter = ComprehensivePdfExporter(context)
+
+                // Generate drawing for PDF
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateFootingDrawing(
+                        footingLX = res.width,
+                        footingLY = res.length,
+                        footingThickness = res.thickness,
+                        colW = res.column1Size.first,
+                        colD = res.column1Size.second,
+                        rebarXCount = res.barsX,
+                        rebarXDia = res.barDiameter.toDouble(),
+                        rebarXSpacing = res.reinforcementBottom.spacing,
+                        rebarYCount = res.barsY,
+                        rebarYDia = res.barDiameter.toDouble(),
+                        rebarYSpatial = res.reinforcementBottom.spacing
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+
                 val exportedFile = exporter.exportFootingReport(
                     projectName = "تقرير تصميم أساسات - ${res.type.displayName}",
                     designCode = res.code,
                     result = res,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
                 
                 withContext(Dispatchers.Main) {

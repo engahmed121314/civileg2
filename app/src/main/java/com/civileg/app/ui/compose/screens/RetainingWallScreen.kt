@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -210,26 +211,32 @@ fun RetainingWallScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                ProfessionalRetainingWallDrawing(
-                    wallHeight = res.height,
-                    wallTopThickness = res.stemThickness * 0.6,
-                    wallBottomThickness = res.stemThickness,
-                    baseWidth = res.baseWidth,
-                    baseThickness = res.stemThickness * 1.2,
-                    toeLength = res.baseWidth * 0.25,
-                    heelLength = res.baseWidth * 0.6,
-                    mainRebarDia = res.stemReinforcement.diameter.toDouble(),
-                    mainRebarSpacing = res.stemReinforcement.spacing.toDouble(),
-                    distRebarDia = res.stemReinforcement.diameter.toDouble() * 0.7,
-                    distRebarSpacing = res.stemReinforcement.spacing.toDouble() * 1.5,
-                    baseRebarDia = res.baseReinforcement.diameter.toDouble(),
-                    baseRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                    cover = 50.0,
-                    backfillAngle = res.ka.toDouble(),
-                    hasKey = true,
-                    keyDepth = 150.0,
-                    modifier = Modifier.fillMaxWidth()
+                InteractiveDrawingScreen(
+                    title = "📐 رسم حائط السند التفصيلي",
+                    subtitle = "Retaining Wall Detail",
+                    viewModes = listOf("الكل", "المقطع", "ضغط التربة", "جدول التسليح"),
+                    drawingContent = {
+                        ProfessionalRetainingWallDrawing(
+                            wallHeight = res.height,
+                            wallTopThickness = res.stemThickness * 0.6,
+                            wallBottomThickness = res.stemThickness,
+                            baseWidth = res.baseWidth,
+                            baseThickness = res.stemThickness * 1.2,
+                            toeLength = res.baseWidth * 0.25,
+                            heelLength = res.baseWidth * 0.6,
+                            mainRebarDia = res.stemReinforcement.diameter.toDouble(),
+                            mainRebarSpacing = res.stemReinforcement.spacing.toDouble(),
+                            distRebarDia = res.stemReinforcement.diameter.toDouble() * 0.7,
+                            distRebarSpacing = res.stemReinforcement.spacing.toDouble() * 1.5,
+                            baseRebarDia = res.baseReinforcement.diameter.toDouble(),
+                            baseRebarSpacing = res.baseReinforcement.spacing.toDouble(),
+                            cover = 50.0,
+                            backfillAngle = res.ka.toDouble(),
+                            hasKey = true,
+                            keyDepth = 150.0,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 )
             }
         }

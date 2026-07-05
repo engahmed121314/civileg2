@@ -42,6 +42,7 @@ import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ColumnViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
 import kotlin.math.max
 import kotlin.math.min
@@ -339,18 +340,24 @@ fun ColumnScreen(
                 }
 
                 item {
-                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    ProfessionalColumnDrawing(
-                        columnWidth = result.width.toDouble(),
-                        columnDepth = result.depth.toDouble(),
-                        columnHeight = (result.clearHeight ?: 3000.0),
-                        longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
-                        tieDia = result.stirrups.diameter.toDouble(),
-                        tieSpacing = result.stirrups.spacing.toDouble(),
-                        cover = 40.0,
-                        isSpiral = false,
-                        sectionType = if (result.isCircular) "Circular" else "Rectangular",
-                        modifier = Modifier.fillMaxWidth()
+                    InteractiveDrawingScreen(
+                        title = "📐 الرسم الهندسي التفصيلي",
+                        subtitle = "Column Reinforcement Detail",
+                        viewModes = listOf("الكل", "المنظور", "المقطع العرضي", "جدول التسليح"),
+                        drawingContent = {
+                            ProfessionalColumnDrawing(
+                                columnWidth = result.width.toDouble(),
+                                columnDepth = result.depth.toDouble(),
+                                columnHeight = (result.clearHeight ?: 3000.0),
+                                longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
+                                tieDia = result.stirrups.diameter.toDouble(),
+                                tieSpacing = result.stirrups.spacing.toDouble(),
+                                cover = 40.0,
+                                isSpiral = false,
+                                sectionType = if (result.isCircular) "Circular" else "Rectangular",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     )
                 }
             }

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +28,8 @@ class BeamViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private var lastSpan: Double = 5.0
 
     fun calculateBeamPro(
         width: Double,
@@ -56,6 +59,7 @@ class BeamViewModel @Inject constructor(
                     supportType = supportType
                 )
                 _result.value = res
+                lastSpan = span
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
@@ -84,6 +88,26 @@ class BeamViewModel @Inject constructor(
                 val file = java.io.File(context.cacheDir, fileName)
                 val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
                 
+                // Generate drawing for PDF
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateBeamDrawing(
+                        beamWidth = res.width.toDouble(),
+                        beamDepth = res.depth.toDouble(),
+                        span = lastSpan * 1000.0,
+                        mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
+                        mainRebarCount = res.reinforcementBottom.numBars,
+                        stirrupDia = res.stirrups.diameter.toDouble(),
+                        stirrupSpacing = res.stirrups.spacing.toDouble(),
+                        cover = 50.0,
+                        hasTopSteel = res.reinforcementTop.numBars > 0,
+                        topRebarDia = res.reinforcementTop.diameter.toDouble(),
+                        topRebarCount = res.reinforcementTop.numBars
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+
                 val domainCode = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
                     CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
@@ -137,7 +161,8 @@ class BeamViewModel @Inject constructor(
                     result = advResult,
                     inventoryAnalysis = null,
                     momentShearDiagrams = com.civileg.app.domain.entities.MomentShearDiagrams(emptyList(), emptyList(), emptyList()),
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
                 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

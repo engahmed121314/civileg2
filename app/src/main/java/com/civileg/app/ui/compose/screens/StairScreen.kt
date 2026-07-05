@@ -34,6 +34,8 @@ import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -288,6 +290,28 @@ fun StairScreen(
                 item {
                     Text("🎨 رسم تفصيلي للتسليح (Full Reinforcement)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(300.dp))
+                }
+
+                item {
+                    InteractiveDrawingScreen(
+                        title = "رسم السلم التفصيلي",
+                        subtitle = "Staircase Reinforcement Detail",
+                        drawingContent = {
+                            ProfessionalStairDrawing(
+                                stairWidth = 1200.0,
+                                totalHeight = ((res.span * 1000.0) / res.tread).toInt() * res.riser,
+                                totalLength = res.span * 1000.0,
+                                riserHeight = res.riser,
+                                treadWidth = res.tread,
+                                slabThickness = res.thickness,
+                                mainRebarDia = res.reinforcement.diameter.toDouble(),
+                                mainRebarSpacing = res.reinforcement.spacing,
+                                distributionDia = res.distributionReinforcement.diameter.toDouble(),
+                                distributionSpacing = res.distributionReinforcement.spacing,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    )
                 }
 
                 item {

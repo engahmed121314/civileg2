@@ -33,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfExportHelper
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
 
@@ -241,21 +242,27 @@ fun SlabScreen(
                 }
 
                 item {
-                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    ProfessionalSlabDrawing(
-                        slabType = selectedType.displayName,
-                        slabThickness = res.thickness.toDouble(),
-                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
-                        mainRebarDia = res.reinforcementMain.diameter.toDouble(),
-                        mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
-                        distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
-                        distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
-                        cover = 25.0,
-                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                        ribWidth = 0.0,
-                        ribSpacing = 0.0,
-                        modifier = Modifier.fillMaxWidth()
+                    InteractiveDrawingScreen(
+                        title = "📐 رسم البلاطة التفصيلي",
+                        subtitle = "Slab Reinforcement Detail",
+                        viewModes = listOf("الكل", "المخطط", "المقطع", "جدول التسليح"),
+                        drawingContent = {
+                            ProfessionalSlabDrawing(
+                                slabType = selectedType.displayName,
+                                slabThickness = res.thickness.toDouble(),
+                                spanX = shortSpan.toDoubleOrNull() ?: 4.0,
+                                spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                                mainRebarDia = res.reinforcementMain.diameter.toDouble(),
+                                mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
+                                distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
+                                distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
+                                cover = 25.0,
+                                dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                                ribWidth = 0.0,
+                                ribSpacing = 0.0,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     )
                 }
                 

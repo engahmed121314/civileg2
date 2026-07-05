@@ -45,6 +45,8 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.SteelViewModel
+import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import java.io.File
 import kotlin.math.PI
 import kotlin.math.ceil
@@ -1127,6 +1129,33 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             item {
                 Text("🎨 الرسم الهندسي للقطاع", fontWeight = FontWeight.Bold)
                 SteelSectionDrawing(res.sectionType)
+            }
+
+            item {
+                InteractiveDrawingScreen(
+                    title = "رسم القطاع الحديدي",
+                    subtitle = "Steel Member Detail",
+                    viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "التوصيلات"),
+                    drawingContent = {
+                        ProfessionalSteelDrawing(
+                            sectionType = res.sectionType.displayName,
+                            sectionName = res.sectionType.sectionName,
+                            memberLength = (length.toDoubleOrNull() ?: 6.0) * 1000.0,
+                            depth = res.sectionType.depth,
+                            flangeWidth = res.sectionType.width,
+                            flangeThickness = res.sectionType.flangeThickness,
+                            webThickness = res.sectionType.webThickness,
+                            radius = res.sectionType.rootRadius,
+                            area = res.sectionType.area,
+                            ix = res.sectionType.ix,
+                            sx = res.sectionType.sx,
+                            zx = res.sectionType.zx,
+                            weightPerMeter = res.sectionType.weight,
+                            isColumn = res.memberType == SteelMemberType.COLUMN,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                )
             }
             
             // Economy Indicator

@@ -31,6 +31,8 @@ import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.BeamViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
+import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -276,22 +278,40 @@ fun BeamScreen(
                 }
 
                 item {
-                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    ProfessionalBeamDrawing(
-                        beamWidth = res.width.toDouble(),
-                        beamDepth = res.depth.toDouble(),
-                        span = (res.span ?: 5.0) * 1000.0,
-                        mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
-                        mainRebarCount = res.reinforcementBottom.numBars,
-                        stirrupDia = res.stirrups.diameter.toDouble(),
-                        stirrupSpacing = res.stirrups.spacing.toDouble(),
-                        cover = 50.0,
-                        developmentLength = res.developmentLength ?: 0.0,
-                        lapLength = 0.0,
-                        isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
-                        hasTopSteel = res.reinforcementTop.numBars > 0,
-                        topRebarDia = res.reinforcementTop.diameter.toDouble(),
-                        topRebarCount = res.reinforcementTop.numBars,
+                    InteractiveDrawingScreen(
+                        title = "📐 الرسم الهندسي التفصيلي",
+                        subtitle = "Beam Reinforcement Detail",
+                        viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "جدول التسليح"),
+                        drawingContent = {
+                            ProfessionalBeamDrawing(
+                                beamWidth = res.width.toDouble(),
+                                beamDepth = res.depth.toDouble(),
+                                span = (res.span ?: 5.0) * 1000.0,
+                                mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
+                                mainRebarCount = res.reinforcementBottom.numBars,
+                                stirrupDia = res.stirrups.diameter.toDouble(),
+                                stirrupSpacing = res.stirrups.spacing.toDouble(),
+                                cover = 50.0,
+                                developmentLength = res.developmentLength ?: 0.0,
+                                lapLength = 0.0,
+                                isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
+                                hasTopSteel = res.reinforcementTop.numBars > 0,
+                                topRebarDia = res.reinforcementTop.diameter.toDouble(),
+                                topRebarCount = res.reinforcementTop.numBars,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    )
+                }
+
+                item {
+                    MomentShearForceDiagram(
+                        span = res.span ?: 5.0,
+                        supportType = res.supportType.name,
+                        deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
+                        liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,
+                        appliedMoment = res.appliedMoment,
+                        appliedShear = res.appliedShear,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.R
 import com.civileg.app.viewmodel.FootingViewModel
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.viewmodel.ProjectViewModel
 
@@ -302,20 +303,26 @@ fun FootingScreen(
                 }
 
                 item {
-                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    ProfessionalFootingDrawing(
-                        footingType = selectedType.displayName,
-                        footingLengthX = res.length.toDouble(),
-                        footingLengthY = res.width.toDouble(),
-                        footingThickness = res.thickness.toDouble(),
-                        columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                        columnDepth = colLength.toDoubleOrNull() ?: 600.0,
-                        rebarXDia = res.barDiameter.toDouble(),
-                        rebarXCount = res.barsX,
-                        rebarYDia = res.barDiameter.toDouble(),
-                        rebarYCount = res.barsY,
-                        cover = 75.0,
-                        modifier = Modifier.fillMaxWidth()
+                    InteractiveDrawingScreen(
+                        title = "📐 رسم القاعدة التفصيلي",
+                        subtitle = "Footing Reinforcement Detail",
+                        viewModes = listOf("الكل", "المخطط", "المقطع", "جدول التسليح"),
+                        drawingContent = {
+                            ProfessionalFootingDrawing(
+                                footingType = selectedType.displayName,
+                                footingLengthX = res.length.toDouble(),
+                                footingLengthY = res.width.toDouble(),
+                                footingThickness = res.thickness.toDouble(),
+                                columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                                columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                                rebarXDia = res.barDiameter.toDouble(),
+                                rebarXCount = res.barsX,
+                                rebarYDia = res.barDiameter.toDouble(),
+                                rebarYCount = res.barsY,
+                                cover = 75.0,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     )
                 }
             }

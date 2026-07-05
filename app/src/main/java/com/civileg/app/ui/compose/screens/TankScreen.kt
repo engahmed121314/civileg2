@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
 import com.civileg.app.viewmodel.TankViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -271,21 +272,27 @@ fun TankScreen(
                 }
 
                 item {
-                    Text("📐 الرسم الهندسي التفصيلي", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    ProfessionalTankDrawing(
-                        tankType = selectedType.displayName,
-                        length = res.length,
-                        width = res.width,
-                        height = res.height,
-                        wallThickness = res.wallThickness,
-                        baseThickness = res.baseThickness,
-                        waterLevel = res.height * 0.85,
-                        verticalRebarDia = res.wallReinforcement.diameter.toDouble(),
-                        verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
-                        horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
-                        horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                        foundationDepth = 0.0,
-                        modifier = Modifier.fillMaxWidth()
+                    InteractiveDrawingScreen(
+                        title = "📐 رسم الخزان التفصيلي",
+                        subtitle = "Water Tank Detail",
+                        viewModes = listOf("الكل", "المنظور", "المقطع", "جدول التسليح"),
+                        drawingContent = {
+                            ProfessionalTankDrawing(
+                                tankType = selectedType.displayName,
+                                length = res.length,
+                                width = res.width,
+                                height = res.height,
+                                wallThickness = res.wallThickness,
+                                baseThickness = res.baseThickness,
+                                waterLevel = res.height * 0.85,
+                                verticalRebarDia = res.wallReinforcement.diameter.toDouble(),
+                                verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
+                                horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
+                                horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
+                                foundationDepth = 0.0,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     )
                 }
             }
