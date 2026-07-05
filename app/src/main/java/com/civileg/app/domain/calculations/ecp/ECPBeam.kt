@@ -324,4 +324,178 @@ class ECPBeam : BeamDesign {
         val Mn = ast * fs * leverArm
         return Mn / 1e6  // kN.m
     }
+
+    /**
+     * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب ECP 203
+     * يُستخدم عندما K > K_bal (المقطع يحتاج حديد ضغط)
+     *
+     * ECP 203 البند 4-2-2-2:
+     * - Mu1 = K_bal × fcu × b × d² (العزم المتوازن)
+     * - As1 = Mu1 / (fs × z1) (حديد الشد للعزم المتوازن)
+     * - Mu2 = Mu - Mu1 (العزم الزائد)
+     * - As' = Mu2 / (fs × (d - d')) (حديد الضغط)
+     * - As2 = As' (حديد الشد الإضافي)
+     * - As = As1 + As2
+     */
+    fun calculateDoublyReinforcedBeam(
+        designMoment: Double,  // kN.m
+        width: Double,         // mm
+        depth: Double,         // mm (العمق الكلي h)
+        fcu: Double,           // MPa
+        fy: Double,            // MPa
+        compressionSteelDia: Double = 16.0,
+        d_prime: Double = 50.0 // mm - المسافة من وجه الضغط لمركز حديد الضغط
+    ): DoublyReinforcedResult {
+        val notes = mutableListOf<String>()
+        
+        // العمق الفعال (تقدير: الغطاء + كانة + نصف قطر سيخ)
+        val d = depth - 60.0
+        val b = width
+        
+        // تحويل العزم إلى نيوتن.مم
+        val Mu = designMoment * 1e6
+        
+        // حساب K و K_bal حسب ECP 203 البند 4-2-2-1
+        val K = Mu / (fcu * b * d * d)
+        val kBal = calculateKBal(fcu, fy)
+        
+        notes.add("K = ${"%.4f".format(K)}")
+        notes.add("K_bal = ${"%.4f".format(kBal)}")
+        
+        // عمق المحور المحايد
+        val epsilonCu = 0.003
+        val epsilonY = fy / (E_S * GAMMA_S)
+        val cOverD = epsilonCu / (epsilonCu + epsilonY)
+        val neutralAxisDepth = cOverD * d
+        
+        // إذا كان K ≤ K_bal: المقطع لا يحتاج حديد ضغط
+        if (K <= kBal) {
+            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 1.25)))
+            val fs = fy / GAMMA_S
+            val asReq = Mu / (fs * leverArm)
+            
+            // تطبيق الحد الأدنى
+            val minSteel = max(0.26 * (fcu / fy), 0.0013) * b * d
+            val asFinal = max(asReq, minSteel)
+            
+            notes.add("K ≤ K_bal → Singly reinforced section is sufficient")
+            notes.add(CodeReference.ECP.BEAM_FLEXURE)
+            
+            return DoublyReinforcedResult(
+                needsCompressionSteel = false,
+                balancedMoment = designMoment,
+                excessMoment = 0.0,
+                tensionSteelArea = asFinal,
+                compressionSteelArea = 0.0,
+                tensionBars = selectECPBars(asFinal),
+                compressionBars = "None",
+                leverArm = leverArm,
+                neutralAxisDepth = neutralAxisDepth,
+                isSafe = true,
+                utilizationRatio = K / kBal,
+                codeNotes = notes.joinToString("\n")
+            )
+        }
+        
+        // ========== تصميم مضاعف التسليح ==========
+        val fs = fy / GAMMA_S
+        
+        // Mu1 = العزم المتوازن (الذي يتحمله المقطع بالتسليح الأحادي)
+        val Mu1 = kBal * fcu * b * d * d
+        // ذراع العزم للجزء المتوازن
+        val z1 = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 1.25)))
+        // As1 = حديد الشد للعزم المتوازن
+        val As1 = Mu1 / (fs * z1)
+        
+        // Mu2 = العزم الزائد
+        val Mu2 = Mu - Mu1
+        
+        // التحقق من أن d - d' كافٍ
+        val leverArmExcess = d - d_prime
+        if (leverArmExcess < 30.0) {
+            notes.add("WARNING: d - d' = ${"%.0f".format(leverArmExcess)} mm is too small!")
+            notes.add("Increase section depth or reduce d'")
+        }
+        
+        // As' = حديد الضغط للعزم الزائد
+        val AsPrime = if (leverArmExcess > 0) Mu2 / (fs * leverArmExcess) else 0.0
+        // As2 = حديد الشد الإضافي (نفس As' لأن fy' = fy)
+        val As2 = AsPrime
+        
+        // مساحة حديد الشد الكلية
+        val AsTotal = As1 + As2
+        
+        // تطبيق الحد الأدنى
+        val minSteel = max(0.26 * (fcu / fy), 0.0013) * b * d
+        val asFinal = max(AsTotal, minSteel)
+        
+        // اختيار الأسياخ
+        val tensionBars = selectECPBars(asFinal)
+        val compressionBars = if (AsPrime > 0) selectECPBars(AsPrime, compressionSteelDia) else "None"
+        
+        // حساب مساحة الحديد المقدمة للتحقق
+        val tensionBarArea = parseBarArea(tensionBars)
+        val compressionBarArea = if (AsPrime > 0) parseBarArea(compressionBars) else 0.0
+        
+        // حساب قدرة العزم الفعلية للمقطع المضاعف
+        // φMn = As1_prov × fs × z1 + As'_prov × fs × (d - d')
+        val capacityNmm = tensionBarArea * fs * z1 * 0.85 + compressionBarArea * fs * leverArmExcess
+        val capacity = capacityNmm / 1e6
+        val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
+        
+        notes.add("K > K_bal → Compression steel required")
+        notes.add("Mu_balanced = ${"%.1f".format(Mu1 / 1e6)} kN.m")
+        notes.add("Mu_excess = ${"%.1f".format(Mu2 / 1e6)} kN.m")
+        notes.add("As₁ (balanced) = ${"%.0f".format(As1)} mm²")
+        notes.add("As₂ (excess) = ${"%.0f".format(As2)} mm²")
+        notes.add("As (total) = ${"%.0f".format(asFinal)} mm²")
+        notes.add("As' (compression) = ${"%.0f".format(AsPrime)} mm²")
+        notes.add("Neutral axis depth c = ${"%.1f".format(neutralAxisDepth)} mm")
+        notes.add(CodeReference.ECP.BEAM_FLEXURE)
+        notes.add("ECP 203-2020: Section 4-2-2-2 (Doubly reinforced)")
+        
+        return DoublyReinforcedResult(
+            needsCompressionSteel = true,
+            balancedMoment = Mu1 / 1e6,
+            excessMoment = Mu2 / 1e6,
+            tensionSteelArea = asFinal,
+            compressionSteelArea = AsPrime,
+            tensionBars = tensionBars,
+            compressionBars = compressionBars,
+            leverArm = z1,
+            neutralAxisDepth = neutralAxisDepth,
+            isSafe = utilizationRatio <= 1.0,
+            utilizationRatio = utilizationRatio,
+            codeNotes = notes.joinToString("\n")
+        )
+    }
+
+    /**
+     * اختيار أسياخ مناسبة حسب المساحة المطلوبة (ECP - مقاسات مترية)
+     */
+    private fun selectECPBars(requiredArea: Double, preferredDia: Double? = null): String {
+        val availableBars = listOf(10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0, 28.0, 32.0)
+        val barDia = preferredDia ?: availableBars.firstOrNull {
+            val area = PI * it * it / 4
+            ceil(requiredArea / area) <= 6
+        } ?: 16.0
+        val barArea = PI * barDia * barDia / 4
+        val numBars = ceil(requiredArea / barArea).toInt().coerceIn(2, 12)
+        return "${numBars}Ø${barDia.toInt()}"
+    }
+
+    /**
+     * تحليل نص الأسياخ واستخراج المساحة الإجمالية
+     */
+    private fun parseBarArea(barString: String): Double {
+        if (barString == "None" || !barString.contains("Ø")) return 0.0
+        try {
+            val parts = barString.split("Ø")
+            val count = parts[0].trim().toInt()
+            val dia = parts[1].trim().toInt().toDouble()
+            return count * PI * dia * dia / 4
+        } catch (e: Exception) {
+            return 0.0
+        }
+    }
 }

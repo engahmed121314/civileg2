@@ -21,6 +21,7 @@ object CodeReference {
         const val BEAM_REINFORCEMENT_MIN = "ECP 203-2020: Section 4-2-5"
         const val BEAM_REINFORCEMENT_MAX = "ECP 203-2020: Section 4-2-1-2 (Ductility requirement)"
         const val BEAM_DEVELOPMENT_LENGTH = "ECP 203-2020: Section 5-3"
+        const val BEAM_DOUBLY_REINFORCED = "ECP 203-2020: Section 4-2-2-2"
         
         // البلاطات
         const val SLAB_ONE_WAY = "ECP 203-2020: Section 6-2-1"
@@ -52,6 +53,7 @@ object CodeReference {
         const val BEAM_REINFORCEMENT_MIN = "ACI 318-19: Section 9.6.1"
         const val BEAM_REINFORCEMENT_MAX = "ACI 318-19: Section 9.3.3.1 (Tension-controlled)"
         const val BEAM_DEVELOPMENT_LENGTH = "ACI 318-19: Chapter 25"
+        const val BEAM_DOUBLY_REINFORCED = "ACI 318-19: Section 9.3.3.2"
         
         // البلاطات
         const val SLAB_ONE_WAY = "ACI 318-19: Section 8.3"
@@ -83,6 +85,7 @@ object CodeReference {
         const val BEAM_REINFORCEMENT_MIN = "SBC 304-2018: Section 9.6.1"
         const val BEAM_REINFORCEMENT_MAX = "SBC 304-2018: Section 9.3.3.1"
         const val BEAM_DEVELOPMENT_LENGTH = "SBC 304-2018: Section 12"
+        const val BEAM_DOUBLY_REINFORCED = "SBC 304-2018: Section 9.3.3.2"
         
         // البلاطات
         const val SLAB_ONE_WAY = "SBC 304-2018: Section 8.3"

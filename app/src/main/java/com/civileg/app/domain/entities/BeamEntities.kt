@@ -1,5 +1,7 @@
 package com.civileg.app.domain.entities
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import kotlin.math.*
 
 /**
@@ -109,3 +111,23 @@ enum class BeamSectionType(val displayName: String) {
     CIRCULAR("Circular"),
     COMPOSITE("Composite Steel-Concrete")
 }
+
+/**
+ * نتيجة تصميم الكمرة المضاعفة التسليح (Doubly-Reinforced Beam)
+ * يُستخدم عندما يكون المقطع صغيراً للعزم المطلوب بالتسليح الأحادي فقط
+ */
+@Parcelize
+data class DoublyReinforcedResult(
+    val needsCompressionSteel: Boolean,
+    val balancedMoment: Double,       // kN.m - العزم المتوازن الذي يتحمله المقطع الأحادي
+    val excessMoment: Double,         // kN.m - العزم الزائد الذي يتحمله الحديد الضاغط
+    val tensionSteelArea: Double,     // mm² - مساحة حديد الشد الكلية (As)
+    val compressionSteelArea: Double, // mm² - مساحة حديد الضغط (As')
+    val tensionBars: String,          // e.g. "5Ø20"
+    val compressionBars: String,      // e.g. "3Ø16"
+    val leverArm: Double,             // mm - ذراع العزم
+    val neutralAxisDepth: Double,     // mm - عمق المحور المحايد
+    val isSafe: Boolean,
+    val utilizationRatio: Double,
+    val codeNotes: String
+) : Parcelable
