@@ -1,0 +1,1870 @@
+     1→package com.civileg.app.domain.calculations.sbc
+     2→
+     3→import com.civileg.app.domain.calculations.base.*
+     4→import com.civileg.app.domain.entities.*
+     5→import com.civileg.app.domain.usecases.AnalyzeRebarInventory
+     6→import kotlin.math.*
+     7→
+     8→/**
+     9→ * تصميم متقدم للكمرات بجميع أنواعها حسب الكود السعودي SBC 304-2018
+    10→ *
+    11→ * SBC 304-2018 مبني على ACI 318-19 مع تعديلات سعودية خاصة تتضمن:
+    12→ * - متطلبات المناطق الزلزالية (SBC 304 البند 21)
+    13→ * - متطلبات البيئة المالحة والتآكل (غطاء 50 مم للمناطق الساحلية)
+    14→ * - أقل عرض للكمرات في المناطق الزلزالية (250 مم)
+    15→ * - تباعد الكانات الزلزالية (d/4 أو 100 مم)
+    16→ * - نسب تسليح أدنى مختلفة للمناطق الزلزالية
+    17→ * - أطوال التثبيت المعدلة للأسياك المجلفنة
+    18→ * - معامل انحراف طويل المدى للمناخ الحار (λ ≈ 2.5)
+    19→ *
+    20→ * المراجع:
+    21→ * - SBC 304-2018 البند 9 (الانحناء)
+    22→ * - SBC 304-2018 البند 11 (القص)
+    23→ * - SBC 304-2018 البند 12 (أطوال التثبيت)
+    24→ * - SBC 304-2018 البند 21 (متطلبات الزلازل)
+    25→ * - SBC 304-2018 البند 18.10 (الكمرات العميقة)
+    26→ * - SBC 304-2018 البند 8.12 (الكمرات تي الشكل)
+    27→ */
+    28→class SBCAdvancedBeam {
+    29→
+    30→    private val baseBeam = SBCBeam()
+    31→
+    32→    companion object {
+    33→        // ثوابت الكود السعودي SBC 304-2018
+    34→        private const val PHI_FLEXURE = 0.9        // معامل الاختزال للانحناء - SBC 304 §9.3
+    35→        private const val PHI_SHEAR = 0.75         // معامل الاختزال للقص - SBC 304 §21.2
+    36→        private const val LAMBDA = 1.0             // عامل الوزن للخرسانة العادية - SBC 304 §19.2.4
+    37→        private const val SBC_COVER_NORMAL = 40.0  // mm - الغطاء العادي - SBC 304 §7.7
+    38→        private const val SBC_COVER_CORROSIVE = 50.0 // mm - غطاء البيئة المالحة (الساحلية)
+    39→        private const val SBC_MIN_WIDTH_SEISMIC = 250.0 // mm - أقل عرض زلزالي - SBC 304 §21.4
+    40→        private const val SBC_LONG_TERM_MULTIPLIER = 2.5  // معامل الانحراف طويل المدى للمناخ الحار
+    41→        private const val EPSILON_CU = 0.003       // إجهاد الخرسانة الأقصى - SBC 304 §22.2.2.1
+    42→        private const val EC_COEFFICIENT = 4700.0  // معامل مرونة الخرسانة - SBC 304 §19.2.2.1
+    43→
+    44→        // أقطار الأسياخ المتاحة حسب SBC (النظام المتري المعتمد في السعودية)
+    45→        private val SBC_BAR_DIAMETERS = listOf(10.0, 12.0, 16.0, 20.0, 25.0, 28.0, 32.0, 36.0, 40.0)
+    46→
+    47→        // معاملات عزم الانحناء للمقاطع الحرجة - SBC 304 §6.5 / ACI 318-6.5
+    48→        // للحمل الموزع على كمرات مستمرة متساوية الأبحر
+    49→        private const val MOMENT_COEFF_EXT_NEG = 1.0 / 16.0     // عزم سالب عند الدعامة الخارجية
+    50→        private const val MOMENT_COEFF_EXT_POS = 1.0 / 14.0     // عزم موجب في المنتصف للبحر الخارجي
+    51→        private const val MOMENT_COEFF_INT_NEG = 1.0 / 10.0     // عزم سالب عند الدعامة الداخلية
+    52→        private const val MOMENT_COEFF_INT_POS = 1.0 / 11.0     // عزم موجب في المنتصف للبحر الداخلي
+    53→        private const val MOMENT_COEFF_CANTILEVER = 1.0 / 2.0   // عزم الكابولي
+    54→    }
+    55→
+    56→    // ========================================================================
+    57→    //  تصميم الكمرة الأساسي
+    58→    // ========================================================================
+    59→
+    60→    /**
+    61→     * تصميم متقدم للكمرة حسب SBC 304-2018
+    62→     *
+    63→     * @param beamType نوع الكمرة (بسيطة، ثابتة، كابولي، مستمرة، متعددة الدعامات، متغيرة المقطع، فيرينديل)
+    64→     * @param sectionType نوع المقطع (مستطيل، تي، إل، دائري، مركب)
+    65→     * @param fcu مقاومة الخرسانة للمكعب (MPa) - يتم تحويلها إلى مقاومة الأسطوانة fc' = 0.8 × fcu
+    66→     * @param fy إجهاد خضوع الحديد (MPa)
+    67→     * @param deadLoad الحمل الميت الموزع (kN/m)
+    68→     * @param liveLoad الحمل الحي الموزع (kN/m)
+    69→     * @param width عرض الكمرة (mm)
+    70→     * @param depth عمق الكمرة الكلي (mm)
+    71→     * @param inventory مخزون حديد التسليح المتوفر (اختياري)
+    72→     * @param loadCombination مجموعة التحميل
+    73→     * @return AdvancedBeamResult نتيجة التصميم المتقدم
+    74→     */
+    75→    fun designBeam(
+    76→        beamType: BeamType,
+    77→        sectionType: BeamSectionType,
+    78→        fcu: Double,
+    79→        fy: Double,
+    80→        deadLoad: Double,     // kN/m
+    81→        liveLoad: Double,     // kN/m
+    82→        width: Double,        // mm
+    83→        depth: Double,        // mm
+    84→        inventory: RebarInventory?,
+    85→        loadCombination: LoadCombination
+    86→    ): AdvancedBeamResult {
+    87→        val warnings = mutableListOf<String>()
+    88→        val codeNotes = mutableListOf<String>()
+    89→
+    90→        // === التحويل من مقاومة المكعب إلى مقاومة الأسطوانة ===
+    91→        // SBC 304 يتبع ACI: fc' = 0.8 × fcu
+    92→        val fcPrime = 0.8 * fcu
+    93→
+    94→        codeNotes.add("fc' = 0.8 × fcu = 0.8 × $fcu = ${"%.1f".format(fcPrime)} MPa (SBC 304 cube-to-cylinder)")
+    95→        codeNotes.add("Load Combination: ${loadCombination.description}")
+    96→
+    97→        // === تحديد الغطاء الخرساني حسب البيئة ===
+    98→        val isCorrosive = loadCombination == LoadCombination.DEAD_LIVE_EARTHQUAKE ||
+    99→                loadCombination == LoadCombination.DEAD_LIVE_WIND
+   100→        val cover = if (isCorrosive) SBC_COVER_CORROSIVE else SBC_COVER_NORMAL
+   101→        codeNotes.add("Concrete cover: ${cover.toInt()}mm ${if (isCorrosive) "(SBC 304 §7.7 - corrosive/coastal)" else "(SBC 304 §7.7 - normal)"}")
+   102→
+   103→        // === حساب معاملات التحميل حسب SBC 304-2018 (يتبع ACI 5.3) ===
+   104→        val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
+   105→        val gammaD = 1.2
+   106→        val gammaL = 1.6
+   107→        val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
+   108→
+   109→        codeNotes.add("SBC 304 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${"%.2f".format(totalLoad)} kN/m")
+   110→
+   111→        // === حساب القوى القصوى بناءً على نوع الكمرة ===
+   112→        val maxMoment = beamType.getMaxMoment(totalLoad)  // kN.m
+   113→        val maxShear = beamType.getMaxShear(totalLoad)    // kN
+   114→
+   115→        codeNotes.add("Max Moment: ${"%.2f".format(maxMoment)} kN.m")
+   116→        codeNotes.add("Max Shear: ${"%.2f".format(maxShear)} kN")
+   117→
+   118→        // === فحص متطلبات المناطق الزلزالية ===
+   119→        val isSeismic = loadCombination == LoadCombination.DEAD_LIVE_EARTHQUAKE ||
+   120→                loadCombination == LoadCombination.DEAD_EARTHQUAKE
+   121→        if (isSeismic) {
+   122→            val seismicWarnings = checkSeismicRequirements(width, depth, fcu, fy, totalLoad)
+   123→            warnings.addAll(seismicWarnings.first)
+   124→            codeNotes.addAll(seismicWarnings.second)
+   125→        }
+   126→
+   127→        // === تحديد العمق الفعال ===
+   128→        val effectiveDepth = depth - cover - 10.0 - 12.0  // mm (خصم الغطاء + الكانة + نصف السيخ)
+   129→
+   130→        // === تصميم الانحناء (Flexure Design) - SBC 304 البند 9 ===
+   131→        val flexureResult = baseBeam.calculateFlexureReinforcement(
+   132→            fcu, fy, width, effectiveDepth, depth, maxMoment, loadCombination
+   133→        )
+   134→
+   135→        // === تصميم القص (Shear Design) - SBC 304 البند 11 ===
+   136→        val shearResult = baseBeam.calculateShearReinforcement(
+   137→            fcu, fy, width, effectiveDepth, maxShear, 0.0, loadCombination
+   138→        )
+   139→
+   140→        // في المناطق الزلزالية: تطبيق متطلبات الكانات الزلزالية
+   141→        val finalShearResult = if (isSeismic) {
+   142→            designSeismicStirrups(shearResult, fcu, fy, width, effectiveDepth, maxShear)
+   143→        } else {
+   144→            shearResult
+   145→        }
+   146→
+   147→        // === تحديد طول البحر للتحقيقات ===
+   148→        val span = when (beamType) {
+   149→            is BeamType.SimplySupported -> beamType.span
+   150→            is BeamType.Fixed -> beamType.span
+   151→            is BeamType.Cantilever -> beamType.length
+   152→            is BeamType.Continuous -> beamType.spans.maxOrNull() ?: 1.0
+   153→            is BeamType.MultiSupport -> beamType.totalLength
+   154→            is BeamType.Haunched -> beamType.span
+   155→            is BeamType.Vierendeel -> beamType.span
+   156→        }
+   157→
+   158→        // === تحميل الخدمة للتحقيقات ===
+   159→        val serviceLoad = deadLoad + liveLoad
+   160→        val serviceMoment = when (beamType) {
+   161→            is BeamType.SimplySupported -> serviceLoad * beamType.span * beamType.span / 8
+   162→            is BeamType.Fixed -> serviceLoad * beamType.span * beamType.span / 12
+   163→            is BeamType.Cantilever -> serviceLoad * beamType.length * beamType.length / 2
+   164→            is BeamType.Continuous -> serviceLoad * (beamType.spans.maxOrNull() ?: 1.0).pow(2) / 10
+   165→            is BeamType.MultiSupport -> serviceLoad * beamType.totalLength * beamType.totalLength / 10
+   166→            is BeamType.Haunched -> serviceLoad * beamType.span * beamType.span / 10
+   167→            is BeamType.Vierendeel -> serviceLoad * beamType.span * beamType.span / 8
+   168→        }
+   169→
+   170→        // === التحقق من الانحراف (Deflection Check) - SBC 304 مع معامل المناخ الحار ===
+   171→        val deflectionCheck = checkDeflectionSBC(
+   172→            span = span,
+   173→            depth = depth,
+   174→            fcPrime = fcPrime,
+   175→            serviceLoad = serviceLoad,
+   176→            serviceMoment = serviceMoment,
+   177→            beamWidth = width,
+   178→            effectiveDepth = effectiveDepth,
+   179→            astProvided = flexureResult.astProvided,
+   180→            beamType = beamType
+   181→        )
+   182→
+   183→        // === تحليل المخزون (Inventory Analysis) ===
+   184→        val inventoryAnalysis = inventory?.let { inv ->
+   185→            analyzeBeamInventory(flexureResult, span, inv)
+   186→        }
+   187→
+   188→        // === التحقق من عرض الشروخ (Crack Width) - SBC مع عامل المناخ الحار ===
+   189→        val crackWidth = checkCrackWidth(
+   190→            result = flexureResult,
+   191→            fcPrime = fcPrime,
+   192→            moment = serviceMoment,
+   193→            effectiveDepth = effectiveDepth,
+   194→            width = width,
+   195→            isExterior = isCorrosive
+   196→        )
+   197→
+   198→        // === التحقق من طول التثبيت (Development Length) - SBC 304 البند 12 ===
+   199→        val devLength = checkDevelopmentLength(flexureResult, fcPrime, fy, span)
+   200→
+   201→        // === تجميع مراجع الكود ===
+   202→        codeNotes.add(CodeReference.SBC.BEAM_FLEXURE)
+   203→        codeNotes.add(CodeReference.SBC.BEAM_SHEAR)
+   204→        codeNotes.add("SBC 304-2018 §9.5: Deflection Control")
+   205→        codeNotes.add("SBC 304-2018 §24.5: Crack Width Control (Hot/Arid Climate)")
+   206→        codeNotes.add(CodeReference.SBC.BEAM_DEVELOPMENT_LENGTH)
+   207→        codeNotes.add("Beam Type: ${beamType.displayName}")
+   208→
+   209→        // === إضافة بدائل اقتصادية وآمنة ===
+   210→        val alternatives = generateBarAlternatives(
+   211→            astRequired = flexureResult.astRequired,
+   212→            width = width,
+   213→            effectiveDepth = effectiveDepth,
+   214→            fcPrime = fcPrime,
+   215→            fy = fy,
+   216→            designMoment = maxMoment,
+   217→            selectedDia = flexureResult.barDiameter
+   218→        )
+   219→        codeNotes.addAll(alternatives)
+   220→
+   221→        // === إضافة تحذيرات من النتائج الفرعية ===
+   222→        warnings.addAll(deflectionCheck.warnings)
+   223→
+   224→        return AdvancedBeamResult(
+   225→            beamType = beamType,
+   226→            sectionType = sectionType,
+   227→            flexureResult = flexureResult,
+   228→            shearResult = finalShearResult,
+   229→            deflectionCheck = deflectionCheck,
+   230→            momentDiagram = generateMomentDiagram(beamType, totalLoad),
+   231→            shearDiagram = generateShearDiagram(beamType, totalLoad),
+   232→            inventoryAnalysis = inventoryAnalysis,
+   233→            crackWidthCheck = crackWidth,
+   234→            developmentLengthCheck = devLength,
+   235→            warnings = warnings + flexureResult.warnings + finalShearResult.warnings,
+   236→            codeNotes = codeNotes + flexureResult.codeNotes + finalShearResult.codeNotes
+   237→        )
+   238→    }
+   239→
+   240→    // ========================================================================
+   241→    //  تصميم كمرة تي الشكل (T-Beam) - SBC 304 البند 8.12
+   242→    // ========================================================================
+   243→
+   244→    /**
+   245→     * تصميم كمرة تي الشكل حسب SBC 304-2018 البند 8.12
+   246→     *
+   247→     * قواعد عرض الجناح الفعال حسب SBC 304 §8.12 (مطابق لـ ACI §6.3):
+   248→     *   bf ≤ bw + 16×hf (لكل جانب)
+   249→     *   bf ≤ bw + L/2 (لكل جانب)
+   250→     *   bf ≤ bw + سد البحر المجاور/2
+   251→     *   bf لا يتجاوز مسافة مركزية بين الكمرات
+   252→     *
+   253→     * @param flangeWidth عرض الجناح الكلي للبلاطة (mm)
+   254→     * @param flangeThickness سمك الجناح / البلاطة (mm)
+   255→     * @param webWidth عرض الكورسة / جسم الكمرة (mm)
+   256→     * @param webDepth عمق جسم الكمرة تحت الجناح (mm)
+   257→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+   258→     * @param fy إجهاد خضوع الحديد (MPa)
+   259→     * @param deadLoad الحمل الميت الموزع (kN/m)
+   260→     * @param liveLoad الحمل الحي الموزع (kN/m)
+   261→     * @param span البحر (m)
+   262→     * @param inventory مخزون حديد التسليح (اختياري)
+   263→     * @param loadCombination مجموعة التحميل
+   264→     * @return AdvancedBeamResult مع ملاحظات مقطع تي
+   265→     */
+   266→    fun designTBeam(
+   267→        flangeWidth: Double,
+   268→        flangeThickness: Double,
+   269→        webWidth: Double,
+   270→        webDepth: Double,
+   271→        fcu: Double,
+   272→        fy: Double,
+   273→        deadLoad: Double,
+   274→        liveLoad: Double,
+   275→        span: Double,
+   276→        inventory: RebarInventory?,
+   277→        loadCombination: LoadCombination
+   278→    ): AdvancedBeamResult {
+   279→        val warnings = mutableListOf<String>()
+   280→        val codeNotes = mutableListOf<String>()
+   281→
+   282→        // === التحقق من العرض الفعال للجناح - SBC 304 §8.12 ===
+   283→        val flangeCheck = checkTBeamFlange(
+   284→            flangeWidth = flangeWidth,
+   285→            flangeThickness = flangeThickness,
+   286→            webWidth = webWidth,
+   287→            span = span
+   288→        )
+   289→        val effectiveFlangeWidth = flangeCheck.first
+   290→        val flangeNotes = flangeCheck.second
+   291→        codeNotes.addAll(flangeNotes)
+   292→
+   293→        // === حساب الأبعاد الإجمالية للمقطع تي ===
+   294→        val totalDepth = webDepth + flangeThickness  // mm
+   295→        val effectiveDepth = totalDepth - SBC_COVER_CORROSIVE - 10.0 - 12.0  // mm
+   296→
+   297→        // === تحويل مقاومة المكعب إلى أسطوانة ===
+   298→        val fcPrime = 0.8 * fcu
+   299→        codeNotes.add("fc' = 0.8 × fcu = ${"%.1f".format(fcPrime)} MPa (SBC 304 cube-to-cylinder)")
+   300→        codeNotes.add("T-Section: bf=${effectiveFlangeWidth.toInt()}mm, hf=${flangeThickness.toInt()}mm, bw=${webWidth.toInt()}mm, d=${totalDepth.toInt()}mm")
+   301→
+   302→        // === حساب الأحمال ===
+   303→        val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
+   304→        val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
+   305→        val maxMoment = totalLoad * span * span / 8.0  // kN.m (بسيطة الدعم)
+   306→        val maxShear = totalLoad * span / 2.0  // kN
+   307→
+   308→        codeNotes.add("SBC 304 §5.3: Wu = ${"%.2f".format(totalLoad)} kN/m")
+   309→        codeNotes.add("Max Moment: ${"%.2f".format(maxMoment)} kN.m, Max Shear: ${"%.2f".format(maxShear)} kN")
+   310→
+   311→        // === تصميم الانحناء لكمرة تي ===
+   312→        // نحسب أولاً عزم تشقق الجناح
+   313→        // a = As × fy / (0.85 × fc' × bf)
+   314→        // إذا كانت a ≤ hf: المحور المحايد داخل الجناح (تصميم كمرة مستطيلة بعرض bf)
+   315→        // إذا كانت a > hf: المحور المحايد في الكورسة (تصميم كمرة تي حقيقي)
+   316→
+   317→        // حساب Rn للكمرة تي (على افتراض المحور المحايد داخل الجناح أولاً)
+   318→        val Mu = maxMoment * 1e6  // N.mm
+   319→        val denominator = PHI_FLEXURE * effectiveFlangeWidth * effectiveDepth * effectiveDepth
+   320→        val Rn = if (denominator > 0) Mu / denominator else 0.0
+   321→
+   322→        val m = if (fcPrime > 0) fy / (0.85 * fcPrime) else 0.0
+   323→        val rho = if (m > 0 && (1 - 2 * m * Rn / fy) >= 0) {
+   324→            (1 - sqrt(1 - 2 * m * Rn / fy)) / m
+   325→        } else 0.0
+   326→
+   327→        var astRequired = rho * effectiveFlangeWidth * effectiveDepth
+   328→
+   329→        // التحقق من المحور المحايد
+   330→        val a = if (fcPrime > 0) astRequired * fy / (0.85 * fcPrime * effectiveFlangeWidth) else 0.0
+   331→
+   332→        val flexureResult: ReinforcementResult
+   333→        if (a <= flangeThickness) {
+   334→            // المحور المحايد داخل الجناح - تصميم كمرة مستطيلة بعرض bf
+   335→            codeNotes.add("SBC 304 §8.12: Neutral axis within flange (a=${"%.1f".format(a)}mm ≤ hf=${flangeThickness}mm)")
+   336→
+   337→            flexureResult = designTBeamAsRectangular(
+   338→                fcu = fcu,
+   339→                fy = fy,
+   340→                width = effectiveFlangeWidth,
+   341→                effectiveDepth = effectiveDepth,
+   342→                totalDepth = totalDepth,
+   343→                designMoment = maxMoment,
+   344→                loadCombination = loadCombination,
+   345→                astRequired = astRequired
+   346→            )
+   347→        } else {
+   348→            // المحور المحايد في الكورسة - تصميم كمرة تي حقيقي
+   349→            // As = (Mu/φ + 0.85×fc'×(bf-bw)×hf×(d-hf/2)) / (fy×(d-hf/2))
+   350→            codeNotes.add("SBC 304 §8.12: Neutral axis in web (a=${"%.1f".format(a)}mm > hf=${flangeThickness}mm) - T-beam analysis required")
+   351→
+   352→            val flangeForce = 0.85 * fcPrime * (effectiveFlangeWidth - webWidth) * flangeThickness  // N
+   353→            val flangeMoment = flangeForce * (effectiveDepth - flangeThickness / 2.0)  // N.mm
+   354→            val remainingMoment = Mu / PHI_FLEXURE - flangeMoment  // N.mm
+   355→
+   356→            val webRn = if (webWidth > 0 && effectiveDepth > 0) remainingMoment / (webWidth * effectiveDepth * effectiveDepth) else 0.0
+   357→            val webRho = if (m > 0 && (1 - 2 * m * webRn / fy) >= 0 && webRn > 0) {
+   358→                (1 - sqrt(1 - 2 * m * webRn / fy)) / m
+   359→            } else 0.0
+   360→
+   361→            val webSteel = webRho * webWidth * effectiveDepth
+   362→            val flangeSteel = flangeForce / fy
+   363→            astRequired = webSteel + flangeSteel
+   364→
+   365→            // التسليح الأدنى
+   366→            val minSteel1 = 0.25 * sqrt(fcPrime) / fy * webWidth * effectiveDepth
+   367→            val minSteel2 = 1.4 / fy * webWidth * effectiveDepth
+   368→            val minSteel = max(minSteel1, minSteel2)
+   369→
+   370→            if (astRequired < minSteel) {
+   371→                astRequired = minSteel
+   372→                warnings.add("تم تطبيق نسبة التسليح الأدنى - SBC 304 §9.6.1")
+   373→            }
+   374→
+   375→            flexureResult = designTBeamAsRectangular(
+   376→                fcu = fcu,
+   377→                fy = fy,
+   378→                width = webWidth,
+   379→                effectiveDepth = effectiveDepth,
+   380→                totalDepth = totalDepth,
+   381→                designMoment = maxMoment,
+   382→                loadCombination = loadCombination,
+   383→                astRequired = astRequired,
+   384→                isTrueTBeam = true,
+   385→                flangeWidth = effectiveFlangeWidth,
+   386→                flangeThickness = flangeThickness,
+   387→                flangeForce = flangeForce
+   388→            )
+   389→        }
+   390→
+   391→        // === تصميم القص ===
+   392→        val shearResult = baseBeam.calculateShearReinforcement(
+   393→            fcu, fy, webWidth, effectiveDepth, maxShear, 0.0, loadCombination
+   394→        )
+   395→
+   396→        // === تحميل الخدمة والتحقيقات ===
+   397→        val serviceLoad = deadLoad + liveLoad
+   398→        val serviceMoment = serviceLoad * span * span / 8.0
+   399→
+   400→        val deflectionCheck = checkDeflectionSBC(
+   401→            span = span,
+   402→            depth = totalDepth,
+   403→            fcPrime = fcPrime,
+   404→            serviceLoad = serviceLoad,
+   405→            serviceMoment = serviceMoment,
+   406→            beamWidth = effectiveFlangeWidth,
+   407→            effectiveDepth = effectiveDepth,
+   408→            astProvided = flexureResult.astProvided,
+   409→            beamType = BeamType.SimplySupported(span)
+   410→        )
+   411→
+   412→        val crackWidth = checkCrackWidth(
+   413→            result = flexureResult,
+   414→            fcPrime = fcPrime,
+   415→            moment = serviceMoment,
+   416→            effectiveDepth = effectiveDepth,
+   417→            width = effectiveFlangeWidth,
+   418→            isExterior = false
+   419→        )
+   420→
+   421→        val devLength = checkDevelopmentLength(flexureResult, fcPrime, fy, span)
+   422→
+   423→        val inventoryAnalysis = inventory?.let { inv ->
+   424→            analyzeBeamInventory(flexureResult, span, inv)
+   425→        }
+   426→
+   427→        codeNotes.add(CodeReference.SBC.BEAM_FLEXURE)
+   428→        codeNotes.add(CodeReference.SBC.BEAM_SHEAR)
+   429→        codeNotes.add("T-Beam Design: SBC 304-2018 §8.12")
+   430→
+   431→        return AdvancedBeamResult(
+   432→            beamType = BeamType.SimplySupported(span),
+   433→            sectionType = BeamSectionType.T_SECTION,
+   434→            flexureResult = flexureResult,
+   435→            shearResult = shearResult,
+   436→            deflectionCheck = deflectionCheck,
+   437→            momentDiagram = generateMomentDiagram(BeamType.SimplySupported(span), totalLoad),
+   438→            shearDiagram = generateShearDiagram(BeamType.SimplySupported(span), totalLoad),
+   439→            inventoryAnalysis = inventoryAnalysis,
+   440→            crackWidthCheck = crackWidth,
+   441→            developmentLengthCheck = devLength,
+   442→            warnings = warnings + flexureResult.warnings,
+   443→            codeNotes = codeNotes + flexureResult.codeNotes
+   444→        )
+   445→    }
+   446→
+   447→    /**
+   448→     * تصميم مقطع تي ككمرة مستطيلة (عندما يكون المحور المحايد داخل الجناح)
+   449→     * أو كمرة تي حقيقية (عندما يكون المحور المحايد في الكورسة)
+   450→     */
+   451→    private fun designTBeamAsRectangular(
+   452→        fcu: Double,
+   453→        fy: Double,
+   454→        width: Double,
+   455→        effectiveDepth: Double,
+   456→        totalDepth: Double,
+   457→        designMoment: Double,
+   458→        loadCombination: LoadCombination,
+   459→        astRequired: Double,
+   460→        isTrueTBeam: Boolean = false,
+   461→        flangeWidth: Double = 0.0,
+   462→        flangeThickness: Double = 0.0,
+   463→        flangeForce: Double = 0.0
+   464→    ): ReinforcementResult {
+   465→        val warnings = mutableListOf<String>()
+   466→        val codeNotes = mutableListOf<String>()
+   467→        val fcPrime = 0.8 * fcu
+   468→
+   469→        // اختيار القطر المناسب
+   470→        val availableBars = SBC_BAR_DIAMETERS
+   471→        var selectedBarDia = availableBars.firstOrNull {
+   472→            val area = PI * it * it / 4
+   473→            ceil(astRequired / area) <= 8
+   474→        } ?: 20.0
+   475→
+   476→        val barArea = PI * selectedBarDia * selectedBarDia / 4
+   477→        val numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(2, 12)
+   478→        val astProvided = numberOfBars * barArea
+   479→
+   480→        // حساب السعة الفعلية
+   481→        val aActual = if (fcPrime > 0 && (if (isTrueTBeam) width else flangeWidth) > 0) {
+   482→            astProvided * fy / (0.85 * fcPrime * (if (isTrueTBeam) width else flangeWidth))
+   483→        } else 0.0
+   484→
+   485→        val Mn: Double
+   486→        if (isTrueTBeam && flangeThickness > 0) {
+   487→            // حساب العزم للكمرة تي الحقيقية
+   488→            val effectiveWidth = flangeWidth
+   489→            val aBlock = if (fcPrime > 0) astProvided * fy / (0.85 * fcPrime * effectiveWidth) else 0.0
+   490→            if (aBlock <= flangeThickness) {
+   491→                Mn = astProvided * fy * (effectiveDepth - aBlock / 2.0)
+   492→            } else {
+   493→                val fFlange = 0.85 * fcPrime * (effectiveWidth - width) * flangeThickness
+   494→                val mFlange = fFlange * (effectiveDepth - flangeThickness / 2.0)
+   495→                val asWeb = astProvided - fFlange / fy
+   496→                val aWeb = if (fcPrime > 0 && width > 0) asWeb * fy / (0.85 * fcPrime * width) else 0.0
+   497→                Mn = mFlange + asWeb * fy * (effectiveDepth - flangeThickness - aWeb / 2.0)
+   498→            }
+   499→        } else {
+   500→            Mn = astProvided * fy * (effectiveDepth - aActual / 2.0)
+   501→        }
+   502→
+   503→        val capacity = PHI_FLEXURE * Mn / 1e6  // kN.m
+   504→        val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
+   505→
+   506→        // التحقق من النسبة القصوى
+   507→        val beta1 = calculateBeta1(fcPrime)
+   508→        val rhoProvided = astProvided / (width * effectiveDepth)
+   509→        val rhoMax = 0.85 * beta1 * (fcPrime / fy) * (EPSILON_CU / (EPSILON_CU + 0.005))
+   510→
+   511→        if (rhoProvided > rhoMax) {
+   512→            warnings.add("نسبة التسليح تتجاوز الحد الأقصى المسموح - SBC 304 §9.3.3.1")
+   513→        }
+   514→
+   515→        codeNotes.add("T-section As_req=${"%.0f".format(astRequired)}mm², As_prov=${"%.0f".format(astProvided)}mm²")
+   516→
+   517→        return ReinforcementResult(
+   518→            astRequired = astRequired,
+   519→            astProvided = astProvided,
+   520→            barDiameter = selectedBarDia,
+   521→            numberOfBars = numberOfBars,
+   522→            tiesDiameter = 0.0,
+   523→            tiesSpacing = 0.0,
+   524→            isSafe = utilizationRatio <= 1.0,
+   525→            utilizationRatio = utilizationRatio,
+   526→            warnings = warnings,
+   527→            codeNotes = codeNotes
+   528→        )
+   529→    }
+   530→
+   531→    // ========================================================================
+   532→    //  تصميم الكمرات العميقة (Deep Beams) - SBC 304 البند 18.10
+   533→    // ========================================================================
+   534→
+   535→    /**
+   536→     * تصميم الكمرات العميقة حسب SBC 304-2018 البند 18.10
+   537→     *
+   538→     * تعريف الكمرة العميقة: L/d < 4 (SBC 304 §18.10.1)
+   539→     *
+   540→     * متطلبات التصميم:
+   541→     * - استخدام نموذج العارضة والشد (Strut-and-Tie Model)
+   542→     * - نسبة تسليح أدنى أفقي: 0.001 × bw × s (SBC 304 §18.10.3)
+   543→     * - نسبة تسليح أدنى رأسي: 0.0025 × bw × sv (SBC 304 §18.10.4)
+   544→     * - التسليح الأفقي والرأسي موزع على عمقين من كلتا الجهتين
+   545→     *
+   546→     * @param span البحر الصافي (m)
+   547→     * @param width عرض الكمرة (mm)
+   548→     * @param depth عمق الكمرة الكلي (mm)
+   549→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+   550→     * @param fy إجهاد خضوع الحديد (MPa)
+   551→     * @param deadLoad الحمل الميت الموزع (kN/m)
+   552→     * @param liveLoad الحمل الحي الموزع (kN/m)
+   553→     * @param loadCombination مجموعة التحميل
+   554→     * @return AdvancedBeamResult نتيجة تصميم الكمرة العميقة
+   555→     */
+   556→    fun designDeepBeam(
+   557→        span: Double,
+   558→        width: Double,
+   559→        depth: Double,
+   560→        fcu: Double,
+   561→        fy: Double,
+   562→        deadLoad: Double,
+   563→        liveLoad: Double,
+   564→        loadCombination: LoadCombination
+   565→    ): AdvancedBeamResult {
+   566→        val warnings = mutableListOf<String>()
+   567→        val codeNotes = mutableListOf<String>()
+   568→
+   569→        val fcPrime = 0.8 * fcu
+   570→        val effectiveDepth = depth - SBC_COVER_CORROSIVE - 10.0 - 12.0
+   571→
+   572→        // === فحص معايير الكمرة العميقة - SBC 304 §18.10.1 ===
+   573→        val deepBeamCheck = checkDeepBeamCriteria(span, depth, effectiveDepth)
+   574→        codeNotes.addAll(deepBeamCheck.second)
+   575→
+   576→        val ln = span * 1000.0  // البحر الصافي بالمليمتر
+   577→        val ldRatio = ln / effectiveDepth
+   578→
+   579→        if (!deepBeamCheck.first) {
+   580→            warnings.add("نسبة L/d = ${"%.1f".format(ldRatio)} ≥ 4 - ليست كمرة عميقة، استخدم التصميم العادي")
+   581→        }
+   582→
+   583→        // === حساب الأحمال ===
+   584→        val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
+   585→        val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
+   586→        val Vu = totalLoad * span  // kN - القوة القصية القصوى عند الدعامة
+   587→
+   588→        // === تصميم نموذج العارضة والشد (Strut-and-Tie Model) ===
+   589→        // SBC 304 §18.10.2: تصرف القوى عبر العوارض المائلة
+   590→
+   591→        // زاوية ميلان العارضة: θ = atan(2d/Ln)
+   592→        // θ لا تقل عن 25° ولا تزيد عن 65° حسب SBC 304
+   593→        val thetaRad = atan(2.0 * effectiveDepth / ln)
+   594→        val thetaDeg = thetaRad * 180.0 / PI
+   595→        val thetaDesign = thetaDeg.coerceIn(25.0, 65.0)
+   596→        val thetaDesignRad = thetaDesign * PI / 180.0
+   597→
+   598→        codeNotes.add("SBC 304 §18.10.2: Strut angle θ = ${"%.1f".format(thetaDesign)}° (atan(2d/Ln))")
+   599→
+   600→        // حساب قوة الشد في العارضة (Tie Force):
+   601→        // T = Vu / tan(θ)
+   602→        val tieForce = Vu * 1000.0 / tan(thetaDesignRad)  // N
+   603→
+   604→        // مساحة التسليح المطلوبة للشد
+   605→        val astRequired = tieForce / fy  // mm²
+   606→
+   607→        // === التسليح الأدنى للكمرات العميقة ===
+   608→        // SBC 304 §18.10.3: تسليح أفقي أدنى
+   609→        // ρ_h = 0.001 × bw × s (لكل وجه)
+   610→        val minHorizReinfPerFace = 0.001 * width * 1000.0  // mm²/m لكل وجه
+   611→        val totalHorizMin = minHorizReinfPerFace * 2  // الوجهين
+   612→
+   613→        // SBC 304 §18.10.4: تسليح رأسي أدنى
+   614→        // ρ_v = 0.0025 × bw × sv (لكل وجه)
+   615→        val minVertReinfPerFace = 0.0025 * width * 1000.0  // mm²/m لكل وجه
+   616→        val totalVertMin = minVertReinfPerFace * 2  // الوجهين
+   617→
+   618→        codeNotes.add("SBC 304 §18.10.3: Min horizontal reinf = ${"%.0f".format(minHorizReinfPerFace)} mm²/m per face")
+   619→        codeNotes.add("SBC 304 §18.10.4: Min vertical reinf = ${"%.0f".format(minVertReinfPerFace)} mm²/m per face")
+   620→
+   621→        // اختيار سيخ الشد الرئيسي
+   622→        val selectedDia = SBC_BAR_DIAMETERS.firstOrNull {
+   623→            val area = PI * it * it / 4
+   624→            ceil(astRequired / area) <= 6
+   625→        } ?: 20.0
+   626→
+   627→        val barArea = PI * selectedDia * selectedDia / 4
+   628→        val numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(2, 8)
+   629→        val astProvided = numberOfBars * barArea
+   630→
+   631→        // حساب السعة
+   632→        val capacity = PHI_FLEXURE * astProvided * fy * effectiveDepth / (tan(thetaDesignRad) * 1e6)  // kN
+   633→        val utilizationRatio = if (capacity > 0) Vu / capacity else 2.0
+   634→
+   635→        // === تسليح القص للكمرة العميقة ===
+   636→        // Vc للكمرة العميقة = 2.5 × λ × √(fc') × bw × d (معزز)
+   637→        // لكن SBC 304 §18.10 يحدد Vn ≤ 0.66 × √(fc') × bw × d
+   638→        val VcDeep = 2.5 * LAMBDA * sqrt(fcPrime.coerceAtLeast(1.0)) * width * effectiveDepth / 1000.0  // kN
+   639→        val VsMax = 0.66 * sqrt(fcPrime.coerceAtLeast(1.0)) * width * effectiveDepth / 1000.0  // kN
+   640→
+   641→        // اختيار كانات الكمرة العميقة
+   642→        val stirrupDia = 10.0  // mm
+   643→        val stirrupArea = 2 * PI * stirrupDia * stirrupDia / 4  // رجلين
+   644→        val stirrupSpacing = if (minVertReinfPerFace > 0) {
+   645→            (stirrupArea * 1000.0 / minVertReinfPerFace).coerceAtMost(150.0)
+   646→        } else 150.0
+   647→
+   648→        // التسليح الأفقي (موزع على الوجهين)
+   649→        val horizBarDia = 10.0
+   650→        val horizBarArea = PI * horizBarDia * horizBarDia / 4
+   651→        val horizSpacing = if (minHorizReinfPerFace > 0) {
+   652→            (horizBarArea * 1000.0 / minHorizReinfPerFace).coerceAtMost(200.0)
+   653→        } else 200.0
+   654→
+   655→        codeNotes.add("Deep beam main: ${numberOfBars}Ø${selectedDia.toInt()}")
+   656→        codeNotes.add("Vertical: Ø${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()}mm c/c")
+   657→        codeNotes.add("Horizontal: Ø${horizBarDia.toInt()} @ ${horizSpacing.toInt()}mm c/c (both faces)")
+   658→
+   659→        // === تحقق الانحراف المبسط ===
+   660→        val serviceLoad = deadLoad + liveLoad
+   661→        val allowableDeflection = span * 1000.0 / 240.0
+   662→        val Ec = EC_COEFFICIENT * sqrt(fcPrime.coerceAtLeast(1.0))
+   663→        val Ig = width * depth.pow(3) / 12.0
+   664→        val immediateDeflection = 5.0 * (serviceLoad / 1000.0) * (span * 1000.0).pow(4) / (384.0 * Ec * Ig)
+   665→        val longTermDeflection = immediateDeflection * (1.0 + SBC_LONG_TERM_MULTIPLIER)
+   666→        val deflectionRatio = longTermDeflection / allowableDeflection
+   667→
+   668→        val deflectionCheck = DeflectionCheckResult(
+   669→            immediateDeflection = immediateDeflection,
+   670→            longTermDeflection = longTermDeflection,
+   671→            calculatedDeflection = longTermDeflection,
+   672→            allowableDeflection = allowableDeflection,
+   673→            ratio = deflectionRatio,
+   674→            isSafe = deflectionRatio <= 1.0,
+   675→            message = "SBC 304 §18.10 (Deep Beam): δi=%.1fmm, δLT=%.1fmm".format(immediateDeflection, longTermDeflection),
+   676→            recommendation = when {
+   677→                deflectionRatio > 1.0 -> "زِد عمق الكمرة العميقة أو قلل البحر"
+   678→                else -> "الانحراف مقبول للكمرة العميقة"
+   679→            }
+   680→        )
+   681→
+   682→        val flexureResult = ReinforcementResult(
+   683→            astRequired = astRequired,
+   684→            astProvided = astProvided,
+   685→            barDiameter = selectedDia,
+   686→            numberOfBars = numberOfBars,
+   687→            tiesDiameter = stirrupDia,
+   688→            tiesSpacing = stirrupSpacing,
+   689→            isSafe = utilizationRatio <= 1.0,
+   690→            utilizationRatio = utilizationRatio,
+   691→            warnings = warnings,
+   692→            codeNotes = codeNotes
+   693→        )
+   694→
+   695→        val shearResult = ShearReinforcementResult(
+   696→            concreteShearCapacity = VcDeep,
+   697→            requiredArea = minVertReinfPerFace,
+   698→            providedArea = stirrupArea * 1000.0 / stirrupSpacing,
+   699→            requiredShearReinforcement = minVertReinfPerFace,
+   700→            providedShearReinforcement = stirrupArea * 1000.0 / stirrupSpacing,
+   701→            stirrupDiameter = stirrupDia,
+   702→            stirrupSpacing = stirrupSpacing,
+   703→            isSafe = Vu <= PHI_SHEAR * (VcDeep + VsMax),
+   704→            utilizationRatio = if ((VcDeep + VsMax) > 0) Vu / (PHI_SHEAR * (VcDeep + VsMax)) else 2.0,
+   705→            warnings = listOf(),
+   706→            codeNotes = listOf("SBC 304 §18.10: Deep Beam Shear Provisions")
+   707→        )
+   708→
+   709→        return AdvancedBeamResult(
+   710→            beamType = BeamType.SimplySupported(span),
+   711→            sectionType = BeamSectionType.RECTANGULAR,
+   712→            flexureResult = flexureResult,
+   713→            shearResult = shearResult,
+   714→            deflectionCheck = deflectionCheck,
+   715→            momentDiagram = generateMomentDiagram(BeamType.SimplySupported(span), totalLoad),
+   716→            shearDiagram = generateShearDiagram(BeamType.SimplySupported(span), totalLoad),
+   717→            inventoryAnalysis = null,
+   718→            crackWidthCheck = null,
+   719→            developmentLengthCheck = null,
+   720→            warnings = warnings,
+   721→            codeNotes = codeNotes + "SBC 304-2018 §18.10 (Deep Beam Design)"
+   722→        )
+   723→    }
+   724→
+   725→    // ========================================================================
+   726→    //  تصميم الكمرات المستمرة - SBC 304 البند 6.5 / ACI 318-6.5
+   727→    // ========================================================================
+   728→
+   729→    /**
+   730→     * تصميم الكمرة المستمرة حسب SBC 304-2018 البند 6.5
+   731→     *
+   732→     * يستخدم معاملات العزم التقريبية (ACI/SBC Moment Coefficients):
+   733→     * - عزم سالب عند الدعامة الخارجية: wL²/16
+   734→     * - عزم موجب في منتصف البحر الخارجي: wL²/14
+   735→     * - عزم سالب عند الدعامة الداخلية: wL²/10
+   736→     * - عزم موجب في منتصف البحر الداخلي: wL²/11
+   737→     *
+   738→     * كما يحسب:
+   739→     * - نقاط القطع (Cutoff Points)
+   740→     * - أطوال التثبيت عند المقاطع الحرجة
+   741→     * - توزيع الكانات
+   742→     *
+   743→     * @param spans أطوال الأبحر (m) - يجب أن تكون متساوية أو متقاربة
+   744→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+   745→     * @param fy إجهاد خضوع الحديد (MPa)
+   746→     * @param deadLoad الحمل الميت الموزع (kN/m)
+   747→     * @param liveLoad الحمل الحي الموزع (kN/m)
+   748→     * @param width عرض الكمرة (mm)
+   749→     * @param depth عمق الكمرة (mm)
+   750→     * @param inventory مخزون الحديد (اختياري)
+   751→     * @param loadCombination مجموعة التحميل
+   752→     * @return List<AdvancedBeamResult> نتيجة لكل مقطع حرج
+   753→     */
+   754→    fun designContinuousBeam(
+   755→        spans: List<Double>,
+   756→        fcu: Double,
+   757→        fy: Double,
+   758→        deadLoad: Double,
+   759→        liveLoad: Double,
+   760→        width: Double,
+   761→        depth: Double,
+   762→        inventory: RebarInventory?,
+   763→        loadCombination: LoadCombination
+   764→    ): List<AdvancedBeamResult> {
+   765→        val allResults = mutableListOf<AdvancedBeamResult>()
+   766→        val globalCodeNotes = mutableListOf<String>()
+   767→        val globalWarnings = mutableListOf<String>()
+   768→
+   769→        val fcPrime = 0.8 * fcu
+   770→        val effectiveDepth = depth - SBC_COVER_CORROSIVE - 10.0 - 12.0
+   771→        val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
+   772→        val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
+   773→
+   774→        globalCodeNotes.add("fc' = 0.8 × fcu = ${"%.1f".format(fcPrime)} MPa")
+   775→        globalCodeNotes.add("SBC 304 §6.5: Continuous Beam Moment Coefficients")
+   776→        globalCodeNotes.add("Wu = ${"%.2f".format(totalLoad)} kN/m")
+   777→
+   778→        if (spans.isEmpty()) return allResults
+   779→
+   780→        // === معاملات إعادة التوزيع (Moment Redistribution) ===
+   781→        // SBC 304 §6.6.4 / ACI 6.6.4: يمكن إعادة توزيع العزم السالب
+   782→        // بنسبة لا تتجاوز 1000×εt (%)
+   783→        // εt = 0.003 × (d/c - 1) حيث c = a/β1
+   784→        val redistributionRatio = 0.1  // 10% كحد أقصى آمن
+   785→        globalCodeNotes.add("SBC 304 §6.6.4: Moment redistribution ≤ ${"%.0f".format(redistributionRatio * 100)}% applied")
+   786→
+   787→        // === فحص نسبة الأبحر المتجاورة ===
+   788→        // معاملات العزم التقريبية صالحة عندما لا يختلف البحر عن المتوسط بأكثر من 20%
+   789→        if (spans.size >= 2) {
+   790→            val avgSpan = spans.average()
+   791→            val maxDeviation = spans.maxOf { abs(it - avgSpan) / avgSpan }
+   792→            if (maxDeviation > 0.2) {
+   793→                globalWarnings.add("تباين الأبحر يتجاوز 20% - معاملات العزم التقريبية أقل دقة - SBC 304 §6.5")
+   794→                globalCodeNotes.add("⚠ SBC 304 §6.5: Span variation > 20%, approximate coefficients less accurate")
+   795→            }
+   796→        }
+   797→
+   798→        // === حساب المقاطع الحرجة لكل بحر ===
+   799→        for (spanIndex in spans.indices) {
+   800→            val span = spans[spanIndex]
+   801→            val isFirst = spanIndex == 0
+   802→            val isLast = spanIndex == spans.size - 1
+   803→
+   804→            // تحديد معاملات العزم حسب موقع البحر
+   805→            // الدعامة الخارجية اليسرى (للبحر الأول فقط)
+   806→            if (isFirst) {
+   807→                // مقطع عند الدعامة الخارجية
+   808→                val momentSupport = totalLoad * span * span * MOMENT_COEFF_EXT_NEG
+   809→                val shearAtSupport = totalLoad * span * 0.5
+   810→
+   811→                val negFlexure = baseBeam.calculateFlexureReinforcement(
+   812→                    fcu, fy, width, effectiveDepth, depth, momentSupport, loadCombination
+   813→                )
+   814→
+   815→                val negShear = baseBeam.calculateShearReinforcement(
+   816→                    fcu, fy, width, effectiveDepth, shearAtSupport, 0.0, loadCombination
+   817→                )
+   818→
+   819→                // نقطة القطع للقضبان السفلية (bottom bars)
+   820→                // عند الدعامة: القضبان العلوية هي الأساسية
+   821→                // نقطة القطع = المسافة من الدعامة حيث العزم يقل عن سعة القضبان
+   822→                val cutoffPoint = calculateCutoffPoint(
+   823→                    load = totalLoad,
+   824→                    span = span,
+   825→                    momentAtSupport = momentSupport,
+   826→                    capacityOfCutBars = negFlexure.astProvided * 0.5 * fy * effectiveDepth / 1e6, // kN.m (نصف القضبان)
+   827→                    supportType = "exterior"
+   828→                )
+   829→
+   830→                allResults.add(
+   831→                    AdvancedBeamResult(
+   832→                        beamType = BeamType.Continuous(spans, listOf(EndCondition.PINNED, EndCondition.FIXED)),
+   833→                        sectionType = BeamSectionType.RECTANGULAR,
+   834→                        flexureResult = negFlexure,
+   835→                        shearResult = negShear,
+   836→                        deflectionCheck = DeflectionCheckResult(isSafe = true),
+   837→                        momentDiagram = emptyList(),
+   838→                        shearDiagram = emptyList(),
+   839→                        inventoryAnalysis = null,
+   840→                        crackWidthCheck = null,
+   841→                        developmentLengthCheck = null,
+   842→                        warnings = globalWarnings + negFlexure.warnings,
+   843→                        codeNotes = globalCodeNotes + negFlexure.codeNotes +
+   844→                                "Span ${spanIndex + 1} - Exterior Support: M=${"%.1f".format(momentSupport)} kN.m" +
+   845→                                ", Cutoff point: ${"%.2f".format(cutoffPoint)}m from support"
+   846→                    )
+   847→                )
+   848→            }
+   849→
+   850→            // مقطع المنتصف (عزم موجب)
+   851→            val momentCoeffMid = if (isFirst || isLast) MOMENT_COEFF_EXT_POS else MOMENT_COEFF_INT_POS
+   852→            val momentMidspan = totalLoad * span * span * momentCoeffMid
+   853→
+   854→            val posFlexure = baseBeam.calculateFlexureReinforcement(
+   855→                fcu, fy, width, effectiveDepth, depth, momentMidspan, loadCombination
+   856→            )
+   857→
+   858→            val shearMidspan = 0.0  // القص عند المنتصف ≈ 0
+   859→            val posShear = baseBeam.calculateShearReinforcement(
+   860→                fcu, fy, width, effectiveDepth, shearMidspan, 0.0, loadCombination
+   861→            )
+   862→
+   863→            allResults.add(
+   864→                AdvancedBeamResult(
+   865→                    beamType = BeamType.Continuous(spans, listOf(EndCondition.FIXED, EndCondition.FIXED)),
+   866→                    sectionType = BeamSectionType.RECTANGULAR,
+   867→                    flexureResult = posFlexure,
+   868→                    shearResult = posShear,
+   869→                    deflectionCheck = DeflectionCheckResult(isSafe = true),
+   870→                    momentDiagram = emptyList(),
+   871→                    shearDiagram = emptyList(),
+   872→                    inventoryAnalysis = null,
+   873→                    crackWidthCheck = null,
+   874→                    developmentLengthCheck = null,
+   875→                    warnings = globalWarnings + posFlexure.warnings,
+   876→                    codeNotes = globalCodeNotes + posFlexure.codeNotes +
+   877→                            "Span ${spanIndex + 1} - Midspan (+M): M=${"%.1f".format(momentMidspan)} kN.m" +
+   878→                            " (coeff = 1/${(1.0 / momentCoeffMid).toInt()})"
+   879→                )
+   880→            )
+   881→
+   882→            // مقطع عند الدعامة الداخلية (للبحور ما عدا الأخير - أو لجميع الدعامات الداخلية)
+   883→            if (!isLast) {
+   884→                val momentIntSupport = totalLoad * span * span * MOMENT_COEFF_INT_NEG
+   885→                val shearIntSupport = totalLoad * span * 0.6
+   886→
+   887→                // تطبيق إعادة التوزيع: تقليل العزم السالب وزيادة الموجب
+   888→                val redistributedMoment = momentIntSupport * (1.0 - redistributionRatio)
+   889→
+   890→                val intNegFlexure = baseBeam.calculateFlexureReinforcement(
+   891→                    fcu, fy, width, effectiveDepth, depth, redistributedMoment, loadCombination
+   892→                )
+   893→
+   894→                val intNegShear = baseBeam.calculateShearReinforcement(
+   895→                    fcu, fy, width, effectiveDepth, shearIntSupport, 0.0, loadCombination
+   896→                )
+   897→
+   898→                val cutoffPoint = calculateCutoffPoint(
+   899→                    load = totalLoad,
+   900→                    span = span,
+   901→                    momentAtSupport = redistributedMoment,
+   902→                    capacityOfCutBars = intNegFlexure.astProvided * 0.5 * fy * effectiveDepth / 1e6,
+   903→                    supportType = "interior"
+   904→                )
+   905→
+   906→                allResults.add(
+   907→                    AdvancedBeamResult(
+   908→                        beamType = BeamType.Continuous(spans, listOf(EndCondition.FIXED, EndCondition.FIXED)),
+   909→                        sectionType = BeamSectionType.RECTANGULAR,
+   910→                        flexureResult = intNegFlexure,
+   911→                        shearResult = intNegShear,
+   912→                        deflectionCheck = DeflectionCheckResult(isSafe = true),
+   913→                        momentDiagram = emptyList(),
+   914→                        shearDiagram = emptyList(),
+   915→                        inventoryAnalysis = null,
+   916→                        crackWidthCheck = null,
+   917→                        developmentLengthCheck = null,
+   918→                        warnings = globalWarnings + intNegFlexure.warnings,
+   919→                        codeNotes = globalCodeNotes + intNegFlexure.codeNotes +
+   920→                                "Span ${spanIndex + 1}→${spanIndex + 2} Interior Support: M=${"%.1f".format(momentIntSupport)} kN.m" +
+   921→                                ", Redistributed: ${"%.1f".format(redistributedMoment)} kN.m (-${(redistributionRatio * 100).toInt()}%)" +
+   922→                                ", Cutoff: ${"%.2f".format(cutoffPoint)}m"
+   923→                    )
+   924→                )
+   925→            }
+   926→
+   927→            // الدعامة الخارجية اليمنى (للبحر الأخير فقط)
+   928→            if (isLast && spans.size > 1) {
+   929→                val momentRightSupport = totalLoad * span * span * MOMENT_COEFF_EXT_NEG
+   930→                val rightFlexure = baseBeam.calculateFlexureReinforcement(
+   931→                    fcu, fy, width, effectiveDepth, depth, momentRightSupport, loadCombination
+   932→                )
+   933→
+   934→                allResults.add(
+   935→                    AdvancedBeamResult(
+   936→                        beamType = BeamType.Continuous(spans, listOf(EndCondition.FIXED, EndCondition.PINNED)),
+   937→                        sectionType = BeamSectionType.RECTANGULAR,
+   938→                        flexureResult = rightFlexure,
+   939→                        shearResult = ShearReinforcementResult(),
+   940→                        deflectionCheck = DeflectionCheckResult(isSafe = true),
+   941→                        momentDiagram = emptyList(),
+   942→                        shearDiagram = emptyList(),
+   943→                        inventoryAnalysis = null,
+   944→                        crackWidthCheck = null,
+   945→                        developmentLengthCheck = null,
+   946→                        warnings = globalWarnings + rightFlexure.warnings,
+   947→                        codeNotes = globalCodeNotes + rightFlexure.codeNotes +
+   948→                                "Span ${spanIndex + 1} - Right Exterior Support: M=${"%.1f".format(momentRightSupport)} kN.m"
+   949→                    )
+   950→                )
+   951→            }
+   952→        }
+   953→
+   954→        return allResults
+   955→    }
+   956→
+   957→    /**
+   958→     * حساب نقطة القطع (Cutoff Point) للقضبان
+   959→     *
+   960→     * عند نقطة القطع، يجب أن يكون عزم المقطع ≥ سعة القضبان المتبقية
+   961→     * M(x) = R×x - w×x²/2 - M_support × (1 - x/L)
+   962→     *
+   963→     * @param load الحمل الموزع (kN/m)
+   964→     * @param span البحر (m)
+   965→     * @param momentAtSupport العزم عند الدعامة (kN.m)
+   966→     * @param capacityOfCutBars سعة القضبان المقطوعة (kN.m)
+   967→     * @param supportType نوع الدعامة (خارجية/داخلية)
+   968→     * @return المسافة من الدعامة لنقطة القطع (m)
+   969→     */
+   970→    private fun calculateCutoffPoint(
+   971→        load: Double,
+   972→        span: Double,
+   973→        momentAtSupport: Double,
+   974→        capacityOfCutBars: Double,
+   975→        supportType: String
+   976→    ): Double {
+   977→        // عزم القص عند المسافة x من الدعامة
+   978→        // M(x) = R×x - w×x²/2 - M_support (للبحر الخارجي: R = wL/2)
+   979→        // M(x) = R×x - w×x²/2 - M_support (للبحر الداخلي: R ≈ wL×0.6)
+   980→        val reaction = if (supportType == "exterior") load * span / 2.0 else load * span * 0.6
+   981→
+   982→        // نبحث عن x حيث M(x) = capacityOfCutBars
+   983→        // R×x - w×x²/2 = M_support + capacityOfCutBars
+   984→        // -w/2 × x² + R × x - (M_support + capacityOfCutBars) = 0
+   985→        val totalMoment = momentAtSupport + capacityOfCutBars
+   986→        val a = -load / 2.0
+   987→        val b = reaction
+   988→        val c = -totalMoment
+   989→
+   990→        val discriminant = b * b - 4 * a * c
+   991→        if (discriminant < 0) return span / 3.0  // قيمة افتراضية آمنة
+   992→
+   993→        val x1 = (-b + sqrt(discriminant)) / (2 * a)
+   994→        val x2 = (-b - sqrt(discriminant)) / (2 * a)
+   995→
+   996→        // نأخذ القيمة الموجبة الأقل
+   997→        val validSolutions = listOf(x1, x2).filter { it > 0 && it < span }
+   998→        return validSolutions.minOrNull()?.coerceAtLeast(span / 6.0) ?: span / 3.0
+   999→    }
+  1000→
+  1001→    // ========================================================================
+  1002→    //  دوال التصميم الزلزالي - SBC 304 البند 21
+  1003→    // ========================================================================
+  1004→
+  1005→    /**
+  1006→     * فحص متطلبات المناطق الزلزالية حسب SBC 304 البند 21
+  1007→     *
+  1008→     * يشمل:
+  1009→     * - عرض الكمرة الأدنى (250 مم) - SBC 304 §21.4
+  1010→     * - نسبة التسليح الأدنى (0.25√fc'/fy) - SBC 304 §21.5
+  1011→     * - نسبة التسليح القصوى (0.025) - SBC 304 §21.5
+  1012→     * - نسبة الضغط إلى الشد (As'/As ≥ 0.5 عند الدعامات)
+  1013→     *
+  1014→     * @param width عرض الكمرة (mm)
+  1015→     * @param depth عمق الكمرة (mm)
+  1016→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+  1017→     * @param fy إجهاد خضوع الحديد (MPa)
+  1018→     * @param totalLoad الحمل الكلي (kN/m)
+  1019→     * @return زوج (تحذيرات، ملاحظات الكود)
+  1020→     */
+  1021→    fun checkSeismicRequirements(
+  1022→        width: Double,
+  1023→        depth: Double,
+  1024→        fcu: Double,
+  1025→        fy: Double,
+  1026→        totalLoad: Double
+  1027→    ): Pair<List<String>, List<String>> {
+  1028→        val warnings = mutableListOf<String>()
+  1029→        val codeNotes = mutableListOf<String>()
+  1030→        val fcPrime = 0.8 * fcu
+  1031→
+  1032→        codeNotes.add("SBC 304-2018 §21: Seismic Design Provisions")
+  1033→
+  1034→        // SBC 304 §21.4: أقل عرض للكمرات في المناطق الزلزالية
+  1035→        if (width < SBC_MIN_WIDTH_SEISMIC) {
+  1036→            warnings.add("SBC 304 §21.4: عرض الكمرة ${width.toInt()} مم < ${SBC_MIN_WIDTH_SEISMIC.toInt()} مم (الحد الأدنى الزلزالي)")
+  1037→            codeNotes.add("⚠ SBC 304 §21.4: Min beam width = 250mm in seismic zones")
+  1038→        } else {
+  1039→            codeNotes.add("SBC 304 §21.4: Beam width ${width.toInt()}mm ≥ 250mm ✓")
+  1040→        }
+  1041→
+  1042→        // SBC 304 §21.5: نسبة التسليح الأدنى للمناطق الزلزالية
+  1043→        val rhoMinSeismic = 0.25 * sqrt(fcPrime.coerceAtLeast(1.0)) / fy
+  1044→        codeNotes.add("SBC 304 §21.5: Seismic ρmin = 0.25√fc'/fy = ${"%.4f".format(rhoMinSeismic)}")
+  1045→
+  1046→        // SBC 304 §21.5: نسبة التسليح القصوى
+  1047→        val rhoMaxSeismic = 0.025
+  1048→        codeNotes.add("SBC 304 §21.5: Seismic ρmax = ${rhoMaxSeismic}")
+  1049→
+  1050→        // SBC 304 §21.5.2: نسبة الضغط إلى الشد عند الدعامات (As'/As ≥ 0.5)
+  1051→        codeNotes.add("SBC 304 §21.5.2: At joint faces, As'/As ≥ 0.5 (compression/tension ratio)")
+  1052→
+  1053→        // SBC 304 §21.5.1: الحد الأقصى للعمق/العرض
+  1054→        val depthWidthRatio = depth / width
+  1055→        if (depthWidthRatio > 4.0) {
+  1056→            warnings.add("SBC 304 §21.5.1: نسبة العمق/العرض = ${"%.1f".format(depthWidthRatio)} > 4 - غير مفضل زلزالياً")
+  1057→        }
+  1058→
+  1059→        // SBC 304 §21.5.3: التسليح المضغوط الأدنى في مناطق العزم العالي
+  1060→        codeNotes.add("SBC 304 §21.5.3: Compression reinforcement required at plastic hinge zones")
+  1061→
+  1062→        return warnings to codeNotes
+  1063→    }
+  1064→
+  1065→    /**
+  1066→     * تصميم الكانات الزلزالية حسب SBC 304 البند 21.5
+  1067→     *
+  1068→     * متطلبات مناطق الحصر الزلزالية (Confinement Zones):
+  1069→     * - تباعد الكانات: min(d/4, 100 مم, 8×db) - SBC 304 §21.5.3
+  1070→     * - كانات 135° مع امتداد 10×db - SBC 304 §25.7.3
+  1071→     * - نسبة القص الأدنى: 0.062√fc'×bw/fy - SBC 304 §21.5.4
+  1072→     * - طول منطقة الحصر: 2×h من وجه الدعامة
+  1073→     *
+  1074→     * @param shearResult نتيجة القص العادية
+  1075→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+  1076→     * @param fy إجهاد خضوع الحديد (MPa)
+  1077→     * @param width عرض الكمرة (mm)
+  1078→     * @param effectiveDepth العمق الفعال (mm)
+  1079→     * @param designShear قوة القص التصميمية (kN)
+  1080→     * @return ShearReinforcementResult مع متطلبات الحصر الزلزالي
+  1081→     */
+  1082→    fun designSeismicStirrups(
+  1083→        shearResult: ShearReinforcementResult,
+  1084→        fcu: Double,
+  1085→        fy: Double,
+  1086→        width: Double,
+  1087→        effectiveDepth: Double,
+  1088→        designShear: Double
+  1089→    ): ShearReinforcementResult {
+  1090→        val warnings = shearResult.warnings.toMutableList()
+  1091→        val codeNotes = shearResult.codeNotes.toMutableList()
+  1092→        val fcPrime = 0.8 * fcu
+  1093→
+  1094→        codeNotes.add("SBC 304 §21.5.3: Seismic Confinement Zone - Seismic Stirrup Design")
+  1095→
+  1096→        // SBC 304 §21.5.3: تباعد الكانات في منطقة الحصر
+  1097→        // s = min(d/4, 100mm, 8×db_main)
+  1098→        val s1 = effectiveDepth / 4.0
+  1099→        val s2 = 100.0
+  1100→        val s3 = 8.0 * 25.0  // 8 × قطر السيخ الرئيسي (افتراضي 25مم)
+  1101→        val seismicSpacing = minOf(s1, s2, s3)
+  1102→
+  1103→        // SBC 304 §21.5.4: نسبة القص الأدنى في المناطق الزلزالية
+  1104→        val Av_min_seismic = 0.062 * sqrt(fcPrime.coerceAtLeast(1.0)) * width / fy * 1000  // mm²/m
+  1105→
+  1106→        // اختيار قطر الكانات الزلزالية (لا يقل عن 10 مم)
+  1107→        val seismicStirrupDia = maxOf(shearResult.stirrupDiameter, 10.0)
+  1108→        val seismicStirrupArea = 2 * PI * seismicStirrupDia * seismicStirrupDia / 4  // رجلين
+  1109→
+  1110→        // التباعد الفعلي (آخر بين الحسابي والزلزالي)
+  1111→        val requiredSpacing = if (shearResult.requiredShearReinforcement > 0) {
+  1112→            seismicStirrupArea * 1000.0 / max(shearResult.requiredShearReinforcement, Av_min_seismic)
+  1113→        } else {
+  1114→            seismicSpacing
+  1115→        }
+  1116→        val finalSpacing = minOf(requiredSpacing, seismicSpacing).coerceAtLeast(50.0)
+  1117→
+  1118→        // تحقق من طول منطقة الحصر
+  1119→        // SBC 304 §21.5.3: منطقة الحصر تمتد 2h من وجه الدعامة
+  1120→        codeNotes.add("Confinement zone length: 2h = ${"%.0f".format(2 * (effectiveDepth + SBC_COVER_CORROSIVE))}mm from support face")
+  1121→        codeNotes.add("Seismic stirrup: Ø${seismicStirrupDia.toInt()} @ ${finalSpacing.toInt()}mm c/c (min of d/4=${"%.0f".format(s1)}, 100mm)")
+  1122→        codeNotes.add("SBC 304 §21.5.3: Hooks = 135° with 10db extension")
+  1123→
+  1124→        if (finalSpacing < shearResult.stirrupSpacing) {
+  1125→            codeNotes.add("Seismic spacing ${finalSpacing.toInt()}mm < normal spacing ${shearResult.stirrupSpacing.toInt()}mm (governed by seismic)")
+  1126→        }
+  1127→
+  1128→        val providedArea = seismicStirrupArea * 1000.0 / finalSpacing
+  1129→        return ShearReinforcementResult(
+  1130→            concreteShearCapacity = shearResult.concreteShearCapacity,
+  1131→            requiredArea = max(shearResult.requiredArea, Av_min_seismic),
+  1132→            providedArea = providedArea,
+  1133→            requiredShearReinforcement = max(shearResult.requiredShearReinforcement, Av_min_seismic),
+  1134→            providedShearReinforcement = providedArea,
+  1135→            stirrupDiameter = seismicStirrupDia,
+  1136→            stirrupSpacing = finalSpacing,
+  1137→            isSafe = shearResult.isSafe,
+  1138→            utilizationRatio = shearResult.utilizationRatio,
+  1139→            warnings = warnings,
+  1140→            codeNotes = codeNotes
+  1141→        )
+  1142→    }
+  1143→
+  1144→    /**
+  1145→     * فحص شرط العمود القوي والكمرة الضعيفة (Strong Column - Weak Beam)
+  1146→     * حسب SBC 304 البند 21.6
+  1147→     *
+  1148→     * ΣMnc ≥ (6/5) × ΣMnb
+  1149→     * حيث:
+  1150→     *   ΣMnc = مجموع عزوم الخضوع للأعمدة عند المفصل
+  1151→     *   ΣMnb = مجموع عزوم الخضوع للكمرات عند المفصل
+  1152→     *
+  1153→     * @param columnSumMoment مجموع عزوم الخضوع للأعمدة (kN.m)
+  1154→     * @param beamTopReinforcement مساحة تسليح الكمرة العلوية (mm²)
+  1155→     * @param beamBottomReinforcement مساحة تسليح الكمرة السفلية (mm²)
+  1156→     * @param effectiveDepth العمق الفعال للكمرة (mm)
+  1157→     * @param fy إجهاد خضوع الحديد (MPa)
+  1158→     * @return Triple(نسبة السلامة، هل آمن، ملاحظات)
+  1159→     */
+  1160→    fun checkStrongColumnWeakBeam(
+  1161→        columnSumMoment: Double,
+  1162→        beamTopReinforcement: Double,
+  1163→        beamBottomReinforcement: Double,
+  1164→        effectiveDepth: Double,
+  1165→        fy: Double
+  1166→    ): Triple<Double, Boolean, List<String>> {
+  1167→        val notes = mutableListOf<String>()
+  1168→        notes.add("SBC 304-2018 §21.6: Strong Column - Weak Beam Check")
+  1169→
+  1170→        // حساب عزوم الخضوع للكمرات
+  1171→        // Mnb = As × fy × (d - a/2) / φ
+  1172→        // تقريبي: Mnb ≈ As × fy × 0.9 × d
+  1173→        val MnTop = beamTopReinforcement * fy * 0.9 * effectiveDepth / 1e6  // kN.m
+  1174→        val MnBottom = beamBottomReinforcement * fy * 0.9 * effectiveDepth / 1e6  // kN.m
+  1175→        val sumMnb = MnTop + MnBottom  // kN.m
+  1176→
+  1177→        // شرط SBC 304 §21.6: ΣMnc ≥ (6/5) × ΣMnb
+  1178→        val requiredColumnMoment = 1.2 * sumMnb  // (6/5) = 1.2
+  1179→        val ratio = if (sumMnb > 0) columnSumMoment / requiredColumnMoment else 999.0
+  1180→        val isSafe = ratio >= 1.0
+  1181→
+  1182→        notes.add("ΣMnc = ${"%.1f".format(columnSumMoment)} kN.m")
+  1183→        notes.add("ΣMnb = ${"%.1f".format(sumMnb)} kN.m (Top: ${"%.1f".format(MnTop)} + Bottom: ${"%.1f".format(MnBottom)})")
+  1184→        notes.add("(6/5)×ΣMnb = ${"%.1f".format(requiredColumnMoment)} kN.m")
+  1185→        notes.add("Ratio ΣMnc/[(6/5)×ΣMnb] = ${"%.2f".format(ratio)} ${if (isSafe) "≥ 1.0 ✓" else "< 1.0 ✗"}")
+  1186→
+  1187→        // SBC 304 §21.6: إضافة نسب التسليح عند المفصل
+  1188→        val rhoSum = (beamTopReinforcement + beamBottomReinforcement) / (2 * 250.0 * effectiveDepth) // تقريبي
+  1189→        notes.add("ρsum at joint face ≈ ${"%.4f".format(rhoSum)}")
+  1190→
+  1191→        if (!isSafe) {
+  1192→            notes.add("⚠ العمود لا يحقق شرط القوة - زِد مقطع العمود أو التسليح")
+  1193→        }
+  1194→
+  1195→        return Triple(ratio, isSafe, notes)
+  1196→    }
+  1197→
+  1198→    // ========================================================================
+  1199→    //  فحص الانحراف المتقدم - SBC 304 مع معامل المناخ الحار
+  1200→    // ========================================================================
+  1201→
+  1202→    /**
+  1203→     * فحص الانحراف المتقدم حسب SBC 304-2018 مع تعديلات المناخ الحار
+  1204→     *
+  1205→     * الاختلاف الرئيسي عن ACI:
+  1206→     * - معامل الانحراف طويل المدى ξ = 2.5 (للمناخ الحار الجاف)
+  1207→     *   بدلاً من 2.0 (للرطوبة المتوسطة) حسب ACI 24.2.4.1
+  1208→     *
+  1209→     * يتبع نفس منهجية ACI 24.2.3.5 لحساب عزم القصور الفعال Ie
+  1210→     *
+  1211→     * @param span البحر (m)
+  1212→     * @param depth العمق الكلي (mm)
+  1213→     * @param fcPrime مقاومة الأسطوانة (MPa)
+  1214→     * @param serviceLoad حمل الخدمة الموزع (kN/m)
+  1215→     * @param serviceMoment عزم الخدمة (kN.m)
+  1216→     * @param beamWidth عرض الكمرة (mm)
+  1217→     * @param effectiveDepth العمق الفعال (mm)
+  1218→     * @param astProvided مساحة التسليح المقدمة (mm²)
+  1219→     * @param beamType نوع الكمرة
+  1220→     * @return DeflectionCheckResult نتيجة فحص الانحراف
+  1221→     */
+  1222→    private fun checkDeflectionSBC(
+  1223→        span: Double,
+  1224→        depth: Double,
+  1225→        fcPrime: Double,
+  1226→        serviceLoad: Double,
+  1227→        serviceMoment: Double,
+  1228→        beamWidth: Double,
+  1229→        effectiveDepth: Double,
+  1230→        astProvided: Double,
+  1231→        beamType: BeamType
+  1232→    ): DeflectionCheckResult {
+  1233→        val deflectionWarnings = mutableListOf<String>()
+  1234→
+  1235→        // معامل مرونة الخرسانة - SBC 304 §19.2.2.1 (= ACI 19.2.2.1)
+  1236→        val Ec = EC_COEFFICIENT * sqrt(fcPrime.coerceAtLeast(1.0))  // MPa
+  1237→        val Es = 200000.0  // MPa
+  1238→        val n = Es / Ec
+  1239→
+  1240→        // عزم القصور الذاتي للمقطع الكلي
+  1241→        val Ig = beamWidth * depth.pow(3) / 12.0
+  1242→        val yt = depth / 2.0
+  1243→
+  1244→        // عزم التشقق - SBC 304 §24.2.3.5
+  1245→        val fr = 0.62 * LAMBDA * sqrt(fcPrime.coerceAtLeast(1.0))  // MPa
+  1246→        val Mcr = fr * Ig / yt  // N.mm
+  1247→        val Ma = serviceMoment * 1e6  // N.mm
+  1248→
+  1249→        // عزم القصور للمقطع المتشقق Icr
+  1250→        val rho = if (effectiveDepth > 0 && beamWidth > 0) astProvided / (beamWidth * effectiveDepth) else 0.0
+  1251→        val nRho = n * rho
+  1252→
+  1253→        val xCr = if (nRho > 0) {
+  1254→            effectiveDepth * (-nRho + sqrt(nRho * nRho + 2 * nRho))
+  1255→        } else {
+  1256→            effectiveDepth * 0.3
+  1257→        }.coerceIn(0.1 * effectiveDepth, 0.6 * effectiveDepth)
+  1258→
+  1259→        val Icr = beamWidth * xCr.pow(3) / 3.0 + n * astProvided * (effectiveDepth - xCr).pow(2)
+  1260→
+  1261→        // عزم القصور الفعال Ie - SBC 304 (= ACI 24.2.3.5a)
+  1262→        val mcRatio = if (Ma > 0) Mcr / Ma else 1.0
+  1263→        val mcRatioCubed = mcRatio.pow(3).coerceAtMost(1.0)
+  1264→
+  1265→        val Ie: Double = if (mcRatio >= 1.0) {
+  1266→            Ig
+  1267→        } else {
+  1268→            minOf(mcRatioCubed * Ig + (1.0 - mcRatioCubed) * Icr, Ig)
+  1269→        }
+  1270→
+  1271→        // الانحراف الفوري
+  1272→        val w = serviceLoad / 1000.0  // N/mm
+  1273→        val L = span * 1000.0  // mm
+  1274→
+  1275→        val alpha = when (beamType) {
+  1276→            is BeamType.SimplySupported -> 5.0 / 384.0
+  1277→            is BeamType.Fixed -> 1.0 / 384.0
+  1278→            is BeamType.Cantilever -> 1.0 / 8.0
+  1279→            is BeamType.Continuous -> 3.0 / 384.0
+  1280→            is BeamType.MultiSupport -> 3.0 / 384.0
+  1281→            is BeamType.Haunched -> 4.0 / 384.0
+  1282→            is BeamType.Vierendeel -> 5.0 / 384.0
+  1283→        }
+  1284→
+  1285→        val immediateDeflection = alpha * w * L.pow(4) / (Ec * Ie)  // mm
+  1286→
+  1287→        // === معامل الزيادة طويل المدى - SBC 304 (مع تعديل المناخ الحار) ===
+  1288→        // ACI 24.2.4.1: λΔ = ξ / (1 + 50 × ρ')
+  1289→        // SBC: ξ = 2.5 للمناخ الحار الجاف (المميز في المملكة العربية السعودية)
+  1290→        // بدلاً من ξ = 2.0 للرطوبة المتوسطة
+  1291→        val xi = SBC_LONG_TERM_MULTIPLIER  // 2.5 للمناخ الحار
+  1292→        val rhoPrime = 0.0  // نسبة تسليح الضغط (محافظ)
+  1293→        val longTermMultiplier = xi / (1.0 + 50.0 * rhoPrime)
+  1294→
+  1295→        val longTermDeflection = immediateDeflection * (1.0 + longTermMultiplier)
+  1296→
+  1297→        // حدود الانحراف - SBC 304 (= ACI 24.2.2)
+  1298→        val allowableTotal = L / 240.0
+  1299→        val ratio = longTermDeflection / allowableTotal
+  1300→
+  1301→        val recommendation = when {
+  1302→            ratio > 1.2 -> "زِد عمق الكمرة أو قلل نسبة التسليح - SBC 304 §9.5"
+  1303→            ratio > 1.0 -> "الانحراف يتجاوز الحد المسموح - راجع SBC 304 §9.5"
+  1304→            ratio > 0.8 -> "الانحراف قريب من الحد - SBC 304 §9.5"
+  1305→            else -> "الانحراف مقبول حسب SBC 304 §9.5"
+  1306→        }
+  1307→
+  1308→        if (ratio > 1.0) {
+  1309→            deflectionWarnings.add("⚠️ الانحراف يتجاوز حدود SBC 304 §9.5 (δ/δ_allow = ${"%.2f".format(ratio)})")
+  1310→        }
+  1311→
+  1312→        deflectionWarnings.add("SBC: معامل طويل المدى ξ = ${SBC_LONG_TERM_MULTIPLIER} (مناخ حار) بدلاً من 2.0 (ACI)")
+  1313→
+  1314→        return DeflectionCheckResult(
+  1315→            immediateDeflection = immediateDeflection,
+  1316→            longTermDeflection = longTermDeflection,
+  1317→            calculatedDeflection = longTermDeflection,
+  1318→            allowableDeflection = allowableTotal,
+  1319→            ratio = ratio,
+  1320→            isSafe = ratio <= 1.0,
+  1321→            message = "SBC 304 §9.5: δi=%.2fmm, δLT=%.2fmm (ξ=%.1f), δ_allow=%.2fmm".format(
+  1322→                immediateDeflection, longTermDeflection, SBC_LONG_TERM_MULTIPLIER, allowableTotal
+  1323→            ),
+  1324→            recommendation = recommendation,
+  1325→            warnings = deflectionWarnings
+  1326→        )
+  1327→    }
+  1328→
+  1329→    // ========================================================================
+  1330→    //  فحص عرض الشروخ - SBC مع عامل المناخ الحار/الجاف
+  1331→    // ========================================================================
+  1332→
+  1333→    /**
+  1334→     * فحص عرض الشروخ حسب SBC 304-2018 مع تعديلات المناخ الحار/الجاف
+  1335→     *
+  1336→     * يستخدم طريقة Gergely-Lutz (مشابهة لـ ACI 24.5) مع تعديلات:
+  1337→     * - عامل المناخ الحار: يزيد عرض الشرخ بنسبة 15% تقريباً
+  1338→     *   بسبب التشقق الحراري التكراري (الفرق الكبير في درجات الحرارة)
+  1339→     * - الحد المسموح أكثر تحفظاً: 0.30 مم للعناصر الداخلية
+  1340→     *   (بدلاً من 0.41 مم في ACI)
+  1341→     *
+  1342→     * @param result نتيجة التسليح
+  1343→     * @param fcPrime مقاومة الأسطوانة (MPa)
+  1344→     * @param moment عزم الخدمة (kN.m)
+  1345→     * @param effectiveDepth العمق الفعال (mm)
+  1346→     * @param width عرض الكمرة (mm)
+  1347→     * @param isExterior هل العنصر خارجي (معرض للبيئة المالحة)
+  1348→     * @return CrackWidthCheckResult نتيجة فحص عرض الشروخ
+  1349→     */
+  1350→    fun checkCrackWidth(
+  1351→        result: ReinforcementResult,
+  1352→        fcPrime: Double,
+  1353→        moment: Double,
+  1354→        effectiveDepth: Double = 0.0,
+  1355→        width: Double = 250.0,
+  1356→        isExterior: Boolean = false
+  1357→    ): CrackWidthCheckResult {
+  1358→        if (result.astProvided <= 0) {
+  1359→            return CrackWidthCheckResult(
+  1360→                calculatedWidth = 0.0,
+  1361→                allowableWidth = 0.30,
+  1362→                isSafe = true,
+  1363→                codeReference = "SBC 304-2018: Section 24.5 (Crack Width Control - Hot/Arid Climate)"
+  1364→            )
+  1365→        }
+  1366→
+  1367→        val dEff = if (effectiveDepth > 0) effectiveDepth else (result.barDiameter * 50)
+  1368→
+  1369→        // حساب إجهاد الحديد تحت حمل الخدمة
+  1370→        val j = 0.875  // معامل الذراع التقريبي
+  1371→        val fs = (moment * 1e6) / (result.astProvided * j * dEff)  // MPa
+  1372→
+  1373→        // تحويل إلى ksi
+  1374→        val fsKsi = fs / 6.895
+  1375→
+  1376→        // المسافة من مركز السيخ للسطح
+  1377→        val cover = SBC_COVER_CORROSIVE  // 50 مم للبيئة السعودية
+  1378→        val dc = cover + 10.0 / 2.0 + result.barDiameter / 2.0  // mm
+  1379→        val dcIn = dc / 25.4  // in
+  1380→
+  1381→        // مساحة الخرسانة المحيطة بكل سيخ
+  1382→        val spacing = if (result.numberOfBars > 1) {
+  1383→            (width - 2 * cover - result.numberOfBars * result.barDiameter) / (result.numberOfBars - 1)
+  1384→        } else {
+  1385→            width - 2 * cover
+  1386→        }
+  1387→        val spacingIn = spacing / 25.4
+  1388→        val A = width / 25.4 * spacingIn / result.numberOfBars  // in²
+  1389→        val aCubed = if (A > 0) cbrt(A) else 1.0
+  1390→
+  1391→        // معامل z (Gergely-Lutz)
+  1392→        val z = fsKsi * dcIn * aCubed  // kip/in
+  1393→
+  1394→        // تقدير عرض الشرخ
+  1395→        var crackWidth = z / 425.0 * 25.4  // mm
+  1396→
+  1397→        // === تعديل المناخ الحار/الجاف (SBC) ===
+  1398→        // في المناخ الحار الجاف (السعودية)، يزيد عرض الشرخ بسبب:
+  1399→        // 1. التكرارات الحرارية الكبيرة (50+ درجة نهاراً، 15-20 ليلاً)
+  1400→        // 2. الجفاف السريع للخرسانة السطحية
+  1401→        // 3. الأملاح في الهواء (المناطق الساحلية)
+  1402→        val hotClimateFactor = if (isExterior) 1.20 else 1.15  // 15-20% زيادة
+  1403→        crackWidth *= hotClimateFactor
+  1404→
+  1405→        // === الحد المسموح حسب SBC (أكثر تحفظاً من ACI) ===
+  1406→        // SBC: 0.30 مم للعناصر الداخلية (بدلاً من 0.41 ACI)
+  1407→        //      0.25 مم للعناصر الخارجية في البيئة المالحة
+  1408→        val allowableWidth = if (isExterior) 0.25 else 0.30
+  1409→        val isSafe = crackWidth <= allowableWidth
+  1410→
+  1411→        return CrackWidthCheckResult(
+  1412→            calculatedWidth = crackWidth,
+  1413→            allowableWidth = allowableWidth,
+  1414→            isSafe = isSafe,
+  1415→            codeReference = "SBC 304-2018: Section 24.5 (z=${"%.0f".format(z)} kip/in, " +
+  1416→                    "hot-climate factor=${"%.2f".format(hotClimateFactor)}, " +
+  1417→                    "limit=${if (isExterior) 0.25 else 0.30}mm)"
+  1418→        )
+  1419→    }
+  1420→
+  1421→    // ========================================================================
+  1422→    //  فحص طول التثبيت - SBC 304 البند 12 (مع تعديلات الأسياك المجلفنة)
+  1423→    // ========================================================================
+  1424→
+  1425→    /**
+  1426→     * فحص طول التثبيت حسب SBC 304-2018 البند 12
+  1427→     *
+  1428→     * يتبع ACI 25.4.2 مع تعديلات SBC:
+  1429→     * - للأسياك المجلفنة (Galvanized): زيادة 10% في طول التثبيت
+  1430→     * - للبيئة المالحة: طول تثبيت أكبر
+  1431→     *
+  1432→     * Ld = (fy × ψt × ψe × ψs) / (1.7 × λ × √(fc')) × db × galvanizeFactor
+  1433→     *
+  1434→     * @param result نتيجة التسليح
+  1435→     * @param fcPrime مقاومة الأسطوانة (MPa)
+  1436→     * @param fy إجهاد الخضوع (MPa)
+  1437→     * @param span البحر (m)
+  1438→     * @return DevelopmentLengthCheckResult نتيجة فحص طول التثبيت
+  1439→     */
+  1440→    fun checkDevelopmentLength(
+  1441→        result: ReinforcementResult,
+  1442→        fcPrime: Double,
+  1443→        fy: Double,
+  1444→        span: Double
+  1445→    ): DevelopmentLengthCheckResult {
+  1446→        // حساب طول التثبيت باستخدام SBCBeam (الذي يضيف 10% للمجلفن)
+  1447→        val ldBottom = baseBeam.calculateDevelopmentLength(
+  1448→            barDiameter = result.barDiameter,
+  1449→            fy = fy,
+  1450→            fcu = fcPrime / 0.8,  // نمرر fcu لأن SBCBeam يرسله لـ ACIBeam الذي يحول
+  1451→            barLocation = BarLocation.BOTTOM,
+  1452→            coating = CoatingType.UNCOATED
+  1453→        )
+  1454→
+  1455→        val ldTop = baseBeam.calculateDevelopmentLength(
+  1456→            barDiameter = result.barDiameter,
+  1457→            fy = fy,
+  1458→            fcu = fcPrime / 0.8,
+  1459→            barLocation = BarLocation.TOP,
+  1460→            coating = CoatingType.UNCOATED
+  1461→        )
+  1462→
+  1463→        // طول التثبيت للأسياك المجلفنة (SBC 304 §12)
+  1464→        val ldBottomGalv = ldBottom * 1.1  // 10% زيادة للمجلفن
+  1465→        val ldTopGalv = ldTop * 1.1
+  1466→
+  1467→        // نستخدم القيمة الأكبر
+  1468→        val ldRequired = maxOf(ldBottomGalv, ldTopGalv)
+  1469→
+  1470→        // الطول المتاح
+  1471→        val availableLength = span * 1000.0 / 2.0  // mm (نصف البحر)
+  1472→        val isSafe = ldRequired <= availableLength
+  1473→
+  1474→        return DevelopmentLengthCheckResult(
+  1475→            requiredLength = ldRequired,
+  1476→            availableLength = availableLength,
+  1477→            isSafe = isSafe,
+  1478→            codeReference = "SBC 304-2018: Section 12 (Ld_bot=${"%.0f".format(ldBottom)}mm, " +
+  1479→                    "Ld_top=${"%.0f".format(ldTop)}mm, Galv: ×1.1, " +
+  1480→                    "Ld_req=${"%.0f".format(ldRequired)}mm)"
+  1481→        )
+  1482→    }
+  1483→
+  1484→    // ========================================================================
+  1485→    //  فحص عرض الجناح الفعال لكمرة تي - SBC 304 البند 8.12
+  1486→    // ========================================================================
+  1487→
+  1488→    /**
+  1489→     * فحص العرض الفعال للجناح حسب SBC 304-2018 البند 8.12
+  1490→     *
+  1491→     * bf لا يتجاوز:
+  1492→     *   1. bw + 16 × hf (لكل جانب)
+  1493→     *   2. bw + Ln/8 (لكل جانب)  -- وهنا يختلف عن بعض الأكواد الأخرى
+  1494→     *   3. bw + سد البحر المجاور / 2
+  1495→     *   4. المسافة المركزية بين الكمرات
+  1496→     *
+  1497→     * @param flangeWidth عرض الجناح الكلي (mm)
+  1498→     * @param flangeThickness سمك الجناح (mm)
+  1499→     * @param webWidth عرض الكورسة (mm)
+  1500→     * @param span البحر (m)
+  1501→     * @return زوج (العرض الفعال، ملاحظات الكود)
+  1502→     */
+  1503→    fun checkTBeamFlange(
+  1504→        flangeWidth: Double,
+  1505→        flangeThickness: Double,
+  1506→        webWidth: Double,
+  1507→        span: Double
+  1508→    ): Pair<Double, List<String>> {
+  1509→        val notes = mutableListOf<String>()
+  1510→        notes.add("SBC 304-2018 §8.12: Effective Flange Width Check")
+  1511→
+  1512→        val Ln = span * 1000.0  // mm
+  1513→
+  1514→        // شرط 1: bw + 16hf
+  1515→        val bf1 = webWidth + 16.0 * flangeThickness
+  1516→        // شرط 2: bw + Ln/8
+  1517→        val bf2 = webWidth + Ln / 8.0
+  1518→        // شرط 3: المسافة المركزية (نفترض أن flangeWidth = المسافة المركزية)
+  1519→        val bf3 = flangeWidth
+  1520→
+  1521→        val effectiveBf = minOf(bf1, bf2, bf3)
+  1522→
+  1523→        notes.add("Rule 1: bw + 16hf = ${webWidth.toInt()} + 16×${flangeThickness.toInt()} = ${bf1.toInt()}mm")
+  1524→        notes.add("Rule 2: bw + Ln/8 = ${webWidth.toInt()} + ${"%.0f".format(Ln / 8.0)} = ${bf2.toInt()}mm")
+  1525→        notes.add("Rule 3: Center-to-center = ${flangeWidth.toInt()}mm")
+  1526→        notes.add("Effective bf = min(${bf1.toInt()}, ${bf2.toInt()}, ${flangeWidth.toInt()}) = ${effectiveBf.toInt()}mm")
+  1527→
+  1528→        if (effectiveBf < flangeWidth) {
+  1529→            notes.add("⚠ Actual flange width ${flangeWidth.toInt()}mm reduced to effective ${effectiveBf.toInt()}mm")
+  1530→        }
+  1531→
+  1532→        // فحص أن المحور المحايد داخل الجناح أو لا
+  1533→        notes.add("Flange thickness hf = ${flangeThickness.toInt()}mm (must be ≥ L/4 for deep analysis)")
+  1534→
+  1535→        return effectiveBf to notes
+  1536→    }
+  1537→
+  1538→    // ========================================================================
+  1539→    //  فحص معايير الكمرة العميقة - SBC 304 البند 18.10.1
+  1540→    // ========================================================================
+  1541→
+  1542→    /**
+  1543→     * فحص معايير الكمرة العميقة حسب SBC 304-2018 البند 18.10.1
+  1544→     *
+  1545→     * الكمرة العميقة: Ln/d < 4
+  1546→     * الكمرة العادية: Ln/d ≥ 4
+  1547→     *
+  1548→     * @param span البحر (m)
+  1549→     * @param totalDepth العمق الكلي (mm)
+  1550→     * @param effectiveDepth العمق الفعال (mm)
+  1551→     * @return زوج (هل كمرة عميقة، ملاحظات الكود)
+  1552→     */
+  1553→    fun checkDeepBeamCriteria(
+  1554→        span: Double,
+  1555→        totalDepth: Double,
+  1556→        effectiveDepth: Double
+  1557→    ): Pair<Boolean, List<String>> {
+  1558→        val notes = mutableListOf<String>()
+  1559→        val Ln = span * 1000.0  // mm
+  1560→        val ldRatio = Ln / effectiveDepth
+  1561→
+  1562→        notes.add("SBC 304-2018 §18.10.1: Deep Beam Criteria")
+  1563→        notes.add("Clear span Ln = ${"%.0f".format(Ln)}mm")
+  1564→        notes.add("Effective depth d = ${"%.0f".format(effectiveDepth)}mm")
+  1565→        notes.add("Total depth h = ${"%.0f".format(totalDepth)}mm")
+  1566→        notes.add("Ln/d = ${"%.2f".format(ldRatio)}")
+  1567→
+  1568→        val isDeepBeam = ldRatio < 4.0
+  1569→        notes.add("Deep beam: Ln/d = ${"%.2f".format(ldRatio)} ${if (isDeepBeam) "< 4.0 ✓ (Deep Beam)" else "≥ 4.0 (Normal Beam)"}")
+  1570→
+  1571→        // معلومات إضافية
+  1572→        if (isDeepBeam) {
+  1573→            notes.add("SBC 304 §18.10: Strut-and-tie model required")
+  1574→            notes.add("SBC 304 §18.10.3: Min horizontal reinforcement = 0.001 × bw × s (per face)")
+  1575→            notes.add("SBC 304 §18.10.4: Min vertical reinforcement = 0.0025 × bw × sv (per face)")
+  1576→
+  1577→            // فحص إضافي: h/Ln
+  1578→            val hlRatio = totalDepth / Ln
+  1579→            if (hlRatio > 0.4) {
+  1580→                notes.add("SBC 304 §18.10: h/Ln = ${"%.2f".format(hlRatio)} > 0.4 - Consider as deep corbel")
+  1581→            }
+  1582→        }
+  1583→
+  1584→        return isDeepBeam to notes
+  1585→    }
+  1586→
+  1587→    // ========================================================================
+  1588→    //  حساب معامل β1 - SBC 304 (= ACI 21.2.2.1)
+  1589→    // ========================================================================
+  1590→
+  1591→    /**
+  1592→     * حساب معامل β1 حسب SBC 304-2018 (= ACI 21.2.2.1)
+  1593→     *
+  1594→     * β1 = 0.85 لـ fc' ≤ 28 MPa
+  1595→     * β1 ينخفض 0.05 لكل 7 MPa فوق 28 MPa
+  1596→     * β1 لا يقل عن 0.65
+  1597→     */
+  1598→    fun calculateBeta1(fc: Double): Double {
+  1599→        return when {
+  1600→            fc <= 28.0 -> 0.85
+  1601→            fc >= 55.0 -> 0.65
+  1602→            else -> 0.85 - 0.05 * ((fc - 28.0) / 7.0)
+  1603→        }
+  1604→    }
+  1605→
+  1606→    // ========================================================================
+  1607→    //  تحليل مخزون حديد التسليح
+  1608→    // ========================================================================
+  1609→
+  1610→    /**
+  1611→     * تحليل المخزون المتوفر مقابل المتطلبات
+  1612→     *
+  1613→     * @param result نتيجة التسليح
+  1614→     * @param span البحر (m)
+  1615→     * @param inventory مخزون الحديد المتوفر
+  1616→     * @return InventoryAnalysisResult نتيجة تحليل المخزون
+  1617→     */
+  1618→    private fun analyzeBeamInventory(
+  1619→        result: ReinforcementResult,
+  1620→        span: Double,
+  1621→        inventory: RebarInventory
+  1622→    ): InventoryAnalysisResult {
+  1623→        val analyzer = AnalyzeRebarInventory()
+  1624→        return analyzer.analyze(
+  1625→            requiredArea = result.astRequired,
+  1626→            requiredLength = result.numberOfBars * span,
+  1627→            inventory = inventory,
+  1628→            designCode = DesignCode.SBC,
+  1629→            elementLength = span,
+  1630→            cover = SBC_COVER_CORROSIVE
+  1631→        )
+  1632→    }
+  1633→
+  1634→    // ========================================================================
+  1635→    //  توليد بدائل التسليح
+  1636→    // ========================================================================
+  1637→
+  1638→    /**
+  1639→     * توليد بدائل اختيار القضبان مع تصنيف اقتصادي وآمن
+  1640→     *
+  1641→     * @param astRequired المساحة المطلوبة (mm²)
+  1642→     * @param width العرض (mm)
+  1643→     * @param effectiveDepth العمق الفعال (mm)
+  1644→     * @param fcPrime مقاومة الأسطوانة (MPa)
+  1645→     * @param fy إجهاد الخضوع (MPa)
+  1646→     * @param designMoment عزم التصميم (kN.m)
+  1647→     * @param selectedDia القطر المختار (mm)
+  1648→     * @return قائمة بملاحظات الكود للبدائل
+  1649→     */
+  1650→    private fun generateBarAlternatives(
+  1651→        astRequired: Double,
+  1652→        width: Double,
+  1653→        effectiveDepth: Double,
+  1654→        fcPrime: Double,
+  1655→        fy: Double,
+  1656→        designMoment: Double,
+  1657→        selectedDia: Double
+  1658→    ): List<String> {
+  1659→        val alternatives = mutableListOf<String>()
+  1660→
+  1661→        for (dia in SBC_BAR_DIAMETERS) {
+  1662→            if (dia == selectedDia) continue
+  1663→
+  1664→            val area = PI * dia * dia / 4.0
+  1665→            val numBars = ceil(astRequired / area).toInt().coerceIn(2, 12)
+  1666→            val asProv = numBars * area
+  1667→
+  1668→            // التحقق من التباعد
+  1669→            val clearSpacing = if (numBars > 1) {
+  1670→                (width - 2 * SBC_COVER_CORROSIVE - numBars * dia) / (numBars - 1)
+  1671→            } else {
+  1672→                width - 2 * SBC_COVER_CORROSIVE
+  1673→            }
+  1674→
+  1675→            val minSpacing = maxOf(25.0, dia)
+  1676→            if (clearSpacing < minSpacing) continue
+  1677→
+  1678→            // حساب السعة
+  1679→            val aBlock = if (fcPrime > 0) asProv * fy / (0.85 * fcPrime * width) else 0.0
+  1680→            val Mn = asProv * fy * (effectiveDepth - aBlock / 2.0)
+  1681→            val capacity = PHI_FLEXURE * Mn / 1e6  // kN.m
+  1682→            val utilization = if (capacity > 0) designMoment / capacity else 2.0
+  1683→
+  1684→            // التحقق من النسبة القصوى
+  1685→            val beta1 = calculateBeta1(fcPrime)
+  1686→            val rhoProv = asProv / (width * effectiveDepth)
+  1687→            val rhoMax = 0.85 * beta1 * (fcPrime / fy) * 0.375
+  1688→            if (rhoProv > rhoMax) continue
+  1689→
+  1690→            if (utilization in 0.5..1.0) {
+  1691→                val utilizationPct = (utilization * 100).toInt()
+  1692→                alternatives.add("${numBars}Ø${dia.toInt()} (${utilizationPct}%)")
+  1693→            }
+  1694→        }
+  1695→
+  1696→        val notes = mutableListOf<String>()
+  1697→        if (alternatives.size >= 1) {
+  1698→            notes.add("SBC Economical: ${alternatives.first()}")
+  1699→        }
+  1700→        if (alternatives.size >= 2) {
+  1701→            notes.add("SBC Safest: ${alternatives.last()}")
+  1702→        }
+  1703→        return notes
+  1704→    }
+  1705→
+  1706→    // ========================================================================
+  1707→    //  توليد مخطط عزم الانحناء لجميع أنواع الكمرات
+  1708→    // ========================================================================
+  1709→
+  1710→    /**
+  1711→     * توليد مخطط عزم الانحناء (Moment Diagram)
+  1712→     *
+  1713→     * @param beamType نوع الكمرة
+  1714→     * @param load الحمل الكلي الموزع (kN/m)
+  1715→     * @return قائمة أزواج (الموقع بالأمتار، العزم بـ kN.m)
+  1716→     */
+  1717→    fun generateMomentDiagram(beamType: BeamType, load: Double): List<Pair<Double, Double>> {
+  1718→        val points = mutableListOf<Pair<Double, Double>>()
+  1719→        val numPoints = 20
+  1720→
+  1721→        when (beamType) {
+  1722→            is BeamType.SimplySupported -> {
+  1723→                val L = beamType.span
+  1724→                for (i in 0..numPoints) {
+  1725→                    val x = L * i / numPoints
+  1726→                    val m = (load * L / 2.0) * x - (load * x * x / 2.0)
+  1727→                    points.add(x to m)
+  1728→                }
+  1729→            }
+  1730→            is BeamType.Fixed -> {
+  1731→                val L = beamType.span
+  1732→                for (i in 0..numPoints) {
+  1733→                    val x = L * i / numPoints
+  1734→                    val m = (load * L / 2.0) * x - (load * x * x / 2.0) - (load * L * L / 12.0)
+  1735→                    points.add(x to m)
+  1736→                }
+  1737→            }
+  1738→            is BeamType.Cantilever -> {
+  1739→                val L = beamType.length
+  1740→                for (i in 0..numPoints) {
+  1741→                    val x = L * i / numPoints
+  1742→                    val m = -load * (L - x) * (L - x) / 2.0
+  1743→                    points.add(x to m)
+  1744→                }
+  1745→            }
+  1746→            is BeamType.Continuous -> {
+  1747→                val spans = beamType.spans
+  1748→                if (spans.isNotEmpty()) {
+  1749→                    val maxSpan = spans.maxOrNull() ?: 1.0
+  1750→                    for (i in 0..numPoints) {
+  1751→                        val x = maxSpan * i / numPoints
+  1752→                        val m = if (x <= maxSpan / 2.0) {
+  1753→                            (load * maxSpan / 2.0) * x - (load * x * x / 2.0) - load * maxSpan * maxSpan / 10.0 * (x / maxSpan)
+  1754→                        } else {
+  1755→                            (load * maxSpan / 2.0) * x - (load * x * x / 2.0) - load * maxSpan * maxSpan / 10.0 * ((maxSpan - x) / maxSpan)
+  1756→                        }
+  1757→                        points.add(x to m)
+  1758→                    }
+  1759→                }
+  1760→            }
+  1761→            is BeamType.MultiSupport -> {
+  1762→                val totalLength = beamType.totalLength
+  1763→                for (i in 0..numPoints) {
+  1764→                    val x = totalLength * i / numPoints
+  1765→                    val m = (load * totalLength / 2.0) * x - (load * x * x / 2.0)
+  1766→                        - load * totalLength * totalLength / 10.0 * sin(PI * x / totalLength)
+  1767→                    points.add(x to m)
+  1768→                }
+  1769→            }
+  1770→            is BeamType.Haunched -> {
+  1771→                val L = beamType.span
+  1772→                for (i in 0..numPoints) {
+  1773→                    val x = L * i / numPoints
+  1774→                    val m = (load * L / 2.0) * x - (load * x * x / 2.0) - (load * L * L / 12.0)
+  1775→                    points.add(x to m)
+  1776→                }
+  1777→            }
+  1778→            is BeamType.Vierendeel -> {
+  1779→                val L = beamType.span
+  1780→                for (i in 0..numPoints) {
+  1781→                    val x = L * i / numPoints
+  1782→                    val m = (load * L / 2.0) * x - (load * x * x / 2.0)
+  1783→                    points.add(x to m)
+  1784→                }
+  1785→            }
+  1786→        }
+  1787→
+  1788→        return points
+  1789→    }
+  1790→
+  1791→    // ========================================================================
+  1792→    //  توليد مخطط القص لجميع أنواع الكمرات
+  1793→    // ========================================================================
+  1794→
+  1795→    /**
+  1796→     * توليد مخطط القص (Shear Diagram)
+  1797→     *
+  1798→     * @param beamType نوع الكمرة
+  1799→     * @param load الحمل الكلي الموزع (kN/m)
+  1800→     * @return قائمة أزواج (الموقع بالأمتار، القوة القصية بـ kN)
+  1801→     */
+  1802→    fun generateShearDiagram(beamType: BeamType, load: Double): List<Pair<Double, Double>> {
+  1803→        val points = mutableListOf<Pair<Double, Double>>()
+  1804→        val numPoints = 20
+  1805→
+  1806→        when (beamType) {
+  1807→            is BeamType.SimplySupported -> {
+  1808→                val L = beamType.span
+  1809→                for (i in 0..numPoints) {
+  1810→                    val x = L * i / numPoints
+  1811→                    val v = load * L / 2.0 - load * x
+  1812→                    points.add(x to v)
+  1813→                }
+  1814→            }
+  1815→            is BeamType.Fixed -> {
+  1816→                val L = beamType.span
+  1817→                for (i in 0..numPoints) {
+  1818→                    val x = L * i / numPoints
+  1819→                    val v = load * L / 2.0 - load * x
+  1820→                    points.add(x to v)
+  1821→                }
+  1822→            }
+  1823→            is BeamType.Cantilever -> {
+  1824→                val L = beamType.length
+  1825→                for (i in 0..numPoints) {
+  1826→                    val x = L * i / numPoints
+  1827→                    val v = load * (L - x)
+  1828→                    points.add(x to v)
+  1829→                }
+  1830→            }
+  1831→            is BeamType.Continuous -> {
+  1832→                val spans = beamType.spans
+  1833→                if (spans.isNotEmpty()) {
+  1834→                    val maxSpan = spans.maxOrNull() ?: 1.0
+  1835→                    for (i in 0..numPoints) {
+  1836→                        val x = maxSpan * i / numPoints
+  1837→                        val v = load * maxSpan * 0.6 - load * x
+  1838→                        points.add(x to v)
+  1839→                    }
+  1840→                }
+  1841→            }
+  1842→            is BeamType.MultiSupport -> {
+  1843→                val totalLength = beamType.totalLength
+  1844→                for (i in 0..numPoints) {
+  1845→                    val x = totalLength * i / numPoints
+  1846→                    val v = load * totalLength * 0.6 - load * x
+  1847→                    points.add(x to v)
+  1848→                }
+  1849→            }
+  1850→            is BeamType.Haunched -> {
+  1851→                val L = beamType.span
+  1852→                for (i in 0..numPoints) {
+  1853→                    val x = L * i / numPoints
+  1854→                    val v = load * L / 2.0 - load * x
+  1855→                    points.add(x to v)
+  1856→                }
+  1857→            }
+  1858→            is BeamType.Vierendeel -> {
+  1859→                val L = beamType.span
+  1860→                for (i in 0..numPoints) {
+  1861→                    val x = L * i / numPoints
+  1862→                    val v = load * L / 2.0 - load * x
+  1863→                    points.add(x to v)
+  1864→                }
+  1865→            }
+  1866→        }
+  1867→
+  1868→        return points
+  1869→    }
+  1870→}

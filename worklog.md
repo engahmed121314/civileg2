@@ -212,3 +212,68 @@ Stage Summary:
 - 1 إصلاح (DesignCode.kt)
 - المجموع: ~12,000+ سطر كود جديد/مطور
 - التغطية الآن كاملة لـ ECP/ACI/SBC في: الكمرات (بكل أنواعها), الأعمدة (قصيرة/طويلة/حلزونية/تفاعل), البلاطات (مصمتة/هوردي/وافل), القواعد, المنشآت المعدنية
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: مراجعة شاملة وتطوير عميق - الجلسة الثالثة (إصلاح حرج + ملفات جديدة + واجهات)
+
+Work Log:
+
+### تحليل شامل (4 وكلاء بالتوازي):
+- فحص 38 ملف حسابات + 26 ملف UI = 64 ملف
+- اكتشاف 32+ خطأ حرج و60+ فجوة وظيفية
+
+### إصلاحات الكمرات (18 خطأ):
+1. **ECPBeam.kt**: إصلاح capacity قبل التعيين، تصحيح qcu = 0.24√fcu/γc، إصلاح معامل الانحراف، fbd = 0.3√fcu، minSteel ديناميكي، maxSteel بـ K_bal
+2. **ECPAdvancedBeam.kt**: إصلاح String كـ Double (خطأ ترجمة)، K_bal ديناميكي بدل 0.156، ξ كمعامل
+3. **SBCAdvancedBeam.kt**: إصلاح Vu = wL/2 (كان wL)، isCorrosive منفصل عن LoadCombination، T-beam بـ L/8 بدل Ln/8
+4. **ACIBeam.kt**: إزالة rho_max المكرر، Ld أدنى قابلة للتهيئة
+5. **ACIAdvancedBeam.kt**: effectiveDepth بدون hardcoded، ξ و rhoPrime كمعاملات
+
+### إصلاحات الأعمدة (14 خطأ):
+6. **ECPColumn.kt**: العزوم لم تعد مهملة — معامل تصحيح عند الانحراف > 0.05h
+7. **ACIColumn.kt**: نفس إصلاح العزوم
+8. **SBCColumn.kt**: نفس إصلاح العزوم
+9. **ECPAdvancedColumn.kt**: P-Delta يُطبَّق فعلياً على التصميم، fcu دينامي بدل 25.0، تصحيح punching shear، β₁ بفرق 5MPa، EI بمعادلة ECP
+10. **ACIAdvancedColumn.kt**: EI = min (أحفظ)، αs=40 داخلي، إزالة تحمل 5% في biaxial
+11. **SBCAdvancedColumn.kt**: fc' دينامي بدل 30.0، حساب Ash الزلزالي فعلي، αs=40، development length بـ fc' حقيقي
+12. **إضافة تصميم القص للأعمدة** (ECP/ACI/SBC) — ColumnShearDesignResult
+13. **إصلاح Composite getGrossArea** — إزالة double-count للصلب
+
+### ملفات بلاطات جديدة:
+14. **ACIAdvancedSlab.kt** (1390 سطر) — Flat Plate, Flat Slab, Hordi, Waffle, Cantilever حسب ACI 318-19
+15. **SBCAdvancedSlab.kt** (1450 سطر) — نفس الأنواع حسب SBC 304-2018 مع تعديلات سعودية
+
+### إصلاحات القواعد والخزانات:
+16. **SBCFooting.kt**: K_bal ديناميكي (كان 0.375 خطر!)
+17. **ECPFooting.kt**: أبعاد العمود كمعاملات بدل hardcoded
+18. **ACIFooting.kt**: إضافة فحص القص الأحادي + أبعاد العمود
+19. **ECPTank.kt**: إصلاح maxMomentWall (كان As×0.15 لا عزم!)
+20. **ACITank.kt**: نفس إصلاح maxMomentWall
+21. **SBCTank.kt**: نفس إصلاح maxMomentWall
+22. **CalculationFactory.kt**: إضافة مصنعات ACIAdvancedSlab و SBCAdvancedSlab
+
+### حذف الكود الميت:
+23. حذف TankDesignEngine.kt (131 سطر)
+24. حذف TankAnalysis.kt (96 سطر)
+25. حذف WaterTankDesign.kt (28 سطر)
+26. حذف TankDesignScreen.kt (92 سطر — مكرر)
+
+### تطوير الواجهات:
+27. **SeismicScreen.kt** (242→840 سطر): إعادة كتابة احترافية كاملة مع محدد كود، نوع تربة، منطقة زلزالية، مخطط طيفي، توزيع القوى
+28. **Type.kt** (53→100 سطر): إكمال 8 أنماط نصية ناقصة
+29. **SteelDesignScreen.kt** (1303→1840 سطر): عناوين عربية، تبويب قواعد معدنية + وصلات، محدد كود، شريط استغلال متحرك
+
+### تطوير المنشآت المعدنية:
+30. **SteelTables.kt**: إضافة Zx, Sx, J, Cw لكل الأقسام + إزالة وظائف حديد الخرسانة
+31. **SteelEntities.kt**: إضافة PlateGirder و Pipe section types
+
+Stage Summary:
+- 18 خطأ حرج في الكمرات ✅
+- 14 خطأ حرج في الأعمدة ✅
+- 6 أخطاء في القواعد والخزانات ✅
+- 2 ملفات بلاطات جديدة (+2840 سطر) ✅
+- 4 ملفات محذوفة (كود ميت) ✅
+- 3 شاشات واجهة مطوّرة ✅
+- المجموع: ~5000+ سطر جديد/مطور في هذه الجلسة
