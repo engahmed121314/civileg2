@@ -120,3 +120,69 @@ Stage Summary:
 - SBCTank.kt: من placeholder 54 سطر → تصميم كامل ~230 سطر ✅
 - SeismicDesign: واجهة محسّنة مع 3 معاملات جديدة ✅
 - جميع التطبيقات محدّثة ✅
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: مراجعة شاملة وتطوير احترافي لكل محركات الحسابات (خرسانة + معدنية)
+
+Work Log:
+- استكشاف شامل لـ 34 ملف حسابات في domain/calculations/
+- تحليل معمقي لكل ملف حسب الكود (ECP 203 / ACI 318 / SBC 304)
+
+### الكمرات الخرسانية:
+1. **ECPBeam.kt**: K_bal كان ثابت = 0.186 → أصبح ديناميكي حسب fcu و fy
+   - إضافة دالة calculateKBal() مع تحقق رياضي: fcu=25, fy=360 → 0.186
+   - إضافة اختيار بدائل أسياخ (اقتصادية + آمنة) مع نسبة الاستغلال
+   - توسيع قائمة الأقطار: 10→32 مم
+2. **ACIBeam.kt**: rho_max كان يعتمد على β1 ثابت → أصبح ديناميكي
+   - إضافة فحص tension-controlled (εt≥0.005) وفحص compression limit
+   - إضافة بدائل أسياخ مع حساب قدرة العزم لكل بديل
+3. **SBCBeam.kt**: كان مجرد غلاف لـ ACIBeam → أصبح بحسابات سعودية حقيقية
+   - إضافة متطلبات زلزالية SBC 304-18 (عرض أدنى 250مم، نسبة تسليح أدنى، تباعد كانات)
+   - إضافة غطاء محسّن: 50مم للبيئة المالحة، 65مم للشديدة التآكل
+   - تعديل أطوال التثبيت للبيئة المجلفنة (+10%)
+
+### الأعمدة الخرسانية:
+4. **ACIColumn.kt**: 
+   - إضافة calculateAxialCapacityWithPhi() لدعم φ=0.75 (حلزوني) و φ=0.65 (مربوط)
+   - إضافة calculateSlendernessEffect() لحساب النحافة (λ=KL/r) والقدرة الحرجة Fcr
+   - إضافة بدائل أسياخ مع حساب القدرة المحورية لكل بديل
+
+### الملفات الجديدة:
+5. **ACIAdvancedBeam.kt** (892 سطر) - تصميم متقدم للكمرات حسب ACI 318:
+   - Ie = (Mcr/Ma)³×Ig + [1-(Mcr/Ma)³]×Icr (ACI 24.2.3.5a)
+   - Mcr = fr×Ig/yt, fr = 0.62λ√fc'
+   - معامل الانحراف طويل المدى: λΔ = ξ/(1+50ρ') مع ξ=2.0
+   - فحص عرض الشروخ بطريقة Gergely-Lutz (z-parameter)
+   - مخططات عزم وقص لجميع أنواع الكمرات (7 أنواع × 20-30 نقطة)
+6. **SteelConnectionDesign.kt** (1309 سطر) - تصميم الوصلات المعدنية:
+   - تصميم وصلات مسامير: قص، احتكاك، شد، مدمج (AISC J3 / ECP 205 Ch.5)
+   - تصميم وصلات لحام: لحام ترساء، لحام أخدود (AISC J2 / ECP 205 Ch.6)
+   - فحص Block Shear (AISC J4.3)
+   - فحص Slip-Critical connections
+   - جداول مسامير (Ø12-Ø36)، أبعاد أدنى، أحجام لحام أدنى
+7. **SteelBasePlateDesign.kt** (1301 سطر) - تصميم القواعد المعدنية:
+   - قواعد مركزية (AISC 360-14 §14 / ECP 205)
+   - قواعد لامركزية (مع عزوم)
+   - قواعد الجيب (Pocket Base Plates)
+   - تصميم براغي الارتكاز (Anchor Bolts)
+   - تصميم المونة (Grout)
+
+### إصلاحات إضافية:
+8. **SteelEntities.kt**: إصلاح extension properties (كانت كلها = 0.0)
+   - ix: حساب حقيقي حسب نوع المقطع (I, C, RHS, CHS, L, T)
+   - sx, rx, zx: حسابات مبنية على ix
+   - rootRadius, flangeSlope: قيم تقريبية حسب الحجم
+   - إضافة دوالر مساعدة: calculateIxISection, calculateIxRHS, calculateIxAngle, calculateIxTSection
+9. **ECPAdvancedBeam.kt**: إصلاح القيم الثابتة
+   - checkCrackWidth: d_eff من معامل بدلاً من 600-50 ثابت
+   - checkDevelopmentLength: الطول المتاح من معامل بدلاً من 1200 ثابت
+
+Stage Summary:
+- 7 ملفات تم تعديلها ✅
+- 3 ملفات جديدة تم إنشاؤها (3502 سطر إجمالي) ✅
+- K_bal ديناميكي ✅
+- SBC بحسابات حقيقية ✅
+- Steel connection + base plate ✅
+- SteelEntities properties محسوبة ✅
