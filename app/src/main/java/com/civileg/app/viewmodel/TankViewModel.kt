@@ -74,11 +74,29 @@ class TankViewModel @Inject constructor(
                 val file = File(context.cacheDir, fileName)
                 
                 val exporter = ComprehensivePdfExporter(context)
+
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateTankDrawing(
+                        tankType = res.type.displayName,
+                        length = res.length,
+                        width = res.width,
+                        height = res.height,
+                        wallThickness = res.wallThickness,
+                        baseThickness = res.baseThickness,
+                        verticalRebarDia = res.wallReinforcement.diameter.toDouble(),
+                        verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
+                        horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
+                        horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
+                        waterLevel = res.height * 0.85
+                    )
+                } catch (e: Exception) { null }
+
                 val exportedFile = exporter.exportTankReport(
                     projectName = "تقرير تصميم خزان",
                     designCode = res.code,
                     result = res,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
                 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

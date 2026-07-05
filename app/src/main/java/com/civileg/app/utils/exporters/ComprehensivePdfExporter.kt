@@ -462,6 +462,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 }
             }
 
+            addDrawingSection(document, drawingBitmap, "Column Reinforcement Detail")
             addFooter(document)
             document.close()
             File(outputPath)

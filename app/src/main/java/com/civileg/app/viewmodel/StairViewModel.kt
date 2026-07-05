@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -85,11 +86,33 @@ class StairViewModel @Inject constructor(
                     val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
                     val fileName = "Stair_Report_${System.currentTimeMillis()}.pdf"
                     val file = java.io.File(context.cacheDir, fileName)
+
+                    // Generate drawing for PDF
+                    val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
+                    val drawingBitmap = try {
+                        PdfDrawingGenerator.generateStairDrawing(
+                            totalHeight = totalHeight,
+                            totalLength = currentResult.span,
+                            stairWidth = 1000.0,
+                            riserHeight = currentResult.riser,
+                            treadWidth = currentResult.tread,
+                            slabThickness = currentResult.thickness,
+                            mainDia = currentResult.reinforcement.diameter.toDouble(),
+                            mainSpacing = currentResult.reinforcement.spacing,
+                            distDia = currentResult.distributionReinforcement.diameter.toDouble(),
+                            distSpacing = currentResult.distributionReinforcement.spacing
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
+
                     exporter.exportStairReport(
                         projectName = "تقرير تصميم سلم",
                         designCode = currentResult.code,
                         result = currentResult,
-                        outputPath = file.absolutePath
+                        outputPath = file.absolutePath,
+                        drawingBitmap = drawingBitmap
                     )
                 }
                 exportedFile?.let {

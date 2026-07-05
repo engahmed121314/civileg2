@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -81,11 +82,35 @@ class RetainingWallViewModel @Inject constructor(
                     val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
                     val fileName = "RetainingWall_Report_${System.currentTimeMillis()}.pdf"
                     val file = java.io.File(context.cacheDir, fileName)
+
+                    val drawingBitmap = try {
+                        PdfDrawingGenerator.generateRetainingWallDrawing(
+                            wallHeight = currentResult.height,
+                            wallTopThickness = currentResult.stemThickness * 0.6,
+                            wallBottomThickness = currentResult.stemThickness,
+                            baseWidth = currentResult.baseWidth,
+                            baseThickness = currentResult.stemThickness * 1.2,
+                            toeLength = currentResult.baseWidth * 0.25,
+                            heelLength = currentResult.baseWidth * 0.6,
+                            mainRebarDia = currentResult.stemReinforcement.diameter.toDouble(),
+                            mainRebarSpacing = currentResult.stemReinforcement.spacing.toDouble(),
+                            distRebarDia = currentResult.stemReinforcement.diameter.toDouble() * 0.7,
+                            distRebarSpacing = currentResult.stemReinforcement.spacing.toDouble() * 1.5,
+                            baseRebarDia = currentResult.baseReinforcement.diameter.toDouble(),
+                            baseRebarSpacing = currentResult.baseReinforcement.spacing.toDouble(),
+                            cover = 50.0,
+                            backfillAngle = currentResult.ka.toDouble(),
+                            hasKey = true,
+                            keyDepth = 150.0
+                        )
+                    } catch (e: Exception) { null }
+
                     exporter.exportRetainingWallReport(
                         projectName = "تقرير تصميم حائط ساند",
                         designCode = currentResult.code,
                         result = currentResult,
-                        outputPath = file.absolutePath
+                        outputPath = file.absolutePath,
+                        drawingBitmap = drawingBitmap
                     )
                 }
                 exportedFile?.let {
