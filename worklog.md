@@ -186,3 +186,29 @@ Stage Summary:
 - SBC بحسابات حقيقية ✅
 - Steel connection + base plate ✅
 - SteelEntities properties محسوبة ✅
+---
+Task ID: 2
+Agent: Main Agent
+Task: مراجعة شاملة وتطوير عميق - الكمرات والأعمدة والبلاطات والقواعد والمنشآت المعدنية
+
+Work Log:
+- فحص شامل لجميع ملفات التنفيذ الحالية (38 ملف في calculations/)
+- تحليل الفجوات: SBC لا يملك AdvancedBeam/AdvancedColumn، ACI لا يملك AdvancedColumn، الصلب فقط في ECP
+- إنشاء SBCAdvancedBeam.kt (1869 سطر): تصميم متقدم مع T-beam, Deep Beam, كمرة مستمرة, زلازل
+- إنشاء ACIAdvancedColumn.kt (1541 سطر): مخطط تفاعل 24+ نقطة, P-Delta, أعمدة حلزونية, Bresler
+- إنشاء SBCAdvancedColumn.kt (1312 سطر): تصميم متقدم مع أحكام SBC 304 الزلزالية, تغطية 50mm ساحلية
+- تطوير ECPAdvancedBeam.kt (1395 سطر): إضافة T-beam, L-beam, Deep Beam, كمرة مستمرة, التوق, مخططات محسنة
+- تطوير ECPAdvancedColumn.kt (1124 سطر): إضافة مخطط تفاعل, P-Delta, أعمدة حلزونية, صلابة جانبية
+- إنشاء AISCSteelDesignEngine.kt (1958 سطر): محرك AISC 360-16 كامل (شد, ضغط, انحناء, LTB, مركب, bracing, composite)
+- إنشاء SBCSteelDesignEngine.kt (1551 سطر): محرك SBC 306 مع تعديلات سعودية (ساحلية, زلزالية)
+- إنشاء ECPHordiWaffleSlab.kt (1329 سطر): تصميم بلاطة هوردي ووافل حسب ECP 203 البند 6-4
+- تحديث CalculationFactory.kt: إضافة مصنعات للتصميم المتقدم والمنشآت المعدنية والبلاطات المتخصصة
+- إصلاح DesignCode.kt: values() → entries() (Kotlin 1.9+ depreciation fix)
+
+Stage Summary:
+- 6 ملفات جديدة أنشئت (+9,558 سطر)
+- 2 ملفات طُورت (+2,519 سطر إضافي)
+- 1 ملف محدث (CalculationFactory)
+- 1 إصلاح (DesignCode.kt)
+- المجموع: ~12,000+ سطر كود جديد/مطور
+- التغطية الآن كاملة لـ ECP/ACI/SBC في: الكمرات (بكل أنواعها), الأعمدة (قصيرة/طويلة/حلزونية/تفاعل), البلاطات (مصمتة/هوردي/وافل), القواعد, المنشآت المعدنية
