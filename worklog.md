@@ -87,3 +87,36 @@ Stage Summary:
 - 3 تحذيرات تم حلها ✅
 - جميع ملفات calculations تستخدم getFactorForCode() بشكل متسق ✅
 - لم تبقَ أي loadCombination.factor أو createEmptyResult أو fcu=25.0 hardcoded ✅
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: مراجعة شاملة وإصلاح الملفات المتبقية (ACITank, SBCTank, Seismic)
+
+Work Log:
+- مراجعة شاملة لـ 152 ملف Kotlin في المشروع
+- اكتشاف ACITank.kt و SBCTank.kt كـ placeholders بقيم ثابتة مزيفة
+- إعادة كتابة ACITank.kt بالكامل (54→~250 سطر):
+  - تصميم حقيقي حسب ACI 350-06 / ACI 318-19
+  - Rn-ρ method مع f'c=0.8×fcu
+  - معامل تحميل السائل 1.4F
+  - فحص الشقوق: fs ≤ min(0.6fy, 240MPa)
+  - فحص القص: Vc = 0.17√f'c
+  - تصميم جدران مستطيلة (cantilever) ودائرية (hoop tension)
+  - تصميم قاعدة مع قص اختراق
+- إعادة كتابة SBCTank.kt بالكامل (54→~230 سطر):
+  - تصميم حقيقي حسب SBC 304 مع f'c=0.67×fcu/γc
+  - أقطار حديد سوقية سعودية (14, 16, 20, 25, 32mm)
+  - نفس منهجية ACI 350 لكن مع معاملات SBC
+- تحسين واجهة SeismicDesign.getResponseSpectrum():
+  - إضافة soilType, peakGroundAcceleration, importanceFactor كمعاملات
+  - قيم افتراضية للحفاظ على التوافق العكسي
+  - تحديث ECPSeismic.kt - يُستخدم ag و I و soilType فعلياً
+  - تحديث ACISeismic.kt - يُقدر SDS/SD1 من ag مع Fa/Fv
+  - تحديث SBCSeismic.kt - يفوض لـ ACI مع بادئة SBC 301
+
+Stage Summary:
+- ACITank.kt: من placeholder 54 سطر → تصميم كامل ~250 سطر ✅
+- SBCTank.kt: من placeholder 54 سطر → تصميم كامل ~230 سطر ✅
+- SeismicDesign: واجهة محسّنة مع 3 معاملات جديدة ✅
+- جميع التطبيقات محدّثة ✅
