@@ -67,19 +67,10 @@ class PdfLayoutHelper(private val context: Context) {
     }
 
     private fun getArabicTypeface(): Typeface {
-        return try {
-            Typeface.createFromAsset(context.assets, "fonts/NotoNaskhArabic-Regular.ttf")
-        } catch (e: Exception) {
-            try {
-                // Fallback to system font that usually supports Arabic on Android
-                Typeface.create("sans-serif", Typeface.NORMAL)
-            } catch (e2: Exception) {
-                Typeface.DEFAULT
-            }
-        }
+        return ArabicFontProvider.getArabicTypeface(context)
     }
 
-    fun isArabic(text: String): Boolean = text.any { it.code in 0x0600..0x06FF }
+    fun isArabic(text: String): Boolean = ArabicFontProvider.containsArabic(text)
 
     fun drawText(canvas: Canvas, text: String, x: Float, y: Float, paint: Paint, width: Float = (PAGE_WIDTH - 2 * MARGIN)) {
         if (text.isEmpty()) return

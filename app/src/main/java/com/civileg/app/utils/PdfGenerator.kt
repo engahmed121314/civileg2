@@ -36,30 +36,12 @@ object PdfGenerator {
     
     // ... (rest of the file until generateBOQReport)
 
-    private fun getArabicFont(): PdfFont? {
-        val paths = arrayOf(
-            "/system/fonts/NotoNaskhArabic-Regular.ttf",
-            "/system/fonts/DroidSansArabic.ttf",
-            "/system/fonts/Arbutus-Regular.ttf"
-        )
-        for (path in paths) {
-            try {
-                if (File(path).exists()) {
-                    return PdfFontFactory.createFont(path, PdfEncodings.IDENTITY_H)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        return try {
-            PdfFontFactory.createFont(StandardFonts.HELVETICA, PdfEncodings.CP1252)
-        } catch (e: Exception) {
-            null
-        }
+    private fun getArabicFont(context: Context): PdfFont? {
+        return ArabicFontProvider.getArabicPdfFont(context)
     }
 
     private fun containsArabic(text: String): Boolean {
-        return text.any { it.code in 0x0600..0x06FF }
+        return ArabicFontProvider.containsArabic(text)
     }
 
     private fun createStyledParagraph(text: String, font: PdfFont?, fontSize: Float = 12f, isBold: Boolean = false): Paragraph {
@@ -121,7 +103,7 @@ object PdfGenerator {
         val writer = PdfWriter(file)
         val pdf = PdfDocument(writer)
         val document = Document(pdf)
-        val arabicFont = getArabicFont()
+        val arabicFont = getArabicFont(context)
 
         // --- Header Section ---
         val header = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
@@ -230,7 +212,7 @@ object PdfGenerator {
         val writer = PdfWriter(file)
         val pdf = PdfDocument(writer)
         val document = Document(pdf)
-        val arabicFont = getArabicFont()
+        val arabicFont = getArabicFont(context)
 
         // --- 1. Top Header & Logo Area ---
         val header = Table(UnitValue.createPercentArray(floatArrayOf(60f, 40f))).useAllAvailableWidth()
@@ -409,7 +391,7 @@ object PdfGenerator {
         val writer = PdfWriter(file)
         val pdf = PdfDocument(writer)
         val document = Document(pdf)
-        val arabicFont = getArabicFont()
+        val arabicFont = getArabicFont(context)
 
         // --- Header ---
         val header = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
