@@ -1,23 +1,29 @@
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Complete remaining civileg2 development work and push to GitHub
+Task: Implement Frame Analysis & Design feature for civileg2
 
 Work Log:
-- Explored full project structure: 38 calculation files, 16 screen files, 11 drawing component files, 15 ViewModels
-- Discovered existing Professional*Drawing composables (9,497 lines) already handle all on-screen drawings
-- Discovered PdfDrawingGenerator (1,137→1,480 lines) already generates bitmaps for PDF embedding
-- Verified all ViewModels (Beam, Column, Footing, Tank, Stair, RetainingWall) already pass bitmaps to ComprehensivePdfExporter
-- Fixed SlabViewModel: replaced hardcoded fcu=25/fy=400/DL=2/LL=3 with stored actual input values
-- Fixed SteelViewModel: replaced hardcoded axialLoad=100/moment=50/shear=20 with stored actual SteelInputs
-- Added SteelViewModel bitmap generation via PdfDrawingGenerator.generateSteelDrawing()
-- Enhanced PdfDrawingGenerator: added generateBeamDrawingWithDiagrams() (340+ lines) with BMD/SFD overlay, load arrows, stirrup spacing annotation, cross-section, reinforcement schedule
-- Enhanced ExportViewModel: added bitmap generation for all 4 export methods (Column, Beam, Slab, Steel) with automatic fallback generation
-- Enhanced SharedComponents.kt: added DesignSystem object, SafetyCheckRow, DesignActionButton, FormulaCard, QuickActionsRow composables
+- Explored project structure, understood MVVM + Compose + Room architecture
+- Created domain/entities/FrameEntities.kt (FrameNode, FrameMember, SupportType, loads, results, diagrams)
+- Created domain/calculations/FrameAnalysisEngine.kt (stiffness matrix method solver with Gauss elimination)
+- Created domain/calculations/ConcreteFrameDesign.kt (ECP 203/ACI 318 flexure + shear design)
+- Created domain/calculations/SteelFrameDesign.kt (optimal section selection from SteelTables library)
+- Created viewmodel/FrameAnalysisViewModel.kt (Hilt ViewModel with LiveData, templates, PDF inputs)
+- Created ui/compose/screens/FrameDrawingCanvas.kt (interactive canvas with frame, supports, loads, BMD/SFD/AFD)
+- Created ui/compose/screens/FrameAnalysisScreen.kt (5-tab screen: Drawing, Nodes, Members, Loads, Results)
+- Created utils/FrameAnalysisPdfExporter.kt (Arabic PDF with iText, diagrams as bitmap)
+- Added ic_frame.xml drawable vector
+- Added FrameAnalysis route to Screen.kt
+- Added FrameAnalysis to HomeScreen module list
+- Added FrameAnalysis composable route in MainActivity.kt
+- Added PDF export button to FrameAnalysisScreen top bar
 
 Stage Summary:
-- SlabViewModel now uses actual user inputs in PDF export (not hardcoded values)
-- SteelViewModel now uses actual member inputs and generates steel section bitmap for PDF
-- PdfDrawingGenerator has new advanced beam drawing with bending moment and shear force diagrams
-- ExportViewModel now generates and passes bitmaps to all PDF export methods
-- SharedComponents.kt has 4 new professional UI components for consistent styling
+- Complete frame analysis module implemented with 8 new files
+- Stiffness matrix method supports 2D frames with fixed/pin/roller supports
+- UDL, point loads, moments on members; nodal loads (Fx, Fy, Mz)
+- Interactive BMD/SFD/AFD diagrams with member tap selection
+- Conditional concrete reinforcement design (ECP 203/ACI 318) or steel section optimization (AISC/SBC)
+- PDF export with Arabic support via NotoNaskhArabic fonts
+- Fully integrated into app navigation from HomeScreen
