@@ -69,6 +69,7 @@ private val CardAccentWall        = Color(0xFF558B2F)
 private val CardAccentStair       = Color(0xFFAD1457)
 private val CardAccentSteel       = Color(0xFF37474F)
 private val CardAccentSeismic     = Color(0xFFBF360C)
+private val CardAccentFrame       = Color(0xFF1A237E)
 
 private val ToolCalcBg            = Color(0xFF1B5E20).copy(alpha = 0.12f)
 private val ToolCalcAccent        = Color(0xFF2E7D32)
@@ -126,7 +127,8 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.RetainingWall,   "حوائط السند",       "حوائط السند واستقرار التربة", listOf("ECP", "ACI"),     CardAccentWall,    Icons.Default.SensorDoor),
     DesignModuleItem(AppScreen.StairDesign,     "السلالم",           "تصميم السلالم الخرسانية",   listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
     DesignModuleItem(AppScreen.SteelDesign,     "المنشآت المعدنية",  "تصميم الوصلات والأعضاء",     listOf("AISC", "ECP"),      CardAccentSteel,   Icons.Default.Build),
-    DesignModuleItem(AppScreen.SeismicAnalysis, "الزلازل",           "قوى الزلازل والرياح",       listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning)
+    DesignModuleItem(AppScreen.SeismicAnalysis, "الزلازل",           "قوى الزلازل والرياح",       listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning),
+    DesignModuleItem(AppScreen.FrameAnalysis,  "تحليل الإطارات",   "تحليل وتصميم الهياكل ثنائية الأبعاد", listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree)
 )
 
 private val quickTools = listOf(

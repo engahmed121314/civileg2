@@ -187,6 +187,10 @@ fun AppNavigation(drawerState: DrawerState) {
                 SteelDesignScreen(onNavigateBack = { navController.popBackStack() })
             }
 
+            composable(AppScreen.FrameAnalysis.route) {
+                FrameAnalysisScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
             composable(AppScreen.Inventory.route) {
                 InventoryScreen(onNavigateBack = { navController.popBackStack() })
             }

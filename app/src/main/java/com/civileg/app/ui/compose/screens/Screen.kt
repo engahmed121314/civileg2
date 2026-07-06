@@ -16,6 +16,7 @@ sealed class AppScreen(val route: String, val title: String, val iconRes: Int) {
     object StairDesign : AppScreen("stairs", "السلالم", R.drawable.ic_stairs)
     object SeismicAnalysis : AppScreen("seismic", "الأحمال الزلزالية", R.drawable.ic_design)
     object SteelDesign : AppScreen("steel", "المنشآت المعدنية", R.drawable.ic_tools)
+    object FrameAnalysis : AppScreen("frame_analysis", "تحليل الإطارات", R.drawable.ic_frame)
     object BOQ : AppScreen("boq", "حساب الكميات", R.drawable.ic_quantity)
     object UnitConverter : AppScreen("converter", "محول الوحدات", R.drawable.ic_converter)
     object Projects : AppScreen("projects", "مشاريعي", R.drawable.ic_folder)
