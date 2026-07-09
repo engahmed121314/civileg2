@@ -22,6 +22,14 @@ class ACISeismic : SeismicDesign {
             SeismicZone.ZONE_4 to 0.40,
             SeismicZone.ZONE_5 to 0.50
         )
+
+        private val SOIL_FACTORS = mapOf(
+            SoilType.A to 0.8,
+            SoilType.B to 1.0,
+            SoilType.C to 1.2,
+            SoilType.D to 1.6,
+            SoilType.E to 2.5
+        )
     }
 
     override fun calculateBaseShear(
@@ -94,9 +102,9 @@ class ACISeismic : SeismicDesign {
         
         val usingDefaults = peakGroundAcceleration <= 0
         val desc = if (usingDefaults) {
-            "ASCE 7 Response Spectrum [default SDS=%.2f, SD1=%.2f]".format(sds, sd1)
+            String.format("ASCE 7 Response Spectrum [default SDS=%.2f, SD1=%.2f]", sds, sd1)
         } else {
-            "ASCE 7 Response Spectrum [ag=%.2f, I=%.1f, %s]".format(
+            String.format("ASCE 7 Response Spectrum [ag=%.2f, I=%.1f, %s]", 
                 peakGroundAcceleration, importanceFactor, soilType.displayName)
         }
         

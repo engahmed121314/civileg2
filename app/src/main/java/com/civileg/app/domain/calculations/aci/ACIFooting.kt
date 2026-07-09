@@ -85,7 +85,7 @@ class ACIFooting : FootingDesign {
         )
 
         if (q_max > soilBearingCapacity) {
-            warnings.add("ACI: q_max=%.1f kPa > SBC=%.1f kPa".format(q_max, soilBearingCapacity))
+            warnings.add(String.format("ACI: q_max=%.1f kPa > SBC=%.1f kPa", q_max, soilBearingCapacity))
         }
         if (q_min < 0) {
             warnings.add("ACI: Footing separation - increase dimensions")
@@ -116,7 +116,7 @@ class ACIFooting : FootingDesign {
             warnings.add("ACI: One-way shear Y exceeds capacity - increase thickness")
         }
 
-        codeNotes.add("One-way shear capacity: %.2f MPa".format(vc_oneWay))
+        codeNotes.add(String.format("One-way shear capacity: %.2f MPa", vc_oneWay))
 
         // 11. فحص قص الاختراق
         val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad, loadCombination)
@@ -147,13 +147,13 @@ class ACIFooting : FootingDesign {
         }
 
         codeNotes.add("ACI 318-19: Isolated Footing Design")
-        codeNotes.add("B=%.0fxL=%.0f mm, d=%.0f mm".format(B, L, d))
-        codeNotes.add("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa".format(q_avg, q_max, q_min))
-        codeNotes.add("Mu_x=%.1f, Mu_y=%.1f kN.m".format(Mu_x, Mu_y))
-        codeNotes.add("Short dir: %s".format(reinfX.barString))
-        codeNotes.add("Long dir: %s".format(reinfY.barString))
+        codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
+        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
+        codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
+        codeNotes.add(String.format("Short dir: %s", reinfX.barString))
+        codeNotes.add(String.format("Long dir: %s", reinfY.barString))
         if (distBarsPerMeter > 0) {
-            codeNotes.add("Distribution: %dØ%d @ %dmm".format(
+            codeNotes.add(String.format("Distribution: %dØ%d @ %dmm", 
                 distBarsPerMeter, distBarDia.toInt(), distSpacing.toInt()
             ))
         }
@@ -265,8 +265,8 @@ class ACIFooting : FootingDesign {
         val asProvided = actualBars * barArea
         
         val utilization = rho / rhoFinal.coerceAtLeast(0.001)
-        codeNotes.add("ACI 318-19: %dØ%d @ %dmm".format(actualBars, barDiameter.toInt(), finalSpacing.toInt()))
-        codeNotes.add("ρ=%.4f, ρ_min=%.4f, Rn=%.2f".format(rhoFinal, rhoMin, Rn))
+        codeNotes.add(String.format("ACI 318-19: %dØ%d @ %dmm", actualBars, barDiameter.toInt(), finalSpacing.toInt()))
+        codeNotes.add(String.format("ρ=%.4f, ρ_min=%.4f, Rn=%.2f", rhoFinal, rhoMin, Rn))
         
         return ReinforcementResult(
             astRequired = asRequired,
@@ -425,13 +425,13 @@ class ACIFooting : FootingDesign {
         // فحص زاوية الخرسانة المضغوطة (Strut-and-Tie Model)
         val strutAngle = atan2(d, projection * 1000.0) * 180.0 / PI
         if (strutAngle < 40.0) {
-            warnings.add("ACI: Strut angle %.1f° < 40° - increase thickness".format(strutAngle))
+            warnings.add(String.format("ACI: Strut angle %.1f° < 40° - increase thickness", strutAngle))
         }
         
         codeNotes.add("ACI 318: Pile Cap (Strut-and-Tie Model)")
-        codeNotes.add("Layout: %dx%d piles, Spacing: %.0fmm".format(rows, cols, spacing))
-        codeNotes.add("Strut angle: %.1f° (min 40°)".format(strutAngle))
-        codeNotes.add("Load/pile: %.0f kN".format(loadPerPile))
+        codeNotes.add(String.format("Layout: %dx%d piles, Spacing: %.0fmm", rows, cols, spacing))
+        codeNotes.add(String.format("Strut angle: %.1f° (min 40°)", strutAngle))
+        codeNotes.add(String.format("Load/pile: %.0f kN", loadPerPile))
         
         return FootingDesignResult(
             requiredWidth = capW,

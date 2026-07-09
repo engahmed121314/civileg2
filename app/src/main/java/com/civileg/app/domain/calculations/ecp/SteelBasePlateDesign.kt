@@ -117,7 +117,7 @@ class SteelBasePlateDesign {
         val pocketWidth: Double,         // عرض الجيب (mm)
         val pocketLength: Double,        // طول الجيب (mm)
         val boltDiameter: Double,        // قطر البرغي (mm)
-        concreteCover: Double,           // غطاء الخرسانة (mm)
+        val concreteCover: Double,           // غطاء الخرسانة (mm)
         val isSafe: Boolean              // هل التصميم آمن؟
     )
 

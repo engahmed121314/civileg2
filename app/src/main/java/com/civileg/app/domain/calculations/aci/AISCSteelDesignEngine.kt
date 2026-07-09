@@ -185,6 +185,7 @@ class AISCSteelDesignEngine {
             IyFlange + IyWeb
         }
         is SteelSectionType.BuiltUp -> 0.0
+        else -> TODO()
     }
 
     /** Weak axis elastic section modulus Sy — mm³ */
@@ -198,6 +199,7 @@ class AISCSteelDesignEngine {
             is SteelSectionType.LSection -> Iy / (section.legB / 2.0)
             is SteelSectionType.TSection -> Iy / (section.flangeWidth / 2.0)
             is SteelSectionType.BuiltUp -> 0.0
+            else -> TODO()
         }
     }
 
@@ -212,6 +214,7 @@ class AISCSteelDesignEngine {
             is SteelSectionType.LSection -> Sy * 1.05
             is SteelSectionType.TSection -> Sy * 1.05
             is SteelSectionType.BuiltUp -> 0.0
+            else -> TODO()
         }
     }
 
@@ -268,6 +271,7 @@ class AISCSteelDesignEngine {
             (bf * tf.pow(3) + dw * tw.pow(3)) / 3.0
         }
         is SteelSectionType.BuiltUp -> 0.0
+        else -> TODO()
     }
 
     /** Warping constant Cw — mm⁶ */
@@ -304,6 +308,7 @@ class AISCSteelDesignEngine {
         is SteelSectionType.CHS -> 0.0
         is SteelSectionType.LSection -> 0.0
         is SteelSectionType.BuiltUp -> 0.0
+        else -> TODO()
     }
 
     /** Polar radius of gyration r₀ — mm (for torsional buckling) */
@@ -580,6 +585,7 @@ class AISCSteelDesignEngine {
                     flangeSlenderLimit = 0.0
                 )
             }
+            else -> { return TODO() }
         }
     }
 
@@ -633,25 +639,25 @@ class AISCSteelDesignEngine {
         // Code notes
         codeNotes.add("AISC 360-16 Chapter D: تصميم عضو الشد")
         codeNotes.add("Fy = ${Fy.toInt()} MPa, Fu = ${Fu.toInt()} MPa")
-        codeNotes.add("Ag = ${"%.0f".format(Ag)} mm²")
-        codeNotes.add("φ×Pn (yielding) = ${"%.1f".format(phiPnGross)} kN — D2-1")
-        codeNotes.add("φ×Pn (rupture) = ${"%.1f".format(phiPnNet)} kN — D2-2 (U=${"%.2f".format(U)})")
-        codeNotes.add("φ×Rn (block shear) = ${"%.1f".format(phiRnBlockShear)} kN — J4.3")
-        codeNotes.add("القدرة التصميمية = ${"%.1f".format(designCapacity)} kN")
+        codeNotes.add("Ag = ${String.format("%.0f", Ag)} mm²")
+        codeNotes.add("φ×Pn (yielding) = ${String.format("%.1f", phiPnGross)} kN — D2-1")
+        codeNotes.add("φ×Pn (rupture) = ${String.format("%.1f", phiPnNet)} kN — D2-2 (U=${String.format("%.2f", U)})")
+        codeNotes.add("φ×Rn (block shear) = ${String.format("%.1f", phiRnBlockShear)} kN — J4.3")
+        codeNotes.add("القدرة التصميمية = ${String.format("%.1f", designCapacity)} kN")
 
         // Warnings
         if (utilizationRatio > 1.0) {
-            warnings.add("المقطع غير كافٍ للشد — نسبة الإجهاد = ${"%.2f".format(utilizationRatio)} > 1.0")
+            warnings.add("المقطع غير كافٍ للشد — نسبة الإجهاد = ${String.format("%.2f", utilizationRatio)} > 1.0")
         }
         if (U < 0.85) {
-            warnings.add("معامل التأخير القصي U = ${"%.2f".format(U)} — يُنصح بزيادة طول الوصلة")
+            warnings.add("معامل التأخير القصي U = ${String.format("%.2f", U)} — يُنصح بزيادة طول الوصلة")
         }
 
         // Slenderness check (AISC D1)
         val minR = minOf(section.rx, getRy(section))
         if (minR > 0) {
             val Lmax = MAX_SLENDERNESS_TENSION * minR
-            codeNotes.add("الحد الأقصى للطول غير المدعوم = ${"%.0f".format(Lmax)} mm (KL/r ≤ ${MAX_SLENDERNESS_TENSION.toInt()})")
+            codeNotes.add("الحد الأقصى للطول غير المدعوم = ${String.format("%.0f", Lmax)} mm (KL/r ≤ ${MAX_SLENDERNESS_TENSION.toInt()})")
         }
 
         return SteelTensionResult(
@@ -769,6 +775,7 @@ class AISCSteelDesignEngine {
                 uCalc.coerceIn(0.5, 1.0)
             }
             is SteelSectionType.BuiltUp -> 0.80
+            else -> TODO()
         }
     }
 
@@ -863,13 +870,13 @@ class AISCSteelDesignEngine {
         val lambdaMax = maxOf(lambdaX, lambdaY)
 
         codeNotes.add("AISC 360-16 Chapter E: تصميم عضو الضغط")
-        codeNotes.add("Fy = ${Fy.toInt()} MPa, Ag = ${"%.0f".format(Ag)} mm²")
-        codeNotes.add("λx = ${"%.1f".format(lambdaX)}, λy = ${"%.1f".format(lambdaY)}")
-        codeNotes.add("نسبة النحافة الحاكمة λ = ${"%.1f".format(lambdaMax)}")
+        codeNotes.add("Fy = ${Fy.toInt()} MPa, Ag = ${String.format("%.0f", Ag)} mm²")
+        codeNotes.add("λx = ${String.format("%.1f", lambdaX)}, λy = ${String.format("%.1f", lambdaY)}")
+        codeNotes.add("نسبة النحافة الحاكمة λ = ${String.format("%.1f", lambdaMax)}")
 
         // Slenderness check (AISC D1)
         if (lambdaMax > MAX_SLENDERNESS_COMPRESSION) {
-            warnings.add("نسبة النحافة تتجاوز الحد المسموح (λ=${"%.1f".format(lambdaMax)} > ${MAX_SLENDERNESS_COMPRESSION.toInt()})")
+            warnings.add("نسبة النحافة تتجاوز الحد المسموح (λ=${String.format("%.1f", lambdaMax)} > ${MAX_SLENDERNESS_COMPRESSION.toInt()})")
         }
 
         // E3: Flexural buckling
@@ -909,12 +916,12 @@ class AISCSteelDesignEngine {
             else -> "انبعاج مرن حول المحور الضعيف (Flexural Buckling — E3, Y-axis)"
         }
 
-        codeNotes.add("Fe = ${"%.1f".format(Fe)} MPa (Euler)")
-        codeNotes.add("Fcr = ${"%.1f".format(Fcr)} MPa")
-        codeNotes.add("Qs = ${"%.3f".format(Qs)}, Qa = ${"%.3f".format(Qa)}")
-        codeNotes.add("Fcr (مُعدّل) = ${"%.1f".format(FcrAdjusted)} MPa")
-        codeNotes.add("φPn = ${"%.1f".format(phiPn)} kN")
-        codeNotes.add("نسبة الإجهاد = ${"%.3f".format(utilizationRatio)}")
+        codeNotes.add("Fe = ${String.format("%.1f", Fe)} MPa (Euler)")
+        codeNotes.add("Fcr = ${String.format("%.1f", Fcr)} MPa")
+        codeNotes.add("Qs = ${String.format("%.3f", Qs)}, Qa = ${String.format("%.3f", Qa)}")
+        codeNotes.add("Fcr (مُعدّل) = ${String.format("%.1f", FcrAdjusted)} MPa")
+        codeNotes.add("φPn = ${String.format("%.1f", phiPn)} kN")
+        codeNotes.add("نسبة الإجهاد = ${String.format("%.3f", utilizationRatio)}")
 
         if (utilizationRatio > 1.0) {
             warnings.add("المقطع غير كافٍ للضغط — اختر مقطعاً أكبر")
@@ -923,7 +930,7 @@ class AISCSteelDesignEngine {
             warnings.add("الانبعاج الالتوائي حاكم — يُنصح باستخدام مقاطع مغلقة أو زيادة الدعم الجانبي")
         }
         if (Qs < 0.99) {
-            warnings.add("عوامل تخفيض الانبعاج المحلي فعّالة (Qs=${"%.2f".format(Qs)})")
+            warnings.add("عوامل تخفيض الانبعاج المحلي فعّالة (Qs=${String.format("%.2f", Qs)})")
         }
 
         return SteelCompressionResult(
@@ -1095,7 +1102,7 @@ class AISCSteelDesignEngine {
         val classification = classifySection(section, grade)
         codeNotes.add("AISC 360-16 Chapter F: تصميم الكمرة")
         codeNotes.add("Fy = ${Fy.toInt()} MPa, تصنيف المقطع: ${classification.overall}")
-        codeNotes.add("Ag = ${"%.0f".format(section.area)} mm², Zx = ${"%.0f".format(section.zx)} mm³")
+        codeNotes.add("Ag = ${String.format("%.0f", section.area)} mm², Zx = ${String.format("%.0f", section.zx)} mm³")
 
         // ---- Strong axis flexure (F2, F3, F4, F6, F7) ----
         val Mnx = calculateNominalMomentX(section, grade, Lb, Cb, isLaterallyBraced, classification, warnings, codeNotes)
@@ -1146,16 +1153,16 @@ class AISCSteelDesignEngine {
         val maxRatio = maxOf(ratioMx, ratioMy, ratioVx, ratioVy)
         val isSafe = maxRatio <= 1.0
 
-        codeNotes.add("φMnx = ${"%.1f".format(phiMnx)} kN.m (η = ${"%.3f".format(ratioMx)})")
-        codeNotes.add("φMny = ${"%.1f".format(phiMny)} kN.m (η = ${"%.3f".format(ratioMy)})")
-        codeNotes.add("φVnx = ${"%.1f".format(phiVnx)} kN (η = ${"%.3f".format(ratioVx)})")
-        codeNotes.add("φVny = ${"%.1f".format(phiVny)} kN (η = ${"%.3f".format(ratioVy)})")
+        codeNotes.add("φMnx = ${String.format("%.1f", phiMnx)} kN.m (η = ${String.format("%.3f", ratioMx)})")
+        codeNotes.add("φMny = ${String.format("%.1f", phiMny)} kN.m (η = ${String.format("%.3f", ratioMy)})")
+        codeNotes.add("φVnx = ${String.format("%.1f", phiVnx)} kN (η = ${String.format("%.3f", ratioVx)})")
+        codeNotes.add("φVny = ${String.format("%.1f", phiVny)} kN (η = ${String.format("%.3f", ratioVy)})")
         if (deflectionRatio > 0) {
-            codeNotes.add("الانحراف = ${"%.1f".format(delta)} mm (الحد = ${"%.1f".format(deltaMax)} mm, η = ${"%.3f".format(deflectionRatio)})")
+            codeNotes.add("الانحراف = ${String.format("%.1f", delta)} mm (الحد = ${String.format("%.1f", deltaMax)} mm, η = ${String.format("%.3f", deflectionRatio)})")
         }
 
         if (maxRatio > 1.0) {
-            warnings.add("المقطع غير كافٍ — نسبة الإجهاد القصوى = ${"%.3f".format(maxRatio)} > 1.0")
+            warnings.add("المقطع غير كافٍ — نسبة الإجهاد القصوى = ${String.format("%.3f", maxRatio)} > 1.0")
         }
         if (deflectionRatio > 1.0) {
             warnings.add("الانحراف يتجاوز الحد المسموح (L/${(360.0 / deltaMax * span).toInt()})")
@@ -1221,6 +1228,7 @@ class AISCSteelDesignEngine {
             is SteelSectionType.BuiltUp -> {
                 section.zx * Fy / 1e6  // Simplified
             }
+            else -> TODO()
         }
     }
 
@@ -1250,8 +1258,8 @@ class AISCSteelDesignEngine {
         val rt = sqrt(sqrt(Iy * Cw) / Sx.coerceAtLeast(1.0))  // mm
         val Lr = 1.95 * rt * sqrt(E_STEEL / (0.7 * Fy))  // mm, F2-6
 
-        codeNotes.add("Lp = ${"%.0f".format(Lp)} mm, Lr = ${"%.0f".format(Lr)} mm, rt = ${"%.1f".format(rt)} mm")
-        codeNotes.add("Lb = ${"%.0f".format(Lb)} mm, Cb = ${"%.2f".format(Cb)}")
+        codeNotes.add("Lp = ${String.format("%.0f", Lp)} mm, Lr = ${String.format("%.0f", Lr)} mm, rt = ${String.format("%.1f", rt)} mm")
+        codeNotes.add("Lb = ${String.format("%.0f", Lb)} mm, Cb = ${String.format("%.2f", Cb)}")
 
         val Mn = if (isLaterallyBraced || Lb <= Lp) {
             // Fully braced or within plastic range: Mn = Mp
@@ -1267,7 +1275,7 @@ class AISCSteelDesignEngine {
             // Elastic LTB — AISC F2-3, F2-4
             val FcrLtb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))  // MPa
             val MnLtb = FcrLtb * Sx / 1e6  // kN.m
-            codeNotes.add("Lb > Lr → انبعاج مرن (Elastic LTB) — F2-4, Fcr = ${"%.1f".format(FcrLtb)} MPa")
+            codeNotes.add("Lb > Lr → انبعاج مرن (Elastic LTB) — F2-4, Fcr = ${String.format("%.1f", FcrLtb)} MPa")
             MnLtb.coerceAtMost(Mp)
         }
 
@@ -1312,7 +1320,7 @@ class AISCSteelDesignEngine {
         val Mp = Fy * Zx / 1e6
         val Lp = 1.76 * ry * sqrt(E_STEEL / Fy)
 
-        codeNotes.add("Lp = ${"%.0f".format(Lp)} mm, Lb = ${"%.0f".format(Lb)} mm")
+        codeNotes.add("Lp = ${String.format("%.0f", Lp)} mm, Lb = ${String.format("%.0f", Lb)} mm")
 
         val Mn = if (isLaterallyBraced || Lb <= Lp) {
             Mp
@@ -1320,7 +1328,7 @@ class AISCSteelDesignEngine {
             // Elastic LTB for channels (conservative)
             val FcrLtb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))
             val MnLtb = minOf(FcrLtb * Sx / 1e6, Mp)
-            codeNotes.add("انبعاج مرن للقناة (Elastic LTB) — Fcr = ${"%.1f".format(FcrLtb)} MPa")
+            codeNotes.add("انبعاج مرن للقناة (Elastic LTB) — Fcr = ${String.format("%.1f", FcrLtb)} MPa")
             MnLtb
         }
 
@@ -1423,7 +1431,7 @@ class AISCSteelDesignEngine {
         // Elastic LTB (conservative for T-sections)
         val FcrLtb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))
         val MnLtb = minOf(FcrLtb * Sx / 1e6, Mp)
-        codeNotes.add("T-section: انبعاج مرن — Fcr = ${"%.1f".format(FcrLtb)} MPa")
+        codeNotes.add("T-section: انبعاج مرن — Fcr = ${String.format("%.1f", FcrLtb)} MPa")
         return MnLtb
     }
 
@@ -1523,6 +1531,7 @@ class AISCSteelDesignEngine {
                 PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
             }
             is SteelSectionType.BuiltUp -> 0.0
+            else -> TODO()
         }
     }
 
@@ -1559,8 +1568,8 @@ class AISCSteelDesignEngine {
         val Vn = 0.6 * Fy * Aw * Cv / 1000.0  // kN
         val phiVn = PHI_SHEAR * Vn
 
-        codeNotes.add("القص: h/tw = ${"%.1f".format(hOverTw)}, Cv = ${"%.3f".format(Cv)}, Aw = ${"%.0f".format(Aw)} mm²")
-        codeNotes.add("φVn = ${"%.1f".format(phiVn)} kN")
+        codeNotes.add("القص: h/tw = ${String.format("%.1f", hOverTw)}, Cv = ${String.format("%.3f", Cv)}, Aw = ${String.format("%.0f", Aw)} mm²")
+        codeNotes.add("φVn = ${String.format("%.1f", phiVn)} kN")
 
         return phiVn
     }
@@ -1604,6 +1613,7 @@ class AISCSteelDesignEngine {
                 PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
             }
             is SteelSectionType.BuiltUp -> 0.0
+            else -> TODO()
         }
     }
 
@@ -1640,7 +1650,7 @@ class AISCSteelDesignEngine {
             // Compression
             val compressionResult = designCompressionMember(section, grade, Pu, Kx, Ky, Lx, Ly)
             phiPn = compressionResult.phiPn
-            codeNotes.add("ضغط: φPn = ${"%.1f".format(phiPn)} kN, Fcr = ${"%.1f".format(compressionResult.Fcr)} MPa")
+            codeNotes.add("ضغط: φPn = ${String.format("%.1f", phiPn)} kN, Fcr = ${String.format("%.1f", compressionResult.Fcr)} MPa")
         } else {
             // Tension (use a default welded connection if none provided)
             val tensionResult = designTensionMember(
@@ -1648,7 +1658,7 @@ class AISCSteelDesignEngine {
                 ConnectionType.Welded(WeldType.FILLET, 6.0, 100.0, ElectrodeType.E70XX)
             )
             phiPn = tensionResult.designCapacity
-            codeNotes.add("شد: φPn = ${"%.1f".format(phiPn)} kN")
+            codeNotes.add("شد: φPn = ${String.format("%.1f", phiPn)} kN")
         }
 
         // Flexural capacities
@@ -1670,7 +1680,7 @@ class AISCSteelDesignEngine {
             val B1y = Cm / (1.0 - (abs(Pu) / Pe1y.coerceAtLeast(1.0))).coerceAtLeast(1.0)
             MuxAmplified = B1x * Mux
             MuyAmplified = B1y * Muy
-            codeNotes.add("B1x = ${"%.2f".format(B1x)}, B1y = ${"%.2f".format(B1y)} (تضخيم العزوم — إطار جانبي)")
+            codeNotes.add("B1x = ${String.format("%.2f", B1x)}, B1y = ${String.format("%.2f", B1y)} (تضخيم العزوم — إطار جانبي)")
         }
 
         // --- Interaction equations ---
@@ -1691,12 +1701,12 @@ class AISCSteelDesignEngine {
 
         codeNotes.add("AISC 360-16 Chapter H: الحمل المركب")
         codeNotes.add("المعادلة: ${equation}")
-        codeNotes.add("Pu/(φPn) = ${"%.3f".format(pr)}")
-        codeNotes.add("Mux/(φMnx) = ${"%.3f".format(mrX)}, Muy/(φMny) = ${"%.3f".format(mrY)}")
-        codeNotes.add("نسبة التفاعل = ${"%.3f".format(interactionRatio)}")
+        codeNotes.add("Pu/(φPn) = ${String.format("%.3f", pr)}")
+        codeNotes.add("Mux/(φMnx) = ${String.format("%.3f", mrX)}, Muy/(φMny) = ${String.format("%.3f", mrY)}")
+        codeNotes.add("نسبة التفاعل = ${String.format("%.3f", interactionRatio)}")
 
         if (interactionRatio > 1.0) {
-            warnings.add("معادلة التفاعل تتجاوز 1.0 (η = ${"%.3f".format(interactionRatio)}) — زِد المقطع أو قلل الأحمال")
+            warnings.add("معادلة التفاعل تتجاوز 1.0 (η = ${String.format("%.3f", interactionRatio)}) — زِد المقطع أو قلل الأحمال")
         }
         if (isSwayFrame) {
             warnings.add("إطار جانبي — فحص الاستقرار الكلي مطلوب (AISC C2)")
@@ -1756,7 +1766,7 @@ class AISCSteelDesignEngine {
                 val phiRnBolt = 0.75 * 0.6 * fu * Ab / 1000.0  // kN per bolt (double shear possible)
                 val totalBoltCapacity = phiRnBolt * connectionType.numberOfBolts
                 connectionAdequate = totalBoltCapacity >= axialLoad
-                codeNotes.add("قدرة المسامير = ${"%.1f".format(totalBoltCapacity)} kN (${connectionType.numberOfBolts} × ${"%.1f".format(phiRnBolt)} kN)")
+                codeNotes.add("قدرة المسامير = ${String.format("%.1f", totalBoltCapacity)} kN (${connectionType.numberOfBolts} × ${String.format("%.1f", phiRnBolt)} kN)")
             }
             is ConnectionType.Welded -> {
                 // Weld capacity check
@@ -1767,7 +1777,7 @@ class AISCSteelDesignEngine {
                 val Rnw = 0.60 * Fexx * (a / sqrt(2.0)) * L / 1000.0  // kN
                 val phiRnw = 0.75 * Rnw
                 connectionAdequate = phiRnw >= axialLoad
-                codeNotes.add("قدرة اللحام = ${"%.1f".format(phiRnw)} kN")
+                codeNotes.add("قدرة اللحام = ${String.format("%.1f", phiRnw)} kN")
             }
             else -> {
                 connectionAdequate = true
@@ -1776,14 +1786,14 @@ class AISCSteelDesignEngine {
 
         // Slenderness check
         if (lambdaMax > MAX_SLENDERNESS_BRACING) {
-            warnings.add("نسبة النحافة تتجاوز الحد (λ=${"%.1f".format(lambdaMax)} > ${MAX_SLENDERNESS_BRACING.toInt()})")
+            warnings.add("نسبة النحافة تتجاوز الحد (λ=${String.format("%.1f", lambdaMax)} > ${MAX_SLENDERNESS_BRACING.toInt()})")
         }
 
         codeNotes.add("AISC 360-16: تصميم الكوبري (Bracing)")
-        codeNotes.add("λx = ${"%.1f".format(lambdaX)}, λy = ${"%.1f".format(lambdaY)}")
-        codeNotes.add("قدرة الضغط = ${"%.1f".format(compressionResult.phiPn)} kN")
-        codeNotes.add("الحمل المطلوب = ${"%.1f".format(axialLoad)} kN")
-        codeNotes.add("نسبة الإجهاد = ${"%.3f".format(compressionResult.utilizationRatio)}")
+        codeNotes.add("λx = ${String.format("%.1f", lambdaX)}, λy = ${String.format("%.1f", lambdaY)}")
+        codeNotes.add("قدرة الضغط = ${String.format("%.1f", compressionResult.phiPn)} kN")
+        codeNotes.add("الحمل المطلوب = ${String.format("%.1f", axialLoad)} kN")
+        codeNotes.add("نسبة الإجهاد = ${String.format("%.3f", compressionResult.utilizationRatio)}")
 
         val isSafe = compressionResult.isSafe && connectionAdequate
 
@@ -1830,7 +1840,7 @@ class AISCSteelDesignEngine {
 
         codeNotes.add("AISC 360-16 Chapter I: تصميم الكمرة المركبة")
         codeNotes.add("Fy = ${Fy.toInt()} MPa, fc' = ${fcu.toInt()} MPa")
-        codeNotes.add("Ec = ${"%.0f".format(Ec)} MPa, n = ${"%.1f".format(concreteModularRatio)}")
+        codeNotes.add("Ec = ${String.format("%.0f", Ec)} MPa, n = ${String.format("%.1f", concreteModularRatio)}")
 
         // Steel section properties
         val As = steelSection.area  // mm²
@@ -1852,8 +1862,8 @@ class AISCSteelDesignEngine {
         val QnValue2 = FuStud * AsStud
         val Qn = minOf(QnValue1, QnValue2)  // N per stud
 
-        codeNotes.add("قطر الوتد = ${studDiameter.toInt()} mm, مساحة الوتد = ${"%.0f".format(AsStud)} mm²")
-        codeNotes.add("قدرة الوتد Qn = ${"%.1f".format(Qn / 1000.0)} kN")
+        codeNotes.add("قطر الوتد = ${studDiameter.toInt()} mm, مساحة الوتد = ${String.format("%.0f", AsStud)} mm²")
+        codeNotes.add("قدرة الوتد Qn = ${String.format("%.1f", Qn / 1000.0)} kN")
 
         // Horizontal shear (AISC I3)
         // Vh = min(0.85 × fc' × Ac, Fy × As) (full composite)
@@ -1861,9 +1871,9 @@ class AISCSteelDesignEngine {
         val Vh2 = Fy * As / 1000.0  // kN (steel yielding)
         val Vh = minOf(Vh1, Vh2)
 
-        codeNotes.add("Vh (قص أفقي) = ${"%.1f".format(Vh)} kN")
-        codeNotes.add("  0.85×fc'×Ac = ${"%.1f".format(Vh1)} kN")
-        codeNotes.add("  Fy×As = ${"%.1f".format(Vh2)} kN")
+        codeNotes.add("Vh (قص أفقي) = ${String.format("%.1f", Vh)} kN")
+        codeNotes.add("  0.85×fc'×Ac = ${String.format("%.1f", Vh1)} kN")
+        codeNotes.add("  Fy×As = ${String.format("%.1f", Vh2)} kN")
 
         // Number of studs required (half-span studs on each side)
         val studsRequired = if (Qn > 0) {
@@ -1905,7 +1915,7 @@ class AISCSteelDesignEngine {
             // Mn = Fy × As × (d/2 + slabThickness/2) approximately
             val yt = d / 2.0 + slabThickness / 2.0 - aFull / 2.0
             compositeMomentCapacity = Fy * As * yt / 1e6  // kN.m
-            codeNotes.add("PNA داخل البلاطة الخرسانية (a = ${"%.1f".format(aFull)} mm)")
+            codeNotes.add("PNA داخل البلاطة الخرسانية (a = ${String.format("%.1f", aFull)} mm)")
         } else {
             // PNA in steel section — partial composite
             // Use steel moment capacity as lower bound (conservative)
@@ -1914,24 +1924,24 @@ class AISCSteelDesignEngine {
             codeNotes.add("PNA خارج البلاطة — تصميم جزئي")
         }
 
-        codeNotes.add("القدرة اللدنة المركبة = ${"%.1f".format(compositeMomentCapacity)} kN.m")
+        codeNotes.add("القدرة اللدنة المركبة = ${String.format("%.1f", compositeMomentCapacity)} kN.m")
 
         // Compare with non-composite capacity
         val nonCompositeMp = Fy * Zx / 1e6
-        codeNotes.add("القدرة اللدنة غير المركبة = ${"%.1f".format(nonCompositeMp)} kN.m")
+        codeNotes.add("القدرة اللدنة غير المركبة = ${String.format("%.1f", nonCompositeMp)} kN.m")
         if (compositeMomentCapacity > nonCompositeMp) {
-            codeNotes.add("الزيادة بسبب التركيب = ${"%.1f".format(compositeMomentCapacity - nonCompositeMp)} kN.m (${"%.0f".format((compositeMomentCapacity / nonCompositeMp - 1) * 100)}%)")
+            codeNotes.add("الزيادة بسبب التركيب = ${String.format("%.1f", compositeMomentCapacity - nonCompositeMp)} kN.m (${String.format("%.0f", (compositeMomentCapacity / nonCompositeMp - 1) * 100)}%)")
         }
 
         val utilizationRatio = if (compositeMomentCapacity > 0) Mu / compositeMomentCapacity else Double.MAX_VALUE
         val phiMn = PHI_FLEXURE * compositeMomentCapacity
         val phiUtilization = Mu / phiMn
 
-        codeNotes.add("φMn = ${"%.1f".format(phiMn)} kN.m")
-        codeNotes.add("Mu = ${"%.1f".format(Mu)} kN.m, نسبة الإجهاد = ${"%.3f".format(phiUtilization)}")
+        codeNotes.add("φMn = ${String.format("%.1f", phiMn)} kN.m")
+        codeNotes.add("Mu = ${String.format("%.1f", Mu)} kN.m, نسبة الإجهاد = ${String.format("%.3f", phiUtilization)}")
 
         if (phiUtilization > 1.0) {
-            warnings.add("الكمرة المركبة غير كافية — نسبة الإجهاد = ${"%.3f".format(phiUtilization)} > 1.0")
+            warnings.add("الكمرة المركبة غير كافية — نسبة الإجهاد = ${String.format("%.3f", phiUtilization)} > 1.0")
         }
 
         // Check minimum slab thickness (AISC I3.1)
@@ -1942,7 +1952,7 @@ class AISCSteelDesignEngine {
         // Check maximum stud spacing (AISC I8.2d)
         val maxStudSpacing = minOf(8.0 * (slabThickness / 1.0), 915.0)  // mm
         if (studSpacing > maxStudSpacing) {
-            warnings.add("مسافة الأوتاد تتجاوز الحد الأقصى ${"%.0f".format(maxStudSpacing)} mm")
+            warnings.add("مسافة الأوتاد تتجاوز الحد الأقصى ${String.format("%.0f", maxStudSpacing)} mm")
         }
 
         return CompositeBeamResult(

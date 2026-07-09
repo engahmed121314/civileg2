@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.navArgs
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentWaterTankBinding
 import com.civileg.app.db.*
@@ -35,7 +34,8 @@ class WaterTankFragment : Fragment() {
     private var _binding: FragmentWaterTankBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ProjectViewModel by viewModels()
-    private val args: WaterTankFragmentArgs by navArgs()
+    private val projectId: Long
+        get() = requireArguments().getLong("projectId", -1L)
     
     @Inject
     lateinit var settingsManager: SettingsManager
@@ -143,7 +143,7 @@ class WaterTankFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val projectId = if (args.projectId != -1L) args.projectId else {
+            val projectId = if (this@WaterTankFragment.projectId != -1L) this@WaterTankFragment.projectId else {
                 if (projectsList.isEmpty()) {
                     showError("Please create a project first")
                     return@setOnClickListener

@@ -96,7 +96,7 @@ class ACIAdvancedColumn : ColumnDesign {
 
         if (!short) {
             warnings.add("⚠️ عمود نحيف! يجب مراعاة تأثيرات الدرجة الثانية (P-Delta)")
-            codeNotes.add("ACI 318-22.4: Slenderness ratio λ=%.1f > %.0f".format(slendernessRatio, if (isSpiral) NS_LIMIT_SPIRAL else NS_LIMIT))
+            codeNotes.add(String.format("ACI 318-22.4: Slenderness ratio λ=%.1f > %.0f", slendernessRatio, if (isSpiral) NS_LIMIT_SPIRAL else NS_LIMIT))
         }
 
         // ── Step 2: Moment magnification for slender columns ──
@@ -116,7 +116,7 @@ class ACIAdvancedColumn : ColumnDesign {
         val MyDesign = momentY * magnifierY
 
         if (magnifierX > 1.05 || magnifierY > 1.05) {
-            codeNotes.add("ACI 22.4.2.1: Moment magnification δx=%.2f, δy=%.2f".format(magnifierX, magnifierY))
+            codeNotes.add(String.format("ACI 22.4.2.1: Moment magnification δx=%.2f, δy=%.2f", magnifierX, magnifierY))
         }
 
         // ── Step 3: Reinforcement design ──
@@ -170,7 +170,7 @@ class ACIAdvancedColumn : ColumnDesign {
         // ── Step 6: Spiral reinforcement design ──
         if (isSpiral) {
             val spiralResult = designSpiralReinforcement(fcPrime, fy, columnType, Ag, clearCover)
-            codeNotes.add("ACI 25.7.6: Spiral ρs=%.4f, pitch=%.0fmm, dia=%.0fmm".format(
+            codeNotes.add(String.format("ACI 25.7.6: Spiral ρs=%.4f, pitch=%.0fmm, dia=%.0fmm", 
                 spiralResult.third, spiralResult.first, spiralResult.second
             ))
         }
@@ -194,15 +194,15 @@ class ACIAdvancedColumn : ColumnDesign {
 
         // ── Code notes ──
         codeNotes.add("ACI 318-19: Chapter 10 - Design of Compression Members")
-        codeNotes.add("ACI 21.2.1: φ = %.2f (%s column)".format(
+        codeNotes.add(String.format("ACI 21.2.1: φ = %.2f (%s column)", 
             if (isSpiral) PHI_SPIRAL else PHI_TIED,
             if (isSpiral) "spiral" else "tied"
         ))
-        codeNotes.add("ACI 10.6.1.1: Reinforcement ratio = %.2f%%".format(As / Ag * 100))
+        codeNotes.add(String.format("ACI 10.6.1.1: Reinforcement ratio = %.2f%%", As / Ag * 100))
         if (fcu > 0) {
-            codeNotes.add("fc' = 0.8 × fcu = %.0f MPa (cylinder strength)".format(fcPrime))
+            codeNotes.add(String.format("fc' = 0.8 × fcu = %.0f MPa (cylinder strength)", fcPrime))
         }
-        codeNotes.add("ACI 20.6.1: Clear cover = %.0fmm".format(clearCover))
+        codeNotes.add(String.format("ACI 20.6.1: Clear cover = %.0fmm", clearCover))
 
         // ── Steel weight and concrete volume per meter ──
         val steelWeightPerMeter = As / 1e6 * 7850.0 // kg/m (longitudinal bars only)
@@ -720,7 +720,7 @@ class ACIAdvancedColumn : ColumnDesign {
             myRatio = myRatio,
             interactionFactor = if (PnBresler > 0) Pu * 1000.0 / PnBresler else abs(Pu * 1000.0 / PnBresler),
             isSafe = isSafe,
-            formula = "ACI 22.10.3.2: 1/Pn = 1/Pnx + 1/Pny - 1/Po, Pn=%.0fkN".format(PnBresler / 1000.0)
+            formula = String.format("ACI 22.10.3.2: 1/Pn = 1/Pnx + 1/Pny - 1/Po, Pn=%.0fkN", PnBresler / 1000.0)
         )
     }
 
@@ -764,7 +764,7 @@ class ACIAdvancedColumn : ColumnDesign {
             myRatio = myRatio,
             interactionFactor = interactionFactor,
             isSafe = isSafe,
-            formula = "ACI 22.10.3 (Hsu): (Mx/Mnx)^%.2f + (My/Mny)^%.2f = %.3f ≤ 1.0".format(alpha, alpha, interactionFactor)
+            formula = String.format("ACI 22.10.3 (Hsu): (Mx/Mnx)^%.2f + (My/Mny)^%.2f = %.3f ≤ 1.0", alpha, alpha, interactionFactor)
         )
     }
 
@@ -945,7 +945,7 @@ class ACIAdvancedColumn : ColumnDesign {
 
         // Compression load ratio check
         if (stressRatio > 0.1 * fcPrime) {
-            codeNotes.add("ACI 10.6.2: Compression controls (Pu/φAg = %.1f > 0.1fc' = %.1f)".format(
+            codeNotes.add(String.format("ACI 10.6.2: Compression controls (Pu/φAg = %.1f > 0.1fc' = %.1f)", 
                 stressRatio, 0.1 * fcPrime
             ))
         }
@@ -1023,15 +1023,15 @@ class ACIAdvancedColumn : ColumnDesign {
 
         // Check maximum spacing
         if (tiesSpacing > 150.0) {
-            codeNotes.add("ACI 25.7.2.3: Tighter spacing may be needed near joints (so/2 ≤ %.0fmm)".format(tiesSpacing / 2))
+            codeNotes.add(String.format("ACI 25.7.2.3: Tighter spacing may be needed near joints (so/2 ≤ %.0fmm)", tiesSpacing / 2))
         }
 
         val description = if (isSpiral) {
-            "Spiral: %dØ%d + Spiral Ø%d @ %.0fmm".format(
+            String.format("Spiral: %dØ%d + Spiral Ø%d @ %.0fmm", 
                 numberOfBars, selectedBarDia.toInt(), tiesDiameter.toInt(), tiesSpacing
             )
         } else {
-            "%dØ%d, Ties Ø%d @ %.0fmm".format(
+            String.format("%dØ%d, Ties Ø%d @ %.0fmm", 
                 numberOfBars, selectedBarDia.toInt(), tiesDiameter.toInt(), tiesSpacing
             )
         }
@@ -1130,14 +1130,14 @@ class ACIAdvancedColumn : ColumnDesign {
         val isSafe = Pu_N <= phiVc
 
         if (!isSafe) {
-            warnings.add("❌ فشل قص الاختراق! vu=%.2f > φvc=%.2f MPa".format(vu, PHI_SHEAR * vc * capFactor))
+            warnings.add(String.format("❌ فشل قص الاختراق! vu=%.2f > φvc=%.2f MPa", vu, PHI_SHEAR * vc * capFactor))
             warnings.add("يجب زيادة سمك البلاطة أو إضافة رأس عمود أو حديد قص إضافي (shear studs)")
             codeNotes.add("ACI 22.6.5: Shear head or shear studs required (vc exceeded)")
             codeNotes.add("ACI 22.6.8: Consider shear reinforcement (studs or stirrups)")
         }
 
-        codeNotes.add("ACI 22.6: Critical perimeter bo=%.0fmm at d/2=%.0fmm".format(bo, d / 2))
-        codeNotes.add("ACI 22.6.5.2: vc=%.2f MPa (interior), φ=%.2f".format(vc, PHI_SHEAR))
+        codeNotes.add(String.format("ACI 22.6: Critical perimeter bo=%.0fmm at d/2=%.0fmm", bo, d / 2))
+        codeNotes.add(String.format("ACI 22.6.5.2: vc=%.2f MPa (interior), φ=%.2f", vc, PHI_SHEAR))
 
         return PunchingCheckResult(
             appliedShear = Pu,
@@ -1455,7 +1455,7 @@ class ACIAdvancedColumn : ColumnDesign {
             }
             is ColumnType.LShaped -> {
                 // Use smallest leg dimension
-                0.3 * min(columnType.legWidth, columnType.legDepth, columnType.thickness)
+                0.3 * minOf(columnType.legWidth, columnType.legDepth, columnType.thickness)
             }
             is ColumnType.TShaped -> {
                 0.3 * min(columnType.webWidth, columnType.flangeThickness)

@@ -222,11 +222,11 @@ class ACITank : TankDesign {
         ))
 
         codeNotes.add("ACI 350-06 / ACI 318-19: Water-Retaining Structure")
-        codeNotes.add("f'c=%.0f MPa (0.8×fcu), φ_flex=%.2f".format(fcPrime, PHI_FLEXURE))
-        codeNotes.add("Fluid load factor: %.1f".format(FLUID_LOAD_FACTOR))
-        codeNotes.add("Vertical: %dØ%d @ %dmm".format(barsPerMeter, barDiameter.toInt(), spacing.toInt()))
-        codeNotes.add("Horizontal: %dØ%d @ %dmm".format(hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))
-        codeNotes.add("ρ=%.4f, ρ_min=%.4f".format(rhoFinal, rhoMin))
+        codeNotes.add(String.format("f'c=%.0f MPa (0.8×fcu), φ_flex=%.2f", fcPrime, PHI_FLEXURE))
+        codeNotes.add(String.format("Fluid load factor: %.1f", FLUID_LOAD_FACTOR))
+        codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))
+        codeNotes.add(String.format("Horizontal: %dØ%d @ %dmm", hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))
+        codeNotes.add(String.format("ρ=%.4f, ρ_min=%.4f", rhoFinal, rhoMin))
 
         return ReinforcementResult(
             astRequired = asRequired,
@@ -240,7 +240,7 @@ class ACITank : TankDesign {
             spacing = spacing,
             warnings = warnings,
             codeNotes = codeNotes,
-            description = "V: %dØ%d@%dmm, H: %dØ%d@%dmm".format(
+            description = String.format("V: %dØ%d@%dmm, H: %dØ%d@%dmm", 
                 barsPerMeter, barDiameter.toInt(), spacing.toInt(),
                 hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()
             )
@@ -302,9 +302,9 @@ class ACITank : TankDesign {
         ))
 
         codeNotes.add("ACI 350-06: Circular Tank - Hoop Tension")
-        codeNotes.add("T_max = γw×H×R × %.1f = %.1f kN/m".format(FLUID_LOAD_FACTOR, maxHoopTension))
-        codeNotes.add("Hoop: %dØ%d @ %dmm".format(hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt()))
-        codeNotes.add("Vertical: %dØ%d @ %dmm".format(vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()))
+        codeNotes.add(String.format("T_max = γw×H×R × %.1f = %.1f kN/m", FLUID_LOAD_FACTOR, maxHoopTension))
+        codeNotes.add(String.format("Hoop: %dØ%d @ %dmm", hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt()))
+        codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()))
 
         if (!isCrackSafe) {
             warnings.add("ACI 350: Increase wall thickness or reduce spacing for crack control")
@@ -322,7 +322,7 @@ class ACITank : TankDesign {
             spacing = hoopSpacing,
             warnings = warnings,
             codeNotes = codeNotes,
-            description = "Hoop: %dØ%d@%dmm, Vert: %dØ%d@%dmm".format(
+            description = String.format("Hoop: %dØ%d@%dmm, Vert: %dØ%d@%dmm", 
                 hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt(),
                 vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()
             )
@@ -380,7 +380,7 @@ class ACITank : TankDesign {
             punchingSafe, "ACI 318: vc = 0.33√f'c × b₀ × d"
         ))
 
-        codeNotes.add("Base: %dØ%d @ %dmm (each way)".format(
+        codeNotes.add(String.format("Base: %dØ%d @ %dmm (each way)", 
             barsPerMeter, barDiameter.toInt(), spacing.toInt()))
 
         return ReinforcementResult(
@@ -395,7 +395,7 @@ class ACITank : TankDesign {
             spacing = spacing,
             warnings = warnings,
             codeNotes = codeNotes,
-            description = "%dØ%d @ %dmm (each way)".format(
+            description = String.format("%dØ%d @ %dmm (each way)", 
                 barsPerMeter, barDiameter.toInt(), spacing.toInt())
         )
     }

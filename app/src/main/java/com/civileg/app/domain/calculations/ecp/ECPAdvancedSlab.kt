@@ -109,7 +109,7 @@ class ECPAdvancedSlab {
         val K_bal = 0.186
         
         if (K > K_bal) {
-            warnings.add("K=%.3f > K_bal=%.3f - زِد سماكة البلاطة الهوردية".format(K, K_bal))
+            warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد سماكة البلاطة الهوردية", K, K_bal))
         }
         
         // z = d × (0.5 + √(0.25 - K/1.25))
@@ -128,8 +128,8 @@ class ECPAdvancedSlab {
         val asProvided = numBars * barArea
         
         codeNotes.add("ECP 203: Hordi Slab (Section 6.4)")
-        codeNotes.add("Ribs: %.0fmm c/c, Load/rib: %.1f kN/m".format(slab.ribSpacing, loadPerRib))
-        codeNotes.add("Mu = %.1f kN.m, K = %.3f".format(maxMoment, K))
+        codeNotes.add(String.format("Ribs: %.0fmm c/c, Load/rib: %.1f kN/m", slab.ribSpacing, loadPerRib))
+        codeNotes.add(String.format("Mu = %.1f kN.m, K = %.3f", maxMoment, K))
         
         return SlabDesignResult(
             requiredReinforcement = asFinal,
@@ -166,7 +166,7 @@ class ECPAdvancedSlab {
         val K_bal = 0.186
         
         if (K > K_bal) {
-            warnings.add("K=%.3f > K_bal=%.3f".format(K, K_bal))
+            warnings.add(String.format("K=%.3f > K_bal=%.3f", K, K_bal))
         }
         
         val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
@@ -182,7 +182,7 @@ class ECPAdvancedSlab {
         val asProvided = numBars * barArea
         
         codeNotes.add("ECP 203: Waffle Slab (Section 6.4)")
-        codeNotes.add("Mu = %.1f kN.m/rib, K = %.3f".format(maxMoment, K))
+        codeNotes.add(String.format("Mu = %.1f kN.m/rib, K = %.3f", maxMoment, K))
         
         return SlabDesignResult(
             requiredReinforcement = asFinal,
@@ -302,7 +302,7 @@ class ECPAdvancedSlab {
             criticalPerimeter = criticalPerimeter,
             shearHeadsRequired = shearStress > capacity,
             codeReference = "ECP 203-2020: Section 4-3-2 (Punching Shear)",
-            warnings = if (!isSafe) listOf("قص الاختراق %.2f MPa > %.2f MPa - زِد السمك أو أضف رأس عمود".format(shearStress, capacity)) else emptyList()
+            warnings = if (!isSafe) listOf(String.format("قص الاختراق %.2f MPa > %.2f MPa - زِد السمك أو أضف رأس عمود", shearStress, capacity)) else emptyList()
         )
     }
 
@@ -389,7 +389,7 @@ class ECPAdvancedSlab {
         val K_bal = 0.186
 
         if (K > K_bal) {
-            warnings.add("K=%.3f > K_bal=%.3f - زِد سمك البلاطة المسبقة".format(K, K_bal))
+            warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد سمك البلاطة المسبقة", K, K_bal))
         }
 
         // ذراع القوة
@@ -429,11 +429,11 @@ class ECPAdvancedSlab {
         val availableLength = span_m * 1000.0 * 0.8  // 80% من البحر
 
         codeNotes.add("ECP 203-2020: Precast Slab (Section 8)")
-        codeNotes.add("Total: %.0f + %.0f = %.0f mm".format(slab.thickness, slab.toppingThickness, totalThickness))
-        codeNotes.add("Mu = %.1f kN.m, K = %.3f".format(maxMoment, K))
-        codeNotes.add("Ld = %.0f mm, Available = %.0f mm".format(Ld, availableLength))
+        codeNotes.add(String.format("Total: %.0f + %.0f = %.0f mm", slab.thickness, slab.toppingThickness, totalThickness))
+        codeNotes.add(String.format("Mu = %.1f kN.m, K = %.3f", maxMoment, K))
+        codeNotes.add(String.format("Ld = %.0f mm, Available = %.0f mm", Ld, availableLength))
         if (Ld > availableLength) {
-            warnings.add("طول التماسك المطلوب %.0f مم يتجاوز المتاح - استخدم هوك أو تعشيقة".format(Ld))
+            warnings.add(String.format("طول التماسك المطلوب %.0f مم يتجاوز المتاح - استخدم هوك أو تعشيقة", Ld))
         }
 
         return SlabDesignResult(
@@ -479,7 +479,7 @@ class ECPAdvancedSlab {
             shearCapacity = capacity,
             isSafe = Vu <= capacity,
             utilizationRatio = Vu / capacity.coerceAtLeast(0.1),
-            warnings = if (Vu > capacity) listOf("قص الخرسانة %.2f kN/m يتجاوز القدرة %.2f kN/m".format(Vu, capacity)) else emptyList()
+            warnings = if (Vu > capacity) listOf(String.format("قص الخرسانة %.2f kN/m يتجاوز القدرة %.2f kN/m", Vu, capacity)) else emptyList()
         )
     }
 
@@ -544,7 +544,7 @@ class ECPAdvancedSlab {
             allowableDeflection = allowableDeflection,
             ratio = ratio,
             isSafe = ratio <= 1.0,
-            message = "δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=%.1fmm".format(deltaImmediate, deltaLongTerm, allowableDeflection),
+            message = String.format("δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=%.1fmm", deltaImmediate, deltaLongTerm, allowableDeflection),
             recommendation = if (ratio > 1.0) "زِد سماكة البلاطة أو نخفض نسبة التسليح" else "الانحراف مقبول"
         )
     }

@@ -1,9 +1,12 @@
 package com.civileg.app.data.repository
 
+import androidx.lifecycle.asFlow
 import com.civileg.app.data.local.PreferencesManager
 import com.civileg.app.db.ProjectDao
 import com.civileg.app.db.Project
 import com.civileg.app.domain.entities.Project as DomainProject
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.ElementType
 import com.civileg.app.domain.repository.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -14,37 +17,46 @@ class ProjectRepositoryImpl @Inject constructor(
     private val preferencesManager: PreferencesManager
 ) : ProjectRepository {
 
-    // تحويل من Project (DB Entity) إلى DomainProject
     private fun Project.toDomain(): DomainProject = DomainProject(
-        id = id, name = name, location = location ?: "",
-        clientName = clientName ?: "", description = description ?: "",
-        status = status ?: "active", code = code ?: "ECP"
+        id = id.toInt(),
+        name = name,
+        date = createdAt.time,
+        designCode = DesignCode.entries.find { it.name == code } ?: DesignCode.ECP,
+        elementType = ElementType.BEAM,
+        inputs = emptyMap(),
+        results = emptyMap(),
+        notes = "$location - $description"
     )
 
     override fun getAllProjects(): Flow<List<DomainProject>> =
-        projectDao.getAllProjects().map { list -> list.map { it.toDomain() } }
+        projectDao.getAllProjects().asFlow().map { list -> list.map { it.toDomain() } }
 
     override fun getProjectsByType(elementType: String): Flow<List<DomainProject>> =
-        projectDao.getAllProjects().map { list -> list.filter { it.name.contains(elementType, ignoreCase = true) }.map { it.toDomain() } }
+        projectDao.getAllProjects().asFlow().map { list ->
+            list.filter { it.name.contains(elementType, ignoreCase = true) }.map { it.toDomain() }
+        }
 
     override suspend fun getProject(id: Int): DomainProject? =
-        projectDao.getProjectById(id)?.toDomain()
+        projectDao.getProjectById(id.toLong())?.toDomain()
 
     override suspend fun saveProject(project: DomainProject): Long {
         val entity = Project(
-            id = project.id, name = project.name,
-            location = project.location, clientName = project.clientName,
-            description = project.description, status = project.status,
-            code = project.code
+            id = project.id.toLong(), name = project.name,
+            description = project.notes
         )
-        return if (project.id == 0) projectDao.insertProject(entity) else { projectDao.updateProject(entity); project.id.toLong() }
+        return if (project.id == 0) projectDao.insertProject(entity)
+        else { projectDao.updateProject(entity); project.id.toLong() }
     }
 
     override suspend fun deleteProject(project: DomainProject) {
-        projectDao.deleteProject(Project(project.id, project.name, project.location, project.clientName, project.description, project.status, project.code))
+        val entity = Project(id = project.id.toLong(), name = project.name)
+        projectDao.deleteProject(entity)
     }
 
-    override suspend fun deleteProjectById(id: Int) = projectDao.deleteProjectById(id)
+    override suspend fun deleteProjectById(id: Int) {
+        val entity = projectDao.getProjectById(id.toLong()) ?: return
+        projectDao.deleteProject(entity)
+    }
 
     override fun getConcretePrice(): Flow<Double> = preferencesManager.concretePrice
     override fun getSteelPrice(): Flow<Double> = preferencesManager.steelPrice

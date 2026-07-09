@@ -82,8 +82,8 @@ class SBCSteelDesignEngine {
         val Mu: Double,                  // kN.m - العزم المطبق
         val momentRatio: Double,         // نسبة الاستغلال للانحناء
         val shearRatio: Double,          // نسبة الاستغلال للقص
-        deflection: Double,              // mm - الانحراف المحسوب
-        deflectionAllowable: Double,     // mm - الانحراف المسموح
+        val deflection: Double,              // mm - الانحراف المحسوب
+        val deflectionAllowable: Double,     // mm - الانحراف المسموح
         val deflectionRatio: Double,     // نسبة الاستغلال للانحراف
         val ltbCheck: LTBCheckResult?,   // فحص الالتواء البعرضي
         val sectionClassification: SectionClassification,
@@ -259,7 +259,7 @@ class SBCSteelDesignEngine {
         val rx = section.rx             // mm - نصف القطر الدوراني
 
         codeNotes.add("المقطع: ${section.sectionName}")
-        codeNotes.add("Ag=${"%.0f".format(Ag)} mm², Ix=${"%.0f".format(Ix)} mm⁴, Zx=${"%.0f".format(Zx)} mm³, Sx=${"%.0f".format(Sx)} mm³")
+        codeNotes.add("Ag=${String.format("%.0f", Ag)} mm², Ix=${String.format("%.0f", Ix)} mm⁴, Zx=${String.format("%.0f", Zx)} mm³, Sx=${String.format("%.0f", Sx)} mm³")
 
         // 1. تصنيف المقطع حسب SBC 306 Table B4.1 (يتبع AISC 360-16)
         val classification = classifySection(section, grade)
@@ -276,7 +276,7 @@ class SBCSteelDesignEngine {
 
         if (ltbResult != null && ltbResult.isGoverning) {
             Mn_design = min(Mn_design, ltbResult.Mn_lt)
-            codeNotes.add("الالتواء البعرضي حاكم: φMn_lt=${"%.1f".format(ltbResult.phiMn_lt)} kN.m")
+            codeNotes.add("الالتواء البعرضي حاكم: φMn_lt=${String.format("%.1f", ltbResult.phiMn_lt)} kN.m")
         }
 
         // تطبيق معامل التآكل الساحلي (SBC 306 خاص)
@@ -311,33 +311,33 @@ class SBCSteelDesignEngine {
             val bfOver2tf = if (tf > 0) bf / (2 * tf) else Double.MAX_VALUE
             val seismicLimit = 52.0 * sqrt(E_STEEL / grade.fy)
             if (bfOver2tf > seismicLimit) {
-                warnings.add("نسبة الشفة تجاوزت الحد الزلزالي (SBC 301): bf/2tf=${"%.1f".format(bfOver2tf)} > ${"%.1f".format(seismicLimit)}")
+                warnings.add("نسبة الشفة تجاوزت الحد الزلزالي (SBC 301): bf/2tf=${String.format("%.1f", bfOver2tf)} > ${String.format("%.1f", seismicLimit)}")
             } else {
-                codeNotes.add("فحص الزلازل (SBC 301): bf/2tf=${"%.1f".format(bfOver2tf)} ≤ ${"%.1f".format(seismicLimit)} ✓")
+                codeNotes.add("فحص الزلازل (SBC 301): bf/2tf=${String.format("%.1f", bfOver2tf)} ≤ ${String.format("%.1f", seismicLimit)} ✓")
             }
 
             val hOverTw = if (tw > 0) (d - 2 * tf) / tw else Double.MAX_VALUE
             val seismicWebLimit = if (grade.fy <= 345) 1.49 * sqrt(E_STEEL / grade.fy) else 1.12 * sqrt(E_STEEL / grade.fy)
             if (hOverTw > seismicWebLimit) {
-                warnings.add("نسبة الجذع تجاوزت الحد الزلزالي (SBC 301): h/tw=${"%.1f".format(hOverTw)} > ${"%.1f".format(seismicWebLimit)}")
+                warnings.add("نسبة الجذع تجاوزت الحد الزلزالي (SBC 301): h/tw=${String.format("%.1f", hOverTw)} > ${String.format("%.1f", seismicWebLimit)}")
             }
 
             // فحص أقل سماكة في البيئة الساحلية (SBC 306)
             if (isCoastal) {
                 val minThk = min(tw, tf)
                 if (minThk < SBC_MIN_THICKNESS_CORROSIVE) {
-                    warnings.add("أقل سماكة (${"%.1f".format(minThk)} mm) أقل من الحد الأدنى في البيئة المؤكسدة (${"%.0f".format(SBC_MIN_THICKNESS_CORROSIVE)} mm) حسب SBC 306")
+                    warnings.add("أقل سماكة (${String.format("%.1f", minThk)} mm) أقل من الحد الأدنى في البيئة المؤكسدة (${String.format("%.0f", SBC_MIN_THICKNESS_CORROSIVE)} mm) حسب SBC 306")
                 }
             }
         }
 
         // التحذيرات
-        if (momentRatio > 1.0) warnings.add("العزم يتجاوز القدرة - اختر مقطع أكبر (Mu/φMn=${"%.2f".format(momentRatio)})")
-        if (shearRatio > 1.0) warnings.add("القص يتجاوز القدرة - زِد سماكة الجذع (Vu/φVn=${"%.2f".format(shearRatio)})")
-        if (deflectionRatio > 1.0) warnings.add("الانحراف يتجاوز الحد المسموح (δ/δ_allow=${"%.2f".format(deflectionRatio)})")
+        if (momentRatio > 1.0) warnings.add("العزم يتجاوز القدرة - اختر مقطع أكبر (Mu/φMn=${String.format("%.2f", momentRatio)})")
+        if (shearRatio > 1.0) warnings.add("القص يتجاوز القدرة - زِد سماكة الجذع (Vu/φVn=${String.format("%.2f", shearRatio)})")
+        if (deflectionRatio > 1.0) warnings.add("الانحراف يتجاوز الحد المسموح (δ/δ_allow=${String.format("%.2f", deflectionRatio)})")
 
-        codeNotes.add("φMn=${"%.1f".format(phiMn)} kN.m, φVn=${"%.1f".format(phiVn)} kN")
-        codeNotes.add("δ=${"%.2f".format(deflection)} mm, δ_allow=${"%.2f".format(deflectionAllowable)} mm")
+        codeNotes.add("φMn=${String.format("%.1f", phiMn)} kN.m, φVn=${String.format("%.1f", phiVn)} kN")
+        codeNotes.add("δ=${String.format("%.2f", deflection)} mm, δ_allow=${String.format("%.2f", deflectionAllowable)} mm")
         if (isCoastal) codeNotes.add("SBC 306: متطلبات الحماية من التآكل الساحلية مُطبّقة")
         if (isSeismic) codeNotes.add("SBC 301: متطلبات الأداء الزلزالي مُطبّقة")
 
@@ -431,7 +431,7 @@ class SBCSteelDesignEngine {
         }
 
         codeNotes.add("المقطع: ${section.sectionName}")
-        codeNotes.add("Ag=${"%.0f".format(Ag)} mm², rx=${"%.1f".format(rx)} mm, ry=${"%.1f".format(ry)} mm")
+        codeNotes.add("Ag=${String.format("%.0f", Ag)} mm², rx=${String.format("%.1f", rx)} mm, ry=${String.format("%.1f", ry)} mm")
 
         // تصنيف المقطع
         val classification = classifySection(section, grade)
@@ -444,8 +444,8 @@ class SBCSteelDesignEngine {
         val governingAxis = if (klxRx >= kyRy) "X" else "Y"
 
         val isSlender = slendernessRatio > 200.0  // SBC 306 / AISC E2: حد النحافة الأقصى
-        codeNotes.add("نسبة النحافة الحاكمة: λ=${"%.1f".format(slendernessRatio)} (محور $governingAxis)")
-        if (isSlender) warnings.add("عمود نحيف جداً (λ=${"%.0f".format(slendernessRatio)} > 200) - غير مسموح حسب SBC 306 E2")
+        codeNotes.add("نسبة النحافة الحاكمة: λ=${String.format("%.1f", slendernessRatio)} (محور $governingAxis)")
+        if (isSlender) warnings.add("عمود نحيف جداً (λ=${String.format("%.0f", slendernessRatio)} > 200) - غير مسموح حسب SBC 306 E2")
 
         // حساب إجهاد الانبعاج الحرج Fcr (AISC E3)
         val Fe = if (slendernessRatio > 0) PI * PI * E_STEEL / (slendernessRatio * slendernessRatio) else Double.MAX_VALUE
@@ -484,17 +484,17 @@ class SBCSteelDesignEngine {
             // SBC 301 / AISC 341: حد النحافة للعناصر الزلزالية
             val seismicSlendernessLimit = 4.71 * sqrt(E_STEEL / grade.fy)
             if (klR > seismicSlendernessLimit) {
-                warnings.add("نسبة النحافة الزلزالية (SBC 301): λ=${"%.0f".format(klR)} تجاوزت الحد")
+                warnings.add("نسبة النحافة الزلزالية (SBC 301): λ=${String.format("%.0f", klR)} تجاوزت الحد")
             }
         }
 
         val axialRatio = Pu / phiPn.coerceAtLeast(0.001)
         val isSafe = axialRatio <= 1.0
 
-        if (!isSafe) warnings.add("الضغط يتجاوز القدرة - اختر مقطع أكبر (Pu/φPn=${"%.2f".format(axialRatio)})")
+        if (!isSafe) warnings.add("الضغط يتجاوز القدرة - اختر مقطع أكبر (Pu/φPn=${String.format("%.2f", axialRatio)})")
 
-        codeNotes.add("Fcr=${"%.1f".format(Fcr)} MPa, φPn=${"%.1f".format(phiPn)} kN")
-        codeNotes.add("φMnx=${"%.1f".format(phiMn_x)} kN.m, φMny=${"%.1f".format(phiMn_y)} kN.m")
+        codeNotes.add("Fcr=${String.format("%.1f", Fcr)} MPa, φPn=${String.format("%.1f", phiPn)} kN")
+        codeNotes.add("φMnx=${String.format("%.1f", phiMn_x)} kN.m, φMny=${String.format("%.1f", phiMn_y)} kN.m")
         if (isSeismic) codeNotes.add("SBC 301: متطلبات الأداء الزلزالي مُطبّقة")
 
         return SteelCompressionResult(
@@ -570,11 +570,11 @@ class SBCSteelDesignEngine {
         val isSafe = interactionRatio <= 1.0
 
         codeNotes.add("المعادلة المستخدمة: SBC 306 $equation (AISC 360-16 $equation)")
-        codeNotes.add("Pu/φPn = ${"%.3f".format(pr)}, Mux/φMnx = ${"%.3f".format(mrx)}, Muy/φMny = ${"%.3f".format(mry)}")
-        codeNotes.add("نسبة التفاعل = ${"%.3f".format(interactionRatio)}")
+        codeNotes.add("Pu/φPn = ${String.format("%.3f", pr)}, Mux/φMnx = ${String.format("%.3f", mrx)}, Muy/φMny = ${String.format("%.3f", mry)}")
+        codeNotes.add("نسبة التفاعل = ${String.format("%.3f", interactionRatio)}")
 
         if (!isSafe) {
-            warnings.add("معادلة التفاعل تتجاوز 1.0 (${equation}): ${"%.3f".format(interactionRatio)} > 1.0 - زِد المقطع")
+            warnings.add("معادلة التفاعل تتجاوز 1.0 (${equation}): ${String.format("%.3f", interactionRatio)} > 1.0 - زِد المقطع")
         }
         if (isCoastal) {
             codeNotes.add("SBC 306: معامل التآكل الساحلي مُطبّق على القدرات")
@@ -625,7 +625,7 @@ class SBCSteelDesignEngine {
         val calculations = StringBuilder()
 
         codeNotes.add("SBC 306: تصميم الوصلات (Chapter J - يتبع AISC 360-16)")
-        codeNotes.add("درجة الصلب: ${grade.displayName}, سماكة الصفيحة: ${"%.1f".format(plateThickness)} mm")
+        codeNotes.add("درجة الصلب: ${grade.displayName}, سماكة الصفيحة: ${String.format("%.1f", plateThickness)} mm")
 
         var capacity = 0.0
         var isSafe = false
@@ -656,7 +656,7 @@ class SBCSteelDesignEngine {
             is ConnectionType.Pressed -> {
                 capacity = connectionType.pressForce
                 isSafe = connectionType.pressForce >= appliedForce
-                calculations.append("وصلة ضغط: القدرة = ${"%.1f".format(connectionType.pressForce)} kN\n")
+                calculations.append("وصلة ضغط: القدرة = ${String.format("%.1f", connectionType.pressForce)} kN\n")
                 if (!isSafe) warnings.add("قدرة الوصلة أقل من القوة المطبقة")
                 codeNotes.add("SBC 306 / AISC J7: وصلات الضغط")
             }
@@ -671,9 +671,9 @@ class SBCSteelDesignEngine {
                 capacity = boltResult.first + weldResult.first
                 isSafe = capacity >= appliedForce
                 calculations.append("وصلة مركبة (مسامير + لحام):\n")
-                calculations.append("  قدرة المسامير: ${"%.1f".format(boltResult.first)} kN\n")
-                calculations.append("  قدرة اللحام: ${"%.1f".format(weldResult.first)} kN\n")
-                calculations.append("  القدرة الإجمالية: ${"%.1f".format(capacity)} kN\n")
+                calculations.append("  قدرة المسامير: ${String.format("%.1f", boltResult.first)} kN\n")
+                calculations.append("  قدرة اللحام: ${String.format("%.1f", weldResult.first)} kN\n")
+                calculations.append("  القدرة الإجمالية: ${String.format("%.1f", capacity)} kN\n")
                 warnings.addAll(boltResult.fourth)
                 warnings.addAll(weldResult.fourth)
                 codeNotes.add("SBC 306 / AISC J1.7: الوصلات المركبة (لحام + مسامير)")
@@ -745,14 +745,14 @@ class SBCSteelDesignEngine {
         val isSafe = capacity >= appliedForce
 
         calc.append("=== فحص الوصلة المساميرية (SBC 306 / AISC J3) ===\n")
-        calc.append("المسمار: Ø${"%.0f".format(db)} mm × $n, درجة: ${boltGrade.displayName}\n")
-        calc.append("مساحة المسمار: Ab = ${"%.1f".format(Ab)} mm²\n")
-        calc.append("مقاومة القص لكل مسمار: ${"%.1f".format(singleBoltShear)} kN, الإجمالي: ${"%.1f".format(totalBoltShear)} kN\n")
-        calc.append("مقاومة التحمل لكل مسمار: ${"%.1f".format(rnBearing)} kN, الإجمالي: ${"%.1f".format(totalBearing)} kN\n")
-        calc.append("مقاومة الشد لكل مسمار: ${"%.1f".format(singleBoltTension)} kN, الإجمالي: ${"%.1f".format(totalTension)} kN\n")
-        calc.append("مقاومة القص الكتلي (Block Shear): ${"%.1f".format(Rn_bs)} kN\n")
-        calc.append("السعة الحاكمة: ${"%.1f".format(capacity)} kN\n")
-        calc.append("نسبة الاستغلال: ${"%.2f".format(appliedForce / capacity.coerceAtLeast(0.001))}\n")
+        calc.append("المسمار: Ø${String.format("%.0f", db)} mm × $n, درجة: ${boltGrade.displayName}\n")
+        calc.append("مساحة المسمار: Ab = ${String.format("%.1f", Ab)} mm²\n")
+        calc.append("مقاومة القص لكل مسمار: ${String.format("%.1f", singleBoltShear)} kN, الإجمالي: ${String.format("%.1f", totalBoltShear)} kN\n")
+        calc.append("مقاومة التحمل لكل مسمار: ${String.format("%.1f", rnBearing)} kN, الإجمالي: ${String.format("%.1f", totalBearing)} kN\n")
+        calc.append("مقاومة الشد لكل مسمار: ${String.format("%.1f", singleBoltTension)} kN, الإجمالي: ${String.format("%.1f", totalTension)} kN\n")
+        calc.append("مقاومة القص الكتلي (Block Shear): ${String.format("%.1f", Rn_bs)} kN\n")
+        calc.append("السعة الحاكمة: ${String.format("%.1f", capacity)} kN\n")
+        calc.append("نسبة الاستغلال: ${String.format("%.2f", appliedForce / capacity.coerceAtLeast(0.001))}\n")
 
         codeNotes.add("AISC J3.6 / SBC 306: فحص القص للمسمار")
         codeNotes.add("AISC J4.3 / SBC 306: فحص القص الكتلي (Block Shear)")
@@ -763,7 +763,7 @@ class SBCSteelDesignEngine {
             val overstrengthFactor = 1.1  // SBC 301 / AISC 341
             val requiredSeismicCapacity = appliedForce * overstrengthFactor
             if (capacity < requiredSeismicCapacity) {
-                warnings.add("SBC 301: الوصلة الزلزالية تحتاج سعة إضافية (${"%.1f".format(requiredSeismicCapacity)} kN معامل التعزيز)")
+                warnings.add("SBC 301: الوصلة الزلزالية تحتاج سعة إضافية (${String.format("%.1f", requiredSeismicCapacity)} kN معامل التعزيز)")
                 codeNotes.add("SBC 301: فحص التعزيز الزلزالي (Overstrength) مطلوب")
             } else {
                 codeNotes.add("SBC 301: الوصلة تحقق متطلبات التعزيز الزلزالي ✓")
@@ -813,16 +813,16 @@ class SBCSteelDesignEngine {
 
             calc.append("=== فحص الوصلة الملحومة (SBC 306 / AISC J2) ===\n")
             calc.append("نوع اللحام: تفريغي (Fillet Weld)\n")
-            calc.append("حجم اللحام: ${"%.1f".format(weldSize)} mm, الطول: ${"%.0f".format(weldLength)} mm\n")
-            calc.append("القطب: ${electrode.displayName} (Fexx=${"%.0f".format(Fexx)} MPa)\n")
-            calc.append("سُمك الحلق: ${"%.2f".format(throat)} mm, المساحة: ${"%.0f".format(throatArea)} mm²\n")
-            calc.append("مقاومة اللحام: φRn = ${"%.1f".format(phiRn)} kN\n")
-            calc.append("مقاومة القاعدة: φRn = ${"%.1f".format(phiBaseMetal)} kN\n")
-            calc.append("السعة الحاكمة: ${"%.1f".format(capacity)} kN\n")
-            calc.append("نسبة الاستغلال: ${"%.2f".format(appliedForce / capacity.coerceAtLeast(0.001))}\n")
+            calc.append("حجم اللحام: ${String.format("%.1f", weldSize)} mm, الطول: ${String.format("%.0f", weldLength)} mm\n")
+            calc.append("القطب: ${electrode.displayName} (Fexx=${String.format("%.0f", Fexx)} MPa)\n")
+            calc.append("سُمك الحلق: ${String.format("%.2f", throat)} mm, المساحة: ${String.format("%.0f", throatArea)} mm²\n")
+            calc.append("مقاومة اللحام: φRn = ${String.format("%.1f", phiRn)} kN\n")
+            calc.append("مقاومة القاعدة: φRn = ${String.format("%.1f", phiBaseMetal)} kN\n")
+            calc.append("السعة الحاكمة: ${String.format("%.1f", capacity)} kN\n")
+            calc.append("نسبة الاستغلال: ${String.format("%.2f", appliedForce / capacity.coerceAtLeast(0.001))}\n")
 
             codeNotes.add("AISC J2.4 / SBC 306: فحص اللحام التفريغي")
-            codeNotes.add("Fexx = ${"%.0f".format(Fexx)} MPa, φ = $PHI_WELD")
+            codeNotes.add("Fexx = ${String.format("%.0f", Fexx)} MPa, φ = $PHI_WELD")
 
             // فحص أقل حجم اللحام - AISC Table J2.4
             val minWeldSize = when {
@@ -832,20 +832,20 @@ class SBCSteelDesignEngine {
                 else -> 8.0
             }
             if (weldSize < minWeldSize) {
-                warnings.add("حجم اللحام (${"%.1f".format(weldSize)} mm) أقل من الحد الأدنى (${"%.0f".format(minWeldSize)} mm) حسب AISC J2.4 / SBC 306")
+                warnings.add("حجم اللحام (${String.format("%.1f", weldSize)} mm) أقل من الحد الأدنى (${String.format("%.0f", minWeldSize)} mm) حسب AISC J2.4 / SBC 306")
             }
 
             // فحص أقصى حجم اللحام - AISC J2.2
             val maxWeldSize = plateThickness - 2.0
             if (weldSize > maxWeldSize) {
-                warnings.add("حجم اللحام (${"%.1f".format(weldSize)} mm) يتجاوز الحد الأقصى (${"%.1f".format(maxWeldSize)} mm) حسب AISC J2.2 / SBC 306")
+                warnings.add("حجم اللحام (${String.format("%.1f", weldSize)} mm) يتجاوز الحد الأقصى (${String.format("%.1f", maxWeldSize)} mm) حسب AISC J2.2 / SBC 306")
             }
 
             if (isSeismic) {
                 // SBC 301: متطلبات اللحام الزلزالي
                 val minSeismicWeldSize = max(minWeldSize, 6.0)
                 if (weldSize < minSeismicWeldSize) {
-                    warnings.add("SBC 301: اللحام الزلزالي يحتاج حجم أدنى ${"%.0f".format(minSeismicWeldSize)} mm")
+                    warnings.add("SBC 301: اللحام الزلزالي يحتاج حجم أدنى ${String.format("%.0f", minSeismicWeldSize)} mm")
                 }
                 codeNotes.add("SBC 301: متطلبات اللحام الزلزالي مُطبّقة")
             }
@@ -861,8 +861,8 @@ class SBCSteelDesignEngine {
             val isSafe = phiRn >= appliedForce
 
             calc.append("=== فحص اللحام الأخدود (Groove Weld) - SBC 306 / AISC J2 ===\n")
-            calc.append("مساحة اللحام: ${"%.0f".format(weldArea)} mm²\n")
-            calc.append("مقاومة اللحام: φRn = ${"%.1f".format(phiRn)} kN\n")
+            calc.append("مساحة اللحام: ${String.format("%.0f", weldArea)} mm²\n")
+            calc.append("مقاومة اللحام: φRn = ${String.format("%.1f", phiRn)} kN\n")
 
             codeNotes.add("AISC J2 / SBC 306: فحص اللحام الأخدود (Groove Weld)")
 
@@ -899,7 +899,7 @@ class SBCSteelDesignEngine {
         val codeNotes = mutableListOf<String>()
 
         codeNotes.add("SBC 306: تصميم القواعد المعدنية (يتبع AISC Design Guide 1)")
-        codeNotes.add("درجة الصلب: ${grade.displayName}, مقاومة الخرسانة: f'c=${"%.0f".format(fcu)} MPa")
+        codeNotes.add("درجة الصلب: ${grade.displayName}, مقاومة الخرسانة: f'c=${String.format("%.0f", fcu)} MPa")
 
         val d = columnSection.depth    // mm
         val bf = columnSection.width    // mm
@@ -937,12 +937,12 @@ class SBCSteelDesignEngine {
         val sqrtRatio = min(sqrt(A2 / A1.coerceAtLeast(1.0)), 2.0)
         val phiPp = PHI_BEARING_CONCRETE * A1_factor * fcu * A1 * sqrtRatio / 1000.0  // kN
 
-        codeNotes.add("أبعاد القاعدة: B×N = ${"%.0f".format(B)}×${"%.0f".format(N)} mm")
-        codeNotes.add("A1=${"%.0f".format(A1)} mm², √(A2/A1)=${"%.2f".format(sqrtRatio)}")
-        codeNotes.add("قدرة تحمل الخرسانة: φPp=${"%.1f".format(phiPp)} kN")
+        codeNotes.add("أبعاد القاعدة: B×N = ${String.format("%.0f", B)}×${String.format("%.0f", N)} mm")
+        codeNotes.add("A1=${String.format("%.0f", A1)} mm², √(A2/A1)=${String.format("%.2f", sqrtRatio)}")
+        codeNotes.add("قدرة تحمل الخرسانة: φPp=${String.format("%.1f", phiPp)} kN")
 
         if (phiPp < Pu) {
-            warnings.add("قدرة تحمل الخرسانة (${"%.1f".format(phiPp)} kN) أقل من الحمل (${"%.1f".format(Pu)} kN) - زِد أبعاد القاعدة")
+            warnings.add("قدرة تحمل الخرسانة (${String.format("%.1f", phiPp)} kN) أقل من الحمل (${String.format("%.1f", Pu)} kN) - زِد أبعاد القاعدة")
             // محاولة تعديل الأبعاد
             N = ceil(N * sqrt(Pu / phiPp) * 1.1 / 10.0) * 10.0
             B = ceil(B * sqrt(Pu / phiPp) * 1.1 / 10.0) * 10.0
@@ -960,9 +960,9 @@ class SBCSteelDesignEngine {
         // تقريب إلى أقرب قيمة قياسية (أعلى)
         val tp = max(ceil(tp_required / 2.0) * 2.0, MIN_PLATE_THICKNESS)
 
-        codeNotes.add("التبريز: m=${"%.1f".format(m)} mm, n=${"%.1f".format(n)} mm, X=${"%.1f".format(X)} mm")
-        codeNotes.add("الضغط على الخرسانة: fP=${"%.2f".format(fP)} MPa")
-        codeNotes.add("سماكة اللوح المطلوبة: tp=${"%.1f".format(tp_required)} mm → المعتمدة: ${"%.0f".format(tp)} mm")
+        codeNotes.add("التبريز: m=${String.format("%.1f", m)} mm, n=${String.format("%.1f", n)} mm, X=${String.format("%.1f", X)} mm")
+        codeNotes.add("الضغط على الخرسانة: fP=${String.format("%.2f", fP)} MPa")
+        codeNotes.add("سماكة اللوح المطلوبة: tp=${String.format("%.1f", tp_required)} mm → المعتمدة: ${String.format("%.0f", tp)} mm")
 
         // 6. تصميم البراغي الارتكازية
         // عدد البراغي حسب SBC 306 / AISC Design Guide 1
@@ -976,14 +976,14 @@ class SBCSteelDesignEngine {
         }
         val anchorLength = max(anchorDiameter * 12.0, 250.0)  // mm (12 × db أو 250 أيهما أكبر)
 
-        codeNotes.add("البراغي الارتكازية: ${anchorBolts} × Ø${"%.0f".format(anchorDiameter)} mm")
-        codeNotes.add("طول التثبيت: ${"%.0f".format(anchorLength)} mm")
+        codeNotes.add("البراغي الارتكازية: ${anchorBolts} × Ø${String.format("%.0f", anchorDiameter)} mm")
+        codeNotes.add("طول التثبيت: ${String.format("%.0f", anchorLength)} mm")
 
         // 7. فحص السلامة
         val isSafe = phiPp >= Pu && tp >= tp_required
 
         if (tp < SBC_MIN_THICKNESS_CORROSIVE) {
-            warnings.add("سماكة اللوح أقل من الحد الأدنى في البيئات المؤكسدة (${"%.0f".format(SBC_MIN_THICKNESS_CORROSIVE)} mm) حسب SBC 306")
+            warnings.add("سماكة اللوح أقل من الحد الأدنى في البيئات المؤكسدة (${String.format("%.0f", SBC_MIN_THICKNESS_CORROSIVE)} mm) حسب SBC 306")
         }
 
         if (isGrouted) {
@@ -1061,16 +1061,16 @@ class SBCSteelDesignEngine {
             Pn = min(PHI_TENSION * Pn_yield, PHI_TENSION * Pn_rupture)
             phiPn = Pn
 
-            codeNotes.add("عنصر شد: φFyAg=${"%.1f".format(PHI_TENSION * Pn_yield)} kN, φFuAn=${"%.1f".format(PHI_TENSION * Pn_rupture)} kN")
+            codeNotes.add("عنصر شد: φFyAg=${String.format("%.1f", PHI_TENSION * Pn_yield)} kN, φFuAn=${String.format("%.1f", PHI_TENSION * Pn_rupture)} kN")
             codeNotes.add("AISC D2 / SBC 306 D2: فحص الشد")
         } else {
             // === تصميم عنصر الضغط - AISC E3 / SBC 306 E3 ===
             val slendernessRatio = if (r > 0) unbracedLength / r else 0.0
-            codeNotes.add("نسبة النحافة: λ=${"%.1f".format(slendernessRatio)}")
+            codeNotes.add("نسبة النحافة: λ=${String.format("%.1f", slendernessRatio)}")
 
             // حد النحافة الأقصى للكوابرج - SBC 306 / AISC E2
             if (slendernessRatio > 200.0) {
-                warnings.add("نسبة النحافة (${"%.0f".format(slendernessRatio)}) تجاوزت الحد المسموح (200) حسب SBC 306 E2")
+                warnings.add("نسبة النحافة (${String.format("%.0f", slendernessRatio)}) تجاوزت الحد المسموح (200) حسب SBC 306 E2")
             }
 
             // إجهاد الانبعاج الحرج
@@ -1085,7 +1085,7 @@ class SBCSteelDesignEngine {
             Pn = Fcr * Ag / 1000.0  // kN
             phiPn = PHI_COMPRESSION * Pn
 
-            codeNotes.add("Fcr=${"%.1f".format(Fcr)} MPa, φPn=${"%.1f".format(phiPn)} kN")
+            codeNotes.add("Fcr=${String.format("%.1f", Fcr)} MPa, φPn=${String.format("%.1f", phiPn)} kN")
             codeNotes.add("AISC E3 / SBC 306 E3: فحص الضغط")
         }
 
@@ -1101,8 +1101,8 @@ class SBCSteelDesignEngine {
 
         val isSafe = phiPn >= absLoad && connectionCapacity >= absLoad
 
-        if (phiPn < absLoad) warnings.add("قدرة العنصر (${"%.1f".format(phiPn)} kN) أقل من الحمل (${"%.1f".format(absLoad)} kN)")
-        if (connectionCapacity < absLoad) warnings.add("قدرة الوصلة (${"%.1f".format(connectionCapacity)} kN) أقل من الحمل (${"%.1f".format(absLoad)} kN)")
+        if (phiPn < absLoad) warnings.add("قدرة العنصر (${String.format("%.1f", phiPn)} kN) أقل من الحمل (${String.format("%.1f", absLoad)} kN)")
+        if (connectionCapacity < absLoad) warnings.add("قدرة الوصلة (${String.format("%.1f", connectionCapacity)} kN) أقل من الحمل (${String.format("%.1f", absLoad)} kN)")
 
         return SteelBracingResult(
             phiPn = phiPn,
@@ -1420,7 +1420,7 @@ class SBCSteelDesignEngine {
             min(webThickness, flangeThickness)
         }
         if (environment != SBSEnvironment.NORMAL && minThickness < SBC_MIN_THICKNESS_CORROSIVE) {
-            notes.add("تحذير SBC 306: أقل سماكة (${"%.1f".format(minThickness)} mm) أقل من الحد الأدنى المطلوب (${"%.0f".format(SBC_MIN_THICKNESS_CORROSIVE)} mm) في بيئة ${environment.displayNameAr}")
+            notes.add("تحذير SBC 306: أقل سماكة (${String.format("%.1f", minThickness)} mm) أقل من الحد الأدنى المطلوب (${String.format("%.0f", SBC_MIN_THICKNESS_CORROSIVE)} mm) في بيئة ${environment.displayNameAr}")
         }
 
         if (isAdequate) {

@@ -69,9 +69,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    
+
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    // Optimize for devices with 6GB RAM
+    dexOptions {
+        preDexLibraries = true
+        javaMaxHeapSize = "2g"
     }
 }
 

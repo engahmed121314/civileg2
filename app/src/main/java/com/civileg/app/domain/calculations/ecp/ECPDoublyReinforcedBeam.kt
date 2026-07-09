@@ -228,7 +228,7 @@ class ECPDoublyReinforcedBeam {
         // Check d - d' for effective compression steel action
         val leverArmExcess = d - dPrime
         if (leverArmExcess < 40.0) {
-            warnings.add("d - d' = ${"%.0f".format(leverArmExcess)} mm is small; increase section depth or reduce cover")
+            warnings.add("d - d' = ${String.format("%.0f", leverArmExcess)} mm is small; increase section depth or reduce cover")
         }
 
         // Balanced moment capacity (moment resisted by concrete alone at balance)
@@ -302,13 +302,13 @@ class ECPDoublyReinforcedBeam {
         if (tensionBarDia > 0) {
             val laTension = 0.5 * fy * tensionBarDia / fbd.coerceAtLeast(0.1)
             if (laTension > d * 0.8) {
-                warnings.add("Tension development length L_a = ${"%.0f".format(laTension)} mm may be excessive")
+                warnings.add("Tension development length L_a = ${String.format("%.0f", laTension)} mm may be excessive")
             }
         }
         if (compBarDia > 0 && asCompressionValue > 0) {
             val laComp = 0.5 * fy * compBarDia / fbd.coerceAtLeast(0.1)
             if (laComp > d * 0.6) {
-                warnings.add("Compression development length L_a = ${"%.0f".format(laComp)} mm - verify anchorage")
+                warnings.add("Compression development length L_a = ${String.format("%.0f", laComp)} mm - verify anchorage")
             }
         }
 
@@ -319,7 +319,7 @@ class ECPDoublyReinforcedBeam {
             b - 2 * cover
         }
         if (clearSpacing < 25 || (tensCount > 1 && clearSpacing < tensionBarDia)) {
-            warnings.add("Bar spacing ${"%.0f".format(clearSpacing)} mm is tight - consider two layers or larger bars")
+            warnings.add("Bar spacing ${String.format("%.0f", clearSpacing)} mm is tight - consider two layers or larger bars")
         }
 
         val isSafe = utilizationRatio <= 1.0 && asTotal <= asMaxValue && leverArmExcess >= 40.0

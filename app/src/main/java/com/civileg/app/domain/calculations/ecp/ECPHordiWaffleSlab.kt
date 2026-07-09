@@ -138,8 +138,8 @@ class ECPHordiSlabDesign {
         val wu = (deadLoad + liveLoad) * loadFactor  // kN/m² (factored)
         val wRib = wu * ribSpacing / 1000.0           // kN/m per rib
 
-        codeNotes.add("معامل التحميل: ${"%.2f".format(loadFactor)} | الحمل التصميمي: ${"%.1f".format(wu)} ك.ن/م²")
-        codeNotes.add("الحمل على الكمرتة: ${"%.2f".format(wRib)} ك.ن/م")
+        codeNotes.add("معامل التحميل: ${String.format("%.2f", loadFactor)} | الحمل التصميمي: ${String.format("%.1f", wu)} ك.ن/م²")
+        codeNotes.add("الحمل على الكمرتة: ${String.format("%.2f", wRib)} ك.ن/م")
 
         // ── 4. Moment calculation using coefficients per ECP 203 ──
 
@@ -154,8 +154,8 @@ class ECPHordiSlabDesign {
         val MuPos = momentCoefficients.positive * wRib * spanM * spanM   // kN.m per rib (mid-span)
         val MuNeg = momentCoefficients.negative * wRib * spanM * spanM   // kN.m per rib (support)
 
-        codeNotes.add("عزم الموجب: ${"%.2f".format(MuPos)} ك.ن.م/كمرتة | عزم السالب: ${"%.2f".format(MuNeg)} ك.ن.م/كمرتة")
-        codeNotes.add("معامل العزم الموجب: ${"%.3f".format(momentCoefficients.positive)} | معامل العزم السالب: ${"%.3f".format(momentCoefficients.negative)}")
+        codeNotes.add("عزم الموجب: ${String.format("%.2f", MuPos)} ك.ن.م/كمرتة | عزم السالب: ${String.format("%.2f", MuNeg)} ك.ن.م/كمرتة")
+        codeNotes.add("معامل العزم الموجب: ${String.format("%.3f", momentCoefficients.positive)} | معامل العزم السالب: ${String.format("%.3f", momentCoefficients.negative)}")
 
         // ── 5. Rib flexure design (K-method per ECP 203) ──
 
@@ -238,11 +238,11 @@ class ECPHordiSlabDesign {
         val isShearSafe = Vu <= Vc
 
         if (!isShearSafe) {
-            warnings.add("قص الكمرتة يتجاوز قدرة الخرسانة! Vu=${"%.1f".format(Vu)} ك.ن > Vc=${"%.1f".format(Vc)} ك.ن")
+            warnings.add("قص الكمرتة يتجاوز قدرة الخرسانة! Vu=${String.format("%.1f", Vu)} ك.ن > Vc=${String.format("%.1f", Vc)} ك.ن")
             warnings.add("يجب زيادة عرض الكمرتة أو السماكة الكلية")
         }
 
-        codeNotes.add("قص الخرسانة: qcu = ${"%.2f".format(qcu)} ميجاباسكال | Vc = ${"%.1f".format(Vc)} ك.ن")
+        codeNotes.add("قص الخرسانة: qcu = ${String.format("%.2f", qcu)} ميجاباسكال | Vc = ${String.format("%.1f", Vc)} ك.ن")
 
         val ribShearCheck = ShearCheckResult(
             appliedShear = Vu,
@@ -309,7 +309,7 @@ class ECPHordiSlabDesign {
         } else 0.0
 
         if (K > K_bal) {
-            warnings.add("K = ${"%.3f".format(K)} > K_bal = ${"%.3f".format(K_bal)} - المقطع مفرط التسليح (${sectionLabel})")
+            warnings.add("K = ${String.format("%.3f", K)} > K_bal = ${String.format("%.3f", K_bal)} - المقطع مفرط التسليح (${sectionLabel})")
         }
 
         // z = d × (0.5 + √(0.25 - K/1.25))
@@ -360,7 +360,7 @@ class ECPHordiSlabDesign {
 
         val isSafe = K <= K_bal && astProvided >= astRequired
 
-        codeNotes.add("${sectionLabel}: As_req = ${"%.0f".format(astRequired)} مم² | As_prov = ${"%.0f".format(astProvided)} مم² (${numberOfBars}Ø${selectedDiameter.toInt()})")
+        codeNotes.add("${sectionLabel}: As_req = ${String.format("%.0f", astRequired)} مم² | As_prov = ${String.format("%.0f", astProvided)} مم² (${numberOfBars}Ø${selectedDiameter.toInt()})")
 
         return ReinforcementResult(
             astRequired = astRequired,
@@ -434,7 +434,7 @@ class ECPHordiSlabDesign {
         val utilizationRatio = if (astProvided > 0) minAs / astProvided else 2.0
 
         codeNotes.add("تسليح التوبينج: شبك ملحومة Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()} مم (${barsPerMeter}Ø${selectedDia.toInt()}/م')")
-        codeNotes.add("As_min = ${"%.0f".format(minAs)} مم²/م | As_prov = ${"%.0f".format(astProvided)} مم²/م")
+        codeNotes.add("As_min = ${String.format("%.0f", minAs)} مم²/م | As_prov = ${String.format("%.0f", astProvided)} مم²/م")
 
         return ReinforcementResult(
             astRequired = minAs,
@@ -477,10 +477,10 @@ class ECPHordiSlabDesign {
         val calculatedRatio = clearSpan / totalThickness
 
         if (!isSafe) {
-            warnings.add("نسبة البحر للسمك = ${"%.1f".format(calculatedRatio)} تتجاوز الحد المسموح (${ratio.toInt()}) - زِد السماكة الكلية")
+            warnings.add("نسبة البحر للسمك = ${String.format("%.1f", calculatedRatio)} تتجاوز الحد المسموح (${ratio.toInt()}) - زِد السماكة الكلية")
         }
 
-        codeNotes.add("التحقق من الانحراف: L/h = ${"%.1f".format(calculatedRatio)} (الحد: ${ratio.toInt()}) | السماكة المطلوبة: ${"%.0f".format(minThickness)} مم")
+        codeNotes.add("التحقق من الانحراف: L/h = ${String.format("%.1f", calculatedRatio)} (الحد: ${ratio.toInt()}) | السماكة المطلوبة: ${String.format("%.0f", minThickness)} مم")
 
         val allowableDeflection = clearSpan / 250.0 // mm (serviceability limit)
 
@@ -492,7 +492,7 @@ class ECPHordiSlabDesign {
             ratio = calculatedRatio / ratio,
             isSafe = isSafe,
             message = if (isSafe) "التحقق من الانحراف مطابق" else "نسبة البحر/السمك تتجاوز الحد المسموح",
-            recommendation = if (!isSafe) "زِد السماكة الكلية إلى ${"%.0f".format(ceil(minThickness / 10) * 10)} مم على الأقل" else "",
+            recommendation = if (!isSafe) "زِد السماكة الكلية إلى ${String.format("%.0f", ceil(minThickness / 10) * 10)} مم على الأقل" else "",
             warnings = if (!isSafe) listOf("نسبة البحر/السمك تتجاوز الحد المسموح حسب ECP 203 البند 6-3") else emptyList()
         )
     }
@@ -685,11 +685,11 @@ class ECPWaffleSlabDesign {
         }
 
         codeNotes.add("ECP 203-2020: البند 6-4 (البلاطة المجنحة)")
-        codeNotes.add("أبعاد اللوحة: ${"%.1f".format(panelWidthM)} × ${"%.1f".format(panelLengthM)} م")
+        codeNotes.add("أبعاد اللوحة: ${String.format("%.1f", panelWidthM)} × ${String.format("%.1f", panelLengthM)} م")
         codeNotes.add("تباعد الكمرات: ${ribSpacing.toInt()} مم | عرض الكمرتة: ${ribWidth.toInt()} مم | عمق الكمرتة: ${ribDepth.toInt()} مم")
         codeNotes.add("سمك التوبينج: ${toppingThickness.toInt()} مم | السماكة الكلية: ${totalThickness.toInt()} مم")
         if (hasDropPanels) {
-            codeNotes.add("حجم الرأس الصلب: ${"%.0f".format(solidHeadSize)} × ${"%.0f".format(solidHeadSize)} مم")
+            codeNotes.add("حجم الرأس الصلب: ${String.format("%.0f", solidHeadSize)} × ${String.format("%.0f", solidHeadSize)} مم")
         }
 
         // ── 2. Two-way analysis ──
@@ -697,7 +697,7 @@ class ECPWaffleSlabDesign {
         val loadFactor = loadCombination.getFactorForCode(DesignCode.ECP)
         val wu = (deadLoad + liveLoad) * loadFactor // kN/m² (factored)
 
-        codeNotes.add("معامل التحميل: ${"%.2f".format(loadFactor)} | الحمل التصميمي: ${"%.1f".format(wu)} ك.ن/م²")
+        codeNotes.add("معامل التحميل: ${String.format("%.2f", loadFactor)} | الحمل التصميمي: ${String.format("%.1f", wu)} ك.ن/م²")
 
         // Aspect ratio for load distribution
         val aspectRatio = panelLength / panelWidth.coerceAtLeast(1.0)
@@ -713,7 +713,7 @@ class ECPWaffleSlabDesign {
         }
         val longDirCoeff = 1.0 - shortDirCoeff
 
-        codeNotes.add("نسبة الأبعاد: ${"%.2f".format(aspectRatio)} | معامل التوزيع القصير: ${"%.2f".format(shortDirCoeff)} | الطويل: ${"%.2f".format(longDirCoeff)}")
+        codeNotes.add("نسبة الأبعاد: ${String.format("%.2f", aspectRatio)} | معامل التوزيع القصير: ${String.format("%.2f", shortDirCoeff)} | الطويل: ${String.format("%.2f", longDirCoeff)}")
 
         // Support condition analysis
         val edgeA = supportConditions.edgeA
@@ -973,7 +973,7 @@ class ECPWaffleSlabDesign {
         val K = if (fcu > 0 && b > 0 && d > 0) MuNmm / (fcu * b * d * d) else 0.0
 
         if (K > K_bal) {
-            warnings.add("K = ${"%.3f".format(K)} > K_bal = ${"%.3f".format(K_bal)} - الرأس الصلب يحتاج زيادة سماكة (${sectionLabel})")
+            warnings.add("K = ${String.format("%.3f", K)} > K_bal = ${String.format("%.3f", K_bal)} - الرأس الصلب يحتاج زيادة سماكة (${sectionLabel})")
         }
 
         val discriminant = 0.25 - K / 1.25
@@ -1020,7 +1020,7 @@ class ECPWaffleSlabDesign {
         val barsPerMeter = (1000.0 / selectedSpacing).toInt()
         val utilizationRatio = if (astProvided > 0) astRequired / astProvided else 2.0
 
-        codeNotes.add("${sectionLabel}: As_req = ${"%.0f".format(astRequired)} مم²/م | As_prov = ${"%.0f".format(astProvided)} مم²/م (Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()})")
+        codeNotes.add("${sectionLabel}: As_req = ${String.format("%.0f", astRequired)} مم²/م | As_prov = ${String.format("%.0f", astProvided)} مم²/م (Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()})")
 
         return ReinforcementResult(
             astRequired = astRequired,
@@ -1055,7 +1055,7 @@ class ECPWaffleSlabDesign {
         val K = if (fcu > 0 && bw > 0 && d > 0) MuNmm / (fcu * bw * d * d) else 0.0
 
         if (K > K_bal) {
-            warnings.add("K = ${"%.3f".format(K)} > K_bal = ${"%.3f".format(K_bal)} - كمرتة ($directionLabel) مفرطة التسليح")
+            warnings.add("K = ${String.format("%.3f", K)} > K_bal = ${String.format("%.3f", K_bal)} - كمرتة ($directionLabel) مفرطة التسليح")
         }
 
         val discriminant = 0.25 - K / 1.25
@@ -1102,7 +1102,7 @@ class ECPWaffleSlabDesign {
             astRequired / astProvided
         } else 2.0
 
-        codeNotes.add("كمرتة $directionLabel: As_req = ${"%.0f".format(astRequired)} مم² | As_prov = ${"%.0f".format(astProvided)} مم² (${numberOfBars}Ø${selectedDia.toInt()})")
+        codeNotes.add("كمرتة $directionLabel: As_req = ${String.format("%.0f", astRequired)} مم² | As_prov = ${String.format("%.0f", astProvided)} مم² (${numberOfBars}Ø${selectedDia.toInt()})")
 
         return ReinforcementResult(
             astRequired = astRequired,
@@ -1193,7 +1193,7 @@ class ECPWaffleSlabDesign {
         val utilizationRatio = if (astProvided > 0) minAs / astProvided else 2.0
 
         codeNotes.add("تسليح التوبينج: شبك ملحومة Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()} مم (${barsPerMeter}Ø${selectedDia.toInt()}/م')")
-        codeNotes.add("As_min = ${"%.0f".format(minAs)} مم²/م | As_prov = ${"%.0f".format(astProvided)} مم²/م")
+        codeNotes.add("As_min = ${String.format("%.0f", minAs)} مم²/م | As_prov = ${String.format("%.0f", astProvided)} مم²/م")
 
         return ReinforcementResult(
             astRequired = minAs,
@@ -1261,16 +1261,16 @@ class ECPWaffleSlabDesign {
 
         if (!isSafe) {
             if (!hasDropPanels) {
-                warnings.add("قص الثقب يتجاوز قدرة الخرسانة! qp = ${"%.2f".format(qp)} > qp_cap = ${"%.2f".format(effectiveQpCapacity)} ميجاباسكال")
+                warnings.add("قص الثقب يتجاوز قدرة الخرسانة! qp = ${String.format("%.2f", qp)} > qp_cap = ${String.format("%.2f", effectiveQpCapacity)} ميجاباسكال")
                 warnings.add("يجب إضافة رأس صلب (drop panel) أو كانت تسليح القص (shear studs)")
             } else {
-                warnings.add("قص الثقب يتجاوز قدرة الخرسانة حتى مع الرأس الصلب! qp = ${"%.2f".format(qp)} ميجاباسكال")
+                warnings.add("قص الثقب يتجاوز قدرة الخرسانة حتى مع الرأس الصلب! qp = ${String.format("%.2f", qp)} ميجاباسكال")
                 warnings.add("يجب زيادة حجم الرأس الصلب أو استخدام كانت تسليح القص")
             }
         }
 
-        codeNotes.add("قص الثقب: Vu = ${"%.1f".format(Vu)} ك.ن | bo = ${"%.0f".format(bo)} مم")
-        codeNotes.add("qp = ${"%.2f".format(qp)} ميجاباسكال | qp_cap = ${"%.2f".format(effectiveQpCapacity)} ميجاباسكال")
+        codeNotes.add("قص الثقب: Vu = ${String.format("%.1f", Vu)} ك.ن | bo = ${String.format("%.0f", bo)} مم")
+        codeNotes.add("qp = ${String.format("%.2f", qp)} ميجاباسكال | qp_cap = ${String.format("%.2f", effectiveQpCapacity)} ميجاباسكال")
         codeNotes.add("ECP 203 البند 4-3-2: qp_cap = 0.316 × √(fcu/γc)")
 
         return ShearCheckResult(
@@ -1308,12 +1308,12 @@ class ECPWaffleSlabDesign {
         val calculatedRatio = shortSpan / totalThickness
 
         if (!isSafe) {
-            warnings.add("نسبة البحر للسمك = ${"%.1f".format(calculatedRatio)} تتجاوز الحد المسموح (${ratio.toInt()})")
-            warnings.add("زِد السماكة الكلية للبلاطة المجنحة إلى ${"%.0f".format(ceil(minThickness / 10) * 10)} مم على الأقل")
+            warnings.add("نسبة البحر للسمك = ${String.format("%.1f", calculatedRatio)} تتجاوز الحد المسموح (${ratio.toInt()})")
+            warnings.add("زِد السماكة الكلية للبلاطة المجنحة إلى ${String.format("%.0f", ceil(minThickness / 10) * 10)} مم على الأقل")
         }
 
-        codeNotes.add("التحقق من الانحراف: L/h = ${"%.1f".format(calculatedRatio)} (الحد: ${ratio.toInt()})")
-        codeNotes.add("السماكة المطلوبة: ${"%.0f".format(minThickness)} مم | المقدمة: ${totalThickness.toInt()} مم")
+        codeNotes.add("التحقق من الانحراف: L/h = ${String.format("%.1f", calculatedRatio)} (الحد: ${ratio.toInt()})")
+        codeNotes.add("السماكة المطلوبة: ${String.format("%.0f", minThickness)} مم | المقدمة: ${totalThickness.toInt()} مم")
 
         return DeflectionCheckResult(
             immediateDeflection = 0.0,

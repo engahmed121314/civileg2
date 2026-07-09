@@ -436,18 +436,18 @@ fun DrawScope.drawForceDiagram(
 
     // Build path
     val path = Path()
-    values.forEachIndexed { i, (xr, val) ->
+    values.forEachIndexed { i, (xr, v) ->
         val px = spanStart + xr * spanW
-        val py = if (positiveUp) baselineY - val * scale else baselineY + val * scale
+        val py = if (positiveUp) baselineY - v * scale else baselineY + v * scale
         if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
     }
 
     // Fill
     val fillPath = Path().apply {
         moveTo(spanStart, baselineY)
-        values.forEach { (xr, val) ->
+        values.forEach { (xr, v) ->
             val px = spanStart + xr * spanW
-            val py = if (positiveUp) baselineY - val * scale else baselineY + val * scale
+            val py = if (positiveUp) baselineY - v * scale else baselineY + v * scale
             lineTo(px, py)
         }
         lineTo(spanEnd, baselineY)

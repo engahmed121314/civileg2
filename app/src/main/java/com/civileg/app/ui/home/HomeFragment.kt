@@ -79,44 +79,41 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupGridItems() {
+        val bundle = Bundle().apply { putLong("projectId", -1L) }
+
         // Slab
         binding.cardSlab.ivIcon.setImageResource(R.drawable.ic_slab)
         binding.cardSlab.tvTitle.text = getString(R.string.slab_design)
-        binding.cardSlab.root.setOnClickListener { 
-            val action = HomeFragmentDirections.actionHomeToSlab(projectId = -1L)
-            findNavController().navigate(action)
+        binding.cardSlab.root.setOnClickListener {
+            findNavController().navigate(R.id.nav_slab, bundle)
         }
 
         // Beam
         binding.cardBeam.ivIcon.setImageResource(R.drawable.ic_beam)
         binding.cardBeam.tvTitle.text = getString(R.string.beam_design)
-        binding.cardBeam.root.setOnClickListener { 
-            val action = HomeFragmentDirections.actionHomeToBeam(projectId = -1L)
-            findNavController().navigate(action)
+        binding.cardBeam.root.setOnClickListener {
+            findNavController().navigate(R.id.nav_beam, bundle)
         }
 
         // Column
         binding.cardColumn.ivIcon.setImageResource(R.drawable.ic_column)
         binding.cardColumn.tvTitle.text = getString(R.string.column_design)
-        binding.cardColumn.root.setOnClickListener { 
-            val action = HomeFragmentDirections.actionHomeToColumn(projectId = -1L)
-            findNavController().navigate(action)
+        binding.cardColumn.root.setOnClickListener {
+            findNavController().navigate(R.id.nav_column, bundle)
         }
 
         // Footing
         binding.cardFooting.ivIcon.setImageResource(R.drawable.ic_footing)
         binding.cardFooting.tvTitle.text = getString(R.string.footing_design)
-        binding.cardFooting.root.setOnClickListener { 
-            val action = HomeFragmentDirections.actionHomeToFooting(projectId = -1L)
-            findNavController().navigate(action)
+        binding.cardFooting.root.setOnClickListener {
+            findNavController().navigate(R.id.nav_footing, bundle)
         }
 
         // Stairs
         binding.cardStairs.ivIcon.setImageResource(R.drawable.ic_stairs)
         binding.cardStairs.tvTitle.text = getString(R.string.stairs_design)
-        binding.cardStairs.root.setOnClickListener { 
-            val action = HomeFragmentDirections.actionHomeToStairs(projectId = -1L)
-            findNavController().navigate(action)
+        binding.cardStairs.root.setOnClickListener {
+            findNavController().navigate(R.id.nav_stairs, bundle)
         }
 
         // More
@@ -148,11 +145,12 @@ class HomeFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.nav_more))
             .setItems(options) { _, which ->
+                val bundle = Bundle().apply { putLong("projectId", -1L) }
                 when (which) {
-                    0 -> findNavController().navigate(HomeFragmentDirections.actionHomeToRetaining(projectId = -1L))
-                    1 -> findNavController().navigate(HomeFragmentDirections.actionHomeToWatertank(projectId = -1L))
+                    0 -> findNavController().navigate(R.id.nav_retaining, bundle)
+                    1 -> findNavController().navigate(R.id.nav_watertank, bundle)
                     2 -> findNavController().navigate(R.id.action_home_to_pile)
-                    3 -> findNavController().navigate(HomeFragmentDirections.actionHomeToSeismic(projectId = -1L))
+                    3 -> findNavController().navigate(R.id.nav_seismic, bundle)
                     4 -> findNavController().navigate(R.id.action_home_to_projects)
                     5 -> findNavController().navigate(R.id.action_home_to_calculator)
                 }

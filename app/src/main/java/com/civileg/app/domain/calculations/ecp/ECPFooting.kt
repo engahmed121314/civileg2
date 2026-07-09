@@ -101,7 +101,7 @@ class ECPFooting : FootingDesign {
         )
 
         if (q_max > soilBearingCapacity) {
-            warnings.add("ضغط التربة الأقصى %.1f kPa يتجاوز قدرة التربة %.1f kPa".format(q_max, soilBearingCapacity))
+            warnings.add(String.format("ضغط التربة الأقصى %.1f kPa يتجاوز قدرة التربة %.1f kPa", q_max, soilBearingCapacity))
         }
         if (q_min < 0) {
             warnings.add("انفصال القاعدة عن التربة - زِد الأبعاد")
@@ -158,16 +158,16 @@ class ECPFooting : FootingDesign {
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
         codeNotes.add("ECP 203-2020: Isolated Footing Design")
-        codeNotes.add("B=%.0fxL=%.0f mm, d=%.0f mm".format(B, L, d))
-        codeNotes.add("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa".format(q_avg, q_max, q_min))
-        codeNotes.add("Mu_x=%.1f, Mu_y=%.1f kN.m".format(Mu_x, Mu_y))
-        codeNotes.add("Main: %s".format(mainReinf.barString))
+        codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
+        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
+        codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
+        codeNotes.add(String.format("Main: %s", mainReinf.barString))
         if (distBarsPerMeter > 0) {
-            codeNotes.add("Distribution: %d dia %d @ %dmm".format(
+            codeNotes.add(String.format("Distribution: %d dia %d @ %dmm", 
                 distBarsPerMeter, distBar.toInt(), distSpacing.toInt()
             ))
         }
-        codeNotes.add("One-way shear capacity: %.2f MPa".format(qcu))
+        codeNotes.add(String.format("One-way shear capacity: %.2f MPa", qcu))
 
         return FootingDesignResult(
             requiredWidth = B,
@@ -211,7 +211,7 @@ class ECPFooting : FootingDesign {
 
         val warnings = mutableListOf<String>()
         if (!isSafe) {
-            warnings.add("قص الاختراق %.2f MPa > %.2f MPa - زِد سمك القاعدة".format(qp_applied, qp_capacity))
+            warnings.add(String.format("قص الاختراق %.2f MPa > %.2f MPa - زِد سمك القاعدة", qp_applied, qp_capacity))
         }
 
         return ShearCheckResult(
@@ -250,7 +250,7 @@ class ECPFooting : FootingDesign {
         val K_bal = 0.186
 
         if (K > K_bal) {
-            warnings.add("K=%.3f > K_bal=%.3f - زِد العمق الفعال".format(K, K_bal))
+            warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد العمق الفعال", K, K_bal))
         }
 
         // 2. حساب z (ذراع القوة)
@@ -280,11 +280,11 @@ class ECPFooting : FootingDesign {
         // 7. نسبة التسليح
         val rho = asProvided / (b * d)
         if (rho > 0.04) {
-            warnings.add("نسبة التسليح %.1f%% تتجاوز الحد الأقصى".format(rho * 100))
+            warnings.add(String.format("نسبة التسليح %.1f%% تتجاوز الحد الأقصى", rho * 100))
         }
 
         val utilization = asRequired / asProvided
-        codeNotes.add("%s: %d dia %d @ %dmm".format(
+        codeNotes.add(String.format("%s: %d dia %d @ %dmm", 
             direction.name, actualBars, barDiameter.toInt(), finalSpacing.toInt()
         ))
 
@@ -388,10 +388,10 @@ class ECPFooting : FootingDesign {
         val punching2 = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad2, loadCombination)
 
         codeNotes.add("ECP 203: Combined Footing Design")
-        codeNotes.add("Resultant from Col-1: %.0f mm".format(xR * 1000))
-        codeNotes.add("Length=%.0f mm, Width=%.0f mm".format(length, width))
-        codeNotes.add("Bottom: %s".format(reinfBottom.barString))
-        codeNotes.add("Top: %s".format(reinfTop.barString))
+        codeNotes.add(String.format("Resultant from Col-1: %.0f mm", xR * 1000))
+        codeNotes.add(String.format("Length=%.0f mm, Width=%.0f mm", length, width))
+        codeNotes.add(String.format("Bottom: %s", reinfBottom.barString))
+        codeNotes.add(String.format("Top: %s", reinfTop.barString))
 
         return FootingDesignResult(
             requiredWidth = width,
@@ -472,11 +472,11 @@ class ECPFooting : FootingDesign {
         )
 
         codeNotes.add("ECP 203: Raft Foundation (Rigid Method)")
-        codeNotes.add("Average pressure: %.1f kPa".format(q_avg))
-        codeNotes.add("Bot X: %s, Y: %s".format(reinfBotX.barString, reinfBotY.barString))
-        codeNotes.add("Top X: %s, Y: %s".format(reinfTopX.barString, reinfTopY.barString))
-        codeNotes.add("M+ = qL2/10 = %.1f kN.m/m".format(Mu_pos))
-        codeNotes.add("M- = qL2/12 = %.1f kN.m/m".format(Mu_neg))
+        codeNotes.add(String.format("Average pressure: %.1f kPa", q_avg))
+        codeNotes.add(String.format("Bot X: %s, Y: %s", reinfBotX.barString, reinfBotY.barString))
+        codeNotes.add(String.format("Top X: %s, Y: %s", reinfTopX.barString, reinfTopY.barString))
+        codeNotes.add(String.format("M+ = qL2/10 = %.1f kN.m/m", Mu_pos))
+        codeNotes.add(String.format("M- = qL2/12 = %.1f kN.m/m", Mu_neg))
 
         val reinf = if (reinfBotX.astRequired >= reinfBotY.astRequired) reinfBotX else reinfBotY
 
@@ -568,11 +568,11 @@ class ECPFooting : FootingDesign {
         }
 
         codeNotes.add("ECP 203: Pile Cap (Truss Analogy)")
-        codeNotes.add("Layout: %s (%d piles)".format(pileLayout.name, numberOfPiles))
-        codeNotes.add("Spacing: %.0f mm (3x pile dia)".format(spacing))
-        codeNotes.add("Strut angle: %.1f deg (min 40)".format(strutAngle))
-        codeNotes.add("Load/pile: %.0f kN".format(loadPerPile))
-        codeNotes.add("Bottom: %s".format(reinf.barString))
+        codeNotes.add(String.format("Layout: %s (%d piles)", pileLayout.name, numberOfPiles))
+        codeNotes.add(String.format("Spacing: %.0f mm (3x pile dia)", spacing))
+        codeNotes.add(String.format("Strut angle: %.1f deg (min 40)", strutAngle))
+        codeNotes.add(String.format("Load/pile: %.0f kN", loadPerPile))
+        codeNotes.add(String.format("Bottom: %s", reinf.barString))
 
         return FootingDesignResult(
             requiredWidth = capW,

@@ -75,7 +75,7 @@ class SBCFooting : FootingDesign {
         )
         
         if (q_max > soilBearingCapacity) {
-            warnings.add("SBC: q_max=%.1f kPa > SBC=%.1f kPa".format(q_max, soilBearingCapacity))
+            warnings.add(String.format("SBC: q_max=%.1f kPa > SBC=%.1f kPa", q_max, soilBearingCapacity))
         }
         if (q_min < 0) {
             warnings.add("SBC: Footing separation - increase dimensions")
@@ -133,17 +133,17 @@ class SBCFooting : FootingDesign {
         }
 
         codeNotes.add("SBC 304-2018: Isolated Footing Design (ACI 318 based)")
-        codeNotes.add("B=%.0fxL=%.0f mm, d=%.0f mm".format(roundedWidth, roundedLength, d))
-        codeNotes.add("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa".format(q_avg, q_max, q_min))
-        codeNotes.add("Mu_x=%.1f, Mu_y=%.1f kN.m".format(Mu_x, Mu_y))
-        codeNotes.add("Short dir: %s".format(reinfX.barString))
-        codeNotes.add("Long dir: %s".format(reinfY.barString))
+        codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", roundedWidth, roundedLength, d))
+        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
+        codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
+        codeNotes.add(String.format("Short dir: %s", reinfX.barString))
+        codeNotes.add(String.format("Long dir: %s", reinfY.barString))
         if (distBarsPerMeter > 0) {
-            codeNotes.add("Distribution: %d Ø%d @ %dmm".format(
+            codeNotes.add(String.format("Distribution: %d Ø%d @ %dmm", 
                 distBarsPerMeter, distBarDia.toInt(), distSpacing.toInt()
             ))
         }
-        codeNotes.add("One-way shear capacity: %.2f MPa".format(vc_oneWay))
+        codeNotes.add(String.format("One-way shear capacity: %.2f MPa", vc_oneWay))
 
         return FootingDesignResult(
             requiredWidth = roundedWidth,
@@ -186,7 +186,7 @@ class SBCFooting : FootingDesign {
             isSafe = isSafe,
             utilizationRatio = if (phi * vc > 0) vp_applied / (phi * vc) else 2.0,
             criticalPerimeter = b0,
-            warnings = if (!isSafe) listOf("SBC: قص الاختراق %.2f > %.2f MPa - زِد السمك".format(vp_applied, phi * vc)) else emptyList()
+            warnings = if (!isSafe) listOf(String.format("SBC: قص الاختراق %.2f > %.2f MPa - زِد السمك", vp_applied, phi * vc)) else emptyList()
         )
     }
 
@@ -211,7 +211,7 @@ class SBCFooting : FootingDesign {
         val K_bal = rho_bal * fy * (1.0 - 0.5 * rho_bal * fy / (0.85 * fc))
         
         if (K > K_bal) {
-            warnings.add("SBC: K=%.3f > K_bal=%.3f - increase depth".format(K, K_bal))
+            warnings.add(String.format("SBC: K=%.3f > K_bal=%.3f - increase depth", K, K_bal))
         }
         
         // ذراع القوة (ACI approach): z = d × (0.5 + √(0.25 - K/1.25))
@@ -244,7 +244,7 @@ class SBCFooting : FootingDesign {
         val asProvided = actualBars * barArea
         
         val utilization = asRequired / asProvided
-        codeNotes.add("SBC 304/ACI 318: %dØ%d @ %dmm".format(actualBars, barDiameter.toInt(), finalSpacing.toInt()))
+        codeNotes.add(String.format("SBC 304/ACI 318: %dØ%d @ %dmm", actualBars, barDiameter.toInt(), finalSpacing.toInt()))
         
         return ReinforcementResult(
             astRequired = asRequired,
@@ -404,12 +404,12 @@ class SBCFooting : FootingDesign {
         // فحص زاوية الخرسانة المضغوطة
         val strutAngle = atan2(d, projection * 1000.0) * 180.0 / PI
         if (strutAngle < 40.0) {
-            warnings.add("SBC: Strut angle %.1f° < 40° - increase thickness".format(strutAngle))
+            warnings.add(String.format("SBC: Strut angle %.1f° < 40° - increase thickness", strutAngle))
         }
         
         codeNotes.add("SBC 304: Pile Cap (Strut-and-Tie Model)")
-        codeNotes.add("Layout: %dx%d piles, Spacing: %.0fmm".format(rows, cols, spacing))
-        codeNotes.add("Strut angle: %.1f°, Load/pile: %.0f kN".format(strutAngle, loadPerPile))
+        codeNotes.add(String.format("Layout: %dx%d piles, Spacing: %.0fmm", rows, cols, spacing))
+        codeNotes.add(String.format("Strut angle: %.1f°, Load/pile: %.0f kN", strutAngle, loadPerPile))
         
         return FootingDesignResult(
             requiredWidth = capW,

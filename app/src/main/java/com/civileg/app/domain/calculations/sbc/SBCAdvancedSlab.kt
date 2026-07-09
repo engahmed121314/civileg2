@@ -127,11 +127,11 @@ class SBCAdvancedSlab {
 
         // SBC material conversion
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
-        codeNotes.add("fcu=%.0f MPa → fc'=%.1f MPa (SBC: 0.67×fcu/γc, γc=1.5)".format(fcu, fcPrime))
+        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC: 0.67×fcu/γc, γc=1.5)", fcu, fcPrime))
 
         val cover = exposure.cover
         val effectiveDepth = slabThickness - cover - 8.0  // cover + bar radius (estimated)
-        codeNotes.add("Cover=%.0f mm (%s), d=%.0f mm".format(cover, exposure.displayNameEn, effectiveDepth))
+        codeNotes.add(String.format("Cover=%.0f mm (%s), d=%.0f mm", cover, exposure.displayNameEn, effectiveDepth))
 
         // Panel geometry in meters
         val lx = min(panelLength, panelWidth) / 1000.0
@@ -139,11 +139,11 @@ class SBCAdvancedSlab {
         val c = columnSize / 1000.0  // column size in m
         val ratio = ly / lx
 
-        codeNotes.add("Panel: %.1f × %.1f m, ly/lx=%.2f".format(ly, lx, ratio))
+        codeNotes.add(String.format("Panel: %.1f × %.1f m, ly/lx=%.2f", ly, lx, ratio))
 
         // SBC 304 Table 8.10.2.2 — Total static moment: Mo = wu * lx² * ly / 8
         val totalStaticMoment = totalLoad * lx * lx * ly / 8.0  // kN.m
-        codeNotes.add("Mo = wu×lx²×ly/8 = %.1f kN.m".format(totalStaticMoment))
+        codeNotes.add(String.format("Mo = wu×lx²×ly/8 = %.1f kN.m", totalStaticMoment))
 
         // Column strip width = lx/2 on each side, but not exceeding ly/4
         val columnStripWidth = min(lx / 2.0, ly / 4.0)
@@ -163,8 +163,8 @@ class SBCAdvancedSlab {
         val midNegMoment = totalStaticMoment * middleStripNegFactor
         val midPosMoment = totalStaticMoment * middleStripPosFactor
 
-        codeNotes.add("Column strip: M-=%.1f kN.m, M+=%.1f kN.m".format(colNegMoment, colPosMoment))
-        codeNotes.add("Middle strip: M-=%.1f kN.m, M+=%.1f kN.m".format(midNegMoment, midPosMoment))
+        codeNotes.add(String.format("Column strip: M-=%.1f kN.m, M+=%.1f kN.m", colNegMoment, colPosMoment))
+        codeNotes.add(String.format("Middle strip: M-=%.1f kN.m, M+=%.1f kN.m", midNegMoment, midPosMoment))
 
         // Design column strip (controls) — use the larger moment (negative)
         val colDesignMoment = max(colNegMoment, colPosMoment)  // kN.m
@@ -237,9 +237,9 @@ class SBCAdvancedSlab {
                     (384.0 * 25000.0 * 1000.0 * (slabThickness / 12.0).pow(3) * 1000.0) * HOT_CLIMATE_DEFLECTION_FACTOR,
             allowableDeflection = lx * 1000.0 / 360.0,
             isSafe = slabThickness >= minThicknessSBC,
-            message = "SBC 304 Table 8.3.1.1: min h = %.0f mm".format(minThicknessSBC),
+            message = String.format("SBC 304 Table 8.3.1.1: min h = %.0f mm", minThicknessSBC),
             recommendation = if (slabThickness < minThicknessSBC)
-                "Increase thickness to %.0f mm per SBC 304 Table 8.3.1.1".format(minThicknessSBC)
+                String.format("Increase thickness to %.0f mm per SBC 304 Table 8.3.1.1", minThicknessSBC)
             else "Thickness OK per SBC 304"
         )
 
@@ -325,7 +325,7 @@ class SBCAdvancedSlab {
         codeNotes.add("Reference: SBC 304 §8.10, §8.6")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
-        codeNotes.add("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)".format(fcu, fcPrime))
+        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)", fcu, fcPrime))
 
         // SBC 304: Drop panel must extend at least 1/6 span each direction
         val lx = min(panelLength, panelWidth) / 1000.0
@@ -402,7 +402,7 @@ class SBCAdvancedSlab {
             calculatedDeflection = 0.0,
             allowableDeflection = lx * 1000.0 / 360.0,
             isSafe = slabThickness >= minThicknessSBC,
-            message = "Min h = %.0f mm per SBC 304 Table 8.3.1.1".format(minThicknessSBC),
+            message = String.format("Min h = %.0f mm per SBC 304 Table 8.3.1.1", minThicknessSBC),
             recommendation = "Drop panel improves deflection significantly"
         )
 
@@ -485,20 +485,20 @@ class SBCAdvancedSlab {
         codeNotes.add("Reference: SBC 304 §8.12")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
-        codeNotes.add("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)".format(fcu, fcPrime))
+        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)", fcu, fcPrime))
 
         // SBC 304 §8.12: Validate rib dimensions
         if (ribWidth < RIB_MIN_WIDTH) {
-            warnings.add("SBC 304 §8.12.1: Rib width %.0f mm < minimum %.0f mm".format(ribWidth, RIB_MIN_WIDTH))
+            warnings.add(String.format("SBC 304 §8.12.1: Rib width %.0f mm < minimum %.0f mm", ribWidth, RIB_MIN_WIDTH))
         }
         if (ribSpacing > RIB_MAX_SPACING) {
-            warnings.add("SBC 304 §8.12.1: Rib spacing %.0f mm > maximum %.0f mm".format(ribSpacing, RIB_MAX_SPACING))
+            warnings.add(String.format("SBC 304 §8.12.1: Rib spacing %.0f mm > maximum %.0f mm", ribSpacing, RIB_MAX_SPACING))
         }
 
         val ribDepth = totalThickness - blockHeight
         val clearRibDepth = totalThickness - TOPPING_MIN_THICKNESS
         if (ribDepth > 3.5 * ribWidth) {
-            warnings.add("SBC 304 §8.12.2: Rib depth/h (%.1f) > 3.5 — design as beam".format(ribDepth / ribWidth))
+            warnings.add(String.format("SBC 304 §8.12.2: Rib depth/h (%.1f) > 3.5 — design as beam", ribDepth / ribWidth))
         }
 
         val toppingThickness = totalThickness - blockHeight
@@ -507,8 +507,8 @@ class SBCAdvancedSlab {
                 .format(toppingThickness, TOPPING_MIN_THICKNESS))
         }
 
-        codeNotes.add("Rib: %.0f×%.0f mm, spacing: %.0f mm c/c".format(ribWidth, ribDepth, ribSpacing))
-        codeNotes.add("Topping: %.0f mm, Block: %.0f×%.0f mm".format(toppingThickness, blockWidth, blockHeight))
+        codeNotes.add(String.format("Rib: %.0f×%.0f mm, spacing: %.0f mm c/c", ribWidth, ribDepth, ribSpacing))
+        codeNotes.add(String.format("Topping: %.0f mm, Block: %.0f×%.0f mm", toppingThickness, blockWidth, blockHeight))
 
         // Effective depth for rib (main reinforcement)
         val cover = exposure.cover
@@ -537,7 +537,7 @@ class SBCAdvancedSlab {
         }
         val Mu = momentCoeff * loadPerMeter * spanM * spanM  // kN.m per rib
 
-        codeNotes.add("Mu = %.1f kN.m per rib (w=%.1f kN/m, L=%.1f m)".format(Mu, loadPerMeter, spanM))
+        codeNotes.add(String.format("Mu = %.1f kN.m per rib (w=%.1f kN/m, L=%.1f m)", Mu, loadPerMeter, spanM))
 
         // Flexure design for rib (treated as T-beam)
         val bw = ribWidth  // mm
@@ -562,12 +562,12 @@ class SBCAdvancedSlab {
             asRequired = asFlange + asWeb
         }
 
-        codeNotes.add("NA in %s: As_req = %.0f mm² per rib".format(
+        codeNotes.add(String.format("NA in %s: As_req = %.0f mm² per rib", 
             if (isInFlange) "flange" else "web", asRequired))
 
         // Select bar per rib using Saudi diameters
         val barSelection = selectSaudiBar(asRequired, maxSpacing = 200.0, minSpacing = 75.0)
-        codeNotes.add("Rib reinforcement: %d×Φ%.0f mm".format(barSelection.first, barSelection.second))
+        codeNotes.add(String.format("Rib reinforcement: %d×Φ%.0f mm", barSelection.first, barSelection.second))
 
         // Minimum reinforcement per rib (SBC 304-8.12)
         val ribConcreteArea = ribWidth * ribDepth
@@ -604,7 +604,7 @@ class SBCAdvancedSlab {
             message = "SBC min thickness (hot climate factor ×%.2f): %.0f mm"
                 .format(HOT_CLIMATE_DEFLECTION_FACTOR, minThicknessSBC),
             recommendation = if (totalThickness < minThicknessSBC)
-                "Increase total thickness to ≥ %.0f mm".format(minThicknessSBC)
+                String.format("Increase total thickness to ≥ %.0f mm", minThicknessSBC)
             else "Hordi slab thickness adequate"
         )
 
@@ -693,7 +693,7 @@ class SBCAdvancedSlab {
         codeNotes.add("Reference: SBC 304 §8.12 (two-way extension)")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
-        codeNotes.add("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)".format(fcu, fcPrime))
+        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)", fcu, fcPrime))
 
         val lx = shortSpan / 1000.0
         val ly = longSpan / 1000.0
@@ -702,23 +702,23 @@ class SBCAdvancedSlab {
 
         // Validate SBC requirements
         if (ribWidth < RIB_MIN_WIDTH) {
-            warnings.add("SBC 304 §8.12.1: Rib width < %.0f mm minimum".format(RIB_MIN_WIDTH))
+            warnings.add(String.format("SBC 304 §8.12.1: Rib width < %.0f mm minimum", RIB_MIN_WIDTH))
         }
         if (ribSpacing > RIB_MAX_SPACING) {
-            warnings.add("SBC 304 §8.12.1: Rib spacing > %.0f mm maximum".format(RIB_MAX_SPACING))
+            warnings.add(String.format("SBC 304 §8.12.1: Rib spacing > %.0f mm maximum", RIB_MAX_SPACING))
         }
         if (toppingThickness < TOPPING_MIN_THICKNESS) {
-            warnings.add("SBC 304 §8.12.1: Topping < %.0f mm minimum".format(TOPPING_MIN_THICKNESS))
+            warnings.add(String.format("SBC 304 §8.12.1: Topping < %.0f mm minimum", TOPPING_MIN_THICKNESS))
         }
 
         // Solid head must extend at least 1/6 span from column face
         val minHeadSize = max(lx, ly) / 6.0 * 1000.0
         if (solidHeadSize < minHeadSize) {
-            warnings.add("SBC 304 §8.12: Solid head ≥ L/6 = %.0f mm recommended".format(minHeadSize))
+            warnings.add(String.format("SBC 304 §8.12: Solid head ≥ L/6 = %.0f mm recommended", minHeadSize))
         }
 
-        codeNotes.add("Ribs: %.0f×%.0f mm @ %.0f mm c/c (both ways)".format(ribWidth, ribDepth, ribSpacing))
-        codeNotes.add("Topping: %.0f mm, Solid head: %.0f×%.0f mm".format(toppingThickness, solidHeadSize, solidHeadSize))
+        codeNotes.add(String.format("Ribs: %.0f×%.0f mm @ %.0f mm c/c (both ways)", ribWidth, ribDepth, ribSpacing))
+        codeNotes.add(String.format("Topping: %.0f mm, Solid head: %.0f×%.0f mm", toppingThickness, solidHeadSize, solidHeadSize))
 
         // Effective depth
         val cover = exposure.cover
@@ -754,9 +754,9 @@ class SBCAdvancedSlab {
         val shortBar = selectSaudiBar(asShort, 200.0, 75.0)
         val longBar = selectSaudiBar(asLong, 200.0, 75.0)
 
-        codeNotes.add("Short dir ribs: %d×Φ%.0f mm (As=%.0f mm²)".format(
+        codeNotes.add(String.format("Short dir ribs: %d×Φ%.0f mm (As=%.0f mm²)", 
             shortBar.first, shortBar.second, shortBar.first * PI * shortBar.second * shortBar.second / 4.0))
-        codeNotes.add("Long dir ribs: %d×Φ%.0f mm (As=%.0f mm²)".format(
+        codeNotes.add(String.format("Long dir ribs: %d×Φ%.0f mm (As=%.0f mm²)", 
             longBar.first, longBar.second, longBar.first * PI * longBar.second * longBar.second / 4.0))
 
         // Minimum reinforcement per rib
@@ -793,7 +793,7 @@ class SBCAdvancedSlab {
             calculatedDeflection = 0.0,
             allowableDeflection = lx * 1000.0 / 250.0,
             isSafe = totalThickness >= minThicknessSBC,
-            message = "SBC min (with hot climate ×%.2f): %.0f mm".format(
+            message = String.format("SBC min (with hot climate ×%.2f): %.0f mm", 
                 HOT_CLIMATE_DEFLECTION_FACTOR, minThicknessSBC)
         )
 
@@ -874,7 +874,7 @@ class SBCAdvancedSlab {
         codeNotes.add("Reference: SBC 304 §8, Table 8.3.1.1")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
-        codeNotes.add("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)".format(fcu, fcPrime))
+        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC conversion)", fcu, fcPrime))
 
         val cover = exposure.cover
         // For cantilever: top bars are main reinforcement
@@ -882,7 +882,7 @@ class SBCAdvancedSlab {
         val effectiveDepthBottom = slabThickness - cover - 14.0  // bottom bars smaller
 
         val spanM = cantileverSpan / 1000.0
-        codeNotes.add("Cantilever span: %.2f m, h = %.0f mm".format(spanM, slabThickness))
+        codeNotes.add(String.format("Cantilever span: %.2f m, h = %.0f mm", spanM, slabThickness))
 
         // SBC minimum thickness for cantilever: L/8
         val minThicknessSBC = cantileverSpan / 8.0
@@ -901,7 +901,7 @@ class SBCAdvancedSlab {
         // Moment at mid-span for deflection: w × (L/2)² / 2
         val MuMid = effectiveLoad * (spanM / 2.0).pow(2) / 2.0
 
-        codeNotes.add("M- (support) = %.1f kN.m/m, M+ (mid) = %.1f kN.m/m".format(MuSupport, MuMid))
+        codeNotes.add(String.format("M- (support) = %.1f kN.m/m, M+ (mid) = %.1f kN.m/m", MuSupport, MuMid))
 
         // Design top reinforcement (at support — negative moment)
         val topResult = designFlexureSection(
@@ -944,7 +944,7 @@ class SBCAdvancedSlab {
             calculatedDeflection = longTermDeflection,
             allowableDeflection = allowableDeflection,
             isSafe = longTermDeflection <= allowableDeflection,
-            message = "Hot climate factor ×%.2f applied to long-term deflection".format(
+            message = String.format("Hot climate factor ×%.2f applied to long-term deflection", 
                 HOT_CLIMATE_DEFLECTION_FACTOR),
             recommendation = if (longTermDeflection > allowableDeflection)
                 "Increase thickness or add top reinforcement"
@@ -1045,7 +1045,7 @@ class SBCAdvancedSlab {
         val warnings = designResult.warnings.toMutableList()
         val codeNotes = designResult.codeNotes.toMutableList()
         codeNotes.add("SBC 304 §21: Seismic Provisions Applied")
-        codeNotes.add("Seismic Zone: %s".format(seismicZone))
+        codeNotes.add(String.format("Seismic Zone: %s", seismicZone))
 
         val zoneFactor = when (seismicZone.uppercase()) {
             "A" -> SEISMIC_ZONE_A_FACTOR
@@ -1053,7 +1053,7 @@ class SBCAdvancedSlab {
             "C" -> SEISMIC_ZONE_C_FACTOR
             "D" -> SEISMIC_ZONE_D_FACTOR
             else -> {
-                warnings.add("SBC 304 §21: Unknown seismic zone '%s' — defaulting to Zone A".format(seismicZone))
+                warnings.add(String.format("SBC 304 §21: Unknown seismic zone '%s' — defaulting to Zone A", seismicZone))
                 SEISMIC_ZONE_A_FACTOR
             }
         }
@@ -1200,7 +1200,7 @@ class SBCAdvancedSlab {
         val rho = if (discriminant > 0) {
             (0.85 * fcPrime / fy) * (1.0 - sqrt(discriminant))
         } else {
-            warnings.add("%s: Compression failure — increase depth or strength".format(codeRef))
+            warnings.add(String.format("%s: Compression failure — increase depth or strength", codeRef))
             0.025
         }
 
@@ -1404,7 +1404,7 @@ class SBCAdvancedSlab {
             calculatedWidth = crackWidth,
             allowableWidth = allowable,
             isSafe = isSafe,
-            codeReference = "SBC 304 §8.7 (with hot climate factor ×%.2f)".format(HOT_CLIMATE_CRACK_WIDTH_FACTOR)
+            codeReference = String.format("SBC 304 §8.7 (with hot climate factor ×%.2f)", HOT_CLIMATE_CRACK_WIDTH_FACTOR)
         )
     }
 

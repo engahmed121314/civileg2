@@ -169,8 +169,8 @@ object ConcreteFrameDesign {
         asRequired: Double,
         b: Double, d: Double, fcu: Double, fy: Double,
         code: DesignCode, warnings: MutableList<String>
-    ): Tuple4<Double, Int, Int, Double, Double> {
-        if (asRequired <= 0) return Tuple4(0.0, 0, 0, 0.0, 0.0)
+    ): FiveValues<Double, Int, Int, Double, Double> {
+        if (asRequired <= 0) return FiveValues(0.0, 0, 0, 0.0, 0.0)
 
         // Try bars from 12mm to 25mm
         val barDias = listOf(12.0, 16.0, 18.0, 20.0, 22.0, 25.0)
@@ -213,7 +213,7 @@ object ConcreteFrameDesign {
         val asMax = 0.04 * b * d
         if (asBot > asMax) warnings.add("مساحة التسليح تتجاوز الحد الأقصى (${asMax.toInt()} mm²)")
 
-        return Tuple4(selectedDia, numTop, numBot, asTop, asBot)
+        return FiveValues(selectedDia, numTop, numBot, asTop, asBot)
     }
 
     /**
@@ -273,5 +273,5 @@ object ConcreteFrameDesign {
     }
 }
 
-/** Helper data class for returning multiple values */
-private data class Tuple4<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
+/** Helper data class for returning 5 values */
+private data class FiveValues<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)

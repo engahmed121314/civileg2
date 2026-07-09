@@ -193,12 +193,13 @@ class SteelConnectionDesign {
 
         // ===================== معامل قوة الشد المسبق للمسمار (kN) =====================
         // حسب AISC 360 الجدول J3.1 - قوة الشد المسبق Tb
-        private fun getBoltPretension(boltGrade: BoltGrade, boltDiameter: Double): Double {
-            // Tb = 0.70 * Fu * Ab (لكل مسمار)
-            val ab = getBoltThreadedArea(boltDiameter)
-            val tb = 0.70 * boltGrade.fu * ab / 1000.0 // التحويل إلى كيلونيوتن
-            return tb
-        }
+        // Note: getBoltPretension moved to member function to access getBoltThreadedArea
+    }
+
+    /** معامل قوة الشد المسبق للمسمار (kN) — حسب AISC 360 الجدول J3.1 */
+    private fun getBoltPretension(boltGrade: BoltGrade, boltDiameter: Double): Double {
+        val ab = getBoltThreadedArea(boltDiameter)
+        return 0.70 * boltGrade.fu * ab / 1000.0
     }
 
     // ===================== وظائف مساعدة =====================
@@ -753,7 +754,7 @@ class SteelConnectionDesign {
                 )
                 isSafe = combinedSafe
                 utilizationRatio = interactionRatio
-                controllingCapacity = min(shearCapacity, tensionCapacity, bearingCapacity)
+                controllingCapacity = minOf(shearCapacity, tensionCapacity, bearingCapacity)
                 codeNotes.add("📌 AISC 360-J3.7: معادلة التفاعل = (Vu/φVn)² + (Tu/φTn)² = $interactionRatio ≤ 1.0")
 
                 // تعديل مقاومة الشد عند وجود قص مشترك - AISC J3.7
@@ -795,7 +796,7 @@ class SteelConnectionDesign {
                 blockShearResult = bsResult
 
                 if (!bsResult.isSafe) {
-                    warnings.add("⚠️ فحص القص الكتلي غير مُطابق - نسبة الاستخدام = ${"%.2f".format(blockShearUtilization)} > 1.0 (AISC J4.3)")
+                    warnings.add("⚠️ فحص القص الكتلي غير مُطابق - نسبة الاستخدام = ${String.format("%.2f", blockShearUtilization)} > 1.0 (AISC J4.3)")
                 }
             }
 
@@ -818,11 +819,11 @@ class SteelConnectionDesign {
         // ===================== تحذيرات نهائية =====================
 
         if (!isSafe) {
-            warnings.add("⚠️ الوصلة المساميرية غير آمنة - نسبة الاستخدام = ${"%.2f".format(utilizationRatio)} > 1.0")
+            warnings.add("⚠️ الوصلة المساميرية غير آمنة - نسبة الاستخدام = ${String.format("%.2f", utilizationRatio)} > 1.0")
         }
 
         if (utilizationRatio > 0.9 && utilizationRatio <= 1.0) {
-            warnings.add("⚡ نسبة الاستخدام عالية (${"%.2f".format(utilizationRatio)}) - يُنصح بزيادة عدد المسامير أو قطرها")
+            warnings.add("⚡ نسبة الاستخدام عالية (${String.format("%.2f", utilizationRatio)}) - يُنصح بزيادة عدد المسامير أو قطرها")
         }
 
         return BoltDesignResult(
@@ -977,7 +978,7 @@ class SteelConnectionDesign {
         }
 
         if (isLongWeld) {
-            codeNotes.add("📌 AISC 360-J2.2b: معامل تخفيض اللحام الطويل = ${"%.3f".format(lengthReductionFactor)}")
+            codeNotes.add("📌 AISC 360-J2.2b: معامل تخفيض اللحام الطويل = ${String.format("%.3f", lengthReductionFactor)}")
         }
 
         // حساب المقاومة - AISC J2.4 / ECP 205-6.3
@@ -996,7 +997,7 @@ class SteelConnectionDesign {
         val fw = 0.60 * electrodeType.tensileStrength
         val throat = 0.707 * weldSize
         codeNotes.add("📌 AISC 360-J2.4: إجهاد اللحام Fw = 0.60 × FEXX = 0.60 × ${electrodeType.tensileStrength.toInt()} = ${fw.toInt()} MPa")
-        codeNotes.add("📌 AISC 360-J2.2a: الحلق الفعال = 0.707 × ${weldSize.toInt()} = ${"%.2f".format(throat)} مم")
+        codeNotes.add("📌 AISC 360-J2.2a: الحلق الفعال = 0.707 × ${weldSize.toInt()} = ${String.format("%.2f", throat)} مم")
         codeNotes.add("📌 AISC 360-J2.4: مقاومة اللحام = φ × Fw × Aw = 0.75 × ${fw.toInt()} × ${throatArea.toInt()} = ${(capacity * 1000).toInt()} N")
 
         // ===================== فحص الأمان =====================
@@ -1010,11 +1011,11 @@ class SteelConnectionDesign {
         }
 
         if (!isSafe) {
-            warnings.add("⚠️ اللحام غير آمن - نسبة الاستخدام = ${"%.2f".format(utilizationRatio)} > 1.0")
+            warnings.add("⚠️ اللحام غير آمن - نسبة الاستخدام = ${String.format("%.2f", utilizationRatio)} > 1.0")
         }
 
         if (utilizationRatio > 0.9 && utilizationRatio <= 1.0) {
-            warnings.add("⚡ نسبة الاستخدام عالية (${"%.2f".format(utilizationRatio)}) - يُنصح بزيادة حجم اللحام أو طوله")
+            warnings.add("⚡ نسبة الاستخدام عالية (${String.format("%.2f", utilizationRatio)}) - يُنصح بزيادة حجم اللحام أو طوله")
         }
 
         // ===================== التحقق من الطول الأدنى =====================
@@ -1239,9 +1240,9 @@ class SteelConnectionDesign {
                 results["isSafe"] = isSafe
                 results["bearingStress"] = bearingStress
                 results["message"] = if (isSafe) {
-                    "✅ وصلة الضغط آمنة - إجهاد التحمل = ${"%.1f".format(bearingStress)} MPa ≤ Fy = $fyPlate MPa"
+                    "✅ وصلة الضغط آمنة - إجهاد التحمل = ${String.format("%.1f", bearingStress)} MPa ≤ Fy = $fyPlate MPa"
                 } else {
-                    "❌ وصلة الضغط غير آمنة - إجهاد التحمل = ${"%.1f".format(bearingStress)} MPa > Fy = $fyPlate MPa"
+                    "❌ وصلة الضغط غير آمنة - إجهاد التحمل = ${String.format("%.1f", bearingStress)} MPa > Fy = $fyPlate MPa"
                 }
             }
         }

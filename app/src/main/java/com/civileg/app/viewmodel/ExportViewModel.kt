@@ -57,7 +57,8 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                _exportState.value = ExportState.Success(file)
+                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
+                _exportState.value = ExportState.Success(resultFile)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -114,7 +115,8 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                _exportState.value = ExportState.Success(file)
+                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
+                _exportState.value = ExportState.Success(resultFile)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -151,7 +153,8 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                _exportState.value = ExportState.Success(file)
+                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
+                _exportState.value = ExportState.Success(resultFile)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -180,10 +183,10 @@ class ExportViewModel @Inject constructor(
                 
                 val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateSteelDrawing(
                     sectionName = sectionType.displayName,
-                    sectionHeight = sectionType.h,
-                    flangeWidth = sectionType.bf,
-                    webThickness = sectionType.tw,
-                    flangeThickness = sectionType.tf,
+                    sectionHeight = sectionType.depth,
+                    flangeWidth = sectionType.width,
+                    webThickness = sectionType.webThickness,
+                    flangeThickness = sectionType.flangeThickness,
                     memberLength = inputs.length,
                     isSafe = result.isSafe,
                     utilizationRatio = result.utilizationRatio * 100
@@ -201,7 +204,8 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                _exportState.value = ExportState.Success(file)
+                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
+                _exportState.value = ExportState.Success(resultFile)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -217,15 +221,15 @@ class ExportViewModel @Inject constructor(
                 is ColumnType.Rectangular -> PdfDrawingGenerator.generateColumnDrawing(
                     columnWidth = columnType.width, columnDepth = columnType.depth,
                     columnHeight = 3000.0,
-                    numBars = result.reinforcementResult.numBars,
-                    barDia = result.reinforcementResult.diameter.toDouble(),
+                    numBars = result.reinforcementResult.numberOfBars,
+                    barDia = result.reinforcementResult.barDiameter,
                     tieDia = 8.0, tieSpacing = 200.0, cover = 40.0
                 )
                 is ColumnType.Circular -> PdfDrawingGenerator.generateColumnDrawing(
                     columnWidth = columnType.diameter, columnDepth = columnType.diameter,
                     columnHeight = 3000.0,
-                    numBars = result.reinforcementResult.numBars,
-                    barDia = result.reinforcementResult.diameter.toDouble(),
+                    numBars = result.reinforcementResult.numberOfBars,
+                    barDia = result.reinforcementResult.barDiameter,
                     tieDia = 8.0, tieSpacing = 200.0, cover = 40.0
                 )
                 else -> null

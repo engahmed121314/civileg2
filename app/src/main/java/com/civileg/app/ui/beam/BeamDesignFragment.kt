@@ -10,7 +10,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.navArgs
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentBeamDesignBinding
 import com.civileg.app.domain.entities.*
@@ -36,7 +35,7 @@ class BeamDesignFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ProjectViewModel by viewModels()
-    private val args: BeamDesignFragmentArgs by navArgs()
+    private var projectId: Long = -1L
 
     private lateinit var spanAdapter: SpanAdapter
     private val spans = mutableListOf<ContinuousBeamAnalysis.Span>()
@@ -63,6 +62,7 @@ class BeamDesignFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        projectId = arguments?.getLong("projectId", -1L) ?: -1L
 
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             projectsList = projects
@@ -288,7 +288,7 @@ class BeamDesignFragment : Fragment() {
     private fun exportToPdf(result: CalculatorEngine.BeamResult) {
         try {
             val exporter = ComprehensivePdfExporter(requireContext())
-            val projectName = projectsList.firstOrNull { it.id == args.projectId }?.name ?: "Unnamed Project"
+            val projectName = projectsList.firstOrNull { it.id == projectId }?.name ?: "Unnamed Project"
             val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
             val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
             

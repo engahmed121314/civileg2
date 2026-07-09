@@ -202,9 +202,9 @@ class SBCTank : TankDesign {
             rhoActual >= MIN_RHO_ENV, "SBC 304: Min ρ = 0.20% for environmental"
         ))
 
-        codeNotes.add("SBC 304-2018: f'c=%.1f MPa (0.67×fcu/γc)".format(fcPrime))
-        codeNotes.add("Vertical: %dØ%d @ %dmm".format(barsPerMeter, barDiameter.toInt(), spacing.toInt()))
-        codeNotes.add("Horizontal: %dØ%d @ %dmm".format(hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))
+        codeNotes.add(String.format("SBC 304-2018: f'c=%.1f MPa (0.67×fcu/γc)", fcPrime))
+        codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))
+        codeNotes.add(String.format("Horizontal: %dØ%d @ %dmm", hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))
 
         return ReinforcementResult(
             astRequired = asRequired,
@@ -218,7 +218,7 @@ class SBCTank : TankDesign {
             spacing = spacing,
             warnings = warnings,
             codeNotes = codeNotes,
-            description = "V: %dØ%d@%dmm, H: %dØ%d@%dmm".format(
+            description = String.format("V: %dØ%d@%dmm, H: %dØ%d@%dmm", 
                 barsPerMeter, barDiameter.toInt(), spacing.toInt(),
                 hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()
             )
@@ -272,8 +272,8 @@ class SBCTank : TankDesign {
         ))
 
         codeNotes.add("SBC 304-2018: Circular Tank - Hoop Tension")
-        codeNotes.add("Hoop: %dØ%d @ %dmm".format(hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt()))
-        codeNotes.add("Vertical: %dØ%d @ %dmm".format(vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()))
+        codeNotes.add(String.format("Hoop: %dØ%d @ %dmm", hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt()))
+        codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()))
 
         if (!isCrackSafe) {
             warnings.add("SBC 304: Increase wall thickness for crack control")
@@ -291,7 +291,7 @@ class SBCTank : TankDesign {
             spacing = hoopSpacing,
             warnings = warnings,
             codeNotes = codeNotes,
-            description = "Hoop: %dØ%d@%dmm, Vert: %dØ%d@%dmm".format(
+            description = String.format("Hoop: %dØ%d@%dmm, Vert: %dØ%d@%dmm", 
                 hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt(),
                 vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()
             )
@@ -343,7 +343,7 @@ class SBCTank : TankDesign {
             punchingSafe, "SBC 304/ACI 318: vc = 0.33√f'c × b₀ × d"
         ))
 
-        codeNotes.add("Base: %dØ%d @ %dmm (each way)".format(
+        codeNotes.add(String.format("Base: %dØ%d @ %dmm (each way)", 
             barsPerMeter, barDiameter.toInt(), spacing.toInt()))
 
         return ReinforcementResult(
@@ -358,7 +358,7 @@ class SBCTank : TankDesign {
             spacing = spacing,
             warnings = warnings,
             codeNotes = codeNotes,
-            description = "%dØ%d @ %dmm (each way)".format(
+            description = String.format("%dØ%d @ %dmm (each way)", 
                 barsPerMeter, barDiameter.toInt(), spacing.toInt())
         )
     }

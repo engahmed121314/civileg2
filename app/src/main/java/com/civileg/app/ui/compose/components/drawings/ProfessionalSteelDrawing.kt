@@ -266,7 +266,7 @@ private fun DrawScope.drawElevationView(
     val availableH = viewH - pad * 2
 
     val drawLength = if (isColumn) depth.toFloat() else memberLength.toFloat()
-    val drawDepth = if (isColumn) memberLength.toFloat() : depth.toFloat()
+    val drawDepth = if (isColumn) memberLength.toFloat() else depth.toFloat()
 
     val scaleX = availableW / drawLength
     val scaleY = availableH / drawDepth

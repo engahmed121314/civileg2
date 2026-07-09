@@ -7,6 +7,8 @@ import kotlin.math.*
 
 class ECPAdvancedBeam {
     
+    private data class MomentCoeff(val location: String, val description: String, val coefficient: Double, val isPositive: Boolean)
+
     private val baseBeam = ECPBeam()
 
     companion object {
@@ -169,7 +171,7 @@ class ECPAdvancedBeam {
         val beff = min(min(flangeWidth, beffBySpan), beffByFlange)
 
         codeNotes.add("ECP 203-2020: Section 6-2-2 (Effective Flange Width)")
-        codeNotes.add("b_eff = min(b, L/${if (isEdgeBeam) "8" else "4"}, 12hf+bw) = min(${"%.0f".format(flangeWidth)}, ${"%.0f".format(beffBySpan)}, ${"%.0f".format(beffByFlange)}) = ${"%.0f".format(beff)} mm")
+        codeNotes.add("b_eff = min(b, L/${if (isEdgeBeam) "8" else "4"}, 12hf+bw) = min(${String.format("%.0f", flangeWidth)}, ${String.format("%.0f", beffBySpan)}, ${String.format("%.0f", beffByFlange)}) = ${String.format("%.0f", beff)} mm")
 
         if (beff < flangeWidth) {
             warnings.add("عرض الشفة الفعال (${beff.toInt()} مم) أقل من العرض الكلي (${flangeWidth.toInt()} مم)")
@@ -183,8 +185,8 @@ class ECPAdvancedBeam {
         val K_bal_bw = (0.67 / GAMMA_C) * calculateAOverDBal(fy) * (1.0 - calculateAOverDBal(fy) / 2.0)
         val K_bw = Mu / (fcu * webWidth * d * d)
 
-        codeNotes.add("K_bal (bw=${webWidth.toInt()}mm) = ${"%.4f".format(K_bal_bw)}")
-        codeNotes.add("K (bw=${webWidth.toInt()}mm) = ${"%.4f".format(K_bw)}")
+        codeNotes.add("K_bal (bw=${webWidth.toInt()}mm) = ${String.format("%.4f", K_bal_bw)}")
+        codeNotes.add("K (bw=${webWidth.toInt()}mm) = ${String.format("%.4f", K_bw)}")
 
         // حساب عمق كتلة الإجهاد التجريبي باستخدام bw
         val a_trial = if (K_bw > 0) {
@@ -199,7 +201,7 @@ class ECPAdvancedBeam {
         val astRequired: Double
         if (neutralAxisInFlange) {
             // المحور المحايد في الشفة → يُصمم كمقطع مستطيل بعرض b = beff
-            codeNotes.add("Neutral axis in FLANGE (a=${"%.1f".format(a_trial)}mm ≤ hf=${"%.0f".format(flangeThickness)}mm)")
+            codeNotes.add("Neutral axis in FLANGE (a=${String.format("%.1f", a_trial)}mm ≤ hf=${String.format("%.0f", flangeThickness)}mm)")
             codeNotes.add("Design as rectangular beam with b = b_eff = ${beff.toInt()} mm")
 
             val K = Mu / (fcu * beff * d * d)
@@ -211,7 +213,7 @@ class ECPAdvancedBeam {
             astRequired = Mu / (fs * leverArm)
         } else {
             // المحور المحايد في الجذع → تجزئة الحساب: شفة + جذع
-            codeNotes.add("Neutral axis in WEB (a=${"%.1f".format(a_trial)}mm > hf=${"%.0f".format(flangeThickness)}mm)")
+            codeNotes.add("Neutral axis in WEB (a=${String.format("%.1f", a_trial)}mm > hf=${String.format("%.0f", flangeThickness)}mm)")
             codeNotes.add("Design as T-section: flange part + web part")
 
             // قوة الشفة: Cf = 0.85×fcu×(b-bw)×hf
@@ -221,9 +223,9 @@ class ECPAdvancedBeam {
             // تسليح الشفة: As_flange = Cf / (fy/γs)
             val As_flange = Cf / fs
 
-            codeNotes.add("Cf (flange) = ${"%.0f".format(Cf)} N")
-            codeNotes.add("Mf (flange) = ${"%.0f".format(Mf / 1e6)} kN.m")
-            codeNotes.add("As_flange = ${"%.0f".format(As_flange)} mm²")
+            codeNotes.add("Cf (flange) = ${String.format("%.0f", Cf)} N")
+            codeNotes.add("Mf (flange) = ${String.format("%.0f", Mf / 1e6)} kN.m")
+            codeNotes.add("As_flange = ${String.format("%.0f", As_flange)} mm²")
 
             // العزم المتبقي للجذع
             val M_web = Mu - Mf
@@ -241,8 +243,8 @@ class ECPAdvancedBeam {
                 }
                 val As_web = M_web / (fs * leverArm_web)
 
-                codeNotes.add("M_web (remaining) = ${"%.2f".format(M_web / 1e6)} kN.m")
-                codeNotes.add("As_web = ${"%.0f".format(As_web)} mm²")
+                codeNotes.add("M_web (remaining) = ${String.format("%.2f", M_web / 1e6)} kN.m")
+                codeNotes.add("As_web = ${String.format("%.0f", As_web)} mm²")
                 astRequired = As_flange + As_web
             }
         }
@@ -293,7 +295,7 @@ class ECPAdvancedBeam {
 
         codeNotes.add(CodeReference.ECP.BEAM_FLEXURE)
         codeNotes.add(CodeReference.ECP.BEAM_SHEAR)
-        codeNotes.add("As_total = ${"%.0f".format(finalAst)} mm² → ${numBars}Ø${selectedDia.toInt()} (${"%.0f".format(astProvided)} mm²)")
+        codeNotes.add("As_total = ${String.format("%.0f", finalAst)} mm² → ${numBars}Ø${selectedDia.toInt()} (${String.format("%.0f", astProvided)} mm²)")
         codeNotes.add("T-Section: b_eff=${beff.toInt()}, bw=${webWidth.toInt()}, hf=${flangeThickness.toInt()}, h=${totalDepth.toInt()} mm")
 
         return AdvancedBeamResult(
@@ -369,7 +371,7 @@ class ECPAdvancedBeam {
         val beff = min(min(flangeWidth, beffBySpan), beffByFlange)
 
         codeNotes.add("ECP 203-2020: Section 6-2-2 (L-Beam Effective Flange Width)")
-        codeNotes.add("b_eff = min(b, L/12, 6hf+bw) = min(${"%.0f".format(flangeWidth)}, ${"%.0f".format(beffBySpan)}, ${"%.0f".format(beffByFlange)}) = ${"%.0f".format(beff)} mm")
+        codeNotes.add("b_eff = min(b, L/12, 6hf+bw) = min(${String.format("%.0f", flangeWidth)}, ${String.format("%.0f", beffBySpan)}, ${String.format("%.0f", beffByFlange)}) = ${String.format("%.0f", beff)} mm")
 
         if (beff < flangeWidth) {
             warnings.add("عرض الشفة الفعال (${beff.toInt()} مم) أقل من العرض الكلي (${flangeWidth.toInt()} مم)")
@@ -380,7 +382,7 @@ class ECPAdvancedBeam {
         val eccentricityFactor = 1.1  // 10% زيادة للتحميل اللاتمركزي
         val Mu_eccentric = Mu * eccentricityFactor
         codeNotes.add("Eccentricity factor = $eccentricityFactor (L-beam flange eccentricity)")
-        codeNotes.add("M_design (with eccentricity) = ${"%.2f".format(Mu_eccentric / 1e6)} kN.m")
+        codeNotes.add("M_design (with eccentricity) = ${String.format("%.2f", Mu_eccentric / 1e6)} kN.m")
 
         // ── تصميم الانحناء بنفس طريقة كمرة T ──
         val fc = 0.67 * fcu / GAMMA_C
@@ -398,7 +400,7 @@ class ECPAdvancedBeam {
         val astRequired: Double
 
         if (neutralAxisInFlange) {
-            codeNotes.add("Neutral axis in FLANGE (a=${"%.1f".format(a_trial)}mm ≤ hf=${"%.0f".format(flangeThickness)}mm)")
+            codeNotes.add("Neutral axis in FLANGE (a=${String.format("%.1f", a_trial)}mm ≤ hf=${String.format("%.0f", flangeThickness)}mm)")
             val K = Mu_eccentric / (fcu * beff * d * d)
             val leverArm = if (0.25 - K / 1.25 > 0) {
                 d * (0.5 + sqrt(0.25 - K / 1.25))
@@ -407,7 +409,7 @@ class ECPAdvancedBeam {
             }
             astRequired = Mu_eccentric / (fsDesign * leverArm)
         } else {
-            codeNotes.add("Neutral axis in WEB (a=${"%.1f".format(a_trial)}mm > hf=${"%.0f".format(flangeThickness)}mm)")
+            codeNotes.add("Neutral axis in WEB (a=${String.format("%.1f", a_trial)}mm > hf=${String.format("%.0f", flangeThickness)}mm)")
             val Cf = fc * (beff - webWidth) * flangeThickness
             val Mf = Cf * (d - flangeThickness / 2.0)
             val As_flange = Cf / fsDesign
@@ -471,7 +473,7 @@ class ECPAdvancedBeam {
 
         codeNotes.add(CodeReference.ECP.BEAM_FLEXURE)
         codeNotes.add(CodeReference.ECP.BEAM_SHEAR)
-        codeNotes.add("As_total = ${"%.0f".format(finalAst)} mm² → ${numBars}Ø${selectedDia.toInt()} (${"%.0f".format(astProvided)} mm²)")
+        codeNotes.add("As_total = ${String.format("%.0f", finalAst)} mm² → ${numBars}Ø${selectedDia.toInt()} (${String.format("%.0f", astProvided)} mm²)")
         codeNotes.add("L-Section: b_eff=${beff.toInt()}, bw=${webWidth.toInt()}, hf=${flangeThickness.toInt()}, h=${totalDepth.toInt()} mm")
 
         return AdvancedBeamResult(
@@ -527,10 +529,10 @@ class ECPAdvancedBeam {
         val spanToDepthRatio = span * 1000.0 / depth
 
         codeNotes.add("ECP 203-2020: Section 4-2-8 (Deep Beam Design)")
-        codeNotes.add("L/d = ${"%.2f".format(spanToDepthRatio)} ${if (spanToDepthRatio < 4.0) "→ Deep Beam (L/d < 4)" else "→ NOT a Deep Beam (L/d ≥ 4)"}")
+        codeNotes.add("L/d = ${String.format("%.2f", spanToDepthRatio)} ${if (spanToDepthRatio < 4.0) "→ Deep Beam (L/d < 4)" else "→ NOT a Deep Beam (L/d ≥ 4)"}")
 
         if (spanToDepthRatio >= 4.0) {
-            warnings.add("تحذير: L/d = ${"%.2f".format(spanToDepthRatio)} ≥ 4 - هذا ليس كمرة عميقة! استخدم تصميم الكمرات العادية")
+            warnings.add("تحذير: L/d = ${String.format("%.2f", spanToDepthRatio)} ≥ 4 - هذا ليس كمرة عميقة! استخدم تصميم الكمرات العادية")
         }
 
         // ── تصميم الانحناء بطريقة Strut-and-Tie المبسطة ──
@@ -547,8 +549,8 @@ class ECPAdvancedBeam {
         val minLongSteel = 0.0025 * Ag
         astFlexure = max(astFlexure, minLongSteel)
 
-        codeNotes.add("Strut-and-Tie Model: lever arm z = 0.5d = ${"%.0f".format(leverArm)} mm")
-        codeNotes.add("As_flexure = ${"%.0f".format(astFlexure)} mm² (min = ${"%.0f".format(minLongSteel)} mm²)")
+        codeNotes.add("Strut-and-Tie Model: lever arm z = 0.5d = ${String.format("%.0f", leverArm)} mm")
+        codeNotes.add("As_flexure = ${String.format("%.0f", astFlexure)} mm² (min = ${String.format("%.0f", minLongSteel)} mm²)")
 
         // ── التسليح الأفقي الأدنى (كلا الوجهين) ──
         // As_h ≥ 0.0025 × bw × s, وتباعد أقصى = d/2
@@ -558,8 +560,8 @@ class ECPAdvancedBeam {
         val stirrupArea_h = PI * stirrupDia_h * stirrupDia_h / 4
         val spacing_h = (stirrupArea_h * 1000 / as_h_per_meter).coerceIn(50.0, maxSpacingH)
 
-        codeNotes.add("Horizontal reinforcement (each face): ρ_h = 0.0025, s_max = d/2 = ${"%.0f".format(maxSpacingH)} mm")
-        codeNotes.add("Horizontal: Ø${stirrupDia_h.toInt()} @ ${"%.0f".format(spacing_h)} mm (As_h = ${"%.0f".format(as_h_per_meter)} mm²/m per face)")
+        codeNotes.add("Horizontal reinforcement (each face): ρ_h = 0.0025, s_max = d/2 = ${String.format("%.0f", maxSpacingH)} mm")
+        codeNotes.add("Horizontal: Ø${stirrupDia_h.toInt()} @ ${String.format("%.0f", spacing_h)} mm (As_h = ${String.format("%.0f", as_h_per_meter)} mm²/m per face)")
 
         // ── التسليح الرأسي الأدنى (كلا الوجهين) ──
         // As_v ≥ 0.0015 × bw × sv, وتباعد أقصى = d/3
@@ -569,8 +571,8 @@ class ECPAdvancedBeam {
         val stirrupArea_v = PI * stirrupDia_v * stirrupDia_v / 4
         val spacing_v = (stirrupArea_v * 1000 / as_v_per_meter).coerceIn(50.0, maxSpacingV)
 
-        codeNotes.add("Vertical reinforcement (each face): ρ_v = 0.0015, s_max = d/3 = ${"%.0f".format(maxSpacingV)} mm")
-        codeNotes.add("Vertical: Ø${stirrupDia_v.toInt()} @ ${"%.0f".format(spacing_v)} mm (As_v = ${"%.0f".format(as_v_per_meter)} mm²/m per face)")
+        codeNotes.add("Vertical reinforcement (each face): ρ_v = 0.0015, s_max = d/3 = ${String.format("%.0f", maxSpacingV)} mm")
+        codeNotes.add("Vertical: Ø${stirrupDia_v.toInt()} @ ${String.format("%.0f", spacing_v)} mm (As_v = ${String.format("%.0f", as_v_per_meter)} mm²/m per face)")
 
         // ── قدرة القص المعززة للكمرات العميقة ──
         // Vn = 0.167×√fcu × bw × d (معزز للكمرات العميقة)
@@ -583,8 +585,8 @@ class ECPAdvancedBeam {
             warnings.add("تحذير: إجهاد القص يتجاوز الحد الأقصى للكمرة العميقة! زد العرض أو مقاومة الخرسانة")
         }
 
-        codeNotes.add("Deep beam shear: Vn = 0.167√fcu×bw×d = ${"%.0f".format(Vn_concrete / 1000)} kN")
-        codeNotes.add("Applied Vu = ${"%.0f".format(maxShear)} kN, Vn_max = ${"%.0f".format(maxVn / 1000)} kN")
+        codeNotes.add("Deep beam shear: Vn = 0.167√fcu×bw×d = ${String.format("%.0f", Vn_concrete / 1000)} kN")
+        codeNotes.add("Applied Vu = ${String.format("%.0f", maxShear)} kN, Vn_max = ${String.format("%.0f", maxVn / 1000)} kN")
 
         // ── اختيار أسياخ الانحناء ──
         val availableBars = listOf(12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0, 28.0, 32.0)
@@ -639,7 +641,7 @@ class ECPAdvancedBeam {
         )
 
         codeNotes.add("NOTE: DEEP_BEAM is not a BeamSectionType enum value; using RECTANGULAR as placeholder")
-        codeNotes.add("As_flexure = ${numBars}Ø${selectedDia.toInt()} (${"%.0f".format(astProvided)} mm²)")
+        codeNotes.add("As_flexure = ${numBars}Ø${selectedDia.toInt()} (${String.format("%.0f", astProvided)} mm²)")
 
         val beamType = BeamType.SimplySupported(span)
         return AdvancedBeamResult(
@@ -715,35 +717,35 @@ class ECPAdvancedBeam {
 
             // معاملات العزوم لكل مقطع حرج
             // [موقع, وصف, معامل العزم, إشارة]
-            val momentCoefficients = mutableListOf<Triple<String, String, Double, Boolean>>()
+            val momentCoefficients = mutableListOf<MomentCoeff>()
 
             // دعامة خارجية
             if (isEndSpan && isEndSimplySupported) {
-                momentCoefficients.add(Triple("End Support", "دعامة طرفية (بسيطة)", 0.040, false))
+                momentCoefficients.add(MomentCoeff("End Support", "دعامة طرفية (بسيطة)", 0.040, false))
             } else if (isEndSpan && isEndFixed) {
-                momentCoefficients.add(Triple("End Support", "دعامة طرفية (ثابتة)", 0.050, false))
+                momentCoefficients.add(MomentCoeff("End Support", "دعامة طرفية (ثابتة)", 0.050, false))
             }
 
             // وسط البحر
             if (isEndSpan) {
                 val midCoeff = if (isEndSimplySupported) 0.086 else 0.063
-                momentCoefficients.add(Triple("Midspan", "وسط البحر الطرفي", midCoeff, true))
+                momentCoefficients.add(MomentCoeff("Midspan", "وسط البحر الطرفي", midCoeff, true))
             } else {
                 // بحر داخلي
                 val midCoeff = if (adjacentSpanShorter) 0.063 else 0.086
-                momentCoefficients.add(Triple("Midspan", "وسط البحر الداخلي", midCoeff, true))
+                momentCoefficients.add(MomentCoeff("Midspan", "وسط البحر الداخلي", midCoeff, true))
             }
 
             // دعامة داخلية أولى
             if (isEndSpan && i < spans.lastIndex) {
                 val intCoeff = if (adjacentSpanShorter) 0.086 else 0.116
-                momentCoefficients.add(Triple("1st Int. Support", "الدعامة الداخلية الأولى", intCoeff, false))
+                momentCoefficients.add(MomentCoeff("1st Int. Support", "الدعامة الداخلية الأولى", intCoeff, false))
             }
 
             // دعامات داخلية
             if (!isEndSpan && i < spans.size) {
                 val intCoeff = if (adjacentSpanShorter) 0.071 else 0.106
-                momentCoefficients.add(Triple("Int. Support", "دعامة داخلية", intCoeff, false))
+                momentCoefficients.add(MomentCoeff("Int. Support", "دعامة داخلية", intCoeff, false))
             }
 
             // ── تصميم كل مقطع حرج ──
@@ -803,11 +805,11 @@ class ECPAdvancedBeam {
 
                 codeNotes.add("ECP 203-2020: Section 4-2 (Continuous Beam)")
                 codeNotes.add("Span ${i + 1}: $description")
-                codeNotes.add("Moment coefficient = $coeff (wL² = ${"%.1f".format(wL2)} kN.m)")
-                codeNotes.add("M_design = ${"%.2f".format(absMoment)} kN.m")
+                codeNotes.add("Moment coefficient = $coeff (wL² = ${String.format("%.1f", wL2)} kN.m)")
+                codeNotes.add("M_design = ${String.format("%.2f", absMoment)} kN.m")
 
                 if (redistributionFactor < 1.0) {
-                    codeNotes.add("Moment redistribution: ${(redistributionFactor * 100).toInt()}% → M_red = ${"%.2f".format(redistributedMoment)} kN.m")
+                    codeNotes.add("Moment redistribution: ${(redistributionFactor * 100).toInt()}% → M_red = ${String.format("%.2f", redistributedMoment)} kN.m")
                 }
                 if (!isPositive) {
                     codeNotes.add("TOP reinforcement at support")
@@ -818,7 +820,7 @@ class ECPAdvancedBeam {
                 codeNotes.add(cutoffInfo)
 
                 if (isTensionControlled) {
-                    codeNotes.add("Section is tension-controlled (K = ${"%.4f".format(K)} ≤ 0.156)")
+                    codeNotes.add("Section is tension-controlled (K = ${String.format("%.4f", K)} ≤ 0.156)")
                 }
 
                 val beamType = BeamType.Continuous(spans, supportConditions)
@@ -1121,10 +1123,10 @@ class ECPAdvancedBeam {
 
         val deflectionWarnings = mutableListOf<String>()
         if (Ie < Ig * 0.5) {
-            deflectionWarnings.add("المقطع متشقق بدرجة كبيرة - Ie/Ig = ${"%.2f".format(Ie / Ig)}")
+            deflectionWarnings.add("المقطع متشقق بدرجة كبيرة - Ie/Ig = ${String.format("%.2f", Ie / Ig)}")
         }
         if (ratio > 1.0) {
-            deflectionWarnings.add("الانحراف يتجاوز الحد المسموح بنسبة ${"%.0f".format((ratio - 1) * 100)}%")
+            deflectionWarnings.add("الانحراف يتجاوز الحد المسموح بنسبة ${String.format("%.0f", (ratio - 1) * 100)}%")
         }
 
         return DeflectionCheckResult(
@@ -1134,7 +1136,7 @@ class ECPAdvancedBeam {
             allowableDeflection = allowable,
             ratio = ratio,
             isSafe = ratio <= 1.0,
-            message = "δ_i=%.2fmm, δ_LT=%.2fmm, δ_allow=%.1fmm, Ie/Ig=%.3f".format(immediate, longTerm, allowable, Ie / Ig),
+            message = String.format("δ_i=%.2fmm, δ_LT=%.2fmm, δ_allow=%.1fmm, Ie/Ig=%.3f", immediate, longTerm, allowable, Ie / Ig),
             recommendation = recommendation,
             warnings = deflectionWarnings
         )
@@ -1177,8 +1179,8 @@ class ECPAdvancedBeam {
         val Tu_th = 0.083 * sqrt(fcu / GAMMA_C) * b * b * h  // N.mm
         val Tu_th_kNm = Tu_th / 1e6  // kN.m
 
-        codeNotes.add("Tu = ${"%.2f".format(designTorque)} kN.m")
-        codeNotes.add("Tu_threshold = 0.083×√(fcu/γc)×b²×h = ${"%.3f".format(Tu_th_kNm)} kN.m")
+        codeNotes.add("Tu = ${String.format("%.2f", designTorque)} kN.m")
+        codeNotes.add("Tu_threshold = 0.083×√(fcu/γc)×b²×h = ${String.format("%.3f", Tu_th_kNm)} kN.m")
 
         // ── التحقق: هل يلزم تصميم الالتواء؟ ──
         if (Tu <= Tu_th) {
@@ -1207,16 +1209,16 @@ class ECPAdvancedBeam {
         val ao = 0.85 * aoh  // المساحة الفعالة
         val ph = 2.0 * ((b - 2 * COVER) + (h - 2 * COVER))  // محيط محور الكانات
 
-        codeNotes.add("Aoh = (b-2×${COVER.toInt()})×(h-2×${COVER.toInt()}) = ${"%.0f".format(aoh)} mm²")
-        codeNotes.add("Ao = 0.85 × Aoh = ${"%.0f".format(ao)} mm²")
-        codeNotes.add("Ph = 2×((b-2c)+(h-2c)) = ${"%.0f".format(ph)} mm")
+        codeNotes.add("Aoh = (b-2×${COVER.toInt()})×(h-2×${COVER.toInt()}) = ${String.format("%.0f", aoh)} mm²")
+        codeNotes.add("Ao = 0.85 × Aoh = ${String.format("%.0f", ao)} mm²")
+        codeNotes.add("Ph = 2×((b-2c)+(h-2c)) = ${String.format("%.0f", ph)} mm")
 
         // ── التحقق من الحد الأقصى ──
         // الحد الأقصى لعزم اللي: Tu_max = 0.333 × √(fcu/γc) × b² × d
         val Tu_max = 0.333 * sqrt(fcu / GAMMA_C) * b * b * h
         if (Tu > Tu_max) {
             warnings.add("تحذير: عزم اللي يتجاوز الحد الأقصى! زد أبعاد المقطع أو مقاومة الخرسانة")
-            codeNotes.add("Tu_max = ${"%.3f".format(Tu_max / 1e6)} kN.m - EXCEEDED!")
+            codeNotes.add("Tu_max = ${String.format("%.3f", Tu_max / 1e6)} kN.m - EXCEEDED!")
         }
 
         // ── زاوية الميل (θ) ──
@@ -1224,7 +1226,7 @@ class ECPAdvancedBeam {
         val theta = PI / 4.0  // 45° بالراديان
         val cotTheta = 1.0 / tan(theta)  // = 1.0 لـ 45°
 
-        codeNotes.add("θ = 45° (standard for RC), cotθ = ${"%.2f".format(cotTheta)}")
+        codeNotes.add("θ = 45° (standard for RC), cotθ = ${String.format("%.2f", cotTheta)}")
 
         // ── مساحة الكانة لكل فرع ──
         // At = Tu × s / (1.5 × Ao × fy/γs × cotθ)
@@ -1252,8 +1254,8 @@ class ECPAdvancedBeam {
         // تقريب لأقرب 25 مم
         stirrupSpacing = ceil(stirrupSpacing / 25.0) * 25.0
 
-        codeNotes.add("At/s = ${"%.4f".format(At_per_s)} mm²/mm")
-        codeNotes.add("Selected: Ø${selectedStirrupDia.toInt()} @ ${"%.0f".format(stirrupSpacing)} mm (At = ${"%.1f".format(stirrupAreaPerLeg)} mm²)")
+        codeNotes.add("At/s = ${String.format("%.4f", At_per_s)} mm²/mm")
+        codeNotes.add("Selected: Ø${selectedStirrupDia.toInt()} @ ${String.format("%.0f", stirrupSpacing)} mm (At = ${String.format("%.1f", stirrupAreaPerLeg)} mm²)")
 
         // ── الحديد الطولي الإضافي للالتواء ──
         // Al = At × (fy_stirrup/fy_longitudinal) × (Ao/Ph) × cot²θ
@@ -1265,14 +1267,14 @@ class ECPAdvancedBeam {
         val longBarArea = PI * longBarDia * longBarDia / 4.0
         val numLongBars = max(2, ceil(Al_total / longBarArea).toInt())
 
-        codeNotes.add("Al (total) = ${"%.0f".format(Al_total)} mm²")
-        codeNotes.add("Additional longitudinal: ${numLongBars}Ø${longBarDia.toInt()} (${"%.0f".format(numLongBars * longBarArea)} mm²)")
+        codeNotes.add("Al (total) = ${String.format("%.0f", Al_total)} mm²")
+        codeNotes.add("Additional longitudinal: ${numLongBars}Ø${longBarDia.toInt()} (${String.format("%.0f", numLongBars * longBarArea)} mm²)")
 
         // حد أدنى للحديد الطولي
         val Al_min = 0.0025 * b * h  // ECP 203
         val finalAl = max(Al_total, Al_min)
         if (Al_total < Al_min) {
-            codeNotes.add("Minimum longitudinal torsion steel applied: ${"%.0f".format(Al_min)} mm²")
+            codeNotes.add("Minimum longitudinal torsion steel applied: ${String.format("%.0f", Al_min)} mm²")
         }
 
         val isSafe = Tu <= Tu_max
@@ -1380,16 +1382,16 @@ class ECPAdvancedBeam {
             isPositive -> {
                 // حديد الشد (سفلي) عند وسط البحر
                 // يمتد من 0.15L إلى 0.85L تقريباً
-                "Cutoff: Bottom bars extend from ${"%.2f".format(spanLength * 0.15)}m to ${"%.2f".format(spanLength * 0.85)}m from support"
+                "Cutoff: Bottom bars extend from ${String.format("%.2f", spanLength * 0.15)}m to ${String.format("%.2f", spanLength * 0.85)}m from support"
             }
             location.contains("End") -> {
                 // حديد الضغط (علوي) عند الدعامة الطرفية
-                "Cutoff: Top bars extend ${"%.2f".format(spanLength * 0.25)}m into span from end support"
+                "Cutoff: Top bars extend ${String.format("%.2f", spanLength * 0.25)}m into span from end support"
             }
             else -> {
                 // حديد الضغط (علوي) عند الدعامة الداخلية
                 // يمتد 0.2L في كل اتجاه
-                "Cutoff: Top bars extend ${"%.2f".format(spanLength * 0.2)}m each side of interior support"
+                "Cutoff: Top bars extend ${String.format("%.2f", spanLength * 0.2)}m each side of interior support"
             }
         }
     }

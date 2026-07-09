@@ -68,16 +68,16 @@ class ACIAdvancedSlab {
 
         // تحويل مقاومة المكعب لمقاومة الأسطوانة: f'c = 0.8 × fcu
         val fcPrime = 0.8 * fcu
-        codeNotes.add("ACI 318-19: fcu=%.0f MPa → fc'=0.8×fcu=%.0f MPa".format(fcu, fcPrime))
-        codeNotes.add("φ_flexure=%.1f, φ_shear=%.1f (ACI 21.2.1)".format(PHI_FLEXURE, PHI_SHEAR))
+        codeNotes.add(String.format("ACI 318-19: fcu=%.0f MPa → fc'=0.8×fcu=%.0f MPa", fcu, fcPrime))
+        codeNotes.add(String.format("φ_flexure=%.1f, φ_shear=%.1f (ACI 21.2.1)", PHI_FLEXURE, PHI_SHEAR))
 
         // الحمل التصميمي: ACI 5.3.1 → U = 1.2D + 1.6L
         val totalLoad = (deadLoad + liveLoad) * loadCombination.getFactorForCode(DesignCode.ACI)
-        codeNotes.add("wu = 1.2D + 1.6L = %.1f kN/m²".format(totalLoad))
+        codeNotes.add(String.format("wu = 1.2D + 1.6L = %.1f kN/m²", totalLoad))
 
         // β₁ حسب ACI 22.2.2.4.1
         val beta1 = computeBeta1(fcPrime)
-        codeNotes.add("β₁ = %.3f (ACI 22.2.2.4.1)".format(beta1))
+        codeNotes.add(String.format("β₁ = %.3f (ACI 22.2.2.4.1)", beta1))
 
         // التصميم حسب نوع البلاطة
         val flexureResult = when (slabType) {
@@ -170,30 +170,30 @@ class ACIAdvancedSlab {
         val c = slab.columnSize / 1000.0     // م - حجم العمود
 
         codeNotes.add("=== ACI 8.10: Flat Plate (Direct Design Method) ===")
-        codeNotes.add("ln=%.2f m, l2=%.2f m, c=%.2f m, h=%.0f mm".format(ln, l2, c, h))
+        codeNotes.add(String.format("ln=%.2f m, l2=%.2f m, c=%.2f m, h=%.0f mm", ln, l2, c, h))
 
         // فحص الحد الأدنى للسمك - ACI Table 8.3.1.1
         // للبلاطة المسطحة (بدون حواف عمود): ln/30 للوحات داخلية
         val hMin = min(ln, l2) * 1000.0 / 30.0
         if (h < hMin) {
-            warnings.add("ACI Table 8.3.1.1: h=%.0f < h_min=%.0f mm (ln/30)".format(h, hMin))
+            warnings.add(String.format("ACI Table 8.3.1.1: h=%.0f < h_min=%.0f mm (ln/30)", h, hMin))
         } else {
-            codeNotes.add("ACI Table 8.3.1.1: Min thickness OK (%.0f ≥ %.0f)".format(h, hMin))
+            codeNotes.add(String.format("ACI Table 8.3.1.1: Min thickness OK (%.0f ≥ %.0f)", h, hMin))
         }
 
         // العزم الساكن الإجمالي: Mo = wu × l2 × ln² / 8 (ACI 8.10.1.2)
         val Mo = wu * l2 * ln * ln / 8.0
-        codeNotes.add("Mo = wu×l2×ln²/8 = %.1f kN.m".format(Mo))
+        codeNotes.add(String.format("Mo = wu×l2×ln²/8 = %.1f kN.m", Mo))
 
         // توزيع العزم - ACI Table 8.10.2.2 (لوحة داخلية)
         val Mneg = 0.65 * Mo   // عزم سالب عند الدعامة
         val Mpos = 0.35 * Mo   // عزم موجب في المنتصف
-        codeNotes.add("M- = 0.65×Mo = %.1f kN.m, M+ = 0.35×Mo = %.1f kN.m".format(Mneg, Mpos))
+        codeNotes.add(String.format("M- = 0.65×Mo = %.1f kN.m, M+ = 0.35×Mo = %.1f kN.m", Mneg, Mpos))
 
         // عرض شريط العمود - ACI 8.4.1.5
         val columnStripWidth = min(ln / 2.0, l2 / 2.0)
         val middleStripWidth = (l2 - columnStripWidth) / 2.0
-        codeNotes.add("Column strip: 2×%.2f=%.2f m, Middle strip: 2×%.2f=%.2f m".format(
+        codeNotes.add(String.format("Column strip: 2×%.2f=%.2f m, Middle strip: 2×%.2f=%.2f m", 
             columnStripWidth, columnStripWidth * 2, middleStripWidth, middleStripWidth * 2))
 
         // توزيع العزم بين شريط العمود وشريط الوسط - ACI 8.10.4.2
@@ -211,25 +211,25 @@ class ACIAdvancedSlab {
         val muMsNeg = msNeg / (middleStripWidth * 1000.0)
         val muMsPos = msPos / (middleStripWidth * 1000.0)
 
-        codeNotes.add("CS: M-=%.2f, M+=%.2f kN.m/m".format(muCsNeg, muCsPos))
-        codeNotes.add("MS: M-=%.2f, M+=%.2f kN.m/m".format(muMsNeg, muMsPos))
+        codeNotes.add(String.format("CS: M-=%.2f, M+=%.2f kN.m/m", muCsNeg, muCsPos))
+        codeNotes.add(String.format("MS: M-=%.2f, M+=%.2f kN.m/m", muMsNeg, muMsPos))
 
         // تصميم التسليح للحالة الحرجة (شريط العمود - سالب عادةً يتحكم)
-        val muMax = max(muCsNeg, muCsPos, muMsNeg, muMsPos)
+        val muMax = maxOf(muCsNeg, muCsPos, muMsNeg, muMsPos)
         val d = h - 20.0 - 6.0  // العمق الفعال (غطاء + نصف قطر السيخ)
 
         // حساب Rn و ρ بطريقة ACI Rn-ρ
         val (rho, asRequired, Rn) = computeRnRho(muMax, fcPrime, fy, d)
 
-        codeNotes.add("Critical: M=%.2f kN.m/m → Rn=%.2f, ρ=%.5f".format(muMax, Rn, rho))
-        codeNotes.add("As_req = %.1f mm²/m".format(asRequired))
+        codeNotes.add(String.format("Critical: M=%.2f kN.m/m → Rn=%.2f, ρ=%.5f", muMax, Rn, rho))
+        codeNotes.add(String.format("As_req = %.1f mm²/m", asRequired))
 
         // اختيار القضبان - بديل اقتصادي وأكثر أماناً
         val (ecoBar, ecoSpacing, ecoAs) = selectEconomicalBar(asRequired, h)
         val (safeBar, safeSpacing, safeAs) = selectSafestBar(asRequired, h)
 
-        codeNotes.add("Economical: Φ%.0f @ %.0fmm → As=%.0f mm²/m".format(ecoBar, ecoSpacing, ecoAs))
-        codeNotes.add("Safest:    Φ%.0f @ %.0fmm → As=%.0f mm²/m".format(safeBar, safeSpacing, safeAs))
+        codeNotes.add(String.format("Economical: Φ%.0f @ %.0fmm → As=%.0f mm²/m", ecoBar, ecoSpacing, ecoAs))
+        codeNotes.add(String.format("Safest:    Φ%.0f @ %.0fmm → As=%.0f mm²/m", safeBar, safeSpacing, safeAs))
 
         // قدرة القص الخرساني: Vc = 0.17λ√fc' × b × d (ACI 22.5.5.1), λ=1.0
         val Vc = 0.17 * sqrt(fcPrime) * 1000.0 * d / 1000.0  // kN/m
@@ -276,27 +276,27 @@ class ACIAdvancedSlab {
         val hTotal = h + hDrop
 
         codeNotes.add("=== ACI 8.10: Flat Slab with Drop Panels ===")
-        codeNotes.add("h_slab=%.0f, h_drop=%.0f, h_total=%.0f mm".format(h, hDrop, hTotal))
+        codeNotes.add(String.format("h_slab=%.0f, h_drop=%.0f, h_total=%.0f mm", h, hDrop, hTotal))
 
         // متطلبات البلاطة المنخفضة - ACI 8.10.3
         val dropExtensionReq = ln / 6.0  // امتداد مطلوب
         val dropThicknessReq = h / 4.0   // سماكة منخفضة مطلوبة
 
         if (dropSize < dropExtensionReq) {
-            warnings.add("ACI 8.10.3: Drop size %.2fm < L/6=%.2fm".format(dropSize, dropExtensionReq))
+            warnings.add(String.format("ACI 8.10.3: Drop size %.2fm < L/6=%.2fm", dropSize, dropExtensionReq))
         }
         if (hDrop < dropThicknessReq) {
-            warnings.add("ACI 8.10.3: Drop thickness %.0fmm < h/4=%.0fmm".format(hDrop, dropThicknessReq))
+            warnings.add(String.format("ACI 8.10.3: Drop thickness %.0fmm < h/4=%.0fmm", hDrop, dropThicknessReq))
         }
-        codeNotes.add("ACI 8.10.3: Drop extends %.2fm (req ≥ L/6=%.2fm) ✓%s".format(
+        codeNotes.add(String.format("ACI 8.10.3: Drop extends %.2fm (req ≥ L/6=%.2fm) ✓%s", 
             dropSize, dropExtensionReq, if (dropSize >= dropExtensionReq) "" else " ✗"))
-        codeNotes.add("ACI 8.10.3: Drop thick=%.0fmm (req ≥ h/4=%.0fmm) ✓%s".format(
+        codeNotes.add(String.format("ACI 8.10.3: Drop thick=%.0fmm (req ≥ h/4=%.0fmm) ✓%s", 
             hDrop, dropThicknessReq, if (hDrop >= dropThicknessReq) "" else " ✗"))
 
         // الحد الأدنى للسمك - ACI Table 8.3.1.1 (مع drop panel: ln/33)
         val hMin = min(ln, l2) * 1000.0 / 33.0
         if (hTotal < hMin) {
-            warnings.add("ACI Table 8.3.1.1: h_total=%.0f < h_min=%.0f mm".format(hTotal, hMin))
+            warnings.add(String.format("ACI Table 8.3.1.1: h_total=%.0f < h_min=%.0f mm", hTotal, hMin))
         }
 
         // العزم الساكن الإجمالي
@@ -326,9 +326,9 @@ class ACIAdvancedSlab {
         val muPosMax = max(muCsPos, muMsPos)
         val (rhoPos, asPos, RnPos) = computeRnRho(muPosMax, fcPrime, fy, dSlab)
 
-        codeNotes.add("Mo=%.1f kN.m → M-=%.1f, M+=%.1f".format(Mo, Mneg, Mpos))
-        codeNotes.add("Neg (d=%.0f): Rn=%.2f, As=%.1f mm²/m".format(dDrop, RnNeg, asNeg))
-        codeNotes.add("Pos (d=%.0f): Rn=%.2f, As=%.1f mm²/m".format(dSlab, RnPos, asPos))
+        codeNotes.add(String.format("Mo=%.1f kN.m → M-=%.1f, M+=%.1f", Mo, Mneg, Mpos))
+        codeNotes.add(String.format("Neg (d=%.0f): Rn=%.2f, As=%.1f mm²/m", dDrop, RnNeg, asNeg))
+        codeNotes.add(String.format("Pos (d=%.0f): Rn=%.2f, As=%.1f mm²/m", dSlab, RnPos, asPos))
 
         // أكبر تسليح مطلوب يحدد النتيجة
         val asRequired = max(asNeg, asPos)
@@ -337,8 +337,8 @@ class ACIAdvancedSlab {
         val (ecoBar, ecoSpacing, ecoAs) = selectEconomicalBar(asRequired, hTotal)
         val (safeBar, safeSpacing, safeAs) = selectSafestBar(asRequired, hTotal)
 
-        codeNotes.add("Economical: Φ%.0f @ %.0fmm → As=%.0f mm²/m".format(ecoBar, ecoSpacing, ecoAs))
-        codeNotes.add("Safest:    Φ%.0f @ %.0fmm → As=%.0f mm²/m".format(safeBar, safeSpacing, safeAs))
+        codeNotes.add(String.format("Economical: Φ%.0f @ %.0fmm → As=%.0f mm²/m", ecoBar, ecoSpacing, ecoAs))
+        codeNotes.add(String.format("Safest:    Φ%.0f @ %.0fmm → As=%.0f mm²/m", safeBar, safeSpacing, safeAs))
 
         val Vc = 0.17 * sqrt(fcPrime) * 1000.0 * dDesign / 1000.0
 
@@ -385,25 +385,25 @@ class ACIAdvancedSlab {
         val toppingH = totalH - slab.blockHeight.coerceAtMost(slab.blockHeight)  // تقريبي
 
         codeNotes.add("=== ACI 7.6: One-Way Ribbed / Hordi Slab ===")
-        codeNotes.add("Span=%.2f m, Rib spacing=%.0f mm c/c, bw=%.0f mm".format(span, slab.ribSpacing, bw))
-        codeNotes.add("Total h=%.0f mm, Block h=%.0f mm".format(totalH, slab.blockHeight))
+        codeNotes.add(String.format("Span=%.2f m, Rib spacing=%.0f mm c/c, bw=%.0f mm", span, slab.ribSpacing, bw))
+        codeNotes.add(String.format("Total h=%.0f mm, Block h=%.0f mm", totalH, slab.blockHeight))
 
         // فحص متطلبات ACI 7.6.5
         val clearSpacing = slab.ribSpacing - bw
         if (bw < 100.0) {
-            warnings.add("ACI 7.6.5: Rib width %.0fmm < 100mm minimum".format(bw))
+            warnings.add(String.format("ACI 7.6.5: Rib width %.0fmm < 100mm minimum", bw))
         }
         if (clearSpacing > 750.0) {
-            warnings.add("ACI 7.6.5: Clear spacing %.0fmm > 750mm maximum".format(clearSpacing))
+            warnings.add(String.format("ACI 7.6.5: Clear spacing %.0fmm > 750mm maximum", clearSpacing))
         }
-        codeNotes.add("ACI 7.6.5: bw=%.0fmm (≥100), clear=%.0fmm (≤750)".format(bw, clearSpacing))
+        codeNotes.add(String.format("ACI 7.6.5: bw=%.0fmm (≥100), clear=%.0fmm (≤750)", bw, clearSpacing))
 
         // فحص طبقة التغطية (Topping) - ACI 7.6.6: min 50mm
         val minTopping = 50.0
         if (toppingH < minTopping) {
-            warnings.add("ACI 7.6.6: Topping %.0fmm < 50mm minimum".format(toppingH))
+            warnings.add(String.format("ACI 7.6.6: Topping %.0fmm < 50mm minimum", toppingH))
         } else {
-            codeNotes.add("ACI 7.6.6: Topping %.0fmm ≥ 50mm ✓".format(toppingH))
+            codeNotes.add(String.format("ACI 7.6.6: Topping %.0fmm ≥ 50mm ✓", toppingH))
         }
 
         // الحمل على كل كمريتة (kN/m)
@@ -419,7 +419,7 @@ class ACIAdvancedSlab {
 
         // β₁ حسب ACI 22.2.2.4.1 (للتحقق من الإجهاد عند التشقق)
         val beta1 = computeBeta1(fcPrime)
-        codeNotes.add("β₁=%.3f (ACI 22.2.2.4.1 - strain verification)".format(beta1))
+        codeNotes.add(String.format("β₁=%.3f (ACI 22.2.2.4.1 - strain verification)", beta1))
 
         // Rn-ρ method: β₁ not in discriminant (Whitney stress block derivation)
         val discriminant = 1.0 - 2.0 * Rn / (0.85 * fcPrime)
@@ -436,8 +436,8 @@ class ACIAdvancedSlab {
         val asMinRib = max(rhoMin * bw * d, 0.0015 * Ac)  // أكبر الحدين
         val asRequired = max(rho * bw * d, asMinRib)
 
-        codeNotes.add("Mu/rib = %.1f kN.m, Rn=%.2f MPa".format(Mu, Rn))
-        codeNotes.add("ρ=%.5f, ρ_min=%.5f, As_rib=%.1f mm²".format(rho, rhoMin, asRequired))
+        codeNotes.add(String.format("Mu/rib = %.1f kN.m, Rn=%.2f MPa", Mu, Rn))
+        codeNotes.add(String.format("ρ=%.5f, ρ_min=%.5f, As_rib=%.1f mm²", rho, rhoMin, asRequired))
 
         // اختيار التسليح للكمريتة (عدد أسياخ)
         val availableBars = listOf(10.0, 12.0, 14.0, 16.0, 18.0, 20.0)
@@ -451,7 +451,7 @@ class ACIAdvancedSlab {
         val numBars = barResult.second
         val asProvided = barResult.third
 
-        codeNotes.add("Rib steel: %dΦ%.0f → As=%.1f mm²".format(numBars, barDia, asProvided))
+        codeNotes.add(String.format("Rib steel: %dΦ%.0f → As=%.1f mm²", numBars, barDia, asProvided))
 
         // تصميم طبقة التغطية كبلاطة اتجاه واحد
         val toppingResult = designToppingSlab(toppingH, fcPrime, fy, wu, slab.ribSpacing)
@@ -463,9 +463,9 @@ class ACIAdvancedSlab {
         val Vc = 0.17 * sqrt(fcPrime) * bw * d / 1000.0  // kN
         val phiVc = PHI_SHEAR * Vc
         if (Vu > phiVc) {
-            warnings.add("ACI 22.5.5.1: Vu=%.1f > φVc=%.1f kN - increase rib width".format(Vu, phiVc))
+            warnings.add(String.format("ACI 22.5.5.1: Vu=%.1f > φVc=%.1f kN - increase rib width", Vu, phiVc))
         }
-        codeNotes.add("Shear: Vu=%.1f kN, φVc=%.1f kN (bw=%.0f, d=%.0f)".format(Vu, phiVc, bw, d))
+        codeNotes.add(String.format("Shear: Vu=%.1f kN, φVc=%.1f kN (bw=%.0f, d=%.0f)", Vu, phiVc, bw, d))
 
         return SlabDesignResult(
             requiredReinforcement = asRequired,
@@ -503,9 +503,9 @@ class ACIAdvancedSlab {
         val (rho, asRequired, Rn) = computeRnRho(Mu, fcPrime, fy, d)
         val (ecoBar, ecoSpacing, ecoAs) = selectEconomicalBar(asRequired, toppingThickness)
 
-        codeNotes.add("Topping: h=%.0fmm, Mu=%.2f kN.m/m, As=%.1f mm²/m".format(
+        codeNotes.add(String.format("Topping: h=%.0fmm, Mu=%.2f kN.m/m, As=%.1f mm²/m", 
             toppingThickness, Mu, asRequired))
-        codeNotes.add("Topping steel: Φ%.0f @ %.0fmm (ACI 7.6.1.1)".format(ecoBar, ecoSpacing))
+        codeNotes.add(String.format("Topping steel: Φ%.0f @ %.0fmm (ACI 7.6.1.1)", ecoBar, ecoSpacing))
 
         return SlabDesignResult(
             requiredReinforcement = asRequired,
@@ -549,13 +549,13 @@ class ACIAdvancedSlab {
         val ribSpacing = slab.ribSpacing / 1000.0  // م
 
         codeNotes.add("=== ACI 8.10: Two-Way Waffle Slab ===")
-        codeNotes.add("lx=%.2f m, ly=%.2f m, ratio=%.2f".format(lx, ly, ly / lx))
-        codeNotes.add("Total h=%.0f mm, Rib: %.0f×%.0f mm @ %.0f mm c/c".format(
+        codeNotes.add(String.format("lx=%.2f m, ly=%.2f m, ratio=%.2f", lx, ly, ly / lx))
+        codeNotes.add(String.format("Total h=%.0f mm, Rib: %.0f×%.0f mm @ %.0f mm c/c", 
             totalH, ribW, ribD, slab.ribSpacing))
 
         // رأس صلب عند الأعمدة (Solid Head) - ACI 8.10.3
         val solidHeadSize = lx / 3.0  // تقريبي: امتداد رأس العمود
-        codeNotes.add("ACI 8.10.3: Solid head extends ≈ L/3=%.2f m each side".format(solidHeadSize))
+        codeNotes.add(String.format("ACI 8.10.3: Solid head extends ≈ L/3=%.2f m each side", solidHeadSize))
 
         // === الاتجاه القصير (الأساسي) ===
         val loadPerRibShort = wu * ribSpacing  // kN/m لكل كمريتة
@@ -570,7 +570,7 @@ class ACIAdvancedSlab {
 
         // β₁ حسب ACI 22.2.2.4.1 (للتحقق من الإجهاد عند التشقق)
         val beta1 = computeBeta1(fcPrime)
-        codeNotes.add("β₁=%.3f (ACI 22.2.2.4.1)".format(beta1))
+        codeNotes.add(String.format("β₁=%.3f (ACI 22.2.2.4.1)", beta1))
         val discNeg = 1.0 - 2.0 * RnShort_neg / (0.85 * fcPrime)
         val discPos = 1.0 - 2.0 * RnShort_pos / (0.85 * fcPrime)
         val rhoShortNeg = if (discNeg > 0) (0.85 * fcPrime / fy) * (1.0 - sqrt(discNeg)) else 0.025
@@ -594,13 +594,13 @@ class ACIAdvancedSlab {
         val asLongNeg = max(rhoLongNeg * ribW * dShort, rhoMinWaffle * ribW * dShort)
         val asLongPos = max(rhoLongPos * ribW * dShort, rhoMinWaffle * ribW * dShort)
 
-        codeNotes.add("Short dir: M-=%.1f, M+=%.1f kN.m → As_neg=%.1f, As_pos=%.1f mm²".format(
+        codeNotes.add(String.format("Short dir: M-=%.1f, M+=%.1f kN.m → As_neg=%.1f, As_pos=%.1f mm²", 
             MnegShort, MposShort, asShortNeg, asShortPos))
-        codeNotes.add("Long dir:  M-=%.1f, M+=%.1f kN.m → As_neg=%.1f, As_pos=%.1f mm²".format(
+        codeNotes.add(String.format("Long dir:  M-=%.1f, M+=%.1f kN.m → As_neg=%.1f, As_pos=%.1f mm²", 
             MnegLong, MposLong, asLongNeg, asLongPos))
 
         // أكبر تسليح مطلوب
-        val asRequired = max(asShortNeg, asShortPos, asLongNeg, asLongPos)
+        val asRequired = maxOf(asShortNeg, asShortPos, asLongNeg, asLongPos)
 
         // اختيار القضبان
         val availableBars = listOf(12.0, 14.0, 16.0, 18.0, 20.0)
@@ -614,13 +614,13 @@ class ACIAdvancedSlab {
         val numBars = barResult.second
         val asProvided = barResult.third
 
-        codeNotes.add("Rib steel: %dΦ%.0f → As=%.1f mm² (per rib)".format(numBars, barDia, asProvided))
+        codeNotes.add(String.format("Rib steel: %dΦ%.0f → As=%.1f mm² (per rib)", numBars, barDia, asProvided))
 
         // فحص القص في الكمريتات
         val VuRib = loadPerRibShort * lx / 2.0
         val VcRib = 0.17 * sqrt(fcPrime) * ribW * dShort / 1000.0
         if (VuRib > PHI_SHEAR * VcRib) {
-            warnings.add("ACI 22.5.5.1: Rib shear Vu=%.1f > φVc=%.1f kN".format(VuRib, PHI_SHEAR * VcRib))
+            warnings.add(String.format("ACI 22.5.5.1: Rib shear Vu=%.1f > φVc=%.1f kN", VuRib, PHI_SHEAR * VcRib))
         }
 
         return SlabDesignResult(
@@ -666,15 +666,15 @@ class ACIAdvancedSlab {
         val L = cantileverLength / 1000.0  // م
 
         codeNotes.add("=== ACI 8.3.1.1: Cantilever Slab ===")
-        codeNotes.add("fc'=%.0f MPa, h=%.0f mm, L=%.2f m".format(fcPrime, thickness, L))
+        codeNotes.add(String.format("fc'=%.0f MPa, h=%.0f mm, L=%.2f m", fcPrime, thickness, L))
 
         // فحص الحد الأدنى للسمك - ACI Table 8.3.1.1: L/8 للكابولي
         val fyFactor = min(1.0, 420.0 / fy.coerceAtLeast(200.0))
         val hMin = (cantileverLength / 8.0) * fyFactor
         if (thickness < hMin) {
-            warnings.add("ACI Table 8.3.1.1: h=%.0f < h_min=%.0f mm (L/8)".format(thickness, hMin))
+            warnings.add(String.format("ACI Table 8.3.1.1: h=%.0f < h_min=%.0f mm (L/8)", thickness, hMin))
         } else {
-            codeNotes.add("ACI Table 8.3.1.1: Min thickness OK (%.0f ≥ %.0f mm)".format(thickness, hMin))
+            codeNotes.add(String.format("ACI Table 8.3.1.1: Min thickness OK (%.0f ≥ %.0f mm)", thickness, hMin))
         }
 
         // عزم الكابولي عند الدعامة: Mu = wu × L² / 2 (kN.m/m)
@@ -682,8 +682,8 @@ class ACIAdvancedSlab {
         // القص عند الدعامة: Vu = wu × L (kN/m)
         val Vu = totalLoad * L
 
-        codeNotes.add("Mu = wu×L²/2 = %.1f × %.2f² / 2 = %.1f kN.m/m".format(totalLoad, L, Mu))
-        codeNotes.add("Vu = wu×L = %.1f × %.2f = %.1f kN/m".format(totalLoad, L, Vu))
+        codeNotes.add(String.format("Mu = wu×L²/2 = %.1f × %.2f² / 2 = %.1f kN.m/m", totalLoad, L, Mu))
+        codeNotes.add(String.format("Vu = wu×L = %.1f × %.2f = %.1f kN/m", totalLoad, L, Vu))
 
         // تصميم الانحناء بطريقة Rn-ρ - حديد علوي (عزم سالب)
         val flexureResult = designFlexureRnRho(Mu, fcPrime, fy, thickness, isTopSteel = true)
@@ -697,9 +697,9 @@ class ACIAdvancedSlab {
         val phiVc = PHI_SHEAR * Vc
         val isShearSafe = Vu <= phiVc
         if (!isShearSafe) {
-            warnings.add("ACI 22.5.5.1: Vu=%.1f > φVc=%.1f kN/m - increase thickness".format(Vu, phiVc))
+            warnings.add(String.format("ACI 22.5.5.1: Vu=%.1f > φVc=%.1f kN/m - increase thickness", Vu, phiVc))
         }
-        codeNotes.add("Shear: Vu=%.1f, φVc=%.1f kN/m → %s".format(
+        codeNotes.add(String.format("Shear: Vu=%.1f, φVc=%.1f kN/m → %s", 
             Vu, phiVc, if (isShearSafe) "OK ✓" else "FAIL ✗"))
 
         // فحص الانحراف: δ = w × L⁴ / (8 × Ec × Ig) للكابولي
@@ -715,10 +715,10 @@ class ACIAdvancedSlab {
         val isDeflectionOk = deltaLongTerm <= deltaAllow
 
         if (!isDeflectionOk) {
-            warnings.add("ACI 24.2.2: δ_LT=%.1fmm > L/180=%.1fmm - increase thickness".format(
+            warnings.add(String.format("ACI 24.2.2: δ_LT=%.1fmm > L/180=%.1fmm - increase thickness", 
                 deltaLongTerm, deltaAllow))
         }
-        codeNotes.add("Deflection: δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=L/180=%.1fmm".format(
+        codeNotes.add(String.format("Deflection: δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=L/180=%.1fmm", 
             deltaImmediate, deltaLongTerm, deltaAllow))
 
         val deflectionCheck = DeflectionCheckResult(
@@ -728,7 +728,7 @@ class ACIAdvancedSlab {
             allowableDeflection = deltaAllow,
             ratio = deltaLongTerm / deltaAllow.coerceAtLeast(0.1),
             isSafe = isDeflectionOk,
-            message = "δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=L/180=%.1fmm".format(
+            message = String.format("δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=L/180=%.1fmm", 
                 deltaImmediate, deltaLongTerm, deltaAllow),
             recommendation = if (!isDeflectionOk) "Increase thickness or reduce cantilever length" else "Deflection OK"
         )
@@ -803,7 +803,7 @@ class ACIAdvancedSlab {
         // bo = 2 × (c1 + d) + 2 × (c2 + d) = 2(c1 + c2) + 4d
         val bo = 2.0 * (colC1 + d) + 2.0 * (colC2 + d)
         codeNotes.add("=== ACI 22.6: Punching Shear ===")
-        codeNotes.add("bo = 2(c1+d)+2(c2+d) = 2(%.0f+%.0f)+2(%.0f+%.0f) = %.0f mm".format(
+        codeNotes.add(String.format("bo = 2(c1+d)+2(c2+d) = 2(%.0f+%.0f)+2(%.0f+%.0f) = %.0f mm", 
             colC1, d, colC2, d, bo))
 
         // القوة القاطعة عند الاختراق
@@ -827,14 +827,14 @@ class ACIAdvancedSlab {
         val vc3 = 0.33 * lambda * sqrt(fcPrime)  // ACI 22.6.5.2(c)
         val vc = minOf(vc1, vc2, vc3)
 
-        codeNotes.add("β=%.1f, αs=%.0f (interior column)".format(beta, alphaS))
-        codeNotes.add("vc1=%.3f, vc2=%.3f, vc3=%.3f → vc=%.3f MPa".format(vc1, vc2, vc3, vc))
-        codeNotes.add("vu=%.3f MPa, φ×vc=%.3f MPa".format(vu, PHI_SHEAR * vc))
+        codeNotes.add(String.format("β=%.1f, αs=%.0f (interior column)", beta, alphaS))
+        codeNotes.add(String.format("vc1=%.3f, vc2=%.3f, vc3=%.3f → vc=%.3f MPa", vc1, vc2, vc3, vc))
+        codeNotes.add(String.format("vu=%.3f MPa, φ×vc=%.3f MPa", vu, PHI_SHEAR * vc))
 
         val isSafe = vu <= PHI_SHEAR * vc
 
         if (!isSafe) {
-            warnings.add("ACI 22.6.5: vu=%.3f > φvc=%.3f MPa - punching failure!".format(vu, PHI_SHEAR * vc))
+            warnings.add(String.format("ACI 22.6.5: vu=%.3f > φvc=%.3f MPa - punching failure!", vu, PHI_SHEAR * vc))
         }
 
         return PunchingShearCheckResult(
@@ -877,8 +877,8 @@ class ACIAdvancedSlab {
         // إضافة ملاحظات عن الـ drop panel
         val extraNotes = mutableListOf(
             "ACI 22.6.4: Punching checked at drop panel edge",
-            "Effective column size (drop): %.0f × %.0f mm".format(c1Eff, c2Eff),
-            "Total depth at column: %.0f mm (slab %.0f + drop %.0f)".format(
+            String.format("Effective column size (drop): %.0f × %.0f mm", c1Eff, c2Eff),
+            String.format("Total depth at column: %.0f mm (slab %.0f + drop %.0f)", 
                 hTotal, slab.thickness, slab.dropPanelThickness)
         )
 
@@ -958,7 +958,7 @@ class ACIAdvancedSlab {
             criticalSection = d,
             criticalPerimeter = 0.0,
             warnings = if (Vu > phiVc) listOf(
-                "ACI 22.5.5.1: Vu=%.1f kN/m > φVc=%.1f kN/m".format(Vu, phiVc)
+                String.format("ACI 22.5.5.1: Vu=%.1f kN/m > φVc=%.1f kN/m", Vu, phiVc)
             ) else emptyList()
         )
     }
@@ -1031,7 +1031,7 @@ class ACIAdvancedSlab {
             allowableDeflection = deltaAllow,
             ratio = ratio,
             isSafe = ratio <= 1.0,
-            message = "δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=L/240=%.1fmm".format(
+            message = String.format("δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=L/240=%.1fmm", 
                 deltaImmediate, deltaLongTerm, deltaAllow),
             recommendation = if (ratio > 1.0)
                 "ACI 24.2: Increase thickness or reduce reinforcement ratio" else "ACI 24.2: Deflection OK"
@@ -1107,8 +1107,8 @@ class ACIAdvancedSlab {
 
         // β₁ - ACI 22.2.2.4.1
         val beta1 = computeBeta1(fcPrime)
-        codeNotes.add("Rn = Mu/(φbd²) = %.2f MPa".format(Rn))
-        codeNotes.add("β₁ = %.3f (ACI 22.2.2.4.1)".format(beta1))
+        codeNotes.add(String.format("Rn = Mu/(φbd²) = %.2f MPa", Rn))
+        codeNotes.add(String.format("β₁ = %.3f (ACI 22.2.2.4.1)", beta1))
 
         // ρ from Rn
         val discriminant = 1.0 - 2.0 * Rn / (0.85 * fcPrime)
@@ -1124,16 +1124,16 @@ class ACIAdvancedSlab {
         val rhoFinal = max(rho, rhoMin).coerceAtMost(0.025)
         val asRequired = rhoFinal * b * d
 
-        codeNotes.add("ρ=%.5f, ρ_min=%.5f, ρ_final=%.5f".format(rho, rhoMin, rhoFinal))
+        codeNotes.add(String.format("ρ=%.5f, ρ_min=%.5f, ρ_final=%.5f", rho, rhoMin, rhoFinal))
 
         // Bar selection - economical
         val (ecoBar, ecoSpacing, ecoAs) = selectEconomicalBar(asRequired, thickness)
         // Bar selection - safest (next size up)
         val (safeBar, safeSpacing, safeAs) = selectSafestBar(asRequired, thickness)
 
-        codeNotes.add("As_req = %.1f mm²/m".format(asRequired))
-        codeNotes.add("Economical: Φ%.0f @ %.0fmm → As=%.0f mm²/m".format(ecoBar, ecoSpacing, ecoAs))
-        codeNotes.add("Safest:    Φ%.0f @ %.0fmm → As=%.0f mm²/m".format(safeBar, safeSpacing, safeAs))
+        codeNotes.add(String.format("As_req = %.1f mm²/m", asRequired))
+        codeNotes.add(String.format("Economical: Φ%.0f @ %.0fmm → As=%.0f mm²/m", ecoBar, ecoSpacing, ecoAs))
+        codeNotes.add(String.format("Safest:    Φ%.0f @ %.0fmm → As=%.0f mm²/m", safeBar, safeSpacing, safeAs))
 
         if (isTopSteel) {
             codeNotes.add("Top steel at support (negative moment zone)")

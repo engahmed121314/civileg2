@@ -58,7 +58,7 @@ class SBCBeam : BeamDesign {
             val rho_min_seismic = 0.25 * sqrt(0.8 * fcu) / fy
             val rho_actual = result.astProvided / (width * effectiveDepth)
             if (rho_actual < rho_min_seismic) {
-                updatedWarnings.add("SBC 304-18: التسليح أقل من النسبة الزلزالية الدنيا ${"%.4f".format(rho_min_seismic)}")
+                updatedWarnings.add("SBC 304-18: التسليح أقل من النسبة الزلزالية الدنيا ${String.format("%.4f", rho_min_seismic)}")
             }
             updatedNotes.add("SBC 304-2018: Seismic zone provisions applied")
         }
@@ -241,10 +241,10 @@ class SBCBeam : BeamDesign {
         val cOverD = epsilonCu / (epsilonCu + epsilonY)
         val neutralAxisDepth = cOverD * d
         
-        notes.add("SBC 304: f'c = 0.67 × fcu / 1.5 = ${"%.1f".format(fc)} MPa")
-        notes.add("Rn = ${"%.2f".format(Rn)} MPa")
-        notes.add("Rn_bal = ${"%.2f".format(RnBal)} MPa")
-        notes.add("ρ_bal = ${"%.4f".format(rhoBal)}")
+        notes.add("SBC 304: f'c = 0.67 × fcu / 1.5 = ${String.format("%.1f", fc)} MPa")
+        notes.add("Rn = ${String.format("%.2f", Rn)} MPa")
+        notes.add("Rn_bal = ${String.format("%.2f", RnBal)} MPa")
+        notes.add("ρ_bal = ${String.format("%.4f", rhoBal)}")
         
         // If Rn ≤ Rn_bal: singly reinforced is sufficient
         if (Rn <= RnBal) {
@@ -312,11 +312,11 @@ class SBCBeam : BeamDesign {
         val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
         
         notes.add("Rn > Rn_bal → Compression steel required")
-        notes.add("Rn_excess = ${"%.2f".format(RnExcess)} MPa")
-        notes.add("As₁ (balanced) = ${"%.0f".format(As1)} mm²")
-        notes.add("As (total) = ${"%.0f".format(asFinal)} mm²")
-        notes.add("As' (compression) = ${"%.0f".format(AsPrime)} mm²")
-        notes.add("Neutral axis depth c = ${"%.1f".format(neutralAxisDepth)} mm")
+        notes.add("Rn_excess = ${String.format("%.2f", RnExcess)} MPa")
+        notes.add("As₁ (balanced) = ${String.format("%.0f", As1)} mm²")
+        notes.add("As (total) = ${String.format("%.0f", asFinal)} mm²")
+        notes.add("As' (compression) = ${String.format("%.0f", AsPrime)} mm²")
+        notes.add("Neutral axis depth c = ${String.format("%.1f", neutralAxisDepth)} mm")
         notes.add("φ = $phi for tension-controlled sections")
         notes.add(CodeReference.SBC.BEAM_FLEXURE)
         notes.add("SBC 304-2018: Section 9.3.3.2 (Doubly reinforced)")

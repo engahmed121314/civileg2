@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.navArgs
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentColumnDesignBinding
 import com.civileg.app.db.*
@@ -38,7 +37,7 @@ class ColumnDesignFragment : Fragment() {
     private val binding get() = _binding!!
     
     private val viewModel: ProjectViewModel by viewModels()
-    private val args: ColumnDesignFragmentArgs by navArgs()
+    private var projectId: Long = -1L
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -65,6 +64,7 @@ class ColumnDesignFragment : Fragment() {
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        projectId = arguments?.getLong("projectId", -1L) ?: -1L
         
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             projectsList = projects
@@ -278,7 +278,7 @@ class ColumnDesignFragment : Fragment() {
     private fun exportToPdf(result: CalculatorEngine.ColumnResult) {
         try {
             val exporter = ComprehensivePdfExporter(requireContext())
-            val project = projectsList.firstOrNull { it.id == args.projectId }
+            val project = projectsList.firstOrNull { it.id == projectId }
             val projectName = project?.name ?: "Unnamed Project"
             
             val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
@@ -342,7 +342,7 @@ class ColumnDesignFragment : Fragment() {
     }
 
     private fun saveDesign(result: CalculatorEngine.ColumnResult) {
-        val projectId = if (args.projectId != -1L) args.projectId else projectsList.firstOrNull()?.id ?: -1L
+        val projectId = if (projectId != -1L) projectId else projectsList.firstOrNull()?.id ?: -1L
         if (projectId != -1L) {
             lifecycleScope.launch {
                 val inputData = org.json.JSONObject().apply {

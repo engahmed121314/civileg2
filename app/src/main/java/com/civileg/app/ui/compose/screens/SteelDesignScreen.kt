@@ -41,6 +41,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
+import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign.WeldDesignResult
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfGenerator

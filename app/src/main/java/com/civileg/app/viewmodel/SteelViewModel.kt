@@ -113,7 +113,7 @@ class SteelViewModel @Inject constructor(
         clientAr: String, clientEn: String, projAr: String, projEn: String,
         onComplete: (java.io.File?) -> Unit
     ) {
-        val res = _warehouseProResult.value ?: return
+        val res = _warehouseResult.value ?: return
         val inputs = lastWarehouseInputs ?: return
 
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -157,12 +157,57 @@ class SteelViewModel @Inject constructor(
 
                 // Generate steel drawing bitmap using actual section properties
                 val drawingBitmap = try {
+                    val sec = stored.section
+                    val sectionH = when (sec) {
+                        is SteelSectionType.ISection -> sec.h
+                        is SteelSectionType.CSection -> sec.h
+                        is SteelSectionType.TSection -> sec.webDepth + sec.flangeThickness
+                        is SteelSectionType.PlateGirder -> sec.h
+                        is SteelSectionType.Pipe -> sec.outerDiameter
+                        is SteelSectionType.RHS -> sec.height
+                        is SteelSectionType.CHS -> sec.outerDiameter
+                        is SteelSectionType.LSection -> sec.legA
+                        is SteelSectionType.BuiltUp -> 0.0
+                    }
+                    val sectionBf = when (sec) {
+                        is SteelSectionType.ISection -> sec.bf
+                        is SteelSectionType.CSection -> sec.bf
+                        is SteelSectionType.TSection -> sec.flangeWidth
+                        is SteelSectionType.PlateGirder -> sec.bfTop
+                        is SteelSectionType.Pipe -> sec.outerDiameter
+                        is SteelSectionType.RHS -> sec.width
+                        is SteelSectionType.CHS -> sec.outerDiameter
+                        is SteelSectionType.LSection -> sec.legB
+                        is SteelSectionType.BuiltUp -> 0.0
+                    }
+                    val sectionTw = when (sec) {
+                        is SteelSectionType.ISection -> sec.tw
+                        is SteelSectionType.CSection -> sec.tw
+                        is SteelSectionType.TSection -> sec.webThickness
+                        is SteelSectionType.PlateGirder -> sec.tw
+                        is SteelSectionType.Pipe -> sec.wallThickness
+                        is SteelSectionType.RHS -> sec.thickness
+                        is SteelSectionType.CHS -> sec.thickness
+                        is SteelSectionType.LSection -> sec.thickness
+                        is SteelSectionType.BuiltUp -> 0.0
+                    }
+                    val sectionTf = when (sec) {
+                        is SteelSectionType.ISection -> sec.tf
+                        is SteelSectionType.CSection -> sec.tf
+                        is SteelSectionType.TSection -> sec.flangeThickness
+                        is SteelSectionType.PlateGirder -> sec.tfTop
+                        is SteelSectionType.Pipe -> sec.wallThickness
+                        is SteelSectionType.RHS -> sec.thickness
+                        is SteelSectionType.CHS -> sec.thickness
+                        is SteelSectionType.LSection -> sec.thickness
+                        is SteelSectionType.BuiltUp -> 0.0
+                    }
                     PdfDrawingGenerator.generateSteelDrawing(
                         sectionName = stored.section.displayName,
-                        sectionHeight = stored.section.h,
-                        flangeWidth = stored.section.bf,
-                        webThickness = stored.section.tw,
-                        flangeThickness = stored.section.tf,
+                        sectionHeight = sectionH,
+                        flangeWidth = sectionBf,
+                        webThickness = sectionTw,
+                        flangeThickness = sectionTf,
                         memberLength = stored.inputs.length,
                         isSafe = res.isSafe,
                         utilizationRatio = res.utilizationRatio * 100

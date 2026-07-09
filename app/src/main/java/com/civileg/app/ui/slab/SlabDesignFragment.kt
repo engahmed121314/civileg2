@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.navArgs
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentSlabDesignBinding
 import com.civileg.app.db.*
@@ -37,7 +36,8 @@ class SlabDesignFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ProjectViewModel by viewModels()
-    private val args: SlabDesignFragmentArgs by navArgs()
+    private val projectId: Long
+        get() = requireArguments().getLong("projectId", -1L)
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -147,7 +147,7 @@ class SlabDesignFragment : Fragment() {
     private fun exportToPdf(result: CalculatorEngine.SlabResult) {
         try {
             val exporter = ComprehensivePdfExporter(requireContext())
-            val projectName = projectsList.firstOrNull { it.id == args.projectId }?.name ?: "Unnamed Project"
+            val projectName = projectsList.firstOrNull { it.id == projectId }?.name ?: "Unnamed Project"
             val fileName = "Slab_Report_${System.currentTimeMillis()}.pdf"
             val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
             
@@ -202,7 +202,7 @@ class SlabDesignFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSaveDesign.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val projectId = if (args.projectId != -1L) args.projectId else projectsList.firstOrNull()?.id ?: -1L
+            val projectId = if (this@SlabDesignFragment.projectId != -1L) this@SlabDesignFragment.projectId else projectsList.firstOrNull()?.id ?: -1L
             if (projectId == -1L) { showError("اختر مشروعاً للحفظ"); return@setOnClickListener }
 
             lifecycleScope.launch {

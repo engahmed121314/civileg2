@@ -8,7 +8,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.civileg.app.R
 import com.civileg.app.adapter.DesignHistoryAdapter
@@ -22,9 +21,9 @@ class ProjectDetailFragment : Fragment() {
 
     private var _binding: FragmentProjectDetailBinding? = null
     private val binding get() = _binding!!
-    
+
     private val viewModel: ProjectViewModel by viewModels()
-    private val args: ProjectDetailFragmentArgs by navArgs()
+    private var projectId: Long = -1L
     private lateinit var adapter: DesignHistoryAdapter
 
     override fun onCreateView(
@@ -38,6 +37,8 @@ class ProjectDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // Read projectId from arguments (passed via Bundle, not Safe Args)
+        projectId = arguments?.getLong("projectId", -1L) ?: -1L
         setupRecyclerView()
         setupToolbar()
         setupFab()
@@ -78,31 +79,21 @@ class ProjectDetailFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Add New Design to Project")
             .setItems(options) { _, which ->
-                val destination = when (which) {
-                    0 -> ProjectDetailFragmentDirections.actionDetailToBeam(args.projectId)
-                    1 -> ProjectDetailFragmentDirections.actionDetailToColumn(args.projectId)
-                    2 -> ProjectDetailFragmentDirections.actionDetailToFooting(args.projectId)
-                    3 -> ProjectDetailFragmentDirections.actionDetailToSlab(args.projectId)
-                    4 -> ProjectDetailFragmentDirections.actionDetailToStairs(args.projectId)
-                    5 -> {
-                        // Assuming actions are defined in nav_graph.xml
-                        findNavController().navigate(R.id.nav_retaining, Bundle().apply { putLong("projectId", args.projectId) })
-                        return@setItems
-                    }
-                    6 -> {
-                        findNavController().navigate(R.id.nav_watertank, Bundle().apply { putLong("projectId", args.projectId) })
-                        return@setItems
-                    }
-                    else -> null
+                val bundle = Bundle().apply { putLong("projectId", projectId) }
+                when (which) {
+                    0 -> findNavController().navigate(R.id.nav_beam, bundle)
+                    1 -> findNavController().navigate(R.id.nav_column, bundle)
+                    2 -> findNavController().navigate(R.id.nav_footing, bundle)
+                    3 -> findNavController().navigate(R.id.nav_slab, bundle)
+                    4 -> findNavController().navigate(R.id.nav_stairs, bundle)
+                    5 -> findNavController().navigate(R.id.nav_retaining, bundle)
+                    6 -> findNavController().navigate(R.id.nav_watertank, bundle)
                 }
-                destination?.let { findNavController().navigate(it) }
             }
             .show()
     }
 
     private fun observeData() {
-        val projectId = args.projectId
-        
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             val project = projects.find { it.id == projectId }
             project?.let {
@@ -115,7 +106,7 @@ class ProjectDetailFragment : Fragment() {
             binding.tvDesignCount.text = "${designs.size} Designs"
             adapter.submitList(designs)
         }
-        
+
         viewModel.getMaterialsForProject(projectId).observe(viewLifecycleOwner) { materials ->
             val total = materials.sumOf { it.totalPrice }
             binding.tvTotalCost.text = String.format("Total: %,.0f EGP", total)

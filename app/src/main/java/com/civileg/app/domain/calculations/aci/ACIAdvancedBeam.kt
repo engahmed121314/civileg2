@@ -83,14 +83,14 @@ class ACIAdvancedBeam {
         val gammaL = 1.6
         val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
 
-        codeNotes.add("ACI 318-19 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${gammaD}×$deadLoad + ${gammaL}×$liveLoad = ${"%.2f".format(totalLoad)} kN/m")
+        codeNotes.add("ACI 318-19 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${gammaD}×$deadLoad + ${gammaL}×$liveLoad = ${String.format("%.2f", totalLoad)} kN/m")
 
         // === حساب القوى القصوى بناءً على نوع الكمرة ===
         val maxMoment = beamType.getMaxMoment(totalLoad)  // kN.m
         val maxShear = beamType.getMaxShear(totalLoad)    // kN
 
-        codeNotes.add("Max Moment: ${"%.2f".format(maxMoment)} kN.m")
-        codeNotes.add("Max Shear: ${"%.2f".format(maxShear)} kN")
+        codeNotes.add("Max Moment: ${String.format("%.2f", maxMoment)} kN.m")
+        codeNotes.add("Max Shear: ${String.format("%.2f", maxShear)} kN")
 
         // === تحديد العمق الفعال ===
         // d = h - cover - stirrup_dia/2 - main_bar_dia/2 (تقريبي)
@@ -295,7 +295,7 @@ class ACIAdvancedBeam {
         val mcRatio = if (Ma > 0) Mcr / Ma else 1.0
         val mcRatioCubed = mcRatio.pow(3).coerceAtMost(1.0)
 
-        val Ie: Double
+        var Ie: Double
         if (mcRatio >= 1.0) {
             // المقطع لا يتشقق - نستخدم Ig
             Ie = Ig
@@ -356,7 +356,7 @@ class ACIAdvancedBeam {
         }
 
         if (ratio > 1.0) {
-            deflectionWarnings.add("⚠️ Deflection exceeds ACI 24.2.2 limits (δ/δ_allow = ${"%.2f".format(ratio)})")
+            deflectionWarnings.add("⚠️ Deflection exceeds ACI 24.2.2 limits (δ/δ_allow = ${String.format("%.2f", ratio)})")
         }
 
         return DeflectionCheckResult(
@@ -366,7 +366,7 @@ class ACIAdvancedBeam {
             allowableDeflection = allowableDeflection,
             ratio = ratio,
             isSafe = ratio <= 1.0,
-            message = "ACI 24.2: δi=%.2fmm, δLT=%.2fmm, δ_allow=%.2fmm".format(
+            message = String.format("ACI 24.2: δi=%.2fmm, δLT=%.2fmm, δ_allow=%.2fmm", 
                 immediateDeflection, longTermDeflection, allowableDeflection
             ),
             recommendation = recommendation,
@@ -471,7 +471,7 @@ class ACIAdvancedBeam {
             calculatedWidth = crackWidth,
             allowableWidth = allowableWidth,
             isSafe = isSafe,
-            codeReference = "ACI 318-19: Section 24.5 (z = ${"%.0f".format(z)} kip/in, limit = ${if (isExterior) 145 else 175} kip/in)"
+            codeReference = "ACI 318-19: Section 24.5 (z = ${String.format("%.0f", z)} kip/in, limit = ${if (isExterior) 145 else 175} kip/in)"
         )
     }
 
@@ -535,7 +535,7 @@ class ACIAdvancedBeam {
             requiredLength = ldRequired,
             availableLength = availableLength,
             isSafe = isSafe,
-            codeReference = "ACI 318-19: Section 25.4.2 (Ld_bot=${"%.0f".format(ldBottom)}mm, Ld_top=${"%.0f".format(ldTop)}mm)"
+            codeReference = "ACI 318-19: Section 25.4.2 (Ld_bot=${String.format("%.0f", ldBottom)}mm, Ld_top=${String.format("%.0f", ldTop)}mm)"
         )
     }
 

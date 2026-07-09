@@ -1,5 +1,9 @@
 package com.civileg.app.domain.calculations.utils
 
+import kotlin.math.abs
+import kotlin.math.sqrt
+import kotlin.math.pow
+
 data class RectangularSection(val width: Double, val depth: Double)
 
 /**

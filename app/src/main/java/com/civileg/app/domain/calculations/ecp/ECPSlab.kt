@@ -43,7 +43,7 @@ class ECPSlab : SlabDesign {
         val K = if (fcu > 0 && effectiveDepth > 0) Mu / (fcu * width * effectiveDepth * effectiveDepth) else 0.0
         
         if (K > K_bal) {
-            warnings.add("K=%.3f > K_bal=%.3f - Section is over-reinforced, increase slab thickness".format(K, K_bal))
+            warnings.add(String.format("K=%.3f > K_bal=%.3f - Section is over-reinforced, increase slab thickness", K, K_bal))
         }
         
         // ذراع القوة: z = d × (0.5 + √(0.25 - K/1.25)) حسب ECP 203
@@ -86,7 +86,7 @@ class ECPSlab : SlabDesign {
             warnings.add("Shear capacity exceeded - increase thickness")
         }
         
-        codeNotes.add("ECP 203: qcu = %.2f MPa".format(qcu))
+        codeNotes.add(String.format("ECP 203: qcu = %.2f MPa", qcu))
         
         // التحقق من السمك للانحراف
         val minThickness = getMinSlabThickness(clearSpan, SupportCondition.SIMPLY_SUPPORTED)
@@ -95,8 +95,8 @@ class ECPSlab : SlabDesign {
         }
         
         codeNotes.add(CodeReference.ECP.SLAB_ONE_WAY)
-        codeNotes.add("K = %.3f, z = %.0f mm".format(K, leverArm))
-        codeNotes.add("As_req = %.0f mm²/m, As_prov = %.0f mm²/m".format(astRequired, astProvided))
+        codeNotes.add(String.format("K = %.3f, z = %.0f mm", K, leverArm))
+        codeNotes.add(String.format("As_req = %.0f mm²/m, As_prov = %.0f mm²/m", astRequired, astProvided))
         
         return SlabDesignResult(
             requiredReinforcement = astRequired,

@@ -3,7 +3,7 @@ package com.civileg.app.domain.entities
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
-import kotlin.math.PI
+import kotlin.math.*
 
 /**
  * جميع أنواع القطاعات المعدنية

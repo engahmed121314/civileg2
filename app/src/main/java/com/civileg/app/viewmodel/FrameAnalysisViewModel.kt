@@ -133,8 +133,7 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun removeNodalLoad(index: Int) {
-        _nodalLoads.value = _nodalLoads.value?.toIndexedMap()
-            ?.filterKeys { it != index }?.values?.toList()
+        _nodalLoads.value = _nodalLoads.value?.filterIndexed { i, _ -> i != index }
     }
 
     fun updateNodalLoad(index: Int, load: NodalLoad) {

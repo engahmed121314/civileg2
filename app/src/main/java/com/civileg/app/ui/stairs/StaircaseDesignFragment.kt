@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.navArgs
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentStaircaseDesignBinding
 import com.civileg.app.db.*
@@ -30,7 +29,8 @@ class StaircaseDesignFragment : Fragment() {
     private val binding get() = _binding!!
     
     private val viewModel: ProjectViewModel by viewModels()
-    private val args: StaircaseDesignFragmentArgs by navArgs()
+    private val projectId: Long
+        get() = requireArguments().getLong("projectId", -1L)
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -181,7 +181,7 @@ class StaircaseDesignFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val projectId = if (args.projectId != -1L) args.projectId else projectsList.firstOrNull()?.id ?: -1L
+            val projectId = if (this@StaircaseDesignFragment.projectId != -1L) this@StaircaseDesignFragment.projectId else projectsList.firstOrNull()?.id ?: -1L
             if (projectId != -1L) {
                 saveToProject(projectId, result)
             } else {

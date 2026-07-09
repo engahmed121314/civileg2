@@ -109,7 +109,7 @@ class ECPCombinedFooting {
 
         // ==================== 2. Minimum Thickness Check ====================
         if (footingThickness < MIN_THICKNESS) {
-            warnings.add("Footing thickness ${"%.0f".format(footingThickness)} mm < ${"%.0f".format(MIN_THICKNESS)} mm minimum per ECP 203")
+            warnings.add("Footing thickness ${String.format("%.0f", footingThickness)} mm < ${String.format("%.0f", MIN_THICKNESS)} mm minimum per ECP 203")
         }
 
         // ==================== 3. Footing Area ====================
@@ -171,7 +171,7 @@ class ECPCombinedFooting {
         // Check soil bearing capacity at ultimate (approximately SBC * avgFactor)
         val ultSBC = soilBearingCapacity * 1.5
         if (qMax > ultSBC) {
-            warnings.add("Max soil pressure ${"%.1f".format(qMax)} kN/m^2 may exceed capacity - verify SBC at ultimate level")
+            warnings.add("Max soil pressure ${String.format("%.1f", qMax)} kN/m^2 may exceed capacity - verify SBC at ultimate level")
         }
         if (qMin < 0) {
             warnings.add("Negative soil pressure (separation) detected - increase footing length")
@@ -270,7 +270,7 @@ class ECPCombinedFooting {
 
         val oneWayShearSafe = vuMax <= vc
         if (!oneWayShearSafe) {
-            warnings.add("One-way shear V_u = ${"%.1f".format(vuMax)} kN > V_c = ${"%.1f".format(vc)} kN - increase thickness or concrete grade")
+            warnings.add("One-way shear V_u = ${String.format("%.1f", vuMax)} kN > V_c = ${String.format("%.1f", vc)} kN - increase thickness or concrete grade")
         }
 
         // ==================== 11. Punching Shear Check ====================

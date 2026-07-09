@@ -127,7 +127,7 @@ class ECPAdvancedColumn : ColumnDesign {
             val estAs = 0.01 * Ag
             val magX = calculateMomentMagnification(axialLoad, momentX, unsupportedLength, k, w, d, fcu, fy, estAs)
             val magY = calculateMomentMagnification(axialLoad, momentY, unsupportedLength, k, w, d, fcu, fy, estAs)
-            codeNotes.add("Moment magnification applied: δx=${"%.2f".format(magX.delta)}, δy=${"%.2f".format(magY.delta)}")
+            codeNotes.add("Moment magnification applied: δx=${String.format("%.2f", magX.delta)}, δy=${String.format("%.2f", magY.delta)}")
             magX.magnifiedMoment to magY.magnifiedMoment
         } else {
             momentX to momentY
@@ -310,7 +310,7 @@ class ECPAdvancedColumn : ColumnDesign {
         return BiaxialCheckResult(
             abs(Mx), abs(My), interactionFactor,
             interactionFactor <= 1.0,
-            "Bresler's reciprocal approximation (ECP 203 Sec 4.2.6), α=%.2f".format(alpha)
+            String.format("Bresler's reciprocal approximation (ECP 203 Sec 4.2.6), α=%.2f", alpha)
         )
     }
     
@@ -573,11 +573,11 @@ class ECPAdvancedColumn : ColumnDesign {
         val isSlender = lambda > 15.0           // rectangular column limit
 
         codeNotes.add("ECP 203 البند 4-2-7: تكبير العزم بسبب النحافة")
-        codeNotes.add("Ec = 4400√fcu = %.0f MPa".format(Ec))
-        codeNotes.add("Ig = %.2e mm⁴, Is = %.2e mm⁴".format(Ig, Is))
-        codeNotes.add("EI = %.2e N.mm²".format(EI))
-        codeNotes.add("Pc = π²×EI/(KL)² = %.1f kN".format(PcKn))
-        codeNotes.add("نسبة النحافة λ = %.1f, العمود %s".format(
+        codeNotes.add(String.format("Ec = 4400√fcu = %.0f MPa", Ec))
+        codeNotes.add(String.format("Ig = %.2e mm⁴, Is = %.2e mm⁴", Ig, Is))
+        codeNotes.add(String.format("EI = %.2e N.mm²", EI))
+        codeNotes.add(String.format("Pc = π²×EI/(KL)² = %.1f kN", PcKn))
+        codeNotes.add(String.format("نسبة النحافة λ = %.1f, العمود %s", 
             lambda, if (isSlender) "طويل (Long)" else "قصير (Short)"))
 
         // ── Magnification Factor ──
@@ -588,7 +588,7 @@ class ECPAdvancedColumn : ColumnDesign {
             // Non-sway frame: δ = Cm / (1 - Pu/Pc) ≥ 1.0, capped at 2.5
             val ratio = (Pu * 1000.0) / Pc    // dimensionless
             if (ratio >= 1.0) {
-                codeNotes.add("⚠️ Pu/Pc = %.3f ≥ 1.0 → عدم استقرار! يجب زيادة المقطع.".format(ratio))
+                codeNotes.add(String.format("⚠️ Pu/Pc = %.3f ≥ 1.0 → عدم استقرار! يجب زيادة المقطع.", ratio))
                 delta = 2.5  // cap at maximum
             } else {
                 delta = (Cm / (1.0 - ratio)).coerceIn(1.0, 2.5)
@@ -596,11 +596,11 @@ class ECPAdvancedColumn : ColumnDesign {
             magnifiedMoment = Mu * delta
 
             codeNotes.add("إطار غير جانبي (Non-Sway): δ = Cm/(1-Pu/Pc)")
-            codeNotes.add("Cm = %.2f, Pu/Pc = %.3f".format(Cm, ratio))
-            codeNotes.add("δ = %.3f (max 2.5), M_design = %.1f kN.m".format(delta, magnifiedMoment))
+            codeNotes.add(String.format("Cm = %.2f, Pu/Pc = %.3f", Cm, ratio))
+            codeNotes.add(String.format("δ = %.3f (max 2.5), M_design = %.1f kN.m", delta, magnifiedMoment))
 
             if (delta > 1.05) {
-                codeNotes.add("⚠️ العزم مكبّر بمعامل δ = %.2f > 1.05 — يُنصح بزيادة المقطع".format(delta))
+                codeNotes.add(String.format("⚠️ العزم مكبّر بمعامل δ = %.2f > 1.05 — يُنصح بزيادة المقطع", delta))
             }
         } else {
             // Sway frame: δs = 1 / (1 - ΣPu/ΣPc)
@@ -609,7 +609,7 @@ class ECPAdvancedColumn : ColumnDesign {
             val isSwaySensitive = ratio > 0.05
 
             if (ratio >= 0.6) {
-                codeNotes.add("⚠️ ΣPu/ΣPc = %.3f ≥ 0.6 → الإطار حساس جداً للجانبية!".format(ratio))
+                codeNotes.add(String.format("⚠️ ΣPu/ΣPc = %.3f ≥ 0.6 → الإطار حساس جداً للجانبية!", ratio))
                 delta = 1.0 / (1.0 - 0.59)  // use capped ratio
             } else {
                 delta = 1.0 / (1.0 - ratio)
@@ -617,7 +617,7 @@ class ECPAdvancedColumn : ColumnDesign {
             magnifiedMoment = Mu + (delta - 1.0) * Mu  // M_design = Mu + δs × Msway (≈ δs × Mu if all sway)
 
             codeNotes.add("إطار جانبي (Sway): δs = 1/(1-ΣPu/ΣPc)")
-            codeNotes.add("ΣPu/ΣPc ≈ %.3f, δs = %.3f".format(ratio, delta))
+            codeNotes.add(String.format("ΣPu/ΣPc ≈ %.3f, δs = %.3f", ratio, delta))
 
             return MomentMagnificationResult(
                 magnifiedMoment = magnifiedMoment,
@@ -679,7 +679,7 @@ class ECPAdvancedColumn : ColumnDesign {
         // معامل أمان أعلى للأعمدة الحلزونية: φ = 0.75
         val PHI_SPIRAL = 0.75
         codeNotes.add("ECP 203 البند 4-2-6: عمود حلزوني (Spiral Column)")
-        codeNotes.add("معامل التخفيض φ = %.2f (أعلى من 0.65 للأعمدة العادية)".format(PHI_SPIRAL))
+        codeNotes.add(String.format("معامل التخفيض φ = %.2f (أعلى من 0.65 للأعمدة العادية)", PHI_SPIRAL))
 
         val Ag = PI * diameter * diameter / 4.0
         val cover = COVER
@@ -722,19 +722,19 @@ class ECPAdvancedColumn : ColumnDesign {
 
         val sProvided = sRequired.coerceIn(25.0, sMax)
 
-        codeNotes.add("المساحة الكلية Ag = %.0f mm², مساحة اللب Ac = %.0f mm²".format(Ag, Ac))
-        codeNotes.add("نسبة التسليح الحلزوني المطلوبة ρs = %.4f".format(rhoSRequired))
-        codeNotes.add("قطر الحلزون = %.0f mm, التباعد = %.0f mm (أقصى = %.0f mm)".format(dSpiral, sProvided, sMax))
+        codeNotes.add(String.format("المساحة الكلية Ag = %.0f mm², مساحة اللب Ac = %.0f mm²", Ag, Ac))
+        codeNotes.add(String.format("نسبة التسليح الحلزوني المطلوبة ρs = %.4f", rhoSRequired))
+        codeNotes.add(String.format("قطر الحلزون = %.0f mm, التباعد = %.0f mm (أقصى = %.0f mm)", dSpiral, sProvided, sMax))
 
         if (sRequired > sMax) {
-            warnings.add("⚠️ التباعد المطلوب للحلزون (%.0f mm) يزيد عن الحد الأقصى (%.0f mm)".format(sRequired, sMax))
+            warnings.add(String.format("⚠️ التباعد المطلوب للحلزون (%.0f mm) يزيد عن الحد الأقصى (%.0f mm)", sRequired, sMax))
             warnings.add("   يُنصح بزيادة قطر الحلزون أو قطر العمود")
         }
 
         // ── فحص الحد الأدنى للمسافة الخالية بين الحلزونات ──
         val clearSpacing = sProvided - dSpiral
         if (clearSpacing < 25.0) {
-            codeNotes.add("⚠️ المسافة الخالية بين الحلزونات = %.0f mm < 25 mm — تقليل تباعد الحلزون".format(clearSpacing))
+            codeNotes.add(String.format("⚠️ المسافة الخالية بين الحلزونات = %.0f mm < 25 mm — تقليل تباعد الحلزون", clearSpacing))
         }
 
         // ── Slenderness check ──
@@ -745,7 +745,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val slendernessRatio = effectiveLength / r
         val isSlender = slendernessRatio > 12.0  // circular column limit
         if (isSlender) {
-            warnings.add("⚠️ عمود حلزوني نحيف! λ = %.1f > 12 — يجب مراعاة تأثيرات الدرجة الثانية".format(slendernessRatio))
+            warnings.add(String.format("⚠️ عمود حلزوني نحيف! λ = %.1f > 12 — يجب مراعاة تأثيرات الدرجة الثانية", slendernessRatio))
         }
 
         // ── Axial capacity with spiral φ ──
@@ -755,8 +755,8 @@ class ECPAdvancedColumn : ColumnDesign {
         val dEff = diameter - cover - STIRRUP_DIA
         val muCap = reinforcementResult.astProvided * (fy / GAMMA_S) * 0.8 * dEff / 1e6
 
-        codeNotes.add("القدرة المحورية (مع φ=%.2f) = %.1f kN".format(PHI_SPIRAL, axialCapacity))
-        codeNotes.add("تباعد الكانات الحلزونية s = %.0f mm".format(sProvided))
+        codeNotes.add(String.format("القدرة المحورية (مع φ=%.2f) = %.1f kN", PHI_SPIRAL, axialCapacity))
+        codeNotes.add(String.format("تباعد الكانات الحلزونية s = %.0f mm", sProvided))
 
         val inventoryAnalysis = inventory?.let { inv ->
             analyzeInventory(reinforcementResult, unsupportedLength, inv)
@@ -826,7 +826,7 @@ class ECPAdvancedColumn : ColumnDesign {
             endConditions.topCondition.effectiveLengthFactor,
             endConditions.bottomCondition.effectiveLengthFactor
         )
-        notes.add("معامل الطول الفعال K = %.2f (max of top=%.2f, bottom=%.2f)".format(
+        notes.add(String.format("معامل الطول الفعال K = %.2f (max of top=%.2f, bottom=%.2f)", 
             kFactor,
             endConditions.topCondition.effectiveLengthFactor,
             endConditions.bottomCondition.effectiveLengthFactor
@@ -842,7 +842,7 @@ class ECPAdvancedColumn : ColumnDesign {
             is ColumnType.Tubular -> (columnType.outerDiameter + columnType.innerDiameter) / 8.0
         }
 
-        notes.add("نصف القطر الدوراني r = %.1f mm".format(radiusOfGyration))
+        notes.add(String.format("نصف القطر الدوراني r = %.1f mm", radiusOfGyration))
 
         // ── Effective length and slenderness ratio ──
         val effectiveLength = kFactor * unsupportedLength * 1000.0  // mm
@@ -857,9 +857,9 @@ class ECPAdvancedColumn : ColumnDesign {
         val isShortColumn = slendernessRatio <= shortColumnLimit
         val isLongColumn = !isShortColumn
 
-        notes.add("الطول الفعال KL = %.0f mm (%.2f m)".format(effectiveLength, effectiveLength / 1000.0))
-        notes.add("نسبة النحافة λ = KL/r = %.1f".format(slendernessRatio))
-        notes.add("حد العمود القصير λ_lim = %.0f (%s)".format(
+        notes.add(String.format("الطول الفعال KL = %.0f mm (%.2f m)", effectiveLength, effectiveLength / 1000.0))
+        notes.add(String.format("نسبة النحافة λ = KL/r = %.1f", slendernessRatio))
+        notes.add(String.format("حد العمود القصير λ_lim = %.0f (%s)", 
             shortColumnLimit,
             if (columnType is ColumnType.Circular) "دائري" else "مستطيل"
         ))
@@ -872,7 +872,7 @@ class ECPAdvancedColumn : ColumnDesign {
 
         // ── Additional checks ──
         if (slendernessRatio > 100.0) {
-            notes.add("⚠️ نسبة النحافة عالية جداً (λ=%.1f > 100) — يُنصح بإعادة النظر في تصميم النظام الإنشائي".format(slendernessRatio))
+            notes.add(String.format("⚠️ نسبة النحافة عالية جداً (λ=%.1f > 100) — يُنصح بإعادة النظر في تصميم النظام الإنشائي", slendernessRatio))
         }
 
         // ── End condition recommendations ──
@@ -975,7 +975,7 @@ class ECPAdvancedColumn : ColumnDesign {
         // α = 1.0 for Pu ≈ 0, α → 2.0 for Pu → P平衡
         // Accurate α based on Pu/Po ratio
         val r = if (Po > 0) (Pu / Po).coerceIn(0.05, 0.95) else 0.5
-        val alphaContour = log(0.5) / log(max(0.001, 1.0 - r))  // Hsu equation
+        val alphaContour = ln(0.5) / ln(max(0.001, 1.0 - r))  // Hsu equation
         val alphaEffective = alphaContour.coerceIn(1.0, 2.0)
 
         val contourFactor = if (Mnx > 0 && Mny > 0) {
@@ -997,9 +997,9 @@ class ECPAdvancedColumn : ColumnDesign {
 
         val formula = buildString {
             append("Bresler + Load Contour (ECP 203 Sec 4.2.6)\n")
-            append("α(Hsu) = %.2f, Contour factor = %.3f\n".format(alphaEffective, contourFactor))
+            append(String.format("α(Hsu) = %.2f, Contour factor = %.3f\n", alphaEffective, contourFactor))
             if (breslerSafe != contourSafe) {
-                append("Bresler: %s, Contour: %s".format(
+                append(String.format("Bresler: %s, Contour: %s", 
                     if (breslerSafe) "✅" else "❌",
                     if (contourSafe) "✅" else "❌"
                 ))

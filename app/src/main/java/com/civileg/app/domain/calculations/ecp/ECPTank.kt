@@ -6,6 +6,7 @@ import com.civileg.app.domain.calculations.base.TankSafetyCheck
 import com.civileg.app.domain.calculations.base.TankType
 import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
+import kotlin.collections.mutableListOf
 
 /**
  * تصميم خزانات المياه حسب الكود المصري ECP 203
@@ -321,7 +322,7 @@ class ECPTank : TankDesign {
         val isCrackSafe = hoopStress <= fct
 
         codeNotes.add("ECP 203-2020: Section 8-1 (Circular Tank - Hoop Tension)")
-        codeNotes.add("Max Hoop Tension T = γw×H×R = ${"%.1f".format(maxHoopTension)} kN/m")
+        codeNotes.add("Max Hoop Tension T = γw×H×R = ${String.format("%.1f", maxHoopTension)} kN/m")
         codeNotes.add("Hoop: ${hoopBarsPerMeter}Ø${hoopBarDia.toInt()} @ ${hoopSpacing.toInt()}mm")
         codeNotes.add("Vertical: ${vertBarsPerMeter}Ø${vertBarDia.toInt()} @ ${vertSpacing.toInt()}mm")
 
@@ -355,7 +356,7 @@ class ECPTank : TankDesign {
         fcu: Double, fy: Double, baseThickness: Double, wallThickness: Double,
         isCircular: Boolean, isUnderground: Boolean,
         warnings: MutableList<String>, codeNotes: MutableList<String>,
-        safetyChecks: mutableListOf<TankSafetyCheck>
+        safetyChecks: MutableList<TankSafetyCheck>
     ): ReinforcementResult {
         val d = baseThickness - MIN_COVER - 8.0
         val b = 1000.0

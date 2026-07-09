@@ -2,11 +2,13 @@ package com.civileg.app.ui.compose.screens
 
 import android.content.Intent
 import android.widget.Toast
+import kotlin.math.abs
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -83,8 +85,6 @@ fun FrameAnalysisScreen(
                     IconButton(onClick = { viewModel.clearAll() }) {
                         Icon(Icons.Default.DeleteSweep, "مسح الكل", tint = Color.White)
                     }
-                },
-                actions = {
                     // PDF Export
                     if (result?.hasResults == true) {
                         IconButton(onClick = {
@@ -97,11 +97,11 @@ fun FrameAnalysisScreen(
                                 val uri = androidx.core.content.FileProvider.getUriForFile(
                                     context, "${context.packageName}.provider", file
                                 )
-                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "application/pdf"
-                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
-                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_SUBJECT, "Frame Analysis Report")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
                                 context.startActivity(Intent.createChooser(intent, "مشاركة التقرير"))
                             } catch (e: Exception) {
@@ -342,7 +342,7 @@ private fun NodesTab(
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = Text(if (editingNode != null) "تعديل عقدة" else "إضافة عقدة"),
+            title = { Text(if (editingNode != null) "تعديل عقدة" else "إضافة عقدة") },
             text = {
                 Column {
                     OutlinedTextField(
@@ -493,7 +493,7 @@ private fun MembersTab(
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = Text(if (editingMemberId != null) "تعديل عضو" else "إضافة عضو"),
+            title = { Text(if (editingMemberId != null) "تعديل عضو" else "إضافة عضو") },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     item {
@@ -650,8 +650,12 @@ private fun LoadsTab(
             // Nodal loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("حمولات العقد", fontWeight = FontWeight.Bold)
-                Button(onClick = { showNodalDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
+                Button(
+                    onClick = { showNodalDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                    Text("إضافة")
                 }
             }
             if (nodalLoads.isEmpty()) {
@@ -677,8 +681,12 @@ private fun LoadsTab(
             // Member loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("حمولات الأعضاء", fontWeight = FontWeight.Bold)
-                Button(onClick = { showMemberDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
+                Button(
+                    onClick = { showMemberDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                    Text("إضافة")
                 }
             }
             if (memberLoads.isEmpty()) {
@@ -708,7 +716,7 @@ private fun LoadsTab(
     if (showNodalDialog) {
         AlertDialog(
             onDismissRequest = { showNodalDialog = false },
-            title = Text("إضافة حمولة عقدية"),
+            title = { Text("إضافة حمولة عقدية") },
             text = {
                 Column {
                     OutlinedTextField(value = nlNodeId, onValueChange = { nlNodeId = it },
@@ -739,7 +747,7 @@ private fun LoadsTab(
     if (showMemberDialog) {
         AlertDialog(
             onDismissRequest = { showMemberDialog = false },
-            title = Text("إضافة حمولة على عضو"),
+            title = { Text("إضافة حمولة على عضو") },
             text = {
                 Column {
                     OutlinedTextField(value = mlMemberId, onValueChange = { mlMemberId = it },

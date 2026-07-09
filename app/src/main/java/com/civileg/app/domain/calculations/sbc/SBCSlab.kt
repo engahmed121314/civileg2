@@ -79,7 +79,7 @@ class SBCSlab : SlabDesign {
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
         codeNotes.add("SBC 304-2018: One-Way Slab")
-        codeNotes.add("fc'=%.0f MPa, d=%.0f mm".format(fc_prime, effectiveDepth))
+        codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm", fc_prime, effectiveDepth))
 
         return SlabDesignResult(
             requiredReinforcement = asRequired,
@@ -165,7 +165,7 @@ class SBCSlab : SlabDesign {
             providedThickness = adjustedMin,
             isSafe = true,
             deflectionRatio = 0.8,
-            recommendation = "SBC 304 minimum thickness (adjusted for fy=%.0f)".format(fy)
+            recommendation = String.format("SBC 304 minimum thickness (adjusted for fy=%.0f)", fy)
         )
     }
 

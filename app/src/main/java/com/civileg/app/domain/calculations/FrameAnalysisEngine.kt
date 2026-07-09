@@ -611,9 +611,13 @@ object FrameAnalysisEngine {
 
         // Loads (UDL on beams)
         val loads = mutableListOf<MemberLoad>()
+        // Beams are added after columns: columns first, then beams
+        // Number of columns = (numSpans + 1) * numStories
+        // Beams start at index = (numSpans + 1) * numStories
+        val numColumns = (numSpans + 1) * numStories
         for (s in 0 until numStories) {
             for (i in 0 until numSpans) {
-                val beamIdx = numSpans * numStories + s * numSpans + i
+                val beamIdx = numColumns + s * numSpans + i
                 if (beamIdx < members.size) {
                     loads.add(MemberLoad(members[beamIdx].id, MemberLoadType.UDL, udlPerFloor, loadCase = "DL"))
                 }

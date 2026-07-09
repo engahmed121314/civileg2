@@ -24,7 +24,7 @@ object TrialRunManager {
             importanceFactor = 1.0,
             responseModificationFactor = 5.0
         )
-        report.append("1. حسابات الزلازل: القص القاعدي = ${"%.2f".format(baseShear.baseShear)} kN\n")
+        report.append("1. حسابات الزلازل: القص القاعدي = ${String.format("%.2f", baseShear.baseShear)} kN\n")
 
         // 2. تجربة تصميم القواعد
         val footingEngine = ECPFooting()

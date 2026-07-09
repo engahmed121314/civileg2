@@ -175,7 +175,7 @@ class ECPBeam : BeamDesign {
         }
         
         codeNotes.add(CodeReference.ECP.BEAM_SHEAR)
-        codeNotes.add("qcu = ${"%.3f".format(qcu)} MPa")
+        codeNotes.add("qcu = ${String.format("%.3f", qcu)} MPa")
         
         return ShearReinforcementResult(
             concreteShearCapacity = concreteShearCapacity,
@@ -359,8 +359,8 @@ class ECPBeam : BeamDesign {
         val K = Mu / (fcu * b * d * d)
         val kBal = calculateKBal(fcu, fy)
         
-        notes.add("K = ${"%.4f".format(K)}")
-        notes.add("K_bal = ${"%.4f".format(kBal)}")
+        notes.add("K = ${String.format("%.4f", K)}")
+        notes.add("K_bal = ${String.format("%.4f", kBal)}")
         
         // عمق المحور المحايد
         val epsilonCu = 0.003
@@ -413,7 +413,7 @@ class ECPBeam : BeamDesign {
         // التحقق من أن d - d' كافٍ
         val leverArmExcess = d - d_prime
         if (leverArmExcess < 30.0) {
-            notes.add("WARNING: d - d' = ${"%.0f".format(leverArmExcess)} mm is too small!")
+            notes.add("WARNING: d - d' = ${String.format("%.0f", leverArmExcess)} mm is too small!")
             notes.add("Increase section depth or reduce d'")
         }
         
@@ -444,13 +444,13 @@ class ECPBeam : BeamDesign {
         val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
         
         notes.add("K > K_bal → Compression steel required")
-        notes.add("Mu_balanced = ${"%.1f".format(Mu1 / 1e6)} kN.m")
-        notes.add("Mu_excess = ${"%.1f".format(Mu2 / 1e6)} kN.m")
-        notes.add("As₁ (balanced) = ${"%.0f".format(As1)} mm²")
-        notes.add("As₂ (excess) = ${"%.0f".format(As2)} mm²")
-        notes.add("As (total) = ${"%.0f".format(asFinal)} mm²")
-        notes.add("As' (compression) = ${"%.0f".format(AsPrime)} mm²")
-        notes.add("Neutral axis depth c = ${"%.1f".format(neutralAxisDepth)} mm")
+        notes.add("Mu_balanced = ${String.format("%.1f", Mu1 / 1e6)} kN.m")
+        notes.add("Mu_excess = ${String.format("%.1f", Mu2 / 1e6)} kN.m")
+        notes.add("As₁ (balanced) = ${String.format("%.0f", As1)} mm²")
+        notes.add("As₂ (excess) = ${String.format("%.0f", As2)} mm²")
+        notes.add("As (total) = ${String.format("%.0f", asFinal)} mm²")
+        notes.add("As' (compression) = ${String.format("%.0f", AsPrime)} mm²")
+        notes.add("Neutral axis depth c = ${String.format("%.1f", neutralAxisDepth)} mm")
         notes.add(CodeReference.ECP.BEAM_FLEXURE)
         notes.add("ECP 203-2020: Section 4-2-2-2 (Doubly reinforced)")
         

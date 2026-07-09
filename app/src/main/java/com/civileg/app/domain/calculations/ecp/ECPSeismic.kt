@@ -57,7 +57,7 @@ class ECPSeismic : SeismicDesign {
         val h = if (buildingHeight > 0) buildingHeight else {
             val estimatedFloors = max(1.0, totalWeight / 500.0).coerceAtMost(30.0)
             val h_est = 3.0 * estimatedFloors
-            warnings.add("Estimated building height: %.1fm (from weight %.0f kN). Pass buildingHeight for accuracy.".format(h_est, totalWeight))
+            warnings.add(String.format("Estimated building height: %.1fm (from weight %.0f kN). Pass buildingHeight for accuracy.", h_est, totalWeight))
             h_est
         }
         
@@ -122,9 +122,9 @@ class ECPSeismic : SeismicDesign {
         
         val usingDefaults = peakGroundAcceleration <= 0
         val desc = if (usingDefaults) {
-            "ECP 201 Response Spectrum [default ag=0.15, I=%.1f, %s]".format(i, soilType.displayName)
+            String.format("ECP 201 Response Spectrum [default ag=0.15, I=%.1f, %s]", i, soilType.displayName)
         } else {
-            "ECP 201 Response Spectrum [ag=%.2f, I=%.1f, %s]".format(ag, i, soilType.displayName)
+            String.format("ECP 201 Response Spectrum [ag=%.2f, I=%.1f, %s]", ag, i, soilType.displayName)
         }
         
         return SpectrumValue(

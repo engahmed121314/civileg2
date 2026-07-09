@@ -41,10 +41,10 @@ object FrameAnalysisPdfExporter {
         val fontPath = "${context.filesDir}/fonts/NotoNaskhArabic-Regular.ttf"
         val boldFontPath = "${context.filesDir}/fonts/NotoNaskhArabic-Bold.ttf"
         val arabicFont: PdfFont = if (File(fontPath).exists()) {
-            PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H, true)
+            PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED)
         } else PdfFontFactory.createFont("Helvetica")
         val arabicBold: PdfFont = if (File(boldFontPath).exists()) {
-            PdfFontFactory.createFont(boldFontPath, PdfEncodings.IDENTITY_H, true)
+            PdfFontFactory.createFont(boldFontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED)
         } else PdfFontFactory.createFont("Helvetica-Bold")
 
         // === Page 1: Frame Geometry + Drawing ===
@@ -200,7 +200,7 @@ object FrameAnalysisPdfExporter {
 
         val w = 800; val h = 500
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
+        val canvas = android.graphics.Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -344,7 +344,7 @@ object FrameAnalysisPdfExporter {
 
         // Scale bar
         val scaleBarM = 1.0
-        val scaleBarPx = scaleBarM * scale
+        val scaleBarPx = (scaleBarM * scale).toFloat()
         canvas.drawLine(30f, h - 25f, 30f + scaleBarPx, h - 25f, paint.apply { color = Color.DKGRAY; strokeWidth = 2f })
         canvas.drawLine(30f, h - 30f, 30f, h - 20f, paint)
         canvas.drawLine(30f + scaleBarPx, h - 30f, 30f + scaleBarPx, h - 20f, paint)

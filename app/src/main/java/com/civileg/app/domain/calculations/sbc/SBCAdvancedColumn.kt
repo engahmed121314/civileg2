@@ -83,7 +83,7 @@ class SBCAdvancedColumn : ColumnDesign {
 
         // تحويل مقاومة المكعب إلى مقاومة الأسطوانة
         val fcPrime = 0.8 * fcu
-        codeNotes.add("SBC 304-2018: fc' = 0.8 × fcu = 0.8 × $fcu = ${"%.1f".format(fcPrime)} MPa")
+        codeNotes.add("SBC 304-2018: fc' = 0.8 × fcu = 0.8 × $fcu = ${String.format("%.1f", fcPrime)} MPa")
 
         // المساحة الكلية للمقطع
         val Ag = columnType.getGrossArea()
@@ -109,7 +109,7 @@ class SBCAdvancedColumn : ColumnDesign {
 
         if (isSlender) {
             warnings.add("⚠️ عمود نحيف! يجب مراعاة التأثيرات من الدرجة الثانية (P-Delta)")
-            codeNotes.add("SBC 304-2018: Section 6.2.5/6.2.6 — نسبة النحافة λ = %.1f > %.0f".format(slendernessRatio, slendernessLimit))
+            codeNotes.add(String.format("SBC 304-2018: Section 6.2.5/6.2.6 — نسبة النحافة λ = %.1f > %.0f", slendernessRatio, slendernessLimit))
         }
 
         // حساب تأثير النحافة (م magnified moment)
@@ -187,7 +187,7 @@ class SBCAdvancedColumn : ColumnDesign {
         // ===== 8. ملاحظات الكود النهائية =====
         codeNotes.add("SBC 304-2018: Section 10 — تصميم عناصر الضغط")
         codeNotes.add("φ = $phi (${if (isSpiral) "حلزوني" else "مربوط"})")
-        codeNotes.add("الغطاء الخرساني = ${"%.0f".format(cover)} mm")
+        codeNotes.add("الغطاء الخرساني = ${String.format("%.0f", cover)} mm")
         if (isSeismicZone) {
             codeNotes.add("SBC 304 Section 21: متطلبات المنطقة الزلزالية مُطبقة")
         }
@@ -264,26 +264,26 @@ class SBCAdvancedColumn : ColumnDesign {
 
         // فحص 1: أقل بُعد للعمود (SBC 21.4.1)
         if (minDim < SBC_MIN_DIM_SEISMIC) {
-            warnings.add("⚠️ البُعد الأقل للعمود (${"%.0f".format(minDim)} mm) أقل من الحد الأدنى الزلزالي " +
-                    "(${"%.0f".format(SBC_MIN_DIM_SEISMIC)} mm) — SBC 21.4.1")
+            warnings.add("⚠️ البُعد الأقل للعمود (${String.format("%.0f", minDim)} mm) أقل من الحد الأدنى الزلزالي " +
+                    "(${String.format("%.0f", SBC_MIN_DIM_SEISMIC)} mm) — SBC 21.4.1")
         } else {
-            codeNotes.add("SBC 21.4.1: البُعد الأقل = ${"%.0f".format(minDim)} mm ≥ ${"%.0f".format(SBC_MIN_DIM_SEISMIC)} mm ✓")
+            codeNotes.add("SBC 21.4.1: البُعد الأقل = ${String.format("%.0f", minDim)} mm ≥ ${String.format("%.0f", SBC_MIN_DIM_SEISMIC)} mm ✓")
         }
 
         // فحص 2: نسبة الحمل المحوري الأقصى (SBC 21.4.1)
         val maxAxialCapacity = SBC_MAX_AXIAL_RATIO_SEISMIC * Ag * fcPrime / 1000.0 // kN
         if (axialLoad > maxAxialCapacity) {
             warnings.add("⚠️ نسبة الحمل المحوري تتجاوز الحد الزلزالي: " +
-                    "Pu = ${"%.0f".format(axialLoad)} kN > 0.30×Ag×fc' = ${"%.0f".format(maxAxialCapacity)} kN — SBC 21.4.1")
+                    "Pu = ${String.format("%.0f", axialLoad)} kN > 0.30×Ag×fc' = ${String.format("%.0f", maxAxialCapacity)} kN — SBC 21.4.1")
         } else {
             val ratio = axialLoad / maxAxialCapacity * 100.0
-            codeNotes.add("SBC 21.4.1: Pu/Ag×fc' = ${"%.1f".format(ratio)}% ≤ 30% ✓")
+            codeNotes.add("SBC 21.4.1: Pu/Ag×fc' = ${String.format("%.1f", ratio)}% ≤ 30% ✓")
         }
 
         // فحص 3: نسبة التسليح الدنيا في المناطق الزلزالية
         val minReinforcementRatio = 0.01 // 1% per SBC 21
         val minAst = minReinforcementRatio * Ag
-        codeNotes.add("SBC 21.4.3: نسبة التسليح الدنيا في المناطق الزلزالية = 1% (As ≥ ${"%.0f".format(minAst)} mm²)")
+        codeNotes.add("SBC 21.4.3: نسبة التسليح الدنيا في المناطق الزلزالية = 1% (As ≥ ${String.format("%.0f", minAst)} mm²)")
 
         // فحص 4: قيود وصل التراكب في مناطق المفصل اللدن
         codeNotes.add("SBC 21.7.5: يُمنع وصل التراكب في مناطق المفصل اللدن (plastic hinge zone)")
@@ -346,10 +346,10 @@ class SBCAdvancedColumn : ColumnDesign {
 
         // SBC 21.6.4.2: Ash/s = 0.3 × bc × (Ag/bc² - 1) × fc' / fyt
         val ashPerSpacing = 0.3 * bc * (Ag / (bc * bc) - 1.0) * fcPrime / fyt
-        codeNotes.add("SBC 21.6.4.2: Ash/s = 0.3×bc×(Ag/bc²-1)×fc'/fyt = ${"%.2f".format(ashPerSpacing)} mm²/mm")
+        codeNotes.add("SBC 21.6.4.2: Ash/s = 0.3×bc×(Ag/bc²-1)×fc'/fyt = ${String.format("%.2f", ashPerSpacing)} mm²/mm")
 
         codeNotes.add("SBC 21.6.4.1: تباعد الكانات في منطقة المفصل اللدن = min(d/4, 6×db, 100mm)")
-        codeNotes.add("SBC 21.6.4.1: s = min(${"%.0f".format(s1)}, ${"%.0f".format(s2)}, ${"%.0f".format(s3)}) = ${"%.0f".format(hoopSpacingHingeZone)} mm")
+        codeNotes.add("SBC 21.6.4.1: s = min(${String.format("%.0f", s1)}, ${String.format("%.0f", s2)}, ${String.format("%.0f", s3)}) = ${String.format("%.0f", hoopSpacingHingeZone)} mm")
 
         // ===== 3. طول منطقة الحصر (Confinement Zone Length) =====
         // SBC 21.6.4 / ACI 318 18.7.5.1:
@@ -364,7 +364,7 @@ class SBCAdvancedColumn : ColumnDesign {
         val confinementZoneLength = max(columnLength, max(ld, 450.0))
 
         codeNotes.add("SBC 21.6.4: طول منطقة الحصر L_o = max(L, ld, 450mm)")
-        codeNotes.add("L_o = max(${"%.0f".format(columnLength)}, ${"%.0f".format(ld)}, 450) = ${"%.0f".format(confinementZoneLength)} mm")
+        codeNotes.add("L_o = max(${String.format("%.0f", columnLength)}, ${String.format("%.0f", ld)}, 450) = ${String.format("%.0f", confinementZoneLength)} mm")
 
         // ===== 4. نسبة التسليح العرضي =====
         // SBC 21.6.4.2: Ash/s = 0.3 × bc × (Ag/bc² - 1) × fc' / fyh
@@ -736,7 +736,7 @@ class SBCAdvancedColumn : ColumnDesign {
         val formula = if (alpha < 1.3) {
             "طريقة Bresler التبادلية (SBC 304/ACI 318 H1.1): (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1.0"
         } else {
-            "طريقة كفاف الحمل (SBC 304/ACI 318 H1.2): α = %.2f".format(alpha)
+            String.format("طريقة كفاف الحمل (SBC 304/ACI 318 H1.2): α = %.2f", alpha)
         }
 
         return BiaxialCheckResult(

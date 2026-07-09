@@ -117,7 +117,7 @@ class ACIColumn : ColumnDesign {
         if (eccentricity > 0.05 * h) {
             val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
             requiredSteelArea *= momentFactor
-            codeNotes.add("ACI 318: Significant moment (e=${"%.1f".format(eccentricity)}mm > 0.05h), As increased by factor ${"%.2f".format(momentFactor)}")
+            codeNotes.add("ACI 318: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
         }
         
         // Reinforcement limits per ACI
@@ -271,15 +271,15 @@ class ACIColumn : ColumnDesign {
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add("ACI 318-19 §22.5: Column Shear Design")
-        codeNotes.add("f'c = 0.8×fcu = ${"%.0f".format(fc)} MPa")
-        codeNotes.add("Vc = 0.17√f'c·b·d = ${"%.1f".format(Vc)} kN")
-        codeNotes.add("φVc = ${"%.1f".format(phiVc)} kN  (φ=$phi)")
+        codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
+        codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
+        codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=$phi)")
         if (needsStirrups) {
-            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) > φVc → Stirrups required")
-            codeNotes.add("Asv/s = ${"%.3f".format(designAsvPerS)} mm²/mm")
-            codeNotes.add("%.1fmm ties @ %.0fmm c/c".format(selectedDia, selectedSpacing))
+            codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) > φVc → Stirrups required")
+            codeNotes.add("Asv/s = ${String.format("%.3f", designAsvPerS)} mm²/mm")
+            codeNotes.add(String.format("%.1fmm ties @ %.0fmm c/c", selectedDia, selectedSpacing))
         } else {
-            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) ≤ φVc → Concrete alone sufficient")
+            codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) ≤ φVc → Concrete alone sufficient")
         }
 
         return ColumnShearDesignResult(

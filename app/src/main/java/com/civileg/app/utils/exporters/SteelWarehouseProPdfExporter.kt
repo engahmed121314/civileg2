@@ -344,12 +344,10 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         forces.addHeaderCell(headerCell("MOMENT (kN.m)"))
         forces.addHeaderCell(headerCell("SHEAR (kN)"))
         forces.addHeaderCell(headerCell(ar("الحالة") + " | STATUS"))
-        forces.addRow(
-            dataCell("${result.mainFrame.maxAxial.fmt(1)}", bold = true),
-            dataCell("${result.mainFrame.maxMoment.fmt(1)}", bold = true),
-            dataCell("${result.mainFrame.maxShear.fmt(1)}", bold = true),
-            dataCell(if (result.safetyStatus) "PASS" else "REVIEW", bold = true, color = if (result.safetyStatus) SUCCESS else ERROR)
-        )
+        forces.addCell(dataCell("${result.mainFrame.maxAxial.fmt(1)}", bold = true))
+        forces.addCell(dataCell("${result.mainFrame.maxMoment.fmt(1)}", bold = true))
+        forces.addCell(dataCell("${result.mainFrame.maxShear.fmt(1)}", bold = true))
+        forces.addCell(dataCell(if (result.safetyStatus) "PASS" else "REVIEW", bold = true, color = if (result.safetyStatus) SUCCESS else ERROR))
         document.add(forces)
         document.add(Paragraph(" "))
     }
@@ -408,9 +406,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 25f, 30f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("#"))
-        table.addHeaderCell(ar("البند") + " | ITEM"))
-        table.addHeaderCell(ar("الكمية") + " | QUANTITY"))
-        table.addHeaderCell(ar("ملاحظات") + " | NOTES"))
+        table.addHeaderCell(ar("البند") + " | ITEM")
+        table.addHeaderCell(ar("الكمية") + " | QUANTITY")
+        table.addHeaderCell(ar("ملاحظات") + " | NOTES")
 
         var idx = 1
         result.materialTakeoff.forEach { (key, value) ->

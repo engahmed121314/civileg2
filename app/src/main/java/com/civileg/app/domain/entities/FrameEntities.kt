@@ -3,10 +3,7 @@ package com.civileg.app.domain.entities
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.*
 
 // ============================================================================
 // Frame Geometry Entities

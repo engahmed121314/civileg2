@@ -320,12 +320,12 @@ object PdfDrawingGenerator {
         val coverPx = cover.toFloat()
         // Corner bars (front face - 4 bars)
         val corners = listOf(
-            Offset(elevLeft + coverPx, elevTop + coverPx),
-            Offset(elevLeft + elevW - coverPx, elevTop + coverPx),
-            Offset(elevLeft + coverPx, elevTop + elevH - coverPx),
-            Offset(elevLeft + elevW - coverPx, elevTop + elevH - coverPx)
+            Pair(elevLeft + coverPx, elevTop + coverPx),
+            Pair(elevLeft + elevW - coverPx, elevTop + coverPx),
+            Pair(elevLeft + coverPx, elevTop + elevH - coverPx),
+            Pair(elevLeft + elevW - coverPx, elevTop + elevH - coverPx)
         )
-        corners.forEach { canvas.drawRebar(it.x, it.y, barR, REBAR_BLUE) }
+        corners.forEach { canvas.drawRebar(it.first, it.second, barR, REBAR_BLUE) }
 
         // Ties
         val tieP = createPaint(STIRRUP, 1.5f)
@@ -362,11 +362,11 @@ object PdfDrawingGenerator {
         val barsPerSide = maxOf(2, (numBars - 4) / 4)
         // 4 corners always
         val csBarR = maxOf(barDia.toFloat() * 0.5f, 4f)
-        val barPositions = mutableListOf<Offset>()
-        barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR))
-        barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR))
-        barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csH2 - csCover - csBarR))
-        barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csH2 - csCover - csBarR))
+        val barPositions = mutableListOf<Pair<Float, Float>>()
+        barPositions.add(Pair(csLeft + csCover + csBarR, csTop2 + csCover + csBarR))
+        barPositions.add(Pair(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR))
+        barPositions.add(Pair(csLeft + csCover + csBarR, csTop2 + csH2 - csCover - csBarR))
+        barPositions.add(Pair(csLeft + csW2 - csCover - csBarR, csTop2 + csH2 - csCover - csBarR))
 
         val remaining = numBars - 4
         if (remaining > 0) {
@@ -377,20 +377,20 @@ object PdfDrawingGenerator {
                 for (i in 1..count) {
                     val t = i.toFloat() / (count + 1)
                     when (side) {
-                        0 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csCover + csBarR))
-                        1 -> barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
-                        2 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csH2 - csCover - csBarR))
-                        3 -> barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+                        0 -> barPositions.add(Pair(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csCover + csBarR))
+                        1 -> barPositions.add(Pair(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+                        2 -> barPositions.add(Pair(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csH2 - csCover - csBarR))
+                        3 -> barPositions.add(Pair(csLeft + csCover + csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
                     }
                 }
             }
         }
 
         barPositions.forEachIndexed { idx, pos ->
-            canvas.drawRebar(pos.x, pos.y, csBarR, REBAR_BLUE)
+            canvas.drawRebar(pos.first, pos.second, csBarR, REBAR_BLUE)
             // Bar mark number
             val mark = getCircleNumber(idx + 1)
-            canvas.drawTextCentered(mark, pos.x, pos.y - csBarR - 6f, textPaint(DIM_TEXT, 14f, true))
+            canvas.drawTextCentered(mark, pos.first, pos.second - csBarR - 6f, textPaint(DIM_TEXT, 14f, true))
         }
 
         // Section dimensions

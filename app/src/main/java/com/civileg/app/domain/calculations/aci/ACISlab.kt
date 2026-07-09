@@ -69,7 +69,7 @@ class ACISlab : SlabDesign {
         val barArea = PI * barDiameter * barDiameter / 4.0
         val nominalSpacing = barArea * 1000.0 / asRequired
         // ACI 7.7.2.3: max spacing = min(3h, 450mm)
-        val maxSpacing = min(3.0 * slabThickness, 450.0, getMaxBarSpacing())
+        val maxSpacing = minOf(3.0 * slabThickness, 450.0, getMaxBarSpacing())
         val finalSpacing = nominalSpacing.coerceIn(100.0, maxSpacing)
         val asProvided = barArea * 1000.0 / finalSpacing
 
@@ -86,9 +86,9 @@ class ACISlab : SlabDesign {
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
         codeNotes.add("ACI 318-19: One-Way Slab Design")
-        codeNotes.add("fc'=%.0f MPa, d=%.0f mm, Rn=%.2f".format(fc_prime, effectiveDepth, Rn))
-        codeNotes.add("rho=%.4f, rho_min=%.4f".format(rhoFinal, rhoMin))
-        codeNotes.add("Vc=%.1f kN/m".format(Vc))
+        codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm, Rn=%.2f", fc_prime, effectiveDepth, Rn))
+        codeNotes.add(String.format("rho=%.4f, rho_min=%.4f", rhoFinal, rhoMin))
+        codeNotes.add(String.format("Vc=%.1f kN/m", Vc))
 
         return SlabDesignResult(
             requiredReinforcement = asRequired,
@@ -161,9 +161,9 @@ class ACISlab : SlabDesign {
         val longRes = designOneWaySlab(fcu, fy, slabThickness, longSpan, Mu_long, q * lx / 3.0, loadCombination)
 
         codeNotes.add("ACI 318-19: Two-Way Slab (Direct Design Method)")
-        codeNotes.add("ly/lx=%.2f, q=%.1f kN/m²".format(ratio, q))
-        codeNotes.add("Short: M+=%.1f, M-=%.1f kN.m/m".format(Mu_short_pos, Mu_short_neg))
-        codeNotes.add("Long: M+=%.1f, M-=%.1f kN.m/m".format(Mu_long_pos, Mu_long_neg))
+        codeNotes.add(String.format("ly/lx=%.2f, q=%.1f kN/m²", ratio, q))
+        codeNotes.add(String.format("Short: M+=%.1f, M-=%.1f kN.m/m", Mu_short_pos, Mu_short_neg))
+        codeNotes.add(String.format("Long: M+=%.1f, M-=%.1f kN.m/m", Mu_long_pos, Mu_long_neg))
 
         return TwoWaySlabResult(
             shortDirection = shortRes,
@@ -194,7 +194,7 @@ class ACISlab : SlabDesign {
             providedThickness = adjustedMin,
             isSafe = true,
             deflectionRatio = 0.8,
-            recommendation = "ACI 318 Table 7.3.1.1 minimum thickness (adjusted for fy=%.0f)".format(fy)
+            recommendation = String.format("ACI 318 Table 7.3.1.1 minimum thickness (adjusted for fy=%.0f)", fy)
         )
     }
 

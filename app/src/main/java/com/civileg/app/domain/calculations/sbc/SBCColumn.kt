@@ -62,8 +62,8 @@ class SBCColumn : ColumnDesign {
         val h = max(width, depth)
         if (eccentricity > 0.05 * h) {
             val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
-            requiredSteelArea *= momentFactor
-            codeNotes.add("SBC 304: Significant moment (e=${"%.1f".format(eccentricity)}mm > 0.05h), As increased by factor ${"%.2f".format(momentFactor)}")
+            var requiredSteelArea = requiredSteelArea * momentFactor
+            codeNotes.add("SBC 304: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
         }
         
         val minSteel = getMinReinforcementRatio() * Ag
@@ -197,16 +197,16 @@ class SBCColumn : ColumnDesign {
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add("SBC 304: Column Shear Design")
-        codeNotes.add("f'c_sbc = 0.67×fcu/1.5 = ${"%.0f".format(fc)} MPa")
-        codeNotes.add("Vc = 0.17√f'c·b·d = ${"%.1f".format(Vc)} kN")
-        codeNotes.add("φVc = ${"%.1f".format(phiVc)} kN  (φ=$phi)")
+        codeNotes.add("f'c_sbc = 0.67×fcu/1.5 = ${String.format("%.0f", fc)} MPa")
+        codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
+        codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=$phi)")
         if (needsStirrups) {
-            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) > φVc → Stirrups required")
-            codeNotes.add("Asv/s = ${"%.3f".format(designAsvPerS)} mm²/mm")
+            codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) > φVc → Stirrups required")
+            codeNotes.add("Asv/s = ${String.format("%.3f", designAsvPerS)} mm²/mm")
             codeNotes.add("${selectedDia.toInt()}mm ties @ ${selectedSpacing.toInt()}mm c/c")
             codeNotes.add("Seismic max spacing: ${seismicMaxSpacing.toInt()}mm (near plastic hinges)")
         } else {
-            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) ≤ φVc → Concrete alone sufficient")
+            codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) ≤ φVc → Concrete alone sufficient")
         }
 
         return ColumnShearDesignResult(
