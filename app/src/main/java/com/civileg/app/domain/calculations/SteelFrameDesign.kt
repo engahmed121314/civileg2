@@ -90,7 +90,7 @@ object SteelFrameDesign {
         // Axial capacity (simplified - ignoring buckling for now, using Euler with KL=1.0m)
         val A_mm2 = bestSection.area * 100.0  // cm² -> mm²
         val r_mm = bestSection.ry * 10.0      // cm -> mm
-        val Kl = member.concreteSection?.let { 1.0 } ?: 3.0 // Assume KL = member length or 3m default
+        val Kl = 3.0 // Assume KL = 3m default for preliminary design
         val slenderness = Kl * 1000.0 / r_mm
         val Fe = if (slenderness > 0) PI * PI * 200000.0 / (slenderness * slenderness) else steelFy
         val Fcr = if (Fe < steelFy) {

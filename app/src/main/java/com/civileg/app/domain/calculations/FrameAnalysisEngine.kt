@@ -104,7 +104,6 @@ object FrameAnalysisEngine {
             // 7. Member end forces
             val memberForces = mutableListOf<MemberEndForces>()
             val memberDiagrams = mutableListOf<MemberDiagram>()
-            var fefIdx = 0
 
             for ((mIdx, member) in members.withIndex()) {
                 val ni = nodes.indexOfFirst { it.id == member.nodeI }
@@ -162,14 +161,15 @@ object FrameAnalysisEngine {
 
             // 8. Node results
             val nodeResults = nodes.mapIndexed { idx, node ->
+                val localRestrained = node.support.restrainedDOFs
                 NodeResult(
                     nodeId = node.id,
                     dx = U[idx * 3],
                     dy = U[idx * 3 + 1],
                     rz = U[idx * 3 + 2],
-                    reactionFx = if (0 in node.support.restrainedDOFs.map { it - (idx*3) }) reactions[idx * 3] else 0.0,
-                    reactionFy = if (1 in node.support.restrainedDOFs.map { it - (idx*3) }) reactions[idx * 3 + 1] else 0.0,
-                    reactionMz = if (2 in node.support.restrainedDOFs.map { it - (idx*3) }) reactions[idx * 3 + 2] else 0.0
+                    reactionFx = if (0 in localRestrained) reactions[idx * 3] else 0.0,
+                    reactionFy = if (1 in localRestrained) reactions[idx * 3 + 1] else 0.0,
+                    reactionMz = if (2 in localRestrained) reactions[idx * 3 + 2] else 0.0
                 )
             }
 
@@ -555,19 +555,17 @@ object FrameAnalysisEngine {
         spans: List<Double> = listOf(5.0, 5.0),
         storyHeights: List<Double> = listOf(3.5, 3.0),
         udlPerFloor: Double = 15.0
-    ): Triple<List<FrameNode>, List<FrameNode>, Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>>> {
+    ): Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>> {
         val numSpans = spans.size
         val numStories = storyHeights.size
         val nodes = mutableListOf<FrameNode>()
         var nodeId = 1
 
         // Ground nodes
-        val groundNodes = mutableListOf<FrameNode>()
         for (i in 0..numSpans) {
             val x = spans.take(i).sum()
             val node = FrameNode(nodeId++, x, 0.0, SupportType.Fixed)
             nodes.add(node)
-            groundNodes.add(node)
         }
 
         // Upper floor nodes
@@ -622,6 +620,6 @@ object FrameAnalysisEngine {
             }
         }
 
-        return Triple(groundNodes, nodes.toTypedArray().toList(), Triple(nodes, members, loads))
+        return Triple(nodes, members, loads)
     }
 }

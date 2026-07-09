@@ -1,7 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -14,7 +13,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -116,7 +114,7 @@ fun FrameDrawingCanvas(
             if (showDiagrams) {
                 drawDiagrams(
                     members, result?.memberDiagrams ?: emptyList(),
-                    nodes, toScreen, scale, diagramType
+                    nodes, toScreen, scale, diagramType, textMeasurer
                 )
             }
 
@@ -495,7 +493,8 @@ private fun DrawScope.drawDiagrams(
     nodes: List<FrameNode>,
     toScreen: (Double, Double) -> Offset,
     scale: Float,
-    diagramType: DiagramType
+    diagramType: DiagramType,
+    textMeasurer: TextMeasurer
 ) {
     for (diagram in diagrams) {
         val member = members.find { it.id == diagram.memberId } ?: continue
@@ -585,8 +584,7 @@ private fun DrawScope.drawDiagrams(
                 DiagramType.SFD, DiagramType.AFD -> "kN"
             }
             val label = "${abs(maxPt.value).formatValue(2)} $unit"
-            // Draw text with background
-            val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
+            // Draw text
             drawText(
                 textMeasurer = textMeasurer,
                 text = label,

@@ -256,12 +256,12 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun loadTwoStoryFrame(span: Double, height1: Double, height2: Double, udl: Double) {
-        val template = FrameAnalysisEngine.createMultiStoryFrame(
+        val (ns, ms, ls) = FrameAnalysisEngine.createMultiStoryFrame(
             listOf(span), listOf(height1, height2), udl
         )
-        _nodes.value = template.third.first
-        _members.value = template.third.second
-        _memberLoads.value = template.third.third
+        _nodes.value = ns
+        _members.value = ms
+        _memberLoads.value = ls
         _nodalLoads.value = emptyList()
         _result.value = null
         _concreteResults.value = emptyList()

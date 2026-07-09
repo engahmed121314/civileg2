@@ -19,7 +19,6 @@ object ConcreteFrameDesign {
     private const val GAMMA_C_ECP = 1.5
     private const val GAMMA_S_ECP = 1.15
     private const val GAMMA_C_ACI = 1.5  // φ factor applied separately
-    private const val BETA1_LIMIT = 0.85
 
     /**
      * تصميم جميع الأعضاء الخرسانية في الإطار
@@ -157,11 +156,8 @@ object ConcreteFrameDesign {
             val xb = 600.0 * beta / (600.0 + fy / gammaS)
             alpha * xb * (1.0 - 0.5 * xb)
         } else {
-            // ACI 318-19: use ρ_bal approach
-            val beta1 = if (fcu <= 28.0) 0.85 else max(0.85 - 0.05 * ((fcu - 28.0) / 7.0), 0.65)
-            val aBal = beta1 * 87000.0 * d / (87000.0 + fy)
-            val rhoBal = 0.85 * fcu / fy * (aBal / d)
-            rhoBal * fy / fcu * (1.0 - 0.59 * rhoBal * fy / fcu) * 1.5
+            // ACI 318-19: simplified K_bal = 0.167 (typical for singly reinforced)
+            0.167
         }
     }
 

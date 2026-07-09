@@ -2,7 +2,6 @@ package com.civileg.app.utils
 
 import android.content.Context
 import android.graphics.*
-import com.civileg.app.R
 import com.civileg.app.domain.entities.*
 import com.civileg.app.viewmodel.DiagramType
 import com.itextpdf.io.font.PdfEncodings
@@ -11,7 +10,6 @@ import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.kernel.geom.PageSize
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
-import com.itextpdf.kernel.pdf.canvas.PdfCanvas
 import com.itextpdf.layout.*
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.*
