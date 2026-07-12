@@ -26,22 +26,12 @@ android {
             useSupportLibrary = true
         }
 
-        // إعدادات Hilt مع KSP
+        // Hilt KSP settings
         ksp {
             arg("hilt.projectLevelApp", "true")
             arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
             arg("dagger.fastInit", "enabled")
             arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
-        }
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += mapOf(
-                    "dagger.hilt.internal.useAggregatingRootProcessor" to "true",
-                    "dagger.fastInit" to "enabled",
-                    "dagger.hilt.android.internal.disableAndroidSuperclassValidation" to "true"
-                )
-            }
         }
     }
 
@@ -74,11 +64,7 @@ android {
         jvmTarget = "17"
     }
 
-    // Optimize for devices with 6GB RAM
-    dexOptions {
-        preDexLibraries = true
-        javaMaxHeapSize = "2g"
-    }
+    // dexOptions removed - deprecated in AGP 8.x, DEX optimization is automatic
 }
 
 // إخفاء تحذيرات الخيارات غير المعرفة في Hilt/KSP
