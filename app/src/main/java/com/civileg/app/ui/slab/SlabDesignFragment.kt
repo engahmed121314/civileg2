@@ -36,8 +36,7 @@ class SlabDesignFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ProjectViewModel by viewModels()
-    private val projectId: Long
-        get() = requireArguments().getLong("projectId", -1L)
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -202,12 +201,12 @@ class SlabDesignFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSaveDesign.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val projectId = if (this@SlabDesignFragment.projectId != -1L) this@SlabDesignFragment.projectId else projectsList.firstOrNull()?.id ?: -1L
-            if (projectId == -1L) { showError("اختر مشروعاً للحفظ"); return@setOnClickListener }
+            val effectiveProjectId = if (projectId != -1L) projectId else projectsList.firstOrNull()?.id ?: -1L
+            if (effectiveProjectId == -1L) { showError("اختر مشروعاً للحفظ"); return@setOnClickListener }
 
             lifecycleScope.launch {
                 val design = Design(
-                    projectId = projectId, type = DesignType.SLAB,
+                    projectId = effectiveProjectId, type = DesignType.SLAB,
                     name = "Slab - ${System.currentTimeMillis() % 1000}",
                     inputData = "{}",
                     results = result.toString(),

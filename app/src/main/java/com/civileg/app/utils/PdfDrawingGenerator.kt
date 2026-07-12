@@ -2,6 +2,7 @@ package com.civileg.app.utils
 
 import android.content.Context
 import android.graphics.*
+import androidx.compose.ui.geometry.Offset
 import kotlin.math.*
 
 /**

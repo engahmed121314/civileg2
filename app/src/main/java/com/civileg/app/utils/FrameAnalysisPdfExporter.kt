@@ -1,7 +1,12 @@
 package com.civileg.app.utils
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import com.civileg.app.R
 import com.civileg.app.domain.entities.*
 import com.civileg.app.viewmodel.DiagramType
 import com.itextpdf.io.font.PdfEncodings
@@ -10,6 +15,7 @@ import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.kernel.geom.PageSize
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas
 import com.itextpdf.layout.*
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.*
@@ -200,7 +206,7 @@ object FrameAnalysisPdfExporter {
 
         val w = 800; val h = 500
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bitmap)
+        val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)

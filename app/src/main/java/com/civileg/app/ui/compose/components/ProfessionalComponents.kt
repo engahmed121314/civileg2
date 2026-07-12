@@ -49,7 +49,7 @@ import kotlin.math.min
 // DESIGN SYSTEM - Colors & Shapes
 // ============================================================================
 
-object DesignSystem {
+object PremiumDesignSystem {
     // Gradient colors
     val PrimaryGradient = Brush.horizontalGradient(
         listOf(Color(0xFF1565C0), Color(0xFF1E88E5), Color(0xFF42A5F5))
@@ -196,7 +196,7 @@ fun PremiumInputField(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier,
         enabled = enabled,
-        shape = DesignSystem.InputShape,
+        shape = PremiumDesignSystem.InputShape,
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             fontWeight = FontWeight.SemiBold
@@ -233,7 +233,7 @@ fun SafetyStatusCard(
     modifier: Modifier = Modifier
 ) {
     val ratio = utilizationRatio.toFloat()
-    val statusColor = DesignSystem.statusColor(ratio)
+    val statusColor = PremiumDesignSystem.statusColor(ratio)
     val animatedRatio by animateFloatAsState(
         targetValue = ratio.coerceIn(0f, 1.5f),
         animationSpec = tween(1200), label = "ratio"
@@ -244,7 +244,7 @@ fun SafetyStatusCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
         ),
-        shape = DesignSystem.CardShape,
+        shape = PremiumDesignSystem.CardShape,
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(
@@ -295,14 +295,14 @@ fun SafetyStatusCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        DesignSystem.statusIcon(ratio),
+                        PremiumDesignSystem.statusIcon(ratio),
                         contentDescription = null,
                         tint = statusColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "${DesignSystem.statusEmoji(ratio)} ${DesignSystem.statusText(ratio)}",
+                        "${PremiumDesignSystem.statusEmoji(ratio)} ${PremiumDesignSystem.statusText(ratio)}",
                         fontWeight = FontWeight.Bold,
                         color = statusColor,
                         fontSize = 15.sp
@@ -354,7 +354,7 @@ fun ResultDataCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
         ),
-        shape = DesignSystem.CardShape,
+        shape = PremiumDesignSystem.CardShape,
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -417,7 +417,7 @@ fun SafetyCheckList(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
         ),
-        shape = DesignSystem.CardShape
+        shape = PremiumDesignSystem.CardShape
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -492,7 +492,7 @@ fun PremiumActionButtons(
         Button(
             onClick = onExportPdf,
             modifier = Modifier.weight(1f),
-            shape = DesignSystem.ButtonShape,
+            shape = PremiumDesignSystem.ButtonShape,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             ),
@@ -515,7 +515,7 @@ fun PremiumActionButtons(
         OutlinedButton(
             onClick = onSave,
             modifier = Modifier.weight(1f),
-            shape = DesignSystem.ButtonShape,
+            shape = PremiumDesignSystem.ButtonShape,
             border = androidx.compose.foundation.BorderStroke(
                 1.5.dp, MaterialTheme.colorScheme.secondary
             )
@@ -550,7 +550,7 @@ fun FormulaCard(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
             ),
-            shape = DesignSystem.CardShape
+            shape = PremiumDesignSystem.CardShape
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -596,7 +596,7 @@ fun CodeSelectorChips(
                     .weight(1f)
                     .height(42.dp)
                     .clickable { onCodeSelected(code) },
-                shape = DesignSystem.ChipShape,
+                shape = PremiumDesignSystem.ChipShape,
                 color = if (isSelected) MaterialTheme.colorScheme.primary
                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 shadowElevation = if (isSelected) 4.dp else 0.dp
@@ -631,7 +631,7 @@ fun LoadingOverlay(message: String = "جاري التحليل...") {
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Card(
-                shape = DesignSystem.CardShape,
+                shape = PremiumDesignSystem.CardShape,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),

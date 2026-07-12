@@ -1382,7 +1382,7 @@ class SBCAdvancedSlab {
         // Simplified for slabs:
         val dc = h - d  // distance from extreme tension fiber to steel center
         val A = b * dc  // concrete area per bar
-        val crackWidthBase = 0.076 * fs * pow(dc * A, 1.0 / 3.0) / (d * 1e5) * 1000.0  // mm
+        val crackWidthBase = 0.076 * fs * (dc * A).pow(1.0 / 3.0) / (d * 1e5) * 1000.0  // mm
 
         // SBC hot climate modification
         val crackWidth = crackWidthBase * HOT_CLIMATE_CRACK_WIDTH_FACTOR

@@ -10,7 +10,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
+
 import com.civileg.app.R
 import com.civileg.app.databinding.FragmentFootingDesignBinding
 import com.civileg.app.db.*
@@ -32,7 +32,7 @@ class FootingDesignFragment : Fragment() {
     private val binding get() = _binding!!
     
     private val viewModel: ProjectViewModel by viewModels()
-    private var projectId: Long = -1L
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -56,8 +56,6 @@ class FootingDesignFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        projectId = arguments?.getLong("projectId", -1L) ?: -1L
-
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             projectsList = projects
         }
@@ -189,9 +187,9 @@ class FootingDesignFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val pid = projectId
+            val effectiveProjectId = projectId
             if (projectId != -1L) {
-                saveToProject(projectId, result)
+                saveToProject(effectiveProjectId, result)
             } else {
                 Toast.makeText(requireContext(), "Please select a project first", Toast.LENGTH_SHORT).show()
             }

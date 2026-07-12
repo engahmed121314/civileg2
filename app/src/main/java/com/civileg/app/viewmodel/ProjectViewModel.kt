@@ -2,12 +2,14 @@ package com.civileg.app.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.*
-import com.civileg.app.domain.entities.Project as DomainProject
 import com.civileg.app.utils.CalculatorEngine
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
@@ -18,6 +20,9 @@ class ProjectViewModel @Inject constructor(
     private val designDao: DesignDao,
     private val materialDao: MaterialDao
 ) : ViewModel() {
+
+    // Archive Projects — reuse main projects list sorted by date
+    val allArchiveProjects: LiveData<List<Project>> = projectDao.getAllProjects()
 
     // Main Project Containers
     val allProjects: LiveData<List<Project>> = projectDao.getAllProjects()
@@ -34,6 +39,13 @@ class ProjectViewModel @Inject constructor(
     }
 
     fun delete(project: Project) {
+        viewModelScope.launch {
+            projectDao.deleteProject(project)
+        }
+    }
+
+    // --- Archive Methods (delegate to main project dao) ---
+    fun deleteArchiveProject(project: Project) {
         viewModelScope.launch {
             projectDao.deleteProject(project)
         }

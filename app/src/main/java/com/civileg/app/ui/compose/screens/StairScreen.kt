@@ -387,7 +387,7 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
                 .padding(12.dp)
         ) {
             // ===== DATA EXTRACTION FROM RESULT =====
-            val totalSpanMM = res.span * 1000f
+            val totalSpanMM = res.span.toFloat() * 1000f
             val riserMM = res.riser.toFloat()
             val treadMM = res.tread.toFloat()
             val thicknessMM = res.thickness.toFloat()
@@ -409,7 +409,7 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
             val fitHeight = totalHeightMM + thicknessMM + 30f
             val scX = drawW / fitSpan
             val scY = drawH / fitHeight
-            val sc = minOf(scX, scY) * 0.88f
+            val sc = minOf(scX.toFloat(), scY) * 0.88f
 
             // Origin: bottom-left corner of stair (floor level, start of first riser)
             val ox = marginL + border + (drawW - totalSpanMM * sc) / 2f
@@ -697,7 +697,7 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
             drawContext.canvas.nativeCanvas.save()
             val wtMidX = (wtD1x + wtD2x) / 2f
             val wtMidY = (wtD1y + wtD2y) / 2f
-            val wtAngleDeg = -toDegrees(slopeAngle).toFloat()
+            val wtAngleDeg = -Math.toDegrees(slopeAngle).toFloat()
             drawContext.canvas.nativeCanvas.rotate(wtAngleDeg, wtMidX, wtMidY)
             drawContext.canvas.nativeCanvas.drawText(
                 "ts=${thicknessMM.toInt()}", wtMidX, wtMidY - 6f, dimSmPaint

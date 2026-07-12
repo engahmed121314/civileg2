@@ -44,6 +44,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
@@ -119,7 +121,7 @@ data class RecentProject(
 )
 
 private val enhancedDesignModules = listOf(
-    DesignModuleItem(AppScreen.BeamDesign,     "الكمرات",           "تصميم الكمرات الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentBeam,   Icons.Default.Structure),
+    DesignModuleItem(AppScreen.BeamDesign,     "الكمرات",           "تصميم الكمرات الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentBeam,   Icons.Default.AccountBalance),
     DesignModuleItem(AppScreen.ColumnDesign,    "الأعمدة",           "تصميم الأعمدة الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
     DesignModuleItem(AppScreen.SlabDesign,      "البلاطات",          "البلاطات المصمتة والهوردية", listOf("ECP", "ACI"),        CardAccentSlab,    Icons.Default.ViewWeek),
     DesignModuleItem(AppScreen.FootingDesign,   "القواعد",           "تصميم القواعد المنفصلة",    listOf("ECP", "ACI"),        CardAccentFooting, Icons.Default.Layers),
@@ -319,7 +321,7 @@ private fun HeaderSection(isDark: Boolean) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = (-20).dp, y = (-20).dp)
+                .offset { IntOffset(x = (-20).dp.roundToPx(), y = (-20).dp.roundToPx()) }
                 .size(120.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.04f))
@@ -327,7 +329,7 @@ private fun HeaderSection(isDark: Boolean) {
         Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = 30.dp, y = 30.dp)
+                .offset { IntOffset(x = 30.dp.roundToPx(), y = 30.dp.roundToPx()) }
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.03f))
@@ -577,7 +579,7 @@ private fun EnhancedModuleCard(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 12.dp, y = (-12).dp)
+                    .offset { IntOffset(x = 12.dp.roundToPx(), y = (-12).dp.roundToPx()) }
                     .size(50.dp)
                     .clip(CircleShape)
                     .background(module.accentColor.copy(alpha = 0.08f))

@@ -29,7 +29,8 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Structure
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,7 +75,7 @@ data class BottomNavItem(
 
 private val bottomNavItems = listOf(
     BottomNavItem("الرئيسية",          Icons.Default.Home,      "home"),
-    BottomNavItem("التصميم",           Icons.Default.Structure, "design"),
+    BottomNavItem("التصميم",           Icons.Default.AccountBalance, "design"),
     BottomNavItem("المنشآت المعدنية",   Icons.Default.Build,    "steel"),
     BottomNavItem("الأدوات",            Icons.Default.Calculate, "tools"),
     BottomNavItem("المزيد",            Icons.Default.MoreHoriz,  "more")

@@ -14,9 +14,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
-import kotlin.math.min
-import kotlin.math.max
-import kotlin.math.sqrt
+import kotlin.math.*
 
 /**
  * Professional Footing Engineering Drawing
@@ -67,19 +65,21 @@ fun ProfessionalFootingDrawing(
         val critSectionColor = Color(0xFF2ECC71)
 
         // ── Text helper ────────────────────────────────────────────
+        val nc = drawContext.canvas.nativeCanvas
+        val drawDensity = density
         fun drawText(
             text: String, x: Float, y: Float,
             color: Color = textColor, size: Float = 11f, bold: Boolean = false,
             align: android.graphics.Paint.Align = android.graphics.Paint.Align.CENTER
         ) {
-            nativeCanvas.apply {
+            nc.apply {
                 val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = color.hashCode()
-                    this.textSize = size * density
+                    this.textSize = size * drawDensity
                     this.isFakeBoldText = bold
                     this.textAlign = align
                 }
-                drawText(text, x, y, paint)
+                this.drawText(text, x, y, paint)
             }
         }
 
@@ -114,8 +114,8 @@ fun ProfessionalFootingDrawing(
         val scaleX = planW / footingLengthX.toFloat()
         val scaleY = planDrawH / footingLengthY.toFloat()
         val scale = min(scaleX, scaleY) * 0.85f
-        val drawLX = footingLengthX * scale
-        val drawLY = footingLengthY * scale
+        val drawLX = footingLengthX.toFloat() * scale
+        val drawLY = footingLengthY.toFloat() * scale
         val fLeft = planLeft + (planW - drawLX) / 2f
         val fTop = planTop + (planDrawH - drawLY) / 2f
         val fRight = fLeft + drawLX
@@ -131,11 +131,11 @@ fun ProfessionalFootingDrawing(
         )
 
         // Concrete hatching
-        nativeCanvas.save()
-        nativeCanvas.clipRect(fLeft, fTop, fRight, fBottom)
+        nc.save()
+        nc.clipRect(fLeft, fTop, fRight, fBottom)
         var hx = fLeft - drawLY
         while (hx < fRight) {
-            nativeCanvas.drawLine(
+            nc.drawLine(
                 hx, fTop, hx + drawLY, fBottom,
                 android.graphics.Paint().apply {
                     color = Color(0xFFBBBBBB).hashCode()
@@ -144,7 +144,7 @@ fun ProfessionalFootingDrawing(
             )
             hx += 16f
         }
-        nativeCanvas.restore()
+        nc.restore()
 
         // ── Bottom reinforcement X-direction (blue lines, vertical) ──
         if (rebarXCount > 1) {
@@ -183,8 +183,8 @@ fun ProfessionalFootingDrawing(
         drawText("\u2461", fLeft - 16f, fBottom + 14f, barYColor, 11f, true)
 
         // ── Column(s) ─────────────────────────────────────────────
-        val colDrawW = columnWidth * scale
-        val colDrawD = columnDepth * scale
+        val colDrawW = (columnWidth * scale).toFloat()
+        val colDrawD = (columnDepth * scale).toFloat()
 
         when (footingType) {
             "Isolated" -> {
@@ -197,11 +197,11 @@ fun ProfessionalFootingDrawing(
                     style = Stroke(width = 1.5f)
                 )
                 // Column cross hatching
-                nativeCanvas.save()
-                nativeCanvas.clipRect(cL, cT, cL + colDrawW, cT + colDrawD)
+                nc.save()
+                nc.clipRect(cL, cT, cL + colDrawW, cT + colDrawD)
                 var chx = cL
                 while (chx < cL + colDrawW + colDrawD) {
-                    nativeCanvas.drawLine(
+                    nc.drawLine(
                         chx, cT, chx - colDrawD, cT + colDrawD,
                         android.graphics.Paint().apply {
                             color = Color(0xFF444444).hashCode()
@@ -210,7 +210,7 @@ fun ProfessionalFootingDrawing(
                     )
                     chx += 5f
                 }
-                nativeCanvas.restore()
+                nc.restore()
 
                 // ── Punching shear perimeter ───────────────────────
                 val d = footingThickness - cover
@@ -224,8 +224,7 @@ fun ProfessionalFootingDrawing(
                     color = shearPerimColor,
                     topLeft = Offset(psLeft, psTop),
                     size = Size(psWidth, psHeight),
-                    style = Stroke(width = 1.5f),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f))
+                    style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f)))
                 )
                 // Bo label
                 drawText("Bo", cL + colDrawW / 2f, psTop - 4f, shearPerimColor, 8f)
@@ -263,8 +262,8 @@ fun ProfessionalFootingDrawing(
             }
             "Combined" -> {
                 // Two columns
-                val c1xNorm = if (footingLengthX > 0) col1X / footingLengthX else 0.3
-                val c2xNorm = if (footingLengthX > 0) col2X / footingLengthX else 0.7
+                val c1xNorm = if (footingLengthX > 0) (col1X / footingLengthX).toFloat() else 0.3f
+                val c2xNorm = if (footingLengthX > 0) (col2X / footingLengthX).toFloat() else 0.7f
                 val c1L = fLeft + c1xNorm * drawLX - colDrawW / 2f
                 val c2L = fLeft + c2xNorm * drawLX - colDrawW / 2f
                 for (cL in listOf(c1L, c2L)) {
@@ -365,11 +364,11 @@ fun ProfessionalFootingDrawing(
             size = Size(secSpanPx + 40f, soilDepth)
         )
         // Soil hatching
-        nativeCanvas.save()
-        nativeCanvas.clipRect(sLeft - 20f, sBottom, sLeft + secSpanPx + 20f, sBottom + soilDepth)
+        nc.save()
+        nc.clipRect(sLeft - 20f, sBottom, sLeft + secSpanPx + 20f, sBottom + soilDepth)
         var shx = sLeft - 20f
         while (shx < sLeft + secSpanPx + 20f + soilDepth) {
-            nativeCanvas.drawLine(
+            nc.drawLine(
                 shx, sBottom, shx - soilDepth, sBottom + soilDepth,
                 android.graphics.Paint().apply {
                     color = soilHatchColor.hashCode()
@@ -378,7 +377,7 @@ fun ProfessionalFootingDrawing(
             )
             shx += 8f
         }
-        nativeCanvas.restore()
+        nc.restore()
 
         // Footing concrete
         drawRect(
@@ -388,7 +387,7 @@ fun ProfessionalFootingDrawing(
         )
 
         // Column above
-        val colWpx = columnWidth * secScale
+        val colWpx = (columnWidth * secScale).toFloat()
         val colHpx = 40f
         val colLeft = sCenterX - colWpx / 2f
         drawRect(
@@ -403,11 +402,11 @@ fun ProfessionalFootingDrawing(
             style = Stroke(width = 1.5f)
         )
         // Column hatching
-        nativeCanvas.save()
-        nativeCanvas.clipRect(colLeft, sTop - colHpx, colLeft + colWpx, sTop)
+        nc.save()
+        nc.clipRect(colLeft, sTop - colHpx, colLeft + colWpx, sTop)
         var chx2 = colLeft
         while (chx2 < colLeft + colWpx + colHpx) {
-            nativeCanvas.drawLine(
+            nc.drawLine(
                 chx2, sTop - colHpx, chx2 - colHpx, sTop,
                 android.graphics.Paint().apply {
                     color = Color(0xFF444444).hashCode()
@@ -416,7 +415,7 @@ fun ProfessionalFootingDrawing(
             )
             chx2 += 5f
         }
-        nativeCanvas.restore()
+        nc.restore()
 
         // Pedestal (if footing is much wider than column)
         if (footingLengthX > columnWidth * 2.5) {
@@ -437,7 +436,7 @@ fun ProfessionalFootingDrawing(
         }
 
         // Main reinforcement (blue circles at bottom)
-        val barR = (rebarXDia * secScale / 2f).coerceIn(2.5f, 5f)
+        val barR = (rebarXDia * secScale / 2f).toFloat().coerceIn(2.5f, 5f)
         val barCountSec = if (rebarXCount > 1) rebarXCount.coerceIn(3, 18) else 6
         val barStepSec = (secSpanPx - 16f) / (barCountSec - 1)
         for (i in 0 until barCountSec) {
@@ -558,7 +557,7 @@ fun ProfessionalFootingDrawing(
         // Table header
         drawRoundRect(
             color = headerBg, topLeft = Offset(tblLeft, rowY),
-            size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f, 4f, 0f, 0f)
+            size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f)
         )
         val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Length (mm)")
         var colX = tblLeft
@@ -602,7 +601,7 @@ fun ProfessionalFootingDrawing(
             size = Size(tblWidth, rowY - tblTop), style = Stroke(width = 1f)
         )
         // Column lines
-        cx = tblLeft
+        var cx = tblLeft
         for (i in 0 until colWidths.size - 1) {
             cx += colWidths[i]
             drawLine(Color(0xFF37474F), Offset(cx, tblTop), Offset(cx, rowY), strokeWidth = 0.5f)
@@ -618,13 +617,13 @@ private fun DrawScope.drawDimensionLineH(
     drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
     drawLine(color, Offset(x1, y1 - tick), Offset(x1, y1 + tick), strokeWidth = 1f)
     drawLine(color, Offset(x2, y2 - tick), Offset(x2, y2 + tick), strokeWidth = 1f)
-    nativeCanvas.apply {
+    drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.color = color.hashCode()
             textSize = 9f * density
             textAlign = android.graphics.Paint.Align.CENTER
         }
-        drawText(text, (x1 + x2) / 2f, y1 - 4f, paint)
+        this.drawText(text, (x1 + x2) / 2f, y1 - 4f, paint)
     }
 }
 
@@ -636,7 +635,7 @@ private fun DrawScope.drawDimensionLineV(
     drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
     drawLine(color, Offset(x1 - tick, y1), Offset(x1 + tick, y1), strokeWidth = 1f)
     drawLine(color, Offset(x2 - tick, y2), Offset(x2 + tick, y2), strokeWidth = 1f)
-    nativeCanvas.apply {
+    drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.color = color.hashCode()
             textSize = 9f * density

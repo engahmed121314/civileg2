@@ -10,14 +10,16 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.StrokeCap
-import androidx.compose.ui.graphics.drawscope.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -793,9 +795,9 @@ private fun DrawScope.drawSpiralRect(left: Float, top: Float, w: Float, h: Float
         val a = t * turns * 2 * kotlin.math.PI.toFloat()
         val ca = cos(a); val sa = sin(a)
         val n = 4.0
-        val r = 1.0 / (kotlin.math.pow(kotlin.math.pow(kotlin.math.pow(ca, 2.0), n / 2.0) +
-                kotlin.math.pow(kotlin.math.pow(sa, 2.0), n / 2.0), 1.0 / n))
-        val x = cx + (w / 2f) * r * ca; val y = cy + (h / 2f) * r * sa
+        val r = 1.0 / ((ca.toDouble().pow(2.0)).pow(n / 2.0) +
+                (sa.toDouble().pow(2.0)).pow(n / 2.0)).pow(1.0 / n)
+        val x = cx + (w / 2f) * r.toFloat() * ca; val y = cy + (h / 2f) * r.toFloat() * sa
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
     drawPath(path, color = C.Tie, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f))))

@@ -11,12 +11,16 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
 import kotlin.math.tan
 
 // ============================================================================
@@ -101,7 +105,7 @@ fun ProfessionalRetainingWallDrawing(
         val drawKeyD = keyDepth.toFloat() * scale
         val drawKeyW = drawBotT * 0.6f
         val coverPx = cover.toFloat() * scale
-        val tanAngle = tan(Math.toRadians(backfillAngle))
+        val tanAngle = tan(Math.toRadians(backfillAngle)).toFloat()
 
         // ── Positioning ──
         val stemTopLeftX = mainLeft + (mainRight - mainLeft - drawBaseW) / 2f + drawToe - drawBotT / 2f + (drawBotT - drawTopT) / 2f
@@ -126,7 +130,7 @@ fun ProfessionalRetainingWallDrawing(
         drawReinforcementDetail(
             stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
             baseLeft, baseTop, baseBottom, drawBaseW, drawBaseT,
-            drawToe, drawHeel, coverPx, scale,
+            drawToe, drawHeel, coverPx, cover, scale,
             mainRebarDia, mainRebarSpacing,
             distRebarDia, distRebarSpacing,
             baseRebarDia, baseRebarSpacing
@@ -188,8 +192,9 @@ private fun DrawScope.drawBackfillSoil(
     drawPath(path = soilPath, color = SoilFill)
 
     // Soil hatching
-    nativeCanvas.save()
-    nativeCanvas.clipPath(android.graphics.Path().apply {
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
+    nc.clipPath(android.graphics.Path().apply {
         moveTo(soilLeft, soilTop)
         lineTo(soilRight, soilTop + surfaceDrop)
         lineTo(soilRight, soilBottom)
@@ -198,7 +203,7 @@ private fun DrawScope.drawBackfillSoil(
     })
     var hx = soilLeft - 200f
     while (hx < soilRight + 200f) {
-        nativeCanvas.drawLine(
+        nc.drawLine(
             hx, soilTop - 50f, hx + 50f, soilBottom + 50f,
             android.graphics.Paint().apply {
                 color = SoilBrown.hashCode()
@@ -207,7 +212,7 @@ private fun DrawScope.drawBackfillSoil(
         )
         hx += 14f
     }
-    nativeCanvas.restore()
+    nc.restore()
 
     // Retained soil level line
     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 5f), 0f)
@@ -307,7 +312,7 @@ private fun DrawScope.drawReinforcementDetail(
     baseLeft: Float, baseTop: Float, baseBottom: Float,
     drawBaseW: Float, drawBaseT: Float,
     drawToe: Float, drawHeel: Float,
-    coverPx: Float, scale: Float,
+    coverPx: Float, coverC: Double, scale: Float,
     mainRebarDia: Double, mainRebarSpacing: Double,
     distRebarDia: Double, distRebarSpacing: Double,
     baseRebarDia: Double, baseRebarSpacing: Double
@@ -379,7 +384,7 @@ private fun DrawScope.drawReinforcementDetail(
     drawLine(color = ExtensionGray.copy(alpha = 0.6f),
         start = Offset(stemLeft + drawBotT - coverPx, stemTop + drawH - 10f),
         end = Offset(stemLeft + drawBotT, stemTop + drawH - 10f), strokeWidth = 0.8f)
-    drawTextAnnotated("${cover.toInt()}", stemLeft + drawBotT - coverPx - 10f,
+    drawTextAnnotated("${coverC.toInt()}", stemLeft + drawBotT - coverPx - 10f,
         stemTop + drawH - 6f, ExtensionGray, 11f)
 }
 
@@ -415,7 +420,7 @@ private fun DrawScope.drawEarthPressureDiagram(
         start = Offset(stemBackX + 8f + arrowLen, resultY),
         end = Offset(stemBackX + 8f, resultY),
         strokeWidth = 2.5f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = StrokeCap.Round
     )
     drawArrowHead(stemBackX + 8f, resultY, -1f, PressureOrange, vertical = false)
 
@@ -658,11 +663,12 @@ private fun DrawScope.drawReinforcementTable(
 private fun DrawScope.drawConcreteHatch(
     left: Float, top: Float, w: Float, h: Float
 ) {
-    nativeCanvas.save()
-    nativeCanvas.clipRect(left, top, left + w, top + h)
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
+    nc.clipRect(left, top, left + w, top + h)
     var i = left - h
     while (i < left + w + h) {
-        nativeCanvas.drawLine(
+        nc.drawLine(
             i, top, i + h, top + h,
             android.graphics.Paint().apply {
                 color = Color(0x55AAAAAA).hashCode()
@@ -671,18 +677,19 @@ private fun DrawScope.drawConcreteHatch(
         )
         i += 18f
     }
-    nativeCanvas.restore()
+    nc.restore()
 }
 
 private fun DrawScope.drawConcreteHatchPath(path: Path) {
     val bounds = path.getBounds()
-    nativeCanvas.save()
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
     val androidPath = android.graphics.Path()
     path.asAndroidPath().let { androidPath.set(it) }
-    nativeCanvas.clipPath(androidPath)
+    nc.clipPath(androidPath)
     var i = bounds.left - bounds.height
     while (i < bounds.right + bounds.height) {
-        nativeCanvas.drawLine(
+        nc.drawLine(
             i, bounds.top, i + bounds.height, bounds.bottom,
             android.graphics.Paint().apply {
                 color = Color(0x55AAAAAA).hashCode()
@@ -691,7 +698,7 @@ private fun DrawScope.drawConcreteHatchPath(path: Path) {
         )
         i += 18f
     }
-    nativeCanvas.restore()
+    nc.restore()
 }
 
 private fun DrawScope.drawDimLine(
@@ -738,7 +745,7 @@ private fun DrawScope.drawTextAnnotated(
     drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint().apply {
             textSize = size
-            this.color = color
+            this.color = color.toArgb()
             isFakeBoldText = true
             typeface = android.graphics.Typeface.MONOSPACE
             textAlign = android.graphics.Paint.Align.LEFT

@@ -34,8 +34,7 @@ class WaterTankFragment : Fragment() {
     private var _binding: FragmentWaterTankBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ProjectViewModel by viewModels()
-    private val projectId: Long
-        get() = requireArguments().getLong("projectId", -1L)
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
     
     @Inject
     lateinit var settingsManager: SettingsManager
@@ -143,14 +142,14 @@ class WaterTankFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val projectId = if (this@WaterTankFragment.projectId != -1L) this@WaterTankFragment.projectId else {
+            val effectiveProjectId = if (projectId != -1L) projectId else {
                 if (projectsList.isEmpty()) {
                     showError("Please create a project first")
                     return@setOnClickListener
                 }
                 projectsList.first().id
             }
-            saveToProject(projectId, result)
+            saveToProject(effectiveProjectId, result)
         }
     }
 

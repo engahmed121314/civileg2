@@ -39,9 +39,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.domain.calculations.ecp.BoltDesignResult
+import com.civileg.app.domain.calculations.ecp.BlockShearResult
 import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
-import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign.WeldDesignResult
+import com.civileg.app.domain.calculations.ecp.WeldDesignResult
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfGenerator
@@ -1276,7 +1278,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
         item {
             Text("رتبة المسمار (Grade)", fontWeight = FontWeight.Bold)
             FlowRow {
-                BoltGrade.entries.forEach { grade ->
+                for (grade in BoltGrade.entries) {
                     FilterChip(
                         selected = selectedGrade == grade,
                         onClick = { selectedGrade = grade },
@@ -1403,7 +1405,7 @@ fun BasePlateDesignTab() {
     var selectedBoltGrade by remember { mutableStateOf("4.6") }
     var bpResult by remember { mutableStateOf<SteelBasePlateDesign.BasePlateResult?>(null) }
 
-    val boltGradeOptions = SteelBasePlateDesign.BoltGrade.entries.map { it.getGradeName() }
+    val boltGradeOptions = com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.entries.map { it.getGradeName() }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeader("🔧 تصميم القواعد المعدنية", R.drawable.ic_tools) }
@@ -1462,7 +1464,7 @@ fun BasePlateDesignTab() {
                             expanded = expandedBoltGrade,
                             onDismissRequest = { expandedBoltGrade = false }
                         ) {
-                            boltGradeOptions.forEach { grade ->
+                            for (grade in boltGradeOptions) {
                                 DropdownMenuItem(
                                     text = { Text("Grade $grade") },
                                     onClick = { selectedBoltGrade = grade; expandedBoltGrade = false }
@@ -1477,8 +1479,8 @@ fun BasePlateDesignTab() {
         item {
             Button(onClick = {
                 val designer = SteelBasePlateDesign()
-                val boltGrade = SteelBasePlateDesign.BoltGrade.entries.find { it.getGradeName() == selectedBoltGrade }
-                    ?: SteelBasePlateDesign.BoltGrade.GRADE_4_6
+                val boltGrade = com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.entries.find { it.getGradeName() == selectedBoltGrade }
+                    ?: com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.GRADE_4_6
                 val input = SteelBasePlateDesign.ConcentricInput(
                     Pu = axialLoad.toDoubleOrNull() ?: 500.0,
                     Mux = momentM.toDoubleOrNull() ?: 0.0,
@@ -1628,7 +1630,7 @@ fun ConnectionDesignTab() {
                                 expanded = expandedBoltGrade,
                                 onDismissRequest = { expandedBoltGrade = false }
                             ) {
-                                BoltGrade.entries.forEach { grade ->
+                                for (grade in BoltGrade.entries) {
                                     DropdownMenuItem(
                                         text = { Text(grade.displayName) },
                                         onClick = { selectedBoltGrade = grade; expandedBoltGrade = false }
@@ -1655,7 +1657,7 @@ fun ConnectionDesignTab() {
                                 expanded = expandedPattern,
                                 onDismissRequest = { expandedPattern = false }
                             ) {
-                                BoltPattern.entries.forEach { pattern ->
+                                for (pattern in BoltPattern.entries) {
                                     DropdownMenuItem(
                                         text = { Text(pattern.displayName) },
                                         onClick = { selectedPattern = pattern; expandedPattern = false }
@@ -1692,7 +1694,7 @@ fun ConnectionDesignTab() {
                             SteelInputField(weldSize, "مقاس اللحام (mm)", { weldSize = it }, Modifier.weight(1f))
                             SteelInputField(weldLength, "طول اللحام (mm)", { weldLength = it }, Modifier.weight(1f))
                         }
-                        SteelInputField(appliedWeldForce, "القوة المؤثرة (kN)", { appliedWeldForce = it })
+                        SteelInputField(appliedWeldForce, "القوة المؤثرة (kN)", { appliedWeldForce = it }, Modifier.fillMaxWidth())
 
                         Text("نوع القطب (Electrode)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         ExposedDropdownMenuBox(
@@ -1791,7 +1793,7 @@ fun ConnectionDesignTab() {
                         }
                         if (res.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            res.warnings.forEach { w -> Text("• $w", fontSize = 11.sp, color = Color.Gray) }
+                            for (w in res.warnings) { Text("• $w", fontSize = 11.sp, color = Color.Gray) }
                         }
                     }
                 }
@@ -1820,7 +1822,7 @@ fun ConnectionDesignTab() {
                         ResultRow("معامل الاستغلال (U.R)", "%.2f".format(res.utilizationRatio))
                         if (res.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            res.warnings.forEach { w -> Text("• $w", fontSize = 11.sp, color = Color.Gray) }
+                            for (w in res.warnings) { Text("• $w", fontSize = 11.sp, color = Color.Gray) }
                         }
                     }
                 }

@@ -11,11 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.civileg.app.domain.entities.ElementType
-import com.civileg.app.domain.entities.Project
+import androidx.compose.ui.unit.sp
+import com.civileg.app.db.Project
 import com.civileg.app.viewmodel.ProjectViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -33,7 +34,7 @@ fun ArchiveScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Project Archive", fontWeight = FontWeight.Bold) },
+                title = { Text("المشروعات المحفوظة", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -48,16 +49,31 @@ fun ArchiveScreen(
         }
     ) { padding ->
         if (projects.isEmpty()) {
-            EmptyArchiveView(modifier = Modifier.padding(padding))
-        } else {
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentAlignment = Alignment.Center
             ) {
-                items(projects) { project ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Archive,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.outline
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("لا توجد مشروعات محفوظة", color = MaterialTheme.colorScheme.outline)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(projects, key = { it.id }) { project ->
                     ProjectCard(
                         project = project,
                         onClick = { onProjectClick(project) },
@@ -70,7 +86,7 @@ fun ArchiveScreen(
 }
 
 @Composable
-fun ProjectCard(
+private fun ProjectCard(
     project: Project,
     onClick: () -> Unit,
     onDelete: () -> Unit
@@ -93,7 +109,7 @@ fun ProjectCard(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = getElementIcon(project.elementType),
+                        imageVector = Icons.Default.Folder,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -109,11 +125,11 @@ fun ProjectCard(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${project.elementType.displayName} • ${project.designCode.name}",
+                    text = "كود التصميم: ${project.code}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(project.date)),
+                    text = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(project.createdAt),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -123,41 +139,9 @@ fun ProjectCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = Color.Red.copy(alpha = 0.7f)
                 )
             }
         }
-    }
-}
-
-@Composable
-fun EmptyArchiveView(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.Folder,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.outline
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("No saved projects found", color = MaterialTheme.colorScheme.outline)
-        }
-    }
-}
-
-fun getElementIcon(type: ElementType): ImageVector {
-    return when (type) {
-        ElementType.COLUMN -> Icons.Default.VerticalAlignBottom
-        ElementType.BEAM -> Icons.Default.Menu
-        ElementType.SLAB -> Icons.Default.Layers
-        ElementType.TANK -> Icons.Default.Water
-        ElementType.FOOTING -> Icons.Default.Home
-        ElementType.RETAINING_WALL -> Icons.Default.Build
-        ElementType.STEEL -> Icons.Default.Architecture
-        ElementType.STAIR -> Icons.Default.FormatLineSpacing
     }
 }

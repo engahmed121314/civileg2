@@ -64,7 +64,7 @@ class SBCSlab : SlabDesign {
 
         val barArea = PI * barDiameter * barDiameter / 4.0
         val nominalSpacing = barArea * 1000.0 / asRequired
-        val maxSpacing = min(3.0 * slabThickness, 450.0, getMaxBarSpacing())
+        val maxSpacing = minOf(3.0 * slabThickness, 450.0, getMaxBarSpacing())
         val finalSpacing = nominalSpacing.coerceIn(100.0, maxSpacing)
         val asProvided = barArea * 1000.0 / finalSpacing
 

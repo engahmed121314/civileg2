@@ -1,6 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -13,6 +14,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -60,13 +62,13 @@ fun FrameDrawingCanvas(
         val scale = min(
             drawW.value / xSpan,
             drawH.value / ySpan
-        ) * 0.85
+        ).toFloat() * 0.85f
 
-        val offsetX = padding.value + (drawW.value - xSpan * scale) / 2 - xRange.start * scale
-        val offsetY = padding.value + (drawH.value - ySpan * scale) / 2 + yRange.endInclusive * scale
+        val offsetX = (padding.value + (drawW.value - xSpan * scale) / 2 - xRange.start * scale).toFloat()
+        val offsetY = (padding.value + (drawH.value - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
 
-        fun toScreen(x: Double, y: Double): Offset {
-            return Offset(
+        val toScreen: (Double, Double) -> Offset = { x, y ->
+            Offset(
                 (x * scale + offsetX).toFloat(),
                 (-y * scale + offsetY).toFloat()
             )
@@ -101,7 +103,7 @@ fun FrameDrawingCanvas(
                 drawText(
                     textMeasurer = textMeasurer,
                     text = "أضف عقد وأعضاء لبدء التحليل",
-                    topLeft = Offset(size.width / 2 - 120, size.height / 2),
+                    topLeft = Offset(size.width / 2 - 120f, size.height / 2),
                     style = TextStyle(color = Color.Gray, fontSize = 16.sp)
                 )
                 return@Canvas
@@ -151,7 +153,7 @@ fun FrameDrawingCanvas(
                     drawText(
                         textMeasurer = textMeasurer,
                         text = member.name,
-                        topLeft = Offset(labelX - 20, labelY - 8),
+                        topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
                         style = TextStyle(
                             color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
                             fontSize = 10.sp,
@@ -164,7 +166,7 @@ fun FrameDrawingCanvas(
                 drawText(
                     textMeasurer = textMeasurer,
                     text = "#${member.id}",
-                    topLeft = Offset(labelX - 8, labelY + 4),
+                    topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
                     style = TextStyle(color = Color.Gray, fontSize = 8.sp)
                 )
             }
@@ -280,11 +282,11 @@ private fun DrawScope.drawGrid(
 
 private fun calculateGridSpacing(scale: Float): Double {
     val targetPixels = 60f
-    val rawSpacing = targetPixels / scale
+    val rawSpacing = (targetPixels / scale).toDouble()
     val magnitude = 10.0.pow(floor(log10(rawSpacing)))
     return when {
-        rawSpacing / magnitude < 2 -> 2 * magnitude
-        rawSpacing / magnitude < 5 -> 5 * magnitude
+        rawSpacing / magnitude < 2.0 -> 2 * magnitude
+        rawSpacing / magnitude < 5.0 -> 5 * magnitude
         else -> 10 * magnitude
     }
 }
@@ -584,7 +586,6 @@ private fun DrawScope.drawDiagrams(
                 DiagramType.SFD, DiagramType.AFD -> "kN"
             }
             val label = "${abs(maxPt.value).formatValue(2)} $unit"
-            // Draw text
             drawText(
                 textMeasurer = textMeasurer,
                 text = label,
@@ -603,7 +604,7 @@ private fun DrawScope.drawDeformedShape(
     scale: Float
 ) {
     // Scale deformations for visibility
-    val maxDisp = nodeResults.maxOfOrNull { max(abs(it.dx), abs(it.dy)) * scale } ?: 0f
+    val maxDisp = nodeResults.maxOfOrNull { (max(abs(it.dx), abs(it.dy)) * scale).toFloat() } ?: 0f
     if (maxDisp < 0.5f) return // Too small to show
     val deformScale = 50f / maxDisp.coerceAtLeast(1f) // amplify to ~50px max
 
@@ -629,7 +630,7 @@ private fun DrawScope.drawDeformedShape(
 
 private fun DrawScope.drawScaleBar(size: Size, scale: Float, textMeasurer: TextMeasurer) {
     val barLength_m = 1.0 // 1 meter
-    val barLength_px = barLength_m * scale
+    val barLength_px = (barLength_m * scale).toFloat()
     val x = 20f
     val y = size.height - 25f
 

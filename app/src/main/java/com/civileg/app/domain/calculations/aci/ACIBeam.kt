@@ -199,7 +199,7 @@ class ACIBeam : BeamDesign {
         }
         
         codeNotes.add(CodeReference.ACI.BEAM_SHEAR)
-        codeNotes.add("Vc = ${String.format("%.1f", Vc/1000)} kN, φVc = ${String.format("%.1f", phiVc)} kN")
+        codeNotes.add("Vc = ${"%.1f".format(Vc/1000)} kN, φVc = ${"%.1f".format(phiVc)} kN")
         
         return ShearReinforcementResult(
             concreteShearCapacity = Vc / 1000,
@@ -227,9 +227,9 @@ class ACIBeam : BeamDesign {
             SupportCondition.CANTILEVER -> 8.0
         }
         
-        // Modification for fy (ACI Table 7.3.1.1)
-        val fy = 420.0  // Default steel yield strength (MPa)
-        val fyFactor = minOf(1.0, 0.4 + 420.0 / fy.coerceAtLeast(200.0))
+        // Modification for fy (ACI Table 7.3.1.1), assume Grade 60 (fy=420 MPa) as default
+        val defaultFy = 420.0
+        val fyFactor = minOf(1.0, 0.4 + 420.0 / defaultFy)
         
         val actualRatio = (span * 1000) / totalDepth
         val allowableRatio = basicRatio * fyFactor
@@ -343,10 +343,10 @@ class ACIBeam : BeamDesign {
         val cOverD = epsilonCu / (epsilonCu + epsilonY)
         val neutralAxisDepth = cOverD * d
         
-        notes.add("Rn = ${String.format("%.2f", Rn)} MPa")
-        notes.add("Rn_bal = ${String.format("%.2f", RnBal)} MPa")
-        notes.add("ρ_bal = ${String.format("%.4f", rhoBal)}")
-        notes.add("β₁ = ${String.format("%.2f", beta1)}")
+        notes.add("Rn = ${"%.2f".format(Rn)} MPa")
+        notes.add("Rn_bal = ${"%.2f".format(RnBal)} MPa")
+        notes.add("ρ_bal = ${"%.4f".format(rhoBal)}")
+        notes.add("β₁ = ${"%.2f".format(beta1)}")
         
         // If Rn ≤ Rn_bal: singly reinforced is sufficient
         if (Rn <= RnBal) {
@@ -417,11 +417,11 @@ class ACIBeam : BeamDesign {
         val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
         
         notes.add("Rn > Rn_bal → Compression steel required")
-        notes.add("Rn_excess = ${String.format("%.2f", RnExcess)} MPa")
-        notes.add("As₁ (balanced) = ${String.format("%.0f", As1)} mm²")
-        notes.add("As (total) = ${String.format("%.0f", asFinal)} mm²")
-        notes.add("As' (compression) = ${String.format("%.0f", AsPrime)} mm²")
-        notes.add("Neutral axis depth c = ${String.format("%.1f", neutralAxisDepth)} mm")
+        notes.add("Rn_excess = ${"%.2f".format(RnExcess)} MPa")
+        notes.add("As₁ (balanced) = ${"%.0f".format(As1)} mm²")
+        notes.add("As (total) = ${"%.0f".format(asFinal)} mm²")
+        notes.add("As' (compression) = ${"%.0f".format(AsPrime)} mm²")
+        notes.add("Neutral axis depth c = ${"%.1f".format(neutralAxisDepth)} mm")
         notes.add("φ = $PHI_FLEXURE for tension-controlled sections")
         notes.add(CodeReference.ACI.BEAM_FLEXURE)
         notes.add("ACI 318-19: Section 9.3.3.2 (Doubly reinforced)")

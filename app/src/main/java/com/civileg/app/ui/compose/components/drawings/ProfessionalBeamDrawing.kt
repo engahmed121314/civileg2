@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
@@ -519,7 +520,7 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // --- Main bottom rebar (BLUE) ---
     val mainBarRadius = (mainRebarDia / 2f) * scale
-    val mainBarClamped = max(mainBarRadius, 3f)
+    val mainBarClamped = max(mainBarRadius, 3.0).toFloat()
     val bottomBarY = beamBottom - coverPx - mainBarClamped
 
     if (mainRebarCount > 0) {
@@ -578,7 +579,7 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // --- Top steel (LIGHT BLUE) ---
     if (hasTopSteel && topRebarCount > 0 && topRebarDia > 0) {
-        val topBarRadius = max((topRebarDia / 2f) * scale, 2.5f)
+        val topBarRadius = max((topRebarDia / 2f) * scale, 2.5).toFloat()
         val topBarY = beamTop + coverPx + topBarRadius
         val topUsableW = beamDrawW - 2 * coverPx
         val topSpacing = if (topRebarCount > 1) {
@@ -680,7 +681,7 @@ private fun DrawScope.drawCutawayReinforcement(
     )
 
     if (hasTopSteel && topRebarCount > 0) {
-        val topLabelY = beamTop + coverPx + max(topRebarDia / 2f * scale, 2.5f) + 22f
+        val topLabelY = beamTop + coverPx + max(topRebarDia / 2f * scale, 2.5).toFloat() + 22f
         drawTextAnnotated(
             text = "${topRebarCount}Ø${topRebarDia.toInt()}",
             x = labelX, y = topLabelY,
@@ -715,7 +716,7 @@ private fun DrawScope.drawDevelopmentAndLap(
 ) {
     val laPx = developmentLength.toFloat() * scale
     val lapPx = lapLength.toFloat() * scale
-    val barR = max((mainRebarDia / 2f) * scale, 3f)
+    val barR = max((mainRebarDia / 2f) * scale, 3.0).toFloat()
     val mainBarY = beamBottom - (beamDrawH * 0.15f)  // approximate bottom bar position
 
     // --- Development Length (La) on LEFT side ---
@@ -1075,7 +1076,7 @@ private fun DrawScope.drawSectionInset(
     )
 
     // Main bottom rebar circles (BLUE)
-    val mainR = max((mainRebarDia / 2f) * secScale, 2.5f)
+    val mainR = max((mainRebarDia / 2f) * secScale, 2.5).toFloat()
     val bottomY = secTop + secH - covPx - mainR
     if (mainRebarCount > 0) {
         val usableW = secW - 2 * covPx
@@ -1088,7 +1089,7 @@ private fun DrawScope.drawSectionInset(
 
     // Top rebar circles (LIGHT BLUE)
     if (hasTopSteel && topRebarCount > 0 && topRebarDia > 0) {
-        val topR = max((topRebarDia / 2f) * secScale, 2f)
+        val topR = max((topRebarDia / 2f) * secScale, 2.0).toFloat()
         val topY = secTop + covPx + topR
         val usableW = secW - 2 * covPx
         val spacing = if (topRebarCount > 1) (usableW - 2 * topR) / (topRebarCount - 1) else 0f
@@ -1339,7 +1340,7 @@ private fun DrawScope.drawTextAnnotated(
     drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint().apply {
             textSize = size
-            this.color = color
+            this.color = color.toArgb()
             isFakeBoldText = true
             typeface = android.graphics.Typeface.MONOSPACE
             textAlign = android.graphics.Paint.Align.LEFT
@@ -1363,7 +1364,7 @@ private fun DrawScope.drawTextWithBackground(
 ) {
     val paint = android.graphics.Paint().apply {
         this.textSize = textSize
-        color = textColor
+        color = textColor.toArgb()
         isFakeBoldText = true
         typeface = android.graphics.Typeface.MONOSPACE
         textAlign = android.graphics.Paint.Align.LEFT

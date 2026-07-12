@@ -35,7 +35,7 @@ class BeamDesignFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ProjectViewModel by viewModels()
-    private var projectId: Long = -1L
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
 
     private lateinit var spanAdapter: SpanAdapter
     private val spans = mutableListOf<ContinuousBeamAnalysis.Span>()
@@ -62,7 +62,6 @@ class BeamDesignFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        projectId = arguments?.getLong("projectId", -1L) ?: -1L
 
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             projectsList = projects

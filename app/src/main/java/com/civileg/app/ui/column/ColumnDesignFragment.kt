@@ -37,7 +37,7 @@ class ColumnDesignFragment : Fragment() {
     private val binding get() = _binding!!
     
     private val viewModel: ProjectViewModel by viewModels()
-    private var projectId: Long = -1L
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -64,7 +64,6 @@ class ColumnDesignFragment : Fragment() {
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        projectId = arguments?.getLong("projectId", -1L) ?: -1L
         
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             projectsList = projects
@@ -342,8 +341,8 @@ class ColumnDesignFragment : Fragment() {
     }
 
     private fun saveDesign(result: CalculatorEngine.ColumnResult) {
-        val projectId = if (projectId != -1L) projectId else projectsList.firstOrNull()?.id ?: -1L
-        if (projectId != -1L) {
+        val effectiveProjectId = if (projectId != -1L) projectId else projectsList.firstOrNull()?.id ?: -1L
+        if (effectiveProjectId != -1L) {
             lifecycleScope.launch {
                 val inputData = org.json.JSONObject().apply {
                     put("width", result.width)
@@ -353,7 +352,7 @@ class ColumnDesignFragment : Fragment() {
                 }.toString()
 
                 val design = Design(
-                    projectId = projectId,
+                    projectId = effectiveProjectId,
                     type = DesignType.COLUMN,
                     name = "Column ${result.width}x${result.depth}",
                     inputData = inputData,

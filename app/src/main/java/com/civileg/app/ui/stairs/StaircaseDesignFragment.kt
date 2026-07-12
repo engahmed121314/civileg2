@@ -29,8 +29,7 @@ class StaircaseDesignFragment : Fragment() {
     private val binding get() = _binding!!
     
     private val viewModel: ProjectViewModel by viewModels()
-    private val projectId: Long
-        get() = requireArguments().getLong("projectId", -1L)
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
     
     @Inject
     lateinit var calculatorEngine: CalculatorEngine
@@ -181,9 +180,9 @@ class StaircaseDesignFragment : Fragment() {
     private fun setupSaveButton() {
         binding.btnSave.setOnClickListener {
             val result = lastResult ?: return@setOnClickListener
-            val projectId = if (this@StaircaseDesignFragment.projectId != -1L) this@StaircaseDesignFragment.projectId else projectsList.firstOrNull()?.id ?: -1L
-            if (projectId != -1L) {
-                saveToProject(projectId, result)
+            val effectiveProjectId = if (projectId != -1L) projectId else projectsList.firstOrNull()?.id ?: -1L
+            if (effectiveProjectId != -1L) {
+                saveToProject(effectiveProjectId, result)
             } else {
                 showError("Please create a project first")
             }

@@ -21,9 +21,9 @@ class ProjectDetailFragment : Fragment() {
 
     private var _binding: FragmentProjectDetailBinding? = null
     private val binding get() = _binding!!
-
+    
     private val viewModel: ProjectViewModel by viewModels()
-    private var projectId: Long = -1L
+    private val projectId: Long get() = arguments?.getLong("projectId") ?: 0L
     private lateinit var adapter: DesignHistoryAdapter
 
     override fun onCreateView(
@@ -37,8 +37,6 @@ class ProjectDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Read projectId from arguments (passed via Bundle, not Safe Args)
-        projectId = arguments?.getLong("projectId", -1L) ?: -1L
         setupRecyclerView()
         setupToolbar()
         setupFab()
@@ -79,15 +77,14 @@ class ProjectDetailFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Add New Design to Project")
             .setItems(options) { _, which ->
-                val bundle = Bundle().apply { putLong("projectId", projectId) }
                 when (which) {
-                    0 -> findNavController().navigate(R.id.nav_beam, bundle)
-                    1 -> findNavController().navigate(R.id.nav_column, bundle)
-                    2 -> findNavController().navigate(R.id.nav_footing, bundle)
-                    3 -> findNavController().navigate(R.id.nav_slab, bundle)
-                    4 -> findNavController().navigate(R.id.nav_stairs, bundle)
-                    5 -> findNavController().navigate(R.id.nav_retaining, bundle)
-                    6 -> findNavController().navigate(R.id.nav_watertank, bundle)
+                    0 -> findNavController().navigate(R.id.nav_beam, Bundle().apply { putLong("projectId", projectId) })
+                    1 -> findNavController().navigate(R.id.nav_column, Bundle().apply { putLong("projectId", projectId) })
+                    2 -> findNavController().navigate(R.id.nav_footing, Bundle().apply { putLong("projectId", projectId) })
+                    3 -> findNavController().navigate(R.id.nav_slab, Bundle().apply { putLong("projectId", projectId) })
+                    4 -> findNavController().navigate(R.id.nav_stairs, Bundle().apply { putLong("projectId", projectId) })
+                    5 -> findNavController().navigate(R.id.nav_retaining, Bundle().apply { putLong("projectId", projectId) })
+                    6 -> findNavController().navigate(R.id.nav_watertank, Bundle().apply { putLong("projectId", projectId) })
                 }
             }
             .show()
@@ -106,7 +103,7 @@ class ProjectDetailFragment : Fragment() {
             binding.tvDesignCount.text = "${designs.size} Designs"
             adapter.submitList(designs)
         }
-
+        
         viewModel.getMaterialsForProject(projectId).observe(viewLifecycleOwner) { materials ->
             val total = materials.sumOf { it.totalPrice }
             binding.tvTotalCost.text = String.format("Total: %,.0f EGP", total)

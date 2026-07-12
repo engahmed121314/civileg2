@@ -113,7 +113,7 @@ class SteelDesignEngine {
                 ratio <= 1.0 -> "Near Limit"
                 else -> "Unsafe"
             },
-            details = "φMn = ${String.format("%.1f", phiMn)} kN.m, Mn = ${String.format("%.1f", Mn_design)} kN.m"
+            details = "φMn = ${"%.1f".format(phiMn)} kN.m, Mn = ${"%.1f".format(Mn_design)} kN.m"
         )
     }
 
@@ -135,7 +135,7 @@ class SteelDesignEngine {
             utilizationRatio = ratio,
             isSafe = ratio <= 1.0,
             classification = if (ratio < 0.7) "Economic" else "Adequate",
-            details = "φVn = ${String.format("%.1f", phiVn)} kN, Aw = ${String.format("%.0f", Aw)} mm²"
+            details = "φVn = ${"%.1f".format(phiVn)} kN, Aw = ${"%.0f".format(Aw)} mm²"
         )
     }
 
@@ -158,7 +158,7 @@ class SteelDesignEngine {
             utilizationRatio = ratio,
             isSafe = ratio <= 1.0,
             classification = if (ratio < 0.7) "Economic" else "Adequate",
-            details = "δ = ${String.format("%.1f", delta)} mm, δ_allow = ${String.format("%.1f", maxDeflection)} mm"
+            details = "δ = ${"%.1f".format(delta)} mm, δ_allow = ${"%.1f".format(maxDeflection)} mm"
         )
     }
 
@@ -188,7 +188,7 @@ class SteelDesignEngine {
                 utilizationRatio = Mu / phiMnlb,
                 isSafe = Mu <= phiMnlb,
                 classification = if (Mu / phiMnlb < 0.85) "OK" else "Near Limit",
-                details = "φMnlb = ${String.format("%.1f", phiMnlb)} kN.m"
+                details = "φMnlb = ${"%.1f".format(phiMnlb)} kN.m"
             )
         } else null
 
@@ -197,11 +197,11 @@ class SteelDesignEngine {
 
         codeNotes.add("ECP 205 / AISC 360-22: LRFD Method")
         codeNotes.add("Section: ${section.name} (${grade.getGradeName()})")
-        codeNotes.add(String.format("Ag=%.0f mm², Zx=%.0f mm³, Sx=%.0f mm³", section.A, section.Zx, section.Sx))
+        codeNotes.add("Ag=%.0f mm², Zx=%.0f mm³, Sx=%.0f mm³".format(section.A, section.Zx, section.Sx))
         if (Lb > 0) {
             val ry = section.ry
             val Lp = 1.76 * ry * sqrt(E_STEEL / grade.fy)
-            codeNotes.add(String.format("Lb=%.0fmm, Lp=%.0fmm, Lb%s Lp", Lb, Lp, if (Lb <= Lp) "≤" else ">"))
+            codeNotes.add("Lb=%.0fmm, Lp=%.0fmm, Lb%s Lp".format(Lb, Lp, if (Lb <= Lp) "≤" else ">"))
         }
 
         if (!momentCheck.isSafe) warnings.add("العزم يتجاوز القدرة - اختر مقطع أكبر")
@@ -258,12 +258,12 @@ class SteelDesignEngine {
                 axialRatio <= 1.0 -> "Near Limit"
                 else -> "Unsafe"
             },
-            details = "λ=$lambda, Fcr=${String.format("%.1f", Fcr)} MPa, φPn=${String.format("%.1f", phiPn)} kN"
+            details = "λ=$lambda, Fcr=${"%.1f".format(Fcr)} MPa, φPn=${"%.1f".format(phiPn)} kN"
         )
 
         codeNotes.add("ECP 205 / AISC 360: Compression Members")
-        codeNotes.add("Slenderness ratio λ = ${String.format("%.1f", lambda)}")
-        codeNotes.add("Fcr = ${String.format("%.1f", Fcr)} MPa")
+        codeNotes.add("Slenderness ratio λ = ${"%.1f".format(lambda)}")
+        codeNotes.add("Fcr = ${"%.1f".format(Fcr)} MPa")
         if (isSlender) warnings.add("عمود نحيف (λ>100) - فحص P-Delta مطلوب")
 
         return ColumnDesignResult(
@@ -321,14 +321,14 @@ class SteelDesignEngine {
                 interaction <= 1.0 -> "Near Limit"
                 else -> "Unsafe"
             },
-            details = String.format("P/(φPn)=%.2f, ΣM/(φMn)=%.2f, Interaction=%.2f", pr, Mux/Mnx + Muy/Mny, interaction)
+            details = "P/(φPn)=%.2f, ΣM/(φMn)=%.2f, Interaction=%.2f".format(pr, Mux/Mnx + Muy/Mny, interaction)
         )
 
         val isSafe = interaction <= 1.0
-        if (!isSafe) warnings.add(String.format("معادلة التفاعل = %.2f > 1.0 - زِد المقطع", interaction))
+        if (!isSafe) warnings.add("معادلة التفاعل = %.2f > 1.0 - زِد المقطع".format(interaction))
 
         codeNotes.add("AISC H1: Combined Axial + Flexure")
-        codeNotes.add(String.format("Eq: %s (Pu/φPn=%.2f)", if (pr >= 0.2) "H1-1a" else "H1-1b", pr))
+        codeNotes.add("Eq: %s (Pu/φPn=%.2f)".format(if (pr >= 0.2) "H1-1a" else "H1-1b", pr))
 
         return ColumnDesignResult(
             axialCheck = compressionResult.axialCheck,
@@ -431,7 +431,7 @@ class SteelDesignEngine {
             utilizationRatio = max(lambdaFlange / lambdaFlangeLimit, lambdaWeb / (1.49 * sqrt(E_STEEL / grade.fy))),
             isSafe = true, // هذا فحص تصنيف وليس فحص أمان
             classification = classification,
-            details = "Flange λf=${String.format("%.1f", lambdaFlange)} (limit=${String.format("%.1f", lambdaFlangeLimit)}), Web λw=${String.format("%.1f", lambdaWeb)}"
+            details = "Flange λf=${"%.1f".format(lambdaFlange)} (limit=${"%.1f".format(lambdaFlangeLimit)}), Web λw=${"%.1f".format(lambdaWeb)}"
         )
     }
 
@@ -457,7 +457,7 @@ class SteelDesignEngine {
             utilizationRatio = ratio,
             isSafe = ratio <= 1.0,
             classification = if (ratio < 0.8) "Economic" else "Optimized",
-            details = "φMn = ${String.format("%.1f", designCapacity)} kN.m"
+            details = "φMn = ${"%.1f".format(designCapacity)} kN.m"
         )
     }
 }

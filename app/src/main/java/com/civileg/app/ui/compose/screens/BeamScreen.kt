@@ -286,13 +286,13 @@ fun BeamScreen(
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
                                 beamDepth = res.depth.toDouble(),
-                                span = (res.span ?: 5.0) * 1000.0,
+                                span = (span.toDoubleOrNull() ?: 5.0) * 1000.0,
                                 mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
                                 mainRebarCount = res.reinforcementBottom.numBars,
                                 stirrupDia = res.stirrups.diameter.toDouble(),
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
-                                developmentLength = res.developmentLength ?: 0.0,
+                                developmentLength = 0.0,
                                 lapLength = 0.0,
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
@@ -306,7 +306,7 @@ fun BeamScreen(
 
                 item {
                     MomentShearForceDiagram(
-                        span = res.span ?: 5.0,
+                        span = span.toDoubleOrNull() ?: 5.0,
                         supportType = res.supportType.name,
                         deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
                         liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,

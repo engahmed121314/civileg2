@@ -2,13 +2,13 @@ package com.civileg.app.ui.compose.screens
 
 import android.content.Intent
 import android.widget.Toast
-import kotlin.math.abs
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -31,6 +31,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.viewmodel.DiagramType
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
 import com.civileg.app.utils.FrameAnalysisPdfExporter
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,11 +98,11 @@ fun FrameAnalysisScreen(
                                 val uri = androidx.core.content.FileProvider.getUriForFile(
                                     context, "${context.packageName}.provider", file
                                 )
-                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "application/pdf"
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    putExtra(Intent.EXTRA_SUBJECT, "Frame Analysis Report")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
                                 context.startActivity(Intent.createChooser(intent, "مشاركة التقرير"))
                             } catch (e: Exception) {
@@ -128,7 +129,7 @@ fun FrameAnalysisScreen(
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        DiagramType.entries.forEach { type ->
+                        for (type in DiagramType.entries) {
                             val isSelected = diagramType == type
                             FilterChip(
                                 selected = isSelected,
@@ -157,7 +158,7 @@ fun FrameAnalysisScreen(
                 containerColor = Color(0xFF1565C0).copy(alpha = 0.1f),
                 contentColor = Color(0xFF1565C0)
             ) {
-                tabs.forEachIndexed { index, title ->
+                for ((index, title) in tabs.withIndex()) {
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
@@ -361,7 +362,7 @@ private fun NodesTab(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("نوع الارتكاز:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    SupportType.entries.forEach { st ->
+                    for (st in SupportType.entries) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(2.dp)) {
                             RadioButton(
                                 selected = editSupport == st,
@@ -519,7 +520,7 @@ private fun MembersTab(
                     item {
                         Text("نوع المادة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row {
-                            FrameMaterialType.entries.forEach { mt ->
+                            for (mt in FrameMaterialType.entries) {
                                 FilterChip(
                                     selected = editMaterial == mt,
                                     onClick = { editMaterial = mt },
@@ -532,7 +533,7 @@ private fun MembersTab(
                     item {
                         Text("نوع العضو:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row {
-                            FrameMemberType.entries.forEach { mtype ->
+                            for (mtype in FrameMemberType.entries) {
                                 FilterChip(
                                     selected = editMemberType == mtype,
                                     onClick = { editMemberType = mtype },
@@ -650,12 +651,8 @@ private fun LoadsTab(
             // Nodal loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("حمولات العقد", fontWeight = FontWeight.Bold)
-                Button(
-                    onClick = { showNodalDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Text("إضافة")
+                Button(onClick = { showNodalDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
                 }
             }
             if (nodalLoads.isEmpty()) {
@@ -681,12 +678,8 @@ private fun LoadsTab(
             // Member loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("حمولات الأعضاء", fontWeight = FontWeight.Bold)
-                Button(
-                    onClick = { showMemberDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Text("إضافة")
+                Button(onClick = { showMemberDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
                 }
             }
             if (memberLoads.isEmpty()) {
@@ -755,7 +748,7 @@ private fun LoadsTab(
                     Spacer(Modifier.height(4.dp))
                     Text("نوع الحمولة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Row {
-                        MemberLoadType.entries.forEach { lt ->
+                        for (lt in MemberLoadType.entries) {
                             FilterChip(selected = mlType == lt, onClick = { mlType = lt },
                                 label = { Text(lt.displayNameAr, fontSize = 11.sp) }, modifier = Modifier.padding(end = 4.dp))
                         }
@@ -813,7 +806,7 @@ private fun ResultsTab(
     }
 
     TabRow(selectedTabIndex = resultSubTab) {
-        subTabs.forEachIndexed { i, title ->
+        for ((i, title) in subTabs.withIndex()) {
             Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
         }
     }
@@ -826,7 +819,7 @@ private fun ResultsTab(
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("إزاحات العقد", fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
-                        result.nodeResults.filter { it.nodeId in (viewModel.nodes.value?.map { it.id } ?: emptyList()) }.forEach { nr ->
+                        for (nr in result.nodeResults.filter { it.nodeId in (viewModel.nodes.value?.map { it.id } ?: emptyList()) }) {
                             Text(
                                 "عقدة ${nr.nodeId}: dx=${String.format("%.4f", nr.dx * 1000)} mm, dy=${String.format("%.4f", nr.dy * 1000)} mm, θ=${String.format("%.6f", nr.rz)} rad",
                                 fontSize = 11.sp
@@ -844,7 +837,7 @@ private fun ResultsTab(
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("ردود الأفعال", fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
-                        result.nodeResults.filter { abs(it.reactionFx) > 0.01 || abs(it.reactionFy) > 0.01 || abs(it.reactionMz) > 0.01 }.forEach { nr ->
+                        for (nr in result.nodeResults.filter { abs(it.reactionFx) > 0.01 || abs(it.reactionFy) > 0.01 || abs(it.reactionMz) > 0.01 }) {
                             Text(
                                 "عقدة ${nr.nodeId}: Rx=${String.format("%.2f", nr.reactionFx)} kN, Ry=${String.format("%.2f", nr.reactionFy)} kN, M=${String.format("%.2f", nr.reactionMz)} kN.m",
                                 fontSize = 11.sp
@@ -860,7 +853,7 @@ private fun ResultsTab(
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("القوى الداخلية عند النهايات", fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
-                        result.memberEndForces.forEach { mf ->
+                        for (mf in result.memberEndForces) {
                             val mname = viewModel.members.value?.find { it.id == mf.memberId }?.name ?: "عضو ${mf.memberId}"
                             Text("عضو $mname (#${mf.memberId}):", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text("  I: N=${String.format("%.1f", mf.fi_x)} kN, V=${String.format("%.1f", mf.fi_y)} kN, M=${String.format("%.1f", mf.mi_z)} kN.m", fontSize = 10.sp, color = Color.Gray)
@@ -924,7 +917,7 @@ private fun ResultsTab(
 
                         if (cr.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
-                            cr.warnings.forEach { w ->
+                            for (w in cr.warnings) {
                                 Text("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
                             }
                         }

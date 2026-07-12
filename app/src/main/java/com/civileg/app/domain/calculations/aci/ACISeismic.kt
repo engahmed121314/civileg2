@@ -23,6 +23,7 @@ class ACISeismic : SeismicDesign {
             SeismicZone.ZONE_5 to 0.50
         )
 
+        // ASCE 7-16 Table 11.4-1: Site coefficient Fa (short-period) - simplified
         private val SOIL_FACTORS = mapOf(
             SoilType.A to 0.8,
             SoilType.B to 1.0,
@@ -102,9 +103,9 @@ class ACISeismic : SeismicDesign {
         
         val usingDefaults = peakGroundAcceleration <= 0
         val desc = if (usingDefaults) {
-            String.format("ASCE 7 Response Spectrum [default SDS=%.2f, SD1=%.2f]", sds, sd1)
+            "ASCE 7 Response Spectrum [default SDS=%.2f, SD1=%.2f]".format(sds, sd1)
         } else {
-            String.format("ASCE 7 Response Spectrum [ag=%.2f, I=%.1f, %s]", 
+            "ASCE 7 Response Spectrum [ag=%.2f, I=%.1f, %s]".format(
                 peakGroundAcceleration, importanceFactor, soilType.displayName)
         }
         

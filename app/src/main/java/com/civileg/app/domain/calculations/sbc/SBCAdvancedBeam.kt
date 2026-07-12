@@ -92,7 +92,7 @@ class SBCAdvancedBeam {
         // SBC 304 يتبع ACI: fc' = 0.8 × fcu
         val fcPrime = 0.8 * fcu
 
-        codeNotes.add("fc' = 0.8 × fcu = 0.8 × $fcu = ${String.format("%.1f", fcPrime)} MPa (SBC 304 cube-to-cylinder)")
+        codeNotes.add("fc' = 0.8 × fcu = 0.8 × $fcu = ${"%.1f".format(fcPrime)} MPa (SBC 304 cube-to-cylinder)")
         codeNotes.add("Load Combination: ${loadCombination.description}")
 
         // === تحديد الغطاء الخرساني حسب البيئة ===
@@ -106,14 +106,14 @@ class SBCAdvancedBeam {
         val gammaL = 1.6
         val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
 
-        codeNotes.add("SBC 304 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${String.format("%.2f", totalLoad)} kN/m")
+        codeNotes.add("SBC 304 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${"%.2f".format(totalLoad)} kN/m")
 
         // === حساب القوى القصوى بناءً على نوع الكمرة ===
         val maxMoment = beamType.getMaxMoment(totalLoad)  // kN.m
         val maxShear = beamType.getMaxShear(totalLoad)    // kN
 
-        codeNotes.add("Max Moment: ${String.format("%.2f", maxMoment)} kN.m")
-        codeNotes.add("Max Shear: ${String.format("%.2f", maxShear)} kN")
+        codeNotes.add("Max Moment: ${"%.2f".format(maxMoment)} kN.m")
+        codeNotes.add("Max Shear: ${"%.2f".format(maxShear)} kN")
 
         // === فحص متطلبات المناطق الزلزالية ===
         val isSeismic = loadCombination == LoadCombination.DEAD_LIVE_EARTHQUAKE ||
@@ -192,7 +192,7 @@ class SBCAdvancedBeam {
             moment = serviceMoment,
             effectiveDepth = effectiveDepth,
             width = width,
-            isExterior = false
+            isExterior = isCorrosiveEnvironment
         )
 
         // === التحقق من طول التثبيت (Development Length) - SBC 304 البند 12 ===
@@ -296,7 +296,7 @@ class SBCAdvancedBeam {
 
         // === تحويل مقاومة المكعب إلى أسطوانة ===
         val fcPrime = 0.8 * fcu
-        codeNotes.add("fc' = 0.8 × fcu = ${String.format("%.1f", fcPrime)} MPa (SBC 304 cube-to-cylinder)")
+        codeNotes.add("fc' = 0.8 × fcu = ${"%.1f".format(fcPrime)} MPa (SBC 304 cube-to-cylinder)")
         codeNotes.add("T-Section: bf=${effectiveFlangeWidth.toInt()}mm, hf=${flangeThickness.toInt()}mm, bw=${webWidth.toInt()}mm, d=${totalDepth.toInt()}mm")
 
         // === حساب الأحمال ===
@@ -305,8 +305,8 @@ class SBCAdvancedBeam {
         val maxMoment = totalLoad * span * span / 8.0  // kN.m (بسيطة الدعم)
         val maxShear = totalLoad * span / 2.0  // kN
 
-        codeNotes.add("SBC 304 §5.3: Wu = ${String.format("%.2f", totalLoad)} kN/m")
-        codeNotes.add("Max Moment: ${String.format("%.2f", maxMoment)} kN.m, Max Shear: ${String.format("%.2f", maxShear)} kN")
+        codeNotes.add("SBC 304 §5.3: Wu = ${"%.2f".format(totalLoad)} kN/m")
+        codeNotes.add("Max Moment: ${"%.2f".format(maxMoment)} kN.m, Max Shear: ${"%.2f".format(maxShear)} kN")
 
         // === تصميم الانحناء لكمرة تي ===
         // نحسب أولاً عزم تشقق الجناح
@@ -332,7 +332,7 @@ class SBCAdvancedBeam {
         val flexureResult: ReinforcementResult
         if (a <= flangeThickness) {
             // المحور المحايد داخل الجناح - تصميم كمرة مستطيلة بعرض bf
-            codeNotes.add("SBC 304 §8.12: Neutral axis within flange (a=${String.format("%.1f", a)}mm ≤ hf=${flangeThickness}mm)")
+            codeNotes.add("SBC 304 §8.12: Neutral axis within flange (a=${"%.1f".format(a)}mm ≤ hf=${flangeThickness}mm)")
 
             flexureResult = designTBeamAsRectangular(
                 fcu = fcu,
@@ -347,7 +347,7 @@ class SBCAdvancedBeam {
         } else {
             // المحور المحايد في الكورسة - تصميم كمرة تي حقيقي
             // As = (Mu/φ + 0.85×fc'×(bf-bw)×hf×(d-hf/2)) / (fy×(d-hf/2))
-            codeNotes.add("SBC 304 §8.12: Neutral axis in web (a=${String.format("%.1f", a)}mm > hf=${flangeThickness}mm) - T-beam analysis required")
+            codeNotes.add("SBC 304 §8.12: Neutral axis in web (a=${"%.1f".format(a)}mm > hf=${flangeThickness}mm) - T-beam analysis required")
 
             val flangeForce = 0.85 * fcPrime * (effectiveFlangeWidth - webWidth) * flangeThickness  // N
             val flangeMoment = flangeForce * (effectiveDepth - flangeThickness / 2.0)  // N.mm
@@ -512,7 +512,7 @@ class SBCAdvancedBeam {
             warnings.add("نسبة التسليح تتجاوز الحد الأقصى المسموح - SBC 304 §9.3.3.1")
         }
 
-        codeNotes.add("T-section As_req=${String.format("%.0f", astRequired)}mm², As_prov=${String.format("%.0f", astProvided)}mm²")
+        codeNotes.add("T-section As_req=${"%.0f".format(astRequired)}mm², As_prov=${"%.0f".format(astProvided)}mm²")
 
         return ReinforcementResult(
             astRequired = astRequired,
@@ -577,7 +577,7 @@ class SBCAdvancedBeam {
         val ldRatio = ln / effectiveDepth
 
         if (!deepBeamCheck.first) {
-            warnings.add("نسبة L/d = ${String.format("%.1f", ldRatio)} ≥ 4 - ليست كمرة عميقة، استخدم التصميم العادي")
+            warnings.add("نسبة L/d = ${"%.1f".format(ldRatio)} ≥ 4 - ليست كمرة عميقة، استخدم التصميم العادي")
         }
 
         // === حساب الأحمال ===
@@ -595,7 +595,7 @@ class SBCAdvancedBeam {
         val thetaDesign = thetaDeg.coerceIn(25.0, 65.0)
         val thetaDesignRad = thetaDesign * PI / 180.0
 
-        codeNotes.add("SBC 304 §18.10.2: Strut angle θ = ${String.format("%.1f", thetaDesign)}° (atan(2d/Ln))")
+        codeNotes.add("SBC 304 §18.10.2: Strut angle θ = ${"%.1f".format(thetaDesign)}° (atan(2d/Ln))")
 
         // حساب قوة الشد في العارضة (Tie Force):
         // T = Vu / tan(θ)
@@ -615,8 +615,8 @@ class SBCAdvancedBeam {
         val minVertReinfPerFace = 0.0025 * width * 1000.0  // mm²/m لكل وجه
         val totalVertMin = minVertReinfPerFace * 2  // الوجهين
 
-        codeNotes.add("SBC 304 §18.10.3: Min horizontal reinf = ${String.format("%.0f", minHorizReinfPerFace)} mm²/m per face")
-        codeNotes.add("SBC 304 §18.10.4: Min vertical reinf = ${String.format("%.0f", minVertReinfPerFace)} mm²/m per face")
+        codeNotes.add("SBC 304 §18.10.3: Min horizontal reinf = ${"%.0f".format(minHorizReinfPerFace)} mm²/m per face")
+        codeNotes.add("SBC 304 §18.10.4: Min vertical reinf = ${"%.0f".format(minVertReinfPerFace)} mm²/m per face")
 
         // اختيار سيخ الشد الرئيسي
         val selectedDia = SBC_BAR_DIAMETERS.firstOrNull {
@@ -672,7 +672,7 @@ class SBCAdvancedBeam {
             allowableDeflection = allowableDeflection,
             ratio = deflectionRatio,
             isSafe = deflectionRatio <= 1.0,
-            message = String.format("SBC 304 §18.10 (Deep Beam): δi=%.1fmm, δLT=%.1fmm", immediateDeflection, longTermDeflection),
+            message = "SBC 304 §18.10 (Deep Beam): δi=%.1fmm, δLT=%.1fmm".format(immediateDeflection, longTermDeflection),
             recommendation = when {
                 deflectionRatio > 1.0 -> "زِد عمق الكمرة العميقة أو قلل البحر"
                 else -> "الانحراف مقبول للكمرة العميقة"
@@ -771,9 +771,9 @@ class SBCAdvancedBeam {
         val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
         val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
 
-        globalCodeNotes.add("fc' = 0.8 × fcu = ${String.format("%.1f", fcPrime)} MPa")
+        globalCodeNotes.add("fc' = 0.8 × fcu = ${"%.1f".format(fcPrime)} MPa")
         globalCodeNotes.add("SBC 304 §6.5: Continuous Beam Moment Coefficients")
-        globalCodeNotes.add("Wu = ${String.format("%.2f", totalLoad)} kN/m")
+        globalCodeNotes.add("Wu = ${"%.2f".format(totalLoad)} kN/m")
 
         if (spans.isEmpty()) return allResults
 
@@ -782,7 +782,7 @@ class SBCAdvancedBeam {
         // بنسبة لا تتجاوز 1000×εt (%)
         // εt = 0.003 × (d/c - 1) حيث c = a/β1
         val redistributionRatio = 0.1  // 10% كحد أقصى آمن
-        globalCodeNotes.add("SBC 304 §6.6.4: Moment redistribution ≤ ${String.format("%.0f", redistributionRatio * 100)}% applied")
+        globalCodeNotes.add("SBC 304 §6.6.4: Moment redistribution ≤ ${"%.0f".format(redistributionRatio * 100)}% applied")
 
         // === فحص نسبة الأبحر المتجاورة ===
         // معاملات العزم التقريبية صالحة عندما لا يختلف البحر عن المتوسط بأكثر من 20%
@@ -841,8 +841,8 @@ class SBCAdvancedBeam {
                         developmentLengthCheck = null,
                         warnings = globalWarnings + negFlexure.warnings,
                         codeNotes = globalCodeNotes + negFlexure.codeNotes +
-                                "Span ${spanIndex + 1} - Exterior Support: M=${String.format("%.1f", momentSupport)} kN.m" +
-                                ", Cutoff point: ${String.format("%.2f", cutoffPoint)}m from support"
+                                "Span ${spanIndex + 1} - Exterior Support: M=${"%.1f".format(momentSupport)} kN.m" +
+                                ", Cutoff point: ${"%.2f".format(cutoffPoint)}m from support"
                     )
                 )
             }
@@ -874,7 +874,7 @@ class SBCAdvancedBeam {
                     developmentLengthCheck = null,
                     warnings = globalWarnings + posFlexure.warnings,
                     codeNotes = globalCodeNotes + posFlexure.codeNotes +
-                            "Span ${spanIndex + 1} - Midspan (+M): M=${String.format("%.1f", momentMidspan)} kN.m" +
+                            "Span ${spanIndex + 1} - Midspan (+M): M=${"%.1f".format(momentMidspan)} kN.m" +
                             " (coeff = 1/${(1.0 / momentCoeffMid).toInt()})"
                 )
             )
@@ -917,9 +917,9 @@ class SBCAdvancedBeam {
                         developmentLengthCheck = null,
                         warnings = globalWarnings + intNegFlexure.warnings,
                         codeNotes = globalCodeNotes + intNegFlexure.codeNotes +
-                                "Span ${spanIndex + 1}→${spanIndex + 2} Interior Support: M=${String.format("%.1f", momentIntSupport)} kN.m" +
-                                ", Redistributed: ${String.format("%.1f", redistributedMoment)} kN.m (-${(redistributionRatio * 100).toInt()}%)" +
-                                ", Cutoff: ${String.format("%.2f", cutoffPoint)}m"
+                                "Span ${spanIndex + 1}→${spanIndex + 2} Interior Support: M=${"%.1f".format(momentIntSupport)} kN.m" +
+                                ", Redistributed: ${"%.1f".format(redistributedMoment)} kN.m (-${(redistributionRatio * 100).toInt()}%)" +
+                                ", Cutoff: ${"%.2f".format(cutoffPoint)}m"
                     )
                 )
             }
@@ -945,7 +945,7 @@ class SBCAdvancedBeam {
                         developmentLengthCheck = null,
                         warnings = globalWarnings + rightFlexure.warnings,
                         codeNotes = globalCodeNotes + rightFlexure.codeNotes +
-                                "Span ${spanIndex + 1} - Right Exterior Support: M=${String.format("%.1f", momentRightSupport)} kN.m"
+                                "Span ${spanIndex + 1} - Right Exterior Support: M=${"%.1f".format(momentRightSupport)} kN.m"
                     )
                 )
             }
@@ -1041,7 +1041,7 @@ class SBCAdvancedBeam {
 
         // SBC 304 §21.5: نسبة التسليح الأدنى للمناطق الزلزالية
         val rhoMinSeismic = 0.25 * sqrt(fcPrime.coerceAtLeast(1.0)) / fy
-        codeNotes.add("SBC 304 §21.5: Seismic ρmin = 0.25√fc'/fy = ${String.format("%.4f", rhoMinSeismic)}")
+        codeNotes.add("SBC 304 §21.5: Seismic ρmin = 0.25√fc'/fy = ${"%.4f".format(rhoMinSeismic)}")
 
         // SBC 304 §21.5: نسبة التسليح القصوى
         val rhoMaxSeismic = 0.025
@@ -1053,7 +1053,7 @@ class SBCAdvancedBeam {
         // SBC 304 §21.5.1: الحد الأقصى للعمق/العرض
         val depthWidthRatio = depth / width
         if (depthWidthRatio > 4.0) {
-            warnings.add("SBC 304 §21.5.1: نسبة العمق/العرض = ${String.format("%.1f", depthWidthRatio)} > 4 - غير مفضل زلزالياً")
+            warnings.add("SBC 304 §21.5.1: نسبة العمق/العرض = ${"%.1f".format(depthWidthRatio)} > 4 - غير مفضل زلزالياً")
         }
 
         // SBC 304 §21.5.3: التسليح المضغوط الأدنى في مناطق العزم العالي
@@ -1117,8 +1117,8 @@ class SBCAdvancedBeam {
 
         // تحقق من طول منطقة الحصر
         // SBC 304 §21.5.3: منطقة الحصر تمتد 2h من وجه الدعامة
-        codeNotes.add("Confinement zone length: 2h = ${String.format("%.0f", 2 * (effectiveDepth + SBC_COVER_CORROSIVE))}mm from support face")
-        codeNotes.add("Seismic stirrup: Ø${seismicStirrupDia.toInt()} @ ${finalSpacing.toInt()}mm c/c (min of d/4=${String.format("%.0f", s1)}, 100mm)")
+        codeNotes.add("Confinement zone length: 2h = ${"%.0f".format(2 * (effectiveDepth + SBC_COVER_CORROSIVE))}mm from support face")
+        codeNotes.add("Seismic stirrup: Ø${seismicStirrupDia.toInt()} @ ${finalSpacing.toInt()}mm c/c (min of d/4=${"%.0f".format(s1)}, 100mm)")
         codeNotes.add("SBC 304 §21.5.3: Hooks = 135° with 10db extension")
 
         if (finalSpacing < shearResult.stirrupSpacing) {
@@ -1179,14 +1179,14 @@ class SBCAdvancedBeam {
         val ratio = if (sumMnb > 0) columnSumMoment / requiredColumnMoment else 999.0
         val isSafe = ratio >= 1.0
 
-        notes.add("ΣMnc = ${String.format("%.1f", columnSumMoment)} kN.m")
-        notes.add("ΣMnb = ${String.format("%.1f", sumMnb)} kN.m (Top: ${String.format("%.1f", MnTop)} + Bottom: ${String.format("%.1f", MnBottom)})")
-        notes.add("(6/5)×ΣMnb = ${String.format("%.1f", requiredColumnMoment)} kN.m")
-        notes.add("Ratio ΣMnc/[(6/5)×ΣMnb] = ${String.format("%.2f", ratio)} ${if (isSafe) "≥ 1.0 ✓" else "< 1.0 ✗"}")
+        notes.add("ΣMnc = ${"%.1f".format(columnSumMoment)} kN.m")
+        notes.add("ΣMnb = ${"%.1f".format(sumMnb)} kN.m (Top: ${"%.1f".format(MnTop)} + Bottom: ${"%.1f".format(MnBottom)})")
+        notes.add("(6/5)×ΣMnb = ${"%.1f".format(requiredColumnMoment)} kN.m")
+        notes.add("Ratio ΣMnc/[(6/5)×ΣMnb] = ${"%.2f".format(ratio)} ${if (isSafe) "≥ 1.0 ✓" else "< 1.0 ✗"}")
 
         // SBC 304 §21.6: إضافة نسب التسليح عند المفصل
         val rhoSum = (beamTopReinforcement + beamBottomReinforcement) / (2 * 250.0 * effectiveDepth) // تقريبي
-        notes.add("ρsum at joint face ≈ ${String.format("%.4f", rhoSum)}")
+        notes.add("ρsum at joint face ≈ ${"%.4f".format(rhoSum)}")
 
         if (!isSafe) {
             notes.add("⚠ العمود لا يحقق شرط القوة - زِد مقطع العمود أو التسليح")
@@ -1306,7 +1306,7 @@ class SBCAdvancedBeam {
         }
 
         if (ratio > 1.0) {
-            deflectionWarnings.add("⚠️ الانحراف يتجاوز حدود SBC 304 §9.5 (δ/δ_allow = ${String.format("%.2f", ratio)})")
+            deflectionWarnings.add("⚠️ الانحراف يتجاوز حدود SBC 304 §9.5 (δ/δ_allow = ${"%.2f".format(ratio)})")
         }
 
         deflectionWarnings.add("SBC: معامل طويل المدى ξ = ${SBC_LONG_TERM_MULTIPLIER} (مناخ حار) بدلاً من 2.0 (ACI)")
@@ -1318,7 +1318,7 @@ class SBCAdvancedBeam {
             allowableDeflection = allowableTotal,
             ratio = ratio,
             isSafe = ratio <= 1.0,
-            message = String.format("SBC 304 §9.5: δi=%.2fmm, δLT=%.2fmm (ξ=%.1f), δ_allow=%.2fmm", 
+            message = "SBC 304 §9.5: δi=%.2fmm, δLT=%.2fmm (ξ=%.1f), δ_allow=%.2fmm".format(
                 immediateDeflection, longTermDeflection, SBC_LONG_TERM_MULTIPLIER, allowableTotal
             ),
             recommendation = recommendation,
@@ -1412,8 +1412,8 @@ class SBCAdvancedBeam {
             calculatedWidth = crackWidth,
             allowableWidth = allowableWidth,
             isSafe = isSafe,
-            codeReference = "SBC 304-2018: Section 24.5 (z=${String.format("%.0f", z)} kip/in, " +
-                    "hot-climate factor=${String.format("%.2f", hotClimateFactor)}, " +
+            codeReference = "SBC 304-2018: Section 24.5 (z=${"%.0f".format(z)} kip/in, " +
+                    "hot-climate factor=${"%.2f".format(hotClimateFactor)}, " +
                     "limit=${if (isExterior) 0.25 else 0.30}mm)"
         )
     }
@@ -1475,9 +1475,9 @@ class SBCAdvancedBeam {
             requiredLength = ldRequired,
             availableLength = availableLength,
             isSafe = isSafe,
-            codeReference = "SBC 304-2018: Section 12 (Ld_bot=${String.format("%.0f", ldBottom)}mm, " +
-                    "Ld_top=${String.format("%.0f", ldTop)}mm, Galv: ×1.1, " +
-                    "Ld_req=${String.format("%.0f", ldRequired)}mm)"
+            codeReference = "SBC 304-2018: Section 12 (Ld_bot=${"%.0f".format(ldBottom)}mm, " +
+                    "Ld_top=${"%.0f".format(ldTop)}mm, Galv: ×1.1, " +
+                    "Ld_req=${"%.0f".format(ldRequired)}mm)"
         )
     }
 
@@ -1522,7 +1522,7 @@ class SBCAdvancedBeam {
         val effectiveBf = minOf(bf1, bf2, bf3)
 
         notes.add("Rule 1: bw + 16hf = ${webWidth.toInt()} + 16×${flangeThickness.toInt()} = ${bf1.toInt()}mm")
-        notes.add("Rule 2: bw + L/8 = ${webWidth.toInt()} + ${String.format("%.0f", L_center / 8.0)} = ${bf2.toInt()}mm")
+        notes.add("Rule 2: bw + L/8 = ${webWidth.toInt()} + ${"%.0f".format(L_center / 8.0)} = ${bf2.toInt()}mm")
         notes.add("Rule 3: Center-to-center = ${flangeWidth.toInt()}mm")
         notes.add("Effective bf = min(${bf1.toInt()}, ${bf2.toInt()}, ${flangeWidth.toInt()}) = ${effectiveBf.toInt()}mm")
 
@@ -1561,13 +1561,13 @@ class SBCAdvancedBeam {
         val ldRatio = Ln / effectiveDepth
 
         notes.add("SBC 304-2018 §18.10.1: Deep Beam Criteria")
-        notes.add("Clear span Ln = ${String.format("%.0f", Ln)}mm")
-        notes.add("Effective depth d = ${String.format("%.0f", effectiveDepth)}mm")
-        notes.add("Total depth h = ${String.format("%.0f", totalDepth)}mm")
-        notes.add("Ln/d = ${String.format("%.2f", ldRatio)}")
+        notes.add("Clear span Ln = ${"%.0f".format(Ln)}mm")
+        notes.add("Effective depth d = ${"%.0f".format(effectiveDepth)}mm")
+        notes.add("Total depth h = ${"%.0f".format(totalDepth)}mm")
+        notes.add("Ln/d = ${"%.2f".format(ldRatio)}")
 
         val isDeepBeam = ldRatio < 4.0
-        notes.add("Deep beam: Ln/d = ${String.format("%.2f", ldRatio)} ${if (isDeepBeam) "< 4.0 ✓ (Deep Beam)" else "≥ 4.0 (Normal Beam)"}")
+        notes.add("Deep beam: Ln/d = ${"%.2f".format(ldRatio)} ${if (isDeepBeam) "< 4.0 ✓ (Deep Beam)" else "≥ 4.0 (Normal Beam)"}")
 
         // معلومات إضافية
         if (isDeepBeam) {
@@ -1578,7 +1578,7 @@ class SBCAdvancedBeam {
             // فحص إضافي: h/Ln
             val hlRatio = totalDepth / Ln
             if (hlRatio > 0.4) {
-                notes.add("SBC 304 §18.10: h/Ln = ${String.format("%.2f", hlRatio)} > 0.4 - Consider as deep corbel")
+                notes.add("SBC 304 §18.10: h/Ln = ${"%.2f".format(hlRatio)} > 0.4 - Consider as deep corbel")
             }
         }
 

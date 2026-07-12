@@ -21,20 +21,18 @@ class ProjectRepositoryImpl @Inject constructor(
         id = id.toInt(),
         name = name,
         date = createdAt.time,
-        designCode = DesignCode.entries.find { it.name == code } ?: DesignCode.ECP,
+        designCode = DesignCode.entries.firstOrNull { it.name.equals(code, ignoreCase = true) } ?: DesignCode.ECP,
         elementType = ElementType.BEAM,
         inputs = emptyMap(),
         results = emptyMap(),
-        notes = "$location - $description"
+        notes = description ?: ""
     )
 
     override fun getAllProjects(): Flow<List<DomainProject>> =
         projectDao.getAllProjects().asFlow().map { list -> list.map { it.toDomain() } }
 
     override fun getProjectsByType(elementType: String): Flow<List<DomainProject>> =
-        projectDao.getAllProjects().asFlow().map { list ->
-            list.filter { it.name.contains(elementType, ignoreCase = true) }.map { it.toDomain() }
-        }
+        projectDao.getAllProjects().asFlow().map { list -> list.filter { it.name.contains(elementType, ignoreCase = true) }.map { it.toDomain() } }
 
     override suspend fun getProject(id: Int): DomainProject? =
         projectDao.getProjectById(id.toLong())?.toDomain()
@@ -42,20 +40,19 @@ class ProjectRepositoryImpl @Inject constructor(
     override suspend fun saveProject(project: DomainProject): Long {
         val entity = Project(
             id = project.id.toLong(), name = project.name,
-            description = project.notes
+            location = "", clientName = "",
+            description = project.notes, code = project.designCode.name
         )
-        return if (project.id == 0) projectDao.insertProject(entity)
-        else { projectDao.updateProject(entity); project.id.toLong() }
+        return if (project.id == 0) projectDao.insertProject(entity) else { projectDao.updateProject(entity); project.id.toLong() }
     }
 
     override suspend fun deleteProject(project: DomainProject) {
-        val entity = Project(id = project.id.toLong(), name = project.name)
-        projectDao.deleteProject(entity)
+        projectDao.deleteProject(Project(project.id.toLong(), project.name))
     }
 
     override suspend fun deleteProjectById(id: Int) {
-        val entity = projectDao.getProjectById(id.toLong()) ?: return
-        projectDao.deleteProject(entity)
+        val project = projectDao.getProjectById(id.toLong())
+        project?.let { projectDao.deleteProject(it) }
     }
 
     override fun getConcretePrice(): Flow<Double> = preferencesManager.concretePrice

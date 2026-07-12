@@ -19,6 +19,7 @@ object ConcreteFrameDesign {
     private const val GAMMA_C_ECP = 1.5
     private const val GAMMA_S_ECP = 1.15
     private const val GAMMA_C_ACI = 1.5  // φ factor applied separately
+    private const val BETA1_LIMIT = 0.85
 
     /**
      * تصميم جميع الأعضاء الخرسانية في الإطار
@@ -156,8 +157,11 @@ object ConcreteFrameDesign {
             val xb = 600.0 * beta / (600.0 + fy / gammaS)
             alpha * xb * (1.0 - 0.5 * xb)
         } else {
-            // ACI 318-19: simplified K_bal = 0.167 (typical for singly reinforced)
-            0.167
+            // ACI 318-19: use ρ_bal approach
+            val beta1 = if (fcu <= 28.0) 0.85 else max(0.85 - 0.05 * ((fcu - 28.0) / 7.0), 0.65)
+            val aBalOverD = beta1 * 87000.0 / (87000.0 + fy)
+            val rhoBal = 0.85 * fcu / fy * aBalOverD
+            rhoBal * fy / fcu * (1.0 - 0.59 * rhoBal * fy / fcu) * 1.5
         }
     }
 
@@ -169,8 +173,8 @@ object ConcreteFrameDesign {
         asRequired: Double,
         b: Double, d: Double, fcu: Double, fy: Double,
         code: DesignCode, warnings: MutableList<String>
-    ): FiveValues<Double, Int, Int, Double, Double> {
-        if (asRequired <= 0) return FiveValues(0.0, 0, 0, 0.0, 0.0)
+    ): Tuple4<Double, Int, Int, Double, Double> {
+        if (asRequired <= 0) return Tuple4(0.0, 0, 0, 0.0, 0.0)
 
         // Try bars from 12mm to 25mm
         val barDias = listOf(12.0, 16.0, 18.0, 20.0, 22.0, 25.0)
@@ -213,7 +217,7 @@ object ConcreteFrameDesign {
         val asMax = 0.04 * b * d
         if (asBot > asMax) warnings.add("مساحة التسليح تتجاوز الحد الأقصى (${asMax.toInt()} mm²)")
 
-        return FiveValues(selectedDia, numTop, numBot, asTop, asBot)
+        return Tuple4(selectedDia, numTop, numBot, asTop, asBot)
     }
 
     /**
@@ -273,5 +277,5 @@ object ConcreteFrameDesign {
     }
 }
 
-/** Helper data class for returning 5 values */
-private data class FiveValues<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
+/** Helper data class for returning multiple values */
+private data class Tuple4<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)

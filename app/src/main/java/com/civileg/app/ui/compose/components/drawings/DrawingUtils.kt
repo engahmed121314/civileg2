@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -436,18 +437,18 @@ fun DrawScope.drawForceDiagram(
 
     // Build path
     val path = Path()
-    values.forEachIndexed { i, (xr, v) ->
+    values.forEachIndexed { i, (xr, value) ->
         val px = spanStart + xr * spanW
-        val py = if (positiveUp) baselineY - v * scale else baselineY + v * scale
+        val py = if (positiveUp) baselineY - value * scale else baselineY + value * scale
         if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
     }
 
     // Fill
     val fillPath = Path().apply {
         moveTo(spanStart, baselineY)
-        values.forEach { (xr, v) ->
+        values.forEach { (xr, value) ->
             val px = spanStart + xr * spanW
-            val py = if (positiveUp) baselineY - v * scale else baselineY + v * scale
+            val py = if (positiveUp) baselineY - value * scale else baselineY + value * scale
             lineTo(px, py)
         }
         lineTo(spanEnd, baselineY)
@@ -606,8 +607,8 @@ fun DrawScope.drawNorthArrow(
 ) {
     // Circle
     drawCircle(
-        color = Color.Transparent, radius = size, center = Offset(x, y),
-        style = Stroke(1f, color)
+        color = color, radius = size, center = Offset(x, y),
+        style = Stroke(1f)
     )
     // Arrow up (N)
     drawPath(

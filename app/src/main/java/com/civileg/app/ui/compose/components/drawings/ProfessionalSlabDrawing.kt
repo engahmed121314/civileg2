@@ -70,14 +70,14 @@ fun ProfessionalSlabDrawing(
             text: String, x: Float, y: Float,
             color: Color = textColor, size: Float = 11f, bold: Boolean = false
         ) {
-            nativeCanvas.apply {
+            drawContext.canvas.nativeCanvas.apply {
                 val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = color.hashCode()
                     this.textSize = size * density
                     this.isFakeBoldText = bold
                     this.textAlign = android.graphics.Paint.Align.CENTER
                 }
-                drawText(text, x, y, paint)
+                this.drawText(text, x, y, paint)
             }
         }
 
@@ -85,14 +85,14 @@ fun ProfessionalSlabDrawing(
             text: String, x: Float, y: Float,
             color: Color = textColor, size: Float = 11f, bold: Boolean = false
         ) {
-            nativeCanvas.apply {
+            drawContext.canvas.nativeCanvas.apply {
                 val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = color.hashCode()
                     this.textSize = size * density
                     this.isFakeBoldText = bold
                     this.textAlign = android.graphics.Paint.Align.LEFT
                 }
-                drawText(text, x, y, paint)
+                this.drawText(text, x, y, paint)
             }
         }
 
@@ -113,8 +113,8 @@ fun ProfessionalSlabDrawing(
         val scaleX = planW / spanX.toFloat()
         val scaleY = planDrawH / spanY.toFloat()
         val scale = min(scaleX, scaleY) * 0.88f
-        val drawSpanX = spanX * scale
-        val drawSpanY = spanY * scale
+        val drawSpanX = spanX.toFloat() * scale
+        val drawSpanY = spanY.toFloat() * scale
         val slabLeft = planLeft + (planW - drawSpanX) / 2f
         val slabTop = planTop + (planDrawH - drawSpanY) / 2f
         val slabRight = slabLeft + drawSpanX
@@ -146,14 +146,14 @@ fun ProfessionalSlabDrawing(
         )
 
         // Concrete hatching
-        nativeCanvas.save()
-        nativeCanvas.clipRect(
+        drawContext.canvas.nativeCanvas.save()
+        drawContext.canvas.nativeCanvas.clipRect(
             slabLeft, slabTop, slabRight, slabBottom
         )
         val hatchStep = 18f
         var hx = slabLeft - drawSpanY
         while (hx < slabRight) {
-            nativeCanvas.drawLine(
+            drawContext.canvas.nativeCanvas.drawLine(
                 hx, slabTop, hx + drawSpanY, slabBottom,
                 android.graphics.Paint().apply {
                     color = Color(0xFFBBBBBB).hashCode()
@@ -162,7 +162,7 @@ fun ProfessionalSlabDrawing(
             )
             hx += hatchStep
         }
-        nativeCanvas.restore()
+        drawContext.canvas.nativeCanvas.restore()
 
         // ── Hordi / Waffle ribs & blocks ───────────────────────────
         if (slabType == "Hordi" || slabType == "Waffle") {
@@ -339,8 +339,7 @@ fun ProfessionalSlabDrawing(
                             color = shearPerimColor,
                             topLeft = Offset(cx + colSize / 2f - psSize / 2f, cy + colSize / 2f - psSize / 2f),
                             size = Size(psSize, psSize),
-                            style = Stroke(width = 1.5f),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f))
+                            style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f)))
                         )
                         drawText("Bo", cx + colSize / 2f, cy - 6f, shearPerimColor, 9f)
                     }
@@ -434,7 +433,7 @@ fun ProfessionalSlabDrawing(
             )
 
             // Main bottom steel (blue circles)
-            val barR = (mainRebarDia * sectionScale / 2f).coerceIn(2.5f, 5f)
+            val barR = (mainRebarDia * sectionScale / 2f).toFloat().coerceIn(2.5f, 5f)
             val barCount = ((sectionSpanPx - 20f) / (mainRebarSpacing * sectionScale).toFloat())
                 .toInt().coerceIn(3, 20)
             val barStep = (sectionSpanPx - 20f) / (barCount - 1)
@@ -568,7 +567,7 @@ fun ProfessionalSlabDrawing(
         // Table header bg
         drawRoundRect(
             color = headerBg, topLeft = Offset(tblLeft, rowY),
-            size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f, 4f, 0f, 0f)
+            size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f)
         )
         val headers = listOf("Mark", "Direction", "Dia (mm)", "Spacing (mm)", "Length (mm)")
         var colX = tblLeft
@@ -634,13 +633,13 @@ private fun DrawScope.drawDimensionLine(
     drawLine(color, Offset(x1, y1 - tick), Offset(x1, y1 + tick), strokeWidth = 1f)
     drawLine(color, Offset(x2, y2 - tick), Offset(x2, y2 + tick), strokeWidth = 1f)
     // Text centered
-    nativeCanvas.apply {
+    drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.color = color.hashCode()
             textSize = 9f * density
             textAlign = android.graphics.Paint.Align.CENTER
         }
-        drawText(text, (x1 + x2) / 2f, y1 - 4f, paint)
+        this.drawText(text, (x1 + x2) / 2f, y1 - 4f, paint)
     }
 }
 
@@ -652,7 +651,7 @@ private fun DrawScope.drawDimensionLineV(
     drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
     drawLine(color, Offset(x1 - tick, y1), Offset(x1 + tick, y1), strokeWidth = 1f)
     drawLine(color, Offset(x2 - tick, y2), Offset(x2 + tick, y2), strokeWidth = 1f)
-    nativeCanvas.apply {
+    drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             this.color = color.hashCode()
             textSize = 9f * density
@@ -660,7 +659,7 @@ private fun DrawScope.drawDimensionLineV(
         }
         save()
         rotate(-90f, x1 - 4f, (y1 + y2) / 2f)
-        drawText(text, x1 - 4f, (y1 + y2) / 2f + 4f, paint)
+        this.drawText(text, x1 - 4f, (y1 + y2) / 2f + 4f, paint)
         restore()
     }
 }

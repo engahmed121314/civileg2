@@ -17,12 +17,12 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class ProjectListFragment : Fragment() {
-
+    
     private var _binding: FragmentProjectListBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ProjectViewModel by viewModels()
     private lateinit var adapter: ProjectAdapter
-
+    
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -31,15 +31,15 @@ class ProjectListFragment : Fragment() {
         _binding = FragmentProjectListBinding.inflate(inflater, container, false)
         return binding.root
     }
-
+    
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        
         setupRecyclerView()
         setupFab()
         observeProjects()
     }
-
+    
     private fun setupRecyclerView() {
         adapter = ProjectAdapter(
             onProjectClick = { project ->
@@ -50,27 +50,27 @@ class ProjectListFragment : Fragment() {
                 true
             }
         )
-
+        
         binding.recyclerView.layoutManager = LinearLayoutManager(context)
         binding.recyclerView.adapter = adapter
     }
-
+    
     private fun setupFab() {
         binding.fabAdd.setOnClickListener {
             showAddProjectDialog()
         }
     }
-
+    
     private fun observeProjects() {
         viewModel.allProjects.observe(viewLifecycleOwner) { projects ->
             adapter.submitList(projects)
             binding.tvEmpty.visibility = if (projects.isEmpty()) View.VISIBLE else View.GONE
         }
     }
-
+    
     private fun showAddProjectDialog() {
         val dialogBinding = com.civileg.app.databinding.DialogAddProjectBinding.inflate(layoutInflater)
-
+        
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("New Project")
             .setView(dialogBinding.root)
@@ -86,15 +86,14 @@ class ProjectListFragment : Fragment() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-
+    
     private fun navigateToProjectDetail(project: Project) {
-        val bundle = Bundle().apply { putLong("projectId", project.id) }
-        findNavController().navigate(R.id.nav_project_detail, bundle)
+        findNavController().navigate(R.id.nav_project_detail, Bundle().apply { putLong("projectId", project.id) })
     }
-
+    
     private fun showProjectOptions(project: Project) {
         val options = arrayOf("Edit", "Delete", "Export Report")
-
+        
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(project.name)
             .setItems(options) { _, which ->
@@ -106,11 +105,11 @@ class ProjectListFragment : Fragment() {
             }
             .show()
     }
-
+    
     private fun editProject(project: Project) {
         // Show edit dialog
     }
-
+    
     private fun deleteProject(project: Project) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete Project")
@@ -121,11 +120,11 @@ class ProjectListFragment : Fragment() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-
+    
     private fun exportProjectReport(project: Project) {
         // Generate comprehensive PDF report
     }
-
+    
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

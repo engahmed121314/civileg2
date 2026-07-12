@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -147,7 +148,7 @@ fun ProfessionalStairDrawing(
             cw = cw, ch = ch,
             nRisers = nRisers, nTreads = nTreads,
             riserHeight = riserHeight, treadWidth = treadWidth,
-            slabThickness = slabThickness,
+            slabThickness = slabThickness, stairWidth = stairWidth,
             totalHeight = totalHeight, totalLength = totalLength,
             hasLanding = hasLanding, landingLength = landingLength,
             actualLandingThickness = actualLandingThickness,
@@ -211,7 +212,7 @@ private fun DrawScope.drawElevationView(
     cw: Float, ch: Float,
     nRisers: Int, nTreads: Int,
     riserHeight: Double, treadWidth: Double,
-    slabThickness: Double,
+    slabThickness: Double, stairWidth: Double,
     totalHeight: Double, totalLength: Double,
     hasLanding: Boolean, landingLength: Double,
     actualLandingThickness: Double,
@@ -443,7 +444,7 @@ private fun DrawScope.drawElevationView(
     if (mainRebarDia > 0) {
         val barR = max(mainRebarDia.toFloat() * scale * 0.12f, 2.5f)
         // Main bars run along the soffit, offset by cover from bottom
-        val barOffset = (cover.toFloat() + mainRebarDia / 2f) * scale
+        val barOffset = (cover.toFloat() + mainRebarDia.toFloat() / 2f) * scale
         val barStartX = originX + perpOffX * (barOffset / slabT)
         val barStartY = originY + perpOffY * (barOffset / slabT)
         val barEndX = stairEndX + perpOffX * (barOffset / slabT)
@@ -663,7 +664,7 @@ private fun DrawScope.drawCrossSectionView(
 
     // ── Bottom main reinforcement bars ───────────────────────────────
     if (mainRebarDia > 0) {
-        val barR = max((mainRebarDia / 2f) * secScale, 2.5f)
+        val barR = max((mainRebarDia.toFloat() / 2f) * secScale, 2.5f)
         val numBars = (stairWidth / mainRebarSpacing).toInt().coerceAtLeast(2).coerceAtMost(8)
         val usableW = secW - 2 * covPx
         val spacing = if (numBars > 1) usableW / (numBars - 1) else 0f
@@ -694,7 +695,7 @@ private fun DrawScope.drawCrossSectionView(
 
     // ── Top reinforcement bars ───────────────────────────────────────
     if (topRebarDia > 0 && topRebarSpacing > 0) {
-        val barR = max((topRebarDia / 2f) * secScale, 2f)
+        val barR = max((topRebarDia.toFloat() / 2f) * secScale, 2f)
         val numBars = (stairWidth / topRebarSpacing).toInt().coerceAtLeast(2).coerceAtMost(6)
         val usableW = secW - 2 * covPx
         val spacing = if (numBars > 1) usableW / (numBars - 1) else 0f
@@ -723,7 +724,7 @@ private fun DrawScope.drawCrossSectionView(
 
     // ── Distribution bars (shown as small circles along the thickness) ──
     if (distributionDia > 0 && distributionSpacing > 0) {
-        val distR = max((distributionDia / 2f) * secScale, 1.5f)
+        val distR = max((distributionDia.toFloat() / 2f) * secScale, 1.5f)
         // Show a couple distribution bar marks at ends
         for (xOff in listOf(secLeft + covPx + 8f, secLeft + secW - covPx - 8f)) {
             val yPos = secTop + secT / 2f
@@ -775,7 +776,7 @@ private fun DrawScope.drawCrossSectionView(
                 typeface = android.graphics.Typeface.MONOSPACE
                 textAlign = android.graphics.Paint.Align.CENTER
             }
-            drawText(
+            this.drawText(
                 "t=${slabThickness.toInt()}",
                 tDimX + 16f,
                 secTop + secT / 2f + 4f,
@@ -1375,7 +1376,7 @@ private fun DrawScope.drawElevationDimensions(
                 typeface = android.graphics.Typeface.MONOSPACE
                 textAlign = android.graphics.Paint.Align.CENTER
             }
-            drawText(
+            this.drawText(
                 "H=${totalHeight.toInt()}",
                 heightX - 14f,
                 stairEndY + (originY - stairEndY) / 2f + 4f,
@@ -1438,7 +1439,7 @@ private fun DrawScope.drawElevationDimensions(
                     typeface = android.graphics.Typeface.MONOSPACE
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
-                drawText(
+                this.drawText(
                     "R=${riserHeight.toInt()}",
                     rX - 10f,
                     (rY1 + rY2) / 2f + 3f,
@@ -1512,13 +1513,13 @@ private fun DrawScope.drawTextAnnotated(
     drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint().apply {
             textSize = size
-            this.color = color
+            this.color = color.toArgb()
             isFakeBoldText = true
             typeface = android.graphics.Typeface.MONOSPACE
             textAlign = android.graphics.Paint.Align.LEFT
             setShadowLayer(2f, 1f, 1f, 0x44000000)
         }
-        drawText(text, x, y, paint)
+        this.drawText(text, x, y, paint)
     }
 }
 
@@ -1535,7 +1536,7 @@ private fun DrawScope.drawTextWithBackground(
 ) {
     val paint = android.graphics.Paint().apply {
         this.textSize = textSize
-        color = textColor
+        color = textColor.toArgb()
         isFakeBoldText = true
         typeface = android.graphics.Typeface.MONOSPACE
         textAlign = android.graphics.Paint.Align.LEFT

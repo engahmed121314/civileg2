@@ -231,7 +231,7 @@ private fun DrawingToolbar(
             // Info toggle
             IconButton(onClick = onToggleInfo, modifier = Modifier.size(32.dp)) {
                 Icon(
-                    if (showInfo) Icons.Default.Info else Icons.Default.InfoOutline,
+                    Icons.Default.Info,
                     contentDescription = "Info",
                     tint = if (showInfo) Color(0xFF4A90D9) else Color.White,
                     modifier = Modifier.size(18.dp)

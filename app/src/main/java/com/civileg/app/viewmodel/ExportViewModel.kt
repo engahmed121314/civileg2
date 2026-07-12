@@ -57,8 +57,7 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
-                _exportState.value = ExportState.Success(resultFile)
+                _exportState.value = ExportState.Success(file!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -115,8 +114,7 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
-                _exportState.value = ExportState.Success(resultFile)
+                _exportState.value = ExportState.Success(file!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -153,8 +151,7 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
-                _exportState.value = ExportState.Success(resultFile)
+                _exportState.value = ExportState.Success(file!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -204,8 +201,7 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap
                 )
                 
-                val resultFile = file ?: throw IllegalStateException("Failed to generate PDF")
-                _exportState.value = ExportState.Success(resultFile)
+                _exportState.value = ExportState.Success(file!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")

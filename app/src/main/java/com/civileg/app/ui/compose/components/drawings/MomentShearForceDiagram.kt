@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -70,7 +72,7 @@ fun MomentShearForceDiagram(
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
@@ -125,7 +127,7 @@ fun MomentShearForceDiagram(
                     val scale = (diagramH * 0.6f) / maxOf(maxMoment, 0.1f)
 
                     // Title
-                    drawContext.canvas.canvas.nativeCanvas.apply {
+                    drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint().apply {
                             color = Color(0xFF4A90D9).toArgb()
                             textSize = 14f
@@ -144,8 +146,8 @@ fun MomentShearForceDiagram(
                     // Fill + Line
                     val fillPath = Path().apply {
                         moveTo(marginL, baseY)
-                        momentData.forEach { (xr, v) ->
-                            lineTo(marginL + xr * diagramW, baseY - v * scale)
+                        momentData.forEach { (xr, value) ->
+                            lineTo(marginL + xr * diagramW, baseY - value * scale)
                         }
                         lineTo(marginL + diagramW, baseY)
                         close()
@@ -153,9 +155,9 @@ fun MomentShearForceDiagram(
                     drawPath(fillPath, Color(0xFF4A90D9).copy(alpha = 0.2f))
 
                     val linePath = Path().apply {
-                        momentData.forEachIndexed { i, (xr, v) ->
+                        momentData.forEachIndexed { i, (xr, value) ->
                             val px = marginL + xr * diagramW
-                            val py = baseY - v * scale
+                            val py = baseY - value * scale
                             if (i == 0) moveTo(px, py) else lineTo(px, py)
                         }
                     }
@@ -186,7 +188,7 @@ fun MomentShearForceDiagram(
                     val scale = (shearLayoutH * 0.4f) / maxOf(maxShear, 0.1f)
 
                     // Title
-                    drawContext.canvas.canvas.nativeCanvas.apply {
+                    drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint().apply {
                             color = Color(0xFFE74C3C).toArgb()
                             textSize = 14f
@@ -205,8 +207,8 @@ fun MomentShearForceDiagram(
                     // Fill + Line
                     val fillPath = Path().apply {
                         moveTo(marginL, baseY)
-                        shearData.forEach { (xr, v) ->
-                            lineTo(marginL + xr * diagramW, baseY - v * scale)
+                        shearData.forEach { (xr, value) ->
+                            lineTo(marginL + xr * diagramW, baseY - value * scale)
                         }
                         lineTo(marginL + diagramW, baseY)
                         close()
@@ -214,9 +216,9 @@ fun MomentShearForceDiagram(
                     drawPath(fillPath, Color(0xFFE74C3C).copy(alpha = 0.15f))
 
                     val linePath = Path().apply {
-                        shearData.forEachIndexed { i, (xr, v) ->
+                        shearData.forEachIndexed { i, (xr, value) ->
                             val px = marginL + xr * diagramW
-                            val py = baseY - v * scale
+                            val py = baseY - value * scale
                             if (i == 0) moveTo(px, py) else lineTo(px, py)
                         }
                     }
@@ -392,7 +394,7 @@ private fun DrawScope.annotateValue(x: Float, y: Float, text: String, color: Col
 private fun DrawScope.drawTextAnnotated(
     text: String, x: Float, y: Float, color: Color, size: Float, center: Boolean = false
 ) {
-    drawContext.canvas.canvas.nativeCanvas.apply {
+    drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint().apply {
             this.color = color.toArgb()
             this.textSize = size

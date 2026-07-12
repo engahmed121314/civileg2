@@ -12,7 +12,7 @@ class ECPColumn : ColumnDesign {
         private const val ALPHA = 0.8          // عامل اختزال الخرسانة
         private const val GAMMA_C = 1.5        // معامل أمان الخرسانة
         private const val GAMMA_S = 1.15       // معامل أمان الحديد
-        const val PHI_SHEAR = 0.75
+        private const val PHI_SHEAR = 0.75
     }
 
     override fun calculateAxialCapacity(
@@ -84,7 +84,7 @@ class ECPColumn : ColumnDesign {
             // Simplified interaction approach: if e > 0.05h, increase As by factor
             val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
             requiredSteelArea *= momentFactor
-            codeNotes.add("ECP 203: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
+            codeNotes.add("ECP 203: Significant moment (e=${"%.1f".format(eccentricity)}mm > 0.05h), As increased by factor ${"%.2f".format(momentFactor)}")
         }
         
         // تطبيق حدود التسليح
@@ -123,7 +123,7 @@ class ECPColumn : ColumnDesign {
         codeNotes.add("ECP 203-2020: Section 4-2-3")
         codeNotes.add("Cover: ${getMinCover()}mm minimum")
         if (eccentricity > minEccentricity) {
-            codeNotes.add("Eccentricity check: e=${String.format("%.1f", eccentricity)}mm > emin=${minEccentricity}mm")
+            codeNotes.add("Eccentricity check: e=${"%.1f".format(eccentricity)}mm > emin=${minEccentricity}mm")
         }
         
         return ReinforcementResult(
@@ -152,6 +152,7 @@ class ECPColumn : ColumnDesign {
     override fun getMinCover(): Double = 40.0
 
     // ── Shear Design per ECP 203 §4-2-5 ────────────────────────────────────────
+
     /**
      * تصميم كانات القص للأعمدة — ECP 203 البند 4-2-5
      * @param Vu   factored shear force (kN)
@@ -225,14 +226,14 @@ class ECPColumn : ColumnDesign {
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add("ECP 203 §4-2-5: Column Shear Design")
-        codeNotes.add("Vc = 0.24√fcu·b·d / γc = ${String.format("%.1f", Vc)} kN")
-        codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=${PHI_SHEAR})")
+        codeNotes.add("Vc = 0.24√fcu·b·d / γc = ${"%.1f".format(Vc)} kN")
+        codeNotes.add("φVc = ${"%.1f".format(phiVc)} kN  (φ=${PHI_SHEAR})")
         if (needsStirrups) {
-            codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) > φVc → Stirrups required")
-            codeNotes.add("Asv/s = ${String.format("%.3f", designAsvPerS)} mm²/mm")
+            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) > φVc → Stirrups required")
+            codeNotes.add("Asv/s = ${"%.3f".format(designAsvPerS)} mm²/mm")
             codeNotes.add("${selectedDia.toInt()}mm ties @ ${selectedSpacing.toInt()}mm c/c")
         } else {
-            codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) ≤ φVc → Concrete alone sufficient")
+            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) ≤ φVc → Concrete alone sufficient")
         }
 
         return ColumnShearDesignResult(

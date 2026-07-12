@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
@@ -313,11 +314,12 @@ private fun DrawScope.drawSoilBelowBase(
         size = Size(right - left + 160f, soilBottom - baseBottom)
     )
     // Soil hatching
-    nativeCanvas.save()
-    nativeCanvas.clipRect(left - 80f, baseBottom, right + 80f, soilBottom)
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
+    nc.clipRect(left - 80f, baseBottom, right + 80f, soilBottom)
     var hx = left - 80f
     while (hx < right + 80f + (soilBottom - baseBottom)) {
-        nativeCanvas.drawLine(
+        nc.drawLine(
             hx, baseBottom, hx - 30f, soilBottom,
             android.graphics.Paint().apply {
                 color = SoilBrown.hashCode()
@@ -326,7 +328,7 @@ private fun DrawScope.drawSoilBelowBase(
         )
         hx += 14f
     }
-    nativeCanvas.restore()
+    nc.restore()
 }
 
 // ============================================================================
@@ -467,7 +469,7 @@ private fun DrawScope.drawPlanView(
     } else {
         // Rectangle
         val rw = insetSize - 16f
-        val rh = (width / length) * rw
+        val rh = (width / length).toFloat() * rw
         val rl = cx - rw / 2f
         val rt = cy - rh / 2f
         drawRect(color = ConcreteGray, topLeft = Offset(rl, rt), size = Size(rw, rh))
@@ -508,7 +510,7 @@ private fun DrawScope.drawWallDetailInset(
     // Wall cross-section (vertical rectangle)
     val wallW = min(insetW * 0.45f, 50f)
     val wallH = insetH - 60f
-    val wallLeft = insetLeft + (insetWidth - wallW) / 2f
+    val wallLeft = insetLeft + (insetW - wallW) / 2f
     val wallTop = insetTop + 24f
 
     drawRect(color = ConcreteGray, topLeft = Offset(wallLeft, wallTop),
@@ -724,11 +726,12 @@ private fun DrawScope.drawReinforcementTable(
 private fun DrawScope.drawConcreteHatchingOnRect(
     left: Float, top: Float, w: Float, h: Float
 ) {
-    nativeCanvas.save()
-    nativeCanvas.clipRect(left, top, left + w, top + h)
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
+    nc.clipRect(left, top, left + w, top + h)
     var i = left - h
     while (i < left + w + h) {
-        nativeCanvas.drawLine(
+        nc.drawLine(
             i, top, i + h, top + h,
             android.graphics.Paint().apply {
                 color = Color(0x55AAAAAA).hashCode()
@@ -737,7 +740,7 @@ private fun DrawScope.drawConcreteHatchingOnRect(
         )
         i += 18f
     }
-    nativeCanvas.restore()
+    nc.restore()
 }
 
 private fun DrawScope.drawDimLine(
@@ -786,7 +789,7 @@ private fun DrawScope.drawTextAnnotated(
     drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint().apply {
             textSize = size
-            this.color = color
+            this.color = color.toArgb()
             isFakeBoldText = true
             typeface = android.graphics.Typeface.MONOSPACE
             textAlign = android.graphics.Paint.Align.LEFT
