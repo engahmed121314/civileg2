@@ -254,16 +254,7 @@ private fun AdaptiveNavigationRail(
                         )
                     },
                     selected = selectedTab == index,
-                    onClick = { onTabSelected(index) },
-                    indicator = {
-                        if (selectedTab == index) {
-                            NavigationDrawerItemDefaults.Indicator(
-                                shape = RoundedCornerShape(topStartPercent = 50, bottomStartPercent = 50),
-                                color = TabSelectedColor.copy(alpha = 0.2f),
-                                modifier = Modifier.width(4.dp)
-                            )
-                        }
-                    }
+                    onClick = { onTabSelected(index) }
                 )
             }
         }
@@ -537,11 +528,11 @@ private fun TabItem(
                 tint = iconTint,
                 modifier = Modifier
                     .size(24.dp)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
                         transformOrigin = TransformOrigin(0.5f, 0.5f)
-                    }
+                    )
             )
 
             if (showBadge) {

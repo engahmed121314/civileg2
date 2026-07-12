@@ -119,7 +119,7 @@ fun AppNavigation() {
 }
 
 @Composable
-private fun NavHostContent(navController: androidx.navigation.NavController) {
+private fun NavHostContent(navController: androidx.navigation.compose.NavHostController) {
     NavHost(
         navController = navController,
         startDestination = AppScreen.Home.route

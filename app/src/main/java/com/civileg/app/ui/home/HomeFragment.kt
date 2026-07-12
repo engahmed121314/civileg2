@@ -61,9 +61,6 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
-            (activity as? com.civileg.app.MainActivity)?.openDrawer()
-        }
         binding.btnLanguage.setOnClickListener {
             toggleLanguage()
         }

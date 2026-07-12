@@ -121,7 +121,7 @@ object AppIntegrityChecker {
                 Build.PRODUCT.contains("emulator", ignoreCase = true) ||
                 Build.HARDWARE.contains("goldfish", ignoreCase = true) ||
                 Build.HARDWARE.contains("ranchu", ignoreCase = true) ||
-                EMULATOR_INDICATORS.any { Build.HINGERPRINT.contains(it, ignoreCase = true) } ||
+                EMULATOR_INDICATORS.any { Build.FINGERPRINT.contains(it, ignoreCase = true) } ||
                 EMULATOR_INDICATORS.any { Build.PRODUCT.contains(it, ignoreCase = true) } ||
                 (Build.BOARD.lowercase(Locale.getDefault()).let { board ->
                     board.contains("unknown") || board.isEmpty()

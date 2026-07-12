@@ -1,18 +1,29 @@
 package com.civileg.app.ads
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.civileg.app.ads.AdManager
 import com.google.android.gms.ads.AdSize
@@ -140,50 +151,50 @@ fun RemoveAdsBanner(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(
-                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                Brush.horizontalGradient(
                     colors = listOf(
-                        androidx.compose.ui.graphics.Color(0xFF1565C0),
-                        androidx.compose.ui.graphics.Color(0xFF0D47A1)
+                        Color(0xFF1565C0),
+                        Color(0xFF0D47A1)
                     )
                 )
             )
     ) {
-        androidx.compose.foundation.layout.Row(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            androidx.compose.foundation.layout.Column {
+            Column {
                 Text(
                     text = "Civil Engineer Pro",
-                    color = androidx.compose.ui.graphics.Color.White,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    fontSize = androidx.compose.ui.unit.sp(14)
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = sp(14)
                 )
                 Text(
                     text = "إزالة الإعلانات — استمتع بتجربة نظيفة",
-                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
-                    fontSize = androidx.compose.ui.unit.sp(11)
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = sp(11)
                 )
             }
 
-            androidx.compose.material3.OutlinedButton(
+            OutlinedButton(
                 onClick = onUpgradeClick,
-                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                    contentColor = androidx.compose.ui.graphics.Color.White,
-                    borderColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f)
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color.White,
+                    borderColor = Color.White.copy(alpha = 0.6f)
                 ),
                 shape = RoundedCornerShape(20.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                contentPadding = PaddingValues(
                     horizontal = 16.dp, vertical = 4.dp
                 )
             ) {
                 Text(
                     text = "ترقية Pro",
-                    fontSize = androidx.compose.ui.unit.sp(12),
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    fontSize = sp(12),
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

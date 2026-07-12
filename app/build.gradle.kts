@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -33,11 +36,11 @@ android {
         }
 
         // Developer info for Play Store
-        resValue "string", "developer_name", "Eng. Ahmed Magdy"
-        resValue "string", "developer_email", "eng.ahmedmagdy121314@gmail.com"
-        resValue "string", "developer_phone", "+201012628353"
-        resValue "string", "developer_copyright", "Copyright \u00a9 2024-2025 Eng. Ahmed Magdy. All rights reserved."
-        resValue "string", "support_email", "eng.ahmedmagdy121314@gmail.com"
+        resValue("string", "developer_name", "Eng. Ahmed Magdy")
+        resValue("string", "developer_email", "eng.ahmedmagdy121314@gmail.com")
+        resValue("string", "developer_phone", "+201012628353")
+        resValue("string", "developer_copyright", "Copyright \u00a9 2024-2025 Eng. Ahmed Magdy. All rights reserved.")
+        resValue("string", "support_email", "eng.ahmedmagdy121314@gmail.com")
     }
 
     buildFeatures {
@@ -53,14 +56,14 @@ android {
 
     signingConfigs {
         if (hasKeystore) {
-            val keystoreProperties = java.util.Properties()
-            keystoreProperties.load(keystorePropertiesFile.inputStream())
+            val keystoreProperties = Properties()
+            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String?
+                keyPassword = keystoreProperties["keyPassword"] as String?
+                storeFile = file(keystoreProperties["storeFile"] as String? ?: "")
+                storePassword = keystoreProperties["storePassword"] as String?
             }
         } else {
             // Fallback: use environment variables (for CI/CD)
@@ -95,7 +98,6 @@ android {
             // Optimize APK size
             isDebuggable = false
             isJniDebuggable = false
-            isRenderscriptDebuggable = false
             isProfileable = false
         }
         debug {
