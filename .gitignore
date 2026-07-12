@@ -31,3 +31,14 @@ tool-results/
 worklog.md
 civileg2/
 *.hprof
+
+# Signing — NEVER commit keystore or passwords
+*.jks
+*.keystore
+keystore.properties
+*.p12
+*.pem
+
+# Sensitive CI/CD
+.env
+secrets.properties

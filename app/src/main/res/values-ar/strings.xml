@@ -132,4 +132,16 @@
     <string name="reinforcement_format">%1$dØ%2$d</string>
     <string name="waste_tons_format">نسبة الهالك المقدرة: %.3f طن</string>
     <string name="pdf_beam_report_title">تقرير تصميم الكمرة</string>
+
+    <!-- Developer & Legal Information -->
+    <string name="developer_name">المهندس أحمد مجدي</string>
+    <string name="developer_email">eng.ahmedmagdy121314@gmail.com</string>
+    <string name="developer_phone">01012628353</string>
+    <string name="developer_copyright">حقوق النشر \u00a9 2024–2025 المهندس أحمد مجدي. جميع الحقوق محفوظة.</string>
+    <string name="app_version">الإصدار %1$s (البناء %2$d)</string>
+    <string name="about_developer">عن المطور</string>
+    <string name="about_developer_text">تم تطوير المهندس المدني برو بواسطة المهندس أحمد مجدي، مهندس إنشائي متخصص في تصميم الخرسانة والمنشآت المعدنية.\n\nالتواصل:\nالبريد: eng.ahmedmagdy121314@gmail.com\nالهاتف: 01012628353</string>
+    <string name="security_warning_root">يبدو أن هذا الجهاز معدل (Root). لأسباب أمنية، قد تكون بعض الميزات محدودة.</string>
+    <string name="security_warning_tamper">فشل التحقق من سلامة التطبيق. يرجى إعادة التثبيت من المصدر الرسمي.</string>
+    <string name="legal_disclaimer_full">إخلاء مسؤولية: هذا التطبيق هو أداة احترافية للأغراض التعليمية والتصميم الأولي فقط. يجب التحقق من جميع الحسابات والتصاميم والنتائج بواسطة مهندس إنشائي مرخص قبل أي استخدام في الإنشاءات. المطور (المهندس أحمد مجدي) غير مسؤول عن أي أخطار أو أضرار أو عواقب ناتجة عن استخدام هذا التطبيق. الاستخدام على مسؤوليتك الخاصة.</string>
 </resources>

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Civil Engineer Pro - Restricted FileProvider paths -->
+<!-- Developer: Eng. Ahmed Magdy -->
 <paths>
-    <external-path name="external_files" path="." />
-    <files-path name="internal_files" path="." />
-    <cache-path name="cache_files" path="." />
-    <external-files-path name="exports" path="." />
+    <!-- Only expose the exports directory, not the entire storage -->
+    <external-files-path name="pdf_exports" path="CivilEngineerPro/exports/" />
+    <cache-path name="temp_cache" path="temp/" />
 </paths>

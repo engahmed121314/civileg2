@@ -2,15 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Network permission — required for future API integrations -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Storage permissions for PDF/Excel export (scoped to SDK 32 and below) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Modern scoped storage for SDK 33+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- Security: prevent screen capture of sensitive design data -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:name=".CivilEGApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -19,8 +31,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CivilEg"
         android:forceDarkAllowed="true"
-        tools:targetApi="31">
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="35">
 
+        <!-- Splash Screen — Single Launcher Entry Point -->
         <activity
             android:name=".ui.splash.SplashActivity"
             android:exported="true"
@@ -31,32 +46,73 @@
             </intent-filter>
         </activity>
 
+        <!-- Main Activity — Internal only -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 
-        <!-- New Design Activities -->
-        <activity android:name=".ui.column.ColumnInputActivity" android:screenOrientation="portrait" />
-        <activity android:name=".ui.column.ColumnResultActivity" android:screenOrientation="portrait" />
+        <!-- Design Module Activities — All internal (exported=false) -->
+        <activity
+            android:name=".ui.column.ColumnInputActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.column.ColumnResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.slab.SlabInputActivity" android:screenOrientation="portrait" />
-        <activity android:name=".ui.slab.SlabResultActivity" android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.slab.SlabInputActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.slab.SlabResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.beam.BeamInputActivity" android:screenOrientation="portrait" />
-        <activity android:name=".ui.beam.BeamResultActivity" android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.beam.BeamInputActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.beam.BeamResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.stairs.StairInputActivity" android:screenOrientation="portrait" />
-        <activity android:name=".ui.stairs.StairResultActivity" android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.stairs.StairInputActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.stairs.StairResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.retaining.RetainingWallInputActivity" android:screenOrientation="portrait" />
-        <activity android:name=".ui.retaining.RetainingWallResultActivity" android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.retaining.RetainingWallInputActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.retaining.RetainingWallResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.watertank.TankInputActivity" android:screenOrientation="portrait" />
-        <activity android:name=".ui.watertank.TankResultActivity" android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.watertank.TankInputActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.watertank.TankResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
-        <activity android:name=".ui.steel.SteelWarehouseActivity" android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.steel.SteelWarehouseActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
+        <!-- FileProvider — Restricted to exports directory only -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -66,6 +122,26 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
+        <!-- Metadata for Google Play Store -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version"
+            tools:node="remove" />
+
+        <!-- Developer Contact Metadata -->
+        <meta-data
+            android:name="com.civileg.app.developer.name"
+            android:value="Eng. Ahmed Magdy" />
+        <meta-data
+            android:name="com.civileg.app.developer.email"
+            android:value="eng.ahmedmagdy121314@gmail.com" />
+        <meta-data
+            android:name="com.civileg.app.developer.phone"
+            android:value="+201012628353" />
+        <meta-data
+            android:name="com.civileg.app.developer.copyright"
+            android:value="Copyright (c) 2024-2025 Eng. Ahmed Magdy. All rights reserved." />
 
     </application>
 

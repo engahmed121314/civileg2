@@ -1,0 +1,61 @@
+# ============================================================
+# Google Play Content Rating Questionnaire Answers
+# Developer: Eng. Ahmed Magdy | eng.ahmedmagdy121314@gmail.com
+# ============================================================
+
+# This file contains the answers to Google Play's content rating questionnaire.
+# Use these answers when filling out the content rating form in the Play Console.
+
+QUESTIONNAIRE ANSWERS:
+=====================
+
+Q: Does your app contain violence?
+A: No
+
+Q: Does your app contain sexual content or nudity?
+A: No
+
+Q: Does your app contain profanity or crude humor?
+A: No
+
+Q: Does your app contain horror or fear-inducing content?
+A: No
+
+Q: Does your app contain mature humor?
+A: No
+
+Q: Does your app contain gambling or real-money gaming?
+A: No
+
+Q: Does your app contain drug or tobacco use?
+A: No
+
+Q: Does your app contain alcohol or tobacco?
+A: No
+
+Q: Does your app contain crime or dangerous activities?
+A: No
+
+Q: Does your app contain user-generated content?
+A: No
+
+Q: Does your app contain social features (chat, forums, user profiles)?
+A: No
+
+Q: Does your app share user data with third parties?
+A: No
+
+Q: Does your app collect personal information from children?
+A: No
+
+Q: Does your app require location access?
+A: No
+
+Q: Does your app access the camera or microphone?
+A: No
+
+Q: Does your app contain advertisements?
+A: No
+
+EXPECTED RATING: "Everyone" (E)
+CONTENT DESCRIPTORS: None applicable

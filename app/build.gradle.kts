@@ -3,8 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
-    // Safe Args not used with Compose navigation
-    // alias(libs.plugins.navigation.safeargs)
     alias(libs.plugins.compose.compiler)
     id("kotlin-parcelize")
 }
@@ -17,11 +15,11 @@ android {
         applicationId = "com.civileg.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -33,12 +31,53 @@ android {
             arg("dagger.fastInit", "enabled")
             arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
         }
+
+        // Developer info for Play Store
+        resValue "string", "developer_name", "Eng. Ahmed Magdy"
+        resValue "string", "developer_email", "eng.ahmedmagdy121314@gmail.com"
+        resValue "string", "developer_phone", "+201012628353"
+        resValue "string", "developer_copyright", "Copyright \u00a9 2024-2025 Eng. Ahmed Magdy. All rights reserved."
+        resValue "string", "support_email", "eng.ahmedmagdy121314@gmail.com"
     }
 
     buildFeatures {
         viewBinding = true
         dataBinding = true
         compose = true
+        buildConfig = true
+    }
+
+    // Signing configuration — uses env vars for CI, or keystore.properties file locally
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val hasKeystore = keystorePropertiesFile.exists()
+
+    signingConfigs {
+        if (hasKeystore) {
+            val keystoreProperties = java.util.Properties()
+            keystoreProperties.load(keystorePropertiesFile.inputStream())
+
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        } else {
+            // Fallback: use environment variables (for CI/CD)
+            val envAlias = System.getenv("KEY_ALIAS") ?: ""
+            val envKeyPass = System.getenv("KEY_PASSWORD") ?: ""
+            val envStoreFile = System.getenv("KEYSTORE_FILE") ?: ""
+            val envStorePass = System.getenv("KEYSTORE_PASSWORD") ?: ""
+
+            if (envAlias.isNotEmpty() && envStoreFile.isNotEmpty()) {
+                create("release") {
+                    keyAlias = envAlias
+                    keyPassword = envKeyPass
+                    storeFile = file(envStoreFile)
+                    storePassword = envStorePass
+                }
+            }
+        }
     }
 
     buildTypes {
@@ -49,12 +88,25 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Use release signing config if available
+            signingConfigs.findByName("release")?.let {
+                signingConfig = it
+            }
+            // Optimize APK size
+            isDebuggable = false
+            isJniDebuggable = false
+            isRenderscriptDebuggable = false
+            isProfileable = false
         }
         debug {
             isDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -64,10 +116,30 @@ android {
         jvmTarget = "17"
     }
 
-    // dexOptions removed - deprecated in AGP 8.x, DEX optimization is automatic
+    // Prevent packaging of unnecessary files
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE*"
+            excludes += "/META-INF/NOTICE*"
+        }
+    }
+
+    // Lint configuration for Play Store compliance
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        checkReleaseBuilds = true
+        checkDependencies = true
+        // Play Store required checks
+        disable += "TypographyFractions"
+        disable += "TypographyQuotes"
+        // Allow missing translation for now
+        disable += "MissingTranslation"
+    }
 }
 
-// إخفاء تحذيرات الخيارات غير المعرفة في Hilt/KSP
+// Suppress Hilt/KSP warnings
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:-processing")
 }
@@ -77,10 +149,10 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
-    
+
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
-    
+
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -117,6 +189,9 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
+
+    // Play Integrity API
+    implementation("com.google.android.play:integrity:1.4.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

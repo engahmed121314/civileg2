@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Civil Engineer Pro - Network Security Configuration -->
+<!-- Developer: Eng. Ahmed Magdy | eng.ahmedmagdy121314@gmail.com -->
+<network-security-config>
+    <!-- Block all cleartext (HTTP) traffic -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Only system-trusted CAs -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug builds only: allow cleartext for localhost testing -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user" />
+            <certificates src="system" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
