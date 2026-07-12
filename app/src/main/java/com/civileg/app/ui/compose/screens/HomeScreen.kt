@@ -49,6 +49,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.compose.components.rememberWindowSizeClass
+import com.civileg.app.ui.compose.components.WindowSizeClass
 
 // ══════════════════════════════════════════════════════════════════════
 // Color palette extensions for the Home Screen
@@ -156,6 +158,19 @@ fun HomeScreen(
 ) {
     val isDark = isSystemInDarkTheme()
 
+    // Adaptive layout: determine grid columns based on window size
+    val windowSize = rememberWindowSizeClass()
+    val gridColumns = when (windowSize) {
+        WindowSizeClass.EXPANDED -> 4   // Large tablet: 4 columns
+        WindowSizeClass.MEDIUM -> 3     // Small tablet: 3 columns
+        WindowSizeClass.COMPACT -> 2    // Phone: 2 columns
+    }
+    val horizontalPadding = when (windowSize) {
+        WindowSizeClass.EXPANDED -> 24.dp
+        WindowSizeClass.MEDIUM -> 20.dp
+        WindowSizeClass.COMPACT -> 14.dp
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -198,7 +213,7 @@ fun HomeScreen(
         }
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(gridColumns),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
@@ -207,26 +222,26 @@ fun HomeScreen(
                 .background(
                     if (isDark) Color(0xFF0F0F1A) else Color(0xFFF5F6FA)
                 )
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = horizontalPadding)
         ) {
             // ══════════════════════════════════════════
             // A. HEADER SECTION
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 HeaderSection(isDark = isDark)
             }
 
             // ══════════════════════════════════════════
             // B. QUICK STATS ROW
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 QuickStatsRow(isDark = isDark)
             }
 
             // ══════════════════════════════════════════
             // C. MAIN DESIGN MODULES GRID
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 SectionHeader(
                     icon = Icons.Default.Engineering,
                     title = "التصميم الإنشائي",
@@ -245,7 +260,7 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // D. QUICK TOOLS SECTION (horizontal)
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 SectionHeader(
                     icon = Icons.Default.Build,
                     title = "أدوات سريعة",
@@ -253,7 +268,7 @@ fun HomeScreen(
                 )
             }
 
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 QuickToolsRow(
                     isDark = isDark,
                     onToolClick = { onNavigateTo(it) }
@@ -263,7 +278,7 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // E. RECENT PROJECTS SECTION
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 SectionHeader(
                     icon = Icons.Default.History,
                     title = "آخر التصاميم",
@@ -271,7 +286,7 @@ fun HomeScreen(
                 )
             }
 
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 RecentProjectsSection(
                     projects = stubRecentProjects,
                     isDark = isDark
@@ -281,12 +296,12 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // F. FOOTER
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 FooterSection(isDark = isDark)
             }
 
             // Bottom spacer
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(gridColumns) }) {
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }

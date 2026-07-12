@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -30,7 +31,14 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.PermanentNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +52,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -52,19 +59,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // ══════════════════════════════════════════════════════════════════
-// Color Palette – Deep Navy Dark Theme for Bottom Nav
+// Color Palette
 // ══════════════════════════════════════════════════════════════════
-private val NavBarBackground  = Color(0xFF1A1A2E)
-private val NavBarAccent      = Color(0xFF0F9DFF)
-private val NavBarAccentGlow  = Color(0xFF0F9DFF).copy(alpha = 0.12f)
-private val TabSelectedColor  = Color(0xFF0F9DFF)
+private val NavBarBackground   = Color(0xFF1A1A2E)
+private val NavBarAccent       = Color(0xFF0F9DFF)
+private val NavBarAccentGlow   = Color(0xFF0F9DFF).copy(alpha = 0.12f)
+private val TabSelectedColor   = Color(0xFF0F9DFF)
 private val TabUnselectedColor = Color(0xFF6B7280)
-private val BadgeRed          = Color(0xFFFF3D00)
-private val TopBorderGradient = Color(0xFF0F9DFF).copy(alpha = 0.35f)
-private val IndicatorColor    = Color(0xFF0F9DFF)
+private val BadgeRed           = Color(0xFFFF3D00)
+private val TopBorderGradient  = Color(0xFF0F9DFF).copy(alpha = 0.35f)
+private val IndicatorColor     = Color(0xFF0F9DFF)
+private val RailBackgroundColor = Color(0xFF1A1A2E)
 
 // ══════════════════════════════════════════════════════════════════
-// Tab Model
+// Navigation Item Model
 // ══════════════════════════════════════════════════════════════════
 @Immutable
 data class BottomNavItem(
@@ -73,28 +81,320 @@ data class BottomNavItem(
     val route: String
 )
 
-private val bottomNavItems = listOf(
-    BottomNavItem("الرئيسية",          Icons.Default.Home,      "home"),
-    BottomNavItem("التصميم",           Icons.Default.AccountBalance, "design"),
-    BottomNavItem("المنشآت المعدنية",   Icons.Default.Build,    "steel"),
-    BottomNavItem("الأدوات",            Icons.Default.Calculate, "tools"),
-    BottomNavItem("المزيد",            Icons.Default.MoreHoriz,  "more")
+val adaptiveNavItems = listOf(
+    BottomNavItem("الرئيسية",        Icons.Default.Home,           "home"),
+    BottomNavItem("التصميم",         Icons.Default.AccountBalance,  "design"),
+    BottomNavItem("المنشآت المعدنية", Icons.Default.Build,          "steel"),
+    BottomNavItem("الأدوات",          Icons.Default.Calculate,       "tools"),
+    BottomNavItem("المزيد",          Icons.Default.MoreHoriz,       "more")
 )
 
 // ══════════════════════════════════════════════════════════════════
-// Public API
+// Window Size Classification
 // ══════════════════════════════════════════════════════════════════
-/**
- * Professional Bottom Navigation Bar.
- *
- * Deep navy background (#1A1A2E), animated sliding indicator, scale + color
- * transitions on icons, and a red notification badge on the Design tab.
- *
- * @param selectedTab  Currently selected tab index (0‑4).
- * @param onTabSelected Called when a tab is tapped.
- * @param designCount  Saved‑designs count shown as a badge on the Design tab.
- * @param modifier     Optional Modifier.
- */
+enum class WindowSizeClass {
+    COMPACT,    // Phone portrait (< 600dp width)
+    MEDIUM,    // Phone landscape / small tablet (600-840dp)
+    EXPANDED   // Tablet / large screen (> 840dp width)
+}
+
+@Composable
+fun rememberWindowSizeClass(): WindowSizeClass {
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+    return when {
+        screenWidthDp >= 840 -> WindowSizeClass.EXPANDED
+        screenWidthDp >= 600 -> WindowSizeClass.MEDIUM
+        else -> WindowSizeClass.COMPACT
+    }
+}
+
+@Composable
+fun isTablet(): Boolean {
+    val sizeClass = rememberWindowSizeClass()
+    return sizeClass == WindowSizeClass.EXPANDED || sizeClass == WindowSizeClass.MEDIUM
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Adaptive Navigation Scaffold
+// Automatically switches between:
+//   COMPACT  → Bottom Navigation Bar
+//   MEDIUM   → Navigation Rail
+//   EXPANDED → Permanent Navigation Drawer
+// ══════════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdaptiveNavigationScaffold(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    designCount: Int = 0,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val windowSize = rememberWindowSizeClass()
+
+    when (windowSize) {
+        WindowSizeClass.COMPACT -> {
+            // Phone: Bottom Navigation Bar
+            Column(modifier = modifier.fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f)) {
+                    content()
+                }
+                ProfessionalBottomNavBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = onTabSelected,
+                    designCount = designCount
+                )
+            }
+        }
+
+        WindowSizeClass.MEDIUM -> {
+            // Small tablet / Phone landscape: Navigation Rail
+            Row(modifier = modifier.fillMaxSize()) {
+                AdaptiveNavigationRail(
+                    selectedTab = selectedTab,
+                    onTabSelected = onTabSelected,
+                    designCount = designCount
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    content()
+                }
+            }
+        }
+
+        WindowSizeClass.EXPANDED -> {
+            // Large tablet: Permanent Navigation Drawer
+            PermanentNavigationDrawer(
+                drawerContent = {
+                    AdaptiveNavigationDrawerContent(
+                        selectedTab = selectedTab,
+                        onTabSelected = onTabSelected,
+                        designCount = designCount
+                    )
+                },
+                modifier = modifier
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Navigation Rail (Medium screens)
+// ══════════════════════════════════════════════════════════════════
+@Composable
+private fun AdaptiveNavigationRail(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    designCount: Int = 0
+) {
+    Surface(
+        color = RailBackgroundColor,
+        shadowElevation = 8.dp
+    ) {
+        NavigationRail(
+            containerColor = Color.Transparent,
+            header = {
+                // App logo area at top
+                Box(
+                    modifier = Modifier
+                        .padding(top = 16.dp, bottom = 12.dp)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(NavBarAccent.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "CE",
+                        color = NavBarAccent,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        ) {
+            adaptiveNavItems.forEachIndexed { index, item ->
+                NavigationRailItem(
+                    icon = {
+                        Box {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                tint = if (selectedTab == index) TabSelectedColor else TabUnselectedColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            // Badge for design count
+                            if (index == 1 && designCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 4.dp, y = (-4).dp)
+                                        .size(16.dp)
+                                        .background(BadgeRed, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (designCount > 9) "9+" else designCount.toString(),
+                                        color = Color.White,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    label = {
+                        Text(
+                            text = item.label,
+                            color = if (selectedTab == index) TabSelectedColor else TabUnselectedColor,
+                            fontSize = 11.sp,
+                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1
+                        )
+                    },
+                    selected = selectedTab == index,
+                    onClick = { onTabSelected(index) },
+                    indicator = {
+                        if (selectedTab == index) {
+                            NavigationDrawerItemDefaults.Indicator(
+                                shape = RoundedCornerShape(topStartPercent = 50, bottomStartPercent = 50),
+                                color = TabSelectedColor.copy(alpha = 0.2f),
+                                modifier = Modifier.width(4.dp)
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Navigation Drawer Content (Expanded screens)
+// ══════════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdaptiveNavigationDrawerContent(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    designCount: Int = 0
+) {
+    Surface(
+        color = RailBackgroundColor
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 16.dp)
+        ) {
+            // App header in drawer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Civil Engineer Pro",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    Text(
+                        text = "Professional Suite",
+                        color = TabUnselectedColor,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            Spacer(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.1f))
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // Navigation items
+            adaptiveNavItems.forEachIndexed { index, item ->
+                NavigationDrawerItem(
+                    icon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                tint = if (selectedTab == index) TabSelectedColor else TabUnselectedColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            // Badge
+                            if (index == 1 && designCount > 0) {
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .background(BadgeRed, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (designCount > 9) "9+" else designCount.toString(),
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    label = {
+                        Text(
+                            text = item.label,
+                            color = if (selectedTab == index) Color.White else TabUnselectedColor,
+                            fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    },
+                    selected = selectedTab == index,
+                    onClick = { onTabSelected(index) },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = TabSelectedColor.copy(alpha = 0.12f),
+                        unselectedContainerColor = Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+
+            // Developer info at bottom
+            Spacer(Modifier.weight(1f))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Eng. Ahmed Magdy",
+                        color = TabUnselectedColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "eng.ahmedmagdy121314@gmail.com",
+                        color = TabUnselectedColor.copy(alpha = 0.6f),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Original Bottom Navigation Bar (kept for COMPACT screens)
+// ══════════════════════════════════════════════════════════════════
 @Composable
 fun ProfessionalBottomNavBar(
     selectedTab: Int,
@@ -108,12 +408,12 @@ fun ProfessionalBottomNavBar(
             .shadow(
                 elevation = 20.dp,
                 ambientColor = Color.Black.copy(alpha = 0.5f),
-                spotColor  = Color.Black.copy(alpha = 0.3f)
+                spotColor = Color.Black.copy(alpha = 0.3f)
             ),
         color = NavBarBackground
     ) {
         Column {
-            // ── Top accent gradient line ──
+            // Top accent gradient line
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -125,7 +425,7 @@ fun ProfessionalBottomNavBar(
                     )
             )
 
-            // ── Tab row with indicator ──
+            // Tab row with indicator
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -138,7 +438,7 @@ fun ProfessionalBottomNavBar(
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    bottomNavItems.forEachIndexed { index, item ->
+                    adaptiveNavItems.forEachIndexed { index, item ->
                         TabItem(
                             item = item,
                             isSelected = selectedTab == index,
@@ -149,10 +449,10 @@ fun ProfessionalBottomNavBar(
                     }
                 }
 
-                // ── Animated sliding indicator bar ──
+                // Animated sliding indicator bar
                 val screenWidthDp = LocalConfiguration.current.screenWidthDp
-                val tabCenterFraction = (selectedTab.toFloat() + 0.5f) / bottomNavItems.size
-                val targetOffset = tabCenterFraction * screenWidthDp - 16f // 16 dp = half of 32 dp indicator
+                val tabCenterFraction = (selectedTab.toFloat() + 0.5f) / adaptiveNavItems.size
+                val targetOffset = tabCenterFraction * screenWidthDp - 16f
 
                 val animatedOffset by animateDpAsState(
                     targetValue = targetOffset.dp,
@@ -188,7 +488,6 @@ private fun TabItem(
     badgeCount: Int,
     onClick: () -> Unit
 ) {
-    // Animated properties
     val iconTint by animateColorAsState(
         targetValue = if (isSelected) TabSelectedColor else TabUnselectedColor,
         animationSpec = tween(250, easing = FastOutSlowInEasing),
@@ -221,12 +520,10 @@ private fun TabItem(
             .padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Icon container with optional glow
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(42.dp)
         ) {
-            // Glow circle behind icon
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -234,7 +531,6 @@ private fun TabItem(
                     .background(NavBarAccentGlow.copy(alpha = glowAlpha * 0.9f))
             )
 
-            // The actual icon
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.label,
@@ -248,7 +544,6 @@ private fun TabItem(
                     }
             )
 
-            // Notification badge
             if (showBadge) {
                 Box(
                     modifier = Modifier
@@ -271,7 +566,6 @@ private fun TabItem(
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Label
         Text(
             text = item.label,
             color = labelColor,
@@ -282,7 +576,5 @@ private fun TabItem(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
-// Utility – expose items for external use
-// ══════════════════════════════════════════════════════════════════
-fun getBottomNavItems(): List<BottomNavItem> = bottomNavItems
+// Utility
+fun getBottomNavItems(): List<BottomNavItem> = adaptiveNavItems

@@ -20,6 +20,16 @@
     <!-- Security: prevent screen capture of sensitive design data -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+    <!-- Support all screen sizes: phones, tablets, foldables -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:resizeableActivity="true"
+        android:anyDensity="true"
+        android:requiresSmallestWidthDp="320" />
+
     <application
         android:name=".CivilEGApplication"
         android:allowBackup="false"
@@ -39,7 +49,7 @@
         <activity
             android:name=".ui.splash.SplashActivity"
             android:exported="true"
-            android:screenOrientation="portrait">
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -50,67 +60,67 @@
         <activity
             android:name=".MainActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <!-- Design Module Activities — All internal (exported=false) -->
         <activity
             android:name=".ui.column.ColumnInputActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
         <activity
             android:name=".ui.column.ColumnResultActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".ui.slab.SlabInputActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
         <activity
             android:name=".ui.slab.SlabResultActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".ui.beam.BeamInputActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
         <activity
             android:name=".ui.beam.BeamResultActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".ui.stairs.StairInputActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
         <activity
             android:name=".ui.stairs.StairResultActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".ui.retaining.RetainingWallInputActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
         <activity
             android:name=".ui.retaining.RetainingWallResultActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".ui.watertank.TankInputActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
         <activity
             android:name=".ui.watertank.TankResultActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".ui.steel.SteelWarehouseActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <!-- FileProvider — Restricted to exports directory only -->
         <provider
