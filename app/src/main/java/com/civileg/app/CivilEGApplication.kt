@@ -8,6 +8,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import dagger.hilt.android.HiltAndroidApp
 import com.civileg.app.security.AppIntegrityChecker
 import com.civileg.app.security.PlaySafetyChecker
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.initialization.InitializationStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -27,6 +29,9 @@ class CivilEGApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize AdMob (non-blocking, in background)
+        initializeAds()
 
         // Initialize security checks
         initializeSecurity()
@@ -73,8 +78,21 @@ class CivilEGApplication : Application() {
                 Log.w(TAG, "Security Warning: Debugger attached")
             }
 
-            // Log security status (stripped in release by ProGuard)
             Log.d(TAG, "Device: ${report.deviceModel}, Android ${report.androidVersion}, Secure: ${report.isSecure}")
+        }
+    }
+
+    /**
+     * Initialize Google AdMob SDK.
+     * Uses DELAY_APP_MEASUREMENT_INIT in manifest for GDPR consent.
+     */
+    private fun initializeAds() {
+        MobileAds.initialize(this) { initializationStatus: InitializationStatus ->
+            val statusMap = initializationStatus.adapterStatusMap
+            for (adapterClass in statusMap.keys) {
+                val status = statusMap[adapterClass]
+                Log.d(TAG, "AdMob: ${adapterClass.name} = ${status?.initializationState?.name}")
+            }
         }
     }
 }

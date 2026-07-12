@@ -153,6 +153,16 @@
             android:name="com.civileg.app.developer.copyright"
             android:value="Copyright (c) 2024-2025 Eng. Ahmed Magdy. All rights reserved." />
 
+        <!-- Google AdMob — App ID (REPLACE with your real AdMob App ID before release) -->
+        <!-- Get yours at: https://admob.google.com/home/ → Add App → Copy App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+        <!-- Delay app measurement until user consent (GDPR/UCMP compliance) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+
     </application>
 
 </manifest>

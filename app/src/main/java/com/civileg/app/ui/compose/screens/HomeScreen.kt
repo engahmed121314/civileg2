@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.ui.compose.components.rememberWindowSizeClass
 import com.civileg.app.ui.compose.components.WindowSizeClass
+import com.civileg.app.ads.AdBannerSection
+import com.civileg.app.ads.RemoveAdsBanner
 
 // ══════════════════════════════════════════════════════════════════════
 // Color palette extensions for the Home Screen
@@ -261,6 +263,13 @@ fun HomeScreen(
             // D. QUICK TOOLS SECTION (horizontal)
             // ══════════════════════════════════════════
             item(span = { GridItemSpan(gridColumns) }) {
+                // ── Non-intrusive Banner Ad between Design & Tools sections ──
+                AdBannerSection(
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            item(span = { GridItemSpan(gridColumns) }) {
                 SectionHeader(
                     icon = Icons.Default.Build,
                     title = "أدوات سريعة",
@@ -296,6 +305,15 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // F. FOOTER
             // ══════════════════════════════════════════
+
+            // ── "Remove Ads" Upgrade Banner before footer ──
+            item(span = { GridItemSpan(gridColumns) }) {
+                RemoveAdsBanner(
+                    onUpgradeClick = { /* Navigate to premium upgrade screen */ },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
             item(span = { GridItemSpan(gridColumns) }) {
                 FooterSection(isDark = isDark)
             }
