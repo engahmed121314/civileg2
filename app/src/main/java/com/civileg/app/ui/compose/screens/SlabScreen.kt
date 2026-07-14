@@ -70,6 +70,7 @@ fun SlabScreen(
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
 
     var showSaveDialog by remember { mutableStateOf(false) }
+    var pdfError by remember { mutableStateOf<String?>(null) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     var designName by remember { mutableStateOf("بلاطة سقف الدور") }
 
@@ -174,6 +175,16 @@ fun SlabScreen(
                     SlabInputField(liveLoad, "LL (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
                 }
             }
+
+            item { SectionHeader("🔩 خواص المادة", R.drawable.ic_calculator) }
+
+            item {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    SlabInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    SlabInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
+                }
+            }
             
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -272,7 +283,9 @@ fun SlabScreen(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
-                                        // Handle error if needed
+                                        pdfError = "حدث خطأ أثناء إنشاء تقرير PDF"
+                                    } else {
+                                        pdfError = null
                                     }
                                 }
                             },

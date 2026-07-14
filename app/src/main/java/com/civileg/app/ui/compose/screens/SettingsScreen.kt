@@ -8,11 +8,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.viewmodel.SettingsViewModel
+import androidx.activity.ComponentActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,6 +23,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val settings by viewModel.settings.collectAsState()
+    val context = LocalContext.current
     
     Scaffold(
         topBar = {
@@ -113,18 +116,38 @@ fun SettingsScreen(
                 }
             }
 
-            // Report Language
+            // App Language (UI)
             item {
-                SettingsSection(title = "📄 Report Language (PDF)") {
+                SettingsSection(title = "🌐 App Language / لغة التطبيق") {
                     RadioButtonRow(
-                        label = "Arabic (العربية)",
+                        label = "العربية (Arabic)",
                         selected = settings.reportLanguage == "ar",
-                        onClick = { viewModel.setReportLanguage("ar") }
+                        onClick = {
+                            viewModel.setReportLanguage("ar")
+                            viewModel.setAppLanguage("ar")
+                            try {
+                                val activity = context.findActivity()
+                                activity?.let { act ->
+                                    com.civileg.app.utils.LocaleHelper.setLocale(act, "ar")
+                                    act.recreate()
+                                }
+                            } catch (_: Exception) {}
+                        }
                     )
                     RadioButtonRow(
-                        label = "English",
+                        label = "English (الإنجليزية)",
                         selected = settings.reportLanguage == "en",
-                        onClick = { viewModel.setReportLanguage("en") }
+                        onClick = {
+                            viewModel.setReportLanguage("en")
+                            viewModel.setAppLanguage("en")
+                            try {
+                                val activity = context.findActivity()
+                                activity?.let { act ->
+                                    com.civileg.app.utils.LocaleHelper.setLocale(act, "en")
+                                    act.recreate()
+                                }
+                            } catch (_: Exception) {}
+                        }
                     )
                 }
             }
@@ -188,6 +211,15 @@ private fun RadioButtonRow(
         Spacer(modifier = Modifier.width(8.dp))
         Text(label)
     }
+}
+
+private fun android.content.Context.findActivity(): ComponentActivity? {
+    var ctx = this
+    while (ctx is android.content.ContextWrapper) {
+        if (ctx is ComponentActivity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 @Composable

@@ -43,15 +43,9 @@ object FrameAnalysisPdfExporter {
         val document = Document(pdfDoc, PageSize.A4)
         document.setMargins(36f, 36f, 36f, 36f)
 
-        // Arabic font
-        val fontPath = "${context.filesDir}/fonts/NotoNaskhArabic-Regular.ttf"
-        val boldFontPath = "${context.filesDir}/fonts/NotoNaskhArabic-Bold.ttf"
-        val arabicFont: PdfFont = if (File(fontPath).exists()) {
-            PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED)
-        } else PdfFontFactory.createFont("Helvetica")
-        val arabicBold: PdfFont = if (File(boldFontPath).exists()) {
-            PdfFontFactory.createFont(boldFontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED)
-        } else PdfFontFactory.createFont("Helvetica-Bold")
+        // Arabic font - use ArabicFontProvider (never returns null)
+        val arabicFont: PdfFont = ArabicFontProvider.getArabicPdfFont(context, bold = false)
+        val arabicBold: PdfFont = ArabicFontProvider.getArabicPdfFont(context, bold = true)
 
         // === Page 1: Frame Geometry + Drawing ===
         // Title

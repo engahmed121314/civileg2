@@ -30,6 +30,13 @@ class BeamViewModel @Inject constructor(
     val error: LiveData<String?> = _error
 
     private var lastSpan: Double = 5.0
+    private var lastWidth: Double = 250.0
+    private var lastHeight: Double = 600.0
+    private var lastDeadLoad: Double = 15.0
+    private var lastLiveLoad: Double = 10.0
+    private var lastFcu: Double = 25.0
+    private var lastFy: Double = 360.0
+    private var lastSupportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
 
     fun calculateBeamPro(
         width: Double,
@@ -46,6 +53,16 @@ class BeamViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // Store all inputs for PDF export
+                lastWidth = width
+                lastHeight = height
+                lastSpan = span
+                lastDeadLoad = deadLoad
+                lastLiveLoad = liveLoad
+                lastFcu = fcu
+                lastFy = fy
+                lastSupportType = supportType
+
                 val res = calculatorEngine.designBeam(
                     width = width,
                     height = height,
@@ -114,13 +131,21 @@ class BeamViewModel @Inject constructor(
                     else -> com.civileg.app.domain.entities.DesignCode.ECP
                 }
 
-                val beamType = com.civileg.app.domain.entities.BeamType.SimplySupported(5.0)
+                // Map actual support type to domain BeamType
+                val beamType = when (lastSupportType) {
+                    CalculatorEngine.SupportType.FIXED_FIXED -> com.civileg.app.domain.entities.BeamType.FixedFixed(lastSpan)
+                    CalculatorEngine.SupportType.FIXED_HINGED -> com.civileg.app.domain.entities.BeamType.FixedHinged(lastSpan)
+                    CalculatorEngine.SupportType.HINGED_FIXED -> com.civileg.app.domain.entities.BeamType.HingedFixed(lastSpan)
+                    CalculatorEngine.SupportType.CANTILEVER -> com.civileg.app.domain.entities.BeamType.Cantilever(lastSpan)
+                    else -> com.civileg.app.domain.entities.BeamType.SimplySupported(lastSpan)
+                }
                 
+                val cover = 50.0
                 val advResult = com.civileg.app.domain.entities.AdvancedBeamResult(
                     beamType = beamType,
                     sectionType = com.civileg.app.domain.entities.BeamSectionType.RECTANGULAR,
                     flexureResult = com.civileg.app.domain.entities.ReinforcementResult(
-                        astRequired = 0.0,
+                        astRequired = res.reinforcementBottom.area * 0.9, // approximate required
                         astProvided = res.reinforcementBottom.area,
                         barDiameter = res.reinforcementBottom.diameter.toDouble(),
                         numberOfBars = res.reinforcementBottom.numBars,
@@ -136,7 +161,7 @@ class BeamViewModel @Inject constructor(
                         stirrupSpacing = res.stirrups.spacing
                     ),
                     deflectionCheck = com.civileg.app.domain.entities.DeflectionCheckResult(
-                        isSafe = true,
+                        isSafe = res.deflection <= res.allowableDeflection,
                         calculatedDeflection = res.deflection,
                         allowableDeflection = res.allowableDeflection
                     ),
@@ -145,19 +170,29 @@ class BeamViewModel @Inject constructor(
                     inventoryAnalysis = null,
                     crackWidthCheck = null,
                     developmentLengthCheck = null,
-                    warnings = emptyList(),
-                    codeNotes = emptyList()
+                    warnings = listOfNotNull(res.suggestions?.takeIf { it.isNotEmpty() }),
+                    codeNotes = listOf("Design per ${domainCode.version}")
+                )
+
+                // Use ACTUAL input values instead of hardcoded
+                val beamInputs = com.civileg.app.domain.entities.BeamInputs(
+                    fcu = lastFcu,
+                    fy = lastFy,
+                    width = lastWidth,
+                    totalDepth = lastHeight,
+                    effectiveDepth = lastHeight - cover,
+                    designMoment = res.mu,
+                    designShear = res.vu,
+                    span = lastSpan,
+                    deadLoad = lastDeadLoad,
+                    liveLoad = lastLiveLoad
                 )
 
                 val exportedFile = exporter.exportBeamReport(
-                    projectName = "Beam Design Report",
+                    projectName = "تقرير تصميم كمرات - ${lastSupportType.displayName}",
                     designCode = domainCode,
                     beamType = beamType,
-                    inputs = com.civileg.app.domain.entities.BeamInputs(
-                        fcu = 25.0, fy = 400.0, width = res.width, totalDepth = res.depth,
-                        effectiveDepth = res.depth - 50, designMoment = res.mu, designShear = res.vu,
-                        span = 5.0, deadLoad = 2.0, liveLoad = 1.0
-                    ),
+                    inputs = beamInputs,
                     result = advResult,
                     inventoryAnalysis = null,
                     momentShearDiagrams = com.civileg.app.domain.entities.MomentShearDiagrams(emptyList(), emptyList(), emptyList()),

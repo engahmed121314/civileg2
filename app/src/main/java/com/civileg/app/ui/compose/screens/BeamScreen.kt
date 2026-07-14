@@ -48,6 +48,8 @@ fun BeamScreen(
     val error by viewModel.error.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
 
+    var pdfError by remember { mutableStateOf<String?>(null) }
+    // ... existing state vars ...
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     var designName by remember { mutableStateOf("كمرة B1") }
@@ -130,6 +132,14 @@ fun BeamScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BeamInputField(deadLoad, "Dead Load (kN/m)", { deadLoad = it }, Modifier.weight(1f))
                     BeamInputField(liveLoad, "Live Load (kN/m)", { liveLoad = it }, Modifier.weight(1f))
+                }
+            }
+
+            item {
+                Text("🔩 خواص المادة", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BeamInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
+                    BeamInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
                 }
             }
 
@@ -246,7 +256,9 @@ fun BeamScreen(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
-                                        // Handle error
+                                        pdfError = "حدث خطأ أثناء إنشاء تقرير PDF"
+                                    } else {
+                                        pdfError = null
                                     }
                                 }
                             },
@@ -292,7 +304,7 @@ fun BeamScreen(
                                 stirrupDia = res.stirrups.diameter.toDouble(),
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
-                                developmentLength = 0.0,
+                                developmentLength = res.developmentLength ?: 0.0,
                                 lapLength = 0.0,
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
@@ -306,7 +318,7 @@ fun BeamScreen(
 
                 item {
                     MomentShearForceDiagram(
-                        span = span.toDoubleOrNull() ?: 5.0,
+                        span = res.span ?: 5.0,
                         supportType = res.supportType.name,
                         deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
                         liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,

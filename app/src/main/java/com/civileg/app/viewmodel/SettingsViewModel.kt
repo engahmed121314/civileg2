@@ -79,6 +79,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setAppLanguage(lang: String) {
+        viewModelScope.launch {
+            repository.setReportLanguage(lang)
+        }
+    }
+
     fun setDefaultCode(code: DesignCode) {
         viewModelScope.launch {
             repository.setDefaultDesignCode(code.name)
