@@ -1,6 +1,7 @@
 package com.civileg.app
 
 import android.os.Bundle
+import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -16,15 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.civileg.app.ui.compose.components.WindowSizeClass
-import com.civileg.app.ui.compose.components.rememberWindowSizeClass
+import com.civileg.app.ui.compose.components.ProfessionalBottomNavBar
 import com.civileg.app.ui.compose.screens.*
 import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
+import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -32,12 +34,30 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    private var openDrawerAction: (() -> Unit)? = null
+
+    fun openDrawer() {
+        openDrawerAction?.invoke()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val savedLang = LocaleHelper.getLocale(this)
+        val config = resources.configuration
+        val locale = Locale(savedLang)
+        Locale.setDefault(locale)
+        config.setLocale(locale)
+        config.setLayoutDirection(locale)
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(config, resources.displayMetrics)
+
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
-            val settings by settingsViewModel.settings.collectAsState()
+            val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+            val projectViewModel: ProjectViewModel = hiltViewModel()
+            val designCount by projectViewModel.allDesigns
+                .collectAsStateWithLifecycle(initialValue = emptyList())
 
             val darkTheme = when (settings.themeMode) {
                 ThemeMode.LIGHT -> false
@@ -50,7 +70,16 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+                    val scope = rememberCoroutineScope()
+
+                    LaunchedEffect(Unit) {
+                        openDrawerAction = {
+                            scope.launch { drawerState.open() }
+                        }
+                    }
+
+                    AppNavigation(drawerState, designCount.size)
                 }
             }
         }
@@ -62,139 +91,176 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation() {
+fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
-    val windowSize = rememberWindowSizeClass()
+    var selectedBottomTab by remember { mutableIntStateOf(0) }
 
-    // For compact screens, use a modal drawer for additional navigation
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    // Map bottom nav tabs to routes
+    val bottomTabRoutes = listOf("home", "design_hub", "steel", "tools_hub", "more_hub")
 
-    // Determine if we need the modal drawer overlay (compact only, for "More" items)
-    val useModalDrawer = windowSize == WindowSizeClass.COMPACT
+    fun navigateToTab(index: Int) {
+        selectedBottomTab = index
+        val route = bottomTabRoutes[index]
+        if (index == 0) {
+            navController.navigate(AppScreen.Home.route) {
+                popUpTo(AppScreen.Home.route) { inclusive = true }
+            }
+        } else {
+            navController.navigate(route) {
+                popUpTo(AppScreen.Home.route) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
 
-    // Adaptive scaffold: on large screens the navigation is handled by the parent
-    if (useModalDrawer) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                ModalDrawerSheet {
-                    Spacer(Modifier.height(12.dp))
-                    Text("القائمة الرئيسية", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-                    HorizontalDivider()
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Home, null) },
-                        label = { Text("الرئيسية") },
-                        selected = false,
-                        onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Home.route) { popUpTo(0) } }
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Folder, null) },
-                        label = { Text("المشاريع") },
-                        selected = false,
-                        onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Projects.route) }
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, null) },
-                        label = { Text("الإعدادات") },
-                        selected = false,
-                        onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Settings.route) }
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(painterResource(id = R.drawable.ic_tools), null) },
-                        label = { Text("مخزن الموقع") },
-                        selected = false,
-                        onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Inventory.route) }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(Modifier.height(12.dp))
+                Text("القائمة الرئيسية", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                HorizontalDivider()
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Home, null) },
+                    label = { Text("الرئيسية") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Home.route) { popUpTo(0) { inclusive = true } } }
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Folder, null) },
+                    label = { Text("مشاريعي") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Projects.route) }
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Settings, null) },
+                    label = { Text("الإعدادات") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Settings.route) }
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(painterResource(id = R.drawable.ic_tools), null) },
+                    label = { Text("مخزن الموقع") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Inventory.route) }
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            bottomBar = {
+                ProfessionalBottomNavBar(
+                    selectedTab = selectedBottomTab,
+                    onTabSelected = { navigateToTab(it) },
+                    designCount = designCount
+                )
+            }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = AppScreen.Home.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                // ═══ MAIN TABS ═══
+                composable(AppScreen.Home.route) {
+                    selectedBottomTab = 0
+                    HomeScreen(
+                        onNavigateTo = { route -> navController.navigate(route) },
+                        onShowSettings = { navController.navigate(AppScreen.Settings.route) }
                     )
                 }
+
+                // ═══ DESIGN HUB (Tab 1) ═══
+                composable("design_hub") {
+                    DesignHubScreen(
+                        onNavigateTo = { route -> navController.navigate(route) },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ═══ STEEL (Tab 2) ═══
+                composable(AppScreen.SteelDesign.route) {
+                    selectedBottomTab = 2
+                    SteelDesignScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                // ═══ TOOLS HUB (Tab 3) ═══
+                composable("tools_hub") {
+                    ToolsHubScreen(
+                        onNavigateTo = { route -> navController.navigate(route) },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ═══ MORE HUB (Tab 4) ═══
+                composable("more_hub") {
+                    MoreHubScreen(
+                        onNavigateTo = { route -> navController.navigate(route) },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ═══ DESIGN MODULES ═══
+                composable(AppScreen.ColumnDesign.route) {
+                    ColumnScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.BeamDesign.route) {
+                    BeamScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.SlabDesign.route) {
+                    SlabScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.FootingDesign.route) {
+                    FootingScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.StairDesign.route) {
+                    StairScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.RetainingWall.route) {
+                    RetainingWallScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.TankDesign.route) {
+                    TankScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.SeismicAnalysis.route) {
+                    SeismicScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.FrameAnalysis.route) {
+                    FrameAnalysisScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                // ═══ QUICK TOOLS ═══
+                composable(AppScreen.Calculator.route) {
+                    CalculatorScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.SteelTables.route) {
+                    SteelTablesScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.UnitConverter.route) {
+                    UnitConverterScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.BOQ.route) {
+                    BOQScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                // ═══ PROJECT & SETTINGS ═══
+                composable(AppScreen.Projects.route) {
+                    ArchiveScreen(
+                        viewModel = hiltViewModel(),
+                        onProjectClick = { },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(AppScreen.Settings.route) {
+                    SettingsScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.Inventory.route) {
+                    InventoryScreen(onNavigateBack = { navController.popBackStack() })
+                }
             }
-        ) {
-            NavHostContent(navController = navController)
-        }
-    } else {
-        NavHostContent(navController = navController)
-    }
-}
-
-@Composable
-private fun NavHostContent(navController: androidx.navigation.compose.NavHostController) {
-    NavHost(
-        navController = navController,
-        startDestination = AppScreen.Home.route
-    ) {
-        composable(AppScreen.Home.route) {
-            HomeScreen(
-                onNavigateTo = { route -> navController.navigate(route) },
-                onShowSettings = { navController.navigate(AppScreen.Settings.route) }
-            )
-        }
-
-        composable(AppScreen.ColumnDesign.route) {
-            ColumnScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.BeamDesign.route) {
-            BeamScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.SlabDesign.route) {
-            SlabScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.FootingDesign.route) {
-            FootingScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.StairDesign.route) {
-            StairScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.RetainingWall.route) {
-            RetainingWallScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.TankDesign.route) {
-            TankScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.UnitConverter.route) {
-            UnitConverterScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.Settings.route) {
-            SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(AppScreen.Projects.route) {
-            ArchiveScreen(
-                viewModel = hiltViewModel(),
-                onProjectClick = {},
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(AppScreen.BOQ.route) {
-            BOQScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.SeismicAnalysis.route) {
-            SeismicScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.SteelDesign.route) {
-            SteelDesignScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.FrameAnalysis.route) {
-            FrameAnalysisScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(AppScreen.Inventory.route) {
-            InventoryScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

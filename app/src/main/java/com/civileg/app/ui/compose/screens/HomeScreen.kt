@@ -32,7 +32,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.db.DesignType
+import java.text.SimpleDateFormat
+import java.util.Locale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -44,15 +50,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
-import com.civileg.app.ui.compose.components.rememberWindowSizeClass
-import com.civileg.app.ui.compose.components.WindowSizeClass
-import com.civileg.app.ads.AdBannerSection
-import com.civileg.app.ads.RemoveAdsBanner
 
 // ══════════════════════════════════════════════════════════════════════
 // Color palette extensions for the Home Screen
@@ -138,15 +138,14 @@ private val enhancedDesignModules = listOf(
 )
 
 private val quickTools = listOf(
-    QuickTool("حاسبة علمية",    "Scientific Calculator",  Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  "calc"),
-    QuickTool("محول الوحدات",   "Unit Converter",         Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  "converter"),
-    QuickTool("جداول الحديد",   "Steel Rebar Tables",     Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, "steel_tables"),
-    QuickTool("كميات الأعمال",  "Quantity Surveying",     Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   "boq"),
-    QuickTool("التصدير PDF",    "PDF Export",             Icons.Default.PictureAsPdf,    ToolPdfBg,   ToolPdfAccent,   "pdf")
+    QuickTool("حاسبة علمية",    "Scientific Calculator",  Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  AppScreen.Calculator.route),
+    QuickTool("محول الوحدات",   "Unit Converter",         Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
+    QuickTool("جداول الحديد",   "Steel Rebar Tables",     Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
+    QuickTool("كميات الأعمال",  "Quantity Surveying",     Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+    QuickTool("مخزن الموقع",    "Site Inventory",         Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
 )
 
-// Stub recent projects — in a real app this comes from a ViewModel / Room
-private val stubRecentProjects = listOf<RecentProject>() // empty
+// Recent projects now loaded from DB via ViewModel in HomeScreen composable
 
 // ══════════════════════════════════════════════════════════════════════
 // Main Home Screen
@@ -156,22 +155,54 @@ private val stubRecentProjects = listOf<RecentProject>() // empty
 @Composable
 fun HomeScreen(
     onNavigateTo: (String) -> Unit,
-    onShowSettings: () -> Unit
+    onShowSettings: () -> Unit,
+    projectViewModel: ProjectViewModel = hiltViewModel()
 ) {
     val isDark = isSystemInDarkTheme()
+    val allDesigns by projectViewModel.allDesigns.observeAsState(initial = emptyList())
+    val allProjects by projectViewModel.allProjects.observeAsState(initial = emptyList())
+    val designCount = allDesigns.size
+    val uniqueCodes = allDesigns.map { it.codeUsed }.distinct().size
+    val uniqueTypes = allDesigns.map { it.type }.distinct().size
 
-    // Adaptive layout: determine grid columns based on window size
-    val windowSize = rememberWindowSizeClass()
-    val gridColumns = when (windowSize) {
-        WindowSizeClass.EXPANDED -> 4   // Large tablet: 4 columns
-        WindowSizeClass.MEDIUM -> 3     // Small tablet: 3 columns
-        WindowSizeClass.COMPACT -> 2    // Phone: 2 columns
-    }
-    val horizontalPadding = when (windowSize) {
-        WindowSizeClass.EXPANDED -> 24.dp
-        WindowSizeClass.MEDIUM -> 20.dp
-        WindowSizeClass.COMPACT -> 14.dp
-    }
+    val recentProjects = allDesigns
+        .sortedByDescending { it.createdAt }
+        .take(5)
+        .map { design ->
+            val typeLabel = when (design.type) {
+                DesignType.BEAM -> "كمرات"
+                DesignType.COLUMN -> "أعمدة"
+                DesignType.SLAB -> "بلاطات"
+                DesignType.FOOTING -> "قواعد"
+                DesignType.STAIRCASE -> "سلالم"
+                DesignType.RETAINING_WALL -> "حوائط سند"
+                DesignType.WATER_TANK -> "خزانات"
+                DesignType.SEISMIC -> "زلازل"
+                DesignType.STEEL_MEMBER -> "معدني"
+                DesignType.PILE -> "ركائز"
+                DesignType.STEEL_WAREHOUSE -> "مخزن معدني"
+            }
+            val icon = when (design.type) {
+                DesignType.BEAM -> Icons.Default.AccountBalance
+                DesignType.COLUMN -> Icons.Default.ViewColumn
+                DesignType.SLAB -> Icons.Default.ViewWeek
+                DesignType.FOOTING -> Icons.Default.Layers
+                DesignType.STAIRCASE -> Icons.Default.Stairs
+                DesignType.RETAINING_WALL -> Icons.Default.SensorDoor
+                DesignType.WATER_TANK -> Icons.Default.WaterDrop
+                DesignType.SEISMIC -> Icons.Default.Warning
+                DesignType.STEEL_MEMBER -> Icons.Default.Build
+                else -> Icons.Default.Description
+            }
+            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale("ar")).format(design.createdAt)
+            RecentProject(
+                name = design.name,
+                elementType = typeLabel,
+                date = dateStr,
+                code = design.codeUsed,
+                icon = icon
+            )
+        }
 
     Scaffold(
         topBar = {
@@ -215,7 +246,7 @@ fun HomeScreen(
         }
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(gridColumns),
+            columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
@@ -224,26 +255,26 @@ fun HomeScreen(
                 .background(
                     if (isDark) Color(0xFF0F0F1A) else Color(0xFFF5F6FA)
                 )
-                .padding(horizontal = horizontalPadding)
+                .padding(horizontal = 14.dp)
         ) {
             // ══════════════════════════════════════════
             // A. HEADER SECTION
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 HeaderSection(isDark = isDark)
             }
 
             // ══════════════════════════════════════════
             // B. QUICK STATS ROW
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(gridColumns) }) {
-                QuickStatsRow(isDark = isDark)
+            item(span = { GridItemSpan(2) }) {
+                QuickStatsRow(isDark = isDark, designCount = designCount, codeCount = uniqueCodes, typeCount = uniqueTypes)
             }
 
             // ══════════════════════════════════════════
             // C. MAIN DESIGN MODULES GRID
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 SectionHeader(
                     icon = Icons.Default.Engineering,
                     title = "التصميم الإنشائي",
@@ -262,14 +293,7 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // D. QUICK TOOLS SECTION (horizontal)
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(gridColumns) }) {
-                // ── Non-intrusive Banner Ad between Design & Tools sections ──
-                AdBannerSection(
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 SectionHeader(
                     icon = Icons.Default.Build,
                     title = "أدوات سريعة",
@@ -277,7 +301,7 @@ fun HomeScreen(
                 )
             }
 
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 QuickToolsRow(
                     isDark = isDark,
                     onToolClick = { onNavigateTo(it) }
@@ -287,7 +311,7 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // E. RECENT PROJECTS SECTION
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 SectionHeader(
                     icon = Icons.Default.History,
                     title = "آخر التصاميم",
@@ -295,9 +319,9 @@ fun HomeScreen(
                 )
             }
 
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 RecentProjectsSection(
-                    projects = stubRecentProjects,
+                    projects = recentProjects,
                     isDark = isDark
                 )
             }
@@ -305,21 +329,12 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // F. FOOTER
             // ══════════════════════════════════════════
-
-            // ── "Remove Ads" Upgrade Banner before footer ──
-            item(span = { GridItemSpan(gridColumns) }) {
-                RemoveAdsBanner(
-                    onUpgradeClick = { /* Navigate to premium upgrade screen */ },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 FooterSection(isDark = isDark)
             }
 
             // Bottom spacer
-            item(span = { GridItemSpan(gridColumns) }) {
+            item(span = { GridItemSpan(2) }) {
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
@@ -354,7 +369,7 @@ private fun HeaderSection(isDark: Boolean) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset { IntOffset(x = (-20).dp.roundToPx(), y = (-20).dp.roundToPx()) }
+                .offset(x = (-20).dp, y = (-20).dp)
                 .size(120.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.04f))
@@ -362,7 +377,7 @@ private fun HeaderSection(isDark: Boolean) {
         Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset { IntOffset(x = 30.dp.roundToPx(), y = 30.dp.roundToPx()) }
+                .offset(x = 30.dp, y = 30.dp)
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.03f))
@@ -477,7 +492,7 @@ private fun CodeBadge(code: String, color: Color) {
 // ══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun QuickStatsRow(isDark: Boolean) {
+private fun QuickStatsRow(isDark: Boolean, designCount: Int, codeCount: Int, typeCount: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -485,7 +500,7 @@ private fun QuickStatsRow(isDark: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         StatCard(
-            value = "0",
+            value = "$designCount",
             label = "تصميمات محفوظة",
             accentColor = StatCardBlue,
             icon = Icons.Default.Save,
@@ -493,16 +508,16 @@ private fun QuickStatsRow(isDark: Boolean) {
             modifier = Modifier.weight(1f)
         )
         StatCard(
-            value = "3",
-            label = "الأكواد المدعومة",
+            value = "$codeCount",
+            label = "الأكواد المستخدمة",
             accentColor = StatCardGreen,
             icon = Icons.Default.Gavel,
             isDark = isDark,
             modifier = Modifier.weight(1f)
         )
         StatCard(
-            value = "7+",
-            label = "عناصر التصميم",
+            value = "$typeCount+",
+            label = "أنواع العناصر",
             accentColor = StatCardOrange,
             icon = Icons.Default.Grid3x3,
             isDark = isDark,
@@ -612,7 +627,7 @@ private fun EnhancedModuleCard(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset { IntOffset(x = 12.dp.roundToPx(), y = (-12).dp.roundToPx()) }
+                    .offset(x = 12.dp, y = (-12).dp)
                     .size(50.dp)
                     .clip(CircleShape)
                     .background(module.accentColor.copy(alpha = 0.08f))

@@ -22,4 +22,6 @@ sealed class AppScreen(val route: String, val title: String, val iconRes: Int) {
     object Projects : AppScreen("projects", "مشاريعي", R.drawable.ic_folder)
     object Settings : AppScreen("settings", "الإعدادات", R.drawable.ic_settings)
     object Inventory : AppScreen("inventory", "مخزن الموقع", R.drawable.ic_tools)
+    object Calculator : AppScreen("calculator", "الحاسبة العلمية", R.drawable.ic_settings)
+    object SteelTables : AppScreen("steel_tables", "جداول الحديد", R.drawable.ic_tools)
 }
