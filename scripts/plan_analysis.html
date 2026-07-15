@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CivilEG2 - تحليل خطة التطوير</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@page {
+    size: 720px 1020px;
+    margin: 0;
+}
+:root {
+    --c-bg: #0F172A;
+    --c-surface: #1E293B;
+    --c-surface2: #334155;
+    --c-text: #F1F5F9;
+    --c-text-muted: #94A3B8;
+    --c-accent: #3B82F6;
+    --c-accent2: #10B981;
+    --c-accent3: #F59E0B;
+    --c-danger: #EF4444;
+    --c-success: #22C55E;
+    --c-warning: #F59E0B;
+    --c-partial: #F59E0B;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 720px;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Cairo', 'Inter', sans-serif;
+    direction: rtl;
+    line-height: 1.75;
+}
+@media screen {
+    html {
+        height: auto;
+        display: flex;
+        justify-content: center;
+        background: #1a1a2e;
+    }
+    body {
+        transform-origin: top center;
+        margin: 20px auto;
+    }
+}
+
+/* Cover Page */
+.cover {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    break-after: page;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    background: linear-gradient(160deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+}
+.cover::before {
+    content: '';
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.cover::after {
+    content: '';
+    position: absolute;
+    bottom: 80px;
+    left: 60px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.cover-tag {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+}
+.cover-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: #FFFFFF;
+    line-height: 1.3;
+    margin: 0 60px 16px;
+    position: relative;
+    z-index: 1;
+}
+.cover-subtitle {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--c-text-muted);
+    margin: 0 80px 30px;
+    position: relative;
+    z-index: 1;
+    line-height: 1.6;
+}
+.cover-line {
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-accent), var(--c-accent2));
+    border-radius: 2px;
+    margin: 30px auto 40px auto;
+    position: relative;
+    z-index: 1;
+}
+.cover-meta {
+    font-size: 13px;
+    color: var(--c-text-muted);
+    position: relative;
+    z-index: 1;
+}
+.cover-meta span {
+    margin: 0 8px;
+}
+.cover-badge {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 24px;
+    z-index: 1;
+}
+.cover-stat {
+    text-align: center;
+}
+.cover-stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+.cover-stat-label {
+    font-size: 11px;
+    color: var(--c-text-muted);
+    margin-top: 8px;
+}
+
+/* Main Content */
+.main-content {
+    padding: 50px 60px 40px 60px;
+}
+
+/* Status Overview */
+.status-overview {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 36px;
+    break-inside: avoid;
+}
+.status-card {
+    background: var(--c-surface);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.status-card-num {
+    font-size: 32px;
+    font-weight: 800;
+}
+.status-card-num.done { color: var(--c-success); }
+.status-card-num.partial { color: var(--c-warning); }
+.status-card-num.pending { color: var(--c-danger); }
+.status-card-label {
+    font-size: 12px;
+    color: var(--c-text-muted);
+    margin-top: 4px;
+}
+
+/* Section Header */
+.chapter-header {
+    break-after: avoid;
+    break-inside: avoid;
+    margin-top: 32px;
+    margin-bottom: 20px;
+}
+.section-tag {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-accent);
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+.section-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+.divider {
+    width: 50px;
+    height: 3px;
+    background: var(--c-accent);
+    border-radius: 2px;
+    margin-bottom: 8px;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+.status-badge.done { background: rgba(34,197,94,0.15); color: var(--c-success); }
+.status-badge.partial { background: rgba(245,158,11,0.15); color: var(--c-warning); }
+.status-badge.pending { background: rgba(239,68,68,0.15); color: var(--c-danger); }
+
+/* Body Text */
+.body-text {
+    font-size: 14.5px;
+    color: var(--c-text);
+    line-height: 1.85;
+    margin-bottom: 14px;
+    text-align: justify;
+}
+
+/* Note Cards */
+.note-card {
+    background: var(--c-surface);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    border-right: 3px solid var(--c-accent);
+    break-inside: avoid;
+}
+.note-card.warning {
+    border-right-color: var(--c-warning);
+    background: rgba(245,158,11,0.05);
+}
+.note-card.danger {
+    border-right-color: var(--c-danger);
+    background: rgba(239,68,68,0.05);
+}
+.note-card.success {
+    border-right-color: var(--c-success);
+    background: rgba(34,197,94,0.05);
+}
+.note-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 6px;
+}
+.note-card-text {
+    font-size: 13.5px;
+    color: var(--c-text-muted);
+    line-height: 1.75;
+}
+
+/* Subsection */
+.subsection {
+    margin-top: 22px;
+    margin-bottom: 12px;
+}
+.subsection-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #E2E8F0;
+    margin-bottom: 10px;
+}
+
+/* Item List */
+.item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 14px 0;
+}
+.item-list li {
+    padding: 8px 0;
+    padding-right: 20px;
+    position: relative;
+    font-size: 13.5px;
+    color: var(--c-text);
+    line-height: 1.7;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.item-list li:last-child {
+    border-bottom: none;
+}
+.item-list li::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 16px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--c-accent);
+}
+
+/* Priority Table */
+.priority-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 18px 0;
+    font-size: 13px;
+    break-inside: avoid;
+}
+.priority-table th {
+    background: var(--c-surface);
+    color: #FFFFFF;
+    font-weight: 700;
+    padding: 10px 14px;
+    text-align: right;
+    border-bottom: 2px solid var(--c-accent);
+}
+.priority-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    color: var(--c-text);
+    vertical-align: top;
+}
+.priority-table tr:last-child td {
+    border-bottom: none;
+}
+.priority-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.priority-tag.high { background: rgba(239,68,68,0.15); color: var(--c-danger); }
+.priority-tag.medium { background: rgba(245,158,11,0.15); color: var(--c-warning); }
+.priority-tag.low { background: rgba(59,130,246,0.15); color: var(--c-accent); }
+
+/* Progress Bar */
+.progress-container {
+    margin: 14px 0 18px 0;
+    break-inside: avoid;
+}
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+.progress-label span:first-child { color: var(--c-text); font-weight: 600; }
+.progress-label span:last-child { color: var(--c-text-muted); }
+.progress-bar {
+    height: 8px;
+    background: var(--c-surface);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Summary Box */
+.summary-box {
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(16,185,129,0.05));
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    break-inside: avoid;
+}
+.summary-box-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--c-accent);
+    margin-bottom: 10px;
+}
+
+/* Ending Page */
+.ending {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    break-before: page;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(160deg, #0F172A 0%, #1E293B 100%);
+}
+.ending-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 16px;
+}
+.ending-text {
+    font-size: 15px;
+    color: var(--c-text-muted);
+    max-width: 500px;
+    line-height: 1.8;
+}
+.ending-line {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-accent), var(--c-accent2));
+    border-radius: 2px;
+    margin: 24px 0;
+}
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+    <div class="cover-tag">CivilEG2 - Development Plan Analysis</div>
+    <div class="cover-title">تحليل شامل لخطة التطوير الخمسية</div>
+    <div class="cover-subtitle">ملاحظات تفصيلية وتوصيات فنية لكل مرحلة من مراحل خطة تطوير تطبيق المهندس المدني</div>
+    <div class="cover-meta">
+        <span>يوليو 2026</span>
+        <span>|</span>
+        <span>الإصدار 1.1.0</span>
+    </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+<!-- Status Overview -->
+<div class="status-overview">
+    <div class="status-card">
+        <div class="status-card-num done">1</div>
+        <div class="status-card-label">مرحلة مكتملة</div>
+    </div>
+    <div class="status-card">
+        <div class="status-card-num partial">4</div>
+        <div class="status-card-label">مراحل جزئية</div>
+    </div>
+    <div class="status-card">
+        <div class="status-card-num pending">0</div>
+        <div class="status-card-label">لم تبدأ</div>
+    </div>
+</div>
+
+<!-- Phase 1 -->
+<div class="chapter-header">
+    <div class="section-tag">المرحلة الأولى</div>
+    <div class="section-title">تحسين سرعة بناء Gradle</div>
+    <div class="divider"></div>
+</div>
+<div class="status-badge done">مكتمل 100%</div>
+
+<div class="body-text">
+تم تنفيذ هذه المرحلة بالكامل في التزام الأخير (5137e74). شملت التحسينات رفع ذاكرة JVM من 2 جيجابايت إلى 4 جيجابايت لتسريع معالجة التعليقات التوضيحية (KSP/Hilt)، وتفعيل خيار التخزين المؤقت للتكوين (configuration-cache) الذي يسرع عمليات إعادة البناء بشكل ملحوظ، بالإضافة إلى استخدام مترجم Kotlin في نفس العملية (in-process) بدلا من عملية منفصلة. كما تم تعطيل الميزات غير المستخدمة مثل AIDL وRenderScript وShaders لتقليل وقت المعالجة.
+</div>
+
+<div class="note-card success">
+    <div class="note-card-title">ما تم تنفيذه فعلا</div>
+    <div class="note-card-text">
+        زيادة كومة JVM إلى 4 جيجابايت - كومة Kotlin Daemon إلى 2 جيجابايت - تفعيل التخزين المؤقت للتكوين - استخدام مترجم Kotlin في نفس العملية - تعطيل AIDL وRenderScript وShaders - تفعيل البناء المتوازي والتخزين المؤقت
+    </div>
+</div>
+
+<div class="note-card">
+    <div class="note-card-title">ملاحظة إضافية مقترحة</div>
+    <div class="note-card-text">
+        يمكن إضافة ميزة Build Scan عبر Gradle Enterprise لتحليل أداء البناء بشكل أعمق، وكذلك تفعيل Kotlin Incremental Compilation بشكل صريح في إعدادات Kotlin. يوجد أيضا إمكانية تفعيل Gradle Build Cache عن بُعد لفريق العمل إذا تم التوسع مستقبلا.
+    </div>
+</div>
+
+<!-- Phase 2 -->
+<div class="chapter-header">
+    <div class="section-tag">المرحلة الثانية</div>
+    <div class="section-title">الهندسة المعمارية (MVVM / التنظيم النمطي)</div>
+    <div class="divider"></div>
+</div>
+<div class="status-badge partial">مكتمل 40% - يحتاج عمل جوهري</div>
+
+<div class="progress-container">
+    <div class="progress-label">
+        <span>نسبة الإنجاز</span>
+        <span>40%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: 40%; background: linear-gradient(90deg, var(--c-warning), var(--c-accent));"></div>
+    </div>
+</div>
+
+<div class="body-text">
+المشروع يمتلك أساسا جيدا في نمط MVVM مع 16 ViewModel وحقن التبعيات عبر Hilt ونمط الاستراتيجية (Strategy Pattern) في محرك الحسابات. لكن هناك مشاكل هيكلية جوهرية تحتاج إلى معالجة عاجلة قبل التوسع في الميزات الجديدة. أبرز هذه المشاكل وجود نظام حسابات مزدوج (CalculatorEngine القديم مقابل التسلسل الهرمي الجديد في domain/calculations)، وعدم اكتمال نمط Repository لمعظم الميزات، وغياب UseCases باستثناء اثنين فقط.
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">المشكلة الأولى: نظام الحسابات المزدوج</div>
+</div>
+<div class="note-card danger">
+    <div class="note-card-title">خطأ جوهري - CalculatorEngine (82 كيلوبايت) مقابل domain/calculations/</div>
+    <div class="note-card-text">
+        يوجد في المشروع نظامان متوازيان للحسابات: الأول هو CalculatorEngine في حزمة utils وهو ملف عملاق يضم جميع الحسابات في فئة واحدة (God Class). الثاني هو التسلسل الهرمي المنظم في domain/calculations/ الذي يستخدم نمط الاستراتيجية مع فئات أساسية مجردة وتطبيقات منفصلة لكل كود تصميم (ECP/ACI/SBC). هذا الازدواج يخلق ارتباكا في تحديد أي نظام هو المصدر الصحيح للحسابات، ويضاعف جهود الصيانة والتطوير.
+    </div>
+</div>
+<div class="body-text">
+التوصية الفنية هي إزالة CalculatorEngine تدريجيا ونقل أي منطق حسابي فريد غير موجود في domain/calculations/ إلى الفئات المنظمة. يجب أن يكون domain/calculations/ هو المصدر الوحيد للحسابات، مع التأكد من أن جميع ViewModels تستخدم CalculationFactory للحصول على تطبيقات الكود المناسبة بدلا من الاستدعاء المباشر لـ CalculatorEngine.
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">المشكلة الثانية: عدم اكتمال نمط Repository</div>
+</div>
+<div class="note-card warning">
+    <div class="note-card-title">فقط Project يمتلك Repository منفصل (واجهة + تطبيق)</div>
+    <div class="note-card-text">
+        من بين 11 كيانا في قاعدة البيانات، فقط Project يمتلك فصل طبقة Repository بشكل صحيح مع واجهة في domain/repository/ وتطبيق في data/repository/. باقي الكيانات (Beam, Column, Slab, Footing, Stair, RetainingWall, Tank, Inventory) يتم الوصول إلى قواعد بياناتها مباشرة من ViewModels أو عبر DesignRepository الذي يقع في حزمة db/ بدلا من data/repository/ مما ينتهك فصل الطبقات.
+    </div>
+</div>
+<div class="body-text">
+يجب إنشاء واجهات Repository لكل كيان وتطبيقاتها في data/repository/، مع نقل DesignRepository من حزمة db/ إلى حزمة data/repository/ لتوحيد البنية. كما يجب إنشاء UseCases لكل عملية حسابية رئيسية (تصميم العنصر، التحقق من المدخلات، حساب BOQ) بدلا من ترك المنطق في ViewModels.
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">المشكلة الثالثة: مشروع أحادي الوحدة</div>
+</div>
+<div class="note-card warning">
+    <div class="note-card-title">كل الكود في وحدة :app واحدة - بدون تنظيم نمطي</div>
+    <div class="note-card-text">
+        المشروع حاليا يتكون من وحدة واحدة فقط (:app) تحتوي على كل شيء من واجهات المستخدم إلى محركات الحسابات إلى قاعدة البيانات. هذا يعني أن أي تغيير في مكون يتطلب إعادة بناء التطبيق بالكامل، كما أن الاختبارات المعزولة للوحدات الفردية تصبح صعبة التنفيذ. البنية الحالية (حزم domain/data/ui) توفر فصلا منطقيا لكنها غير مفرضة حدوديا بواسطة Gradle.
+    </div>
+</div>
+
+<div class="body-text">
+التنظيم النمطي المقترح يتضمن فصل المشروع إلى: وحدة :core (أنواع أساسية مشتركة وأدوات مساعدة)، وحدة :domain (كيانات وUseCases وواجهات Repositories)، وحدة :data (تنفيذ Repositories وقاعدة البيانات وDataStore)، وحدة :feature-design (شاشات التصميم الهيكلي)، وحدة :feature-tools (الأدوات المساعدة)، وحدة :app (نقطة الدخول وHilt والتجميع).
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">ملاحظات إضافية على الهيكل المعماري</div>
+</div>
+
+<table class="priority-table">
+    <thead>
+        <tr>
+            <th>المشكلة</th>
+            <th>الأثر</th>
+            <th>الأولوية</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>تكرار الكيانات (domain/entities مقابل db/)</td>
+            <td>تعقيد في التحويل بين الطبقات واحتمال عدم تناسق البيانات</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+        <tr>
+            <td>DesignRepository في حزمة db/ بدلا من data/</td>
+            <td>انتهاك فصل الطبقات وصعوبة في الاختبار المعزول</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+        <tr>
+            <td>وجود UseCase واحد فقط لكل من BOQ وInventory</td>
+            <td>منطق العمل مبعثر في ViewModels بدلا من طبقة منفصلة</td>
+            <td><span class="priority-tag medium">متوسطة</span></td>
+        </tr>
+        <tr>
+            <td>هجرة Compose غير مكتملة (~15 شاشة XML)</td>
+            <td>ازدواج في أنماط واجهة المستخدم وصعوبة الصيانة</td>
+            <td><span class="priority-tag medium">متوسطة</span></td>
+        </tr>
+        <tr>
+            <td>استخدام fallbackToDestructiveMigration في Room</td>
+            <td>فقدان بيانات المستخدم عند تحديث إصدار قاعدة البيانات</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Phase 3 -->
+<div class="chapter-header">
+    <div class="section-tag">المرحلة الثالثة</div>
+    <div class="section-title">تكامل قاعدة البيانات وFirebase</div>
+    <div class="divider"></div>
+</div>
+<div class="status-badge partial">مكتمل 35% - Room جاهزة، Firebase غير موجود</div>
+
+<div class="progress-container">
+    <div class="progress-label">
+        <span>نسبة الإنجاز</span>
+        <span>35%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: 35%; background: linear-gradient(90deg, var(--c-danger), var(--c-warning));"></div>
+    </div>
+</div>
+
+<div class="body-text">
+تم دمج Room بشكل كامل مع 11 كيانا و11 واجهة DAO ونظام تحويلات (Converters) يتعامل مع التواريخ وحالات المشروع وأنواع التصميم. قاعدة البيانات في الإصدار السادس مع دعم KSP للمعالجة التوضيحية. لكن هناك مشكلة حرجة في استراتيجية الترحيل (Migration) حيث يستخدم المشروع fallbackToDestructiveMigration مما يعني أن أي تحديث لقاعدة البيانات سيؤدي إلى حذف جميع بيانات المستخدم. هذا غير مقبول لتطبيق إنتاجي.
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">حالة Room الحالية</div>
+</div>
+<div class="note-card success">
+    <div class="note-card-title">البنية موجودة وتعمل</div>
+    <div class="note-card-text">
+        11 كيانا (Project, Design, MaterialItem, Footing, ColumnEntity, Slab, Beam, Stair, RetainingWall, Tank, InventoryItem) - 11 واجهة DAO - فئة Converters للتاريخ والحالات - إصدار قاعدة البيانات 6 - معالجة عبر KSP بدلا من kapt
+    </div>
+</div>
+
+<div class="note-card danger">
+    <div class="note-card-title">مشكلة حرجة: استراتيجية الترحيل المدمرة</div>
+    <div class="note-card-text">
+        استخدام fallbackToDestructiveMigration() يعني أن كل تغيير في schema قاعدة البيانات (إضافة عمود، تعديل نوع، إضافة جدول) سيحذف جميع بيانات المستخدم السابقة. يجب كتابة Migration لكل إصدار جديد. مع 11 جدولا، يجب البدء فورا في إنشاء ملفات Migration قبل أي إصدار إنتاجي.
+    </div>
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">Firebase - غير موجود بالكامل</div>
+</div>
+<div class="note-card danger">
+    <div class="note-card-title">لا يوجد أي تكامل مع Firebase</div>
+    <div class="note-card-text">
+        لا توجد أي تبعيات Firebase في المشروع. لا يوجد ملف google-services.json، ولا أي كلاس مرتبط بـ Firebase. الخدمات غير المتوفرة تشمل: Crashlytics لتتبع الأعطال، Analytics لتحليل استخدام التطبيق، Cloud Firestore للمزامنة السحابية، Remote Config للإعدادات عن بُعد، وAuthentication للمصادقة.
+    </div>
+</div>
+
+<div class="body-text">
+لتكامل Firebase المطلوب، يجب أولا إضافة مكتبة Google Services في ملف build.gradle.kts للمشروع، ثم إضافة التبعيات المطلوبة. الأولوية القصوى هي Crashlytics لتتبع الأعطال في الإصدار الإنتاجي لأنه لا يمكن إصلاح مشاكل لا تعرف عنها. يليه Analytics لفهم سلوك المستخدمين وأي الشاشات الأكثر استخداما. Cloud Firestore يأتي لاحقا عند الحاجة إلى مزامنة البيانات بين الأجهزة أو النسخ الاحتياطي السحابي.
+</div>
+
+<table class="priority-table">
+    <thead>
+        <tr>
+            <th>الخدمة</th>
+            <th>الغرض</th>
+            <th>الأولوية</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Firebase Crashlytics</td>
+            <td>تتبع الأعطال والتقلصات في الإصدار الإنتاجي</td>
+            <td><span class="priority-tag high">حرجة</span></td>
+        </tr>
+        <tr>
+            <td>Firebase Analytics</td>
+            <td>تحليل سلوك المستخدمين وأداء الشاشات</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+        <tr>
+            <td>Room Migration Strategy</td>
+            <td>حماية بيانات المستخدم عند تحديث قاعدة البيانات</td>
+            <td><span class="priority-tag high">حرجة</span></td>
+        </tr>
+        <tr>
+            <td>Cloud Firestore</td>
+            <td>مزامنة سحابية ونسخ احتياطي للمشاريع</td>
+            <td><span class="priority-tag medium">متوسطة</span></td>
+        </tr>
+        <tr>
+            <td>Remote Config</td>
+            <td>تعديل الإعدادات عن بُعد بدون تحديث التطبيق</td>
+            <td><span class="priority-tag low">منخفضة</span></td>
+        </tr>
+        <tr>
+            <td>Firebase Authentication</td>
+            <td>تسجيل دخول المستخدمين وحسابات متعددة</td>
+            <td><span class="priority-tag low">منخفضة</span></td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Phase 4 -->
+<div class="chapter-header">
+    <div class="section-tag">المرحلة الرابعة</div>
+    <div class="section-title">التحقيق المالي (الاشتراكات / الإعلانات)</div>
+    <div class="divider"></div>
+</div>
+<div class="status-badge partial">مكتمل 30% - البنية موجودة لكنها بالهوية التجريبية</div>
+
+<div class="progress-container">
+    <div class="progress-label">
+        <span>نسبة الإنجاز</span>
+        <span>30%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: 30%; background: linear-gradient(90deg, var(--c-danger), var(--c-warning));"></div>
+    </div>
+</div>
+
+<div class="body-text">
+نظام الإعلانات مدمج بشكل جيد من الناحية الهيكلية مع 3 ملفات مخصصة (AdManager, AdComponents, AdPreferences) وفلسفة إعلانات غير مزعجة. يدعم النظام البانرات والإعلانات بينية والمكافآت والإعلانات الأصلية مع تحكم في التكرار (إعلان بيني كل 3 عمليات تصميم). كما يدعم كتم الإعلانات للمستخدمين المميزين وموافقة GDPR عبر UMP. لكن جميع معرفات الإعلانات لا تزال معرفات اختبار من Google ويجب استبدالها قبل الإطلاق.
+</div>
+
+<div class="note-card danger">
+    <div class="note-card-title">مشكلة: جميع معرفات AdMob هي معرفات اختبار</div>
+    <div class="note-card-text">
+        معرف التطبيق ومعرفات جميع أنواع الإعلانات (Banner, Interstitial, Native, Rewarded) تستخدم قيم الاختبار (ca-app-pub-3940256099942544/...). يجب إنشاء حساب AdMob فعلي وإنشاء وحدات إعلانية حقيقية واستبدال هذه القيم. الإطلاق بهذه المعرفات لن ينتج أي إيراد.
+    </div>
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">نظام الاشتراكات - غير موجود</div>
+</div>
+<div class="note-card danger">
+    <div class="note-card-title">Google Play Billing Library غير مضافة</div>
+    <div class="note-card-text">
+        رغم وجود دعم isPremiumUser في AdManager وAdPreferences، لا يوجد أي تكامل فعلي مع Google Play Billing Library. لا يمكن حاليا شراء اشتراك مميز أو إدارة دورة حياة الاشتراك. الفحص الحالي للحالة المميزة هو محلي فقط ولا يتصل بأي خدمة فعلية.
+    </div>
+</div>
+
+<div class="body-text">
+لتطبيق نموذج Freemium المقترح، يجب إضافة Google Play Billing Library (com.android.billingclient:billing) وتنفيذ منطق الشراء والاسترداد. الميزات المقترحة للنسخة المميزة تشمل: إزالة جميع الإعلانات، تصدير PDF بدون علامة مائية، عدد غير محدود من المشاريع المحفوظة، تحليلات متقدمة، ومزامنة سحابية عبر Firebase. يجب أيضا تحديد مستويات الاشتراك (شهري/سنوي) مع خصم للسنة الأولى لتشجيع الاشتراك المبكر.
+</div>
+
+<table class="priority-table">
+    <thead>
+        <tr>
+            <th>العنصر</th>
+            <th>الحالة الحالية</th>
+            <th>المطلوب</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>AdMob App ID</td>
+            <td>معرف اختبار</td>
+            <td>إنشاء حساب AdMob واستبدال المعرفات</td>
+        </tr>
+        <tr>
+            <td>Banner Ads</td>
+            <td>مكونات جاهزة (معرفات اختبار)</td>
+            <td>استبدال المعرفات واختبار الإنتاج</td>
+        </tr>
+        <tr>
+            <td>Interstitial Ads</td>
+            <td>مدمج مع تحكم التكرار</td>
+            <td>استبدال المعرفات</td>
+        </tr>
+        <tr>
+            <td>Native Ads</td>
+            <td>عنصر نائب فقط (Placeholder)</td>
+            <td>تنفيذ Native Advanced Ad كامل</td>
+        </tr>
+        <tr>
+            <td>Rewarded Ads</td>
+            <td>معرف اختبار فقط</td>
+            <td>تنفيذ مكافآت مقابل ميزات مميزة مؤقتة</td>
+        </tr>
+        <tr>
+            <td>Google Play Billing</td>
+            <td>غير موجود</td>
+            <td>إضافة المكتبة وتنفيذ الشراء</td>
+        </tr>
+        <tr>
+            <td>التحقق من المشتريات</td>
+            <td>محلي فقط</td>
+            <td>التحقق من الخادم لحماية من التلاعب</td>
+        </tr>
+        <tr>
+            <td>GDPR / UMP</td>
+            <td>مدمج وجاهز</td>
+            <td>اختبار على أجهزة حقيقية في الاتحاد الأوروبي</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Phase 5 -->
+<div class="chapter-header">
+    <div class="section-tag">المرحلة الخامسة</div>
+    <div class="section-title">CI/CD والاختبارات</div>
+    <div class="divider"></div>
+</div>
+<div class="status-badge partial">مكتمل 25% - البنية موجودة لكن بها مشاكل</div>
+
+<div class="progress-container">
+    <div class="progress-label">
+        <span>نسبة الإنجاز</span>
+        <span>25%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: 25%; background: linear-gradient(90deg, var(--c-danger), var(--c-warning));"></div>
+    </div>
+</div>
+
+<div class="body-text">
+تم إنشاء مسار CI/CD عبر GitHub Actions يتضمن 4 وظائف: فحص Lint، اختبارات الوحدة، بناء Debug APK، وبناء Release AAB (عند إضافة تاج إصدار). لكن المسار الحالي يحتوي على مشكلة حرجة وهي عدم توافق إصدار Java حيث يستخدم المسار JDK 17 بينما المشروع يتطلب JDK 21. كما أن تغطية الاختبارات شبه معدومة بوجود 10 اختبارات فقط لتطبيق يحتوي على 40 محرك حسابي و170 ملف مصدري.
+</div>
+
+<div class="note-card danger">
+    <div class="note-card-title">مشكلة حرجة: عدم توافق إصدار Java في CI/CD</div>
+    <div class="note-card-text">
+        ملف android.yml يستخدم JAVA_VERSION: '17' في حين أن المشروع يطلب JDK 21. هذا سيؤدي إلى فشل البناء في CI/CD. يجب تغيير القيمة إلى '21' فورا. كما أن التخزين المؤقت لـ Gradle يستخدم hashFiles لملفات gradle.kts فقط دون تضمين libs.versions.toml الذي يحتوي على أرقام الإصدارات، مما قد يؤدي إلى استخدام تخزين مؤقت قديم عند تغيير الإصدارات فقط.
+    </div>
+</div>
+
+<div class="subsection">
+    <div class="subsection-title">حالة الاختبارات الحالية</div>
+</div>
+<div class="note-card warning">
+    <div class="note-card-title">تغطية اختبارية شبه معدومة - 10 اختبارات فقط</div>
+    <div class="note-card-text">
+        يوجد 3 ملفات اختبار فقط: ExampleUnitTest (اختبار افتراضي 2+2=4 بخطأ في اسم الحزمة)، CalculatorEngineTest (5 اختبارات لسلامة العوارض والأسطوانات والقواعد)، وECPColumnTest (4 اختبارات لقدرة المحورية وتسليح الأعمدة). لا يوجد أي اختبار للـ ViewModels أو Repositories أو DAOs أو مكونات Compose.
+    </div>
+</div>
+
+<div class="body-text">
+تغطية الاختبارات الحالية أقل من 2 بالمائة من الكود وهي نسبة غير مقبولة لأي تطبيق إنتاجي. مع وجود 16 ViewModel و11 DAO و40 محرك حسابي، يجب إنشاء اختبارات على الأقل لكل ViewModel (اختبارات الحالة والتحويلات) وكل محرك حسابي (اختبارات القيم الحدية والنتائج المتوقعة). يُنصح باستخدام مكتبة Turbine لاختبار StateFlow وMockK للكائنات الوهمية.
+</div>
+
+<table class="priority-table">
+    <thead>
+        <tr>
+            <th>العنصر</th>
+            <th>الحالة</th>
+            <th>الأولوية</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>إصلاح إصدار Java في CI/CD (17 إلى 21)</td>
+            <td>لم يُصلح بعد</td>
+            <td><span class="priority-tag high">حرجة</span></td>
+        </tr>
+        <tr>
+            <td>إعداد Secrets للتكوين (keystore, passwords)</td>
+            <td>غير موجود</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+        <tr>
+            <td>اختبارات ViewModels (16 ViewModel)</td>
+            <td>0 اختبارات</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+        <tr>
+            <td>اختبارات محركات الحسابات (40 محرك)</td>
+            <td>9 اختبارات فقط</td>
+            <td><span class="priority-tag high">عالية</span></td>
+        </tr>
+        <tr>
+            <td>اختبارات DAOs (11 واجهة)</td>
+            <td>0 اختبارات</td>
+            <td><span class="priority-tag medium">متوسطة</span></td>
+        </tr>
+        <tr>
+            <td>اختبارات Compose UI</td>
+            <td>0 اختبارات</td>
+            <td><span class="priority-tag medium">متوسطة</span></td>
+        </tr>
+        <tr>
+            <td>تقرير تغطية الاختبارات (JaCoCo)</td>
+            <td>غير موجود</td>
+            <td><span class="priority-tag medium">متوسطة</span></td>
+        </tr>
+        <tr>
+            <td>تخزين مؤقت يتضمن libs.versions.toml</td>
+            <td>غير مكتمل</td>
+            <td><span class="priority-tag low">منخفضة</span></td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Summary -->
+<div class="chapter-header">
+    <div class="section-tag">ملخص تنفيذي</div>
+    <div class="section-title">خريطة الطريق والأولويات</div>
+    <div class="divider"></div>
+</div>
+
+<div class="summary-box">
+    <div class="summary-box-title">التوصيات حسب الأولوية - الأسبوعان القادمان</div>
+    <div class="body-text" style="color: var(--c-text);">
+        الأول: إصلاح إصدار Java في CI/CD من 17 إلى 21 فورا لأنه يمنع البناء التلقائي بالكامل. الثاني: إنشاء Room Migration Strategy لأنها حماية أساسية لبيانات المستخدم. الثالث: إضافة Firebase Crashlytics لتتبع الأعطال قبل أي إصدار إنتاجي. الرابع: بدء اختبارات الوحدة لمحركات الحسابات لأنها المنطق الأكثر أهمية في التطبيق.
+    </div>
+</div>
+
+<div class="body-text">
+بناء على التحليل الشامل للمشروع، الوضع الحالي يمكن وصفه بأنه أساس متين يحتاج إلى تنظيم وترتيب. النقطة الإيجابية الكبرى هي أن محركات الحسابات مبنية بشكل ممتاز مع نمط الاستراتيجية ودعم 3 أكواد تصميم. لكن الهيكل المعماري المحيط بها يحتاج إلى ترتيب قبل إضافة ميزات جديدة. الهدف في المرحلة القادمة يجب أن يكون تثبيت الأساس (إصلاح CI/CD، حماية البيانات، اختبارات أساسية) بدلا من إضافة ميزات جديدة فوق أساس غير مستقر.
+</div>
+
+<div class="note-card">
+    <div class="note-card-title">ملاحظة حول ترتيب التنفيذ</div>
+    <div class="note-card-text">
+        يُنصح بشدة بعدم البدء بالتنظيم النمطي (Multi-module) إلا بعد استقرار الاختبارات. فصل المشروع إلى وحدات متعددة بدون اختبارات كافية قد يُقدم مشاكل جديدة (تبعيات دائرية، وصول خاص، بناء معقد). الأفضل هو: استقرار CI/CD ثم اختبارات أساسية (30 بالمائة تغطية) ثم Firebase Crashlytics ثم إصلاح استراتيجية الترحيل ثم التنظيم النمطي.
+    </div>
+</div>
+
+<div class="note-card success">
+    <div class="note-card-title">نقاط القوة الحالية</div>
+    <div class="note-card-text">
+        نمط الاستراتيجية في محركات الحسابات ممتاز - Hilt DI مدمج بشكل صحيح - Room مع 11 كيانا جاهزا - نظام ثنائي اللغة عربي/إنجليزي يعمل - 16 ViewModel جاهزة - دعم 3 أكواد تصميم (SBC/ECP/ACI) - رسومات هندسية احترافية - نظام إعلانات غير مزعج - أمان التطبيق (Play Integrity, ProGuard) - التوافق مع الأجهزة اللوحية والهواتف.
+    </div>
+</div>
+
+</div>
+
+<!-- ENDING PAGE -->
+<div class="ending">
+    <div class="ending-title">CivilEG2</div>
+    <div class="ending-line"></div>
+    <div class="ending-text">
+        هذا المستند هو تحليل تقني لحالة المشروع مقارنة بخطة التطوير الخمسية. الأرقام والأولويات مبنية على فحص الكود المصدري الفعلي وليس تقديرات نظرية. يُوصى بمراجعة هذا التحليل قبل بدء أي مرحلة تطوير جديدة.
+    </div>
+    <div class="ending-meta" style="font-size: 12px; color: var(--c-text-muted); margin-top: 30px;">
+        يوليو 2026 - الإصدار 1.1.0
+    </div>
+</div>
+
+</body>
+</html>
