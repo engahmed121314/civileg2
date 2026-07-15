@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -22,6 +23,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -76,7 +78,7 @@ fun MomentShearForceDiagram(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("تحليل القوى", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(stringResource(R.string.analysis_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Text("Moment & Shear Force Diagrams", color = Color(0xAAFFFFFF), fontSize = 10.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

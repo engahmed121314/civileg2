@@ -1,7 +1,10 @@
 package com.civileg.app.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -33,7 +36,9 @@ data class ColumnComposeUiState(
 )
 
 @HiltViewModel
-class ColumnComposeViewModel @Inject constructor() : ViewModel() {
+class ColumnComposeViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ColumnComposeUiState())
     val uiState: StateFlow<ColumnComposeUiState> = _uiState.asStateFlow()
@@ -100,7 +105,7 @@ class ColumnComposeViewModel @Inject constructor() : ViewModel() {
                 onSuccess = { CalculationResult.Success(it) },
                 onFailure = { e -> 
                     CalculationResult.Error(
-                        message = e.localizedMessage ?: "فشل الحساب الإنشائي",
+                        message = e.localizedMessage ?: appContext.getString(R.string.error_calculation_failed),
                         code = ErrorCode.CONVERGENCE_FAILED
                     )
                 }

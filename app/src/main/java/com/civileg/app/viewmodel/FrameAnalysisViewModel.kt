@@ -1,6 +1,8 @@
 package com.civileg.app.viewmodel
 
 import android.app.Application
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -9,6 +11,7 @@ import com.civileg.app.domain.calculations.ConcreteFrameDesign
 import com.civileg.app.domain.calculations.FrameAnalysisEngine
 import com.civileg.app.domain.calculations.SteelFrameDesign
 import com.civileg.app.domain.entities.*
+import com.civileg.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -232,7 +235,7 @@ class FrameAnalysisViewModel @Inject constructor(
             _steelResults.value = steelDesignResults
 
         } catch (e: Exception) {
-            _errorMessage.value = "خطأ: ${e.message}"
+            _errorMessage.value = application.getString(R.string.error_frame_analysis, e.message ?: "")
         } finally {
             _isLoading.value = false
         }
@@ -308,5 +311,12 @@ class FrameAnalysisViewModel @Inject constructor(
 enum class DiagramType(val displayNameAr: String) {
     BMD("مخطط العزوم"),
     SFD("مخطط القص"),
-    AFD("مخطط المحوري")
+    AFD("مخطط المحوري");
+
+    @Composable
+    fun localizedDisplayName(): String = when (this) {
+        BMD -> stringResource(R.string.diagram_bmd)
+        SFD -> stringResource(R.string.diagram_sfd)
+        AFD -> stringResource(R.string.diagram_afd)
+    }
 }

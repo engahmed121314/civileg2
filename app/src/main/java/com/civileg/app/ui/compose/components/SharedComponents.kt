@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 
 // ============================================================================
@@ -71,7 +73,7 @@ fun DesignCodeSelectorRow(
 ) {
     Column(modifier = modifier) {
         Text(
-            "الكود التصميمي",
+            stringResource(R.string.design_code_label),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -216,7 +218,7 @@ fun DesignStatusBanner(
     modifier: Modifier = Modifier
 ) {
     val color = DesignSystem.statusColor(ratio)
-    val statusText = DesignSystem.statusText(ratio)
+    val statusText = statusTextComposable(ratio)
     val statusIcon = when {
         ratio > 1.0f -> Icons.Default.Dangerous
         ratio > 0.9f -> Icons.Default.Warning
@@ -245,7 +247,7 @@ fun DesignStatusBanner(
                     Text(statusText, fontWeight = FontWeight.Bold, color = color)
                 }
                 Text(
-                    "نسبة الاستخدام",
+                    stringResource(R.string.utilization_ratio),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -298,9 +300,10 @@ fun DesignInputField(
 @Composable
 fun DetailedResultsCard(
     results: Map<String, String>,
-    title: String = "📊 نتائج التصميم التفصيلية",
+    title: String = "",
     modifier: Modifier = Modifier
 ) {
+    val resolvedTitle = title.ifEmpty { stringResource(R.string.detailed_results_title) }
     var expanded by remember { mutableStateOf(true) }
 
     Card(
@@ -318,7 +321,7 @@ fun DetailedResultsCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
@@ -373,7 +376,7 @@ fun BeamAnalysisResultsCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "📊 التحليل الإنشائي",
+                stringResource(R.string.analysis_title),
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.primary
@@ -392,7 +395,7 @@ fun BeamAnalysisResultsCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("الانحناء", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.flexure), fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Text(
                     "Mu = ${"%.1f".format(appliedMoment)} kN.m",
                     fontWeight = FontWeight.Bold,
@@ -414,7 +417,7 @@ fun BeamAnalysisResultsCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("القص", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.shear), fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Text(
                     "Vu = ${"%.1f".format(appliedShear)} kN",
                     fontWeight = FontWeight.Bold,
@@ -443,6 +446,14 @@ object DesignSystem {
         ratio > 0.4f -> "آمن ومقبول"
         else -> "غير اقتصادي"
     }
+}
+
+@Composable
+fun statusTextComposable(ratio: Float): String = when {
+    ratio > 1.0f -> stringResource(R.string.status_unsafe)
+    ratio > 0.9f -> stringResource(R.string.status_high_load)
+    ratio > 0.4f -> stringResource(R.string.status_safe_ideal)
+    else -> stringResource(R.string.status_uneconomical)
 }
 
 // ============================================================================
@@ -540,10 +551,11 @@ fun DesignActionButton(
  */
 @Composable
 fun FormulaCard(
-    title: String = "المعادلات التصميمية",
+    title: String = "",
     formulas: List<Pair<String, String>>,
     modifier: Modifier = Modifier
 ) {
+    val resolvedTitle = title.ifEmpty { stringResource(R.string.design_equations) }
     var expanded by remember { mutableStateOf(false) }
 
     Card(
@@ -565,7 +577,7 @@ fun FormulaCard(
                     Icon(Icons.Default.Info, contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,

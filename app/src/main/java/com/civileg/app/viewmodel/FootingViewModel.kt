@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
@@ -132,7 +133,7 @@ class FootingViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _error.value = "خطأ في تصدير PDF: ${e.message}"
+                    _error.value = context.getString(R.string.error_pdf_export, e.message ?: "")
                     _isExporting.value = false
                     onComplete(null)
                 }

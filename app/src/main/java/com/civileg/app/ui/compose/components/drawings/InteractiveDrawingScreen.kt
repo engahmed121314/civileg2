@@ -17,8 +17,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 
 /**
  * Interactive drawing wrapper that adds:
@@ -35,7 +37,7 @@ import androidx.compose.ui.unit.sp
 fun InteractiveDrawingScreen(
     title: String = "Engineering Drawing",
     subtitle: String = "Structural Detail",
-    viewModes: List<String> = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "المخطط"),
+    viewModes: List<String> = emptyList(),
     selectedViewMode: Int = 0,
     onViewModeChanged: (Int) -> Unit = {},
     drawingContent: @Composable () -> Unit,
@@ -44,6 +46,13 @@ fun InteractiveDrawingScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showInfo by remember { mutableStateOf(false) }
+
+    val resolvedViewModes = if (viewModes.isEmpty()) listOf(
+        stringResource(R.string.view_modes_all),
+        stringResource(R.string.view_modes_longitudinal),
+        stringResource(R.string.view_modes_cross),
+        stringResource(R.string.view_modes_plan)
+    ) else viewModes
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -68,7 +77,7 @@ fun InteractiveDrawingScreen(
             )
 
             // View mode tabs
-            if (viewModes.size > 1) {
+            if (resolvedViewModes.size > 1) {
                 Surface(
                     color = Color(0x22FFFFFF),
                     modifier = Modifier.fillMaxWidth()
@@ -81,7 +90,7 @@ fun InteractiveDrawingScreen(
                         divider = {},
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        viewModes.forEachIndexed { index, mode ->
+                        resolvedViewModes.forEachIndexed { index, mode ->
                             Tab(
                                 selected = selectedViewMode == index,
                                 onClick = { onViewModeChanged(index) },
@@ -153,10 +162,10 @@ fun InteractiveDrawingScreen(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        InfoRow("📌 العنوان", title)
-                        InfoRow("📐 النوع", subtitle)
-                        InfoRow("🔍 التكبير", "${"%.0f".format(scale * 100)}%")
-                        InfoRow("👆 إيماءة", "مزدوج = إعادة تعيين | قرص = تكبير")
+                        InfoRow("📌 ${stringResource(R.string.info_label_title)}", title)
+                        InfoRow("📐 ${stringResource(R.string.info_label_type)}", subtitle)
+                        InfoRow("🔍 ${stringResource(R.string.info_label_zoom)}", "${"%.0f".format(scale * 100)}%")
+                        InfoRow("👆 ${stringResource(R.string.info_label_gesture)}", stringResource(R.string.info_gesture_hint))
                     }
                 }
             }

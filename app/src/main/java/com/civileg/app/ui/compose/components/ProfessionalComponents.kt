@@ -42,7 +42,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 import kotlin.math.min
 
 // ============================================================================
@@ -92,10 +94,10 @@ object PremiumDesignSystem {
 
     @Composable
     fun statusText(ratio: Float): String = when {
-        ratio > 1.0f -> "المقطع غير آمن إنشائياً"
-        ratio > 0.9f -> "تحميل عالي (حذر)"
-        ratio > 0.4f -> "تصميم مثالي واقتصادي"
-        else -> "القطاع كبير (غير اقتصادي)"
+        ratio > 1.0f -> stringResource(R.string.status_section_unsafe)
+        ratio > 0.9f -> stringResource(R.string.status_high_load_warning)
+        ratio > 0.4f -> stringResource(R.string.status_ideal_economic)
+        else -> stringResource(R.string.status_oversized)
     }
 
     @Composable
@@ -229,9 +231,10 @@ fun PremiumInputField(
 fun SafetyStatusCard(
     utilizationRatio: Double,
     isSafe: Boolean,
-    title: String = "تقييم التصميم",
+    title: String = "",
     modifier: Modifier = Modifier
 ) {
+    val resolvedTitle = if (title.isEmpty()) stringResource(R.string.design_evaluation) else title
     val ratio = utilizationRatio.toFloat()
     val statusColor = PremiumDesignSystem.statusColor(ratio)
     val animatedRatio by animateFloatAsState(
@@ -282,7 +285,7 @@ fun SafetyStatusCard(
                         color = statusColor
                     )
                     Text(
-                        "نسبة الاستخدام",
+                        stringResource(R.string.utilization_ratio),
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -310,7 +313,7 @@ fun SafetyStatusCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    title,
+                    resolvedTitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -421,7 +424,7 @@ fun SafetyCheckList(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "تحققات الكود والمعايير",
+                stringResource(R.string.code_checks),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.primary
@@ -507,7 +510,7 @@ fun PremiumActionButtons(
             } else {
                 Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("تقرير PDF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(stringResource(R.string.pdf_report), fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
 
@@ -523,7 +526,7 @@ fun PremiumActionButtons(
             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.secondary)
             Spacer(modifier = Modifier.width(6.dp))
-            Text("حفظ", fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            Text(stringResource(R.string.save), fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.secondary)
         }
 
@@ -538,9 +541,10 @@ fun PremiumActionButtons(
 @Composable
 fun FormulaCard(
     formulas: List<String>,
-    title: String = "المعادلات الهندسية",
+    title: String = "",
     modifier: Modifier = Modifier
 ) {
+    val resolvedTitle = if (title.isEmpty()) stringResource(R.string.engineering_equations) else title
     AnimatedVisibility(
         visible = true,
         enter = fadeIn() + slideInVertically(),
@@ -557,7 +561,7 @@ fun FormulaCard(
                     Icon(Icons.Default.Functions, contentDescription = null,
                         tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
+                    Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 formulas.forEach { formula ->
@@ -624,7 +628,8 @@ fun CodeSelectorChips(
 // ============================================================================
 
 @Composable
-fun LoadingOverlay(message: String = "جاري التحليل...") {
+fun LoadingOverlay(message: String = "") {
+    val resolvedMessage = if (message.isEmpty()) stringResource(R.string.analyzing) else message
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Black.copy(alpha = 0.5f)
@@ -648,7 +653,7 @@ fun LoadingOverlay(message: String = "جاري التحليل...") {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        message,
+                        resolvedMessage,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
