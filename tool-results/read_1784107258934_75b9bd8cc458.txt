@@ -1,0 +1,850 @@
+     1→package com.civileg.app.ui.compose.screens
+     2→
+     3→import androidx.compose.foundation.Canvas
+     4→import androidx.compose.foundation.background
+     5→import androidx.compose.foundation.layout.*
+     6→import androidx.compose.foundation.lazy.LazyColumn
+     7→import androidx.compose.foundation.shape.RoundedCornerShape
+     8→import androidx.compose.foundation.text.KeyboardOptions
+     9→import androidx.compose.material.icons.Icons
+    10→import androidx.compose.material.icons.automirrored.filled.ArrowBack
+    11→import androidx.compose.material.icons.filled.*
+    12→import androidx.compose.material3.*
+    13→import androidx.compose.runtime.*
+    14→import androidx.compose.runtime.livedata.observeAsState
+    15→import androidx.compose.ui.Alignment
+    16→import androidx.compose.ui.Modifier
+    17→import androidx.compose.ui.geometry.Offset
+    18→import androidx.compose.ui.geometry.Size
+    19→import androidx.compose.ui.graphics.Color
+    20→import androidx.compose.ui.graphics.Path
+    21→import androidx.compose.ui.graphics.drawscope.Stroke
+    22→import androidx.compose.ui.graphics.nativeCanvas
+    23→import androidx.compose.ui.res.painterResource
+    24→import androidx.compose.ui.text.font.FontFamily
+    25→import androidx.compose.ui.text.font.FontWeight
+    26→import androidx.compose.ui.text.input.KeyboardType
+    27→import androidx.compose.animation.core.animateFloatAsState
+    28→import androidx.compose.animation.core.tween
+    29→import androidx.compose.ui.unit.dp
+    30→import androidx.compose.ui.unit.sp
+    31→import androidx.compose.ui.platform.LocalContext
+    32→import androidx.hilt.navigation.compose.hiltViewModel
+    33→import com.civileg.app.R
+    34→import com.civileg.app.utils.CalculatorEngine
+    35→import com.civileg.app.viewmodel.StairViewModel
+    36→import com.civileg.app.viewmodel.ProjectViewModel
+    37→import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
+    38→import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
+    39→import kotlin.math.*
+    40→
+    41→@OptIn(ExperimentalMaterial3Api::class)
+    42→@Composable
+    43→fun StairScreen(
+    44→    viewModel: StairViewModel = hiltViewModel(),
+    45→    projectViewModel: ProjectViewModel = hiltViewModel(),
+    46→    onNavigateBack: () -> Unit = {}
+    47→) {
+    48→    val context = LocalContext.current
+    49→    val result by viewModel.result.observeAsState()
+    50→    val isLoading by viewModel.isLoading.observeAsState(false)
+    51→    val isExporting by viewModel.isExporting.observeAsState(false)
+    52→    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    53→
+    54→    var showSaveDialog by remember { mutableStateOf(false) }
+    55→    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    56→    var designName by remember { mutableStateOf("سلم S1") }
+    57→    
+    58→    var selectedType by remember { mutableStateOf(CalculatorEngine.StairType.SINGLE_FLIGHT) }
+    59→    var span by remember { mutableStateOf("4.0") }
+    60→    var riser by remember { mutableStateOf("150") }
+    61→    var tread by remember { mutableStateOf("300") }
+    62→    var liveLoad by remember { mutableStateOf("4.0") }
+    63→    var deadLoad by remember { mutableStateOf("5.0") }
+    64→    var expandedType by remember { mutableStateOf(false) }
+    65→
+    66→    Scaffold(
+    67→        topBar = {
+    68→            TopAppBar(
+    69→                title = { Text("تصميم وتسليح السلالم Pro", fontWeight = FontWeight.Bold) },
+    70→                navigationIcon = {
+    71→                    IconButton(onClick = onNavigateBack) {
+    72→                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+    73→                    }
+    74→                },
+    75→                actions = {
+    76→                    if (isExporting) {
+    77→                        CircularProgressIndicator(
+    78→                            modifier = Modifier.size(24.dp).padding(end = 8.dp),
+    79→                            strokeWidth = 2.dp,
+    80→                            color = MaterialTheme.colorScheme.primary
+    81→                        )
+    82→                    } else {
+    83→                        if (result != null) {
+    84→                            IconButton(onClick = { viewModel.exportToPdf(context) {} }) {
+    85→                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF", tint = MaterialTheme.colorScheme.primary)
+    86→                            }
+    87→                        }
+    88→                    }
+    89→                    if (result != null) {
+    90→                        IconButton(onClick = { showSaveDialog = true }) {
+    91→                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+    92→                        }
+    93→                    }
+    94→                }
+    95→            )
+    96→        }
+    97→    ) { padding ->
+    98→        LazyColumn(
+    99→            modifier = Modifier
+   100→                .fillMaxSize()
+   101→                .padding(padding)
+   102→                .background(MaterialTheme.colorScheme.background)
+   103→                .padding(horizontal = 16.dp),
+   104→            verticalArrangement = Arrangement.spacedBy(16.dp)
+   105→        ) {
+   106→            item { SectionHeader("📐 نوع وأبعاد السلم", R.drawable.ic_stairs) }
+   107→
+   108→            item {
+   109→                ExposedDropdownMenuBox(
+   110→                    expanded = expandedType,
+   111→                    onExpandedChange = { expandedType = !expandedType },
+   112→                    modifier = Modifier.fillMaxWidth()
+   113→                ) {
+   114→                    OutlinedTextField(
+   115→                        value = selectedType.displayName,
+   116→                        onValueChange = {},
+   117→                        readOnly = true,
+   118→                        label = { Text("نوع السلم") },
+   119→                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+   120→                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
+   121→                        shape = RoundedCornerShape(12.dp)
+   122→                    )
+   123→                    ExposedDropdownMenu(expanded = expandedType, onDismissRequest = { expandedType = false }) {
+   124→                        CalculatorEngine.StairType.values().forEach { type ->
+   125→                            DropdownMenuItem(
+   126→                                text = { Text(type.displayName) },
+   127→                                onClick = {
+   128→                                    selectedType = type
+   129→                                    expandedType = false
+   130→                                }
+   131→                            )
+   132→                        }
+   133→                    }
+   134→                }
+   135→            }
+   136→
+   137→            item {
+   138→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   139→                    StairInputField(span, "الطول الأفقي L (m)", { span = it }, Modifier.weight(1f))
+   140→                    StairInputField(riser, "القائمة R (mm)", { riser = it }, Modifier.weight(1f))
+   141→                }
+   142→            }
+   143→
+   144→            item {
+   145→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   146→                    StairInputField(deadLoad, "D.L (kN/m²)", { deadLoad = it }, Modifier.weight(1f))
+   147→                    StairInputField(liveLoad, "L.L (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
+   148→                }
+   149→            }
+   150→
+   151→            item {
+   152→                Button(
+   153→                    onClick = {
+   154→                        viewModel.calculateStairPro(
+   155→                            type = selectedType,
+   156→                            span = span.toDoubleOrNull() ?: 4.0,
+   157→                            riser = riser.toDoubleOrNull() ?: 150.0,
+   158→                            tread = tread.toDoubleOrNull() ?: 300.0,
+   159→                            deadLoad = deadLoad.toDoubleOrNull() ?: 5.0,
+   160→                            liveLoad = liveLoad.toDoubleOrNull() ?: 4.0,
+   161→                            fcu = 25.0,
+   162→                            fy = 360.0,
+   163→                            preferredDiameter = 12,
+   164→                            code = CalculatorEngine.DesignCode.EGYPTIAN
+   165→                        )
+   166→                    },
+   167→                    modifier = Modifier.fillMaxWidth(),
+   168→                    shape = RoundedCornerShape(12.dp),
+   169→                    enabled = !isLoading
+   170→                ) {
+   171→                    Icon(Icons.Default.Calculate, contentDescription = null)
+   172→                    Spacer(Modifier.width(8.dp))
+   173→                    Text("إجراء الحسابات والرسم")
+   174→                }
+   175→            }
+   176→
+   177→            result?.let { res ->
+   178→                item { SectionHeader("📊 نتائج التصميم الإنشائي", R.drawable.ic_calculator) }
+   179→                
+   180→                item {
+   181→                    val ecoColor = when {
+   182→                        res.utilizationRatio > 1.0 -> Color.Red
+   183→                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+   184→                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+   185→                        else -> Color(0xFF2196F3)
+   186→                    }
+   187→
+   188→                    Card(
+   189→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+   190→                        shape = RoundedCornerShape(16.dp)
+   191→                    ) {
+   192→                        Column(modifier = Modifier.padding(16.dp)) {
+   193→                            Row(
+   194→                                modifier = Modifier.fillMaxWidth(),
+   195→                                verticalAlignment = Alignment.CenterVertically,
+   196→                                horizontalArrangement = Arrangement.SpaceBetween
+   197→                            ) {
+   198→                                Column(modifier = Modifier.weight(1f)) {
+   199→                                    Row(verticalAlignment = Alignment.CenterVertically) {
+   200→                                        Icon(
+   201→                                            if (res.utilizationRatio <= 1.0) Icons.Default.Verified
+   202→                                            else Icons.Default.Dangerous,
+   203→                                            contentDescription = null,
+   204→                                            tint = ecoColor
+   205→                                        )
+   206→                                        Spacer(Modifier.width(8.dp))
+   207→                                        Text(
+   208→                                            if (res.utilizationRatio > 1.0) "تصميم غير آمن! ❌"
+   209→                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+   210→                                            else if (res.utilizationRatio > 0.4) "تصميم مثالي واقتصادي ✅"
+   211→                                            else "قطاع كبير (غير اقتصادي) 🔵",
+   212→                                            fontWeight = FontWeight.Bold,
+   213→                                            color = ecoColor
+   214→                                        )
+   215→                                    }
+   216→                                    Text(
+   217→                                        "المستشار الإنشائي: نسبة الاستهلاك",
+   218→                                        style = MaterialTheme.typography.labelSmall,
+   219→                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+   220→                                    )
+   221→                                }
+   222→
+   223→                                Box(contentAlignment = Alignment.Center) {
+   224→                                    val animatedRatio by animateFloatAsState(
+   225→                                        targetValue = res.utilizationRatio.toFloat(),
+   226→                                        animationSpec = tween(1000), label = ""
+   227→                                    )
+   228→                                    CircularProgressIndicator(
+   229→                                        progress = { animatedRatio },
+   230→                                        modifier = Modifier.size(60.dp),
+   231→                                        strokeWidth = 6.dp,
+   232→                                        color = ecoColor,
+   233→                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+   234→                                    )
+   235→                                    Text(
+   236→                                        "${(res.utilizationRatio * 100).toInt()}%",
+   237→                                        fontWeight = FontWeight.Bold,
+   238→                                        fontSize = 12.sp
+   239→                                    )
+   240→                                }
+   241→                            }
+   242→                        }
+   243→                    }
+   244→                }
+   245→
+   246→                item {
+   247→                    Card(
+   248→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f)),
+   249→                        shape = RoundedCornerShape(16.dp)
+   250→                    ) {
+   251→                        Column(modifier = Modifier.padding(16.dp)) {
+   252→                            ResultRow("سمك البلاطة ts", "${res.thickness.toInt()} mm")
+   253→                            ResultRow("التسليح الرئيسي", res.reinforcement.barString)
+   254→                            ResultRow("تسليح التوزيع", res.distributionReinforcement.barString)
+   255→                        }
+   256→                    }
+   257→                }
+   258→
+   259→                item {
+   260→                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   261→                        Button(
+   262→                            onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
+   263→                            modifier = Modifier.weight(1f),
+   264→                            shape = RoundedCornerShape(12.dp),
+   265→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+   266→                            enabled = !isExporting
+   267→                        ) {
+   268→                            if (isExporting) {
+   269→                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+   270→                            } else {
+   271→                                Icon(Icons.Default.PictureAsPdf, null)
+   272→                                Spacer(Modifier.width(8.dp))
+   273→                                Text("تقرير PDF")
+   274→                            }
+   275→                        }
+   276→
+   277→                        Button(
+   278→                            onClick = { showSaveDialog = true },
+   279→                            modifier = Modifier.weight(1f),
+   280→                            shape = RoundedCornerShape(12.dp),
+   281→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   282→                        ) {
+   283→                            Icon(Icons.Default.Save, null)
+   284→                            Spacer(Modifier.width(8.dp))
+   285→                            Text("حفظ")
+   286→                        }
+   287→                    }
+   288→                }
+   289→
+   290→                item {
+   291→                    Text("🎨 رسم تفصيلي للتسليح (Full Reinforcement)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   292→                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(300.dp))
+   293→                }
+   294→
+   295→                item {
+   296→                    InteractiveDrawingScreen(
+   297→                        title = "رسم السلم التفصيلي",
+   298→                        subtitle = "Staircase Reinforcement Detail",
+   299→                        drawingContent = {
+   300→                            ProfessionalStairDrawing(
+   301→                                stairWidth = 1200.0,
+   302→                                totalHeight = ((res.span * 1000.0) / res.tread).toInt() * res.riser,
+   303→                                totalLength = res.span * 1000.0,
+   304→                                riserHeight = res.riser,
+   305→                                treadWidth = res.tread,
+   306→                                slabThickness = res.thickness,
+   307→                                mainRebarDia = res.reinforcement.diameter.toDouble(),
+   308→                                mainRebarSpacing = res.reinforcement.spacing,
+   309→                                distributionDia = res.distributionReinforcement.diameter.toDouble(),
+   310→                                distributionSpacing = res.distributionReinforcement.spacing,
+   311→                                modifier = Modifier.fillMaxWidth()
+   312→                            )
+   313→                        }
+   314→                    )
+   315→                }
+   316→
+   317→                item {
+   318→                    Text("📝 المعادلات الهندسية", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   319→                    StairFormulasCard()
+   320→                }
+   321→            }
+   322→            item { Spacer(modifier = Modifier.height(32.dp)) }
+   323→        }
+   324→    }
+   325→
+   326→    if (showSaveDialog) {
+   327→        AlertDialog(
+   328→            onDismissRequest = { showSaveDialog = false },
+   329→            title = { Text("حفظ التصميم في مشروع") },
+   330→            text = {
+   331→                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+   332→                    OutlinedTextField(
+   333→                        value = designName,
+   334→                        onValueChange = { designName = it },
+   335→                        label = { Text("اسم السلم (مثلاً: S1)") },
+   336→                        modifier = Modifier.fillMaxWidth()
+   337→                    )
+   338→                    
+   339→                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+   340→                    if (projects.isEmpty()) {
+   341→                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+   342→                    } else {
+   343→                        projects.forEach { project ->
+   344→                            Row(
+   345→                                modifier = Modifier
+   346→                                    .fillMaxWidth()
+   347→                                    .padding(vertical = 4.dp),
+   348→                                verticalAlignment = Alignment.CenterVertically
+   349→                            ) {
+   350→                                RadioButton(
+   351→                                    selected = selectedProjectId == project.id,
+   352→                                    onClick = { selectedProjectId = project.id }
+   353→                                )
+   354→                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+   355→                            }
+   356→                        }
+   357→                    }
+   358→                }
+   359→            },
+   360→            confirmButton = {
+   361→                Button(onClick = {
+   362→                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+   363→                    result?.let { viewModel.saveStair(pId, designName, it) }
+   364→                    showSaveDialog = false
+   365→                }) {
+   366→                    Text("حفظ")
+   367→                }
+   368→            },
+   369→            dismissButton = {
+   370→                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+   371→            }
+   372→        )
+   373→    }
+   374→}
+   375→
+   376→@Composable
+   377→private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifier: Modifier) {
+   378→    Card(
+   379→        modifier = modifier.height(440.dp),
+   380→        shape = RoundedCornerShape(12.dp),
+   381→        elevation = CardDefaults.cardElevation(4.dp)
+   382→    ) {
+   383→        Canvas(
+   384→            modifier = Modifier
+   385→                .fillMaxSize()
+   386→                .background(Color.White)
+   387→                .padding(12.dp)
+   388→        ) {
+   389→            // ===== DATA EXTRACTION FROM RESULT =====
+   390→            val totalSpanMM = res.span.toFloat() * 1000f
+   391→            val riserMM = res.riser.toFloat()
+   392→            val treadMM = res.tread.toFloat()
+   393→            val thicknessMM = res.thickness.toFloat()
+   394→            val numSteps = (totalSpanMM / treadMM).toInt().coerceIn(1, 30)
+   395→            val totalHeightMM = numSteps * riserMM
+   396→            val coverMM = 25f
+   397→
+   398→            // ===== LAYOUT & SCALING =====
+   399→            val border = 2.5f
+   400→            val marginL = 55f
+   401→            val marginR = 50f
+   402→            val marginT = 45f
+   403→            val marginB = 55f
+   404→            val drawW = size.width - marginL - marginR - border * 2
+   405→            val drawH = size.height - marginT - marginB - border * 2
+   406→            if (drawW <= 0f || drawH <= 0f) return@Canvas
+   407→
+   408→            val fitSpan = totalSpanMM
+   409→            val fitHeight = totalHeightMM + thicknessMM + 30f
+   410→            val scX = drawW / fitSpan
+   411→            val scY = drawH / fitHeight
+   412→            val sc = minOf(scX.toFloat(), scY) * 0.88f
+   413→
+   414→            // Origin: bottom-left corner of stair (floor level, start of first riser)
+   415→            val ox = marginL + border + (drawW - totalSpanMM * sc) / 2f
+   416→            val oy = size.height - marginB - border - (drawH - (totalHeightMM + thicknessMM) * sc) / 2f
+   417→            // End point: top of last riser
+   418→            val ex = ox + numSteps * treadMM * sc
+   419→            val ey = oy - numSteps * riserMM * sc
+   420→
+   421→            // ===== COLORS =====
+   422→            val concreteFill = Color(0xFFE6E6E6)
+   423→            val concreteStroke = Color(0xFF2C2C2C)
+   424→            val mainSteel = Color(0xFFC62828)
+   425→            val distSteel = Color(0xFF0D47A1)
+   426→            val dimClr = Color(0xFF4A4A4A)
+   427→            val borderClr = Color(0xFF1A1A1A)
+   428→            val supportClr = Color(0xFF444444)
+   429→
+   430→            // ===== GEOMETRY HELPERS =====
+   431→            val slopeAngle = atan2(riserMM.toDouble(), treadMM.toDouble())
+   432→            val cosA = cos(slopeAngle).toFloat()
+   433→            val sinA = sin(slopeAngle).toFloat()
+   434→            // Perpendicular offset for slab thickness (below slope line, into the slab)
+   435→            val perpX = thicknessMM * sinA * sc
+   436→            val perpY = thicknessMM * cosA * sc
+   437→            // Cover offset (from slab soffit toward top surface, perpendicular to slope)
+   438→            val covX = coverMM * sinA * sc
+   439→            val covY = coverMM * cosA * sc
+   440→
+   441→            // ===== 1. PROFESSIONAL BORDER =====
+   442→            drawRect(
+   443→                color = borderClr,
+   444→                topLeft = Offset(border / 2f, border / 2f),
+   445→                size = Size(size.width - border, size.height - border),
+   446→                style = Stroke(width = border)
+   447→            )
+   448→            // Inner border for double-line effect
+   449→            drawRect(
+   450→                color = borderClr.copy(alpha = 0.3f),
+   451→                topLeft = Offset(border + 2f, border + 2f),
+   452→                size = Size(size.width - border * 2 - 4f, size.height - border * 2 - 4f),
+   453→                style = Stroke(width = 0.5f)
+   454→            )
+   455→
+   456→            // ===== 2. STAIR PROFILE (CONCRETE SECTION) =====
+   457→            val soffitStartX = ox + perpX
+   458→            val soffitStartY = oy + perpY
+   459→            val soffitEndX = ex + perpX
+   460→            val soffitEndY = ey + perpY
+   461→
+   462→            val profilePath = Path()
+   463→            // Start at soffit bottom-left
+   464→            profilePath.moveTo(soffitStartX, soffitStartY)
+   465→            // Up to floor level at stair start
+   466→            profilePath.lineTo(ox, oy)
+   467→            // Draw each step: riser up, then tread across
+   468→            for (i in 0 until numSteps) {
+   469→                val stepX = ox + i * treadMM * sc
+   470→                val stepTopY = oy - (i + 1) * riserMM * sc
+   471→                val nextX = ox + (i + 1) * treadMM * sc
+   472→                // Riser (vertical up)
+   473→                profilePath.lineTo(stepX, stepTopY)
+   474→                // Tread (horizontal across)
+   475→                profilePath.lineTo(nextX, stepTopY)
+   476→            }
+   477→            // Down to soffit at top end
+   478→            profilePath.lineTo(soffitEndX, soffitEndY)
+   479→            // Soffit straight back to start
+   480→            profilePath.lineTo(soffitStartX, soffitStartY)
+   481→            profilePath.close()
+   482→
+   483→            // Fill concrete section
+   484→            drawPath(profilePath, concreteFill)
+   485→            // Outline concrete section
+   486→            drawPath(profilePath, concreteStroke, style = Stroke(width = 2.2f))
+   487→
+   488→            // ===== 3. STEP DIVISION LINES (risers for clarity) =====
+   489→            for (i in 0 until numSteps) {
+   490→                val x = ox + i * treadMM * sc
+   491→                val yBot = oy - i * riserMM * sc
+   492→                val yTop = oy - (i + 1) * riserMM * sc
+   493→                drawLine(concreteStroke, Offset(x, yBot), Offset(x, yTop), strokeWidth = 1.2f)
+   494→            }
+   495→            // Last vertical line at the top riser
+   496→            if (numSteps > 0) {
+   497→                val lastX = ox + numSteps * treadMM * sc
+   498→                val lastYTop = ey
+   499→                val lastYBot = oy - (numSteps - 1) * riserMM * sc
+   500→                drawLine(concreteStroke, Offset(lastX, lastYBot), Offset(lastX, lastYTop), strokeWidth = 1.2f)
+   501→            }
+   502→
+   503→            // ===== 4. SOFFIT LINE EMPHASIS (waist slab bottom) =====
+   504→            drawLine(
+   505→                concreteStroke,
+   506→                Offset(soffitStartX, soffitStartY),
+   507→                Offset(soffitEndX, soffitEndY),
+   508→                strokeWidth = 2.5f
+   509→            )
+   510→
+   511→            // ===== 5. SUPPORT CONDITIONS =====
+   512→            val supSize = 14f
+   513→
+   514→            // --- Bottom support: pinned (triangle + hatching) ---
+   515→            val bsCx = ox
+   516→            val bsCy = oy
+   517→            drawLine(supportClr, Offset(bsCx, bsCy), Offset(bsCx - supSize, bsCy + supSize), 2f)
+   518→            drawLine(supportClr, Offset(bsCx - supSize, bsCy + supSize), Offset(bsCx + supSize, bsCy + supSize), 2f)
+   519→            drawLine(supportClr, Offset(bsCx + supSize, bsCy + supSize), Offset(bsCx, bsCy), 2f)
+   520→            // Hatching below bottom support
+   521→            for (h in 0..5) {
+   522→                val hx = bsCx - supSize + h * (supSize * 2f / 5f)
+   523→                drawLine(supportClr, Offset(hx, bsCy + supSize), Offset(hx - 5f, bsCy + supSize + 7f), 1f)
+   524→            }
+   525→            // Ground line
+   526→            drawLine(supportClr, Offset(bsCx - supSize - 5f, bsCy + supSize), Offset(bsCx + supSize + 5f, bsCy + supSize), 1.5f)
+   527→
+   528→            // --- Top support: roller (triangle + circle + hatching) ---
+   529→            val tsCx = ex
+   530→            val tsCy = ey
+   531→            drawLine(supportClr, Offset(tsCx, tsCy), Offset(tsCx, tsCy - supSize), 2f)
+   532→            drawLine(supportClr, Offset(tsCx - supSize, tsCy - supSize), Offset(tsCx + supSize, tsCy - supSize), 2f)
+   533→            // Roller circle
+   534→            drawCircle(supportClr, radius = 5f, center = Offset(tsCx, tsCy - supSize - 5f), style = Stroke(1.8f))
+   535→            drawCircle(supportClr, radius = 1.5f, center = Offset(tsCx, tsCy - supSize - 5f))
+   536→            // Hatching above top support
+   537→            for (h in 0..5) {
+   538→                val hx = tsCx - supSize + h * (supSize * 2f / 5f)
+   539→                drawLine(supportClr, Offset(hx, tsCy - supSize), Offset(hx - 5f, tsCy - supSize - 7f), 1f)
+   540→            }
+   541→            drawLine(supportClr, Offset(tsCx - supSize - 5f, tsCy - supSize), Offset(tsCx + supSize + 5f, tsCy - supSize), 1.5f)
+   542→
+   543→            // ===== 6. MAIN REINFORCEMENT (diagonal line following slope) =====
+   544→            val mbStartX = soffitStartX - covX
+   545→            val mbStartY = soffitStartY - covY
+   546→            val mbEndX = soffitEndX - covX
+   547→            val mbEndY = soffitEndY - covY
+   548→
+   549→            // Extend bars into supports (anchorage)
+   550→            val anchLen = 25f
+   551→            val mbFullStartX = mbStartX - anchLen * cosA
+   552→            val mbFullStartY = mbStartY + anchLen * sinA
+   553→            val mbFullEndX = mbEndX + anchLen * cosA
+   554→            val mbFullEndY = mbEndY - anchLen * sinA
+   555→
+   556→            // Main bar line
+   557→            drawLine(mainSteel, Offset(mbFullStartX, mbFullStartY), Offset(mbFullEndX, mbFullEndY), strokeWidth = 3.5f)
+   558→
+   559→            // 90-degree hooks at both ends
+   560→            val hookLen = 14f
+   561→            drawLine(mainSteel, Offset(mbFullStartX, mbFullStartY),
+   562→                Offset(mbFullStartX - hookLen * sinA, mbFullStartY - hookLen * cosA), 3.5f)
+   563→            drawLine(mainSteel, Offset(mbFullEndX, mbFullEndY),
+   564→                Offset(mbFullEndX - hookLen * sinA, mbFullEndY - hookLen * cosA), 3.5f)
+   565→
+   566→            // ===== 7. DISTRIBUTION REINFORCEMENT (small circles along span) =====
+   567→            val numDistBars = maxOf(4, numSteps)
+   568→            for (i in 1..numDistBars) {
+   569→                val t = i.toFloat() / (numDistBars + 1f)
+   570→                val cx = mbStartX + t * (mbEndX - mbStartX)
+   571→                val cy = mbStartY + t * (mbEndY - mbStartY)
+   572→                // Open circle (typical rebar cross-section symbol)
+   573→                drawCircle(distSteel, radius = 4.5f, center = Offset(cx, cy), style = Stroke(1.8f))
+   574→                drawCircle(Color.White, radius = 2.5f, center = Offset(cx, cy))
+   575→            }
+   576→
+   577→            // ===== 8. TOP COVER INDICATION =====
+   578→            val cvFrac = 0.35f
+   579→            val cvTopX = ox + cvFrac * (ex - ox)
+   580→            val cvTopY = oy + cvFrac * (ey - oy)
+   581→            val cvSoffX = cvTopX + perpX
+   582→            val cvSoffY = cvTopY + perpY
+   583→            val cvBarX = cvSoffX - covX
+   584→            val cvBarY = cvSoffY - covY
+   585→            val cvOff = 18f
+   586→            val cvD1X = cvSoffX + cvOff * cosA
+   587→            val cvD1Y = cvSoffY + cvOff * sinA
+   588→            val cvD2X = cvBarX + cvOff * cosA
+   589→            val cvD2Y = cvBarY + cvOff * sinA
+   590→            drawLine(dimClr, Offset(cvD1X, cvD1Y), Offset(cvD2X, cvD2Y), strokeWidth = 0.8f)
+   591→            // Tick marks at soffit and bar
+   592→            drawLine(dimClr,
+   593→                Offset(cvSoffX - 2f * sinA, cvSoffY - 2f * cosA),
+   594→                Offset(cvSoffX + 4f * sinA, cvSoffY + 4f * cosA), 0.8f)
+   595→            drawLine(dimClr,
+   596→                Offset(cvBarX - 2f * sinA, cvBarY - 2f * cosA),
+   597→                Offset(cvBarX + 4f * sinA, cvBarY + 4f * cosA), 0.8f)
+   598→
+   599→            // ===== 9. DIMENSION LINES =====
+   600→            val dimPaint = android.graphics.Paint().apply {
+   601→                color = android.graphics.Color.parseColor("#4A4A4A")
+   602→                textSize = 17f
+   603→                textAlign = android.graphics.Paint.Align.CENTER
+   604→                isFakeBoldText = true
+   605→            }
+   606→            val dimSmPaint = android.graphics.Paint().apply {
+   607→                color = android.graphics.Color.parseColor("#4A4A4A")
+   608→                textSize = 13f
+   609→                textAlign = android.graphics.Paint.Align.CENTER
+   610→            }
+   611→
+   612→            fun extLine(x1: Float, y1: Float, x2: Float, y2: Float) {
+   613→                drawLine(dimClr, Offset(x1, y1), Offset(x2, y2), strokeWidth = 0.7f)
+   614→            }
+   615→
+   616→            fun drawArrow(x: Float, y: Float, angle: Float, sz: Float = 5f) {
+   617→                val a1 = angle + 2.6f
+   618→                val a2 = angle - 2.6f
+   619→                drawLine(dimClr, Offset(x, y),
+   620→                    Offset(x + sz * cos(a1.toDouble()).toFloat(), y + sz * sin(a1.toDouble()).toFloat()), 1f)
+   621→                drawLine(dimClr, Offset(x, y),
+   622→                    Offset(x + sz * cos(a2.toDouble()).toFloat(), y + sz * sin(a2.toDouble()).toFloat()), 1f)
+   623→            }
+   624→
+   625→            // --- (a) Total Horizontal Span ---
+   626→            val spanDimY = oy + 35f
+   627→            extLine(ox, oy + 6f, ox, spanDimY + 4f)
+   628→            extLine(ex, oy + 6f, ex, spanDimY + 4f)
+   629→            drawLine(dimClr, Offset(ox, spanDimY), Offset(ex, spanDimY), strokeWidth = 1f)
+   630→            drawArrow(ox, spanDimY, 0f)
+   631→            drawArrow(ex, spanDimY, PI.toFloat())
+   632→            drawContext.canvas.nativeCanvas.drawText(
+   633→                "L = ${res.span} m", (ox + ex) / 2f, spanDimY + 15f, dimPaint
+   634→            )
+   635→
+   636→            // --- (b) Total Vertical Height ---
+   637→            val hDimX = ox - 38f
+   638→            extLine(ox - 5f, oy, hDimX - 4f, oy)
+   639→            extLine(ox - 5f, ey, hDimX - 4f, ey)
+   640→            drawLine(dimClr, Offset(hDimX, oy), Offset(hDimX, ey), strokeWidth = 1f)
+   641→            drawArrow(hDimX, oy, -(PI.toFloat() / 2f))
+   642→            drawArrow(hDimX, ey, PI.toFloat() / 2f)
+   643→            drawContext.canvas.nativeCanvas.save()
+   644→            drawContext.canvas.nativeCanvas.rotate(-90f, hDimX - 14f, (oy + ey) / 2f)
+   645→            drawContext.canvas.nativeCanvas.drawText(
+   646→                "H = ${totalHeightMM.toInt()} mm", hDimX - 14f, (oy + ey) / 2f + 5f, dimPaint
+   647→            )
+   648→            drawContext.canvas.nativeCanvas.restore()
+   649→
+   650→            // --- (c) Riser Dimension (first step) ---
+   651→            if (numSteps >= 1) {
+   652→                val rDimX = ox - 14f
+   653→                val rTop = oy - riserMM * sc
+   654→                extLine(ox - 2f, oy, rDimX - 2f, oy)
+   655→                extLine(ox - 2f, rTop, rDimX - 2f, rTop)
+   656→                drawLine(dimClr, Offset(rDimX, oy), Offset(rDimX, rTop), strokeWidth = 0.8f)
+   657→                drawContext.canvas.nativeCanvas.save()
+   658→                drawContext.canvas.nativeCanvas.rotate(-90f, rDimX - 8f, (oy + rTop) / 2f)
+   659→                drawContext.canvas.nativeCanvas.drawText(
+   660→                    "R=${riserMM.toInt()}", rDimX - 8f, (oy + rTop) / 2f + 4f, dimSmPaint
+   661→                )
+   662→                drawContext.canvas.nativeCanvas.restore()
+   663→            }
+   664→
+   665→            // --- (d) Tread Dimension (first step) ---
+   666→            if (numSteps >= 1) {
+   667→                val tDimY = oy + 17f
+   668→                val tEndX = ox + treadMM * sc
+   669→                extLine(ox, oy + 2f, ox, tDimY + 2f)
+   670→                extLine(tEndX, oy + 2f, tEndX, tDimY + 2f)
+   671→                drawLine(dimClr, Offset(ox, tDimY), Offset(tEndX, tDimY), strokeWidth = 0.8f)
+   672→                drawArrow(ox, tDimY, 0f, 4f)
+   673→                drawArrow(tEndX, tDimY, PI.toFloat(), 4f)
+   674→                drawContext.canvas.nativeCanvas.drawText(
+   675→                    "T=${treadMM.toInt()}", (ox + tEndX) / 2f, tDimY + 11f, dimSmPaint
+   676→                )
+   677→            }
+   678→
+   679→            // --- (e) Waist Slab Thickness (rotated along slope) ---
+   680→            val wtFrac = 0.65f
+   681→            val wtPx = ox + wtFrac * (ex - ox)
+   682→            val wtPy = oy + wtFrac * (ey - oy)
+   683→            val wtSx = wtPx + perpX
+   684→            val wtSy = wtPy + perpY
+   685→            val wtOff = 22f
+   686→            val wtD1x = wtPx + wtOff * cosA
+   687→            val wtD1y = wtPy + wtOff * sinA
+   688→            val wtD2x = wtSx + wtOff * cosA
+   689→            val wtD2y = wtSy + wtOff * sinA
+   690→            drawLine(dimClr, Offset(wtD1x, wtD1y), Offset(wtD2x, wtD2y), strokeWidth = 0.8f)
+   691→            drawLine(dimClr,
+   692→                Offset(wtPx - 3f * sinA, wtPy - 3f * cosA),
+   693→                Offset(wtPx + 5f * sinA, wtPy + 5f * cosA), 0.8f)
+   694→            drawLine(dimClr,
+   695→                Offset(wtSx - 3f * sinA, wtSy - 3f * cosA),
+   696→                Offset(wtSx + 5f * sinA, wtSy + 5f * cosA), 0.8f)
+   697→            drawContext.canvas.nativeCanvas.save()
+   698→            val wtMidX = (wtD1x + wtD2x) / 2f
+   699→            val wtMidY = (wtD1y + wtD2y) / 2f
+   700→            val wtAngleDeg = -Math.toDegrees(slopeAngle).toFloat()
+   701→            drawContext.canvas.nativeCanvas.rotate(wtAngleDeg, wtMidX, wtMidY)
+   702→            drawContext.canvas.nativeCanvas.drawText(
+   703→                "ts=${thicknessMM.toInt()}", wtMidX, wtMidY - 6f, dimSmPaint
+   704→            )
+   705→            drawContext.canvas.nativeCanvas.restore()
+   706→
+   707→            // ===== 10. REINFORCEMENT LABELS =====
+   708→            val labelPaint = android.graphics.Paint().apply {
+   709→                textSize = 19f
+   710→                textAlign = android.graphics.Paint.Align.LEFT
+   711→                isFakeBoldText = true
+   712→            }
+   713→            val labelSmPaint = android.graphics.Paint().apply {
+   714→                textSize = 13f
+   715→                textAlign = android.graphics.Paint.Align.LEFT
+   716→            }
+   717→
+   718→            // Main reinforcement label with leader line
+   719→            val mlX = (mbStartX + mbEndX) / 2f
+   720→            val mlY = (mbStartY + mbEndY) / 2f
+   721→            val mlLabelX = mlX + 18f
+   722→            val mlLabelY = mlY - 12f
+   723→            drawLine(mainSteel, Offset(mlX, mlY), Offset(mlLabelX, mlLabelY), strokeWidth = 1f)
+   724→            drawLine(mainSteel, Offset(mlLabelX, mlLabelY), Offset(mlLabelX + 6f, mlLabelY), strokeWidth = 1f)
+   725→            labelPaint.color = android.graphics.Color.parseColor("#C62828")
+   726→            drawContext.canvas.nativeCanvas.drawText(
+   727→                res.reinforcement.barString, mlLabelX + 10f, mlLabelY - 2f, labelPaint
+   728→            )
+   729→            labelSmPaint.color = android.graphics.Color.parseColor("#C62828")
+   730→            drawContext.canvas.nativeCanvas.drawText(
+   731→                "(Main Bottom)", mlLabelX + 10f, mlLabelY + 14f, labelSmPaint
+   732→            )
+   733→
+   734→            // Distribution reinforcement label
+   735→            val dlY = mlY + 22f
+   736→            drawLine(distSteel, Offset(mlX, mlY + 5f), Offset(mlLabelX, dlY), strokeWidth = 1f)
+   737→            drawLine(distSteel, Offset(mlLabelX, dlY), Offset(mlLabelX + 6f, dlY), strokeWidth = 1f)
+   738→            labelPaint.color = android.graphics.Color.parseColor("#0D47A1")
+   739→            drawContext.canvas.nativeCanvas.drawText(
+   740→                res.distributionReinforcement.barString, mlLabelX + 10f, dlY - 2f, labelPaint
+   741→            )
+   742→            labelSmPaint.color = android.graphics.Color.parseColor("#0D47A1")
+   743→            drawContext.canvas.nativeCanvas.drawText(
+   744→                "(Distribution)", mlLabelX + 10f, dlY + 14f, labelSmPaint
+   745→            )
+   746→
+   747→            // ===== 11. TITLE & SCALE TEXT =====
+   748→            val titlePaint = android.graphics.Paint().apply {
+   749→                color = android.graphics.Color.parseColor("#1A1A1A")
+   750→                textSize = 15f
+   751→                textAlign = android.graphics.Paint.Align.RIGHT
+   752→                isFakeBoldText = true
+   753→            }
+   754→            drawContext.canvas.nativeCanvas.drawText(
+   755→                "STAIR REINFORCEMENT DETAIL - S1", size.width - 10f, marginT - 5f, titlePaint
+   756→            )
+   757→
+   758→            val stepsPaint = android.graphics.Paint().apply {
+   759→                color = android.graphics.Color.parseColor("#333333")
+   760→                textSize = 13f
+   761→                textAlign = android.graphics.Paint.Align.LEFT
+   762→                isFakeBoldText = true
+   763→            }
+   764→            drawContext.canvas.nativeCanvas.drawText(
+   765→                "Steps: $numSteps  |  R x T = ${riserMM.toInt()} x ${treadMM.toInt()} mm",
+   766→                marginL + 5f, marginT - 5f, stepsPaint
+   767→            )
+   768→
+   769→            val scalePaint = android.graphics.Paint().apply {
+   770→                color = android.graphics.Color.parseColor("#888888")
+   771→                textSize = 12f
+   772→                textAlign = android.graphics.Paint.Align.CENTER
+   773→            }
+   774→            drawContext.canvas.nativeCanvas.drawText(
+   775→                "Scale: Not to Scale", size.width / 2f, size.height - 3f, scalePaint
+   776→            )
+   777→
+   778→            // Safety status indicator
+   779→            val safePaint = android.graphics.Paint().apply {
+   780→                textSize = 12f
+   781→                textAlign = android.graphics.Paint.Align.RIGHT
+   782→                isFakeBoldText = true
+   783→            }
+   784→            if (res.isSafe) {
+   785→                safePaint.color = android.graphics.Color.parseColor("#2E7D32")
+   786→                drawContext.canvas.nativeCanvas.drawText(
+   787→                    "SAFE", size.width - 10f, size.height - 3f, safePaint
+   788→                )
+   789→            } else {
+   790→                safePaint.color = android.graphics.Color.parseColor("#C62828")
+   791→                drawContext.canvas.nativeCanvas.drawText(
+   792→                    "UNSAFE", size.width - 10f, size.height - 3f, safePaint
+   793→                )
+   794→            }
+   795→        }
+   796→    }
+   797→}
+   798→
+   799→@Composable
+   800→private fun StairFormulasCard() {
+   801→    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
+   802→        Column(modifier = Modifier.padding(12.dp)) {
+   803→            FormulaItem("1. Wu = 1.4 * DL + 1.6 * LL")
+   804→            FormulaItem("2. ts = L / 25 (Simple) or L / 20 (Cantilever)")
+   805→            FormulaItem("3. Mu = Wu * L² / 8")
+   806→            FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
+   807→        }
+   808→    }
+   809→}
+   810→
+   811→@Composable
+   812→private fun StairInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
+   813→    OutlinedTextField(
+   814→        value = value,
+   815→        onValueChange = onValueChange,
+   816→        label = { Text(label) },
+   817→        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+   818→        modifier = modifier,
+   819→        shape = RoundedCornerShape(12.dp)
+   820→    )
+   821→}
+   822→
+   823→@Composable
+   824→private fun ResultRow(label: String, value: String) {
+   825→    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+   826→        Text(label)
+   827→        Text(value, fontWeight = FontWeight.Bold)
+   828→    }
+   829→}
+   830→
+   831→@Composable
+   832→private fun FormulaItem(formula: String) {
+   833→    Text(
+   834→        text = formula,
+   835→        fontFamily = FontFamily.Monospace,
+   836→        fontSize = 12.sp,
+   837→        modifier = Modifier.padding(vertical = 2.dp),
+   838→        color = MaterialTheme.colorScheme.secondary
+   839→    )
+   840→}
+   841→
+   842→@Composable
+   843→private fun SectionHeader(title: String, iconRes: Int) {
+   844→    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+   845→        Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+   846→        Spacer(modifier = Modifier.width(8.dp))
+   847→        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+   848→    }
+   849→}
+   850→
