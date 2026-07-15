@@ -36,6 +36,14 @@ import com.civileg.app.domain.calculations.ecp.ECPDoublyReinforcedBeam
 import com.civileg.app.domain.calculations.ecp.ECPCombinedFooting
 import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
 import com.civileg.app.domain.calculations.ecp.ECPWaffleSlabDesign
+import com.civileg.app.domain.calculations.ecp.ECPRetainingWall
+import com.civileg.app.domain.calculations.aci.ACIRetainingWall
+import com.civileg.app.domain.calculations.sbc.SBCRetainingWall
+import com.civileg.app.domain.calculations.base.RetainingWallDesign
+import com.civileg.app.domain.calculations.ecp.ECPStaircase
+import com.civileg.app.domain.calculations.aci.ACIStaircase
+import com.civileg.app.domain.calculations.sbc.SBCStaircase
+import com.civileg.app.domain.calculations.base.StaircaseDesign
 import com.civileg.app.domain.entities.DesignCode
 
 object CalculationFactory {
@@ -112,5 +120,21 @@ object CalculationFactory {
         DesignCode.ECP -> ECPAdvancedSlab()
         DesignCode.ACI -> ACIAdvancedSlab()
         DesignCode.SBC -> SBCAdvancedSlab()
+    }
+
+    // ========== حوائط السند (Retaining Walls) ==========
+
+    fun getRetainingWallDesign(code: DesignCode): RetainingWallDesign = when (code) {
+        DesignCode.ECP -> ECPRetainingWall()
+        DesignCode.ACI -> ACIRetainingWall()
+        DesignCode.SBC -> SBCRetainingWall()
+    }
+
+    // ========== السلالم (Staircases) ==========
+
+    fun getStaircaseDesign(code: DesignCode): StaircaseDesign = when (code) {
+        DesignCode.ECP -> ECPStaircase()
+        DesignCode.ACI -> ACIStaircase()
+        DesignCode.SBC -> SBCStaircase()
     }
 }

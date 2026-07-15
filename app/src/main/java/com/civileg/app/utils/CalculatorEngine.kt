@@ -1266,16 +1266,27 @@ class CalculatorEngine @Inject constructor(
         // 2. Loads on slant
         val wu = when(code) {
             DesignCode.EGYPTIAN -> 1.4 * deadLoad + 1.6 * liveLoad
-            else -> 1.2 * deadLoad + 1.6 * liveLoad
+            DesignCode.ACI, DesignCode.SAUDI -> 1.2 * deadLoad + 1.6 * liveLoad
             }
+        
+        val minSteelRatio = when(code) {
+            DesignCode.EGYPTIAN -> 0.0015  // ECP 203 solid slab
+            DesignCode.ACI -> 0.0018       // ACI 318 one-way slab
+            DesignCode.SAUDI -> 0.002       // SBC 304 hot climate
+        }
+        val cover = when(code) {
+            DesignCode.EGYPTIAN -> 25.0
+            DesignCode.ACI -> 38.0
+            DesignCode.SAUDI -> 40.0
+        }
         
         // 3. Moment calculation (Simple span)
         val mu = (wu * span.pow(2)) / 8.0
-        val d = ts - 25.0
+        val d = ts - cover
         
         // 4. Reinforcement
         val asReq = calculateAs(mu, fcu, fy, d, 1000.0, code)
-        val asMin = 0.0018 * 1000.0 * ts
+        val asMin = minSteelRatio * 1000.0 * ts
         val finalAs = max(asReq, asMin)
         
         val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
@@ -1341,18 +1352,29 @@ class CalculatorEngine @Inject constructor(
         
         val gamma_w = 10.0 // kN/m3
         val waterPressure = gamma_w * height
-        val mu = (waterPressure * height.pow(2)) / 6.0 // Simple cantilever moment for walls
+        val mu = (waterPressure * height.pow(2)) / 6.0
         
-        // Crack Width Control (Simplified - ECP 203)
+        // Code-specific parameters
         val allowableStress = when(code) {
-            DesignCode.EGYPTIAN -> 170.0 // MPa for service load
-            else -> 140.0 // MPa
-            }
+            DesignCode.EGYPTIAN -> 170.0  // ECP 203 service stress
+            DesignCode.ACI -> 140.0        // ACI 350
+            DesignCode.SAUDI -> 130.0      // SBC 304 (conservative hot climate)
+        }
+        val minWallRatio = when(code) {
+            DesignCode.EGYPTIAN -> 0.0025
+            DesignCode.ACI -> 0.0030
+            DesignCode.SAUDI -> 0.0035     // Higher for hot/arid climate
+        }
+        val crackWidthLimit = when(code) {
+            DesignCode.EGYPTIAN -> 0.2     // ECP 203: 0.2mm
+            DesignCode.ACI -> 0.25         // ACI 350: 0.25mm
+            DesignCode.SAUDI -> 0.2        // SBC 304: 0.2mm
+        }
         
         val d_wall = wallThickness - 50.0
         val ms = mu / 1.5 // Service moment approx
         val asReqCrack = (ms * 1e6) / (allowableStress * 0.85 * d_wall)
-        val finalAsWall = max(asReqCrack, 0.0025 * 1000.0 * wallThickness)
+        val finalAsWall = max(asReqCrack, minWallRatio * 1000.0 * wallThickness)
         
         val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
         val spacing = (1000.0 * barArea) / finalAsWall
@@ -1435,16 +1457,36 @@ class CalculatorEngine @Inject constructor(
         val resistingMoment = (wStem * xStem) + (wBase * xBase) + (wSoil * xSoil)
         val drivingMoment = (pa * height / 3.0) + (ps * height / 2.0)
         
+        val otLimit = when(code) {
+            DesignCode.EGYPTIAN, DesignCode.SAUDI -> 1.5
+            DesignCode.ACI -> 2.0
+        }
+        val slideLimit = 1.5
+        val cover = when(code) {
+            DesignCode.EGYPTIAN -> 50.0
+            DesignCode.ACI -> 75.0
+            DesignCode.SAUDI -> 65.0
+        }
+        val minSteel = when(code) {
+            DesignCode.EGYPTIAN -> 0.0013
+            DesignCode.ACI -> 0.0018
+            DesignCode.SAUDI -> 0.002
+        }
+        val lf = when(code) {
+            DesignCode.EGYPTIAN -> 1.4
+            DesignCode.ACI, DesignCode.SAUDI -> 1.6
+        }
+        
         val totalVerticalWeight = wStem + wBase + wSoil
         val fsOverturning = resistingMoment / drivingMoment.coerceAtLeast(1.0)
         val fsSliding = (0.5 * totalVerticalWeight) / (pa + ps).coerceAtLeast(1.0)
         
-        val utilizationRatio = max(1.5 / fsOverturning, 1.5 / fsSliding)
-        val isSafe = fsOverturning >= 1.5 && fsSliding >= 1.5
+        val utilizationRatio = max(otLimit / fsOverturning, slideLimit / fsSliding)
+        val isSafe = fsOverturning >= otLimit && fsSliding >= slideLimit
         
         // 4. Design for Stem Moment
-        val muStem = drivingMoment * 1.5 // Factored
-        val d = stemT - 70.0
+        val muStem = drivingMoment * lf // Factored
+        val d = stemT - cover
         val asReq = calculateAs(muStem, fcu, fy, d, 1000.0, code)
         
         val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
@@ -1456,8 +1498,8 @@ class CalculatorEngine @Inject constructor(
         val steelWeight = (numBars * height + (1000.0/200.0) * baseW) * barWeightPerMeter * 1.15
         
         val safetyChecks = mutableListOf<DesignSafetyCheck>()
-        safetyChecks.add(DesignSafetyCheck("Overturning Stability", fsOverturning, 1.5, "", fsOverturning >= 1.5))
-        safetyChecks.add(DesignSafetyCheck("Sliding Stability", fsSliding, 1.5, "", fsSliding >= 1.5))
+        safetyChecks.add(DesignSafetyCheck("Overturning Stability", fsOverturning, otLimit, "", fsOverturning >= otLimit))
+        safetyChecks.add(DesignSafetyCheck("Sliding Stability", fsSliding, slideLimit, "", fsSliding >= slideLimit))
         
         return RetainingWallResult(
             height = height,

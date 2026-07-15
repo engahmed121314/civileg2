@@ -36,6 +36,7 @@ import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +63,7 @@ fun StairScreen(
     var liveLoad by remember { mutableStateOf("4.0") }
     var deadLoad by remember { mutableStateOf("5.0") }
     var expandedType by remember { mutableStateOf(false) }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
     Scaffold(
         topBar = {
@@ -149,6 +151,13 @@ fun StairScreen(
             }
 
             item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
+            }
+
+            item {
                 Button(
                     onClick = {
                         viewModel.calculateStairPro(
@@ -161,7 +170,7 @@ fun StairScreen(
                             fcu = 25.0,
                             fy = 360.0,
                             preferredDiameter = 12,
-                            code = CalculatorEngine.DesignCode.EGYPTIAN
+                            code = selectedCode
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),

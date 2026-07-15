@@ -28,6 +28,7 @@ import com.civileg.app.R
 import com.civileg.app.viewmodel.FootingViewModel
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +63,7 @@ fun FootingScreen(
     var colDistance by remember { mutableStateOf("3.5") }
     var maxLeft by remember { mutableStateOf("") }
     var maxRight by remember { mutableStateOf("") }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
     Scaffold(
         topBar = {
@@ -165,6 +167,13 @@ fun FootingScreen(
             }
 
             item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
+            }
+
+            item {
                 Button(
                     onClick = {
                         viewModel.calculateFooting(
@@ -175,7 +184,7 @@ fun FootingScreen(
                             soil = soilCapacity.toDoubleOrNull() ?: 150.0,
                             colB = colWidth.toDoubleOrNull() ?: 300.0,
                             colT = colLength.toDoubleOrNull() ?: 600.0,
-                            code = CalculatorEngine.DesignCode.EGYPTIAN,
+                            code = selectedCode,
                             preferredDiameter = barDiameter.toIntOrNull() ?: 16,
                             preferredSpacing = barSpacing.toDoubleOrNull() ?: 150.0,
                             p2 = axialLoad2.toDoubleOrNull() ?: 0.0,

@@ -27,6 +27,7 @@ import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.TankViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
@@ -53,6 +54,7 @@ fun TankScreen(
     var height by remember { mutableStateOf("3.5") }
     var fcu by remember { mutableStateOf("30") }
     var fy by remember { mutableStateOf("400") }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
     Scaffold(
         topBar = {
@@ -136,6 +138,13 @@ fun TankScreen(
             }
 
             item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
+            }
+
+            item {
                 Button(
                     onClick = {
                         viewModel.calculateTankPro(
@@ -145,7 +154,7 @@ fun TankScreen(
                             fcu = fcu.toDoubleOrNull() ?: 30.0,
                             fy = fy.toDoubleOrNull() ?: 400.0,
                             preferredDiameter = 12,
-                            code = CalculatorEngine.DesignCode.EGYPTIAN
+                            code = selectedCode
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),

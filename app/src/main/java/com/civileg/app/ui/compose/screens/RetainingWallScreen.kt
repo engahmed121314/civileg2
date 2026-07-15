@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.RetainingWallViewModel
@@ -55,6 +56,7 @@ fun RetainingWallScreen(
     var surcharge by remember { mutableStateOf("10.0") }
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("400") }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
     
     val scrollState = rememberScrollState()
 
@@ -111,6 +113,13 @@ fun RetainingWallScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            DesignCodeSelectorRow(
+                selectedCode = selectedCode,
+                onCodeSelected = { selectedCode = it }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Button(
                 onClick = {
                     viewModel.calculateRetainingWallPro(
@@ -121,7 +130,7 @@ fun RetainingWallScreen(
                         fcu = fcu.toDoubleOrNull() ?: 25.0,
                         fy = fy.toDoubleOrNull() ?: 400.0,
                         preferredDiameter = 16,
-                        code = CalculatorEngine.DesignCode.EGYPTIAN
+                        code = selectedCode
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),

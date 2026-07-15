@@ -33,6 +33,7 @@ import com.civileg.app.viewmodel.BeamViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +66,7 @@ fun BeamScreen(
     var numBars by remember { mutableStateOf("4") }
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
     Scaffold(
         topBar = {
@@ -136,6 +138,13 @@ fun BeamScreen(
             }
 
             item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
+            }
+
+            item {
                 Text("🔩 خواص المادة", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BeamInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
@@ -163,7 +172,7 @@ fun BeamScreen(
                             fcu.toDoubleOrNull() ?: 25.0,
                             fy.toDoubleOrNull() ?: 360.0,
                             barDiameter.toIntOrNull() ?: 16,
-                            CalculatorEngine.DesignCode.EGYPTIAN,
+                            selectedCode,
                             selectedSupport
                         )
                     },
