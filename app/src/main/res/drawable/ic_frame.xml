@@ -3,7 +3,69 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Portal frame structure -->
+    <!-- Left column -->
     <path
+        android:fillColor="#000000"
+        android:pathData="M4,20h2v-14H4z"/>
+    <!-- Right column -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M18,20h2v-14h-2z"/>
+    <!-- Beam (rafter with slight slope) -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M4,6h16v2H4z"/>
+    <!-- Apex (ridge) -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M10,6h4v-2h-4z"/>
+    <!-- Left pin support -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,20L5,23H1z"/>
+    <!-- Right roller support -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M21,20L19,23h4z"/>
+    <path
+        android:fillColor="none"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:pathData="M18.5,23.5a1,1 0,1,0 2,0a1,1 0,1,0 -2,0z"/>
+    <!-- Ground lines -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:strokeLineCap="round"
+        android:pathData="M0,23h6M18,23h6"/>
+    <!-- Lateral load arrow -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:strokeLineCap="round"
+        android:pathData="M0,13h3.5M2.5,12L4,13.5L2.5,15"/>
+    <!-- Vertical load arrows -->
+    <path
+        android:fillColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M8,2v3M12,1v3M16,2v3"/>
+    <!-- Load distribution line -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:strokeLineCap="round"
+        android:pathData="M7,2h10"/>
+    <!-- Node circles at connections -->
+    <path
+        android:strokeColor="#000000"
         android:fillColor="#FFFFFF"
-        android:pathData="M3,3h2v4H3V3zM19,3h2v4h-2V3zM9,3h2v4H9V3zM13,3h2v4h-2V3zM17,7h2v10h-2V7zM5,7h2v10H5V7zM9,7h2v10H9V7zM13,7h2v10h-2V7zM5,17h2v4H5V17zM19,17h2v4h-2V17zM9,17h2v4H9V17zM13,17h2v4h-2V17z"/>
+        android:strokeWidth="0.5"
+        android:pathData="M4,6a1,1 0,1,0 2,0a1,1 0,1,0 -2,0z"/>
+    <path
+        android:strokeColor="#000000"
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="0.5"
+        android:pathData="M18,6a1,1 0,1,0 2,0a1,1 0,1,0 -2,0z"/>
 </vector>

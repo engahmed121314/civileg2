@@ -42,8 +42,8 @@ class DesignHistoryAdapter(
                 DesignType.WATER_TANK -> R.drawable.ic_water
                 DesignType.PILE -> R.drawable.ic_pile
                 DesignType.SEISMIC -> R.drawable.ic_search
-                DesignType.STEEL_MEMBER -> R.drawable.ic_tools
-                DesignType.STEEL_WAREHOUSE -> R.drawable.ic_tools
+                DesignType.STEEL_MEMBER -> R.drawable.ic_steel
+                DesignType.STEEL_WAREHOUSE -> R.drawable.ic_steel
             }
             binding.ivDesignType.setImageResource(iconRes)
 

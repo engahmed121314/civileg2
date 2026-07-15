@@ -3,10 +3,60 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Simply supported beam with distributed load and reactions -->
+    <!-- Top: distributed load arrows -->
     <path
-        android:fillColor="#FF000000"
-        android:pathData="M2,10H22V14H2V10ZM4,12H20V12H4V12Z"/>
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M6,4L6,7M8,4L8,7M10,4L10,7M12,4L12,7M14,4L14,7M16,4L16,7M18,4L18,7"/>
+    <!-- Load distribution line -->
     <path
-        android:fillColor="#FF000000"
-        android:pathData="M2,8H22V10H2V8ZM2,14H22V16H2V14Z"/>
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M5,4L19,4"/>
+    <!-- Beam body -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,9h18v3H3z"/>
+    <!-- Left support - triangle -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M3,12L5,15.5h-4z"/>
+    <!-- Right support - roller (triangle + circle) -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M21,12L19,15.5h4z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M17.5,16.5a1.5,1.5 0,1,0 3,0a1.5,1.5 0,1,0 -3,0z"/>
+    <!-- Ground lines left -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:pathData="M1,15.5L9,15.5M1.5,16.5L8.5,16.5M2,17.5L8,17.5"/>
+    <!-- Ground lines right -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:pathData="M15,16.5L23,16.5M15.5,17.5L22.5,17.5M16,18.5L22,18.5"/>
+    <!-- Reaction arrows -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:pathData="M3,18.5L3,21M21,19.5L21,22"/>
+    <!-- Bending moment curve (subtle) -->
+    <path
+        android:fillColor="none"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:strokeLineCap="round"
+        android:pathData="M3,9Q7,6 12,6Q17,6 21,9"/>
 </vector>

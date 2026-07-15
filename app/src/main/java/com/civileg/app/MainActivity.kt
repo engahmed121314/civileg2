@@ -142,7 +142,7 @@ fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Settings.route) }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(painterResource(id = R.drawable.ic_tools), null) },
+                    icon = { Icon(painterResource(id = R.drawable.ic_costing), null) },
                     label = { Text("مخزن الموقع") },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Inventory.route) }

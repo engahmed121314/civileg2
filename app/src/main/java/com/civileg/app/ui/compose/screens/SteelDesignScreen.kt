@@ -161,7 +161,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { SectionHeader("🏢 مدخلات تصميم المنشأ المعدني", R.drawable.ic_tools) }
+        item { SectionHeader("🏢 مدخلات تصميم المنشأ المعدني", R.drawable.ic_steel) }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
@@ -806,7 +806,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { SectionHeader("📐 قاموس القطاعات والتحليل الذكي", R.drawable.ic_tools) }
+        item { SectionHeader("📐 قاموس القطاعات والتحليل الذكي", R.drawable.ic_steel) }
 
         // Steel Code Selector
         item {
@@ -1195,7 +1195,7 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
     var capacity by remember { mutableDoubleStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔥 تصميم وصلات اللحام الاحترافي", R.drawable.ic_tools) }
+        item { SectionHeader("🔥 تصميم وصلات اللحام الاحترافي", R.drawable.ic_steel) }
         
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1266,7 +1266,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
     var capacity by remember { mutableDoubleStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔩 تصميم وصلات المسامير الاحترافي", R.drawable.ic_tools) }
+        item { SectionHeader("🔩 تصميم وصلات المسامير الاحترافي", R.drawable.ic_steel) }
         
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1408,7 +1408,7 @@ fun BasePlateDesignTab() {
     val boltGradeOptions = com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.entries.map { it.getGradeName() }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔧 تصميم القواعد المعدنية", R.drawable.ic_tools) }
+        item { SectionHeader("🔧 تصميم القواعد المعدنية", R.drawable.ic_footing) }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
@@ -1576,7 +1576,7 @@ fun ConnectionDesignTab() {
     var weldResult by remember { mutableStateOf<WeldDesignResult?>(null) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔗 تصميم الوصلات الإنشائية", R.drawable.ic_tools) }
+        item { SectionHeader("🔗 تصميم الوصلات الإنشائية", R.drawable.ic_frame) }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {

@@ -3,7 +3,36 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- More options: 3x2 grid of squares (engineering module grid) -->
     <path
-        android:fillColor="#FF000000"
-        android:pathData="M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/>
+        android:fillColor="#000000"
+        android:pathData="M3,3h6v6H3z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M9,3h6v6H9z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M15,3h6v6h-6z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,9h6v6H3z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M9,9h6v6H9z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M15,9h6v6h-6z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,15h6v6H3z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M9,15h6v6H9z"/>
+    <path
+        android:fillColor="#000000"
+        android:pathData="M15,15h6v6h-6z"/>
+    <!-- Small engineering symbol in center -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10.5,11h3v1h-1v2h-1v-2h-1z"/>
 </vector>

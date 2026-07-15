@@ -1,9 +1,76 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
-    android:height="24dp"
     android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportHeight="24"
+    android:height="24dp">
+    <!-- Slab cross-section with thickness and supports -->
+    <!-- Top surface -->
     <path
-        android:fillColor="#FF000000"
-        android:pathData="M3,5H21V19H3V5ZM5,7V17H19V7H5Z"/>
+        android:fillColor="#000000"
+        android:pathData="M2,8h20v5H2z"/>
+    <!-- Bottom surface line -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M2,13h20"/>
+    <!-- Thickness dimension lines -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M21,8v5"/>
+    <!-- Top reinforcement bars -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M4,9.5h3M8,9.5h3M12,9.5h3M16,9.5h3"/>
+    <!-- Bottom reinforcement bars -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M5,11.5h2.5M9,11.5h2.5M13,11.5h2.5M17,11.5h2.5"/>
+    <!-- Supports underneath -->
+    <!-- Left support -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M5,13L7,16H3z"/>
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M2.5,16.5h5M3,17.5h4M3.5,18.5h3"/>
+    <!-- Center support -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M11,13L13,16H9z"/>
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M8.5,16.5h5M9,17.5h4M9.5,18.5h3"/>
+    <!-- Right support -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M17,13L19,16H15z"/>
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M14.5,16.5h5M15,17.5h4M15.5,18.5h3"/>
+    <!-- Distributed load arrows on top -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M5,4v3M8,4v3M11,4v3M14,4v3M17,4v3"/>
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M4,4h14"/>
+    <!-- Span dimension arrow -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:strokeLineCap="round"
+        android:pathData="M7,20L17,20M7,19.5v1M17,19.5v1"/>
 </vector>

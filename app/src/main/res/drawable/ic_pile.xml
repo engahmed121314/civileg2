@@ -3,7 +3,50 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Pile foundation with pile cap and soil -->
+    <!-- Pile cap -->
     <path
-        android:fillColor="#FF000000"
-        android:pathData="M12,2L4,5v14l8,3l8,-3V5L12,2zM12,4.1l6,2.2v11.4l-6,2.2l-6,-2.2V6.3L12,4.1zM11,7h2v10h-2V7z"/>
+        android:fillColor="#000000"
+        android:pathData="M5,8h14v3H5z"/>
+    <!-- Column stub on cap -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M10,3h4v5h-4z"/>
+    <!-- Axial load arrow -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.4"
+        android:strokeLineCap="round"
+        android:pathData="M12,0.5v2.5M10.5,1.5L12,0L13.5,1.5"/>
+    <!-- Piles (angled) -->
+    <!-- Left pile -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M7,11l-1,12h3z"/>
+    <!-- Right pile -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M17,11l1,12h-3z"/>
+    <!-- Center pile -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M11.5,11l-0.5,12h2z"/>
+    <!-- Soil layers (hatching) -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.25"
+        android:strokeLineCap="round"
+        android:pathData="M2,14L3.5,15.5M4,14L5.5,15.5M7,14L8.5,15.5M10,14L11.5,15.5M13,14L14.5,15.5M16,14L17.5,15.5M19,14L20.5,15.5M2,17L3.5,18.5M4,17L5.5,18.5M7,17L8.5,18.5M10,17L11.5,18.5M13,17L14.5,18.5M16,17L17.5,18.5M19,17L20.5,18.5M2,20L3.5,21.5M4,20L5.5,21.5M7,20L8.5,21.5M10,20L11.5,21.5M13,20L14.5,21.5M16,20L17.5,21.5M19,20L20.5,21.5"/>
+    <!-- Ground level line -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M1,11h22"/>
+    <!-- Dimension for pile cap -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.25"
+        android:pathData="M5,7h14M5,6.5v1M19,6.5v1"/>
 </vector>

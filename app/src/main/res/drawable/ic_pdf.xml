@@ -3,7 +3,28 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Engineering PDF report icon -->
+    <!-- Document shape -->
     <path
-        android:fillColor="@color/primary"
-        android:pathData="M20,2L8,2c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2L22,4c0,-1.1 -0.9,-2 -2,-2zM20,16L8,16L8,4h12v12zM4,6L2,6v14c0,1.1 0.9,2 2,2h14v-2L4,20L4,6zM16,12L16,12c0,0.55 -0.45,1 -1,1h-1v1h-1.5v-4L15,10c0.55,0 1,0.45 1,1v1zM14.5,11.5h1v-1h-1v1zM11,14h1.5c0.55,0 1,-0.45 1,-1v-2c0,-0.55 -0.45,-1 -1,-1L10,10v4h1zM11.5,11h1v2h-1v-2zM9,13h1v1L8.5,14v-4L10,10v1L9,11v2z" />
+        android:fillColor="#000000"
+        android:pathData="M5,1h10l5,5v15c0,1.1 -0.9,2 -2,2H7c-1.1,0 -2,-0.9 -2,-2V1z"/>
+    <!-- Folded corner -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,1v5h5"/>
+    <!-- "PDF" text -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8,11h2.5c0.8,0 1.5,0.7 1.5,1.5S11.3,14 10.5,14H8.5v2H8v-5z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13,11h1c1.1,0 2,0.9 2,2.5S15.1,16 14,16h-1v-5z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16.5,11H19v1h-1.5v3H19v1h-2.5v-5z"/>
+    <!-- Engineering lines on document -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.3"
+        android:pathData="M8,17h8M8,18.5h6M8,20h7"/>
 </vector>
