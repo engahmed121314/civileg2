@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Stroke
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.nativeCanvas
@@ -299,7 +299,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
             val eh = (inputs.eaveHeight * scale).toFloat()
             val rh = (inputs.ridgeHeight * scale).toFloat()
             val midX = padding + w / 2
-            val colLX = padding + (w - inputs.span * scale) / 2
+            val colLX = (padding + (w - inputs.span * scale) / 2).toFloat()
             val colRX = colLX + (inputs.span * scale).toFloat()
 
             // ── Grid ──
@@ -583,7 +583,7 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                 (w * 0.7f) / max(inputs.span, inputs.length).toFloat(),
                 (h * 0.7f) / max(inputs.ridgeHeight, inputs.span).toFloat()
             )
-            val startX = padding + (w - inputs.span * scale) / 2
+            val startX = (padding + (w - inputs.span * scale) / 2).toFloat()
             val baseY = size.height - padding - 20f
 
             val textColor = Color.White

@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.R
 import com.civileg.app.ui.theme.ThemeColors
 import kotlin.math.PI
 
