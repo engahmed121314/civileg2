@@ -1,0 +1,1603 @@
+     1→package com.civileg.app.ui.compose.components.drawings
+     2→
+     3→import androidx.compose.foundation.Canvas
+     4→import androidx.compose.foundation.layout.fillMaxWidth
+     5→import androidx.compose.foundation.layout.height
+     6→import androidx.compose.runtime.Composable
+     7→import androidx.compose.ui.Modifier
+     8→import androidx.compose.ui.geometry.CornerRadius
+     9→import androidx.compose.ui.geometry.Offset
+    10→import androidx.compose.ui.geometry.Size
+    11→import androidx.compose.ui.graphics.Brush
+    12→import androidx.compose.ui.graphics.Color
+    13→import androidx.compose.ui.graphics.Path
+    14→import androidx.compose.ui.graphics.PathEffect
+    15→import androidx.compose.ui.graphics.StrokeCap
+    16→import androidx.compose.ui.graphics.StrokeJoin
+    17→import androidx.compose.ui.graphics.drawscope.DrawScope
+    18→import androidx.compose.ui.graphics.drawscope.Stroke
+    19→import androidx.compose.ui.graphics.drawscope.withTransform
+    20→import androidx.compose.ui.graphics.nativeCanvas
+    21→import androidx.compose.ui.graphics.toArgb
+    22→import androidx.compose.ui.unit.dp
+    23→import kotlin.math.atan2
+    24→import kotlin.math.cos
+    25→import kotlin.math.max
+    26→import kotlin.math.min
+    27→import kotlin.math.sin
+    28→import kotlin.math.sqrt
+    29→
+    30→// ============================================================================
+    31→// COLOR PALETTE — matches ProfessionalBeamDrawing exactly
+    32→// ============================================================================
+    33→
+    34→/** Main bottom rebar color — BLUE */
+    35→private val RebarBlue = Color(0xFF4A90D9)
+    36→
+    37→/** Top rebar / secondary steel — LIGHT BLUE */
+    38→private val TopRebarBlue = Color(0xFF7EC8E3)
+    39→
+    40→/** Distribution bars — PURPLE */
+    41→private val DistributionPurple = Color(0xFF9B59B6)
+    42→
+    43→/** Concrete fill — GRAY */
+    44→private val ConcreteGray = Color(0xFF6B6B6B)
+    45→
+    46→/** Concrete top face (lighter for 3D effect) */
+    47→private val ConcreteTopGray = Color(0xFF8A8A8A)
+    48→
+    49→/** Concrete side face (darker for 3D effect) */
+    50→private val ConcreteSideGray = Color(0xFF505050)
+    51→
+    52→/** Dimension lines and text — WHITE */
+    53→private val DimensionWhite = Color(0xFFFFFFFF)
+    54→
+    55→/** Dimension extension lines — GRAY */
+    56→private val ExtensionGray = Color(0xFFAAAAAA)
+    57→
+    58→/** Table header background */
+    59→private val TableHeaderBg = Color(0x33FFFFFF)
+    60→
+    61→/** Table row alternate */
+    62→private val TableRowAlt = Color(0x1AFFFFFF)
+    63→
+    64→/** Support color */
+    65→private val SupportColor = Color(0xFFCCCCCC)
+    66→
+    67→/** Hatch pattern for cut concrete */
+    68→private val HatchColor = Color(0x99AAAAAA)
+    69→
+    70→/** Section cut indicator */
+    71→private val SectionCutColor = Color(0xFFE74C3C)
+    72→
+    73→/** Landing fill */
+    74→private val LandingFill = Color(0xFF5E5E5E)
+    75→
+    76→// ============================================================================
+    77→// COMPOSABLE ENTRY POINT
+    78→// ============================================================================
+    79→
+    80→/**
+    81→ * Professional Reinforced Concrete Staircase Drawing.
+    82→ *
+    83→ * Renders a complete engineering drawing with:
+    84→ * - Side elevation view showing staircase body, steps, and reinforcement
+    85→ * - Cross-section view (Section A-A) showing slab thickness and bars
+    86→ * - Plan view showing stair width, treads, and reinforcement layout
+    87→ * - Reinforcement schedule table
+    88→ *
+    89→ * Background is transparent — the parent composable supplies the dark theme.
+    90→ */
+    91→@Composable
+    92→fun ProfessionalStairDrawing(
+    93→    stairWidth: Double,           // mm - width of staircase
+    94→    totalHeight: Double,          // mm - total rise
+    95→    totalLength: Double,          // mm - total horizontal run (not including landing)
+    96→    riserHeight: Double,          // mm
+    97→    treadWidth: Double,           // mm
+    98→    slabThickness: Double,        // mm - waist slab thickness
+    99→    landingLength: Double = 0.0,  // mm - landing length if any
+   100→    landingThickness: Double = 0.0, // mm
+   101→    mainRebarDia: Double,         // mm - bottom main steel
+   102→    mainRebarSpacing: Double,     // mm
+   103→    topRebarDia: Double = 0.0,    // mm
+   104→    topRebarSpacing: Double = 0.0, // mm
+   105→    distributionDia: Double = 0.0, // mm
+   106→    distributionSpacing: Double = 0.0, // mm
+   107→    cover: Double = 25.0,         // mm
+   108→    numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
+   109→    modifier: Modifier = Modifier
+   110→) {
+   111→    Canvas(
+   112→        modifier = modifier
+   113→            .fillMaxWidth()
+   114→            .height(560.dp)
+   115→    ) {
+   116→        val cw = size.width
+   117→        val ch = size.height
+   118→
+   119→        // ── Derived values ────────────────────────────────────────────
+   120→        val nRisers = if (numberOfRisers > 0) numberOfRisers
+   121→            else (totalHeight / riserHeight).toInt().coerceAtLeast(1)
+   122→        val nTreads = nRisers - 1
+   123→        val slopeLength = sqrt(
+   124→            (totalLength * totalLength + totalHeight * totalHeight).toDouble()
+   125→        )
+   126→        val slopeAngleRad = atan2(totalHeight, totalLength)
+   127→        val slopeAngleDeg = Math.toDegrees(slopeAngleRad)
+   128→        val cosSlope = cos(slopeAngleRad).toFloat()
+   129→        val sinSlope = sin(slopeAngleRad).toFloat()
+   130→        val hasLanding = landingLength > 0.0
+   131→        val actualLandingThickness = if (hasLanding && landingThickness > 0.0)
+   132→            landingThickness else slabThickness
+   133→
+   134→        // ── Layout zones ──────────────────────────────────────────────
+   135→        // Left 58%: Elevation view
+   136→        // Right 42%: Cross-section (top) + Plan view (bottom)
+   137→        // Bottom strip: Reinforcement table
+   138→        val elevZoneRight = cw * 0.58f
+   139→        val tableTop = ch * 0.74f
+   140→        val rightZoneTop = 30f
+   141→        val rightZoneMid = (rightZoneTop + tableTop) / 2f
+   142→
+   143→        // ── Draw all zones ────────────────────────────────────────────
+   144→        // 1. Main elevation view (left)
+   145→        drawElevationView(
+   146→            zoneLeft = 60f, zoneTop = 28f,
+   147→            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 8f,
+   148→            cw = cw, ch = ch,
+   149→            nRisers = nRisers, nTreads = nTreads,
+   150→            riserHeight = riserHeight, treadWidth = treadWidth,
+   151→            slabThickness = slabThickness, stairWidth = stairWidth,
+   152→            totalHeight = totalHeight, totalLength = totalLength,
+   153→            hasLanding = hasLanding, landingLength = landingLength,
+   154→            actualLandingThickness = actualLandingThickness,
+   155→            mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
+   156→            topRebarDia = topRebarDia, topRebarSpacing = topRebarSpacing,
+   157→            distributionDia = distributionDia, distributionSpacing = distributionSpacing,
+   158→            cover = cover,
+   159→            slopeAngleRad = slopeAngleRad, cosSlope = cosSlope, sinSlope = sinSlope
+   160→        )
+   161→
+   162→        // 2. Cross-section view A-A (right-top)
+   163→        drawCrossSectionView(
+   164→            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneTop,
+   165→            zoneRight = cw - 16f, zoneBottom = rightZoneMid - 4f,
+   166→            slabThickness = slabThickness, stairWidth = stairWidth,
+   167→            mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
+   168→            topRebarDia = topRebarDia, topRebarSpacing = topRebarSpacing,
+   169→            distributionDia = distributionDia, distributionSpacing = distributionSpacing,
+   170→            cover = cover,
+   171→            slopeAngleDeg = slopeAngleDeg
+   172→        )
+   173→
+   174→        // 3. Plan view (right-bottom)
+   175→        drawPlanView(
+   176→            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneMid + 4f,
+   177→            zoneRight = cw - 16f, zoneBottom = tableTop - 8f,
+   178→            totalLength = totalLength, stairWidth = stairWidth,
+   179→            nTreads = nTreads, treadWidth = treadWidth,
+   180→            hasLanding = hasLanding, landingLength = landingLength,
+   181→            mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
+   182→            distributionDia = distributionDia, distributionSpacing = distributionSpacing
+   183→        )
+   184→
+   185→        // 4. Reinforcement schedule table (bottom)
+   186→        drawReinforcementScheduleTable(
+   187→            cw = cw, ch = ch, tableTop = tableTop,
+   188→            nRisers = nRisers, nTreads = nTreads,
+   189→            totalLength = totalLength, totalHeight = totalHeight,
+   190→            slopeLength = slopeLength,
+   191→            stairWidth = stairWidth,
+   192→            slabThickness = slabThickness,
+   193→            mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
+   194→            topRebarDia = topRebarDia, topRebarSpacing = topRebarSpacing,
+   195→            distributionDia = distributionDia, distributionSpacing = distributionSpacing,
+   196→            cover = cover, hasLanding = hasLanding,
+   197→            landingLength = landingLength, actualLandingThickness = actualLandingThickness
+   198→        )
+   199→
+   200→        // 5. Title block (bottom-right corner)
+   201→        drawTitleBlock(cw, ch, nRisers, riserHeight, treadWidth, totalHeight, totalLength)
+   202→    }
+   203→}
+   204→
+   205→// ============================================================================
+   206→// 1. ELEVATION VIEW — Side elevation with steps and reinforcement
+   207→// ============================================================================
+   208→
+   209→private fun DrawScope.drawElevationView(
+   210→    zoneLeft: Float, zoneTop: Float,
+   211→    zoneRight: Float, zoneBottom: Float,
+   212→    cw: Float, ch: Float,
+   213→    nRisers: Int, nTreads: Int,
+   214→    riserHeight: Double, treadWidth: Double,
+   215→    slabThickness: Double, stairWidth: Double,
+   216→    totalHeight: Double, totalLength: Double,
+   217→    hasLanding: Boolean, landingLength: Double,
+   218→    actualLandingThickness: Double,
+   219→    mainRebarDia: Double, mainRebarSpacing: Double,
+   220→    topRebarDia: Double, topRebarSpacing: Double,
+   221→    distributionDia: Double, distributionSpacing: Double,
+   222→    cover: Double,
+   223→    slopeAngleRad: Double, cosSlope: Float, sinSlope: Float
+   224→) {
+   225→    val zoneW = zoneRight - zoneLeft
+   226→    val zoneH = zoneBottom - zoneTop
+   227→
+   228→    // ── Scaling: fit stair geometry into zone ────────────────────────
+   229→    val totalDrawLength = if (hasLanding) totalLength + landingLength else totalLength
+   230→    val scaleX = (zoneW * 0.82f) / totalDrawLength.toFloat()
+   231→    val scaleY = (zoneH * 0.70f) / (totalHeight + slabThickness + 80).toFloat()
+   232→    val scale = min(scaleX, scaleY)
+   233→
+   234→    val stepW = treadWidth.toFloat() * scale
+   235→    val stepH = riserHeight.toFloat() * scale
+   236→    val slabT = slabThickness.toFloat() * scale
+   237→    val landT = actualLandingThickness.toFloat() * scale
+   238→
+   239→    // 3D perspective offsets
+   240→    val depth3D = stairWidth.toFloat() * scale * 0.22f
+   241→    val angleX3D = 0.32f
+   242→    val angleY3D = 0.22f
+   243→    val dx3D = depth3D * angleX3D
+   244→    val dy3D = depth3D * angleY3D
+   245→
+   246→    // Origin: bottom-left of stair (where first riser meets floor)
+   247→    val originX = zoneLeft + 50f
+   248→    val originY = zoneBottom - 40f
+   249→
+   250→    // Stair top-right corner (end of last tread at top)
+   251→    val stairEndX = originX + nTreads * stepW
+   252→    val stairEndY = originY - nRisers * stepH
+   253→
+   254→    // Landing extends from stair end
+   255→    val landingEndX = if (hasLanding) stairEndX + landingLength.toFloat() * scale else stairEndX
+   256→
+   257→    // ── Title ────────────────────────────────────────────────────────
+   258→    drawTextAnnotated(
+   259→        text = "ELEVATION", x = zoneLeft + 4f, y = zoneTop + 4f,
+   260→        color = DimensionWhite, size = 20f
+   261→    )
+   262→
+   263→    // ── Draw stair body with 3D shading ──────────────────────────────
+   264→    // Build the waist slab outline (bottom of slab, following the slope)
+   265→    // The waist slab runs from the soffit of the first step to the soffit of the last step
+   266→    // with thickness perpendicular to the slope.
+   267→
+   268→    // Bottom of waist slab line (offset from nosing line by slab thickness)
+   269→    // The nosing line goes from (originX, originY) to (stairEndX, stairEndY)
+   270→    // We offset it perpendicular to the slope (downward-left from the nosing)
+   271→    val perpOffX = slabT * sinSlope
+   272→    val perpOffY = slabT * cosSlope
+   273→
+   274→    // Front face of the stair body (nosing line top, soffit line bottom)
+   275→    val stairFrontPath = Path().apply {
+   276→        // Bottom-left corner (start of first riser at base level)
+   277→        moveTo(originX, originY)
+   278→        // Up the first riser
+   279→        lineTo(originX, originY - stepH)
+   280→        // Step profile: each tread then riser
+   281→        for (i in 1 until nRisers) {
+   282→            // Tread (horizontal)
+   283→            lineTo(originX + i * stepW, originY - i * stepH)
+   284→            // Riser (vertical up) — drawn as we go to next step
+   285→        }
+   286→        // Last step top
+   287→        lineTo(stairEndX, stairEndY)
+   288→
+   289→        // Landing horizontal (if any)
+   290→        if (hasLanding) {
+   291→            lineTo(landingEndX, stairEndY)
+   292→        }
+   293→
+   294→        // Now go down the back edge (top of slab soffit at the back)
+   295→        // The soffit follows the slope offset by slab thickness
+   296→        val soffitStartX = stairEndX + (if (hasLanding) landingLength.toFloat() * scale else 0f)
+   297→        val soffitStartY = stairEndY
+   298→
+   299→        // Landing back edge
+   300→        if (hasLanding) {
+   301→            lineTo(landingEndX, stairEndY + landT)
+   302→        } else {
+   303→            lineTo(stairEndX, stairEndY)
+   304→        }
+   305→
+   306→        // Soffit line: from end back to start, offset perpendicular to slope
+   307→        val soffitEndX = originX + perpOffX
+   308→        val soffitEndY = originY + perpOffY
+   309→
+   310→        // Soffit follows the slope from start to end
+   311→        lineTo(stairEndX + perpOffX - (if (hasLanding) 0f else 0f),
+   312→            stairEndY + perpOffY)
+   313→        lineTo(soffitEndX, soffitEndY)
+   314→
+   315→        close()
+   316→    }
+   317→
+   318→    // Draw front face with gradient
+   319→    drawPath(
+   320→        path = stairFrontPath,
+   321→        brush = Brush.verticalGradient(
+   322→            colors = listOf(ConcreteGray, ConcreteSideGray)
+   323→        )
+   324→    )
+   325→    drawPath(
+   326→        path = stairFrontPath,
+   327→        color = ConcreteGray,
+   328→        style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Miter)
+   329→    )
+   330→
+   331→    // ── 3D Top face ──────────────────────────────────────────────────
+   332→    val topFacePath = Path().apply {
+   333→        // Along the top of steps (nosing line)
+   334→        moveTo(originX, originY - stepH)
+   335→        for (i in 1 until nRisers) {
+   336→            lineTo(originX + i * stepW, originY - i * stepH)
+   337→        }
+   338→        lineTo(stairEndX, stairEndY)
+   339→        if (hasLanding) {
+   340→            lineTo(landingEndX, stairEndY)
+   341→        }
+   342→        // 3D offset back
+   343→        lineTo(landingEndX + dx3D, stairEndY - dy3D)
+   344→        lineTo(stairEndX + dx3D, stairEndY - dy3D)
+   345→        for (i in (nRisers - 1) downTo 1) {
+   346→            lineTo(originX + i * stepW + dx3D, originY - i * stepH - dy3D)
+   347→        }
+   348→        lineTo(originX + dx3D, originY - stepH - dy3D)
+   349→        close()
+   350→    }
+   351→    drawPath(path = topFacePath, color = ConcreteTopGray)
+   352→    drawPath(
+   353→        path = topFacePath,
+   354→        color = ConcreteTopGray,
+   355→        style = Stroke(width = 1.dp.toPx(), join = StrokeJoin.Miter)
+   356→    )
+   357→
+   358→    // ── 3D Right side face (landing end or stair end) ───────────────
+   359→    val sideEndX = if (hasLanding) landingEndX else stairEndX
+   360→    val sideEndY = stairEndY
+   361→    val sidePath = Path().apply {
+   362→        moveTo(sideEndX, sideEndY)
+   363→        lineTo(sideEndX + dx3D, sideEndY - dy3D)
+   364→        lineTo(sideEndX + dx3D, sideEndY - dy3D +
+   365→            (if (hasLanding) landT else slabT))
+   366→        lineTo(sideEndX, sideEndY + (if (hasLanding) landT else slabT))
+   367→        close()
+   368→    }
+   369→    drawPath(path = sidePath, color = ConcreteSideGray)
+   370→    drawPath(
+   371→        path = sidePath,
+   372→        color = ConcreteSideGray,
+   373→        style = Stroke(width = 1.dp.toPx(), join = StrokeJoin.Miter)
+   374→    )
+   375→
+   376→    // ── Step lines (riser and tread lines on front face) ─────────────
+   377→    for (i in 1 until nRisers) {
+   378→        val x = originX + i * stepW
+   379→        val y = originY - i * stepH
+   380→        // Riser line
+   381→        drawLine(
+   382→            color = ExtensionGray.copy(alpha = 0.5f),
+   383→            start = Offset(x, y),
+   384→            end = Offset(x, y - stepH),
+   385→            strokeWidth = 0.8.dp.toPx()
+   386→        )
+   387→    }
+   388→    // Tread lines (horizontal at each step level)
+   389→    for (i in 1 until nRisers) {
+   390→        val x1 = originX + (i - 1) * stepW
+   391→        val x2 = originX + i * stepW
+   392→        val y = originY - i * stepH
+   393→        drawLine(
+   394→            color = ExtensionGray.copy(alpha = 0.35f),
+   395→            start = Offset(x1, y),
+   396→            end = Offset(x2, y),
+   397→            strokeWidth = 0.5.dp.toPx()
+   398→        )
+   399→    }
+   400→
+   401→    // ── Soffit line (bottom of slab) ────────────────────────────────
+   402→    val soffitP1 = Offset(originX + perpOffX, originY + perpOffY)
+   403→    val soffitP2 = Offset(stairEndX + perpOffX, stairEndY + perpOffY)
+   404→    drawLine(
+   405→        color = DimensionWhite.copy(alpha = 0.6f),
+   406→        start = soffitP1,
+   407→        end = soffitP2,
+   408→        strokeWidth = 1.5f,
+   409→        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
+   410→    )
+   411→
+   412→    // ── Landing slab outline ─────────────────────────────────────────
+   413→    if (hasLanding) {
+   414→        // Landing bottom line
+   415→        drawLine(
+   416→            color = DimensionWhite.copy(alpha = 0.6f),
+   417→            start = Offset(stairEndX, stairEndY + landT),
+   418→            end = Offset(landingEndX, stairEndY + landT),
+   419→            strokeWidth = 1.5f,
+   420→            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
+   421→        )
+   422→        // Landing right edge
+   423→        drawLine(
+   424→            color = ExtensionGray.copy(alpha = 0.5f),
+   425→            start = Offset(landingEndX, stairEndY),
+   426→            end = Offset(landingEndX, stairEndY + landT),
+   427→            strokeWidth = 1.dp.toPx()
+   428→        )
+   429→    }
+   430→
+   431→    // ── Supports ─────────────────────────────────────────────────────
+   432→    // Bottom support (pin/fixed)
+   433→    drawStairSupport(
+   434→        x = originX, y = originY,
+   435→        isFixed = true, supportH = 28f
+   436→    )
+   437→    // Top support (pin)
+   438→    drawStairSupport(
+   439→        x = sideEndX, y = sideEndY + (if (hasLanding) landT else 0f),
+   440→        isFixed = false, supportH = 28f
+   441→    )
+   442→
+   443→    // ── Main reinforcement (bottom steel following stair slope) ──────
+   444→    if (mainRebarDia > 0) {
+   445→        val barR = max(mainRebarDia.toFloat() * scale * 0.12f, 2.5f)
+   446→        // Main bars run along the soffit, offset by cover from bottom
+   447→        val barOffset = (cover.toFloat() + mainRebarDia.toFloat() / 2f) * scale
+   448→        val barStartX = originX + perpOffX * (barOffset / slabT)
+   449→        val barStartY = originY + perpOffY * (barOffset / slabT)
+   450→        val barEndX = stairEndX + perpOffX * (barOffset / slabT)
+   451→        val barEndY = stairEndY + perpOffY * (barOffset / slabT)
+   452→
+   453→        // Draw multiple main bars (show 2-3 for visual effect)
+   454→        for (offset in listOf(-barR * 0.8f, barR * 0.8f)) {
+   455→            drawLine(
+   456→                color = RebarBlue,
+   457→                start = Offset(barStartX, barStartY + offset),
+   458→                end = Offset(barEndX, barEndY + offset),
+   459→                strokeWidth = barR * 1.8f,
+   460→                cap = StrokeCap.Round
+   461→            )
+   462→        }
+   463→
+   464→        // Main bar label
+   465→        val midBarX = (barStartX + barEndX) / 2f
+   466→        val midBarY = (barStartY + barEndY) / 2f + barR + 14f
+   467→        drawTextWithBackground(
+   468→            text = "Ø${mainRebarDia.toInt()} @ ${mainRebarSpacing.toInt()}",
+   469→            x = midBarX - 40f, y = midBarY,
+   470→            textColor = RebarBlue, bgColor = Color(0xCC1A1A2E),
+   471→            textSize = 16f
+   472→        )
+   473→    }
+   474→
+   475→    // ── Top reinforcement at supports ────────────────────────────────
+   476→    if (topRebarDia > 0 && topRebarSpacing > 0) {
+   477→        val barR = max(topRebarDia.toFloat() * scale * 0.12f, 2f)
+   478→        val topBarLen = totalLength.toFloat() * scale * 0.18f
+   479→
+   480→        // Bottom support top bars (hogging moment)
+   481→        drawLine(
+   482→            color = TopRebarBlue,
+   483→            start = Offset(originX, originY - stepH - slabT * 0.3f),
+   484→            end = Offset(originX + topBarLen, originY - stepH - slabT * 0.3f - topBarLen * sinSlope),
+   485→            strokeWidth = barR * 1.6f,
+   486→            cap = StrokeCap.Round
+   487→        )
+   488→
+   489→        // Top support top bars
+   490→        val topSupportY = stairEndY + (if (hasLanding) landT else slabT) * 0.7f
+   491→        drawLine(
+   492→            color = TopRebarBlue,
+   493→            start = Offset(sideEndX, topSupportY),
+   494→            end = Offset(sideEndX - topBarLen, topSupportY + topBarLen * sinSlope),
+   495→            strokeWidth = barR * 1.6f,
+   496→            cap = StrokeCap.Round
+   497→        )
+   498→
+   499→        // Top bar label
+   500→        drawTextWithBackground(
+   501→            text = "Ø${topRebarDia.toInt()} @ ${topRebarSpacing.toInt()}",
+   502→            x = originX + 4f, y = originY - stepH - slabT * 0.3f - 14f,
+   503→            textColor = TopRebarBlue, bgColor = Color(0xCC1A1A2E),
+   504→            textSize = 14f
+   505→        )
+   506→    }
+   507→
+   508→    // ── Distribution bars indicators (perpendicular to slope) ────────
+   509→    if (distributionDia > 0 && distributionSpacing > 0) {
+   510→        val distR = max(distributionDia.toFloat() * scale * 0.10f, 1.5f)
+   511→        // Show a few distribution bar marks perpendicular to slope
+   512→        val numDistMarks = min(nRisers, 6)
+   513→        for (i in 1..numDistMarks) {
+   514→            val t = i.toFloat() / (numDistMarks + 1)
+   515→            val bx = originX + t * (stairEndX - originX)
+   516→            val by = originY + t * (stairEndY - originY)
+   517→            // Short perpendicular line (distribution bar indicator)
+   518→            val perpLen = slabT * 0.5f
+   519→            drawLine(
+   520→                color = DistributionPurple,
+   521→                start = Offset(bx + perpOffX * 0.5f - sinSlope * perpLen,
+   522→                    by + perpOffY * 0.5f - cosSlope * perpLen),
+   523→                end = Offset(bx + perpOffX * 0.5f + sinSlope * perpLen,
+   524→                    by + perpOffY * 0.5f + cosSlope * perpLen),
+   525→                strokeWidth = distR * 1.6f,
+   526→                cap = StrokeCap.Round
+   527→            )
+   528→        }
+   529→
+   530→        // Distribution label
+   531→        drawTextWithBackground(
+   532→            text = "Ø${distributionDia.toInt()} @ ${distributionSpacing.toInt()}",
+   533→            x = stairEndX - 80f, y = stairEndY + slabT + 18f,
+   534→            textColor = DistributionPurple, bgColor = Color(0xCC1A1A2E),
+   535→            textSize = 14f
+   536→        )
+   537→    }
+   538→
+   539→    // ── Section cut line A-A ─────────────────────────────────────────
+   540→    val cutX = originX + nTreads * stepW * 0.45f
+   541→    val cutTopY = originY - nRisers * stepH * 0.45f - 20f
+   542→    val cutBotY = originY + perpOffY * 0.45f + 15f
+   543→    drawLine(
+   544→        color = SectionCutColor,
+   545→        start = Offset(cutX - 20f, cutTopY),
+   546→        end = Offset(cutX + 20f, cutTopY),
+   547→        strokeWidth = 2.5f
+   548→    )
+   549→    drawLine(
+   550→        color = SectionCutColor,
+   551→        start = Offset(cutX, cutTopY),
+   552→        end = Offset(cutX, cutBotY),
+   553→        strokeWidth = 2.dp.toPx(),
+   554→        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f), 0f)
+   555→    )
+   556→    drawLine(
+   557→        color = SectionCutColor,
+   558→        start = Offset(cutX - 20f, cutBotY),
+   559→        end = Offset(cutX + 20f, cutBotY),
+   560→        strokeWidth = 2.5f
+   561→    )
+   562→    drawTextAnnotated(
+   563→        text = "A", x = cutX - 28f, y = cutTopY + 2f,
+   564→        color = SectionCutColor, size = 22f
+   565→    )
+   566→    drawTextAnnotated(
+   567→        text = "A", x = cutX + 14f, y = cutBotY + 4f,
+   568→        color = SectionCutColor, size = 22f
+   569→    )
+   570→
+   571→    // ── Dimension lines ──────────────────────────────────────────────
+   572→    drawElevationDimensions(
+   573→        originX = originX, originY = originY,
+   574→        stairEndX = stairEndX, stairEndY = stairEndY,
+   575→        landingEndX = landingEndX, hasLanding = hasLanding,
+   576→        stepW = stepW, stepH = stepH,
+   577→        nRisers = nRisers, nTreads = nTreads,
+   578→        riserHeight = riserHeight, treadWidth = treadWidth,
+   579→        totalHeight = totalHeight, totalLength = totalLength,
+   580→        slabThickness = slabThickness, scale = scale
+   581→    )
+   582→}
+   583→
+   584→// ============================================================================
+   585→// 2. CROSS-SECTION VIEW (Section A-A)
+   586→// ============================================================================
+   587→
+   588→private fun DrawScope.drawCrossSectionView(
+   589→    zoneLeft: Float, zoneTop: Float,
+   590→    zoneRight: Float, zoneBottom: Float,
+   591→    slabThickness: Double, stairWidth: Double,
+   592→    mainRebarDia: Double, mainRebarSpacing: Double,
+   593→    topRebarDia: Double, topRebarSpacing: Double,
+   594→    distributionDia: Double, distributionSpacing: Double,
+   595→    cover: Double,
+   596→    slopeAngleDeg: Double
+   597→) {
+   598→    val zoneW = zoneRight - zoneLeft
+   599→    val zoneH = zoneBottom - zoneTop
+   600→
+   601→    // ── Panel background ─────────────────────────────────────────────
+   602→    drawRoundRect(
+   603→        color = Color(0x18000000),
+   604→        topLeft = Offset(zoneLeft, zoneTop),
+   605→        size = Size(zoneW, zoneH),
+   606→        cornerRadius = CornerRadius(6f, 6f)
+   607→    )
+   608→
+   609→    // ── Title ────────────────────────────────────────────────────────
+   610→    drawTextAnnotated(
+   611→        text = "SECTION A-A", x = zoneLeft + 6f, y = zoneTop + 18f,
+   612→        color = DimensionWhite, size = 18f
+   613→    )
+   614→
+   615→    // ── Scale section to fit zone ────────────────────────────────────
+   616→    val padding = 36f
+   617→    val titleSpace = 28f
+   618→    val availW = zoneW - 2 * padding
+   619→    val availH = zoneH - 2 * padding - titleSpace
+   620→    val secScale = min(
+   621→        availW / stairWidth.toFloat(),
+   622→        availH / (slabThickness + 60).toFloat()
+   623→    ).coerceAtMost(1.8f)
+   624→
+   625→    val secW = stairWidth.toFloat() * secScale
+   626→    val secT = slabThickness.toFloat() * secScale
+   627→    val secLeft = zoneLeft + (zoneW - secW) / 2f
+   628→    val secTop = zoneTop + titleSpace + (availH - secT) / 2f + 10f
+   629→
+   630→    // ── Concrete section rectangle ───────────────────────────────────
+   631→    // In section, we see the slab as a thick band
+   632→    drawRect(
+   633→        color = ConcreteGray,
+   634→        topLeft = Offset(secLeft, secTop),
+   635→        size = Size(secW, secT)
+   636→    )
+   637→    // Gradient overlay
+   638→    drawRect(
+   639→        brush = Brush.verticalGradient(
+   640→            colors = listOf(ConcreteTopGray, ConcreteGray, ConcreteSideGray)
+   641→        ),
+   642→        topLeft = Offset(secLeft, secTop),
+   643→        size = Size(secW, secT)
+   644→    )
+   645→    drawRect(
+   646→        color = DimensionWhite.copy(alpha = 0.5f),
+   647→        topLeft = Offset(secLeft, secTop),
+   648→        size = Size(secW, secT),
+   649→        style = Stroke(width = 1.5.dp.toPx())
+   650→    )
+   651→
+   652→    // ── Hatch pattern on concrete ────────────────────────────────────
+   653→    drawSectionHatch(secLeft, secTop, secW, secT)
+   654→
+   655→    // ── Cover indication (dashed outline) ────────────────────────────
+   656→    val covPx = cover.toFloat() * secScale
+   657→    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+   658→    drawRect(
+   659→        color = ExtensionGray.copy(alpha = 0.4f),
+   660→        topLeft = Offset(secLeft + covPx, secTop + covPx),
+   661→        size = Size(secW - 2 * covPx, secT - 2 * covPx),
+   662→        style = Stroke(width = 0.8f, pathEffect = dashEffect)
+   663→    )
+   664→
+   665→    // ── Bottom main reinforcement bars ───────────────────────────────
+   666→    if (mainRebarDia > 0) {
+   667→        val barR = max((mainRebarDia.toFloat() / 2f) * secScale, 2.5f)
+   668→        val numBars = (stairWidth / mainRebarSpacing).toInt().coerceAtLeast(2).coerceAtMost(8)
+   669→        val usableW = secW - 2 * covPx
+   670→        val spacing = if (numBars > 1) usableW / (numBars - 1) else 0f
+   671→        val barY = secTop + secT - covPx - barR
+   672→
+   673→        for (i in 0 until numBars) {
+   674→            val bx = secLeft + covPx + i * spacing
+   675→            // Draw rebar circle
+   676→            drawCircle(color = RebarBlue, radius = barR, center = Offset(bx, barY))
+   677→            drawCircle(
+   678→                color = RebarBlue.copy(alpha = 0.5f),
+   679→                radius = barR + 1.5f,
+   680→                center = Offset(bx, barY),
+   681→                style = Stroke(width = 0.5f)
+   682→            )
+   683→        }
+   684→
+   685→        // Bar mark label
+   686→        if (numBars > 0) {
+   687→            drawTextAnnotated(
+   688→                text = "Ø${mainRebarDia.toInt()}",
+   689→                x = secLeft + secW + 8f,
+   690→                y = barY + 4f,
+   691→                color = RebarBlue, size = 14f
+   692→            )
+   693→        }
+   694→    }
+   695→
+   696→    // ── Top reinforcement bars ───────────────────────────────────────
+   697→    if (topRebarDia > 0 && topRebarSpacing > 0) {
+   698→        val barR = max((topRebarDia.toFloat() / 2f) * secScale, 2f)
+   699→        val numBars = (stairWidth / topRebarSpacing).toInt().coerceAtLeast(2).coerceAtMost(6)
+   700→        val usableW = secW - 2 * covPx
+   701→        val spacing = if (numBars > 1) usableW / (numBars - 1) else 0f
+   702→        val barY = secTop + covPx + barR
+   703→
+   704→        for (i in 0 until numBars) {
+   705→            val bx = secLeft + covPx + i * spacing
+   706→            drawCircle(color = TopRebarBlue, radius = barR, center = Offset(bx, barY))
+   707→            drawCircle(
+   708→                color = TopRebarBlue.copy(alpha = 0.5f),
+   709→                radius = barR + 1.5f,
+   710→                center = Offset(bx, barY),
+   711→                style = Stroke(width = 0.5f)
+   712→            )
+   713→        }
+   714→
+   715→        if (numBars > 0) {
+   716→            drawTextAnnotated(
+   717→                text = "Ø${topRebarDia.toInt()}",
+   718→                x = secLeft + secW + 8f,
+   719→                y = barY + 4f,
+   720→                color = TopRebarBlue, size = 14f
+   721→            )
+   722→        }
+   723→    }
+   724→
+   725→    // ── Distribution bars (shown as small circles along the thickness) ──
+   726→    if (distributionDia > 0 && distributionSpacing > 0) {
+   727→        val distR = max((distributionDia.toFloat() / 2f) * secScale, 1.5f)
+   728→        // Show a couple distribution bar marks at ends
+   729→        for (xOff in listOf(secLeft + covPx + 8f, secLeft + secW - covPx - 8f)) {
+   730→            val yPos = secTop + secT / 2f
+   731→            drawCircle(
+   732→                color = DistributionPurple,
+   733→                radius = distR,
+   734→                center = Offset(xOff, yPos)
+   735→            )
+   736→        }
+   737→    }
+   738→
+   739→    // ── Cover dimension (left side) ──────────────────────────────────
+   740→    val cDimX = secLeft - 8f
+   741→    drawLine(
+   742→        color = ExtensionGray,
+   743→        start = Offset(cDimX, secTop),
+   744→        end = Offset(cDimX, secTop + covPx),
+   745→        strokeWidth = 0.8f
+   746→    )
+   747→    drawArrowHead(cDimX, secTop, direction = 1f, color = ExtensionGray, vertical = true)
+   748→    drawArrowHead(cDimX, secTop + covPx, direction = -1f, color = ExtensionGray, vertical = true)
+   749→    drawTextAnnotated(
+   750→        text = "${cover.toInt()}",
+   751→        x = cDimX - 22f, y = secTop + covPx / 2f + 4f,
+   752→        color = ExtensionGray, size = 12f
+   753→    )
+   754→
+   755→    // ── Waist slab thickness dimension (right side) ──────────────────
+   756→    val tDimX = secLeft + secW + 6f
+   757→    val dimY1 = secTop
+   758→    val dimY2 = secTop + secT
+   759→    drawLine(
+   760→        color = DimensionWhite,
+   761→        start = Offset(tDimX, dimY1),
+   762→        end = Offset(tDimX, dimY2),
+   763→        strokeWidth = 0.8f
+   764→    )
+   765→    drawArrowHead(tDimX, dimY1, direction = 1f, color = DimensionWhite, vertical = true)
+   766→    drawArrowHead(tDimX, dimY2, direction = -1f, color = DimensionWhite, vertical = true)
+   767→    // Rotated label
+   768→    withTransform({
+   769→        rotate(degrees = -90f, pivot = Offset(tDimX + 16f, secTop + secT / 2f))
+   770→    }) {
+   771→        drawContext.canvas.nativeCanvas.apply {
+   772→            val paint = android.graphics.Paint().apply {
+   773→                textSize = 14f
+   774→                color = android.graphics.Color.WHITE
+   775→                isFakeBoldText = true
+   776→                typeface = android.graphics.Typeface.MONOSPACE
+   777→                textAlign = android.graphics.Paint.Align.CENTER
+   778→            }
+   779→            this.drawText(
+   780→                "t=${slabThickness.toInt()}",
+   781→                tDimX + 16f,
+   782→                secTop + secT / 2f + 4f,
+   783→                paint
+   784→            )
+   785→        }
+   786→    }
+   787→
+   788→    // ── Width dimension (bottom) ─────────────────────────────────────
+   789→    val wDimY = secTop + secT + 16f
+   790→    drawLine(
+   791→        color = DimensionWhite,
+   792→        start = Offset(secLeft, wDimY),
+   793→        end = Offset(secLeft + secW, wDimY),
+   794→        strokeWidth = 0.8f
+   795→    )
+   796→    drawArrowHead(secLeft, wDimY, direction = 1f, color = DimensionWhite)
+   797→    drawArrowHead(secLeft + secW, wDimY, direction = -1f, color = DimensionWhite)
+   798→    drawTextAnnotated(
+   799→        text = "${stairWidth.toInt()}",
+   800→        x = secLeft + secW / 2f - 16f,
+   801→        y = wDimY + 14f,
+   802→        color = DimensionWhite, size = 13f
+   803→    )
+   804→
+   805→    // ── Slope angle indicator ────────────────────────────────────────
+   806→    drawTextAnnotated(
+   807→        text = "θ = ${"%.1f".format(slopeAngleDeg)}°",
+   808→        x = secLeft + 4f, y = secTop - 6f,
+   809→        color = DimensionWhite.copy(alpha = 0.7f), size = 13f
+   810→    )
+   811→}
+   812→
+   813→// ============================================================================
+   814→// 3. PLAN VIEW — Top-down view of staircase
+   815→// ============================================================================
+   816→
+   817→private fun DrawScope.drawPlanView(
+   818→    zoneLeft: Float, zoneTop: Float,
+   819→    zoneRight: Float, zoneBottom: Float,
+   820→    totalLength: Double, stairWidth: Double,
+   821→    nTreads: Int, treadWidth: Double,
+   822→    hasLanding: Boolean, landingLength: Double,
+   823→    mainRebarDia: Double, mainRebarSpacing: Double,
+   824→    distributionDia: Double, distributionSpacing: Double
+   825→) {
+   826→    val zoneW = zoneRight - zoneLeft
+   827→    val zoneH = zoneBottom - zoneTop
+   828→
+   829→    // ── Panel background ─────────────────────────────────────────────
+   830→    drawRoundRect(
+   831→        color = Color(0x18000000),
+   832→        topLeft = Offset(zoneLeft, zoneTop),
+   833→        size = Size(zoneW, zoneH),
+   834→        cornerRadius = CornerRadius(6f, 6f)
+   835→    )
+   836→
+   837→    // ── Title ────────────────────────────────────────────────────────
+   838→    drawTextAnnotated(
+   839→        text = "PLAN VIEW", x = zoneLeft + 6f, y = zoneTop + 18f,
+   840→        color = DimensionWhite, size = 18f
+   841→    )
+   842→
+   843→    // ── Scale ────────────────────────────────────────────────────────
+   844→    val pad = 30f
+   845→    val titleH = 28f
+   846→    val availW = zoneW - 2 * pad
+   847→    val availH = zoneH - 2 * pad - titleH
+   848→    val totalPlanLen = if (hasLanding) totalLength + landingLength else totalLength
+   849→    val planScaleX = availW / totalPlanLen.toFloat()
+   850→    val planScaleY = availH / stairWidth.toFloat()
+   851→    val planScale = min(planScaleX, planScaleY)
+   852→
+   853→    val planW = totalPlanLen.toFloat() * planScale
+   854→    val planH = stairWidth.toFloat() * planScale
+   855→    val planLeft = zoneLeft + (zoneW - planW) / 2f
+   856→    val planTop = zoneTop + titleH + (availH - planH) / 2f + 8f
+   857→
+   858→    val stairPlanW = totalLength.toFloat() * planScale
+   859→
+   860→    // ── Stair outline (main flight) ──────────────────────────────────
+   861→    drawRect(
+   862→        color = ConcreteGray,
+   863→        topLeft = Offset(planLeft, planTop),
+   864→        size = Size(stairPlanW, planH)
+   865→    )
+   866→    drawRect(
+   867→        color = ConcreteTopGray,
+   868→        topLeft = Offset(planLeft, planTop),
+   869→        size = Size(stairPlanW, planH),
+   870→        style = Stroke(width = 1.5.dp.toPx())
+   871→    )
+   872→
+   873→    // ── Landing area ─────────────────────────────────────────────────
+   874→    if (hasLanding) {
+   875→        val landPlanW = landingLength.toFloat() * planScale
+   876→        drawRect(
+   877→            color = LandingFill,
+   878→            topLeft = Offset(planLeft + stairPlanW, planTop),
+   879→            size = Size(landPlanW, planH)
+   880→        )
+   881→        drawRect(
+   882→            color = ConcreteTopGray,
+   883→            topLeft = Offset(planLeft + stairPlanW, planTop),
+   884→            size = Size(landPlanW, planH),
+   885→            style = Stroke(width = 1.5.dp.toPx())
+   886→        )
+   887→        // Landing label
+   888→        drawTextAnnotated(
+   889→            text = "Landing",
+   890→            x = planLeft + stairPlanW + 4f,
+   891→            y = planTop + planH / 2f + 4f,
+   892→            color = DimensionWhite.copy(alpha = 0.6f), size = 13f
+   893→        )
+   894→    }
+   895→
+   896→    // ── Tread lines in plan ──────────────────────────────────────────
+   897→    if (nTreads > 0) {
+   898→        val treadPlanW = stairPlanW / (nTreads + 1)  // +1 for visual spacing
+   899→        for (i in 1..nTreads) {
+   900→            val lx = planLeft + i * treadPlanW
+   901→            if (lx < planLeft + stairPlanW) {
+   902→                drawLine(
+   903→                    color = ExtensionGray.copy(alpha = 0.4f),
+   904→                    start = Offset(lx, planTop),
+   905→                    end = Offset(lx, planTop + planH),
+   906→                    strokeWidth = 0.6f
+   907→                )
+   908→            }
+   909→        }
+   910→    }
+   911→
+   912→    // ── Main reinforcement in plan (parallel to stair length) ────────
+   913→    if (mainRebarDia > 0) {
+   914→        val numBars = (stairWidth / mainRebarSpacing).toInt()
+   915→            .coerceAtLeast(2).coerceAtMost(7)
+   916→        val barSpacing = if (numBars > 1) planH / (numBars + 1) else planH / 2f
+   917→        for (i in 1..numBars) {
+   918→            val by = planTop + i * barSpacing
+   919→            drawLine(
+   920→                color = RebarBlue,
+   921→                start = Offset(planLeft + 4f, by),
+   922→                end = Offset(planLeft + stairPlanW - 4f, by),
+   923→                strokeWidth = max(mainRebarDia.toFloat() * planScale * 0.06f, 1.2f),
+   924→                pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 4f), 0f)
+   925→            )
+   926→        }
+   927→    }
+   928→
+   929→    // ── Distribution bars in plan (perpendicular, across width) ──────
+   930→    if (distributionDia > 0 && distributionSpacing > 0) {
+   931→        val numDist = (totalLength / distributionSpacing).toInt()
+   932→            .coerceAtLeast(2).coerceAtMost(10)
+   933→        val distSpacing = stairPlanW / (numDist + 1)
+   934→        for (i in 1..numDist) {
+   935→            val dx = planLeft + i * distSpacing
+   936→            if (dx < planLeft + stairPlanW) {
+   937→                drawLine(
+   938→                    color = DistributionPurple,
+   939→                    start = Offset(dx, planTop + 3f),
+   940→                    end = Offset(dx, planTop + planH - 3f),
+   941→                    strokeWidth = max(distributionDia.toFloat() * planScale * 0.06f, 1f),
+   942→                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f), 0f)
+   943→                )
+   944→            }
+   945→        }
+   946→    }
+   947→
+   948→    // ── Arrow indicating direction of ascent ─────────────────────────
+   949→    val arrowY = planTop - 8f
+   950→    val arrowX1 = planLeft + stairPlanW * 0.3f
+   951→    val arrowX2 = planLeft + stairPlanW * 0.7f
+   952→    drawLine(
+   953→        color = DimensionWhite.copy(alpha = 0.6f),
+   954→        start = Offset(arrowX1, arrowY),
+   955→        end = Offset(arrowX2, arrowY),
+   956→        strokeWidth = 1.5f
+   957→    )
+   958→    drawArrowHead(arrowX2, arrowY, direction = 1f, color = DimensionWhite.copy(alpha = 0.6f))
+   959→    drawTextAnnotated(
+   960→        text = "UP", x = (arrowX1 + arrowX2) / 2f - 10f, y = arrowY - 4f,
+   961→        color = DimensionWhite.copy(alpha = 0.5f), size = 12f
+   962→    )
+   963→
+   964→    // ── Width dimension (left side) ──────────────────────────────────
+   965→    val wDimX = planLeft - 10f
+   966→    drawLine(
+   967→        color = DimensionWhite,
+   968→        start = Offset(wDimX, planTop),
+   969→        end = Offset(wDimX, planTop + planH),
+   970→        strokeWidth = 0.8f
+   971→    )
+   972→    drawArrowHead(wDimX, planTop, direction = 1f, color = DimensionWhite, vertical = true)
+   973→    drawArrowHead(wDimX, planTop + planH, direction = -1f, color = DimensionWhite, vertical = true)
+   974→    drawTextAnnotated(
+   975→        text = "${stairWidth.toInt()}",
+   976→        x = wDimX - 30f, y = planTop + planH / 2f + 4f,
+   977→        color = DimensionWhite, size = 12f
+   978→    )
+   979→
+   980→    // ── Length dimension (bottom) ────────────────────────────────────
+   981→    val lDimY = planTop + planH + 12f
+   982→    drawLine(
+   983→        color = DimensionWhite,
+   984→        start = Offset(planLeft, lDimY),
+   985→        end = Offset(planLeft + stairPlanW, lDimY),
+   986→        strokeWidth = 0.8f
+   987→    )
+   988→    drawArrowHead(planLeft, lDimY, direction = 1f, color = DimensionWhite)
+   989→    drawArrowHead(planLeft + stairPlanW, lDimY, direction = -1f, color = DimensionWhite)
+   990→    drawTextAnnotated(
+   991→        text = "${totalLength.toInt()}",
+   992→        x = planLeft + stairPlanW / 2f - 18f, y = lDimY + 13f,
+   993→        color = DimensionWhite, size = 12f
+   994→    )
+   995→
+   996→    // ── Number of treads label ───────────────────────────────────────
+   997→    drawTextAnnotated(
+   998→        text = "${nTreads} treads",
+   999→        x = planLeft + stairPlanW / 2f - 22f,
+  1000→        y = planTop + planH / 2f + 4f,
+  1001→        color = DimensionWhite.copy(alpha = 0.5f), size = 13f
+  1002→    )
+  1003→}
+  1004→
+  1005→// ============================================================================
+  1006→// 4. REINFORCEMENT SCHEDULE TABLE
+  1007→// ============================================================================
+  1008→
+  1009→private fun DrawScope.drawReinforcementScheduleTable(
+  1010→    cw: Float, ch: Float, tableTop: Float,
+  1011→    nRisers: Int, nTreads: Int,
+  1012→    totalLength: Double, totalHeight: Double,
+  1013→    slopeLength: Double,
+  1014→    stairWidth: Double,
+  1015→    slabThickness: Double,
+  1016→    mainRebarDia: Double, mainRebarSpacing: Double,
+  1017→    topRebarDia: Double, topRebarSpacing: Double,
+  1018→    distributionDia: Double, distributionSpacing: Double,
+  1019→    cover: Double, hasLanding: Boolean,
+  1020→    landingLength: Double, actualLandingThickness: Double
+  1021→) {
+  1022→    val tableLeft = 16f
+  1023→    val tableW = cw - 32f
+  1024→    val rowH = 24f
+  1025→    val headerH = 28f
+  1026→    val colWidths = floatArrayOf(
+  1027→        tableW * 0.12f,  // Mark
+  1028→        tableW * 0.14f,  // Diameter
+  1029→        tableW * 0.14f,  // Spacing
+  1030→        tableW * 0.24f,  // Length
+  1031→        tableW * 0.18f,  // No.
+  1032→        tableW * 0.18f   // Weight
+  1033→    )
+  1034→
+  1035→    // ── Table title ──────────────────────────────────────────────────
+  1036→    drawTextAnnotated(
+  1037→        text = "REINFORCEMENT SCHEDULE",
+  1038→        x = tableLeft, y = tableTop - 4f,
+  1039→        color = DimensionWhite, size = 18f
+  1040→    )
+  1041→
+  1042→    // ── Header row ───────────────────────────────────────────────────
+  1043→    drawRect(
+  1044→        color = TableHeaderBg,
+  1045→        topLeft = Offset(tableLeft, tableTop + 6f),
+  1046→        size = Size(tableW, headerH)
+  1047→    )
+  1048→
+  1049→    val headers = arrayOf("Mark", "Dia.", "Spacing", "Length", "No.", "Weight")
+  1050→    var cx = tableLeft
+  1051→    for (i in headers.indices) {
+  1052→        drawTextAnnotated(
+  1053→            text = headers[i],
+  1054→            x = cx + 6f,
+  1055→            y = tableTop + 6f + headerH / 2f + 5f,
+  1056→            color = DimensionWhite, size = 16f
+  1057→        )
+  1058→        cx += colWidths[i]
+  1059→    }
+  1060→
+  1061→    // ── Separator ────────────────────────────────────────────────────
+  1062→    drawLine(
+  1063→        color = ExtensionGray.copy(alpha = 0.3f),
+  1064→        start = Offset(tableLeft, tableTop + 6f + headerH),
+  1065→        end = Offset(tableLeft + tableW, tableTop + 6f + headerH),
+  1066→        strokeWidth = 0.5.dp.toPx()
+  1067→    )
+  1068→
+  1069→    // ── Row 1: Main bottom reinforcement ─────────────────────────────
+  1070→    val row1Y = tableTop + 6f + headerH
+  1071→    drawRect(
+  1072→        color = TableRowAlt,
+  1073→        topLeft = Offset(tableLeft, row1Y),
+  1074→        size = Size(tableW, rowH)
+  1075→    )
+  1076→    val mainBarCount = (stairWidth / mainRebarSpacing).toInt().coerceAtLeast(1)
+  1077→    val mainBarLength = slopeLength + 2 * 300  // 300mm anchorage at each end
+  1078→    val mainBarWeight = mainBarCount * mainBarLength * (mainRebarDia * mainRebarDia * 0.006165 / 1000.0)
+  1079→
+  1080→    val row1Data = arrayOf(
+  1081→        "B1",
+  1082→        "Ø${mainRebarDia.toInt()}",
+  1083→        "@ ${mainRebarSpacing.toInt()}",
+  1084→        "${mainBarLength.toInt()} mm",
+  1085→        "$mainBarCount",
+  1086→        "${"%.1f".format(mainBarWeight)} kg"
+  1087→    )
+  1088→    cx = tableLeft
+  1089→    for (i in row1Data.indices) {
+  1090→        drawTextAnnotated(
+  1091→            text = row1Data[i],
+  1092→            x = cx + 6f, y = row1Y + rowH / 2f + 5f,
+  1093→            color = RebarBlue, size = 15f
+  1094→        )
+  1095→        cx += colWidths[i]
+  1096→    }
+  1097→
+  1098→    // ── Separator ────────────────────────────────────────────────────
+  1099→    val row2Y = row1Y + rowH
+  1100→    drawLine(
+  1101→        color = ExtensionGray.copy(alpha = 0.2f),
+  1102→        start = Offset(tableLeft, row2Y),
+  1103→        end = Offset(tableLeft + tableW, row2Y),
+  1104→        strokeWidth = 0.5.dp.toPx()
+  1105→    )
+  1106→
+  1107→    // ── Row 2: Top reinforcement (if present) ────────────────────────
+  1108→    var currentY = row2Y
+  1109→    if (topRebarDia > 0 && topRebarSpacing > 0) {
+  1110→        drawRect(
+  1111→            color = Color(0x0DFFFFFF),
+  1112→            topLeft = Offset(tableLeft, currentY),
+  1113→            size = Size(tableW, rowH)
+  1114→        )
+  1115→        val topBarCount = (stairWidth / topRebarSpacing).toInt().coerceAtLeast(1) * 2 // both ends
+  1116→        val topBarLength = totalLength * 0.25 // ~L/4 at each support
+  1117→        val topBarWeight = topBarCount * topBarLength * (topRebarDia * topRebarDia * 0.006165 / 1000.0)
+  1118→
+  1119→        val row2Data = arrayOf(
+  1120→            "T1",
+  1121→            "Ø${topRebarDia.toInt()}",
+  1122→            "@ ${topRebarSpacing.toInt()}",
+  1123→            "${topBarLength.toInt()} mm",
+  1124→            "$topBarCount",
+  1125→            "${"%.1f".format(topBarWeight)} kg"
+  1126→        )
+  1127→        cx = tableLeft
+  1128→        for (i in row2Data.indices) {
+  1129→            drawTextAnnotated(
+  1130→                text = row2Data[i],
+  1131→                x = cx + 6f, y = currentY + rowH / 2f + 5f,
+  1132→                color = TopRebarBlue, size = 15f
+  1133→            )
+  1134→            cx += colWidths[i]
+  1135→        }
+  1136→        currentY += rowH
+  1137→
+  1138→        drawLine(
+  1139→            color = ExtensionGray.copy(alpha = 0.2f),
+  1140→            start = Offset(tableLeft, currentY),
+  1141→            end = Offset(tableLeft + tableW, currentY),
+  1142→            strokeWidth = 0.5.dp.toPx()
+  1143→        )
+  1144→    }
+  1145→
+  1146→    // ── Row 3: Distribution bars ─────────────────────────────────────
+  1147→    if (distributionDia > 0 && distributionSpacing > 0) {
+  1148→        drawRect(
+  1149→            color = TableRowAlt,
+  1150→            topLeft = Offset(tableLeft, currentY),
+  1151→            size = Size(tableW, rowH)
+  1152→        )
+  1153→        val distBarCount = (slopeLength / distributionSpacing).toInt().coerceAtLeast(1)
+  1154→        val distBarLength = stairWidth - 2 * cover
+  1155→        val distBarWeight = distBarCount * distBarLength * (distributionDia * distributionDia * 0.006165 / 1000.0)
+  1156→
+  1157→        val row3Data = arrayOf(
+  1158→            "D1",
+  1159→            "Ø${distributionDia.toInt()}",
+  1160→            "@ ${distributionSpacing.toInt()}",
+  1161→            "${distBarLength.toInt()} mm",
+  1162→            "$distBarCount",
+  1163→            "${"%.1f".format(distBarWeight)} kg"
+  1164→        )
+  1165→        cx = tableLeft
+  1166→        for (i in row3Data.indices) {
+  1167→            drawTextAnnotated(
+  1168→                text = row3Data[i],
+  1169→                x = cx + 6f, y = currentY + rowH / 2f + 5f,
+  1170→                color = DistributionPurple, size = 15f
+  1171→            )
+  1172→            cx += colWidths[i]
+  1173→        }
+  1174→        currentY += rowH
+  1175→
+  1176→        drawLine(
+  1177→            color = ExtensionGray.copy(alpha = 0.2f),
+  1178→            start = Offset(tableLeft, currentY),
+  1179→            end = Offset(tableLeft + tableW, currentY),
+  1180→            strokeWidth = 0.5.dp.toPx()
+  1181→        )
+  1182→    }
+  1183→
+  1184→    // ── Column separators ────────────────────────────────────────────
+  1185→    var sepX = tableLeft
+  1186→    for (i in 0 until colWidths.size - 1) {
+  1187→        sepX += colWidths[i]
+  1188→        drawLine(
+  1189→            color = ExtensionGray.copy(alpha = 0.15f),
+  1190→            start = Offset(sepX, tableTop + 6f),
+  1191→            end = Offset(sepX, currentY),
+  1192→            strokeWidth = 0.5.dp.toPx()
+  1193→        )
+  1194→    }
+  1195→
+  1196→    // ── Table border ─────────────────────────────────────────────────
+  1197→    drawRect(
+  1198→        color = ExtensionGray.copy(alpha = 0.4f),
+  1199→        topLeft = Offset(tableLeft, tableTop + 6f),
+  1200→        size = Size(tableW, currentY - tableTop - 6f),
+  1201→        style = Stroke(width = 1.dp.toPx())
+  1202→    )
+  1203→}
+  1204→
+  1205→// ============================================================================
+  1206→// 5. TITLE BLOCK
+  1207→// ============================================================================
+  1208→
+  1209→private fun DrawScope.drawTitleBlock(
+  1210→    cw: Float, ch: Float,
+  1211→    nRisers: Int,
+  1212→    riserHeight: Double,
+  1213→    treadWidth: Double,
+  1214→    totalHeight: Double,
+  1215→    totalLength: Double
+  1216→) {
+  1217→    val blockW = 200f
+  1218→    val blockH = 48f
+  1219→    val blockLeft = cw - blockW - 16f
+  1220→    val blockTop = ch - blockH - 8f
+  1221→
+  1222→    drawRoundRect(
+  1223→        color = Color(0x22000000),
+  1224→        topLeft = Offset(blockLeft, blockTop),
+  1225→        size = Size(blockW, blockH),
+  1226→        cornerRadius = CornerRadius(6f, 6f)
+  1227→    )
+  1228→
+  1229→    drawTextAnnotated(
+  1230→        text = "STAIRCASE DETAIL",
+  1231→        x = blockLeft + 8f, y = blockTop + 18f,
+  1232→        color = DimensionWhite, size = 16f
+  1233→    )
+  1234→    drawTextAnnotated(
+  1235→        text = "${nRisers}R × ${treadWidth.toInt()}T  |  H=${totalHeight.toInt()}  L=${totalLength.toInt()}",
+  1236→        x = blockLeft + 8f, y = blockTop + 36f,
+  1237→        color = ExtensionGray, size = 12f
+  1238→    )
+  1239→}
+  1240→
+  1241→// ============================================================================
+  1242→// 6. STAIR SUPPORT SYMBOLS
+  1243→// ============================================================================
+  1244→
+  1245→/**
+  1246→ * Draws a structural support symbol at the given position.
+  1247→ * [isFixed] = true draws a fixed support (hatched wall), false draws a pin support.
+  1248→ */
+  1249→private fun DrawScope.drawStairSupport(
+  1250→    x: Float, y: Float,
+  1251→    isFixed: Boolean, supportH: Float
+  1252→) {
+  1253→    val lineW = 1.5.dp.toPx()
+  1254→    val supportColor = SupportColor
+  1255→
+  1256→    if (isFixed) {
+  1257→        // Fixed support — hatched wall
+  1258→        val wallW = 12f
+  1259→        drawRect(
+  1260→            color = supportColor.copy(alpha = 0.3f),
+  1261→            topLeft = Offset(x - wallW / 2f, y),
+  1262→            size = Size(wallW, supportH)
+  1263→        )
+  1264→        drawLine(
+  1265→            color = supportColor,
+  1266→            start = Offset(x - wallW / 2f, y),
+  1267→            end = Offset(x - wallW / 2f, y + supportH),
+  1268→            strokeWidth = lineW
+  1269→        )
+  1270→        drawLine(
+  1271→            color = supportColor,
+  1272→            start = Offset(x + wallW / 2f, y),
+  1273→            end = Offset(x + wallW / 2f, y + supportH),
+  1274→            strokeWidth = lineW
+  1275→        )
+  1276→        // Ground hatching
+  1277→        for (i in 0..3) {
+  1278→            val hx = x - wallW / 2f + i * (wallW / 3f)
+  1279→            drawLine(
+  1280→                color = supportColor,
+  1281→                start = Offset(hx, y + supportH),
+  1282→                end = Offset(hx - 5f, y + supportH + 8f),
+  1283→                strokeWidth = 1.2f
+  1284→            )
+  1285→        }
+  1286→    } else {
+  1287→        // Pin support — triangle
+  1288→        val triW = 24f
+  1289→        val triH = supportH * 0.65f
+  1290→        val triPath = Path().apply {
+  1291→            moveTo(x, y)
+  1292→            lineTo(x - triW / 2f, y + triH)
+  1293→            lineTo(x + triW / 2f, y + triH)
+  1294→            close()
+  1295→        }
+  1296→        drawPath(path = triPath, color = supportColor.copy(alpha = 0.5f))
+  1297→        drawPath(
+  1298→            path = triPath, color = supportColor,
+  1299→            style = Stroke(width = lineW, join = StrokeJoin.Miter)
+  1300→        )
+  1301→        // Pin circle
+  1302→        drawCircle(
+  1303→            color = supportColor, radius = 3.5f,
+  1304→            center = Offset(x, y + triH + 5f)
+  1305→        )
+  1306→        // Ground line
+  1307→        val groundY = y + triH + 10f
+  1308→        drawLine(
+  1309→            color = supportColor,
+  1310→            start = Offset(x - triW * 0.7f, groundY),
+  1311→            end = Offset(x + triW * 0.7f, groundY),
+  1312→            strokeWidth = lineW
+  1313→        )
+  1314→        // Ground hatching
+  1315→        for (i in 0..4) {
+  1316→            val hx = x - triW * 0.7f + i * (triW * 1.4f / 4f)
+  1317→            drawLine(
+  1318→                color = supportColor,
+  1319→                start = Offset(hx, groundY),
+  1320→                end = Offset(hx - 5f, groundY + 8f),
+  1321→                strokeWidth = 1.2f
+  1322→            )
+  1323→        }
+  1324→    }
+  1325→}
+  1326→
+  1327→// ============================================================================
+  1328→// 7. ELEVATION DIMENSION LINES
+  1329→// ============================================================================
+  1330→
+  1331→private fun DrawScope.drawElevationDimensions(
+  1332→    originX: Float, originY: Float,
+  1333→    stairEndX: Float, stairEndY: Float,
+  1334→    landingEndX: Float, hasLanding: Boolean,
+  1335→    stepW: Float, stepH: Float,
+  1336→    nRisers: Int, nTreads: Int,
+  1337→    riserHeight: Double, treadWidth: Double,
+  1338→    totalHeight: Double, totalLength: Double,
+  1339→    slabThickness: Double, scale: Float
+  1340→) {
+  1341→    val dimLineW = 0.8.dp.toPx()
+  1342→    val extLineW = 0.6.dp.toPx()
+  1343→
+  1344→    // ── Total Height dimension (left side) ───────────────────────────
+  1345→    val heightX = originX - 36f
+  1346→    drawLine(
+  1347→        color = DimensionWhite,
+  1348→        start = Offset(heightX, originY),
+  1349→        end = Offset(heightX, stairEndY),
+  1350→        strokeWidth = dimLineW
+  1351→    )
+  1352→    drawArrowHead(heightX, originY, direction = -1f, color = DimensionWhite, vertical = true)
+  1353→    drawArrowHead(heightX, stairEndY, direction = 1f, color = DimensionWhite, vertical = true)
+  1354→    // Extension lines
+  1355→    drawLine(
+  1356→        color = ExtensionGray,
+  1357→        start = Offset(originX - 2f, originY),
+  1358→        end = Offset(heightX - 4f, originY),
+  1359→        strokeWidth = extLineW
+  1360→    )
+  1361→    drawLine(
+  1362→        color = ExtensionGray,
+  1363→        start = Offset(originX - 2f, stairEndY),
+  1364→        end = Offset(heightX - 4f, stairEndY),
+  1365→        strokeWidth = extLineW
+  1366→    )
+  1367→    // Rotated label
+  1368→    withTransform({
+  1369→        rotate(degrees = -90f, pivot = Offset(heightX - 14f, originY - (originY - stairEndY) / 2f))
+  1370→    }) {
+  1371→        drawContext.canvas.nativeCanvas.apply {
+  1372→            val paint = android.graphics.Paint().apply {
+  1373→                textSize = 16f
+  1374→                color = android.graphics.Color.WHITE
+  1375→                isFakeBoldText = true
+  1376→                typeface = android.graphics.Typeface.MONOSPACE
+  1377→                textAlign = android.graphics.Paint.Align.CENTER
+  1378→            }
+  1379→            this.drawText(
+  1380→                "H=${totalHeight.toInt()}",
+  1381→                heightX - 14f,
+  1382→                stairEndY + (originY - stairEndY) / 2f + 4f,
+  1383→                paint
+  1384→            )
+  1385→        }
+  1386→    }
+  1387→
+  1388→    // ── Total Horizontal Length dimension (bottom) ───────────────────
+  1389→    val endX = if (hasLanding) landingEndX else stairEndX
+  1390→    val lenY = originY + 50f
+  1391→    drawLine(
+  1392→        color = DimensionWhite,
+  1393→        start = Offset(originX, lenY),
+  1394→        end = Offset(endX, lenY),
+  1395→        strokeWidth = dimLineW
+  1396→    )
+  1397→    drawArrowHead(originX, lenY, direction = 1f, color = DimensionWhite)
+  1398→    drawArrowHead(endX, lenY, direction = -1f, color = DimensionWhite)
+  1399→    // Extension lines
+  1400→    drawLine(
+  1401→        color = ExtensionGray,
+  1402→        start = Offset(originX, originY + 4f),
+  1403→        end = Offset(originX, lenY + 6f),
+  1404→        strokeWidth = extLineW
+  1405→    )
+  1406→    drawLine(
+  1407→        color = ExtensionGray,
+  1408→        start = Offset(endX, originY + 4f),
+  1409→        end = Offset(endX, lenY + 6f),
+  1410→        strokeWidth = extLineW
+  1411→    )
+  1412→    drawTextAnnotated(
+  1413→        text = "L = ${totalLength.toInt()} mm",
+  1414→        x = (originX + endX) / 2f - 36f, y = lenY + 18f,
+  1415→        color = DimensionWhite, size = 16f
+  1416→    )
+  1417→
+  1418→    // ── Riser height dimension (first riser, small) ──────────────────
+  1419→    if (nRisers >= 2) {
+  1420→        val rX = originX - 14f
+  1421→        val rY1 = originY - stepH
+  1422→        val rY2 = originY
+  1423→        drawLine(
+  1424→            color = TopRebarBlue.copy(alpha = 0.8f),
+  1425→            start = Offset(rX, rY1),
+  1426→            end = Offset(rX, rY2),
+  1427→            strokeWidth = 0.6f
+  1428→        )
+  1429→        drawArrowHead(rX, rY1, direction = 1f, color = TopRebarBlue.copy(alpha = 0.8f), vertical = true)
+  1430→        drawArrowHead(rX, rY2, direction = -1f, color = TopRebarBlue.copy(alpha = 0.8f), vertical = true)
+  1431→        withTransform({
+  1432→            rotate(degrees = -90f, pivot = Offset(rX - 10f, (rY1 + rY2) / 2f))
+  1433→        }) {
+  1434→            drawContext.canvas.nativeCanvas.apply {
+  1435→                val paint = android.graphics.Paint().apply {
+  1436→                    textSize = 11f
+  1437→                    color = android.graphics.Color.parseColor("#7EC8E3")
+  1438→                    isFakeBoldText = true
+  1439→                    typeface = android.graphics.Typeface.MONOSPACE
+  1440→                    textAlign = android.graphics.Paint.Align.CENTER
+  1441→                }
+  1442→                this.drawText(
+  1443→                    "R=${riserHeight.toInt()}",
+  1444→                    rX - 10f,
+  1445→                    (rY1 + rY2) / 2f + 3f,
+  1446→                    paint
+  1447→                )
+  1448→            }
+  1449→        }
+  1450→    }
+  1451→
+  1452→    // ── Tread width dimension (first tread, small) ───────────────────
+  1453→    if (nTreads >= 1) {
+  1454→        val tY = originY - stepH + stepH + 16f
+  1455→        val tX1 = originX
+  1456→        val tX2 = originX + stepW
+  1457→        drawLine(
+  1458→            color = TopRebarBlue.copy(alpha = 0.8f),
+  1459→            start = Offset(tX1, tY),
+  1460→            end = Offset(tX2, tY),
+  1461→            strokeWidth = 0.6f
+  1462→        )
+  1463→        drawArrowHead(tX1, tY, direction = 1f, color = TopRebarBlue.copy(alpha = 0.8f))
+  1464→        drawArrowHead(tX2, tY, direction = -1f, color = TopRebarBlue.copy(alpha = 0.8f))
+  1465→        drawTextAnnotated(
+  1466→            text = "T=${treadWidth.toInt()}",
+  1467→            x = (tX1 + tX2) / 2f - 16f, y = tY + 13f,
+  1468→            color = TopRebarBlue.copy(alpha = 0.8f), size = 11f
+  1469→        )
+  1470→    }
+  1471→}
+  1472→
+  1473→// ============================================================================
+  1474→// DRAWING HELPERS
+  1475→// ============================================================================
+  1476→
+  1477→/**
+  1478→ * Draws an arrowhead at (x, y) pointing in [direction] (1 = right/down, -1 = left/up).
+  1479→ * Set [vertical] to true for vertical arrows.
+  1480→ */
+  1481→private fun DrawScope.drawArrowHead(
+  1482→    x: Float, y: Float,
+  1483→    direction: Float,
+  1484→    color: Color,
+  1485→    vertical: Boolean = false
+  1486→) {
+  1487→    val arrowSize = 7f
+  1488→    val path = Path()
+  1489→    if (!vertical) {
+  1490→        path.moveTo(x, y)
+  1491→        path.lineTo(x - direction * arrowSize, y - arrowSize * 0.5f)
+  1492→        path.lineTo(x - direction * arrowSize, y + arrowSize * 0.5f)
+  1493→        path.close()
+  1494→    } else {
+  1495→        path.moveTo(x, y)
+  1496→        path.lineTo(x - arrowSize * 0.5f, y - direction * arrowSize)
+  1497→        path.lineTo(x + arrowSize * 0.5f, y - direction * arrowSize)
+  1498→        path.close()
+  1499→    }
+  1500→    drawPath(path = path, color = color)
+  1501→}
+  1502→
+  1503→/**
+  1504→ * Draws text using nativeCanvas for full control over alignment and typeface.
+  1505→ */
+  1506→private fun DrawScope.drawTextAnnotated(
+  1507→    text: String,
+  1508→    x: Float,
+  1509→    y: Float,
+  1510→    color: Color,
+  1511→    size: Float
+  1512→) {
+  1513→    drawContext.canvas.nativeCanvas.apply {
+  1514→        val paint = android.graphics.Paint().apply {
+  1515→            textSize = size
+  1516→            this.color = color.toArgb()
+  1517→            isFakeBoldText = true
+  1518→            typeface = android.graphics.Typeface.MONOSPACE
+  1519→            textAlign = android.graphics.Paint.Align.LEFT
+  1520→            setShadowLayer(2f, 1f, 1f, 0x44000000)
+  1521→        }
+  1522→        this.drawText(text, x, y, paint)
+  1523→    }
+  1524→}
+  1525→
+  1526→/**
+  1527→ * Draws text with a semi-transparent background pill for labels.
+  1528→ */
+  1529→private fun DrawScope.drawTextWithBackground(
+  1530→    text: String,
+  1531→    x: Float,
+  1532→    y: Float,
+  1533→    textColor: Color,
+  1534→    bgColor: Color,
+  1535→    textSize: Float = 20f
+  1536→) {
+  1537→    val paint = android.graphics.Paint().apply {
+  1538→        this.textSize = textSize
+  1539→        color = textColor.toArgb()
+  1540→        isFakeBoldText = true
+  1541→        typeface = android.graphics.Typeface.MONOSPACE
+  1542→        textAlign = android.graphics.Paint.Align.LEFT
+  1543→    }
+  1544→    val metrics = paint.fontMetrics
+  1545→    val textW = paint.measureText(text)
+  1546→    val textH = metrics.descent - metrics.ascent
+  1547→
+  1548→    drawRoundRect(
+  1549→        color = bgColor,
+  1550→        topLeft = Offset(x - 4f, y + metrics.ascent - 2f),
+  1551→        size = Size(textW + 8f, textH + 4f),
+  1552→        cornerRadius = CornerRadius(4f, 4f)
+  1553→    )
+  1554→
+  1555→    drawContext.canvas.nativeCanvas.drawText(text, x, y, paint)
+  1556→}
+  1557→
+  1558→/**
+  1559→ * Draws diagonal hatch lines on a rectangular section (for cut concrete indication).
+  1560→ */
+  1561→private fun DrawScope.drawSectionHatch(
+  1562→    left: Float, top: Float,
+  1563→    width: Float, height: Float
+  1564→) {
+  1565→    val step = 12f
+  1566→    val hatchColor = HatchColor
+  1567→    for (offset in -height.toInt()..(width + height).toInt() step step.toInt()) {
+  1568→        val x1 = left + offset.toFloat()
+  1569→        val y1 = top
+  1570→        val x2 = left + offset.toFloat() - height
+  1571→        val y2 = top + height
+  1572→        // Clip to rect bounds
+  1573→        val cx1 = x1.coerceIn(left, left + width)
+  1574→        val cy1 = when {
+  1575→            x1 < left -> top + (left - x1)
+  1576→            x1 > left + width -> top
+  1577→            else -> top
+  1578→        }.coerceIn(top, top + height)
+  1579→        val cx2 = x2.coerceIn(left, left + width)
+  1580→        val cy2 = when {
+  1581→            x2 < left -> top + (left - x2)
+  1582→            x2 > left + width -> top + (x2 - (left + width))
+  1583→            else -> top + height
+  1584→        }.coerceIn(top, top + height)
+  1585→
+  1586→        if (cx1 in left..(left + width) || cx2 in left..(left + width)) {
+  1587→            drawLine(
+  1588→                color = hatchColor,
+  1589→                start = Offset(
+  1590→                    x = x1.coerceIn(left, left + width),
+  1591→                    y = y1.coerceIn(top, top + height)
+  1592→                ),
+  1593→                end = Offset(
+  1594→                    x = x2.coerceIn(left, left + width),
+  1595→                    y = y2.coerceIn(top, top + height)
+  1596→                ),
+  1597→                strokeWidth = 0.4f
+  1598→            )
+  1599→        }
+  1600→    }
+  1601→}
+  1602→
+  1603→
