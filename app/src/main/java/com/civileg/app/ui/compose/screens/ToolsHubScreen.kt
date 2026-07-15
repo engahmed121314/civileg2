@@ -86,7 +86,7 @@ fun ToolsHubScreen(
 
 @Composable
 private fun ToolHubCard(tool: ToolItem, onClick: () -> Unit) {
-    val isDark = MaterialTheme.colorScheme.surface.luminance < 0.5f
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
 
     Card(

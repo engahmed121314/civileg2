@@ -91,7 +91,7 @@ fun DesignHubScreen(
 
 @Composable
 private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
-    val isDark = MaterialTheme.colorScheme.surface luminance < 0.5f
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     Card(
         onClick = onClick,
