@@ -105,7 +105,7 @@ class ColumnComposeViewModel @Inject constructor(
                 onSuccess = { CalculationResult.Success(it) },
                 onFailure = { e -> 
                     CalculationResult.Error(
-                        message = e.localizedMessage ?: appContext.getString(R.string.error_calculation_failed),
+                        message = e.localizedMessage ?: "Calculation failed",
                         code = ErrorCode.CONVERGENCE_FAILED
                     )
                 }
