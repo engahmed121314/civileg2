@@ -112,7 +112,7 @@ fun InteractiveDrawingScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(500.dp)
+                    .height(620.dp)
                     .background(Color(0xFF1A1A2E))
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->

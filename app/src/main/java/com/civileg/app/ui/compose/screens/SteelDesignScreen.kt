@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -282,63 +283,244 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
 
 @Composable
 fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
-    Card(
-        modifier = Modifier.fillMaxWidth().height(220.dp).padding(vertical = 8.dp),
-        border = BorderStroke(1.dp, Color.LightGray)
+    InteractiveDrawingScreen(
+        title = "تحليل الإطار الإنشائي",
+        subtitle = "Frame Analysis & BMD"
     ) {
-        ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA))) {
-            val padding = 40.dp.toPx()
+        ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFF0D1117))) {
+            val padding = 60f
             val w = size.width - 2 * padding
             val h = size.height - 2 * padding
             val baseY = size.height - padding
-            
+
             // Scale calculations
-            val scale = (w / inputs.span).toFloat()
+            val scale = (w / inputs.span).toFloat() * 0.75f
             val eh = (inputs.eaveHeight * scale).toFloat()
             val rh = (inputs.ridgeHeight * scale).toFloat()
             val midX = padding + w / 2
-            
-            // Draw Main Frame Outline
-            val framePath = Path().apply {
-                moveTo(padding, baseY)
-                lineTo(padding, baseY - eh)
-                lineTo(midX, baseY - rh)
-                lineTo(padding + w, baseY - eh)
-                lineTo(padding + w, baseY)
+            val colLX = padding + (w - inputs.span * scale) / 2
+            val colRX = colLX + (inputs.span * scale).toFloat()
+
+            // ── Grid ──
+            val gridColor = Color(0x1AFFFFFF)
+            for (i in 0..20) {
+                val x = padding + (i * w / 20)
+                drawLine(gridColor, Offset(x, padding), Offset(x, size.height - padding), strokeWidth = 0.5f)
             }
-            drawPath(framePath, Color.Gray, style = androidx.compose.ui.graphics.drawscope.Stroke(1f))
-            
-            // Draw Distributed Load Arrows
-            val loadColor = Color(0xFFE53935)
             for (i in 0..12) {
-                val x = padding + (i * w / 12)
-                val y = if (x <= midX) {
-                    baseY - eh - (x - padding) / (midX - padding) * (rh - eh)
-                } else {
-                    baseY - rh + (x - midX) / (padding + w - midX) * (rh - eh)
-                }
-                drawLine(loadColor, Offset(x, y - 25f), Offset(x, y), strokeWidth = 2f)
-                // Arrow heads
-                drawLine(loadColor, Offset(x - 4f, y - 6f), Offset(x, y), strokeWidth = 2f)
-                drawLine(loadColor, Offset(x + 4f, y - 6f), Offset(x, y), strokeWidth = 2f)
+                val y = padding + (i * h / 12)
+                drawLine(gridColor, Offset(padding, y), Offset(size.width - padding, y), strokeWidth = 0.5f)
             }
-            
-            // Draw Moment Diagram (Simplified)
-            val momentColor = Color(0xFF1E88E5)
+
+            // ── Ground Line with hatching ──
+            val groundColor = Color(0xFF4A4A4A)
+            drawLine(groundColor, Offset(colLX - 30f, baseY), Offset(colRX + 30f, baseY), strokeWidth = 3f)
+            for (i in 0..24) {
+                val x = (colLX - 30f) + (i * (colRX - colLX + 60f) / 24)
+                drawLine(groundColor, Offset(x, baseY), Offset(x - 8f, baseY + 10f), strokeWidth = 1f)
+            }
+
+            // ── Pin Supports ──
+            val supportColor = Color(0xFF8A8A8A)
+            // Left support
+            drawPath(Path().apply {
+                moveTo(colLX - 12f, baseY)
+                lineTo(colLX + 12f, baseY)
+                lineTo(colLX, baseY + 18f)
+                close()
+            }, supportColor, style = Stroke(2f))
+            // Right support
+            drawPath(Path().apply {
+                moveTo(colRX - 12f, baseY)
+                lineTo(colRX + 12f, baseY)
+                lineTo(colRX, baseY + 18f)
+                close()
+            }, supportColor, style = Stroke(2f))
+
+            // ── Main Frame with 3D effect ──
+            val frameColor = Color(0xFFB0BEC5)
+            val frameShadow = Color(0xFF546E7A)
+            val frameHighlight = Color(0xFFECEFF1)
+            val memberWidth = 6f
+
+            // Columns (draw shadow, main, highlight for 3D look)
+            // Left column
+            drawLine(frameShadow, Offset(colLX + 2f, baseY), Offset(colLX + 2f, baseY - eh), strokeWidth = memberWidth + 2f)
+            drawLine(frameColor, Offset(colLX, baseY), Offset(colLX, baseY - eh), strokeWidth = memberWidth)
+            drawLine(frameHighlight, Offset(colLX - 1f, baseY), Offset(colLX - 1f, baseY - eh), strokeWidth = 1f)
+
+            // Right column
+            drawLine(frameShadow, Offset(colRX + 2f, baseY), Offset(colRX + 2f, baseY - eh), strokeWidth = memberWidth + 2f)
+            drawLine(frameColor, Offset(colRX, baseY), Offset(colRX, baseY - eh), strokeWidth = memberWidth)
+            drawLine(frameHighlight, Offset(colRX - 1f, baseY), Offset(colRX - 1f, baseY - eh), strokeWidth = 1f)
+
+            // Rafters (left)
+            drawLine(frameShadow, Offset(colLX + 2f, baseY - eh + 2f), Offset(midX + 1f, baseY - rh + 1f), strokeWidth = memberWidth + 2f)
+            drawLine(frameColor, Offset(colLX, baseY - eh), Offset(midX, baseY - rh), strokeWidth = memberWidth)
+            // Rafters (right)
+            drawLine(frameShadow, Offset(colRX + 2f, baseY - eh + 2f), Offset(midX + 1f, baseY - rh + 1f), strokeWidth = memberWidth + 2f)
+            drawLine(frameColor, Offset(colRX, baseY - eh), Offset(midX, baseY - rh), strokeWidth = memberWidth)
+
+            // ── Joint Circles ──
+            val jointColor = Color(0xFFFF9800)
+            listOf(
+                Offset(colLX, baseY - eh),
+                Offset(colRX, baseY - eh),
+                Offset(midX, baseY - rh)
+            ).forEach { joint ->
+                drawCircle(Color(0x33FF9800), 14f, joint)
+                drawCircle(jointColor, 6f, joint)
+                drawCircle(Color.White, 3f, joint)
+            }
+
+            // ── Distributed Load Arrows (on rafters) ──
+            val loadColor = Color(0xFFEF5350)
+            for (i in 0..14) {
+                val t = i / 14f
+                // Left rafter
+                val xL = colLX + t * (midX - colLX)
+                val yL = baseY - eh + t * (rh - eh) * (-1f)
+                val nxL = -(baseY - eh - (baseY - rh)) // normal direction
+                val lenL = (midX - colLX)
+                val nxNorm = ((baseY - rh) - (baseY - eh)) / lenL
+                val nyNorm = (midX - colLX) / lenL
+                val arrowLen = 25f
+                drawLine(loadColor, Offset(xL - nxNorm * arrowLen, yL - nyNorm * arrowLen), Offset(xL, yL), strokeWidth = 1.5f)
+                // Arrow head
+                drawLine(loadColor, Offset(xL - 4f, yL - 5f), Offset(xL, yL), strokeWidth = 1.5f)
+                drawLine(loadColor, Offset(xL + 4f, yL - 5f), Offset(xL, yL), strokeWidth = 1.5f)
+
+                // Right rafter
+                val xR = midX + t * (colRX - midX)
+                val yR = (baseY - rh) + t * ((baseY - eh) - (baseY - rh))
+                drawLine(loadColor, Offset(xR + nxNorm * arrowLen, yR - nyNorm * arrowLen), Offset(xR, yR), strokeWidth = 1.5f)
+                drawLine(loadColor, Offset(xR - 4f, yR - 5f), Offset(xR, yR), strokeWidth = 1.5f)
+                drawLine(loadColor, Offset(xR + 4f, yR - 5f), Offset(xR, yR), strokeWidth = 1.5f)
+            }
+
+            // Load label
+            drawContext.canvas.nativeCanvas.drawText(
+                "w = %.1f kN/m".format(result.mainFrame.maxShear / max(inputs.span, 1.0)),
+                (colLX + colRX) / 2f - 60f, baseY - rh - 35f,
+                android.graphics.Paint().apply { color = loadColor.toArgb(); textSize = 28f; isFakeBoldText = true }
+            )
+
+            // ── Bending Moment Diagram (filled) ──
+            val momentColor = Color(0xFF42A5F5)
+            val maxMoment = result.mainFrame.maxMoment
+            val momentScale = min(eh * 0.35f / max(maxMoment, 1f), 0.5f)
+
+            // Left rafter moment (parabolic)
             val momentPath = Path().apply {
-                moveTo(padding, baseY - eh)
-                // Simulated parabolic curve for moment
-                cubicTo(
-                    padding + w * 0.25f, baseY - eh + 50f,
-                    padding + w * 0.75f, baseY - eh + 50f,
-                    padding + w, baseY - eh
-                )
+                moveTo(colLX, baseY - eh)
+                for (i in 0..20) {
+                    val t = i / 20f
+                    val x = colLX + t * (midX - colLX)
+                    val y = baseY - eh + t * (rh - eh) * (-1f)
+                    val m = 4 * maxMoment * t * (1 - t)
+                    val nxN = ((baseY - rh) - (baseY - eh)) / (midX - colLX)
+                    val nyN = (midX - colLX) / (midX - colLX)
+                    lineTo(x + nxN * m * momentScale, y + nyN * m * momentScale)
+                }
+                lineTo(midX, baseY - rh)
+                close()
             }
-            drawPath(momentPath, momentColor.copy(alpha = 0.15f))
-            drawPath(momentPath, momentColor, style = androidx.compose.ui.graphics.drawscope.Stroke(2f))
-            
-            // Labels
-            // Note: NativeCanvas is used for text if needed, but we'll keep it simple
+            drawPath(momentPath, momentColor.copy(alpha = 0.2f))
+            drawPath(momentPath, momentColor, style = Stroke(2f))
+
+            // Right rafter moment (mirror)
+            val momentPathR = Path().apply {
+                moveTo(colRX, baseY - eh)
+                for (i in 0..20) {
+                    val t = i / 20f
+                    val x = colRX + t * (midX - colRX)
+                    val y = (baseY - eh) + t * ((baseY - rh) - (baseY - eh))
+                    val m = 4 * maxMoment * t * (1 - t)
+                    val nxN = ((baseY - rh) - (baseY - eh)) / (midX - colRX)
+                    val nyN = (midX - colRX) / (midX - colRX)
+                    lineTo(x + nxN * m * momentScale, y + nyN * m * momentScale)
+                }
+                lineTo(midX, baseY - rh)
+                close()
+            }
+            drawPath(momentPathR, momentColor.copy(alpha = 0.2f))
+            drawPath(momentPathR, momentColor, style = Stroke(2f))
+
+            // Column moment (triangular)
+            val colMoment = maxMoment * 0.3f
+            drawPath(Path().apply {
+                moveTo(colLX, baseY - eh)
+                lineTo(colLX - colMoment * momentScale * 0.5f, baseY - eh / 2)
+                lineTo(colLX, baseY)
+                close()
+            }, momentColor.copy(alpha = 0.15f))
+            drawPath(Path().apply {
+                moveTo(colLX, baseY - eh)
+                lineTo(colLX - colMoment * momentScale * 0.5f, baseY - eh / 2)
+                lineTo(colLX, baseY)
+            }, momentColor, style = Stroke(1.5f))
+
+            drawPath(Path().apply {
+                moveTo(colRX, baseY - eh)
+                lineTo(colRX + colMoment * momentScale * 0.5f, baseY - eh / 2)
+                lineTo(colRX, baseY)
+                close()
+            }, momentColor.copy(alpha = 0.15f))
+            drawPath(Path().apply {
+                moveTo(colRX, baseY - eh)
+                lineTo(colRX + colMoment * momentScale * 0.5f, baseY - eh / 2)
+                lineTo(colRX, baseY)
+            }, momentColor, style = Stroke(1.5f))
+
+            // ── Dimension Lines ──
+            val dimColor = Color(0xFFB0BEC5)
+            val dimTextColor = Color.White
+            val textPaint = android.graphics.Paint().apply { color = dimTextColor.toArgb(); textSize = 24f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER }
+
+            // Span dimension
+            val dimY = baseY + 35f
+            drawLine(dimColor, Offset(colLX, baseY + 8f), Offset(colLX, dimY + 5f), strokeWidth = 1f)
+            drawLine(dimColor, Offset(colRX, baseY + 8f), Offset(colRX, dimY + 5f), strokeWidth = 1f)
+            drawLine(dimColor, Offset(colLX, dimY), Offset(colRX, dimY), strokeWidth = 1.5f)
+            drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.span), (colLX + colRX) / 2f, dimY - 8f, textPaint)
+
+            // Eave height dimension (left)
+            val dimX = colLX - 35f
+            drawLine(dimColor, Offset(colLX - 8f, baseY), Offset(dimX - 5f, baseY), strokeWidth = 1f)
+            drawLine(dimColor, Offset(colLX - 8f, baseY - eh), Offset(dimX - 5f, baseY - eh), strokeWidth = 1f)
+            drawLine(dimColor, Offset(dimX, baseY), Offset(dimX, baseY - eh), strokeWidth = 1.5f)
+            drawContext.canvas.nativeCanvas.save()
+            drawContext.canvas.nativeCanvas.rotate(-90f, dimX - 12f, baseY - eh / 2f)
+            drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.eaveHeight), dimX - 12f, baseY - eh / 2f + 8f, textPaint)
+            drawContext.canvas.nativeCanvas.restore()
+
+            // Ridge height dimension (right)
+            val dimXR = colRX + 35f
+            drawLine(dimColor, Offset(colRX + 8f, baseY), Offset(dimXR + 5f, baseY), strokeWidth = 1f)
+            drawLine(dimColor, Offset(colRX + 8f, baseY - rh), Offset(dimXR + 5f, baseY - rh), strokeWidth = 1f)
+            drawLine(dimColor, Offset(dimXR, baseY), Offset(dimXR, baseY - rh), strokeWidth = 1.5f)
+            drawContext.canvas.nativeCanvas.save()
+            drawContext.canvas.nativeCanvas.rotate(-90f, dimXR + 12f, baseY - rh / 2f)
+            drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.ridgeHeight), dimXR + 12f, baseY - rh / 2f + 8f, textPaint)
+            drawContext.canvas.nativeCanvas.restore()
+
+            // ── Section Labels ──
+            val labelPaint = android.graphics.Paint().apply { color = Color(0xFF4FC3F7).toArgb(); textSize = 22f; isFakeBoldText = true }
+            drawContext.canvas.nativeCanvas.save()
+            drawContext.canvas.nativeCanvas.rotate(-90f, colLX - 12f, baseY - eh / 2f + 40f)
+            drawContext.canvas.nativeCanvas.drawText(result.mainFrame.columnSection.displayName, colLX - 12f, baseY - eh / 2f + 40f, labelPaint)
+            drawContext.canvas.nativeCanvas.restore()
+
+            // ── Title Block ──
+            val tbX = size.width - 320f
+            val tbY = size.height - 90f
+            drawRect(Color(0x22FFFFFF), Offset(tbX, tbY), Size(300f, 75f))
+            drawRect(Color(0xFF4A90D9), Offset(tbX, tbY), Size(300f, 75f), style = Stroke(1.5f))
+            val tbPaint = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f }
+            val tbBold = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 22f; isFakeBoldText = true }
+            drawContext.canvas.nativeCanvas.drawText("CivilEG - Steel Warehouse", tbX + 12f, tbY + 24f, tbBold)
+            drawContext.canvas.nativeCanvas.drawText("M_max = %.1f kN.m | V_max = %.1f kN".format(maxMoment, result.mainFrame.maxShear), tbX + 12f, tbY + 48f, tbPaint)
+            drawContext.canvas.nativeCanvas.drawText("Frame Analysis Diagram", tbX + 12f, tbY + 68f, tbPaint)
         }
     }
 }
@@ -372,133 +554,365 @@ fun AnalysisDetailCard(res: MainFrameResult) {
 @Composable
 fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
     var viewMode by remember { mutableStateOf(0) } // 0: Front, 1: Plan, 2: Side, 3: 3D
-    val views = listOf("الواجهة الأمامية", "المسقط الأفقي", "الواجهة الجانبية", "رسم ثلاثي الأبعاد")
 
-    Column {
-        ScrollableTabRow(selectedTabIndex = viewMode, edgePadding = 0.dp, containerColor = Color.Transparent) {
-            views.forEachIndexed { index, title ->
-                Tab(selected = viewMode == index, onClick = { viewMode = index }, text = { Text(title, fontSize = 10.sp) })
+    InteractiveDrawingScreen(
+        title = "المنظور الإنشائي",
+        subtitle = "Structural Views",
+        viewModes = listOf("الواجهة الأمامية", "المسقط الأفقي", "الواجهة الجانبية", "رسم ثلاثي الأبعاد"),
+        selectedViewMode = viewMode,
+        onViewModeChanged = { viewMode = it }
+    ) {
+        ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFF0D1117))) {
+            val padding = 60f
+            val w = size.width - 2 * padding
+            val h = size.height - 2 * padding
+
+            // ── Grid ──
+            val gridColor = Color(0x12FFFFFF)
+            for (i in 0..20) {
+                val x = padding + (i * w / 20)
+                drawLine(gridColor, Offset(x, padding), Offset(x, size.height - padding), strokeWidth = 0.5f)
             }
-        }
+            for (i in 0..14) {
+                val y = padding + (i * h / 14)
+                drawLine(gridColor, Offset(padding, y), Offset(size.width - padding, y), strokeWidth = 0.5f)
+            }
 
-        Card(
-            modifier = Modifier.fillMaxWidth().height(350.dp).padding(vertical = 8.dp),
-            border = BorderStroke(1.dp, Color.LightGray)
-        ) {
-            ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
-                val padding = 50.dp.toPx()
-                val scale = minOf(
-                    (size.width - 2 * padding) / max(inputs.span, inputs.length),
-                    (size.height - 2 * padding) / max(inputs.ridgeHeight, inputs.span)
-                )
-                val startX = padding
-                val baseY = size.height - padding
+            val scale = minOf(
+                (w * 0.7f) / max(inputs.span, inputs.length).toFloat(),
+                (h * 0.7f) / max(inputs.ridgeHeight, inputs.span).toFloat()
+            )
+            val startX = padding + (w - inputs.span * scale) / 2
+            val baseY = size.height - padding - 20f
 
-                when (viewMode) {
-                    0 -> { // Front Elevation
-                        drawFrontElevation(inputs, scale, startX, baseY)
+            val textColor = Color.White
+            val textPaint = android.graphics.Paint().apply {
+                color = textColor.toArgb()
+                textSize = 22f
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            val dimPaint = android.graphics.Paint().apply {
+                color = Color(0xFFB0BEC5).toArgb()
+                textSize = 20f
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            val sectionPaint = android.graphics.Paint().apply {
+                color = Color(0xFF4FC3F7).toArgb()
+                textSize = 20f
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+
+            when (viewMode) {
+                0 -> { // Front Elevation — Professional
+                    val colLX = startX
+                    val colRX = startX + (inputs.span * scale).toFloat()
+                    val eaveY = baseY - (inputs.eaveHeight * scale).toFloat()
+                    val ridgeY = baseY - (inputs.ridgeHeight * scale).toFloat()
+                    val midX = startX + (inputs.span * scale / 2).toFloat()
+                    val memberW = 8f
+
+                    // Ground hatching
+                    val groundY = baseY
+                    drawLine(Color(0xFF5A5A5A), Offset(colLX - 40f, groundY), Offset(colRX + 40f, groundY), strokeWidth = 3f)
+                    for (i in 0..28) {
+                        val x = (colLX - 40f) + (i * (colRX - colLX + 80f) / 28)
+                        drawLine(Color(0xFF5A5A5A), Offset(x, groundY), Offset(x - 10f, groundY + 12f), strokeWidth = 1f)
                     }
-                    1 -> { // Plan View
-                        drawPlanView(inputs, scale, startX, baseY)
+
+                    // Pin supports
+                    val supC = Color(0xFF9E9E9E)
+                    listOf(colLX, colRX).forEach { cx ->
+                        drawPath(Path().apply {
+                            moveTo(cx - 16f, groundY)
+                            lineTo(cx + 16f, groundY)
+                            lineTo(cx, groundY + 22f)
+                            close()
+                        }, supC, style = Stroke(2.5f))
+                        drawLine(supC, Offset(cx - 20f, groundY + 22f), Offset(cx + 20f, groundY + 22f), strokeWidth = 3f)
                     }
-                    2 -> { // Side View
-                        drawSideElevation(inputs, scale, startX, baseY)
+
+                    // Columns (3D effect)
+                    val colC = Color(0xFFB0BEC5)
+                    val colS = Color(0xFF607D8B)
+                    listOf(colLX, colRX).forEach { cx ->
+                        drawLine(colS, Offset(cx + 2f, groundY), Offset(cx + 2f, eaveY), strokeWidth = memberW + 3f)
+                        drawLine(colC, Offset(cx, groundY), Offset(cx, eaveY), strokeWidth = memberW)
+                        drawLine(Color(0xFFE0E0E0), Offset(cx - 1.5f, groundY), Offset(cx - 1.5f, eaveY), strokeWidth = 1f)
                     }
-                    3 -> { // 3D Perspective
-                        draw3DView(inputs, scale, startX, baseY)
+
+                    // Rafters (3D)
+                    listOf(Pair(colLX, colRX)).forEach { (l, r) ->
+                        drawLine(colS, Offset(l + 2f, eaveY + 2f), Offset(midX + 1f, ridgeY + 1f), strokeWidth = memberW + 3f)
+                        drawLine(colC, Offset(l, eaveY), Offset(midX, ridgeY), strokeWidth = memberW)
+                        drawLine(colS, Offset(r + 2f, eaveY + 2f), Offset(midX + 1f, ridgeY + 1f), strokeWidth = memberW + 3f)
+                        drawLine(colC, Offset(r, eaveY), Offset(midX, ridgeY), strokeWidth = memberW)
                     }
+
+                    // Ridge joint
+                    drawCircle(Color(0xFF37474F), 12f, Offset(midX, ridgeY))
+                    drawCircle(Color(0xFFFF9800), 7f, Offset(midX, ridgeY))
+                    drawCircle(Color.White, 3f, Offset(midX, ridgeY))
+
+                    // Eave joints
+                    listOf(Offset(colLX, eaveY), Offset(colRX, eaveY)).forEach { jt ->
+                        drawCircle(Color(0xFF37474F), 10f, jt)
+                        drawCircle(Color(0xFFFF9800), 5f, jt)
+                    }
+
+                    // Section labels
+                    drawContext.canvas.nativeCanvas.save()
+                    drawContext.canvas.nativeCanvas.rotate(-90f, colLX - 14f, (groundY + eaveY) / 2)
+                    drawContext.canvas.nativeCanvas.drawText(result.mainFrame.columnSection.displayName, colLX - 14f, (groundY + eaveY) / 2, sectionPaint)
+                    drawContext.canvas.nativeCanvas.restore()
+
+                    // Dimension lines
+                    val dimC = Color(0xFF90A4AE)
+                    // Span
+                    val dY = groundY + 40f
+                    drawLine(dimC, Offset(colLX, groundY + 8f), Offset(colLX, dY + 5f), strokeWidth = 1f)
+                    drawLine(dimC, Offset(colRX, groundY + 8f), Offset(colRX, dY + 5f), strokeWidth = 1f)
+                    drawLine(dimC, Offset(colLX, dY), Offset(colRX, dY), strokeWidth = 1.5f)
+                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.span), (colLX + colRX) / 2, dY - 6f, dimPaint)
+
+                    // Eave height
+                    val dXL = colLX - 40f
+                    drawLine(dimC, Offset(colLX - 8f, groundY), Offset(dXL - 5f, groundY), strokeWidth = 1f)
+                    drawLine(dimC, Offset(colLX - 8f, eaveY), Offset(dXL - 5f, eaveY), strokeWidth = 1f)
+                    drawLine(dimC, Offset(dXL, groundY), Offset(dXL, eaveY), strokeWidth = 1.5f)
+                    drawContext.canvas.nativeCanvas.save()
+                    drawContext.canvas.nativeCanvas.rotate(-90f, dXL - 10f, (groundY + eaveY) / 2)
+                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.eaveHeight), dXL - 10f, (groundY + eaveY) / 2 + 6f, dimPaint)
+                    drawContext.canvas.nativeCanvas.restore()
+
+                    // Ridge height
+                    val dXR = colRX + 40f
+                    drawLine(dimC, Offset(colRX + 8f, groundY), Offset(dXR + 5f, groundY), strokeWidth = 1f)
+                    drawLine(dimC, Offset(colRX + 8f, ridgeY), Offset(dXR + 5f, ridgeY), strokeWidth = 1f)
+                    drawLine(dimC, Offset(dXR, groundY), Offset(dXR, ridgeY), strokeWidth = 1.5f)
+                    drawContext.canvas.nativeCanvas.save()
+                    drawContext.canvas.nativeCanvas.rotate(-90f, dXR + 10f, (groundY + ridgeY) / 2)
+                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.ridgeHeight), dXR + 10f, (groundY + ridgeY) / 2 + 6f, dimPaint)
+                    drawContext.canvas.nativeCanvas.restore()
+
+                    // View title
+                    drawContext.canvas.nativeCanvas.drawText("FRONT ELEVATION", size.width / 2, padding - 10f, textPaint)
+
+                    // Title block
+                    val tbX = size.width - 300f
+                    val tbY = size.height - 80f
+                    drawRect(Color(0x22FFFFFF), Offset(tbX, tbY), Size(280f, 65f))
+                    drawRect(Color(0xFF4A90D9), Offset(tbX, tbY), Size(280f, 65f), style = Stroke(1.5f))
+                    val tbP = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f }
+                    drawContext.canvas.nativeCanvas.drawText("CivilEG - Warehouse Front View", tbX + 10f, tbY + 22f, android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f; isFakeBoldText = true })
+                    drawContext.canvas.nativeCanvas.drawText("Col: ${result.mainFrame.columnSection.displayName} | Rafter: ${result.mainFrame.rafterSection.displayName}", tbX + 10f, tbY + 45f, tbP)
+                }
+
+                1 -> { // Plan View — Professional
+                    val planW = (inputs.span * scale).toFloat()
+                    val planL = (inputs.length * scale).toFloat()
+                    val planLeft = startX + (w - planW) / 2
+                    val planTop = padding + (h - planL) / 2
+
+                    // Boundary with fill
+                    drawRect(Color(0x1A4A90D9), Offset(planLeft, planTop), Size(planW, planL))
+                    drawRect(Color(0xFFB0BEC5), Offset(planLeft, planTop), Size(planW, planL), style = Stroke(2f))
+
+                    // Bay lines and column markers
+                    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
+                    for (i in 0..numBays) {
+                        val y = planTop + (i * inputs.baySpacing * scale).toFloat()
+                        if (y <= planTop + planL + 1f) {
+                            drawLine(Color(0xFF607D8B), Offset(planLeft, y), Offset(planLeft + planW, y), strokeWidth = 1f)
+                            // Column markers (I-beam symbol)
+                            val colS = 8f
+                            listOf(planLeft, planLeft + planW).forEach { cx ->
+                                drawRect(Color(0xFFFF9800), Offset(cx - colS, y - 2f), Size(colS * 2, 4f))
+                                drawRect(Color(0xFFFF9800), Offset(cx - 2f, y - colS), Size(4f, colS * 2))
+                            }
+                            // Bay label
+                            if (i < numBays) {
+                                val bayMidY = y + (inputs.baySpacing * scale / 2).toFloat()
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    "%.1f m".format(inputs.baySpacing),
+                                    planLeft + planW + 40f, bayMidY + 6f, dimPaint
+                                )
+                            }
+                        }
+                    }
+
+                    // Purlin markers (dashed lines along span)
+                    val numPurlins = (inputs.span / 1.5).toInt().coerceIn(2, 10)
+                    for (i in 1 until numPurlins) {
+                        val x = planLeft + (i * planW / numPurlins)
+                        drawLine(Color(0x40FFFFFF), Offset(x, planTop), Offset(x, planTop + planL), strokeWidth = 0.5f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f)))
+                    }
+
+                    // Bracing X in first and last bay
+                    if (numBays >= 1) {
+                        listOf(0, max(numBays - 1, 0)).forEach { bayIdx ->
+                            val y1 = planTop + (bayIdx * inputs.baySpacing * scale).toFloat()
+                            val y2 = y1 + (inputs.baySpacing * scale).toFloat().coerceAtMost(planL - (y1 - planTop))
+                            val brC = Color(0x66FF5722)
+                            drawLine(brC, Offset(planLeft, y1), Offset(planLeft + planW, y2), strokeWidth = 1.5f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+                            drawLine(brC, Offset(planLeft + planW, y1), Offset(planLeft, y2), strokeWidth = 1.5f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+                        }
+                    }
+
+                    // Dimension: Span (bottom)
+                    val dimB = planTop + planL + 35f
+                    drawLine(Color(0xFF90A4AE), Offset(planLeft, planTop + planL + 8f), Offset(planLeft, dimB + 5f), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(planLeft + planW, planTop + planL + 8f), Offset(planLeft + planW, dimB + 5f), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(planLeft, dimB), Offset(planLeft + planW, dimB), strokeWidth = 1.5f)
+                    drawContext.canvas.nativeCanvas.drawText("Span: %.1f m".format(inputs.span), planLeft + planW / 2, dimB - 6f, dimPaint)
+
+                    // Dimension: Length (right)
+                    val dimR = planLeft + planW + 35f
+                    drawLine(Color(0xFF90A4AE), Offset(planLeft + planW + 8f, planTop), Offset(dimR + 5f, planTop), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(planLeft + planW + 8f, planTop + planL), Offset(dimR + 5f, planTop + planL), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(dimR, planTop), Offset(dimR, planTop + planL), strokeWidth = 1.5f)
+
+                    drawContext.canvas.nativeCanvas.save()
+                    drawContext.canvas.nativeCanvas.rotate(-90f, dimR + 10f, planTop + planL / 2)
+                    drawContext.canvas.nativeCanvas.drawText("Length: %.1f m".format(inputs.length), dimR + 10f, planTop + planL / 2 + 6f, dimPaint)
+                    drawContext.canvas.nativeCanvas.restore()
+
+                    drawContext.canvas.nativeCanvas.drawText("PLAN VIEW", size.width / 2, padding - 10f, textPaint)
+                }
+
+                2 -> { // Side Elevation — Professional
+                    val planL = (inputs.length * scale).toFloat()
+                    val eaveH = (inputs.eaveHeight * scale).toFloat()
+                    val sideLeft = startX + (w - planL) / 2
+                    val groundY = baseY
+                    val eaveY = groundY - eaveH
+
+                    // Ground hatching
+                    drawLine(Color(0xFF5A5A5A), Offset(sideLeft - 20f, groundY), Offset(sideLeft + planL + 20f, groundY), strokeWidth = 3f)
+                    for (i in 0..30) {
+                        val x = (sideLeft - 20f) + (i * (planL + 40f) / 30)
+                        drawLine(Color(0xFF5A5A5A), Offset(x, groundY), Offset(x - 8f, groundY + 10f), strokeWidth = 1f)
+                    }
+
+                    // Columns and eave line
+                    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
+                    val memberW = 6f
+                    for (i in 0..numBays) {
+                        val x = sideLeft + (i * inputs.baySpacing * scale).toFloat()
+                        if (x <= sideLeft + planL + 1f) {
+                            drawLine(Color(0xFF607D8B), Offset(x + 1f, groundY), Offset(x + 1f, eaveY), strokeWidth = memberW + 2f)
+                            drawLine(Color(0xFFB0BEC5), Offset(x, groundY), Offset(x, eaveY), strokeWidth = memberW)
+
+                            // Small pin support
+                            drawPath(Path().apply {
+                                moveTo(x - 10f, groundY)
+                                lineTo(x + 10f, groundY)
+                                lineTo(x, groundY + 14f)
+                                close()
+                            }, Color(0xFF9E9E9E), style = Stroke(1.5f))
+                        }
+                    }
+
+                    // Eave line
+                    drawLine(Color(0xFFB0BEC5), Offset(sideLeft, eaveY), Offset(sideLeft + planL, eaveY), strokeWidth = memberW)
+                    // Ground line
+                    drawLine(Color(0xFF5A5A5A), Offset(sideLeft - 20f, groundY), Offset(sideLeft + planL + 20f, groundY), strokeWidth = 3f)
+
+                    // Purlin lines (along side view, shown as short vertical ticks on eave)
+                    val numPurlins = (inputs.span / 1.5).toInt().coerceIn(2, 8)
+                    for (i in 1 until numPurlins) {
+                        val x = sideLeft + (i * planL / numPurlins)
+                        drawLine(Color(0xFF4FC3F7), Offset(x, eaveY - 8f), Offset(x, eaveY + 8f), strokeWidth = 2f)
+                    }
+
+                    // Bracing in first bay
+                    if (numBays >= 1) {
+                        val bx1 = sideLeft
+                        val bx2 = sideLeft + (inputs.baySpacing * scale).toFloat().coerceAtMost(planL)
+                        drawLine(Color(0x66FF5722), Offset(bx1, groundY), Offset(bx2, eaveY), strokeWidth = 1.5f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+                        drawLine(Color(0x66FF5722), Offset(bx2, groundY), Offset(bx1, eaveY), strokeWidth = 1.5f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+                    }
+
+                    // Girt markers on columns
+                    val numGirts = (inputs.eaveHeight / 1.5).toInt().coerceIn(1, 4)
+                    for (i in 1..numGirts) {
+                        val gy = groundY - (i * eaveH / (numGirts + 1))
+                        drawLine(Color(0x40FF9800), Offset(sideLeft, gy), Offset(sideLeft + planL, gy), strokeWidth = 0.5f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+                    }
+
+                    // Dimensions
+                    drawContext.canvas.nativeCanvas.drawText("SIDE ELEVATION", size.width / 2, padding - 10f, textPaint)
+
+                    // Length dimension
+                    val dY = groundY + 35f
+                    drawLine(Color(0xFF90A4AE), Offset(sideLeft, groundY + 8f), Offset(sideLeft, dY + 5f), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(sideLeft + planL, groundY + 8f), Offset(sideLeft + planL, dY + 5f), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(sideLeft, dY), Offset(sideLeft + planL, dY), strokeWidth = 1.5f)
+                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.length), sideLeft + planL / 2, dY - 6f, dimPaint)
+
+                    // Eave height dimension
+                    val dX = sideLeft - 35f
+                    drawLine(Color(0xFF90A4AE), Offset(sideLeft - 8f, groundY), Offset(dX - 5f, groundY), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(sideLeft - 8f, eaveY), Offset(dX - 5f, eaveY), strokeWidth = 1f)
+                    drawLine(Color(0xFF90A4AE), Offset(dX, groundY), Offset(dX, eaveY), strokeWidth = 1.5f)
+                    drawContext.canvas.nativeCanvas.save()
+                    drawContext.canvas.nativeCanvas.rotate(-90f, dX - 10f, (groundY + eaveY) / 2)
+                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.eaveHeight), dX - 10f, (groundY + eaveY) / 2 + 6f, dimPaint)
+                    drawContext.canvas.nativeCanvas.restore()
+                }
+
+                3 -> { // 3D Isometric — Professional
+                    val s = scale * 0.65f
+                    val depthOff = 40f
+                    val numFrames = 5
+
+                    for (frameIdx in numFrames downTo 0) {
+                        val off = frameIdx * depthOff
+                        val x0 = startX + off
+                        val y0 = baseY - off
+                        val spanW = (inputs.span * s).toFloat()
+                        val eaveH = (inputs.eaveHeight * s).toFloat()
+                        val ridgeH = (inputs.ridgeHeight * s).toFloat()
+                        val midXf = x0 + spanW / 2
+
+                        val alpha = if (frameIdx == 0) 1f else 0.2f + 0.15f * frameIdx
+                        val color = Color.White.copy(alpha = alpha)
+                        val stroke = if (frameIdx == 0) 3f else 1.5f
+
+                        // Columns
+                        drawLine(color, Offset(x0, y0), Offset(x0, y0 - eaveH), strokeWidth = stroke)
+                        drawLine(color, Offset(x0 + spanW, y0), Offset(x0 + spanW, y0 - eaveH), strokeWidth = stroke)
+                        // Rafters
+                        drawLine(color, Offset(x0, y0 - eaveH), Offset(midXf, y0 - ridgeH), strokeWidth = stroke)
+                        drawLine(color, Offset(x0 + spanW, y0 - eaveH), Offset(midXf, y0 - ridgeH), strokeWidth = stroke)
+
+                        // Eave line (longitudinal)
+                        if (frameIdx > 0) {
+                            val prevOff = (frameIdx - 1) * depthOff
+                            val px = startX + prevOff
+                            val py = baseY - prevOff
+                            val lineC = Color.White.copy(alpha = 0.1f + 0.08f * frameIdx)
+                            drawLine(lineC, Offset(x0, y0 - eaveH), Offset(px, py - eaveH), strokeWidth = 1f)
+                            drawLine(lineC, Offset(x0 + spanW, y0 - eaveH), Offset(px + spanW, py - eaveH), strokeWidth = 1f)
+                            drawLine(lineC, Offset(midXf, y0 - ridgeH), Offset(px + spanW / 2, py - ridgeH), strokeWidth = 1f)
+                        }
+                    }
+
+                    // Ground plane
+                    val groundColor = Color(0x15FFFFFF)
+                    val gOff = numFrames * depthOff
+                    drawRect(groundColor, Offset(startX, baseY - gOff - 10f), Size((inputs.span * s).toFloat(), gOff + 10f))
+
+                    drawContext.canvas.nativeCanvas.drawText("3D ISOMETRIC VIEW", size.width / 2, padding - 10f, textPaint)
                 }
             }
-        }
-    }
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFrontElevation(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
-    val colLX = startX
-    val colRX = startX + (inputs.span * scale).toFloat()
-    val eaveY = baseY - (inputs.eaveHeight * scale).toFloat()
-    val ridgeY = baseY - (inputs.ridgeHeight * scale).toFloat()
-    val midX = startX + (inputs.span * scale / 2).toFloat()
-
-    // Columns
-    drawLine(Color.Black, Offset(colLX, baseY), Offset(colLX, eaveY), strokeWidth = 8f)
-    drawLine(Color.Black, Offset(colRX, baseY), Offset(colRX, eaveY), strokeWidth = 8f)
-    // Rafters
-    drawLine(Color.Black, Offset(colLX, eaveY), Offset(midX, ridgeY), strokeWidth = 8f)
-    drawLine(Color.Black, Offset(colRX, eaveY), Offset(midX, ridgeY), strokeWidth = 8f)
-    
-    // Foundations
-    drawRect(Color.Gray, Offset(colLX - 15f, baseY), Size(30f, 15f))
-    drawRect(Color.Gray, Offset(colRX - 15f, baseY), Size(30f, 15f))
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPlanView(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
-    val planW = (inputs.span * scale).toFloat()
-    val planL = (inputs.length * scale).toFloat()
-    val planTop = baseY - planL
-    
-    // Boundary
-    drawRect(Color.Black, Offset(startX, planTop), Size(planW, planL), style = androidx.compose.ui.graphics.drawscope.Stroke(4f))
-    
-    // Grid Lines (Bays)
-    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
-    for (i in 0..numBays) {
-        val y = planTop + (i * inputs.baySpacing * scale).toFloat()
-        drawLine(Color.LightGray, Offset(startX, y), Offset(startX + planW, y), strokeWidth = 1f)
-        // Columns markers
-        drawCircle(Color.Black, 4f, Offset(startX, y))
-        drawCircle(Color.Black, 4f, Offset(startX + planW, y))
-    }
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSideElevation(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
-    val planL = (inputs.length * scale).toFloat()
-    val eaveH = (inputs.eaveHeight * scale).toFloat()
-    val eaveY = baseY - eaveH
-    
-    // Ground
-    drawLine(Color.Gray, Offset(startX, baseY), Offset(startX + planL, baseY), strokeWidth = 2f)
-    
-    // Columns
-    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
-    for (i in 0..numBays) {
-        val x = startX + (i * inputs.baySpacing * scale).toFloat()
-        drawLine(Color.Black, Offset(x, baseY), Offset(x, eaveY), strokeWidth = 6f)
-    }
-    // Eave Line
-    drawLine(Color.Black, Offset(startX, eaveY), Offset(startX + planL, eaveY), strokeWidth = 6f)
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.draw3DView(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
-    val s = scale.toFloat() * 0.65f
-    val depthOff = 35f
-    
-    // Draw from back to front for better perspective look
-    for (i in 4 downTo 0) {
-        val off = i * depthOff
-        val x0 = startX + off
-        val y0 = baseY - off
-        val spanW = (inputs.span * s).toFloat()
-        val eaveH = (inputs.eaveHeight * s).toFloat()
-        val ridgeH = (inputs.ridgeHeight * s).toFloat()
-        
-        val color = if (i == 0) Color.Black else Color.Gray.copy(alpha = 0.4f)
-        val stroke = if (i == 0) 3f else 1.5f
-        
-        // Sections of the frame
-        drawLine(color, Offset(x0, y0), Offset(x0, y0 - eaveH), strokeWidth = stroke)
-        drawLine(color, Offset(x0 + spanW, y0), Offset(x0 + spanW, y0 - eaveH), strokeWidth = stroke)
-        drawLine(color, Offset(x0, y0 - eaveH), Offset(x0 + spanW / 2, y0 - ridgeH), strokeWidth = stroke)
-        drawLine(color, Offset(x0 + spanW, y0 - eaveH), Offset(x0 + spanW / 2, y0 - ridgeH), strokeWidth = stroke)
-        
-        // Purlins/Girts connections (longitudinal)
-        if (i > 0) {
-            val px = x0 - depthOff
-            val py = y0 + depthOff
-            val lineCol = Color.LightGray.copy(alpha = 0.5f)
-            drawLine(lineCol, Offset(x0, y0 - eaveH), Offset(px, py - eaveH), strokeWidth = 1f)
-            drawLine(lineCol, Offset(x0 + spanW, y0 - eaveH), Offset(px + spanW, py - eaveH), strokeWidth = 1f)
-            drawLine(lineCol, Offset(x0 + spanW / 2, y0 - ridgeH), Offset(px + spanW / 2, py - ridgeH), strokeWidth = 1f)
         }
     }
 }
@@ -1129,11 +1543,6 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 }
             }
             item { SteelResultCard(res) }
-            item {
-                Text("🎨 الرسم الهندسي للقطاع", fontWeight = FontWeight.Bold)
-                SteelSectionDrawing(res.sectionType)
-            }
-
             item {
                 InteractiveDrawingScreen(
                     title = "رسم القطاع الحديدي",

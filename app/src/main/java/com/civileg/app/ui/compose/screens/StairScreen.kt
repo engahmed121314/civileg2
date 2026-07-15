@@ -298,7 +298,7 @@ fun StairScreen(
 
                 item {
                     Text("🎨 رسم تفصيلي للتسليح (Full Reinforcement)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(300.dp))
+                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(400.dp))
                 }
 
                 item {
@@ -385,7 +385,7 @@ fun StairScreen(
 @Composable
 private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifier: Modifier) {
     Card(
-        modifier = modifier.height(440.dp),
+        modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {

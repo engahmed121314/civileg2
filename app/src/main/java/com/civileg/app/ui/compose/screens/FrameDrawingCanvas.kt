@@ -57,7 +57,7 @@ fun FrameDrawingCanvas(
         val xRange = if (nodes.isNotEmpty()) (nodes.minOf { it.x }..nodes.maxOf { it.x }) else 0.0..1.0
         val yRange = if (nodes.isNotEmpty()) (nodes.minOf { it.y }..nodes.maxOf { it.y }) else 0.0..1.0
         val xSpan = max(xRange.endInclusive - xRange.start, 1.0)
-        val ySpan = max(yRange.endInclusive - xRange.start, 1.0)
+        val ySpan = max(yRange.endInclusive - yRange.start, 1.0)
 
         val scale = min(
             drawW.value / xSpan,

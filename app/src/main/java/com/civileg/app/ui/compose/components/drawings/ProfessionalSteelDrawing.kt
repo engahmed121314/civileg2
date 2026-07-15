@@ -1,6 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -109,7 +110,7 @@ fun ProfessionalSteelDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(560.dp)
+            .fillMaxSize()
     ) {
         val cw = size.width
         val ch = size.height
