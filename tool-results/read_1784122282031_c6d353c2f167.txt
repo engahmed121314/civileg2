@@ -1,0 +1,669 @@
+     1→package com.civileg.app.ui.compose.screens
+     2→
+     3→import androidx.compose.foundation.Canvas
+     4→import androidx.compose.foundation.background
+     5→import androidx.compose.foundation.gestures.detectTapGestures
+     6→import androidx.compose.foundation.layout.*
+     7→import androidx.compose.material3.MaterialTheme
+     8→import androidx.compose.material3.Text
+     9→import androidx.compose.runtime.*
+    10→import androidx.compose.ui.Alignment
+    11→import androidx.compose.ui.Modifier
+    12→import androidx.compose.ui.geometry.Offset
+    13→import androidx.compose.ui.geometry.Size
+    14→import androidx.compose.ui.graphics.*
+    15→import androidx.compose.ui.graphics.drawscope.DrawScope
+    16→import androidx.compose.ui.graphics.drawscope.Stroke
+    17→import androidx.compose.ui.graphics.drawscope.withTransform
+    18→import androidx.compose.ui.input.pointer.pointerInput
+    19→import androidx.compose.ui.text.TextMeasurer
+    20→import androidx.compose.ui.text.TextStyle
+    21→import androidx.compose.ui.text.drawText
+    22→import androidx.compose.ui.text.font.FontWeight
+    23→import androidx.compose.ui.unit.dp
+    24→import androidx.compose.ui.unit.sp
+    25→import com.civileg.app.domain.entities.*
+    26→import com.civileg.app.viewmodel.DiagramType
+    27→import kotlin.math.*
+    28→
+    29→/**
+    30→ * لوحة الرسم التفاعلية للإطار والمخططات
+    31→ */
+    32→@Composable
+    33→fun FrameDrawingCanvas(
+    34→    nodes: List<FrameNode>,
+    35→    members: List<FrameMember>,
+    36→    memberLoads: List<MemberLoad>,
+    37→    nodalLoads: List<NodalLoad>,
+    38→    result: FrameAnalysisResult?,
+    39→    diagramType: DiagramType,
+    40→    selectedMemberId: Int?,
+    41→    onMemberTap: ((Int) -> Unit)? = null,
+    42→    modifier: Modifier = Modifier
+    43→) {
+    44→    val showDiagrams = result?.hasResults == true
+    45→    val colorScheme = MaterialTheme.colorScheme
+    46→
+    47→    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    48→        val canvasW = maxWidth
+    49→        val canvasH = maxHeight
+    50→        val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
+    51→
+    52→        // Calculate scale to fit frame in canvas with padding
+    53→        val padding = 60.dp
+    54→        val drawW = canvasW - padding * 2
+    55→        val drawH = canvasH - padding * 2
+    56→
+    57→        val xRange = if (nodes.isNotEmpty()) (nodes.minOf { it.x }..nodes.maxOf { it.x }) else 0.0..1.0
+    58→        val yRange = if (nodes.isNotEmpty()) (nodes.minOf { it.y }..nodes.maxOf { it.y }) else 0.0..1.0
+    59→        val xSpan = max(xRange.endInclusive - xRange.start, 1.0)
+    60→        val ySpan = max(yRange.endInclusive - yRange.start, 1.0)
+    61→
+    62→        val scale = min(
+    63→            drawW.value / xSpan,
+    64→            drawH.value / ySpan
+    65→        ).toFloat() * 0.85f
+    66→
+    67→        val offsetX = (padding.value + (drawW.value - xSpan * scale) / 2 - xRange.start * scale).toFloat()
+    68→        val offsetY = (padding.value + (drawH.value - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
+    69→
+    70→        val toScreen: (Double, Double) -> Offset = { x, y ->
+    71→            Offset(
+    72→                (x * scale + offsetX).toFloat(),
+    73→                (-y * scale + offsetY).toFloat()
+    74→            )
+    75→        }
+    76→
+    77→        Canvas(
+    78→            modifier = Modifier
+    79→                .fillMaxSize()
+    80→                .pointerInput(selectedMemberId) {
+    81→                    detectTapGestures { tapOffset ->
+    82→                        if (onMemberTap != null) {
+    83→                            // Find closest member to tap
+    84→                            var closestMember: Int? = null
+    85→                            var minDist = 30f // pixels threshold
+    86→                            for (member in members) {
+    87→                                val ni = nodes.find { it.id == member.nodeI } ?: continue
+    88→                                val nj = nodes.find { it.id == member.nodeJ } ?: continue
+    89→                                val p1 = toScreen(ni.x, ni.y)
+    90→                                val p2 = toScreen(nj.x, nj.y)
+    91→                                val dist = pointToSegmentDist(tapOffset, p1, p2)
+    92→                                if (dist < minDist) {
+    93→                                    minDist = dist
+    94→                                    closestMember = member.id
+    95→                                }
+    96→                            }
+    97→                            closestMember?.let { onMemberTap(it) }
+    98→                        }
+    99→                    }
+   100→                }
+   101→        ) {
+   102→            if (nodes.isEmpty()) {
+   103→                drawText(
+   104→                    textMeasurer = textMeasurer,
+   105→                    text = "أضف عقد وأعضاء لبدء التحليل",
+   106→                    topLeft = Offset(size.width / 2 - 120f, size.height / 2),
+   107→                    style = TextStyle(color = Color.Gray, fontSize = 16.sp)
+   108→                )
+   109→                return@Canvas
+   110→            }
+   111→
+   112→            // === Draw Grid (light) ===
+   113→            drawGrid(toScreen, xRange, yRange, scale, offsetX, offsetY)
+   114→
+   115→            // === Draw BMD/SFD/AFD Diagrams (behind members if active) ===
+   116→            if (showDiagrams) {
+   117→                drawDiagrams(
+   118→                    members, result?.memberDiagrams ?: emptyList(),
+   119→                    nodes, toScreen, scale, diagramType, textMeasurer
+   120→                )
+   121→            }
+   122→
+   123→            // === Draw Members ===
+   124→            for (member in members) {
+   125→                val ni = nodes.find { it.id == member.nodeI } ?: continue
+   126→                val nj = nodes.find { it.id == member.nodeJ } ?: continue
+   127→                val p1 = toScreen(ni.x, ni.y)
+   128→                val p2 = toScreen(nj.x, nj.y)
+   129→
+   130→                val isSelected = member.id == selectedMemberId
+   131→                val memberColor = when (member.materialType) {
+   132→                    FrameMaterialType.Concrete -> if (isSelected) Color(0xFF1565C0) else Color(0xFF42A5F5)
+   133→                    FrameMaterialType.Steel -> if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800)
+   134→                }
+   135→
+   136→                drawLine(
+   137→                    color = memberColor,
+   138→                    start = p1,
+   139→                    end = p2,
+   140→                    strokeWidth = if (isSelected) 5.dp.toPx() else 3.dp.toPx(),
+   141→                    cap = StrokeCap.Round
+   142→                )
+   143→
+   144→                // Member label
+   145→                val midX = (p1.x + p2.x) / 2
+   146→                val midY = (p1.y + p2.y) / 2
+   147→                val angle = atan2(p2.y - p1.y, p2.x - p1.x)
+   148→                val labelOffset = 15.dp.toPx()
+   149→                val labelX = midX + cos(angle + PI / 2) * labelOffset
+   150→                val labelY = midY + sin(angle + PI / 2) * labelOffset
+   151→
+   152→                if (member.name.isNotEmpty()) {
+   153→                    drawText(
+   154→                        textMeasurer = textMeasurer,
+   155→                        text = member.name,
+   156→                        topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
+   157→                        style = TextStyle(
+   158→                            color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
+   159→                            fontSize = 10.sp,
+   160→                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+   161→                        )
+   162→                    )
+   163→                }
+   164→
+   165→                // Member ID
+   166→                drawText(
+   167→                    textMeasurer = textMeasurer,
+   168→                    text = "#${member.id}",
+   169→                    topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
+   170→                    style = TextStyle(color = Color.Gray, fontSize = 8.sp)
+   171→                )
+   172→            }
+   173→
+   174→            // === Draw Member Loads (UDL arrows) ===
+   175→            for (mLoad in memberLoads) {
+   176→                val member = members.find { it.id == mLoad.memberId } ?: continue
+   177→                val ni = nodes.find { it.id == member.nodeI } ?: continue
+   178→                val nj = nodes.find { it.id == member.nodeJ } ?: continue
+   179→                drawMemberLoadArrows(ni, nj, mLoad, toScreen, scale, textMeasurer)
+   180→            }
+   181→
+   182→            // === Draw Nodal Loads ===
+   183→            for (nLoad in nodalLoads) {
+   184→                val node = nodes.find { it.id == nLoad.nodeId } ?: continue
+   185→                val p = toScreen(node.x, node.y)
+   186→                drawNodalLoadArrow(p, nLoad, textMeasurer)
+   187→            }
+   188→
+   189→            // === Draw Supports ===
+   190→            for (node in nodes) {
+   191→                if (node.support != SupportType.Free) {
+   192→                    val p = toScreen(node.x, node.y)
+   193→                    drawSupport(p, node.support)
+   194→                }
+   195→            }
+   196→
+   197→            // === Draw Nodes ===
+   198→            for (node in nodes) {
+   199→                val p = toScreen(node.x, node.y)
+   200→                drawCircle(
+   201→                    color = Color.White,
+   202→                    radius = 6f,
+   203→                    center = p
+   204→                )
+   205→                drawCircle(
+   206→                    color = Color(0xFF333333),
+   207→                    radius = 6f,
+   208→                    center = p,
+   209→                    style = Stroke(width = 2f)
+   210→                )
+   211→
+   212→                // Node ID label
+   213→                drawText(
+   214→                    textMeasurer = textMeasurer,
+   215→                    text = "${node.id}",
+   216→                    topLeft = Offset(p.x - 4, p.y - 20),
+   217→                    style = TextStyle(color = Color(0xFF1565C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+   218→                )
+   219→            }
+   220→
+   221→            // === Draw Deformed Shape (if solved) ===
+   222→            if (showDiagrams) {
+   223→                drawDeformedShape(
+   224→                    members, nodes, result?.nodeResults ?: emptyList(),
+   225→                    toScreen, scale
+   226→                )
+   227→            }
+   228→
+   229→            // === Scale Bar ===
+   230→            drawScaleBar(size, scale, textMeasurer)
+   231→        }
+   232→    }
+   233→}
+   234→
+   235→// ============================================================================
+   236→// Drawing Helpers
+   237→// ============================================================================
+   238→
+   239→private fun DrawScope.drawGrid(
+   240→    toScreen: (Double, Double) -> Offset,
+   241→    xRange: ClosedFloatingPointRange<Double>,
+   242→    yRange: ClosedFloatingPointRange<Double>,
+   243→    scale: Float,
+   244→    offsetX: Float,
+   245→    offsetY: Float
+   246→) {
+   247→    val gridSpacing = calculateGridSpacing(scale)
+   248→    val xMin = xRange.start - 1
+   249→    val xMax = xRange.endInclusive + 1
+   250→    val yMin = yRange.start - 1
+   251→    val yMax = yRange.endInclusive + 1
+   252→
+   253→    val gridColor = Color(0xFFE0E0E0)
+   254→    val axisColor = Color(0xFFBDBDBD)
+   255→
+   256→    // Vertical grid lines
+   257→    var x = floor(xMin / gridSpacing) * gridSpacing
+   258→    while (x <= xMax) {
+   259→        val p1 = toScreen(x, yMin)
+   260→        val p2 = toScreen(x, yMax)
+   261→        drawLine(
+   262→            color = if (abs(x) < 0.01) axisColor else gridColor,
+   263→            start = p1, end = p2,
+   264→            strokeWidth = if (abs(x) < 0.01) 1.5f else 0.5f
+   265→        )
+   266→        x += gridSpacing
+   267→    }
+   268→
+   269→    // Horizontal grid lines
+   270→    var y = floor(yMin / gridSpacing) * gridSpacing
+   271→    while (y <= yMax) {
+   272→        val p1 = toScreen(xMin, y)
+   273→        val p2 = toScreen(xMax, y)
+   274→        drawLine(
+   275→            color = if (abs(y) < 0.01) axisColor else gridColor,
+   276→            start = p1, end = p2,
+   277→            strokeWidth = if (abs(y) < 0.01) 1.5f else 0.5f
+   278→        )
+   279→        y += gridSpacing
+   280→    }
+   281→}
+   282→
+   283→private fun calculateGridSpacing(scale: Float): Double {
+   284→    val targetPixels = 60f
+   285→    val rawSpacing = (targetPixels / scale).toDouble()
+   286→    val magnitude = 10.0.pow(floor(log10(rawSpacing)))
+   287→    return when {
+   288→        rawSpacing / magnitude < 2.0 -> 2 * magnitude
+   289→        rawSpacing / magnitude < 5.0 -> 5 * magnitude
+   290→        else -> 10 * magnitude
+   291→    }
+   292→}
+   293→
+   294→private fun DrawScope.drawSupport(p: Offset, supportType: SupportType) {
+   295→    val size = 18f
+   296→    when (supportType) {
+   297→        SupportType.Pin -> {
+   298→            // Triangle
+   299→            val path = Path().apply {
+   300→                moveTo(p.x, p.y)
+   301→                lineTo(p.x - size, p.y + size * 1.2f)
+   302→                lineTo(p.x + size, p.y + size * 1.2f)
+   303→                close()
+   304→            }
+   305→            drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
+   306→            // Ground line
+   307→            drawLine(
+   308→                color = Color(0xFF1565C0),
+   309→                start = Offset(p.x - size - 5, p.y + size * 1.2f),
+   310→                end = Offset(p.x + size + 5, p.y + size * 1.2f),
+   311→                strokeWidth = 2f
+   312→            )
+   313→            // Hatching
+   314→            for (i in -2..2) {
+   315→                val hx = p.x + i * 8f
+   316→                drawLine(
+   317→                    color = Color(0xFF1565C0),
+   318→                    start = Offset(hx, p.y + size * 1.2f),
+   319→                    end = Offset(hx - 5, p.y + size * 1.2f + 6),
+   320→                    strokeWidth = 1f
+   321→                )
+   322→            }
+   323→        }
+   324→        SupportType.Roller -> {
+   325→            // Triangle (smaller)
+   326→            val path = Path().apply {
+   327→                moveTo(p.x, p.y)
+   328→                lineTo(p.x - size * 0.7f, p.y + size * 0.8f)
+   329→                lineTo(p.x + size * 0.7f, p.y + size * 0.8f)
+   330→                close()
+   331→            }
+   332→            drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
+   333→            // Circle (roller)
+   334→            drawCircle(color = Color(0xFF1565C0), radius = 4f, center = Offset(p.x, p.y + size * 0.8f + 5f), style = Stroke(2f))
+   335→            // Ground line
+   336→            drawLine(
+   337→                color = Color(0xFF1565C0),
+   338→                start = Offset(p.x - size, p.y + size * 0.8f + 12f),
+   339→                end = Offset(p.x + size, p.y + size * 0.8f + 12f),
+   340→                strokeWidth = 2f
+   341→            )
+   342→        }
+   343→        SupportType.Fixed -> {
+   344→            // Hatched wall at the support
+   345→            drawLine(
+   346→                color = Color(0xFF1565C0),
+   347→                start = Offset(p.x - 14, p.y + 14),
+   348→                end = Offset(p.x + 14, p.y - 14),
+   349→                strokeWidth = 3f
+   350→            )
+   351→            for (i in -2..2) {
+   352→                val hx = p.x - 14 + i * 7f
+   353→                drawLine(
+   354→                    color = Color(0xFF1565C0),
+   355→                    start = Offset(hx, p.y + 14 + (i - 2) * 3f),
+   356→                    end = Offset(hx - 8, p.y + 6 + (i - 2) * 3f),
+   357→                    strokeWidth = 1.5f
+   358→                )
+   359→            }
+   360→        }
+   361→        SupportType.VerticalRoller -> {
+   362→            // Similar to pin but rotated
+   363→            val path = Path().apply {
+   364→                moveTo(p.x, p.y)
+   365→                lineTo(p.x + size * 1.2f, p.y - size * 0.7f)
+   366→                lineTo(p.x + size * 1.2f, p.y + size * 0.7f)
+   367→                close()
+   368→            }
+   369→            drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
+   370→            drawCircle(color = Color(0xFF1565C0), radius = 4f, center = Offset(p.x + size * 1.2f + 5f, p.y), style = Stroke(2f))
+   371→        }
+   372→        SupportType.Free -> { /* nothing */ }
+   373→    }
+   374→}
+   375→
+   376→private fun DrawScope.drawMemberLoadArrows(
+   377→    ni: FrameNode, nj: FrameNode,
+   378→    mLoad: MemberLoad,
+   379→    toScreen: (Double, Double) -> Offset,
+   380→    scale: Float,
+   381→    textMeasurer: TextMeasurer
+   382→) {
+   383→    if (mLoad.loadType == MemberLoadType.UDL) {
+   384→        val numArrows = 8
+   385→        val p1 = toScreen(ni.x, ni.y)
+   386→        val p2 = toScreen(nj.x, nj.y)
+   387→        val dx = p2.x - p1.x
+   388→        val dy = p2.y - p1.y
+   389→        val L = sqrt(dx * dx + dy * dy)
+   390→        if (L < 1f) return
+   391→        val nx = -dy / L  // normal to member (perpendicular, pointing "down" in screen)
+   392→        val ny = dx / L
+   393→
+   394→        val arrowLen = 25f
+   395→        val arrowColor = Color(0xFFD32F2F)
+   396→
+   397→        for (i in 1..numArrows) {
+   398→            val t = i.toFloat() / (numArrows + 1)
+   399→            val baseX = p1.x + dx * t
+   400→            val baseY = p1.y + dy * t
+   401→            val tipX = baseX + nx * arrowLen
+   402→            val tipY = baseY + ny * arrowLen
+   403→
+   404→            drawLine(color = arrowColor, start = Offset(baseX, baseY), end = Offset(tipX, tipY), strokeWidth = 1.5f)
+   405→            // Arrow head
+   406→            val headSize = 4f
+   407→            val angle = atan2(ny, nx)
+   408→            drawLine(color = arrowColor, start = Offset(tipX, tipY), end = Offset(tipX - headSize * cos(angle - 0.5f), tipY - headSize * sin(angle - 0.5f)), strokeWidth = 1.5f)
+   409→            drawLine(color = arrowColor, start = Offset(tipX, tipY), end = Offset(tipX - headSize * cos(angle + 0.5f), tipY - headSize * sin(angle + 0.5f)), strokeWidth = 1.5f)
+   410→        }
+   411→
+   412→        // Load value label
+   413→        val midX = (p1.x + p2.x) / 2 + nx * (arrowLen + 8f)
+   414→        val midY = (p1.y + p2.y) / 2 + ny * (arrowLen + 8f)
+   415→        drawText(
+   416→            textMeasurer = textMeasurer,
+   417→            text = "${mLoad.value} kN/m",
+   418→            topLeft = Offset(midX - 20, midY - 6),
+   419→            style = TextStyle(color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+   420→        )
+   421→    } else if (mLoad.loadType == MemberLoadType.PointLoad) {
+   422→        val p1 = toScreen(ni.x, ni.y)
+   423→        val p2 = toScreen(nj.x, nj.y)
+   424→        val dx = p2.x - p1.x
+   425→        val dy = p2.y - p1.y
+   426→        val L = sqrt(dx * dx + dy * dy)
+   427→        if (L < 1f) return
+   428→        val memberLength = sqrt((nj.x - ni.x).pow(2) + (nj.y - ni.y).pow(2))
+   429→        val t = if (memberLength > 0) (mLoad.position / memberLength).toFloat() else 0.5f
+   430→        val baseX = p1.x + dx * t
+   431→        val baseY = p1.y + dy * t
+   432→        val nx = -dy / L
+   433→        val ny = dx / L
+   434→        val arrowLen = 35f
+   435→
+   436→        val tipX = baseX + nx * arrowLen
+   437→        val tipY = baseY + ny * arrowLen
+   438→
+   439→        drawLine(color = Color(0xFFD32F2F), start = Offset(baseX, baseY), end = Offset(tipX, tipY), strokeWidth = 2f)
+   440→        val angle = atan2(ny, nx)
+   441→        drawLine(color = Color(0xFFD32F2F), start = Offset(tipX, tipY), end = Offset(tipX - 6f * cos(angle - 0.5f), tipY - 6f * sin(angle - 0.5f)), strokeWidth = 2f)
+   442→        drawLine(color = Color(0xFFD32F2F), start = Offset(tipX, tipY), end = Offset(tipX - 6f * cos(angle + 0.5f), tipY - 6f * sin(angle + 0.5f)), strokeWidth = 2f)
+   443→
+   444→        drawText(
+   445→            textMeasurer = textMeasurer,
+   446→            text = "${mLoad.value} kN",
+   447→            topLeft = Offset(tipX - 12, tipY + 4),
+   448→            style = TextStyle(color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+   449→        )
+   450→    }
+   451→}
+   452→
+   453→private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasurer: TextMeasurer) {
+   454→    if (abs(load.fx) < 0.01 && abs(load.fy) < 0.01 && abs(load.mz) < 0.01) return
+   455→
+   456→    val arrowColor = Color(0xFF4CAF50)
+   457→    val arrowLen = 35f
+   458→
+   459→    // Draw force arrow (fy is positive upward, screen y is inverted)
+   460→    if (abs(load.fy) > 0.01) {
+   461→        val dir = if (load.fy < 0) 1f else -1f // positive fy = upward force, but loads are usually downward
+   462→        val tipY = p.y + dir * arrowLen
+   463→        drawLine(color = arrowColor, start = p, end = Offset(p.x, tipY), strokeWidth = 2f)
+   464→        val headDir = if (load.fy < 0) -1f else 1f
+   465→        drawLine(color = arrowColor, start = Offset(p.x, tipY), end = Offset(p.x - 5f, tipY + headDir * 6f), strokeWidth = 2f)
+   466→        drawLine(color = arrowColor, start = Offset(p.x, tipY), end = Offset(p.x + 5f, tipY + headDir * 6f), strokeWidth = 2f)
+   467→        drawText(
+   468→            textMeasurer = textMeasurer,
+   469→            text = "${abs(load.fy)} kN",
+   470→            topLeft = Offset(p.x + 6, tipY - 4),
+   471→            style = TextStyle(color = arrowColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+   472→        )
+   473→    }
+   474→    if (abs(load.fx) > 0.01) {
+   475→        val dir = if (load.fx > 0) 1f else -1f
+   476→        val tipX = p.x + dir * arrowLen
+   477→        drawLine(color = arrowColor, start = p, end = Offset(tipX, p.y), strokeWidth = 2f)
+   478→        val headDir = if (load.fx > 0) -1f else 1f
+   479→        drawLine(color = arrowColor, start = Offset(tipX, p.y), end = Offset(tipX + headDir * 6f, p.y - 5f), strokeWidth = 2f)
+   480→        drawLine(color = arrowColor, start = Offset(tipX, p.y), end = Offset(tipX + headDir * 6f, p.y + 5f), strokeWidth = 2f)
+   481→    }
+   482→    if (abs(load.mz) > 0.01) {
+   483→        drawText(
+   484→            textMeasurer = textMeasurer,
+   485→            text = "M=${load.mz} kN.m",
+   486→            topLeft = Offset(p.x + 10, p.y - 20),
+   487→            style = TextStyle(color = Color(0xFF9C27B0), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+   488→        )
+   489→    }
+   490→}
+   491→
+   492→private fun DrawScope.drawDiagrams(
+   493→    members: List<FrameMember>,
+   494→    diagrams: List<MemberDiagram>,
+   495→    nodes: List<FrameNode>,
+   496→    toScreen: (Double, Double) -> Offset,
+   497→    scale: Float,
+   498→    diagramType: DiagramType,
+   499→    textMeasurer: TextMeasurer
+   500→) {
+   501→    for (diagram in diagrams) {
+   502→        val member = members.find { it.id == diagram.memberId } ?: continue
+   503→        val ni = nodes.find { it.id == member.nodeI } ?: continue
+   504→        val nj = nodes.find { it.id == member.nodeJ } ?: continue
+   505→        val p1 = toScreen(ni.x, ni.y)
+   506→        val p2 = toScreen(nj.x, nj.y)
+   507→        val L = sqrt((p2.x - p1.x).pow(2) + (p2.y - p1.y).pow(2))
+   508→        if (L < 1f) continue
+   509→
+   510→        // Direction along member
+   511→        val dx = (p2.x - p1.x) / L
+   512→        val dy = (p2.y - p1.y) / L
+   513→        // Normal to member (perpendicular)
+   514→        val nx = -dy
+   515→        val ny = dx
+   516→
+   517→        val points = when (diagramType) {
+   518→            DiagramType.BMD -> diagram.momentDiagram
+   519→            DiagramType.SFD -> diagram.shearDiagram
+   520→            DiagramType.AFD -> diagram.axialDiagram
+   521→        }
+   522→
+   523→        if (points.size < 2) continue
+   524→
+   525→        // Scale factor for diagram (adjust based on max value)
+   526→        val maxVal = points.maxOfOrNull { abs(it.value) } ?: 1.0
+   527→        if (maxVal < 0.001) continue
+   528→        val diagramScale = 40f / maxVal.toFloat() // Max diagram height = 40px
+   529→
+   530→        val diagramColor = when (diagramType) {
+   531→            DiagramType.BMD -> Color(0xFF2196F3)  // Blue
+   532→            DiagramType.SFD -> Color(0xFF4CAF50)  // Green
+   533→            DiagramType.AFD -> Color(0xFFFF9800)  // Orange
+   534→        }
+   535→
+   536→        // Draw filled diagram area
+   537→        val path = Path()
+   538→        val memberLength = member.getLength(nodes)
+   539→        val firstPt = points[0]
+   540→        val t0 = if (memberLength > 0) (firstPt.x / memberLength).toFloat() else 0f
+   541→        val offset0 = firstPt.value * diagramScale
+   542→        path.moveTo(p1.x + dx * L * t0 + nx * offset0.toFloat(), p1.y + dy * L * t0 + ny * offset0.toFloat())
+   543→
+   544→        for (i in 1 until points.size) {
+   545→            val pt = points[i]
+   546→            val t = if (memberLength > 0) (pt.x / memberLength).toFloat() else (i.toFloat() / (points.size - 1))
+   547→            val offset = pt.value * diagramScale
+   548→            path.lineTo(p1.x + dx * L * t + nx * offset.toFloat(), p1.y + dy * L * t + ny * offset.toFloat())
+   549→        }
+   550→
+   551→        // Close the path back along the member line
+   552→        path.lineTo(p2.x, p2.y)
+   553→        path.lineTo(p1.x, p1.y)
+   554→        path.close()
+   555→
+   556→        // Fill with semi-transparent color
+   557→        drawPath(
+   558→            path = path,
+   559→            color = diagramColor.copy(alpha = 0.2f)
+   560→        )
+   561→
+   562→        // Draw the diagram outline
+   563→        val outlinePath = Path()
+   564→        val firstPt2 = points[0]
+   565→        val t0_2 = if (memberLength > 0) (firstPt2.x / memberLength).toFloat() else 0f
+   566→        val offset0_2 = firstPt2.value * diagramScale
+   567→        outlinePath.moveTo(p1.x + dx * L * t0_2 + nx * offset0_2.toFloat(), p1.y + dy * L * t0_2 + ny * offset0_2.toFloat())
+   568→
+   569→        for (i in 1 until points.size) {
+   570→            val pt = points[i]
+   571→            val t = if (memberLength > 0) (pt.x / memberLength).toFloat() else (i.toFloat() / (points.size - 1))
+   572→            val offset = pt.value * diagramScale
+   573→            outlinePath.lineTo(p1.x + dx * L * t + nx * offset.toFloat(), p1.y + dy * L * t + ny * offset.toFloat())
+   574→        }
+   575→        drawPath(outlinePath, color = diagramColor, style = Stroke(width = 2f))
+   576→
+   577→        // Draw max value annotation
+   578→        val maxPt = points.maxByOrNull { abs(it.value) }
+   579→        if (maxPt != null && abs(maxPt.value) > 0.01) {
+   580→            val tMax = if (memberLength > 0) (maxPt.x / memberLength).toFloat() else 0.5f
+   581→            val offsetMax = maxPt.value * diagramScale
+   582→            val annX = p1.x + dx * L * tMax + nx * offsetMax.toFloat()
+   583→            val annY = p1.y + dy * L * tMax + ny * offsetMax.toFloat()
+   584→            val unit = when (diagramType) {
+   585→                DiagramType.BMD -> "kN.m"
+   586→                DiagramType.SFD, DiagramType.AFD -> "kN"
+   587→            }
+   588→            val label = "${abs(maxPt.value).formatValue(2)} $unit"
+   589→            drawText(
+   590→                textMeasurer = textMeasurer,
+   591→                text = label,
+   592→                topLeft = Offset(annX + 4, annY - 14),
+   593→                style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+   594→            )
+   595→        }
+   596→    }
+   597→}
+   598→
+   599→private fun DrawScope.drawDeformedShape(
+   600→    members: List<FrameMember>,
+   601→    nodes: List<FrameNode>,
+   602→    nodeResults: List<NodeResult>,
+   603→    toScreen: (Double, Double) -> Offset,
+   604→    scale: Float
+   605→) {
+   606→    // Scale deformations for visibility
+   607→    val maxDisp = nodeResults.maxOfOrNull { (max(abs(it.dx), abs(it.dy)) * scale).toFloat() } ?: 0f
+   608→    if (maxDisp < 0.5f) return // Too small to show
+   609→    val deformScale = 50f / maxDisp.coerceAtLeast(1f) // amplify to ~50px max
+   610→
+   611→    for (member in members) {
+   612→        val ni = nodes.find { it.id == member.nodeI } ?: continue
+   613→        val nj = nodes.find { it.id == member.nodeJ } ?: continue
+   614→        val ri = nodeResults.find { it.nodeId == member.nodeI }
+   615→        val rj = nodeResults.find { it.nodeId == member.nodeJ } ?: continue
+   616→
+   617→        val p1 = toScreen(ni.x + (ri?.dx ?: 0.0) * deformScale / scale,
+   618→                          ni.y + (ri?.dy ?: 0.0) * deformScale / scale)
+   619→        val p2 = toScreen(nj.x + (rj?.dx ?: 0.0) * deformScale / scale,
+   620→                          nj.y + (rj?.dy ?: 0.0) * deformScale / scale)
+   621→
+   622→        drawLine(
+   623→            color = Color(0xFFFF5722).copy(alpha = 0.6f),
+   624→            start = p1, end = p2,
+   625→            strokeWidth = 2f,
+   626→            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 4f))
+   627→        )
+   628→    }
+   629→}
+   630→
+   631→private fun DrawScope.drawScaleBar(size: Size, scale: Float, textMeasurer: TextMeasurer) {
+   632→    val barLength_m = 1.0 // 1 meter
+   633→    val barLength_px = (barLength_m * scale).toFloat()
+   634→    val x = 20f
+   635→    val y = size.height - 25f
+   636→
+   637→    drawLine(color = Color.DarkGray, start = Offset(x, y), end = Offset(x + barLength_px, y), strokeWidth = 2f)
+   638→    drawLine(color = Color.DarkGray, start = Offset(x, y - 5), end = Offset(x, y + 5), strokeWidth = 2f)
+   639→    drawLine(color = Color.DarkGray, start = Offset(x + barLength_px, y - 5), end = Offset(x + barLength_px, y + 5), strokeWidth = 2f)
+   640→    drawText(
+   641→        textMeasurer = textMeasurer,
+   642→        text = "${barLength_m.toInt()} m",
+   643→        topLeft = Offset(x + barLength_px / 2 - 10, y + 6),
+   644→        style = TextStyle(color = Color.DarkGray, fontSize = 10.sp)
+   645→    )
+   646→}
+   647→
+   648→// ============================================================================
+   649→// Utility Functions
+   650→// ============================================================================
+   651→
+   652→private fun pointToSegmentDist(p: Offset, a: Offset, b: Offset): Float {
+   653→    val dx = b.x - a.x
+   654→    val dy = b.y - a.y
+   655→    val lenSq = dx * dx + dy * dy
+   656→    if (lenSq < 1f) return (p - a).getDistance()
+   657→    var t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq
+   658→    t = t.coerceIn(0f, 1f)
+   659→    val proj = Offset(a.x + t * dx, a.y + t * dy)
+   660→    return (p - proj).getDistance()
+   661→}
+   662→
+   663→private fun Offset.getDistance(): Float = sqrt(x * x + y * y)
+   664→
+   665→private fun Double.formatValue(decimals: Int): String {
+   666→    return if (abs(this) < 0.001) "0"
+   667→    else if (abs(this) >= 1000) "%.0f".format(this)
+   668→    else "%.${decimals}f".format(this)
+   669→}

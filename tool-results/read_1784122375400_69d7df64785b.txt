@@ -1,0 +1,2002 @@
+     1→package com.civileg.app.ui.compose.screens
+     2→
+     3→import android.content.Context
+     4→import android.content.Intent
+     5→import android.graphics.Bitmap
+     6→import android.graphics.Canvas
+     7→import android.graphics.Paint
+     8→import android.net.Uri
+     9→import android.widget.Toast
+    10→import androidx.compose.animation.core.animateFloatAsState
+    11→import androidx.compose.animation.core.tween
+    12→import androidx.compose.foundation.BorderStroke
+    13→import androidx.compose.foundation.Canvas as ComposeCanvas
+    14→import androidx.compose.foundation.background
+    15→import androidx.compose.foundation.layout.*
+    16→import androidx.compose.foundation.lazy.LazyColumn
+    17→import androidx.compose.foundation.lazy.items
+    18→import androidx.compose.foundation.shape.RoundedCornerShape
+    19→import androidx.compose.foundation.text.KeyboardOptions
+    20→import androidx.compose.material.icons.Icons
+    21→import androidx.compose.material.icons.automirrored.filled.ArrowBack
+    22→import androidx.compose.material.icons.filled.*
+    23→import androidx.compose.material3.*
+    24→import androidx.compose.runtime.*
+    25→import androidx.compose.runtime.livedata.observeAsState
+    26→import androidx.compose.ui.Alignment
+    27→import androidx.compose.ui.Modifier
+    28→import androidx.compose.ui.geometry.Offset
+    29→import androidx.compose.ui.geometry.Size
+    30→import androidx.compose.ui.graphics.Color
+    31→import androidx.compose.ui.graphics.Path
+    32→import androidx.compose.ui.graphics.PathEffect
+    33→import androidx.compose.ui.graphics.nativeCanvas
+    34→import androidx.compose.ui.platform.LocalContext
+    35→import androidx.compose.ui.res.painterResource
+    36→import androidx.compose.ui.text.font.FontWeight
+    37→import androidx.compose.ui.text.input.KeyboardType
+    38→import androidx.compose.ui.unit.dp
+    39→import androidx.compose.ui.unit.sp
+    40→import androidx.core.content.FileProvider
+    41→import androidx.hilt.navigation.compose.hiltViewModel
+    42→import com.civileg.app.R
+    43→import com.civileg.app.domain.calculations.ecp.BoltDesignResult
+    44→import com.civileg.app.domain.calculations.ecp.BlockShearResult
+    45→import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
+    46→import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
+    47→import com.civileg.app.domain.calculations.ecp.WeldDesignResult
+    48→import com.civileg.app.domain.entities.*
+    49→import com.civileg.app.utils.CalculatorEngine
+    50→import com.civileg.app.utils.PdfGenerator
+    51→import com.civileg.app.viewmodel.SteelViewModel
+    52→import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
+    53→import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
+    54→import java.io.File
+    55→import kotlin.math.PI
+    56→import kotlin.math.ceil
+    57→import kotlin.math.max
+    58→import kotlin.math.min
+    59→import kotlin.math.atan2
+    60→import kotlin.math.cos
+    61→import kotlin.math.sin
+    62→import kotlin.math.abs
+    63→import kotlin.math.pow
+    64→import kotlin.math.sqrt
+    65→
+    66→@OptIn(ExperimentalMaterial3Api::class)
+    67→@Composable
+    68→fun SteelDesignScreen(
+    69→    viewModel: SteelViewModel = hiltViewModel(),
+    70→    onNavigateBack: () -> Unit = {}
+    71→) {
+    72→    val result by viewModel.result.observeAsState()
+    73→    val warehouseResult by viewModel.warehouseResult.observeAsState()
+    74→    val isLoading by viewModel.isLoading.observeAsState(false)
+    75→    val errorMessage by viewModel.errorMessage.observeAsState()
+    76→    
+    77→    val context = LocalContext.current
+    78→    var selectedTab by remember { mutableIntStateOf(0) }
+    79→    val tabs = listOf("المستودعات", "القطاعات", "اللحام", "المسامير", "قواعد معدنية", "وصلات")
+    80→
+    81→    // Handle error messages from ViewModel
+    82→    LaunchedEffect(errorMessage) {
+    83→        errorMessage?.let {
+    84→            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+    85→        }
+    86→    }
+    87→
+    88→    Scaffold(
+    89→        topBar = {
+    90→            TopAppBar(
+    91→                title = { Text("تصميم المنشآت المعدنية", fontWeight = FontWeight.Bold) },
+    92→                navigationIcon = {
+    93→                    IconButton(onClick = onNavigateBack) {
+    94→                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+    95→                    }
+    96→                },
+    97→                actions = {
+    98→                    IconButton(onClick = { viewModel.resetResult() }) {
+    99→                        Icon(Icons.Default.Refresh, contentDescription = "إعادة تعيين")
+   100→                    }
+   101→                }
+   102→            )
+   103→        }
+   104→    ) { padding ->
+   105→        Column(modifier = Modifier.padding(padding)) {
+   106→            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 0.dp) {
+   107→                tabs.forEachIndexed { index, title ->
+   108→                    Tab(
+   109→                        selected = selectedTab == index, 
+   110→                        onClick = { 
+   111→                            if (selectedTab != index) {
+   112→                                viewModel.resetResult()
+   113→                                selectedTab = index 
+   114→                            }
+   115→                        }, 
+   116→                        text = { Text(title) }
+   117→                    )
+   118→                }
+   119→            }
+   120→
+   121→            when (selectedTab) {
+   122→                0 -> SteelWarehouseTab(viewModel, warehouseResult, isLoading)
+   123→                1 -> SteelSectionTab(viewModel, result, isLoading)
+   124→                2 -> WeldDesignTab(viewModel)
+   125→                3 -> BoltDesignTab(viewModel)
+   126→                4 -> BasePlateDesignTab()
+   127→                5 -> ConnectionDesignTab()
+   128→            }
+   129→        }
+   130→    }
+   131→}
+   132→
+   133→@OptIn(ExperimentalMaterial3Api::class)
+   134→@Composable
+   135→fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisResult?, isLoading: Boolean) {
+   136→    val context = LocalContext.current
+   137→    var span by remember { mutableStateOf("12") }
+   138→    var length by remember { mutableStateOf("30") }
+   139→    var eaveHeight by remember { mutableStateOf("6") }
+   140→    var ridgeHeight by remember { mutableStateOf("7.5") }
+   141→    var baySpacing by remember { mutableStateOf("6") }
+   142→    var floors by remember { mutableStateOf("1") }
+   143→    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+   144→
+   145→    val currentInputs = remember(span, length, eaveHeight, ridgeHeight, baySpacing, floors, selectedCode) {
+   146→        SteelWarehouseInputs(
+   147→            span = span.toDoubleOrNull() ?: 12.0,
+   148→            length = length.toDoubleOrNull() ?: 30.0,
+   149→            eaveHeight = eaveHeight.toDoubleOrNull() ?: 6.0,
+   150→            ridgeHeight = ridgeHeight.toDoubleOrNull() ?: 7.5,
+   151→            baySpacing = baySpacing.toDoubleOrNull() ?: 6.0,
+   152→            numberOfStories = floors.toIntOrNull() ?: 1,
+   153→            code = when(selectedCode) {
+   154→                CalculatorEngine.DesignCode.EGYPTIAN -> DesignCode.ECP
+   155→                CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+   156→                else -> DesignCode.ACI
+   157→            }
+   158→        )
+   159→    }
+   160→
+   161→    LazyColumn(
+   162→        modifier = Modifier.fillMaxSize().padding(16.dp),
+   163→        verticalArrangement = Arrangement.spacedBy(16.dp)
+   164→    ) {
+   165→        item { SectionHeader("🏢 مدخلات تصميم المنشأ المعدني", R.drawable.ic_steel) }
+   166→
+   167→        item {
+   168→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+   169→                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   170→                    Text("الكود المعتمد", fontWeight = FontWeight.Bold)
+   171→                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+   172→                        CalculatorEngine.DesignCode.entries.forEach { code ->
+   173→                            FilterChip(
+   174→                                selected = selectedCode == code,
+   175→                                onClick = { selectedCode = code },
+   176→                                label = { Text(code.name, fontSize = 12.sp) }
+   177→                            )
+   178→                        }
+   179→                    }
+   180→                }
+   181→            }
+   182→        }
+   183→
+   184→        item {
+   185→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   186→                SteelInputField(span, "البحر Span (m)", { span = it }, Modifier.weight(1f))
+   187→                SteelInputField(length, "الطول (m)", { length = it }, Modifier.weight(1f))
+   188→            }
+   189→        }
+   190→
+   191→        item {
+   192→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   193→                SteelInputField(eaveHeight, "الارتفاع (m)", { eaveHeight = it }, Modifier.weight(1f))
+   194→                SteelInputField(ridgeHeight, "ارتفاع القمة (m)", { ridgeHeight = it }, Modifier.weight(1f))
+   195→            }
+   196→        }
+   197→
+   198→        item {
+   199→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   200→                SteelInputField(baySpacing, "الباكية Bay (m)", { baySpacing = it }, Modifier.weight(1f))
+   201→                SteelInputField(floors, "الأدوار", { floors = it }, Modifier.weight(1f))
+   202→            }
+   203→        }
+   204→
+   205→        item {
+   206→            Button(
+   207→                onClick = { viewModel.calculateWarehouse(currentInputs) },
+   208→                modifier = Modifier.fillMaxWidth(),
+   209→                enabled = !isLoading
+   210→            ) {
+   211→                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+   212→                else Text("تحليل وتصميم المنشأ")
+   213→            }
+   214→        }
+   215→
+   216→        result?.let { res ->
+   217→            item { WarehouseResultSummary(res) }
+   218→            
+   219→            item { 
+   220→                Text("📐 تفاصيل المنظور الإنشائي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+   221→                SteelWarehouseVisualizer(currentInputs, res)
+   222→            }
+   223→
+   224→            item {
+   225→                Text("📊 تحليل الإجهادات والأحمال", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+   226→                StructuralAnalysisVisualizer(currentInputs, res)
+   227→            }
+   228→
+   229→            item {
+   230→                Button(
+   231→                    onClick = {
+   232→                        viewModel.exportWarehouseProToPdf(
+   233→                            context = context,
+   234→                            clientAr = "عميل افتراضي",
+   235→                            clientEn = "Default Client",
+   236→                            projAr = "مشروع مستودع معدني",
+   237→                            projEn = "Steel Warehouse Project"
+   238→                        ) { /* handled by VM */ }
+   239→                    },
+   240→                    modifier = Modifier.fillMaxWidth(),
+   241→                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   242→                ) {
+   243→                    Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+   244→                    Spacer(modifier = Modifier.width(8.dp))
+   245→                    Text("إصدار التقرير الفني الهندسي (Pro Drawings)")
+   246→                }
+   247→            }
+   248→
+   249→            item { Text("📈 نتائج التحليل الحسابي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+   250→            item { AnalysisDetailCard(res.mainFrame) }
+   251→
+   252→            item { Text("🏗️ تفاصيل القطاعات", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+   253→            item { SectionResultCard("الأعمدة الرئيسية", res.mainFrame.columnSection) }
+   254→            item { SectionResultCard("الكمرات (Rafters)", res.mainFrame.rafterSection) }
+   255→            item { SecondaryMembersCard(res.secondaryMembers) }
+   256→            
+   257→            item { Text("🔗 وصلات الربط (Connections)", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+   258→            items(res.connections) { conn ->
+   259→                ConnectionDetailCard(conn)
+   260→            }
+   261→
+   262→            item { RecommendationsCard(res.recommendations) }
+   263→        }
+   264→    }
+   265→}
+   266→
+   267→@Composable
+   268→fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
+   269→    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
+   270→        Column(modifier = Modifier.padding(16.dp)) {
+   271→            Text("💰 دراسة الجدوى الاقتصادية", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   272→            Spacer(modifier = Modifier.height(8.dp))
+   273→            SummaryLine("إجمالي وزن الحديد", "%.2f Ton".format(res.totalWeight), isBold = true)
+   274→            SummaryLine("التكلفة التقديرية", "%,.0f EGP".format(res.estimatedTotalCost), isBold = true)
+   275→            SummaryLine("تكلفة المتر المسطح", "%.0f EGP/m²".format(res.costPerM2))
+   276→            SummaryLine("صافي الربح المتوقع", "%,.0f EGP".format(res.netProfit))
+   277→            SummaryLine("العائد على الاستثمار (ROI)", "%.1f %%".format(res.roi), isBold = true)
+   278→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+   279→            Text(res.resultsByCode, fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+   280→        }
+   281→    }
+   282→}
+   283→
+   284→@Composable
+   285→fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+   286→    InteractiveDrawingScreen(
+   287→        title = "تحليل الإطار الإنشائي",
+   288→        subtitle = "Frame Analysis & BMD"
+   289→    ) {
+   290→        ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFF0D1117))) {
+   291→            val padding = 60f
+   292→            val w = size.width - 2 * padding
+   293→            val h = size.height - 2 * padding
+   294→            val baseY = size.height - padding
+   295→
+   296→            // Scale calculations
+   297→            val scale = (w / inputs.span).toFloat() * 0.75f
+   298→            val eh = (inputs.eaveHeight * scale).toFloat()
+   299→            val rh = (inputs.ridgeHeight * scale).toFloat()
+   300→            val midX = padding + w / 2
+   301→            val colLX = padding + (w - inputs.span * scale) / 2
+   302→            val colRX = colLX + (inputs.span * scale).toFloat()
+   303→
+   304→            // ── Grid ──
+   305→            val gridColor = Color(0x1AFFFFFF)
+   306→            for (i in 0..20) {
+   307→                val x = padding + (i * w / 20)
+   308→                drawLine(gridColor, Offset(x, padding), Offset(x, size.height - padding), strokeWidth = 0.5f)
+   309→            }
+   310→            for (i in 0..12) {
+   311→                val y = padding + (i * h / 12)
+   312→                drawLine(gridColor, Offset(padding, y), Offset(size.width - padding, y), strokeWidth = 0.5f)
+   313→            }
+   314→
+   315→            // ── Ground Line with hatching ──
+   316→            val groundColor = Color(0xFF4A4A4A)
+   317→            drawLine(groundColor, Offset(colLX - 30f, baseY), Offset(colRX + 30f, baseY), strokeWidth = 3f)
+   318→            for (i in 0..24) {
+   319→                val x = (colLX - 30f) + (i * (colRX - colLX + 60f) / 24)
+   320→                drawLine(groundColor, Offset(x, baseY), Offset(x - 8f, baseY + 10f), strokeWidth = 1f)
+   321→            }
+   322→
+   323→            // ── Pin Supports ──
+   324→            val supportColor = Color(0xFF8A8A8A)
+   325→            // Left support
+   326→            drawPath(Path().apply {
+   327→                moveTo(colLX - 12f, baseY)
+   328→                lineTo(colLX + 12f, baseY)
+   329→                lineTo(colLX, baseY + 18f)
+   330→                close()
+   331→            }, supportColor, style = Stroke(2f))
+   332→            // Right support
+   333→            drawPath(Path().apply {
+   334→                moveTo(colRX - 12f, baseY)
+   335→                lineTo(colRX + 12f, baseY)
+   336→                lineTo(colRX, baseY + 18f)
+   337→                close()
+   338→            }, supportColor, style = Stroke(2f))
+   339→
+   340→            // ── Main Frame with 3D effect ──
+   341→            val frameColor = Color(0xFFB0BEC5)
+   342→            val frameShadow = Color(0xFF546E7A)
+   343→            val frameHighlight = Color(0xFFECEFF1)
+   344→            val memberWidth = 6f
+   345→
+   346→            // Columns (draw shadow, main, highlight for 3D look)
+   347→            // Left column
+   348→            drawLine(frameShadow, Offset(colLX + 2f, baseY), Offset(colLX + 2f, baseY - eh), strokeWidth = memberWidth + 2f)
+   349→            drawLine(frameColor, Offset(colLX, baseY), Offset(colLX, baseY - eh), strokeWidth = memberWidth)
+   350→            drawLine(frameHighlight, Offset(colLX - 1f, baseY), Offset(colLX - 1f, baseY - eh), strokeWidth = 1f)
+   351→
+   352→            // Right column
+   353→            drawLine(frameShadow, Offset(colRX + 2f, baseY), Offset(colRX + 2f, baseY - eh), strokeWidth = memberWidth + 2f)
+   354→            drawLine(frameColor, Offset(colRX, baseY), Offset(colRX, baseY - eh), strokeWidth = memberWidth)
+   355→            drawLine(frameHighlight, Offset(colRX - 1f, baseY), Offset(colRX - 1f, baseY - eh), strokeWidth = 1f)
+   356→
+   357→            // Rafters (left)
+   358→            drawLine(frameShadow, Offset(colLX + 2f, baseY - eh + 2f), Offset(midX + 1f, baseY - rh + 1f), strokeWidth = memberWidth + 2f)
+   359→            drawLine(frameColor, Offset(colLX, baseY - eh), Offset(midX, baseY - rh), strokeWidth = memberWidth)
+   360→            // Rafters (right)
+   361→            drawLine(frameShadow, Offset(colRX + 2f, baseY - eh + 2f), Offset(midX + 1f, baseY - rh + 1f), strokeWidth = memberWidth + 2f)
+   362→            drawLine(frameColor, Offset(colRX, baseY - eh), Offset(midX, baseY - rh), strokeWidth = memberWidth)
+   363→
+   364→            // ── Joint Circles ──
+   365→            val jointColor = Color(0xFFFF9800)
+   366→            listOf(
+   367→                Offset(colLX, baseY - eh),
+   368→                Offset(colRX, baseY - eh),
+   369→                Offset(midX, baseY - rh)
+   370→            ).forEach { joint ->
+   371→                drawCircle(Color(0x33FF9800), 14f, joint)
+   372→                drawCircle(jointColor, 6f, joint)
+   373→                drawCircle(Color.White, 3f, joint)
+   374→            }
+   375→
+   376→            // ── Distributed Load Arrows (on rafters) ──
+   377→            val loadColor = Color(0xFFEF5350)
+   378→            for (i in 0..14) {
+   379→                val t = i / 14f
+   380→                // Left rafter
+   381→                val xL = colLX + t * (midX - colLX)
+   382→                val yL = baseY - eh + t * (rh - eh) * (-1f)
+   383→                val nxL = -(baseY - eh - (baseY - rh)) // normal direction
+   384→                val lenL = (midX - colLX)
+   385→                val nxNorm = ((baseY - rh) - (baseY - eh)) / lenL
+   386→                val nyNorm = (midX - colLX) / lenL
+   387→                val arrowLen = 25f
+   388→                drawLine(loadColor, Offset(xL - nxNorm * arrowLen, yL - nyNorm * arrowLen), Offset(xL, yL), strokeWidth = 1.5f)
+   389→                // Arrow head
+   390→                drawLine(loadColor, Offset(xL - 4f, yL - 5f), Offset(xL, yL), strokeWidth = 1.5f)
+   391→                drawLine(loadColor, Offset(xL + 4f, yL - 5f), Offset(xL, yL), strokeWidth = 1.5f)
+   392→
+   393→                // Right rafter
+   394→                val xR = midX + t * (colRX - midX)
+   395→                val yR = (baseY - rh) + t * ((baseY - eh) - (baseY - rh))
+   396→                drawLine(loadColor, Offset(xR + nxNorm * arrowLen, yR - nyNorm * arrowLen), Offset(xR, yR), strokeWidth = 1.5f)
+   397→                drawLine(loadColor, Offset(xR - 4f, yR - 5f), Offset(xR, yR), strokeWidth = 1.5f)
+   398→                drawLine(loadColor, Offset(xR + 4f, yR - 5f), Offset(xR, yR), strokeWidth = 1.5f)
+   399→            }
+   400→
+   401→            // Load label
+   402→            drawContext.canvas.nativeCanvas.drawText(
+   403→                "w = %.1f kN/m".format(result.mainFrame.maxShear / max(inputs.span, 1.0)),
+   404→                (colLX + colRX) / 2f - 60f, baseY - rh - 35f,
+   405→                android.graphics.Paint().apply { color = loadColor.toArgb(); textSize = 28f; isFakeBoldText = true }
+   406→            )
+   407→
+   408→            // ── Bending Moment Diagram (filled) ──
+   409→            val momentColor = Color(0xFF42A5F5)
+   410→            val maxMoment = result.mainFrame.maxMoment
+   411→            val momentScale = min(eh * 0.35f / max(maxMoment, 1f), 0.5f)
+   412→
+   413→            // Left rafter moment (parabolic)
+   414→            val momentPath = Path().apply {
+   415→                moveTo(colLX, baseY - eh)
+   416→                for (i in 0..20) {
+   417→                    val t = i / 20f
+   418→                    val x = colLX + t * (midX - colLX)
+   419→                    val y = baseY - eh + t * (rh - eh) * (-1f)
+   420→                    val m = 4 * maxMoment * t * (1 - t)
+   421→                    val nxN = ((baseY - rh) - (baseY - eh)) / (midX - colLX)
+   422→                    val nyN = (midX - colLX) / (midX - colLX)
+   423→                    lineTo(x + nxN * m * momentScale, y + nyN * m * momentScale)
+   424→                }
+   425→                lineTo(midX, baseY - rh)
+   426→                close()
+   427→            }
+   428→            drawPath(momentPath, momentColor.copy(alpha = 0.2f))
+   429→            drawPath(momentPath, momentColor, style = Stroke(2f))
+   430→
+   431→            // Right rafter moment (mirror)
+   432→            val momentPathR = Path().apply {
+   433→                moveTo(colRX, baseY - eh)
+   434→                for (i in 0..20) {
+   435→                    val t = i / 20f
+   436→                    val x = colRX + t * (midX - colRX)
+   437→                    val y = (baseY - eh) + t * ((baseY - rh) - (baseY - eh))
+   438→                    val m = 4 * maxMoment * t * (1 - t)
+   439→                    val nxN = ((baseY - rh) - (baseY - eh)) / (midX - colRX)
+   440→                    val nyN = (midX - colRX) / (midX - colRX)
+   441→                    lineTo(x + nxN * m * momentScale, y + nyN * m * momentScale)
+   442→                }
+   443→                lineTo(midX, baseY - rh)
+   444→                close()
+   445→            }
+   446→            drawPath(momentPathR, momentColor.copy(alpha = 0.2f))
+   447→            drawPath(momentPathR, momentColor, style = Stroke(2f))
+   448→
+   449→            // Column moment (triangular)
+   450→            val colMoment = maxMoment * 0.3f
+   451→            drawPath(Path().apply {
+   452→                moveTo(colLX, baseY - eh)
+   453→                lineTo(colLX - colMoment * momentScale * 0.5f, baseY - eh / 2)
+   454→                lineTo(colLX, baseY)
+   455→                close()
+   456→            }, momentColor.copy(alpha = 0.15f))
+   457→            drawPath(Path().apply {
+   458→                moveTo(colLX, baseY - eh)
+   459→                lineTo(colLX - colMoment * momentScale * 0.5f, baseY - eh / 2)
+   460→                lineTo(colLX, baseY)
+   461→            }, momentColor, style = Stroke(1.5f))
+   462→
+   463→            drawPath(Path().apply {
+   464→                moveTo(colRX, baseY - eh)
+   465→                lineTo(colRX + colMoment * momentScale * 0.5f, baseY - eh / 2)
+   466→                lineTo(colRX, baseY)
+   467→                close()
+   468→            }, momentColor.copy(alpha = 0.15f))
+   469→            drawPath(Path().apply {
+   470→                moveTo(colRX, baseY - eh)
+   471→                lineTo(colRX + colMoment * momentScale * 0.5f, baseY - eh / 2)
+   472→                lineTo(colRX, baseY)
+   473→            }, momentColor, style = Stroke(1.5f))
+   474→
+   475→            // ── Dimension Lines ──
+   476→            val dimColor = Color(0xFFB0BEC5)
+   477→            val dimTextColor = Color.White
+   478→            val textPaint = android.graphics.Paint().apply { color = dimTextColor.toArgb(); textSize = 24f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER }
+   479→
+   480→            // Span dimension
+   481→            val dimY = baseY + 35f
+   482→            drawLine(dimColor, Offset(colLX, baseY + 8f), Offset(colLX, dimY + 5f), strokeWidth = 1f)
+   483→            drawLine(dimColor, Offset(colRX, baseY + 8f), Offset(colRX, dimY + 5f), strokeWidth = 1f)
+   484→            drawLine(dimColor, Offset(colLX, dimY), Offset(colRX, dimY), strokeWidth = 1.5f)
+   485→            drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.span), (colLX + colRX) / 2f, dimY - 8f, textPaint)
+   486→
+   487→            // Eave height dimension (left)
+   488→            val dimX = colLX - 35f
+   489→            drawLine(dimColor, Offset(colLX - 8f, baseY), Offset(dimX - 5f, baseY), strokeWidth = 1f)
+   490→            drawLine(dimColor, Offset(colLX - 8f, baseY - eh), Offset(dimX - 5f, baseY - eh), strokeWidth = 1f)
+   491→            drawLine(dimColor, Offset(dimX, baseY), Offset(dimX, baseY - eh), strokeWidth = 1.5f)
+   492→            drawContext.canvas.nativeCanvas.save()
+   493→            drawContext.canvas.nativeCanvas.rotate(-90f, dimX - 12f, baseY - eh / 2f)
+   494→            drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.eaveHeight), dimX - 12f, baseY - eh / 2f + 8f, textPaint)
+   495→            drawContext.canvas.nativeCanvas.restore()
+   496→
+   497→            // Ridge height dimension (right)
+   498→            val dimXR = colRX + 35f
+   499→            drawLine(dimColor, Offset(colRX + 8f, baseY), Offset(dimXR + 5f, baseY), strokeWidth = 1f)
+   500→            drawLine(dimColor, Offset(colRX + 8f, baseY - rh), Offset(dimXR + 5f, baseY - rh), strokeWidth = 1f)
+   501→            drawLine(dimColor, Offset(dimXR, baseY), Offset(dimXR, baseY - rh), strokeWidth = 1.5f)
+   502→            drawContext.canvas.nativeCanvas.save()
+   503→            drawContext.canvas.nativeCanvas.rotate(-90f, dimXR + 12f, baseY - rh / 2f)
+   504→            drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.ridgeHeight), dimXR + 12f, baseY - rh / 2f + 8f, textPaint)
+   505→            drawContext.canvas.nativeCanvas.restore()
+   506→
+   507→            // ── Section Labels ──
+   508→            val labelPaint = android.graphics.Paint().apply { color = Color(0xFF4FC3F7).toArgb(); textSize = 22f; isFakeBoldText = true }
+   509→            drawContext.canvas.nativeCanvas.save()
+   510→            drawContext.canvas.nativeCanvas.rotate(-90f, colLX - 12f, baseY - eh / 2f + 40f)
+   511→            drawContext.canvas.nativeCanvas.drawText(result.mainFrame.columnSection.displayName, colLX - 12f, baseY - eh / 2f + 40f, labelPaint)
+   512→            drawContext.canvas.nativeCanvas.restore()
+   513→
+   514→            // ── Title Block ──
+   515→            val tbX = size.width - 320f
+   516→            val tbY = size.height - 90f
+   517→            drawRect(Color(0x22FFFFFF), Offset(tbX, tbY), Size(300f, 75f))
+   518→            drawRect(Color(0xFF4A90D9), Offset(tbX, tbY), Size(300f, 75f), style = Stroke(1.5f))
+   519→            val tbPaint = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f }
+   520→            val tbBold = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 22f; isFakeBoldText = true }
+   521→            drawContext.canvas.nativeCanvas.drawText("CivilEG - Steel Warehouse", tbX + 12f, tbY + 24f, tbBold)
+   522→            drawContext.canvas.nativeCanvas.drawText("M_max = %.1f kN.m | V_max = %.1f kN".format(maxMoment, result.mainFrame.maxShear), tbX + 12f, tbY + 48f, tbPaint)
+   523→            drawContext.canvas.nativeCanvas.drawText("Frame Analysis Diagram", tbX + 12f, tbY + 68f, tbPaint)
+   524→        }
+   525→    }
+   526→}
+   527→
+   528→@Composable
+   529→private fun SummaryLine(label: String, value: String, isBold: Boolean = false) {
+   530→    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+   531→        Text(label, fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal)
+   532→        Text(value, fontWeight = FontWeight.ExtraBold, color = if (isBold) MaterialTheme.colorScheme.primary else Color.Unspecified)
+   533→    }
+   534→}
+   535→
+   536→@Composable
+   537→fun AnalysisDetailCard(res: MainFrameResult) {
+   538→    Card(modifier = Modifier.fillMaxWidth()) {
+   539→        Column(modifier = Modifier.padding(12.dp)) {
+   540→            Text("إجهادات التصميم القصوى", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   541→            ResultRow("أقصى عزم (M_max)", "%.1f kN.m".format(res.maxMoment))
+   542→            ResultRow("أقصى قص (V_max)", "%.1f kN".format(res.maxShear))
+   543→            ResultRow("حمل محوري (P_max)", "%.1f kN".format(res.maxAxial))
+   544→            ResultRow("الترخيم (Deflection)", "%.1f mm".format(res.maxDeflection))
+   545→            Text(if (res.isSafe) "تحليل الأمان: آمن ✅" else "تحليل الأمان: تجاوز الحدود ❌", 
+   546→                fontWeight = FontWeight.Bold, 
+   547→                color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
+   548→                modifier = Modifier.padding(top = 8.dp)
+   549→            )
+   550→        }
+   551→    }
+   552→}
+   553→
+   554→@Composable
+   555→fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+   556→    var viewMode by remember { mutableStateOf(0) } // 0: Front, 1: Plan, 2: Side, 3: 3D
+   557→
+   558→    InteractiveDrawingScreen(
+   559→        title = "المنظور الإنشائي",
+   560→        subtitle = "Structural Views",
+   561→        viewModes = listOf("الواجهة الأمامية", "المسقط الأفقي", "الواجهة الجانبية", "رسم ثلاثي الأبعاد"),
+   562→        selectedViewMode = viewMode,
+   563→        onViewModeChanged = { viewMode = it }
+   564→    ) {
+   565→        ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFF0D1117))) {
+   566→            val padding = 60f
+   567→            val w = size.width - 2 * padding
+   568→            val h = size.height - 2 * padding
+   569→
+   570→            // ── Grid ──
+   571→            val gridColor = Color(0x12FFFFFF)
+   572→            for (i in 0..20) {
+   573→                val x = padding + (i * w / 20)
+   574→                drawLine(gridColor, Offset(x, padding), Offset(x, size.height - padding), strokeWidth = 0.5f)
+   575→            }
+   576→            for (i in 0..14) {
+   577→                val y = padding + (i * h / 14)
+   578→                drawLine(gridColor, Offset(padding, y), Offset(size.width - padding, y), strokeWidth = 0.5f)
+   579→            }
+   580→
+   581→            val scale = minOf(
+   582→                (w * 0.7f) / max(inputs.span, inputs.length).toFloat(),
+   583→                (h * 0.7f) / max(inputs.ridgeHeight, inputs.span).toFloat()
+   584→            )
+   585→            val startX = padding + (w - inputs.span * scale) / 2
+   586→            val baseY = size.height - padding - 20f
+   587→
+   588→            val textColor = Color.White
+   589→            val textPaint = android.graphics.Paint().apply {
+   590→                color = textColor.toArgb()
+   591→                textSize = 22f
+   592→                isFakeBoldText = true
+   593→                textAlign = android.graphics.Paint.Align.CENTER
+   594→            }
+   595→            val dimPaint = android.graphics.Paint().apply {
+   596→                color = Color(0xFFB0BEC5).toArgb()
+   597→                textSize = 20f
+   598→                textAlign = android.graphics.Paint.Align.CENTER
+   599→            }
+   600→            val sectionPaint = android.graphics.Paint().apply {
+   601→                color = Color(0xFF4FC3F7).toArgb()
+   602→                textSize = 20f
+   603→                isFakeBoldText = true
+   604→                textAlign = android.graphics.Paint.Align.CENTER
+   605→            }
+   606→
+   607→            when (viewMode) {
+   608→                0 -> { // Front Elevation — Professional
+   609→                    val colLX = startX
+   610→                    val colRX = startX + (inputs.span * scale).toFloat()
+   611→                    val eaveY = baseY - (inputs.eaveHeight * scale).toFloat()
+   612→                    val ridgeY = baseY - (inputs.ridgeHeight * scale).toFloat()
+   613→                    val midX = startX + (inputs.span * scale / 2).toFloat()
+   614→                    val memberW = 8f
+   615→
+   616→                    // Ground hatching
+   617→                    val groundY = baseY
+   618→                    drawLine(Color(0xFF5A5A5A), Offset(colLX - 40f, groundY), Offset(colRX + 40f, groundY), strokeWidth = 3f)
+   619→                    for (i in 0..28) {
+   620→                        val x = (colLX - 40f) + (i * (colRX - colLX + 80f) / 28)
+   621→                        drawLine(Color(0xFF5A5A5A), Offset(x, groundY), Offset(x - 10f, groundY + 12f), strokeWidth = 1f)
+   622→                    }
+   623→
+   624→                    // Pin supports
+   625→                    val supC = Color(0xFF9E9E9E)
+   626→                    listOf(colLX, colRX).forEach { cx ->
+   627→                        drawPath(Path().apply {
+   628→                            moveTo(cx - 16f, groundY)
+   629→                            lineTo(cx + 16f, groundY)
+   630→                            lineTo(cx, groundY + 22f)
+   631→                            close()
+   632→                        }, supC, style = Stroke(2.5f))
+   633→                        drawLine(supC, Offset(cx - 20f, groundY + 22f), Offset(cx + 20f, groundY + 22f), strokeWidth = 3f)
+   634→                    }
+   635→
+   636→                    // Columns (3D effect)
+   637→                    val colC = Color(0xFFB0BEC5)
+   638→                    val colS = Color(0xFF607D8B)
+   639→                    listOf(colLX, colRX).forEach { cx ->
+   640→                        drawLine(colS, Offset(cx + 2f, groundY), Offset(cx + 2f, eaveY), strokeWidth = memberW + 3f)
+   641→                        drawLine(colC, Offset(cx, groundY), Offset(cx, eaveY), strokeWidth = memberW)
+   642→                        drawLine(Color(0xFFE0E0E0), Offset(cx - 1.5f, groundY), Offset(cx - 1.5f, eaveY), strokeWidth = 1f)
+   643→                    }
+   644→
+   645→                    // Rafters (3D)
+   646→                    listOf(Pair(colLX, colRX)).forEach { (l, r) ->
+   647→                        drawLine(colS, Offset(l + 2f, eaveY + 2f), Offset(midX + 1f, ridgeY + 1f), strokeWidth = memberW + 3f)
+   648→                        drawLine(colC, Offset(l, eaveY), Offset(midX, ridgeY), strokeWidth = memberW)
+   649→                        drawLine(colS, Offset(r + 2f, eaveY + 2f), Offset(midX + 1f, ridgeY + 1f), strokeWidth = memberW + 3f)
+   650→                        drawLine(colC, Offset(r, eaveY), Offset(midX, ridgeY), strokeWidth = memberW)
+   651→                    }
+   652→
+   653→                    // Ridge joint
+   654→                    drawCircle(Color(0xFF37474F), 12f, Offset(midX, ridgeY))
+   655→                    drawCircle(Color(0xFFFF9800), 7f, Offset(midX, ridgeY))
+   656→                    drawCircle(Color.White, 3f, Offset(midX, ridgeY))
+   657→
+   658→                    // Eave joints
+   659→                    listOf(Offset(colLX, eaveY), Offset(colRX, eaveY)).forEach { jt ->
+   660→                        drawCircle(Color(0xFF37474F), 10f, jt)
+   661→                        drawCircle(Color(0xFFFF9800), 5f, jt)
+   662→                    }
+   663→
+   664→                    // Section labels
+   665→                    drawContext.canvas.nativeCanvas.save()
+   666→                    drawContext.canvas.nativeCanvas.rotate(-90f, colLX - 14f, (groundY + eaveY) / 2)
+   667→                    drawContext.canvas.nativeCanvas.drawText(result.mainFrame.columnSection.displayName, colLX - 14f, (groundY + eaveY) / 2, sectionPaint)
+   668→                    drawContext.canvas.nativeCanvas.restore()
+   669→
+   670→                    // Dimension lines
+   671→                    val dimC = Color(0xFF90A4AE)
+   672→                    // Span
+   673→                    val dY = groundY + 40f
+   674→                    drawLine(dimC, Offset(colLX, groundY + 8f), Offset(colLX, dY + 5f), strokeWidth = 1f)
+   675→                    drawLine(dimC, Offset(colRX, groundY + 8f), Offset(colRX, dY + 5f), strokeWidth = 1f)
+   676→                    drawLine(dimC, Offset(colLX, dY), Offset(colRX, dY), strokeWidth = 1.5f)
+   677→                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.span), (colLX + colRX) / 2, dY - 6f, dimPaint)
+   678→
+   679→                    // Eave height
+   680→                    val dXL = colLX - 40f
+   681→                    drawLine(dimC, Offset(colLX - 8f, groundY), Offset(dXL - 5f, groundY), strokeWidth = 1f)
+   682→                    drawLine(dimC, Offset(colLX - 8f, eaveY), Offset(dXL - 5f, eaveY), strokeWidth = 1f)
+   683→                    drawLine(dimC, Offset(dXL, groundY), Offset(dXL, eaveY), strokeWidth = 1.5f)
+   684→                    drawContext.canvas.nativeCanvas.save()
+   685→                    drawContext.canvas.nativeCanvas.rotate(-90f, dXL - 10f, (groundY + eaveY) / 2)
+   686→                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.eaveHeight), dXL - 10f, (groundY + eaveY) / 2 + 6f, dimPaint)
+   687→                    drawContext.canvas.nativeCanvas.restore()
+   688→
+   689→                    // Ridge height
+   690→                    val dXR = colRX + 40f
+   691→                    drawLine(dimC, Offset(colRX + 8f, groundY), Offset(dXR + 5f, groundY), strokeWidth = 1f)
+   692→                    drawLine(dimC, Offset(colRX + 8f, ridgeY), Offset(dXR + 5f, ridgeY), strokeWidth = 1f)
+   693→                    drawLine(dimC, Offset(dXR, groundY), Offset(dXR, ridgeY), strokeWidth = 1.5f)
+   694→                    drawContext.canvas.nativeCanvas.save()
+   695→                    drawContext.canvas.nativeCanvas.rotate(-90f, dXR + 10f, (groundY + ridgeY) / 2)
+   696→                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.ridgeHeight), dXR + 10f, (groundY + ridgeY) / 2 + 6f, dimPaint)
+   697→                    drawContext.canvas.nativeCanvas.restore()
+   698→
+   699→                    // View title
+   700→                    drawContext.canvas.nativeCanvas.drawText("FRONT ELEVATION", size.width / 2, padding - 10f, textPaint)
+   701→
+   702→                    // Title block
+   703→                    val tbX = size.width - 300f
+   704→                    val tbY = size.height - 80f
+   705→                    drawRect(Color(0x22FFFFFF), Offset(tbX, tbY), Size(280f, 65f))
+   706→                    drawRect(Color(0xFF4A90D9), Offset(tbX, tbY), Size(280f, 65f), style = Stroke(1.5f))
+   707→                    val tbP = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f }
+   708→                    drawContext.canvas.nativeCanvas.drawText("CivilEG - Warehouse Front View", tbX + 10f, tbY + 22f, android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f; isFakeBoldText = true })
+   709→                    drawContext.canvas.nativeCanvas.drawText("Col: ${result.mainFrame.columnSection.displayName} | Rafter: ${result.mainFrame.rafterSection.displayName}", tbX + 10f, tbY + 45f, tbP)
+   710→                }
+   711→
+   712→                1 -> { // Plan View — Professional
+   713→                    val planW = (inputs.span * scale).toFloat()
+   714→                    val planL = (inputs.length * scale).toFloat()
+   715→                    val planLeft = startX + (w - planW) / 2
+   716→                    val planTop = padding + (h - planL) / 2
+   717→
+   718→                    // Boundary with fill
+   719→                    drawRect(Color(0x1A4A90D9), Offset(planLeft, planTop), Size(planW, planL))
+   720→                    drawRect(Color(0xFFB0BEC5), Offset(planLeft, planTop), Size(planW, planL), style = Stroke(2f))
+   721→
+   722→                    // Bay lines and column markers
+   723→                    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
+   724→                    for (i in 0..numBays) {
+   725→                        val y = planTop + (i * inputs.baySpacing * scale).toFloat()
+   726→                        if (y <= planTop + planL + 1f) {
+   727→                            drawLine(Color(0xFF607D8B), Offset(planLeft, y), Offset(planLeft + planW, y), strokeWidth = 1f)
+   728→                            // Column markers (I-beam symbol)
+   729→                            val colS = 8f
+   730→                            listOf(planLeft, planLeft + planW).forEach { cx ->
+   731→                                drawRect(Color(0xFFFF9800), Offset(cx - colS, y - 2f), Size(colS * 2, 4f))
+   732→                                drawRect(Color(0xFFFF9800), Offset(cx - 2f, y - colS), Size(4f, colS * 2))
+   733→                            }
+   734→                            // Bay label
+   735→                            if (i < numBays) {
+   736→                                val bayMidY = y + (inputs.baySpacing * scale / 2).toFloat()
+   737→                                drawContext.canvas.nativeCanvas.drawText(
+   738→                                    "%.1f m".format(inputs.baySpacing),
+   739→                                    planLeft + planW + 40f, bayMidY + 6f, dimPaint
+   740→                                )
+   741→                            }
+   742→                        }
+   743→                    }
+   744→
+   745→                    // Purlin markers (dashed lines along span)
+   746→                    val numPurlins = (inputs.span / 1.5).toInt().coerceIn(2, 10)
+   747→                    for (i in 1 until numPurlins) {
+   748→                        val x = planLeft + (i * planW / numPurlins)
+   749→                        drawLine(Color(0x40FFFFFF), Offset(x, planTop), Offset(x, planTop + planL), strokeWidth = 0.5f,
+   750→                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f)))
+   751→                    }
+   752→
+   753→                    // Bracing X in first and last bay
+   754→                    if (numBays >= 1) {
+   755→                        listOf(0, max(numBays - 1, 0)).forEach { bayIdx ->
+   756→                            val y1 = planTop + (bayIdx * inputs.baySpacing * scale).toFloat()
+   757→                            val y2 = y1 + (inputs.baySpacing * scale).toFloat().coerceAtMost(planL - (y1 - planTop))
+   758→                            val brC = Color(0x66FF5722)
+   759→                            drawLine(brC, Offset(planLeft, y1), Offset(planLeft + planW, y2), strokeWidth = 1.5f,
+   760→                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+   761→                            drawLine(brC, Offset(planLeft + planW, y1), Offset(planLeft, y2), strokeWidth = 1.5f,
+   762→                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+   763→                        }
+   764→                    }
+   765→
+   766→                    // Dimension: Span (bottom)
+   767→                    val dimB = planTop + planL + 35f
+   768→                    drawLine(Color(0xFF90A4AE), Offset(planLeft, planTop + planL + 8f), Offset(planLeft, dimB + 5f), strokeWidth = 1f)
+   769→                    drawLine(Color(0xFF90A4AE), Offset(planLeft + planW, planTop + planL + 8f), Offset(planLeft + planW, dimB + 5f), strokeWidth = 1f)
+   770→                    drawLine(Color(0xFF90A4AE), Offset(planLeft, dimB), Offset(planLeft + planW, dimB), strokeWidth = 1.5f)
+   771→                    drawContext.canvas.nativeCanvas.drawText("Span: %.1f m".format(inputs.span), planLeft + planW / 2, dimB - 6f, dimPaint)
+   772→
+   773→                    // Dimension: Length (right)
+   774→                    val dimR = planLeft + planW + 35f
+   775→                    drawLine(Color(0xFF90A4AE), Offset(planLeft + planW + 8f, planTop), Offset(dimR + 5f, planTop), strokeWidth = 1f)
+   776→                    drawLine(Color(0xFF90A4AE), Offset(planLeft + planW + 8f, planTop + planL), Offset(dimR + 5f, planTop + planL), strokeWidth = 1f)
+   777→                    drawLine(Color(0xFF90A4AE), Offset(dimR, planTop), Offset(dimR, planTop + planL), strokeWidth = 1.5f)
+   778→
+   779→                    drawContext.canvas.nativeCanvas.save()
+   780→                    drawContext.canvas.nativeCanvas.rotate(-90f, dimR + 10f, planTop + planL / 2)
+   781→                    drawContext.canvas.nativeCanvas.drawText("Length: %.1f m".format(inputs.length), dimR + 10f, planTop + planL / 2 + 6f, dimPaint)
+   782→                    drawContext.canvas.nativeCanvas.restore()
+   783→
+   784→                    drawContext.canvas.nativeCanvas.drawText("PLAN VIEW", size.width / 2, padding - 10f, textPaint)
+   785→                }
+   786→
+   787→                2 -> { // Side Elevation — Professional
+   788→                    val planL = (inputs.length * scale).toFloat()
+   789→                    val eaveH = (inputs.eaveHeight * scale).toFloat()
+   790→                    val sideLeft = startX + (w - planL) / 2
+   791→                    val groundY = baseY
+   792→                    val eaveY = groundY - eaveH
+   793→
+   794→                    // Ground hatching
+   795→                    drawLine(Color(0xFF5A5A5A), Offset(sideLeft - 20f, groundY), Offset(sideLeft + planL + 20f, groundY), strokeWidth = 3f)
+   796→                    for (i in 0..30) {
+   797→                        val x = (sideLeft - 20f) + (i * (planL + 40f) / 30)
+   798→                        drawLine(Color(0xFF5A5A5A), Offset(x, groundY), Offset(x - 8f, groundY + 10f), strokeWidth = 1f)
+   799→                    }
+   800→
+   801→                    // Columns and eave line
+   802→                    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
+   803→                    val memberW = 6f
+   804→                    for (i in 0..numBays) {
+   805→                        val x = sideLeft + (i * inputs.baySpacing * scale).toFloat()
+   806→                        if (x <= sideLeft + planL + 1f) {
+   807→                            drawLine(Color(0xFF607D8B), Offset(x + 1f, groundY), Offset(x + 1f, eaveY), strokeWidth = memberW + 2f)
+   808→                            drawLine(Color(0xFFB0BEC5), Offset(x, groundY), Offset(x, eaveY), strokeWidth = memberW)
+   809→
+   810→                            // Small pin support
+   811→                            drawPath(Path().apply {
+   812→                                moveTo(x - 10f, groundY)
+   813→                                lineTo(x + 10f, groundY)
+   814→                                lineTo(x, groundY + 14f)
+   815→                                close()
+   816→                            }, Color(0xFF9E9E9E), style = Stroke(1.5f))
+   817→                        }
+   818→                    }
+   819→
+   820→                    // Eave line
+   821→                    drawLine(Color(0xFFB0BEC5), Offset(sideLeft, eaveY), Offset(sideLeft + planL, eaveY), strokeWidth = memberW)
+   822→                    // Ground line
+   823→                    drawLine(Color(0xFF5A5A5A), Offset(sideLeft - 20f, groundY), Offset(sideLeft + planL + 20f, groundY), strokeWidth = 3f)
+   824→
+   825→                    // Purlin lines (along side view, shown as short vertical ticks on eave)
+   826→                    val numPurlins = (inputs.span / 1.5).toInt().coerceIn(2, 8)
+   827→                    for (i in 1 until numPurlins) {
+   828→                        val x = sideLeft + (i * planL / numPurlins)
+   829→                        drawLine(Color(0xFF4FC3F7), Offset(x, eaveY - 8f), Offset(x, eaveY + 8f), strokeWidth = 2f)
+   830→                    }
+   831→
+   832→                    // Bracing in first bay
+   833→                    if (numBays >= 1) {
+   834→                        val bx1 = sideLeft
+   835→                        val bx2 = sideLeft + (inputs.baySpacing * scale).toFloat().coerceAtMost(planL)
+   836→                        drawLine(Color(0x66FF5722), Offset(bx1, groundY), Offset(bx2, eaveY), strokeWidth = 1.5f,
+   837→                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+   838→                        drawLine(Color(0x66FF5722), Offset(bx2, groundY), Offset(bx1, eaveY), strokeWidth = 1.5f,
+   839→                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
+   840→                    }
+   841→
+   842→                    // Girt markers on columns
+   843→                    val numGirts = (inputs.eaveHeight / 1.5).toInt().coerceIn(1, 4)
+   844→                    for (i in 1..numGirts) {
+   845→                        val gy = groundY - (i * eaveH / (numGirts + 1))
+   846→                        drawLine(Color(0x40FF9800), Offset(sideLeft, gy), Offset(sideLeft + planL, gy), strokeWidth = 0.5f,
+   847→                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+   848→                    }
+   849→
+   850→                    // Dimensions
+   851→                    drawContext.canvas.nativeCanvas.drawText("SIDE ELEVATION", size.width / 2, padding - 10f, textPaint)
+   852→
+   853→                    // Length dimension
+   854→                    val dY = groundY + 35f
+   855→                    drawLine(Color(0xFF90A4AE), Offset(sideLeft, groundY + 8f), Offset(sideLeft, dY + 5f), strokeWidth = 1f)
+   856→                    drawLine(Color(0xFF90A4AE), Offset(sideLeft + planL, groundY + 8f), Offset(sideLeft + planL, dY + 5f), strokeWidth = 1f)
+   857→                    drawLine(Color(0xFF90A4AE), Offset(sideLeft, dY), Offset(sideLeft + planL, dY), strokeWidth = 1.5f)
+   858→                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.length), sideLeft + planL / 2, dY - 6f, dimPaint)
+   859→
+   860→                    // Eave height dimension
+   861→                    val dX = sideLeft - 35f
+   862→                    drawLine(Color(0xFF90A4AE), Offset(sideLeft - 8f, groundY), Offset(dX - 5f, groundY), strokeWidth = 1f)
+   863→                    drawLine(Color(0xFF90A4AE), Offset(sideLeft - 8f, eaveY), Offset(dX - 5f, eaveY), strokeWidth = 1f)
+   864→                    drawLine(Color(0xFF90A4AE), Offset(dX, groundY), Offset(dX, eaveY), strokeWidth = 1.5f)
+   865→                    drawContext.canvas.nativeCanvas.save()
+   866→                    drawContext.canvas.nativeCanvas.rotate(-90f, dX - 10f, (groundY + eaveY) / 2)
+   867→                    drawContext.canvas.nativeCanvas.drawText("%.1f m".format(inputs.eaveHeight), dX - 10f, (groundY + eaveY) / 2 + 6f, dimPaint)
+   868→                    drawContext.canvas.nativeCanvas.restore()
+   869→                }
+   870→
+   871→                3 -> { // 3D Isometric — Professional
+   872→                    val s = scale * 0.65f
+   873→                    val depthOff = 40f
+   874→                    val numFrames = 5
+   875→
+   876→                    for (frameIdx in numFrames downTo 0) {
+   877→                        val off = frameIdx * depthOff
+   878→                        val x0 = startX + off
+   879→                        val y0 = baseY - off
+   880→                        val spanW = (inputs.span * s).toFloat()
+   881→                        val eaveH = (inputs.eaveHeight * s).toFloat()
+   882→                        val ridgeH = (inputs.ridgeHeight * s).toFloat()
+   883→                        val midXf = x0 + spanW / 2
+   884→
+   885→                        val alpha = if (frameIdx == 0) 1f else 0.2f + 0.15f * frameIdx
+   886→                        val color = Color.White.copy(alpha = alpha)
+   887→                        val stroke = if (frameIdx == 0) 3f else 1.5f
+   888→
+   889→                        // Columns
+   890→                        drawLine(color, Offset(x0, y0), Offset(x0, y0 - eaveH), strokeWidth = stroke)
+   891→                        drawLine(color, Offset(x0 + spanW, y0), Offset(x0 + spanW, y0 - eaveH), strokeWidth = stroke)
+   892→                        // Rafters
+   893→                        drawLine(color, Offset(x0, y0 - eaveH), Offset(midXf, y0 - ridgeH), strokeWidth = stroke)
+   894→                        drawLine(color, Offset(x0 + spanW, y0 - eaveH), Offset(midXf, y0 - ridgeH), strokeWidth = stroke)
+   895→
+   896→                        // Eave line (longitudinal)
+   897→                        if (frameIdx > 0) {
+   898→                            val prevOff = (frameIdx - 1) * depthOff
+   899→                            val px = startX + prevOff
+   900→                            val py = baseY - prevOff
+   901→                            val lineC = Color.White.copy(alpha = 0.1f + 0.08f * frameIdx)
+   902→                            drawLine(lineC, Offset(x0, y0 - eaveH), Offset(px, py - eaveH), strokeWidth = 1f)
+   903→                            drawLine(lineC, Offset(x0 + spanW, y0 - eaveH), Offset(px + spanW, py - eaveH), strokeWidth = 1f)
+   904→                            drawLine(lineC, Offset(midXf, y0 - ridgeH), Offset(px + spanW / 2, py - ridgeH), strokeWidth = 1f)
+   905→                        }
+   906→                    }
+   907→
+   908→                    // Ground plane
+   909→                    val groundColor = Color(0x15FFFFFF)
+   910→                    val gOff = numFrames * depthOff
+   911→                    drawRect(groundColor, Offset(startX, baseY - gOff - 10f), Size((inputs.span * s).toFloat(), gOff + 10f))
+   912→
+   913→                    drawContext.canvas.nativeCanvas.drawText("3D ISOMETRIC VIEW", size.width / 2, padding - 10f, textPaint)
+   914→                }
+   915→            }
+   916→        }
+   917→    }
+   918→}
+   919→
+   920→fun createWarehouseBitmap(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult): Bitmap {
+   921→    val bitmap = Bitmap.createBitmap(1200, 1600, Bitmap.Config.ARGB_8888)
+   922→    val canvas = Canvas(bitmap)
+   923→    canvas.drawColor(android.graphics.Color.WHITE)
+   924→    
+   925→    val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 4f; style = Paint.Style.STROKE }
+   926→    val textP = Paint().apply { color = android.graphics.Color.BLUE; textSize = 30f; isFakeBoldText = true }
+   927→
+   928→    // Draw 4 Quadrants for 4 Views
+   929→    
+   930→    // 1. Elevation (Top Left)
+   931→    drawCanvasElevation(canvas, inputs, 100f, 400f, 0.5f, result)
+   932→    canvas.drawText("الواجهة الأمامية", 100f, 50f, textP)
+   933→    
+   934→    // 2. Plan (Top Right)
+   935→    drawCanvasPlan(canvas, inputs, 700f, 400f, 0.4f)
+   936→    canvas.drawText("المسقط الأفقي", 700f, 50f, textP)
+   937→    
+   938→    // 3. Side (Bottom Left)
+   939→    drawCanvasSide(canvas, inputs, 100f, 900f, 0.4f)
+   940→    canvas.drawText("الواجهة الجانبية", 100f, 550f, textP)
+   941→    
+   942→    // 4. 3D/Schedule Info (Bottom Right)
+   943→    canvas.drawText("ملخص التصميم", 700f, 550f, textP)
+   944→    val infoP = Paint().apply { color = android.graphics.Color.BLACK; textSize = 24f }
+   945→    canvas.drawText("إجمالي الوزن: ${"%.2f".format(result.totalWeight)} طن", 700f, 600f, infoP)
+   946→    canvas.drawText("التكلفة/م²: ${"%.0f".format(result.costPerM2)} جنيه", 700f, 640f, infoP)
+   947→    canvas.drawText("العائد على الاستثمار: ${"%.1f".format(result.roi)} %", 700f, 680f, infoP)
+   948→
+   949→    return bitmap
+   950→}
+   951→
+   952→private fun drawCanvasElevation(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float, result: SteelWarehouseAnalysisResult? = null) {
+   953→    val p = Paint().apply { 
+   954→        color = android.graphics.Color.BLACK
+   955→        strokeWidth = 6f
+   956→        isAntiAlias = true
+   957→        style = Paint.Style.STROKE
+   958→    }
+   959→    val dimPaint = Paint().apply {
+   960→        color = android.graphics.Color.DKGRAY
+   961→        strokeWidth = 2f
+   962→        textSize = 24f
+   963→        isAntiAlias = true
+   964→    }
+   965→    val textP = Paint().apply {
+   966→        color = android.graphics.Color.BLACK
+   967→        textSize = 22f
+   968→        isFakeBoldText = true
+   969→        textAlign = Paint.Align.CENTER
+   970→    }
+   971→    
+   972→    val s = scale * 0.7f
+   973→    val w = inputs.span.toFloat() * s
+   974→    val eh = inputs.eaveHeight.toFloat() * s
+   975→    val rh = inputs.ridgeHeight.toFloat() * s
+   976→    val midX = x + w/2
+   977→    
+   978→    // Draw Main Frame (Columns & Rafters)
+   979→    canvas.drawLine(x, y, x, y - eh, p)
+   980→    canvas.drawLine(x + w, y, x + w, y - eh, p)
+   981→    canvas.drawLine(x, y - eh, midX, y - rh, p)
+   982→    canvas.drawLine(x + w, y - eh, midX, y - rh, p)
+   983→    
+   984→    // Foundations
+   985→    val footP = Paint().apply { color = android.graphics.Color.LTGRAY; style = Paint.Style.FILL }
+   986→    canvas.drawRect(x - 20f, y, x + 20f, y + 10f, footP)
+   987→    canvas.drawRect(x + w - 20f, y, x + w + 20f, y + 10f, footP)
+   988→    canvas.drawRect(x - 20f, y, x + 20f, y + 10f, p.apply { strokeWidth = 2f })
+   989→    canvas.drawRect(x + w - 20f, y, x + w + 20f, y + 10f, p)
+   990→    p.strokeWidth = 6f
+   991→    
+   992→    // --- Dimension Lines ---
+   993→    // Span Dimension
+   994→    drawDimensionLine(canvas, x, y + 60f, x + w, y + 60f, "${inputs.span} m", dimPaint)
+   995→    
+   996→    // Eave Height Dimension
+   997→    drawDimensionLine(canvas, x - 60f, y, x - 60f, y - eh, "${inputs.eaveHeight} m", dimPaint)
+   998→    
+   999→    // Ridge Height Dimension
+  1000→    drawDimensionLine(canvas, x + w + 60f, y, x + w + 60f, y - rh, "${inputs.ridgeHeight} m", dimPaint)
+  1001→
+  1002→    // --- Section Labels ---
+  1003→    result?.let { res ->
+  1004→        val sectionP = Paint().apply { color = android.graphics.Color.BLUE; textSize = 20f; isFakeBoldText = true }
+  1005→        
+  1006→        // Column Label
+  1007→        canvas.save()
+  1008→        canvas.rotate(-90f, x + 25f, y - eh/2)
+  1009→        canvas.drawText(res.mainFrame.columnSection.displayName, x + 25f, y - eh/2, sectionP.apply { textAlign = Paint.Align.CENTER })
+  1010→        canvas.restore()
+  1011→        
+  1012→        // Rafter Label
+  1013→        canvas.save()
+  1014→        val angle = Math.toDegrees(Math.atan2((rh - eh).toDouble(), (w/2).toDouble())).toFloat()
+  1015→        canvas.rotate(-angle, x + w/4, y - eh - (rh-eh)/4 - 15f)
+  1016→        canvas.drawText(res.mainFrame.rafterSection.displayName, x + w/4, y - eh - (rh-eh)/4 - 15f, sectionP.apply { textAlign = Paint.Align.CENTER })
+  1017→        canvas.restore()
+  1018→    }
+  1019→
+  1020→    // Connection Markers (Circles at joints)
+  1021→    val connPaint = Paint().apply { color = android.graphics.Color.RED; style = Paint.Style.STROKE; strokeWidth = 2f }
+  1022→    canvas.drawCircle(x, y - eh, 15f, connPaint) // Eave joint left
+  1023→    canvas.drawCircle(x + w, y - eh, 15f, connPaint) // Eave joint right
+  1024→    canvas.drawCircle(midX, y - rh, 15f, connPaint) // Apex joint
+  1025→}
+  1026→
+  1027→private fun drawDimensionLine(canvas: Canvas, x1: Float, y1: Float, x2: Float, y2: Float, text: String, paint: Paint) {
+  1028→    val tickSize = 15f
+  1029→    canvas.drawLine(x1, y1, x2, y2, paint)
+  1030→    
+  1031→    // Draw Ticks (45 degree lines)
+  1032→    val angle = Math.atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
+  1033→    val tickAngle = angle + Math.PI / 4
+  1034→    
+  1035→    canvas.drawLine(x1 - (Math.cos(tickAngle) * tickSize).toFloat(), y1 - (Math.sin(tickAngle) * tickSize).toFloat(), 
+  1036→                    x1 + (Math.cos(tickAngle) * tickSize).toFloat(), y1 + (Math.sin(tickAngle) * tickSize).toFloat(), paint)
+  1037→    canvas.drawLine(x2 - (Math.cos(tickAngle) * tickSize).toFloat(), y2 - (Math.sin(tickAngle) * tickSize).toFloat(), 
+  1038→                    x2 + (Math.cos(tickAngle) * tickSize).toFloat(), y2 + (Math.sin(tickAngle) * tickSize).toFloat(), paint)
+  1039→
+  1040→    // Text label
+  1041→    val midX = (x1 + x2) / 2
+  1042→    val midY = (y1 + y2) / 2
+  1043→    val textPaint = Paint(paint).apply { textAlign = Paint.Align.CENTER }
+  1044→    
+  1045→    if (x1 == x2) { // Vertical
+  1046→        canvas.save()
+  1047→        canvas.rotate(-90f, midX - 10f, midY)
+  1048→        canvas.drawText(text, midX - 10f, midY, textPaint)
+  1049→        canvas.restore()
+  1050→    } else { // Horizontal
+  1051→        canvas.drawText(text, midX, midY - 10f, textPaint)
+  1052→    }
+  1053→}
+  1054→
+  1055→private fun drawCanvasPlan(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float) {
+  1056→    val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 4f; style = Paint.Style.STROKE; isAntiAlias = true }
+  1057→    val dimPaint = Paint().apply { color = android.graphics.Color.DKGRAY; strokeWidth = 1.5f; textSize = 20f; isAntiAlias = true }
+  1058→    
+  1059→    val s = scale * 0.6f
+  1060→    val w = inputs.span.toFloat() * s
+  1061→    val l = inputs.length.toFloat() * s
+  1062→    val planTop = y - l
+  1063→    
+  1064→    canvas.drawRect(x, planTop, x + w, y, p)
+  1065→    
+  1066→    val baySpacing = inputs.baySpacing.toFloat() * s
+  1067→    var curY = planTop
+  1068→    var count = 0
+  1069→    while (curY <= y + 0.1f) {
+  1070→        canvas.drawLine(x, curY, x + w, curY, p.apply { strokeWidth = 2f })
+  1071→        
+  1072→        // Column markers
+  1073→        canvas.drawRect(x - 5f, curY - 5f, x + 5f, curY + 5f, Paint().apply { color = android.graphics.Color.BLACK })
+  1074→        canvas.drawRect(x + w - 5f, curY - 5f, x + w + 5f, curY + 5f, Paint().apply { color = android.graphics.Color.BLACK })
+  1075→        
+  1076→        if (curY + baySpacing <= y + 0.1f) {
+  1077→            drawDimensionLine(canvas, x - 40f, curY, x - 40f, curY + baySpacing, "${inputs.baySpacing}m", dimPaint)
+  1078→        }
+  1079→        
+  1080→        curY += baySpacing
+  1081→        count++
+  1082→    }
+  1083→    
+  1084→    // Span Dimension
+  1085→    drawDimensionLine(canvas, x, y + 40f, x + w, y + 40f, "البحر: ${inputs.span}m", dimPaint)
+  1086→    // Total Length Dimension
+  1087→    drawDimensionLine(canvas, x + w + 40f, planTop, x + w + 40f, y, "الطول: ${inputs.length}m", dimPaint)
+  1088→}
+  1089→
+  1090→private fun drawCanvasSide(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float) {
+  1091→    val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 5f; isAntiAlias = true }
+  1092→    val textP = Paint().apply { color = android.graphics.Color.DKGRAY; textSize = 22f; textAlign = Paint.Align.CENTER }
+  1093→    
+  1094→    val s = scale * 0.6f
+  1095→    val l = inputs.length.toFloat() * s
+  1096→    val eh = inputs.eaveHeight.toFloat() * s
+  1097→    
+  1098→    canvas.drawLine(x, y, x + l, y, p) // Ground
+  1099→    val bay = inputs.baySpacing.toFloat() * s
+  1100→    var cur = x
+  1101→    while (cur <= x + l + 0.1f) {
+  1102→        canvas.drawLine(cur, y, cur, y - eh, p)
+  1103→        cur += bay
+  1104→    }
+  1105→    canvas.drawLine(x, y - eh, x + l, y - eh, p)
+  1106→    
+  1107→    canvas.drawText("الطول الكلي: ${inputs.length}m", x + l/2, y + 35f, textP)
+  1108→}
+  1109→
+  1110→fun openPdf(context: Context, file: File) {
+  1111→    val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+  1112→    val intent = Intent(Intent.ACTION_VIEW).apply {
+  1113→        setDataAndType(uri, "application/pdf")
+  1114→        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+  1115→    }
+  1116→    try {
+  1117→        context.startActivity(intent)
+  1118→    } catch (e: Exception) {
+  1119→        Toast.makeText(context, "لا يوجد قارئ PDF", Toast.LENGTH_SHORT).show()
+  1120→    }
+  1121→}
+  1122→
+  1123→@Composable
+  1124→fun SectionResultCard(title: String, section: SteelSectionType) {
+  1125→    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+  1126→        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+  1127→            ComposeCanvas(modifier = Modifier.size(45.dp)) {
+  1128→                val w = size.width; val h = size.height; val t = 10f
+  1129→                drawRect(Color.DarkGray, Offset(0f, 0f), Size(w, t))
+  1130→                drawRect(Color.DarkGray, Offset(0f, h - t), Size(w, t))
+  1131→                drawRect(Color.DarkGray, Offset((w - t) / 2, 0f), Size(t, h))
+  1132→            }
+  1133→            Spacer(modifier = Modifier.width(16.dp))
+  1134→            Column {
+  1135→                Text(title, fontWeight = FontWeight.Bold)
+  1136→                Text(section.displayName, style = MaterialTheme.typography.bodyMedium)
+  1137→                if (section is SteelSectionType.ISection) {
+  1138→                    Text("h=${section.depth.toInt()}, b=${section.width.toInt()}, tw=${section.webThickness}, tf=${section.flangeThickness} (mm)", fontSize = 11.sp)
+  1139→                }
+  1140→            }
+  1141→        }
+  1142→    }
+  1143→}
+  1144→
+  1145→@Composable
+  1146→fun SecondaryMembersCard(res: SecondaryMembersResult) {
+  1147→    Card(modifier = Modifier.fillMaxWidth()) {
+  1148→        Column(modifier = Modifier.padding(12.dp)) {
+  1149→            Text("العناصر الثانوية والتربيط", fontWeight = FontWeight.Bold)
+  1150→            ResultRow("المدادات (Purlins)", res.purlinSection.displayName)
+  1151→            ResultRow("مدادات الجوانب (Girts)", res.girtSection.displayName)
+  1152→            ResultRow("البريسينج (Bracing)", res.bracingSection.displayName)
+  1153→            ResultRow("عدد المدادات الكلي", "${res.purlinCount}")
+  1154→        }
+  1155→    }
+  1156→}
+  1157→
+  1158→@Composable
+  1159→fun ConnectionDetailCard(conn: SteelConnectionDetail) {
+  1160→    Card(
+  1161→        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+  1162→        border = BorderStroke(1.dp, if (conn.isSafe) Color(0xFF81C784) else Color(0xFFE57373))
+  1163→    ) {
+  1164→        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+  1165→            Column {
+  1166→                Text(conn.name, fontWeight = FontWeight.Bold)
+  1167→                Text(conn.type.displayName, fontSize = 12.sp)
+  1168→            }
+  1169→            Column(horizontalAlignment = Alignment.End) {
+  1170→                Text(if (conn.isSafe) "آمن ✅" else "فشل ❌", color = if (conn.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold)
+  1171→                Text("U.R: %.2f".format(conn.demand / conn.capacity), fontSize = 12.sp)
+  1172→            }
+  1173→        }
+  1174→    }
+  1175→}
+  1176→
+  1177→@Composable
+  1178→fun RecommendationsCard(recs: List<String>) {
+  1179→    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDE7)), border = BorderStroke(1.dp, Color(0xFFFBC02D))) {
+  1180→        Column(modifier = Modifier.padding(12.dp)) {
+  1181→            Row(verticalAlignment = Alignment.CenterVertically) {
+  1182→                Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFBC02D))
+  1183→                Spacer(modifier = Modifier.width(8.dp))
+  1184→                Text("توصيات التصميم والنصائح", fontWeight = FontWeight.Bold)
+  1185→            }
+  1186→            Spacer(modifier = Modifier.height(8.dp))
+  1187→            recs.forEach { rec ->
+  1188→                Text("• $rec", fontSize = 13.sp, modifier = Modifier.padding(vertical = 2.dp))
+  1189→            }
+  1190→        }
+  1191→    }
+  1192→}
+  1193→
+  1194→@OptIn(ExperimentalMaterial3Api::class)
+  1195→@Composable
+  1196→fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoading: Boolean) {
+  1197→    var selectedCategory by remember { mutableStateOf("IPE (European I-Beams)") }
+  1198→    var selectedSection by remember { mutableStateOf<SteelSectionType?>(null) }
+  1199→    var searchQuery by remember { mutableStateOf("") }
+  1200→    var expandedCategory by remember { mutableStateOf(false) }
+  1201→    var expandedSection by remember { mutableStateOf(false) }
+  1202→    
+  1203→    // User Inputs
+  1204→    var axialLoad by remember { mutableStateOf("500") }
+  1205→    var moment by remember { mutableStateOf("100") }
+  1206→    var shear by remember { mutableStateOf("50") }
+  1207→    var length by remember { mutableStateOf("3") }
+  1208→    var selectedMemberType by remember { mutableStateOf(SteelMemberType.COLUMN) }
+  1209→    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+  1210→    
+  1211→    val searchResults by viewModel.searchResults.observeAsState(emptyList())
+  1212→    val library = viewModel.sectionLibrary
+  1213→    val categories = library.keys.toList()
+  1214→
+  1215→    val steelCodes = listOf("ECP 205", "AISC 360-16", "SBC 306")
+  1216→    var selectedSteelCode by remember { mutableStateOf(steelCodes[0]) }
+  1217→    var expandedSteelCode by remember { mutableStateOf(false) }
+  1218→
+  1219→    LazyColumn(
+  1220→        modifier = Modifier.fillMaxSize().padding(16.dp),
+  1221→        verticalArrangement = Arrangement.spacedBy(16.dp)
+  1222→    ) {
+  1223→        item { SectionHeader("📐 قاموس القطاعات والتحليل الذكي", R.drawable.ic_steel) }
+  1224→
+  1225→        // Steel Code Selector
+  1226→        item {
+  1227→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+  1228→                Column(modifier = Modifier.padding(12.dp)) {
+  1229→                    Text("كود التصميم المعدني", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+  1230→                    Spacer(modifier = Modifier.height(4.dp))
+  1231→                    ExposedDropdownMenuBox(
+  1232→                        expanded = expandedSteelCode,
+  1233→                        onExpandedChange = { expandedSteelCode = !expandedSteelCode }
+  1234→                    ) {
+  1235→                        OutlinedTextField(
+  1236→                            value = selectedSteelCode,
+  1237→                            onValueChange = {},
+  1238→                            readOnly = true,
+  1239→                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSteelCode) },
+  1240→                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+  1241→                            shape = RoundedCornerShape(12.dp),
+  1242→                            textStyle = MaterialTheme.typography.bodyMedium
+  1243→                        )
+  1244→                        ExposedDropdownMenu(
+  1245→                            expanded = expandedSteelCode,
+  1246→                            onDismissRequest = { expandedSteelCode = false }
+  1247→                        ) {
+  1248→                            steelCodes.forEach { code ->
+  1249→                                DropdownMenuItem(
+  1250→                                    text = { Text(code) },
+  1251→                                    onClick = { selectedSteelCode = code; expandedSteelCode = false }
+  1252→                                )
+  1253→                            }
+  1254→                        }
+  1255→                    }
+  1256→                }
+  1257→            }
+  1258→        }
+  1259→
+  1260→        // Smart Search Section
+  1261→        item {
+  1262→            OutlinedTextField(
+  1263→                value = searchQuery,
+  1264→                onValueChange = { 
+  1265→                    searchQuery = it
+  1266→                    viewModel.searchSections(it)
+  1267→                },
+  1268→                label = { Text("ابحث برقم القطاع (مثال: 300)") },
+  1269→                placeholder = { Text("IPE 300, HEB 240...") },
+  1270→                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+  1271→                trailingIcon = {
+  1272→                    if (searchQuery.isNotEmpty()) {
+  1273→                        IconButton(onClick = { searchQuery = ""; viewModel.searchSections("") }) {
+  1274→                            Icon(Icons.Default.Close, contentDescription = null)
+  1275→                        }
+  1276→                    }
+  1277→                },
+  1278→                modifier = Modifier.fillMaxWidth(),
+  1279→                shape = RoundedCornerShape(12.dp)
+  1280→            )
+  1281→        }
+  1282→
+  1283→        // Show Search Results if searching
+  1284→        if (searchQuery.isNotEmpty()) {
+  1285→            item {
+  1286→                Text("نتائج البحث:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+  1287→                Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+  1288→                    searchResults.take(8).forEach { section ->
+  1289→                        Surface(
+  1290→                            onClick = { 
+  1291→                                searchQuery = "" // Clear search first
+  1292→                                viewModel.searchSections("")
+  1293→                                // Find which category this section belongs to
+  1294→                                categories.find { cat -> library[cat]?.any { s -> s.sectionName == section.sectionName } == true }?.let { cat ->
+  1295→                                    selectedCategory = cat
+  1296→                                    // Give Compose a chance to update the list before setting the section
+  1297→                                    selectedSection = section
+  1298→                                }
+  1299→                            },
+  1300→                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+  1301→                            shape = RoundedCornerShape(8.dp),
+  1302→                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+  1303→                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+  1304→                        ) {
+  1305→                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+  1306→                                Icon(Icons.Default.Architecture, contentDescription = null, modifier = Modifier.size(16.dp))
+  1307→                                Spacer(modifier = Modifier.width(8.dp))
+  1308→                                Text(section.displayName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+  1309→                            }
+  1310→                        }
+  1311→                    }
+  1312→                }
+  1313→            }
+  1314→        }
+  1315→        
+  1316→        item {
+  1317→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1318→                Column(modifier = Modifier.weight(1f)) {
+  1319→                    Text("فئة القطاع", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+  1320→                    ExposedDropdownMenuBox(
+  1321→                        expanded = expandedCategory,
+  1322→                        onExpandedChange = { expandedCategory = !expandedCategory }
+  1323→                    ) {
+  1324→                        OutlinedTextField(
+  1325→                            value = selectedCategory,
+  1326→                            onValueChange = {},
+  1327→                            readOnly = true,
+  1328→                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
+  1329→                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+  1330→                            shape = RoundedCornerShape(12.dp),
+  1331→                            textStyle = MaterialTheme.typography.bodySmall
+  1332→                        )
+  1333→                        ExposedDropdownMenu(
+  1334→                            expanded = expandedCategory,
+  1335→                            onDismissRequest = { expandedCategory = false }
+  1336→                        ) {
+  1337→                            categories.forEach { category ->
+  1338→                                DropdownMenuItem(
+  1339→                                    text = { Text(category) },
+  1340→                                    onClick = {
+  1341→                                        selectedCategory = category
+  1342→                                        selectedSection = library[category]?.firstOrNull()
+  1343→                                        expandedCategory = false
+  1344→                                    }
+  1345→                                )
+  1346→                            }
+  1347→                        }
+  1348→                    }
+  1349→                }
+  1350→                
+  1351→                Column(modifier = Modifier.weight(1f)) {
+  1352→                    Text("القطاع المحدد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+  1353→                    ExposedDropdownMenuBox(
+  1354→                        expanded = expandedSection,
+  1355→                        onExpandedChange = { expandedSection = !expandedSection }
+  1356→                    ) {
+  1357→                        OutlinedTextField(
+  1358→                            value = selectedSection?.sectionName ?: "اختر قطاعاً",
+  1359→                            onValueChange = {},
+  1360→                            readOnly = true,
+  1361→                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
+  1362→                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+  1363→                            shape = RoundedCornerShape(12.dp),
+  1364→                            textStyle = MaterialTheme.typography.bodySmall
+  1365→                        )
+  1366→                        ExposedDropdownMenu(
+  1367→                            expanded = expandedSection,
+  1368→                            onDismissRequest = { expandedSection = false }
+  1369→                        ) {
+  1370→                            library[selectedCategory]?.forEach { section ->
+  1371→                                DropdownMenuItem(
+  1372→                                    text = { Text(section.sectionName) },
+  1373→                                    onClick = {
+  1374→                                        selectedSection = section
+  1375→                                        expandedSection = false
+  1376→                                    }
+  1377→                                )
+  1378→                            }
+  1379→                        }
+  1380→                    }
+  1381→                }
+  1382→            }
+  1383→        }
+  1384→
+  1385→        selectedSection?.let { section ->
+  1386→            item {
+  1387→                Card(
+  1388→                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+  1389→                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+  1390→                ) {
+  1391→                    Column(modifier = Modifier.padding(16.dp)) {
+  1392→                        Row(verticalAlignment = Alignment.CenterVertically) {
+  1393→                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+  1394→                            Spacer(Modifier.width(8.dp))
+  1395→                            Text("الخصائص الهندسية للقطاع:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+  1396→                        }
+  1397→                        Spacer(Modifier.height(12.dp))
+  1398→                        
+  1399→                        Row(modifier = Modifier.fillMaxWidth()) {
+  1400→                            Column(modifier = Modifier.weight(1f)) {
+  1401→                                PropertyLine("المساحة (A)", "%.2f cm²".format(section.getArea()/100.0))
+  1402→                                PropertyLine("الوزن (W)", "%.1f kg/m".format(section.weight))
+  1403→                                PropertyLine("الارتفاع (h)", "${section.depth} mm")
+  1404→                            }
+  1405→                            Column(modifier = Modifier.weight(1f)) {
+  1406→                                PropertyLine("الشفة (bf)", "${section.width} mm")
+  1407→                                PropertyLine("سمك الشفة (tf)", "${section.flangeThickness} mm")
+  1408→                                PropertyLine("سمك العصب (tw)", "${section.webThickness} mm")
+  1409→                            }
+  1410→                        }
+  1411→                        
+  1412→                        if (section.area > 0) {
+  1413→                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+  1414→                            Row(modifier = Modifier.fillMaxWidth()) {
+  1415→                                Column(modifier = Modifier.weight(1f)) {
+  1416→                                    PropertyLine("Inertia Ix", "%.0f cm⁴".format(section.ix))
+  1417→                                }
+  1418→                                Column(modifier = Modifier.weight(1f)) {
+  1419→                                    PropertyLine("Modulus Sx", "%.1f cm³".format(section.sx))
+  1420→                                }
+  1421→                            }
+  1422→                        }
+  1423→                    }
+  1424→                }
+  1425→            }
+  1426→        }
+  1427→
+  1428→        item {
+  1429→            Card {
+  1430→                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  1431→                    Text("مدخلات التصميم", fontWeight = FontWeight.Bold)
+  1432→                    
+  1433→                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+  1434→                        SteelMemberType.entries.forEach { type ->
+  1435→                            FilterChip(
+  1436→                                selected = selectedMemberType == type,
+  1437→                                onClick = { selectedMemberType = type },
+  1438→                                label = { Text(type.name, fontSize = 10.sp) }
+  1439→                            )
+  1440→                        }
+  1441→                    }
+  1442→
+  1443→                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1444→                        SteelInputField(axialLoad, "Pu (kN)", { axialLoad = it }, Modifier.weight(1f))
+  1445→                        SteelInputField(moment, "Mu (kN.m)", { moment = it }, Modifier.weight(1f))
+  1446→                    }
+  1447→                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1448→                        SteelInputField(shear, "Vu (kN)", { shear = it }, Modifier.weight(1f))
+  1449→                        SteelInputField(length, "L (m)", { length = it }, Modifier.weight(1f))
+  1450→                    }
+  1451→
+  1452→                    Text("كود التصميم", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+  1453→                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+  1454→                        CalculatorEngine.DesignCode.entries.forEach { code ->
+  1455→                            FilterChip(
+  1456→                                selected = selectedCode == code,
+  1457→                                onClick = { selectedCode = code },
+  1458→                                label = { Text(code.name, fontSize = 10.sp) }
+  1459→                            )
+  1460→                        }
+  1461→                    }
+  1462→                }
+  1463→            }
+  1464→        }
+  1465→
+  1466→        item {
+  1467→            Button(
+  1468→                onClick = { 
+  1469→                    selectedSection?.let { sec ->
+  1470→                        viewModel.calculateSteelMember(
+  1471→                            section = sec,
+  1472→                            memberType = selectedMemberType,
+  1473→                            inputs = SteelInputs(
+  1474→                                axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
+  1475→                                moment = moment.toDoubleOrNull() ?: 0.0,
+  1476→                                shear = shear.toDoubleOrNull() ?: 0.0,
+  1477→                                unbracedLength = length.toDoubleOrNull() ?: 1.0,
+  1478→                                length = length.toDoubleOrNull() ?: 1.0
+  1479→                            ),
+  1480→                            code = selectedCode
+  1481→                        )
+  1482→                    }
+  1483→                },
+  1484→                modifier = Modifier.fillMaxWidth(),
+  1485→                enabled = !isLoading && selectedSection != null
+  1486→            ) {
+  1487→                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+  1488→                else Text("تحليل وتصميم القطاع")
+  1489→            }
+  1490→        }
+  1491→
+  1492→        result?.let { res ->
+  1493→            item {
+  1494→                val urColor = when {
+  1495→                    res.utilizationRatio > 1.0 -> Color.Red
+  1496→                    res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+  1497→                    res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+  1498→                    else -> Color(0xFF2196F3)
+  1499→                }
+  1500→                val animatedRatio by animateFloatAsState(
+  1501→                    targetValue = res.utilizationRatio.toFloat().coerceAtMost(1.5f),
+  1502→                    animationSpec = tween(1000), label = ""
+  1503→                )
+  1504→
+  1505→                Card(
+  1506→                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+  1507→                    shape = RoundedCornerShape(16.dp)
+  1508→                ) {
+  1509→                    Column(modifier = Modifier.padding(16.dp)) {
+  1510→                        Row(
+  1511→                            modifier = Modifier.fillMaxWidth(),
+  1512→                            verticalAlignment = Alignment.CenterVertically,
+  1513→                            horizontalArrangement = Arrangement.SpaceBetween
+  1514→                        ) {
+  1515→                            Column(modifier = Modifier.weight(1f)) {
+  1516→                                Text("معامل الاستغلال", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+  1517→                                Spacer(modifier = Modifier.height(4.dp))
+  1518→                                Text(
+  1519→                                    if (res.isSafe) "القطاع آمن ✅" else "القطاع غير آمن ❌",
+  1520→                                    fontWeight = FontWeight.Bold,
+  1521→                                    color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
+  1522→                                    fontSize = 13.sp
+  1523→                                )
+  1524→                            }
+  1525→                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+  1526→                                CircularProgressIndicator(
+  1527→                                    progress = { animatedRatio.coerceAtMost(1f) },
+  1528→                                    modifier = Modifier.size(64.dp),
+  1529→                                    strokeWidth = 7.dp,
+  1530→                                    color = urColor,
+  1531→                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+  1532→                                )
+  1533→                                Spacer(modifier = Modifier.height(4.dp))
+  1534→                                Text(
+  1535→                                    "${(res.utilizationRatio * 100).toInt()}%",
+  1536→                                    fontWeight = FontWeight.Bold,
+  1537→                                    fontSize = 13.sp,
+  1538→                                    color = urColor
+  1539→                                )
+  1540→                            }
+  1541→                        }
+  1542→                    }
+  1543→                }
+  1544→            }
+  1545→            item { SteelResultCard(res) }
+  1546→            item {
+  1547→                InteractiveDrawingScreen(
+  1548→                    title = "رسم القطاع الحديدي",
+  1549→                    subtitle = "Steel Member Detail",
+  1550→                    viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "التوصيلات"),
+  1551→                    drawingContent = {
+  1552→                        ProfessionalSteelDrawing(
+  1553→                            sectionType = res.sectionType.displayName,
+  1554→                            sectionName = res.sectionType.sectionName,
+  1555→                            memberLength = (length.toDoubleOrNull() ?: 6.0) * 1000.0,
+  1556→                            depth = res.sectionType.depth,
+  1557→                            flangeWidth = res.sectionType.width,
+  1558→                            flangeThickness = res.sectionType.flangeThickness,
+  1559→                            webThickness = res.sectionType.webThickness,
+  1560→                            radius = res.sectionType.rootRadius,
+  1561→                            area = res.sectionType.area,
+  1562→                            ix = res.sectionType.ix,
+  1563→                            sx = res.sectionType.sx,
+  1564→                            zx = res.sectionType.zx,
+  1565→                            weightPerMeter = res.sectionType.weight,
+  1566→                            isColumn = res.memberType == SteelMemberType.COLUMN,
+  1567→                            modifier = Modifier.fillMaxWidth()
+  1568→                        )
+  1569→                    }
+  1570→                )
+  1571→            }
+  1572→            
+  1573→            // Economy Indicator
+  1574→            item {
+  1575→                val color = if (res.utilizationRatio in 0.7..0.95) Color(0xFF2E7D32) 
+  1576→                           else if (res.utilizationRatio > 1.0) Color.Red 
+  1577→                           else Color(0xFFF57C00)
+  1578→                val status = if (res.utilizationRatio in 0.7..0.95) "مثالي ومقتصد" 
+  1579→                            else if (res.utilizationRatio > 1.0) "غير آمن — يحتاج قطاع أكبر" 
+  1580→                            else "تصميم محافظ — هدر في الحديد"
+  1581→                            
+  1582→                Card(colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)), border = BorderStroke(1.dp, color)) {
+  1583→                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+  1584→                        Icon(if (res.utilizationRatio <= 1.0) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = color)
+  1585→                        Spacer(modifier = Modifier.width(12.dp))
+  1586→                        Column {
+  1587→                            Text("مؤشر التوفير والأمان", fontWeight = FontWeight.Bold, color = color)
+  1588→                            Text(status, fontSize = 13.sp)
+  1589→                        }
+  1590→                    }
+  1591→                }
+  1592→            }
+  1593→        }
+  1594→    }
+  1595→}
+  1596→
+  1597→@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+  1598→@Composable
+  1599→fun WeldDesignTab(viewModel: SteelViewModel) {
+  1600→    var size by remember { mutableStateOf("6") }
+  1601→    var length by remember { mutableStateOf("200") }
+  1602→    var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
+  1603→    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+  1604→    var capacity by remember { mutableDoubleStateOf(0.0) }
+  1605→
+  1606→    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+  1607→        item { SectionHeader("🔥 تصميم وصلات اللحام الاحترافي", R.drawable.ic_steel) }
+  1608→        
+  1609→        item {
+  1610→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1611→                SteelInputField(size, "مقاس اللحام s (mm)", { size = it }, Modifier.weight(1f))
+  1612→                SteelInputField(length, "طول اللحام L (mm)", { length = it }, Modifier.weight(1f))
+  1613→            }
+  1614→        }
+  1615→        
+  1616→        item {
+  1617→            Text("نوع الإلكترود (Electrode)", fontWeight = FontWeight.Bold)
+  1618→            FlowRow {
+  1619→                ElectrodeType.entries.forEach { type ->
+  1620→                    FilterChip(
+  1621→                        selected = selectedElectrode == type,
+  1622→                        onClick = { selectedElectrode = type },
+  1623→                        label = { Text(type.displayName, fontSize = 10.sp) },
+  1624→                        modifier = Modifier.padding(end = 4.dp)
+  1625→                    )
+  1626→                }
+  1627→            }
+  1628→        }
+  1629→
+  1630→        item {
+  1631→            Text("كود التصميم", fontWeight = FontWeight.Bold)
+  1632→            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+  1633→                CalculatorEngine.DesignCode.entries.forEach { code ->
+  1634→                    FilterChip(
+  1635→                        selected = selectedCode == code,
+  1636→                        onClick = { selectedCode = code },
+  1637→                        label = { Text(code.name, fontSize = 11.sp) }
+  1638→                    )
+  1639→                }
+  1640→            }
+  1641→        }
+  1642→
+  1643→        item {
+  1644→            Button(onClick = {
+  1645→                val s = size.toDoubleOrNull() ?: 6.0
+  1646→                val l = length.toDoubleOrNull() ?: 200.0
+  1647→                capacity = viewModel.calculateWeldCapacity(s, l, selectedElectrode, selectedCode)
+  1648→            }, modifier = Modifier.fillMaxWidth()) {
+  1649→                Text("حساب مقاومة القص (Design Rn)")
+  1650→            }
+  1651→        }
+  1652→
+  1653→        if (capacity > 0) {
+  1654→            item {
+  1655→                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+  1656→                    Column(modifier = Modifier.padding(16.dp)) {
+  1657→                        Text("مقاومة اللحام التصميمية (Design Capacity):", fontWeight = FontWeight.Bold)
+  1658→                        Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+  1659→                        Spacer(Modifier.height(4.dp))
+  1660→                        Text("مساحة الحلق الفعالة: ${"%.1f".format(0.707 * (size.toDoubleOrNull() ?: 0.0) * (length.toDoubleOrNull() ?: 0.0))} mm²", fontSize = 12.sp)
+  1661→                    }
+  1662→                }
+  1663→            }
+  1664→        }
+  1665→    }
+  1666→}
+  1667→
+  1668→@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+  1669→@Composable
+  1670→fun BoltDesignTab(viewModel: SteelViewModel) {
+  1671→    var diameter by remember { mutableStateOf("16") }
+  1672→    var selectedGrade by remember { mutableStateOf(BoltGrade.GRADE_8_8) }
+  1673→    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+  1674→    var numBolts by remember { mutableStateOf("1") }
+  1675→    var capacity by remember { mutableDoubleStateOf(0.0) }
+  1676→
+  1677→    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+  1678→        item { SectionHeader("🔩 تصميم وصلات المسامير الاحترافي", R.drawable.ic_steel) }
+  1679→        
+  1680→        item {
+  1681→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1682→                SteelInputField(diameter, "قطر المسمار M (mm)", { diameter = it }, Modifier.weight(1f))
+  1683→                SteelInputField(numBolts, "عدد المسامير", { numBolts = it }, Modifier.weight(1f))
+  1684→            }
+  1685→        }
+  1686→
+  1687→        item {
+  1688→            Text("رتبة المسمار (Grade)", fontWeight = FontWeight.Bold)
+  1689→            FlowRow {
+  1690→                for (grade in BoltGrade.entries) {
+  1691→                    FilterChip(
+  1692→                        selected = selectedGrade == grade,
+  1693→                        onClick = { selectedGrade = grade },
+  1694→                        label = { Text(grade.displayName, fontSize = 10.sp) },
+  1695→                        modifier = Modifier.padding(end = 4.dp)
+  1696→                    )
+  1697→                }
+  1698→            }
+  1699→        }
+  1700→
+  1701→        item {
+  1702→            Text("كود التصميم", fontWeight = FontWeight.Bold)
+  1703→            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+  1704→                CalculatorEngine.DesignCode.entries.forEach { code ->
+  1705→                    FilterChip(
+  1706→                        selected = selectedCode == code,
+  1707→                        onClick = { selectedCode = code },
+  1708→                        label = { Text(code.name, fontSize = 11.sp) }
+  1709→                    )
+  1710→                }
+  1711→            }
+  1712→        }
+  1713→
+  1714→        item {
+  1715→            Button(onClick = {
+  1716→                val d = diameter.toDoubleOrNull() ?: 16.0
+  1717→                val n = numBolts.toIntOrNull() ?: 1
+  1718→                capacity = viewModel.calculateBoltCapacity(d, selectedGrade, n, selectedCode)
+  1719→            }, modifier = Modifier.fillMaxWidth()) {
+  1720→                Text("حساب مقاومة القص للمجموعة")
+  1721→            }
+  1722→        }
+  1723→
+  1724→        if (capacity > 0) {
+  1725→            item {
+  1726→                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+  1727→                    Column(modifier = Modifier.padding(16.dp)) {
+  1728→                        Text("مقاومة القص الكلية (Total Rn):", fontWeight = FontWeight.Bold)
+  1729→                        Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.secondary)
+  1730→                        Spacer(Modifier.height(4.dp))
+  1731→                        Text("مقاومة المسمار الواحد: ${"%.1f".format(capacity / (numBolts.toIntOrNull() ?: 1))} kN", fontSize = 12.sp)
+  1732→                    }
+  1733→                }
+  1734→            }
+  1735→        }
+  1736→    }
+  1737→}
+  1738→
+  1739→@Composable
+  1740→fun SteelResultCard(res: SteelMemberResult) {
+  1741→    Card(
+  1742→        modifier = Modifier.fillMaxWidth(),
+  1743→        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f))
+  1744→    ) {
+  1745→        Column(modifier = Modifier.padding(16.dp)) {
+  1746→            ResultRow("مساحة القطاع", "%.1f mm²".format(res.sectionType.getArea()))
+  1747→            ResultRow("سعة الضغط", "%.1f kN".format(res.axialCapacity))
+  1748→            ResultRow("سعة الانحناء", "%.1f kN.m".format(res.flexuralCapacity))
+  1749→            ResultRow("نسبة الاستخدام", "%.2f".format(res.utilizationRatio))
+  1750→            Text(if (res.isSafe) "آمن ✅" else "غير آمن ❌", fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+  1751→        }
+  1752→    }
+  1753→}
+  1754→
+  1755→@Composable
+  1756→fun SteelSectionDrawing(section: SteelSectionType) {
+  1757→    Box(modifier = Modifier.fillMaxWidth().height(250.dp).padding(16.dp), contentAlignment = Alignment.Center) {
+  1758→        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+  1759→            ComposeCanvas(modifier = Modifier.size(150.dp)) {
+  1760→                val w = size.width
+  1761→                val h = size.height
+  1762→                
+  1763→                when (section) {
+  1764→                    is SteelSectionType.ISection -> {
+  1765→                        val tf = (section.flangeThickness / section.depth * h).toFloat().coerceIn(5f, 25f)
+  1766→                        val tw = (section.webThickness / section.width * w).toFloat().coerceIn(5f, 20f)
+  1767→                        val bf = (section.width / section.depth * w).toFloat().coerceAtMost(w)
+  1768→                        val offsetBF = (w - bf) / 2
+  1769→                        
+  1770→                        // Top Flange
+  1771→                        drawRect(Color.DarkGray, Offset(offsetBF, 0f), Size(bf, tf))
+  1772→                        // Bottom Flange
+  1773→                        drawRect(Color.DarkGray, Offset(offsetBF, h - tf), Size(bf, tf))
+  1774→                        // Web
+  1775→                        drawRect(Color.DarkGray, Offset((w - tw) / 2, tf), Size(tw, h - 2 * tf))
+  1776→                        
+  1777→                        // Stress Distribution (Schematic)
+  1778→                        drawLine(Color.Red.copy(alpha = 0.3f), Offset(w + 20f, 0f), Offset(w + 20f, h), strokeWidth = 2f)
+  1779→                        drawLine(Color.Red, Offset(w + 20f, 0f), Offset(w + 50f, 0f), strokeWidth = 3f)
+  1780→                        drawLine(Color.Red, Offset(w + 20f, h), Offset(w - 10f, h), strokeWidth = 3f)
+  1781→                        drawLine(Color.Red, Offset(w + 50f, 0f), Offset(w - 10f, h), strokeWidth = 2f)
+  1782→                    }
+  1783→                    is SteelSectionType.LSection -> {
+  1784→                        val t = (section.thickness / section.legA * h).toFloat().coerceIn(5f, 20f)
+  1785→                        drawRect(Color.DarkGray, Offset(0f, 0f), Size(t, h))
+  1786→                        drawRect(Color.DarkGray, Offset(t, h - t), Size(w - t, t))
+  1787→                    }
+  1788→                    is SteelSectionType.RHS -> {
+  1789→                        val t = (section.thickness / section.height * h).toFloat().coerceIn(5f, 20f)
+  1790→                        drawRect(Color.DarkGray, Offset(0f, 0f), size, style = androidx.compose.ui.graphics.drawscope.Stroke(t))
+  1791→                    }
+  1792→                    else -> {
+  1793→                        drawRect(Color.DarkGray, Offset(0f, 0f), size)
+  1794→                    }
+  1795→                }
+  1796→            }
+  1797→            Spacer(Modifier.height(12.dp))
+  1798→            Text("توزيع الإجهادات المرن", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+  1799→        }
+  1800→    }
+  1801→}
+  1802→
+  1803→@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+  1804→@Composable
+  1805→fun BasePlateDesignTab() {
+  1806→    var colSection by remember { mutableStateOf("HEB 300") }
+  1807→    var bf by remember { mutableStateOf("300") }
+  1808→    var dc by remember { mutableStateOf("300") }
+  1809→    var axialLoad by remember { mutableStateOf("500") }
+  1810→    var momentM by remember { mutableStateOf("0") }
+  1811→    var fpc by remember { mutableStateOf("25") }
+  1812→    var fy by remember { mutableStateOf("250") }
+  1813→    var expandedBoltGrade by remember { mutableStateOf(false) }
+  1814→    var selectedBoltGrade by remember { mutableStateOf("4.6") }
+  1815→    var bpResult by remember { mutableStateOf<SteelBasePlateDesign.BasePlateResult?>(null) }
+  1816→
+  1817→    val boltGradeOptions = com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.entries.map { it.getGradeName() }
+  1818→
+  1819→    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+  1820→        item { SectionHeader("🔧 تصميم القواعد المعدنية", R.drawable.ic_footing) }
+  1821→
+  1822→        item {
+  1823→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+  1824→                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  1825→                    Text("بيانات العمود", fontWeight = FontWeight.Bold)
+  1826→                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1827→                        SteelInputField(colSection, "القطاع (مثال: HEB 300)", { colSection = it }, Modifier.weight(1f))
+  1828→                    }
+  1829→                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1830→                        SteelInputField(bf, "عرض الشفة bf (mm)", { bf = it }, Modifier.weight(1f))
+  1831→                        SteelInputField(dc, "عمق العمود dc (mm)", { dc = it }, Modifier.weight(1f))
+  1832→                    }
+  1833→                }
+  1834→            }
+  1835→        }
+  1836→
+  1837→        item {
+  1838→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+  1839→                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  1840→                    Text("الأحمال المؤثرة", fontWeight = FontWeight.Bold)
+  1841→                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1842→                        SteelInputField(axialLoad, "القوة المحورية P (kN)", { axialLoad = it }, Modifier.weight(1f))
+  1843→                        SteelInputField(momentM, "العزم M (kN.m) — اختياري", { momentM = it }, Modifier.weight(1f))
+  1844→                    }
+  1845→                }
+  1846→            }
+  1847→        }
+  1848→
+  1849→        item {
+  1850→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+  1851→                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  1852→                    Text("خواص المواد", fontWeight = FontWeight.Bold)
+  1853→                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+  1854→                        SteelInputField(fpc, "مقاومة الخرسانة f'c (MPa)", { fpc = it }, Modifier.weight(1f))
+  1855→                        SteelInputField(fy, "إجهاد الخضوع Fy (MPa)", { fy = it }, Modifier.weight(1f))
+  1856→                    }
+  1857→
+  1858→                    Text("درجة براغي الارتكاز", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+  1859→                    ExposedDropdownMenuBox(
+  1860→                        expanded = expandedBoltGrade,
+  1861→                        onExpandedChange = { expandedBoltGrade = !expandedBoltGrade }
+  1862→                    ) {
+  1863→                        OutlinedTextField(
+  1864→                            value = "Grade $selectedBoltGrade",
+  1865→                            onValueChange = {},
+  1866→                            readOnly = true,
+  1867→                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBoltGrade) },
+  1868→                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+  1869→                            shape = RoundedCornerShape(12.dp),
+  1870→                            textStyle = MaterialTheme.typography.bodySmall
+  1871→                        )
+  1872→                        ExposedDropdownMenu(
+  1873→                            expanded = expandedBoltGrade,
+  1874→                            onDismissRequest = { expandedBoltGrade = false }
+  1875→                        ) {
+  1876→                            for (grade in boltGradeOptions) {
+  1877→                                DropdownMenuItem(
+  1878→                                    text = { Text("Grade $grade") },
+  1879→                                    onClick = { selectedBoltGrade = grade; expandedBoltGrade = false }
+  1880→                                )
+  1881→                            }
+  1882→                        }
+  1883→                    }
+  1884→                }
+  1885→            }
+  1886→        }
+  1887→
+  1888→        item {
+  1889→            Button(onClick = {
+  1890→                val designer = SteelBasePlateDesign()
+  1891→                val boltGrade = com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.entries.find { it.getGradeName() == selectedBoltGrade }
+  1892→                    ?: com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.GRADE_4_6
+  1893→                val input = SteelBasePlateDesign.ConcentricInput(
+  1894→                    Pu = axialLoad.toDoubleOrNull() ?: 500.0,
+  1895→                    Mux = momentM.toDoubleOrNull() ?: 0.0,
+  1896→                    Muy = 0.0,
+  1897→                    Vu = 0.0,
+  1898→                    bf = bf.toDoubleOrNull() ?: 300.0,
+  1899→                    dc = dc.toDoubleOrNull() ?: 300.0,
+  1900→                    Fy = fy.toDoubleOrNull() ?: 250.0,
+  1901→                    fpc = fpc.toDoubleOrNull() ?: 25.0,
+  1902→                    boltGrade = boltGrade
+  1903→                )
+  1904→                bpResult = designer.designConcentricBasePlate(input)
+  1905→            }, modifier = Modifier.fillMaxWidth()) {
+  1906→                Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
+  1907→                Spacer(Modifier.width(8.dp))
+  1908→                Text("تصميم القاعدة المعدنية")
+  1909→            }
+  1910→        }
+  1911→
+  1912→        bpResult?.let { res ->
+  1913→            item {
+  1914→                val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+  1915→                Card(
+  1916→                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+  1917→                    border = BorderStroke(1.dp, urColor)
+  1918→                ) {
+  1919→                    Column(modifier = Modifier.padding(16.dp)) {
+  1920→                        Row(verticalAlignment = Alignment.CenterVertically) {
+  1921→                            Icon(if (res.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = urColor)
+  1922→                            Spacer(Modifier.width(8.dp))
+  1923→                            Text(if (res.isSafe) "التصميم آمن ✅" else "التصميم غير آمن ❌", fontWeight = FontWeight.Bold, color = urColor, fontSize = 16.sp)
+  1924→                        }
+  1925→                        Spacer(Modifier.height(12.dp))
+  1926→                        ResultRow("أبعاد اللوح (B × N)", "%.0f × %.0f mm".format(res.plateWidth, res.plateLength))
+  1927→                        ResultRow("سماكة اللوح tp", "%.0f mm".format(res.plateThickness))
+  1928→                        ResultRow("أقصى ضغط تحمل", "%.2f MPa".format(res.maxBearingPressure))
+  1929→                        ResultRow("سعة الخرسانة", "%.2f MPa".format(res.concreteCapacity))
+  1930→                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+  1931→                        Text("البراغي الارتكازية", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+  1932→                        ResultRow("عدد البراغي", "${res.anchorBolts.numberOfBolts}")
+  1933→                        ResultRow("قطر البرغي", "M${res.anchorBolts.boltDiameter.toInt()} (${res.anchorBolts.boltGrade})")
+  1934→                        ResultRow("مسافة بين البراغي", "%.0f mm".format(res.anchorBolts.boltSpacing))
+  1935→                        ResultRow("المسافة من الحافة", "%.0f mm".format(res.anchorBolts.edgeDistance))
+  1936→                        ResultRow("سعة الشد لكل برغي", "%.1f kN".format(res.anchorBolts.tensionCapacity))
+  1937→                        ResultRow("طول التثبيت", "%.0f mm".format(res.anchorBolts.embedmentLength))
+  1938→                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+  1939→                        Text("المونة (Grout)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+  1940→                        ResultRow("سماكة المونة", "%.0f mm".format(res.grout.thickness))
+  1941→                        ResultRow("مقاومة المونة", "%.0f MPa".format(res.grout.providedStrength))
+  1942→                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+  1943→                        ResultRow("معامل الاستغلال (U.R)", "%.2f".format(res.utilizationRatio))
+  1944→
+  1945→                        if (res.warnings.isNotEmpty()) {
+  1946→                            Spacer(Modifier.height(8.dp))
+  1947→                            Text("⚠️ تحذيرات:", fontWeight = FontWeight.Bold, color = Color(0xFFF57C00), fontSize = 12.sp)
+  1948→                            res.warnings.forEach { w ->
+  1949→                                Text("• $w", fontSize = 11.sp, color = Color.Gray)
+  1950→                            }
+  1951→                        }
+  1952→                    }
+  1953→                }
+  1954→            }
+  1955→        }
+  1956→    }
+  1957→}
+  1958→
+  1959→@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+  1960→@Composable
+  1961→fun ConnectionDesignTab() {
+  1962→    var connectionType by remember { mutableIntStateOf(0) }
+  1963→    val connTypes = listOf("وصلة مساميرية قص", "وصلة مساميرية عزم", "وصلة ملحومة", "وصلة مركبة")
+  1964→
+  1965→    // Bolted inputs
+  1966→    var boltDiameter by remember { mutableStateOf("20") }
+  1967→    var numBolts by remember { mutableStateOf("4") }
+  1968→    var boltSpacing by remember { mutableStateOf("75") }
+  1969→    var edgeDistance by remember { mutableStateOf("40") }
+  1970→    var appliedShear by remember { mutableStateOf("100") }
+  1971→    var appliedTension by remember { mutableStateOf("0") }
+  1972→    var expandedBoltGrade by remember { mutableStateOf(false) }
+  1973→    var selectedBoltGrade by remember { mutableStateOf(BoltGrade.GRADE_8_8) }
+  1974→    var expandedPattern by remember { mutableStateOf(false) }
+  1975→    var selectedPattern by remember { mutableStateOf(BoltPattern.DOUBLE_ROW) }
+  1976→
+  1977→    // Welded inputs
+  1978→    var weldSize by remember { mutableStateOf("6") }
+  1979→    var weldLength by remember { mutableStateOf("200") }
+  1980→    var expandedElectrode by remember { mutableStateOf(false) }
+  1981→    var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
+  1982→    var appliedWeldForce by remember { mutableStateOf("100") }
+  1983→
+  1984→    var boltResult by remember { mutableStateOf<BoltDesignResult?>(null) }
+  1985→    var weldResult by remember { mutableStateOf<WeldDesignResult?>(null) }
+  1986→
+  1987→    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+  1988→        item { SectionHeader("🔗 تصميم الوصلات الإنشائية", R.drawable.ic_frame) }
+  1989→
+  1990→        item {
+  1991→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+  1992→                Column(modifier = Modifier.padding(12.dp)) {
+  1993→                    Text("نوع الوصلة", fontWeight = FontWeight.Bold)
+  1994→                    Spacer(modifier = Modifier.height(4.dp))
+  1995→                    FlowRow {
+  1996→                        connTypes.forEachIndexed { idx, name ->
+  1997→                            FilterChip(
+  1998→                                selected = connectionType == idx,
+  1999→                                onClick = { connectionType = idx; boltResult = null; weldResult = null },
+  2000→                                label = { Text(name, fontSize = 11.sp) },
+
+[showing lines 1-2000 of 2282; use offset=2001 with limit to continue reading]
