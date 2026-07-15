@@ -54,7 +54,7 @@
         android:pathData="M3,18.5L3,21M21,19.5L21,22"/>
     <!-- Bending moment curve (subtle) -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#000000"
         android:strokeWidth="0.4"
         android:strokeLineCap="round"

@@ -37,13 +37,13 @@
         android:pathData="M7,21.5L8,22.5M9,21.5L10,22.5M11,21.5L12,22.5M13,21.5L14,22.5M15,21.5L16,22.5M17,21.5L18,22.5"/>
     <!-- Moment curves on sides -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#000000"
         android:strokeWidth="0.4"
         android:strokeLineCap="round"
         android:pathData="M9,8Q7,12.5 9,17"/>
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#000000"
         android:strokeWidth="0.4"
         android:strokeLineCap="round"

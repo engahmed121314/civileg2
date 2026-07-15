@@ -30,7 +30,7 @@
         android:pathData="M4,5h1.5M4,9h1.5M4,13h1.5M4,17h1.5"/>
     <!-- Pressure triangle outline -->
     <path
-        android:fillColor="none"
+        android:fillColor="#00000000"
         android:strokeColor="#000000"
         android:strokeWidth="0.3"
         android:pathData="M5.5,3L5.5,18L3,18L3,3z"/>
