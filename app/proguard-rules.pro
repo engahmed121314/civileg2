@@ -91,7 +91,5 @@
 -keep class androidx.** { *; }
 -dontwarn androidx.**
 
-# --- Security: Prevent class dumping ---
--keepclassmembers class * {
-    <methods>;
-}
+# --- Security: Keep application and model classes ---
+-keep class com.civileg.app.** { *; }

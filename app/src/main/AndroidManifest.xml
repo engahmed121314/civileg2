@@ -117,10 +117,7 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
-        <activity
-            android:name=".ui.steel.SteelWarehouseActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <!-- Steel warehouse (if needed in future, add Activity class first) -->
 
         <!-- FileProvider — Restricted to exports directory only -->
         <provider
@@ -133,11 +130,7 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <!-- Metadata for Google Play Store -->
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version"
-            tools:node="remove" />
+        <!-- Google Play Services version — auto-managed by play-services-basement -->
 
         <!-- Developer Contact Metadata -->
         <meta-data
