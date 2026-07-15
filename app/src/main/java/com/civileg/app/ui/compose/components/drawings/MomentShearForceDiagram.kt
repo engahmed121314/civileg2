@@ -79,7 +79,7 @@ fun MomentShearForceDiagram(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(stringResource(R.string.analysis_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Analysis", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Text("Moment & Shear Force Diagrams", color = Color(0xAAFFFFFF), fontSize = 10.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

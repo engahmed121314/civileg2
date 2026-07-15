@@ -124,18 +124,18 @@ fun CalculatorScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                ScientificFuncButton("sin") { appendFunc("sin", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("cos") { appendFunc("cos", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("tan") { appendFunc("tan", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("log") { appendFunc("log", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("ln") { appendFunc("ln", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("√") { appendFunc("√", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("sin") { appendFunc("sin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("cos") { appendFunc("cos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("tan") { appendFunc("tan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("log") { appendFunc("log", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("ln") { appendFunc("ln", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("√") { appendFunc("√", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("x²") { expression += "^2"; isNewCalculation = false }
-                ScientificFuncButton("π") { appendNumber("π", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("e") { appendNumber("e", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("π") { appendNumber("π", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("e") { appendNumber("e", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("n!") { expression += "!"; isNewCalculation = false }
-                ScientificFuncButton("1/x") { appendFunc("1/", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("|x|") { appendFunc("abs", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("1/x") { appendFunc("1/", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("|x|") { appendFunc("abs", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("(") { expression += "("; isNewCalculation = false }
                 ScientificFuncButton(")") { expression += ")"; isNewCalculation = false }
             }
@@ -149,43 +149,43 @@ fun CalculatorScreen(
             ) {
                 // Row 1: C, (, ), ÷
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("C", Color(0xFFD32F2F), Modifier.weight(1f)) {
+                    CalcButton("C", Modifier.weight(1f), Color(0xFFD32F2F)) {
                         expression = ""; result = "0"; isNewCalculation = true
                     }
-                    CalcButton("⌫", Color(0xFFD32F2F), Modifier.weight(1f)) {
+                    CalcButton("⌫", Modifier.weight(1f), Color(0xFFD32F2F)) {
                         if (expression.isNotEmpty()) expression = expression.dropLast(1)
                     }
-                    CalcButton("^", Color(0xFF1565C0), Modifier.weight(1f)) {
+                    CalcButton("^", Modifier.weight(1f), Color(0xFF1565C0)) {
                         expression += "^"; isNewCalculation = false
                     }
-                    CalcButton("÷", Color(0xFF1565C0), Modifier.weight(1f)) {
+                    CalcButton("÷", Modifier.weight(1f), Color(0xFF1565C0)) {
                         expression += "÷"; isNewCalculation = false
                     }
                 }
                 // Row 2: 7, 8, 9, ×
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("7", Modifier.weight(1f)) { appendNumber("7", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("8", Modifier.weight(1f)) { appendNumber("8", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("9", Modifier.weight(1f)) { appendNumber("9", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("×", Color(0xFF1565C0), Modifier.weight(1f)) {
+                    CalcButton("7", Modifier.weight(1f)) { appendNumber("7", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("8", Modifier.weight(1f)) { appendNumber("8", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("9", Modifier.weight(1f)) { appendNumber("9", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("×", Modifier.weight(1f), Color(0xFF1565C0)) {
                         expression += "×"; isNewCalculation = false
                     }
                 }
                 // Row 3: 4, 5, 6, -
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("4", Modifier.weight(1f)) { appendNumber("4", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("5", Modifier.weight(1f)) { appendNumber("5", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("6", Modifier.weight(1f)) { appendNumber("6", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("-", Color(0xFF1565C0), Modifier.weight(1f)) {
+                    CalcButton("4", Modifier.weight(1f)) { appendNumber("4", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("5", Modifier.weight(1f)) { appendNumber("5", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("6", Modifier.weight(1f)) { appendNumber("6", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("-", Modifier.weight(1f), Color(0xFF1565C0)) {
                         expression += "-"; isNewCalculation = false
                     }
                 }
                 // Row 4: 1, 2, 3, +
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("1", Modifier.weight(1f)) { appendNumber("1", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("2", Modifier.weight(1f)) { appendNumber("2", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("3", Modifier.weight(1f)) { appendNumber("3", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
-                    CalcButton("+", Color(0xFF1565C0), Modifier.weight(1f)) {
+                    CalcButton("1", Modifier.weight(1f)) { appendNumber("1", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("2", Modifier.weight(1f)) { appendNumber("2", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("3", Modifier.weight(1f)) { appendNumber("3", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    CalcButton("+", Modifier.weight(1f), Color(0xFF1565C0)) {
                         expression += "+"; isNewCalculation = false
                     }
                 }
@@ -197,9 +197,9 @@ fun CalculatorScreen(
                             else expression = "-$expression"
                         }
                     }
-                    CalcButton("0", Modifier.weight(1f)) { appendNumber("0", ::expression, ::isNewCalculation) { expression = it; isNewCalculation = false } }
+                    CalcButton("0", Modifier.weight(1f)) { appendNumber("0", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton(".", Modifier.weight(1f)) { expression += "."; isNewCalculation = false }
-                    CalcButton("=", Color(0xFF2E7D32), Modifier.weight(1f)) {
+                    CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
                         try {
                             val evalResult = evaluateExpression(expression)
                             val formatted = formatResult(evalResult)

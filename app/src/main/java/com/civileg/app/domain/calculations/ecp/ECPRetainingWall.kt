@@ -93,9 +93,9 @@ class ECPRetainingWall : RetainingWallDesign {
         val AsMin = MIN_STEEL_RATIO * b * d
         val AsReq = max(As, AsMin)
 
-        val (numBars, barDia) = selectBars(AsReq)
+        val (numBars, barDia) = RetainingWallDesign.selectBars(AsReq)
         val AsProvided = numBars * PI * (barDia / 2.0).pow(2)
-        val distBars = selectBars(AsMin * 0.25).let { "${it.first}\u03A6${it.second}" }
+        val distBars = RetainingWallDesign.selectBars(AsMin * 0.25).let { "${it.first}\u03A6${it.second}" }
 
         // Shear check
         val qu = Vu * 1000 / (b * d)
@@ -111,7 +111,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val toeZ = 0.8 + sqrt(max(0.0, 0.36 - 2 * toeR)) * 0.45
         val toeAs = toeMoment * 1e6 / (fy / GAMMA_S * toeZ * toeD)
         val toeAsFinal = max(toeAs, MIN_STEEL_RATIO * b * toeD)
-        val toeBars = selectBars(toeAsFinal)
+        val toeBars = RetainingWallDesign.selectBars(toeAsFinal)
         val toeRebarStr = "${toeBars.first}\u03A6${toeBars.second}"
 
         // Heel design
@@ -123,7 +123,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val heelZ = 0.8 + sqrt(max(0.0, 0.36 - 2 * heelR)) * 0.45
         val heelAs = heelMoment * 1e6 / (fy / GAMMA_S * heelZ * heelD)
         val heelAsFinal = max(heelAs, MIN_STEEL_RATIO * b * heelD)
-        val heelBars = selectBars(heelAsFinal)
+        val heelBars = RetainingWallDesign.selectBars(heelAsFinal)
         val heelRebarStr = "${heelBars.first}\u03A6${heelBars.second}"
 
         val checks = listOf(
@@ -153,7 +153,7 @@ class ECPRetainingWall : RetainingWallDesign {
             overturningFS = overturningFS, slidingFS = slidingFS, bearingFS = bearingFS,
             maxBearingPressure = maxBearing, minBearingPressure = minBearing,
             stemMoment = Mu, stemShear = Vu,
-            stemMainRebar = formatRebar(numBars, barDia), stemMainRebarArea = AsProvided,
+            stemMainRebar = RetainingWallDesign.formatRebar(numBars, barDia), stemMainRebarArea = AsProvided,
             stemDistributionRebar = distBars,
             toeMoment = toeMoment * LOAD_FACTOR_DEAD, toeShear = toeShear, toeRebar = toeRebarStr,
             heelMoment = heelMoment, heelShear = heelShear, heelRebar = heelRebarStr,

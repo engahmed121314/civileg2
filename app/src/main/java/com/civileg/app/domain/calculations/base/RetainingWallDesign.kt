@@ -1,6 +1,8 @@
 package com.civileg.app.domain.calculations.base
 
 import com.civileg.app.domain.entities.DesignCode
+import kotlin.math.PI
+import kotlin.math.pow
 
 data class RetainingWallInput(
     val wallHeight: Double,

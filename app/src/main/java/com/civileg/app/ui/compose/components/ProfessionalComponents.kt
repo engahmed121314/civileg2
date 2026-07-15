@@ -94,10 +94,10 @@ object PremiumDesignSystem {
 
     @Composable
     fun statusText(ratio: Float): String = when {
-        ratio > 1.0f -> stringResource(R.string.status_section_unsafe)
-        ratio > 0.9f -> stringResource(R.string.status_high_load_warning)
-        ratio > 0.4f -> stringResource(R.string.status_ideal_economic)
-        else -> stringResource(R.string.status_oversized)
+        ratio > 1.0f -> "Unsafe Section"
+        ratio > 0.9f -> "High Load Warning"
+        ratio > 0.4f -> "Ideal Economic"
+        else -> "Oversized"
     }
 
     @Composable
@@ -234,7 +234,7 @@ fun SafetyStatusCard(
     title: String = "",
     modifier: Modifier = Modifier
 ) {
-    val resolvedTitle = if (title.isEmpty()) stringResource(R.string.design_evaluation) else title
+    val resolvedTitle = if (title.isEmpty()) "Design Evaluation" else title
     val ratio = utilizationRatio.toFloat()
     val statusColor = PremiumDesignSystem.statusColor(ratio)
     val animatedRatio by animateFloatAsState(
@@ -285,7 +285,7 @@ fun SafetyStatusCard(
                         color = statusColor
                     )
                     Text(
-                        stringResource(R.string.utilization_ratio),
+                        "Utilization Ratio",
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -424,7 +424,7 @@ fun SafetyCheckList(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                stringResource(R.string.code_checks),
+                "Code Checks",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.primary
@@ -510,7 +510,7 @@ fun PremiumActionButtons(
             } else {
                 Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.pdf_report), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("PDF Report", fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
 
@@ -526,7 +526,7 @@ fun PremiumActionButtons(
             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.secondary)
             Spacer(modifier = Modifier.width(6.dp))
-            Text(stringResource(R.string.save), fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.secondary)
         }
 
@@ -544,7 +544,7 @@ fun FormulaCard(
     title: String = "",
     modifier: Modifier = Modifier
 ) {
-    val resolvedTitle = if (title.isEmpty()) stringResource(R.string.engineering_equations) else title
+    val resolvedTitle = if (title.isEmpty()) "Engineering Equations" else title
     AnimatedVisibility(
         visible = true,
         enter = fadeIn() + slideInVertically(),
@@ -629,7 +629,7 @@ fun CodeSelectorChips(
 
 @Composable
 fun LoadingOverlay(message: String = "") {
-    val resolvedMessage = if (message.isEmpty()) stringResource(R.string.analyzing) else message
+    val resolvedMessage = if (message.isEmpty()) "Analyzing..." else message
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Black.copy(alpha = 0.5f)

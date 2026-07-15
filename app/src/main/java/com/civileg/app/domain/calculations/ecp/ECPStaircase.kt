@@ -90,8 +90,8 @@ class ECPStaircase : StaircaseDesign {
         }
 
         val inclinedLength = sqrt(input.span * input.span + input.totalRise * input.totalRise)
-        val slopeAngle = toDegrees(atan(input.totalRise / input.span))
-        val cosTheta = cos(toRadians(slopeAngle))
+        val slopeAngle = Math.toDegrees(atan(input.totalRise / input.span))
+        val cosTheta = cos(Math.toRadians(slopeAngle))
 
         codeNotes.add("Geometry: ${numRisers} risers × ${numTreads} treads")
         codeNotes.add("R = ${String.format("%.1f", riserMm)} mm, G = ${String.format("%.1f", goingMm)} mm")

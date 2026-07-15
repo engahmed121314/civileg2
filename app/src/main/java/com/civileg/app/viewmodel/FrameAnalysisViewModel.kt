@@ -235,7 +235,7 @@ class FrameAnalysisViewModel @Inject constructor(
             _steelResults.value = steelDesignResults
 
         } catch (e: Exception) {
-            _errorMessage.value = application.getString(R.string.error_frame_analysis, e.message ?: "")
+            _errorMessage.value = "Frame analysis error: ${e.message ?: ""}"
         } finally {
             _isLoading.value = false
         }
@@ -315,8 +315,8 @@ enum class DiagramType(val displayNameAr: String) {
 
     @Composable
     fun localizedDisplayName(): String = when (this) {
-        BMD -> stringResource(R.string.diagram_bmd)
-        SFD -> stringResource(R.string.diagram_sfd)
-        AFD -> stringResource(R.string.diagram_afd)
+        BMD -> "BMD"
+        SFD -> "SFD"
+        AFD -> "AFD"
     }
 }

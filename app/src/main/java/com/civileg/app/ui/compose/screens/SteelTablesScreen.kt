@@ -15,9 +15,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.utils.SteelTables
 import com.civileg.app.utils.SteelTables.SectionProperties
@@ -73,35 +74,49 @@ fun SteelTablesScreen(
                         .padding(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val props = listOf(
-                        "العمق h" to "${section.depth} mm",
-                        "العرض b" to "${section.width} mm",
-                        "سماكة النفق tw" to "${section.tw} mm",
-                        "سماكة الشنش tf" to "${section.tf} mm",
-                        "المساحة" to "${section.area} cm²",
-                        "الوزن" to "${section.weight} kg/m",
-                        "عزم القصور القوي Iy" to "${section.iy} cm⁴",
-                        "عزم القصور الضعيف Iz" to "${section.iz} cm⁴",
-                        "معامل المقطع القوي Sy" to "${section.sy} cm³",
-                        "معامل المقطع الضعيف Sz" to "${section.sz} cm³",
-                        "نصف قطر الدوران القوي ry" to "${section.ry} cm",
-                        "نصف قطر الدوران الضعيف rz" to "${section.rz} cm"
-                    )
-                    if (section.Zx > 0) {
-                        props + listOf(
+                    val displayProps = if (section.Zx > 0) {
+                        listOf(
+                            "العمق h" to "${section.depth} mm",
+                            "العرض b" to "${section.width} mm",
+                            "سماكة النفق tw" to "${section.tw} mm",
+                            "سماكة الشنش tf" to "${section.tf} mm",
+                            "المساحة" to "${section.area} cm²",
+                            "الوزن" to "${section.weight} kg/m",
+                            "عزم القصور القوي Iy" to "${section.iy} cm⁴",
+                            "عزم القصور الضعيف Iz" to "${section.iz} cm⁴",
+                            "معامل المقطع القوي Sy" to "${section.sy} cm³",
+                            "معامل المقطع الضعيف Sz" to "${section.sz} cm³",
+                            "نصف قطر الدوران القوي ry" to "${section.ry} cm",
+                            "نصف قطر الدوران الضعيف rz" to "${section.rz} cm",
                             "معامل البلاستك القوي Zx" to "${section.Zx} cm³",
                             "معامل البلاستك الضعيف Zy" to "${section.Zy} cm³"
                         )
-                    } else props
-                }.forEach { (label, value) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        listOf(
+                            "العمق h" to "${section.depth} mm",
+                            "العرض b" to "${section.width} mm",
+                            "سماكة النفق tw" to "${section.tw} mm",
+                            "سماكة الشنش tf" to "${section.tf} mm",
+                            "المساحة" to "${section.area} cm²",
+                            "الوزن" to "${section.weight} kg/m",
+                            "عزم القصور القوي Iy" to "${section.iy} cm⁴",
+                            "عزم القصور الضعيف Iz" to "${section.iz} cm⁴",
+                            "معامل المقطع القوي Sy" to "${section.sy} cm³",
+                            "معامل المقطع الضعيف Sz" to "${section.sz} cm³",
+                            "نصف قطر الدوران القوي ry" to "${section.ry} cm",
+                            "نصف قطر الدوران الضعيف rz" to "${section.rz} cm"
+                        )
+                    }
+                    displayProps.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             },

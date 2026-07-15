@@ -71,7 +71,7 @@ fun MoreHubScreen(
 
             items(moreItems.size) { index ->
                 val item = moreItems[index]
-                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                val isDark = MaterialTheme.colorScheme.surface.luminance < 0.5f
                 val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
 
                 Card(

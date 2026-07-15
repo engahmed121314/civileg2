@@ -135,7 +135,6 @@ class BeamViewModel @Inject constructor(
                 val beamType = when (lastSupportType) {
                     CalculatorEngine.SupportType.FIXED_FIXED -> com.civileg.app.domain.entities.BeamType.Fixed(lastSpan)
                     CalculatorEngine.SupportType.FIXED_HINGED -> com.civileg.app.domain.entities.BeamType.Fixed(lastSpan)
-                    CalculatorEngine.SupportType.HINGED_FIXED -> com.civileg.app.domain.entities.BeamType.Fixed(lastSpan)
                     CalculatorEngine.SupportType.CANTILEVER -> com.civileg.app.domain.entities.BeamType.Cantilever(lastSpan)
                     else -> com.civileg.app.domain.entities.BeamType.SimplySupported(lastSpan)
                 }
@@ -170,7 +169,7 @@ class BeamViewModel @Inject constructor(
                     inventoryAnalysis = null,
                     crackWidthCheck = null,
                     developmentLengthCheck = null,
-                    warnings = listOfNotNull(res.suggestions?.takeIf { it.isNotEmpty() }),
+                    warnings = emptyList(),
                     codeNotes = listOf("Design per ${domainCode.version}")
                 )
 

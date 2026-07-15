@@ -85,10 +85,10 @@ class ACIRetainingWall : RetainingWallDesign {
         val rhoMax = 0.025
         val rhoFinal = rho.coerceIn(rhoMin, rhoMax)
         val As = rhoFinal * b * d
-        val (nBars, barDia) = selectBars(As)
+        val (nBars, barDia) = RetainingWallDesign.selectBars(As)
         val AsProv = nBars * PI * (barDia / 2.0).pow(2)
         val distAs = max(rhoMin * b * d * 0.25, 100.0)
-        val distBars = selectBars(distAs)
+        val distBars = RetainingWallDesign.selectBars(distAs)
 
         // Shear
         val qu = VuStem * 1000 / (b * d)
@@ -101,7 +101,7 @@ class ACIRetainingWall : RetainingWallDesign {
         val toeRn = toeMu / (PHI_FLEXURE * b * toeD * toeD)
         val toeRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * toeRn / (0.85 * fc))))
         val toeAs = max(toeRho, rhoMin) * b * toeD
-        val tb = selectBars(toeAs)
+        val tb = RetainingWallDesign.selectBars(toeAs)
 
         // Heel
         val heelLoad = (H - tFooting) * gamma + q
@@ -110,7 +110,7 @@ class ACIRetainingWall : RetainingWallDesign {
         val heelRn = heelMu / (PHI_FLEXURE * b * heelD * heelD)
         val heelRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * heelRn / (0.85 * fc))))
         val heelAs = max(heelRho, rhoMin) * b * heelD
-        val hb = selectBars(heelAs)
+        val hb = RetainingWallDesign.selectBars(heelAs)
 
         val checks = listOf(
             WallSafetyCheck("OT FS", otFS >= OT_FS_LIMIT, otFS, OT_FS_LIMIT,
@@ -140,7 +140,7 @@ class ACIRetainingWall : RetainingWallDesign {
             overturningFS = otFS, slidingFS = slideFS, bearingFS = bearingFS,
             maxBearingPressure = maxBP, minBearingPressure = minBP,
             stemMoment = MuStem / 1e6, stemShear = VuStem,
-            stemMainRebar = formatRebar(nBars, barDia), stemMainRebarArea = AsProv,
+            stemMainRebar = RetainingWallDesign.formatRebar(nBars, barDia), stemMainRebarArea = AsProv,
             stemDistributionRebar = "${distBars.first}\u03A6${distBars.second}",
             toeMoment = toeMu / 1e6, toeShear = maxBP * toe, toeRebar = "${tb.first}\u03A6${tb.second}",
             heelMoment = heelMu / 1e6, heelShear = heelLoad * heel, heelRebar = "${hb.first}\u03A6${hb.second}",

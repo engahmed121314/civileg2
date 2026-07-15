@@ -17,10 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.civileg.app.R
 
 /**
  * Interactive drawing wrapper that adds:
@@ -40,18 +38,18 @@ fun InteractiveDrawingScreen(
     viewModes: List<String> = emptyList(),
     selectedViewMode: Int = 0,
     onViewModeChanged: (Int) -> Unit = {},
-    drawingContent: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    drawingContent: @Composable () -> Unit
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showInfo by remember { mutableStateOf(false) }
 
     val resolvedViewModes = if (viewModes.isEmpty()) listOf(
-        stringResource(R.string.view_modes_all),
-        stringResource(R.string.view_modes_longitudinal),
-        stringResource(R.string.view_modes_cross),
-        stringResource(R.string.view_modes_plan)
+        "All",
+        "Longitudinal",
+        "Cross Section",
+        "Plan"
     ) else viewModes
 
     Card(
@@ -162,10 +160,10 @@ fun InteractiveDrawingScreen(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        InfoRow("📌 ${stringResource(R.string.info_label_title)}", title)
-                        InfoRow("📐 ${stringResource(R.string.info_label_type)}", subtitle)
-                        InfoRow("🔍 ${stringResource(R.string.info_label_zoom)}", "${"%.0f".format(scale * 100)}%")
-                        InfoRow("👆 ${stringResource(R.string.info_label_gesture)}", stringResource(R.string.info_gesture_hint))
+                        InfoRow("📌 ${"Title"}", title)
+                        InfoRow("📐 ${"Type"}", subtitle)
+                        InfoRow("🔍 ${"Zoom"}", "${"%.0f".format(scale * 100)}%")
+                        InfoRow("👆 ${"Gesture"}", "Pinch to zoom, drag to pan, double-tap to reset")
                     }
                 }
             }

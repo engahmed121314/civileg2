@@ -1,5 +1,6 @@
 package com.civileg.app.ads
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +30,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.civileg.app.ads.AdManager
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 
 /**
  * Native Compose Banner Ad — Professional placement between content sections.
@@ -87,10 +91,14 @@ fun AdBannerCompact(
             .clip(RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
+        val context = LocalContext.current
+        val density = LocalDensity.current
+        val adWidthPx = with(density) { (LocalConfiguration.current.screenWidthDp.dp).roundToPx() }
+
         AndroidView(
-            factory = { context ->
-                AdView(context).apply {
-                    setAdSize(AdSize.ADAPTIVE_BANNER)
+            factory = { ctx ->
+                AdView(ctx).apply {
+                    setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, adWidthPx))
                     adUnitId = AdManager.BANNER_AD_UNIT_ID
                     loadAd(AdManager.buildAdRequest())
                 }
@@ -169,23 +177,20 @@ fun RemoveAdsBanner(
             Column {
                 Text(
                     text = "Civil Engineer Pro",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = sp(14)
+                    style = TextStyle(color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 )
                 Text(
                     text = "إزالة الإعلانات — استمتع بتجربة نظيفة",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = sp(11)
+                    style = TextStyle(color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                 )
             }
 
             OutlinedButton(
                 onClick = onUpgradeClick,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White,
-                    borderColor = Color.White.copy(alpha = 0.6f)
+                    contentColor = Color.White
                 ),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)),
                 shape = RoundedCornerShape(20.dp),
                 contentPadding = PaddingValues(
                     horizontal = 16.dp, vertical = 4.dp
@@ -193,8 +198,7 @@ fun RemoveAdsBanner(
             ) {
                 Text(
                     text = "ترقية Pro",
-                    fontSize = sp(12),
-                    fontWeight = FontWeight.SemiBold
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 )
             }
         }

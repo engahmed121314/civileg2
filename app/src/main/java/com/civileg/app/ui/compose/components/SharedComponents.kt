@@ -73,7 +73,7 @@ fun DesignCodeSelectorRow(
 ) {
     Column(modifier = modifier) {
         Text(
-            stringResource(R.string.design_code_label),
+            "Design Code",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -247,7 +247,7 @@ fun DesignStatusBanner(
                     Text(statusText, fontWeight = FontWeight.Bold, color = color)
                 }
                 Text(
-                    stringResource(R.string.utilization_ratio),
+                    "Utilization Ratio",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -303,7 +303,7 @@ fun DetailedResultsCard(
     title: String = "",
     modifier: Modifier = Modifier
 ) {
-    val resolvedTitle = title.ifEmpty { stringResource(R.string.detailed_results_title) }
+    val resolvedTitle = title.ifEmpty { "Detailed Results" }
     var expanded by remember { mutableStateOf(true) }
 
     Card(
@@ -376,7 +376,7 @@ fun BeamAnalysisResultsCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                stringResource(R.string.analysis_title),
+                "Analysis",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.primary
@@ -395,7 +395,7 @@ fun BeamAnalysisResultsCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.flexure), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text("Flexure", fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Text(
                     "Mu = ${"%.1f".format(appliedMoment)} kN.m",
                     fontWeight = FontWeight.Bold,
@@ -417,7 +417,7 @@ fun BeamAnalysisResultsCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.shear), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text("Shear", fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Text(
                     "Vu = ${"%.1f".format(appliedShear)} kN",
                     fontWeight = FontWeight.Bold,
@@ -451,9 +451,9 @@ object DesignSystem {
 @Composable
 fun statusTextComposable(ratio: Float): String = when {
     ratio > 1.0f -> stringResource(R.string.status_unsafe)
-    ratio > 0.9f -> stringResource(R.string.status_high_load)
-    ratio > 0.4f -> stringResource(R.string.status_safe_ideal)
-    else -> stringResource(R.string.status_uneconomical)
+    ratio > 0.9f -> "High Load"
+    ratio > 0.4f -> "Safe - Ideal"
+    else -> "Uneconomical"
 }
 
 // ============================================================================
@@ -555,7 +555,7 @@ fun FormulaCard(
     formulas: List<Pair<String, String>>,
     modifier: Modifier = Modifier
 ) {
-    val resolvedTitle = title.ifEmpty { stringResource(R.string.design_equations) }
+    val resolvedTitle = title.ifEmpty { "Design Equations" }
     var expanded by remember { mutableStateOf(false) }
 
     Card(

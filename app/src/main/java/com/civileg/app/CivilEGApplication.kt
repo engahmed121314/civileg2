@@ -101,7 +101,7 @@ class CivilEGApplication : Application() {
                     val statusMap = initializationStatus.adapterStatusMap
                     for (adapterClass in statusMap.keys) {
                         val status = statusMap[adapterClass]
-                        Log.d(TAG, "AdMob: ${adapterClass.name} = ${status?.initializationState?.name}")
+                        Log.d(TAG, "AdMob: $adapterClass = ${status?.initializationState?.name}")
                     }
                 }
             } else {

@@ -18,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -56,8 +57,8 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
             val projectViewModel: ProjectViewModel = hiltViewModel()
-            val designCount by projectViewModel.allDesigns
-                .collectAsStateWithLifecycle(initialValue = emptyList())
+            val designs by projectViewModel.allDesigns.observeAsState(initial = emptyList())
+            val designCount = designs.size
 
             val darkTheme = when (settings.themeMode) {
                 ThemeMode.LIGHT -> false
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    AppNavigation(drawerState, designCount.size)
+                    AppNavigation(drawerState, designCount)
                 }
             }
         }

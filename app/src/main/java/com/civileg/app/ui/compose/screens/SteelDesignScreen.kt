@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Stroke
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.nativeCanvas
@@ -385,7 +386,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
                 val nxNorm = ((baseY - rh) - (baseY - eh)) / lenL
                 val nyNorm = (midX - colLX) / lenL
                 val arrowLen = 25f
-                drawLine(loadColor, Offset(xL - nxNorm * arrowLen, yL - nyNorm * arrowLen), Offset(xL, yL), strokeWidth = 1.5f)
+                drawLine(loadColor, Offset(xL - nxNorm * arrowLen.toFloat(), yL - nyNorm * arrowLen.toFloat()), Offset(xL, yL), strokeWidth = 1.5f)
                 // Arrow head
                 drawLine(loadColor, Offset(xL - 4f, yL - 5f), Offset(xL, yL), strokeWidth = 1.5f)
                 drawLine(loadColor, Offset(xL + 4f, yL - 5f), Offset(xL, yL), strokeWidth = 1.5f)
@@ -393,21 +394,21 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
                 // Right rafter
                 val xR = midX + t * (colRX - midX)
                 val yR = (baseY - rh) + t * ((baseY - eh) - (baseY - rh))
-                drawLine(loadColor, Offset(xR + nxNorm * arrowLen, yR - nyNorm * arrowLen), Offset(xR, yR), strokeWidth = 1.5f)
+                drawLine(loadColor, Offset(xR + nxNorm * arrowLen.toFloat(), yR - nyNorm * arrowLen.toFloat()), Offset(xR, yR), strokeWidth = 1.5f)
                 drawLine(loadColor, Offset(xR - 4f, yR - 5f), Offset(xR, yR), strokeWidth = 1.5f)
                 drawLine(loadColor, Offset(xR + 4f, yR - 5f), Offset(xR, yR), strokeWidth = 1.5f)
             }
 
             // Load label
             drawContext.canvas.nativeCanvas.drawText(
-                "w = %.1f kN/m".format(result.mainFrame.maxShear / max(inputs.span, 1.0)),
+                "w = %.1f kN/m".format((result.mainFrame.maxShear / max(inputs.span, 1.0)).toFloat()),
                 (colLX + colRX) / 2f - 60f, baseY - rh - 35f,
-                android.graphics.Paint().apply { color = loadColor.toArgb(); textSize = 28f; isFakeBoldText = true }
+                android.graphics.Paint().apply { color = loadColor.toArgbInt(); textSize = 28f; isFakeBoldText = true }
             )
 
             // ── Bending Moment Diagram (filled) ──
             val momentColor = Color(0xFF42A5F5)
-            val maxMoment = result.mainFrame.maxMoment
+            val maxMoment = result.mainFrame.maxMoment.toFloat()
             val momentScale = min(eh * 0.35f / max(maxMoment, 1f), 0.5f)
 
             // Left rafter moment (parabolic)
@@ -475,7 +476,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
             // ── Dimension Lines ──
             val dimColor = Color(0xFFB0BEC5)
             val dimTextColor = Color.White
-            val textPaint = android.graphics.Paint().apply { color = dimTextColor.toArgb(); textSize = 24f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER }
+            val textPaint = android.graphics.Paint().apply { color = dimTextColor.toArgbInt(); textSize = 24f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER }
 
             // Span dimension
             val dimY = baseY + 35f
@@ -505,7 +506,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
             drawContext.canvas.nativeCanvas.restore()
 
             // ── Section Labels ──
-            val labelPaint = android.graphics.Paint().apply { color = Color(0xFF4FC3F7).toArgb(); textSize = 22f; isFakeBoldText = true }
+            val labelPaint = android.graphics.Paint().apply { color = Color(0xFF4FC3F7).toArgbInt(); textSize = 22f; isFakeBoldText = true }
             drawContext.canvas.nativeCanvas.save()
             drawContext.canvas.nativeCanvas.rotate(-90f, colLX - 12f, baseY - eh / 2f + 40f)
             drawContext.canvas.nativeCanvas.drawText(result.mainFrame.columnSection.displayName, colLX - 12f, baseY - eh / 2f + 40f, labelPaint)
@@ -516,8 +517,8 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
             val tbY = size.height - 90f
             drawRect(Color(0x22FFFFFF), Offset(tbX, tbY), Size(300f, 75f))
             drawRect(Color(0xFF4A90D9), Offset(tbX, tbY), Size(300f, 75f), style = Stroke(1.5f))
-            val tbPaint = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f }
-            val tbBold = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 22f; isFakeBoldText = true }
+            val tbPaint = android.graphics.Paint().apply { color = Color.White.toArgbInt(); textSize = 20f }
+            val tbBold = android.graphics.Paint().apply { color = Color.White.toArgbInt(); textSize = 22f; isFakeBoldText = true }
             drawContext.canvas.nativeCanvas.drawText("CivilEG - Steel Warehouse", tbX + 12f, tbY + 24f, tbBold)
             drawContext.canvas.nativeCanvas.drawText("M_max = %.1f kN.m | V_max = %.1f kN".format(maxMoment, result.mainFrame.maxShear), tbX + 12f, tbY + 48f, tbPaint)
             drawContext.canvas.nativeCanvas.drawText("Frame Analysis Diagram", tbX + 12f, tbY + 68f, tbPaint)
@@ -587,18 +588,18 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
 
             val textColor = Color.White
             val textPaint = android.graphics.Paint().apply {
-                color = textColor.toArgb()
+                color = textColor.toArgbInt()
                 textSize = 22f
                 isFakeBoldText = true
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             val dimPaint = android.graphics.Paint().apply {
-                color = Color(0xFFB0BEC5).toArgb()
+                color = Color(0xFFB0BEC5).toArgbInt()
                 textSize = 20f
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             val sectionPaint = android.graphics.Paint().apply {
-                color = Color(0xFF4FC3F7).toArgb()
+                color = Color(0xFF4FC3F7).toArgbInt()
                 textSize = 20f
                 isFakeBoldText = true
                 textAlign = android.graphics.Paint.Align.CENTER
@@ -639,7 +640,7 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                     listOf(colLX, colRX).forEach { cx ->
                         drawLine(colS, Offset(cx + 2f, groundY), Offset(cx + 2f, eaveY), strokeWidth = memberW + 3f)
                         drawLine(colC, Offset(cx, groundY), Offset(cx, eaveY), strokeWidth = memberW)
-                        drawLine(Color(0xFFE0E0E0), Offset(cx - 1.5f, groundY), Offset(cx - 1.5f, eaveY), strokeWidth = 1f)
+                        drawLine(Color(0xFFE0E0E0), Offset(cx - 1.5f.toFloat(), groundY), Offset(cx - 1.5f.toFloat(), eaveY), strokeWidth = 1f)
                     }
 
                     // Rafters (3D)
@@ -704,8 +705,8 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                     val tbY = size.height - 80f
                     drawRect(Color(0x22FFFFFF), Offset(tbX, tbY), Size(280f, 65f))
                     drawRect(Color(0xFF4A90D9), Offset(tbX, tbY), Size(280f, 65f), style = Stroke(1.5f))
-                    val tbP = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f }
-                    drawContext.canvas.nativeCanvas.drawText("CivilEG - Warehouse Front View", tbX + 10f, tbY + 22f, android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 20f; isFakeBoldText = true })
+                    val tbP = android.graphics.Paint().apply { color = Color.White.toArgbInt(); textSize = 20f }
+                    drawContext.canvas.nativeCanvas.drawText("CivilEG - Warehouse Front View", tbX + 10f, tbY + 22f, android.graphics.Paint().apply { color = Color.White.toArgbInt(); textSize = 20f; isFakeBoldText = true })
                     drawContext.canvas.nativeCanvas.drawText("Col: ${result.mainFrame.columnSection.displayName} | Rafter: ${result.mainFrame.rafterSection.displayName}", tbX + 10f, tbY + 45f, tbP)
                 }
 
@@ -901,7 +902,7 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                             val lineC = Color.White.copy(alpha = 0.1f + 0.08f * frameIdx)
                             drawLine(lineC, Offset(x0, y0 - eaveH), Offset(px, py - eaveH), strokeWidth = 1f)
                             drawLine(lineC, Offset(x0 + spanW, y0 - eaveH), Offset(px + spanW, py - eaveH), strokeWidth = 1f)
-                            drawLine(lineC, Offset(midXf, y0 - ridgeH), Offset(px + spanW / 2, py - ridgeH), strokeWidth = 1f)
+                            drawLine(lineC, Offset(midXf, y0 - ridgeH), Offset(px + spanW / 2.toFloat(), py - ridgeH), strokeWidth = 1f)
                         }
                     }
 
@@ -1128,7 +1129,7 @@ fun SectionResultCard(title: String, section: SteelSectionType) {
                 val w = size.width; val h = size.height; val t = 10f
                 drawRect(Color.DarkGray, Offset(0f, 0f), Size(w, t))
                 drawRect(Color.DarkGray, Offset(0f, h - t), Size(w, t))
-                drawRect(Color.DarkGray, Offset((w - t) / 2, 0f), Size(t, h))
+                drawRect(Color.DarkGray, Offset((w - t) / 2.toFloat(), 0f), Size(t, h))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -1772,7 +1773,7 @@ fun SteelSectionDrawing(section: SteelSectionType) {
                         // Bottom Flange
                         drawRect(Color.DarkGray, Offset(offsetBF, h - tf), Size(bf, tf))
                         // Web
-                        drawRect(Color.DarkGray, Offset((w - tw) / 2, tf), Size(tw, h - 2 * tf))
+                        drawRect(Color.DarkGray, Offset((w - tw) / 2.toFloat(), tf), Size(tw, h - 2 * tf))
                         
                         // Stress Distribution (Schematic)
                         drawLine(Color.Red.copy(alpha = 0.3f), Offset(w + 20f, 0f), Offset(w + 20f, h), strokeWidth = 2f)
@@ -2278,4 +2279,13 @@ private fun PropertyLine(label: String, value: String) {
         Spacer(Modifier.weight(1f))
         Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
+}
+
+
+private fun Color.toArgbInt(): Int {
+    val a = (alpha * 255).toInt() and 0xFF
+    val r = (red * 255).toInt() and 0xFF
+    val g = (green * 255).toInt() and 0xFF
+    val b = (blue * 255).toInt() and 0xFF
+    return (a shl 24) or (r shl 16) or (g shl 8) or b
 }

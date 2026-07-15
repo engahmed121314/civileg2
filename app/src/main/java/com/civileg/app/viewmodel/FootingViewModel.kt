@@ -133,7 +133,7 @@ class FootingViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _error.value = context.getString(R.string.error_pdf_export, e.message ?: "")
+                    _error.value = "PDF export failed: ${e.message ?: ""}"
                     _isExporting.value = false
                     onComplete(null)
                 }

@@ -257,7 +257,7 @@ private fun InteractionPointDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
+            TextButton(onClick = onDismiss) { Text("Close") }
         }
     )
 }
