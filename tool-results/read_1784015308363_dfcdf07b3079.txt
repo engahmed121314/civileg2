@@ -1,0 +1,1071 @@
+     1→package com.civileg.app.utils.exporters
+     2→
+     3→import android.content.Context
+     4→import android.graphics.Bitmap
+     5→import com.civileg.app.R
+     6→import com.civileg.app.domain.entities.*
+     7→import com.civileg.app.utils.ArabicFontProvider
+     8→import com.civileg.app.utils.CalculatorEngine
+     9→import com.itextpdf.io.font.PdfEncodings
+    10→import com.itextpdf.io.image.ImageDataFactory
+    11→import com.itextpdf.kernel.colors.ColorConstants
+    12→import com.itextpdf.kernel.colors.DeviceRgb
+    13→import com.itextpdf.kernel.font.PdfFont
+    14→import com.itextpdf.kernel.pdf.PdfDocument
+    15→import com.itextpdf.kernel.pdf.PdfWriter
+    16→import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
+    17→import com.itextpdf.layout.Document
+    18→import com.itextpdf.layout.element.*
+    19→import com.itextpdf.layout.properties.BaseDirection
+    20→import com.itextpdf.layout.properties.HorizontalAlignment
+    21→import com.itextpdf.layout.properties.TextAlignment
+    22→import com.itextpdf.layout.properties.UnitValue
+    23→import java.io.ByteArrayOutputStream
+    24→import java.io.File
+    25→import java.io.FileOutputStream
+    26→import java.text.SimpleDateFormat
+    27→import java.util.*
+    28→
+    29→/**
+    30→ * مصدّر PDF الشامل - Comprehensive PDF Exporter
+    31→ *
+    32→ * Generates professional Arabic/English bilingual structural design reports
+    33→ * with proper RTL text shaping, connected Arabic letters, and engineering formatting.
+    34→ *
+    35→ * Uses ArabicFontProvider to guarantee correct Arabic rendering via bundled
+    36→ * NotoNaskhArabic font with IDENTITY_H encoding and OpenType shaping.
+    37→ */
+    38→class ComprehensivePdfExporter(private val context: Context) {
+    39→
+    40→    // ==================== Color Palette ====================
+    41→    private val PRIMARY = DeviceRgb(21, 101, 192)
+    42→    private val SECONDARY = DeviceRgb(55, 71, 79)
+    43→    private val SUCCESS = DeviceRgb(46, 125, 50)
+    44→    private val ERROR = DeviceRgb(198, 40, 40)
+    45→    private val WARNING = DeviceRgb(245, 124, 0)
+    46→    private val LIGHT_BG = DeviceRgb(232, 245, 253)
+    47→    private val HEADER_BG = DeviceRgb(21, 101, 192)
+    48→    private val ROW_ALT = DeviceRgb(245, 245, 245)
+    49→    private val WHITE = DeviceRgb(255, 255, 255)
+    50→
+    51→    // ==================== Font Management ====================
+    52→    // ArabicFontProvider.getArabicPdfFont() now NEVER returns null
+    53→    private val arabicFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = false) }
+    54→    private val arabicBoldFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = true) }
+    55→
+    56→    private var currentLanguage: String = "ar"
+    57→
+    58→    fun setLanguage(lang: String): ComprehensivePdfExporter {
+    59→        this.currentLanguage = lang
+    60→        return this
+    61→    }
+    62→
+    63→    // ==================== Text Helpers ====================
+    64→    private fun isArabic(text: String) = ArabicFontProvider.containsArabic(text)
+    65→
+    66→    private fun ar(text: String): String = text
+    67→
+    68→    private fun styledParagraph(
+    69→        text: String,
+    70→        fontSize: Float = 10f,
+    71→        bold: Boolean = false,
+    72→        color: DeviceRgb? = null,
+    73→        alignment: TextAlignment? = null,
+    74→        rtl: Boolean? = null
+    75→    ): Paragraph {
+    76→        val p = Paragraph(text).setFontSize(fontSize)
+    77→        if (bold) {
+    78→            p.setBold()
+    79→            if (isArabic(text)) p.setFont(arabicBoldFont)
+    80→        }
+    81→        color?.let { p.setFontColor(it) }
+    82→        alignment?.let { p.setTextAlignment(it) }
+    83→
+    84→        val useRtl = rtl ?: isArabic(text)
+    85→        if (useRtl) {
+    86→            p.setFont(if (bold) arabicBoldFont else arabicFont)
+    87→            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+    88→        }
+    89→        return p
+    90→    }
+    91→
+    92→    private fun rtlParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null): Paragraph {
+    93→        return styledParagraph(text, fontSize, bold, color, TextAlignment.RIGHT, true)
+    94→    }
+    95→
+    96→    private fun tableCell(
+    97→        text: String,
+    98→        fontSize: Float = 9f,
+    99→        bold: Boolean = false,
+   100→        color: DeviceRgb? = null,
+   101→        bg: DeviceRgb? = null,
+   102→        align: TextAlignment = TextAlignment.CENTER
+   103→    ): Cell {
+   104→        val cell = Cell().setPadding(4f)
+   105→        val p = styledParagraph(text, fontSize, bold, color, align)
+   106→        cell.add(p)
+   107→        bg?.let { cell.setBackgroundColor(it) }
+   108→        return cell
+   109→    }
+   110→
+   111→    private fun rtlCell(text: String, fontSize: Float = 9f, bold: Boolean = false, bg: DeviceRgb? = null): Cell {
+   112→        val cell = Cell().setPadding(4f).setTextAlignment(TextAlignment.RIGHT)
+   113→        val p = Paragraph(text).setFontSize(fontSize)
+   114→        if (bold) {
+   115→            p.setBold()
+   116→            p.setFont(arabicBoldFont)
+   117→        } else {
+   118→            p.setFont(arabicFont)
+   119→        }
+   120→        if (isArabic(text)) {
+   121→            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+   122→        }
+   123→        cell.add(p)
+   124→        bg?.let { cell.setBackgroundColor(it) }
+   125→        return cell
+   126→    }
+   127→
+   128→    private fun headerCell(text: String, colSpan: Int = 1): Cell {
+   129→        val cell = Cell(colSpan, 1)
+   130→            .setPadding(6f)
+   131→            .setBackgroundColor(HEADER_BG)
+   132→            .setTextAlignment(TextAlignment.CENTER)
+   133→        val p = Paragraph(text).setFontSize(9f).setBold().setFontColor(WHITE)
+   134→        if (isArabic(text)) {
+   135→            p.setFont(arabicBoldFont)
+   136→            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+   137→        }
+   138→        cell.add(p)
+   139→        return cell
+   140→    }
+   141→
+   142→    // ==================== Document Structure ====================
+   143→    private fun createDocument(outputPath: String): Triple<PdfDocument, Document, PdfFont> {
+   144→        val writer = PdfWriter(FileOutputStream(outputPath))
+   145→        val pdf = PdfDocument(writer)
+   146→        val document = Document(pdf)
+   147→        document.setMargins(40f, 40f, 40f, 40f)
+   148→        return Triple(pdf, document, arabicFont)
+   149→    }
+   150→
+   151→    private fun addReportHeader(document: Document, titleAr: String, titleEn: String, subtitle: String, font: PdfFont) {
+   152→        // App name - always Arabic with proper font
+   153→        val appName = Paragraph(context.getString(R.string.app_name))
+   154→            .setFontSize(22f)
+   155→            .setBold()
+   156→            .setFont(arabicBoldFont)
+   157→            .setFontColor(PRIMARY)
+   158→            .setTextAlignment(TextAlignment.CENTER)
+   159→            .setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+   160→        document.add(appName)
+   161→
+   162→        // English subtitle
+   163→        document.add(Paragraph("Civil EG - Advanced Structural Design")
+   164→            .setFontSize(10f)
+   165→            .setTextAlignment(TextAlignment.CENTER)
+   166→            .setFontColor(ColorConstants.GRAY))
+   167→
+   168→        document.add(LineSeparator(SolidLine(2f)).setMarginTop(5f).setMarginBottom(10f))
+   169→
+   170→        // Report title
+   171→        val titlePara = styledParagraph("$titleAr  |  $titleEn", 16f, true, PRIMARY, TextAlignment.CENTER)
+   172→        document.add(titlePara)
+   173→
+   174→        // Subtitle
+   175→        document.add(Paragraph(subtitle)
+   176→            .setFontSize(10f)
+   177→            .setFontColor(SECONDARY)
+   178→            .setTextAlignment(TextAlignment.CENTER))
+   179→
+   180→        // Date
+   181→        val dateStr = SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale("ar")).format(Date())
+   182→        val datePara = styledParagraph(dateStr, 9f, color = ColorConstants.GRAY as DeviceRgb, alignment = TextAlignment.CENTER)
+   183→        document.add(datePara)
+   184→
+   185→        document.add(LineSeparator(SolidLine(0.5f)).setMarginTop(5f).setMarginBottom(10f))
+   186→    }
+   187→
+   188→    private fun addStatusBanner(document: Document, isSafe: Boolean, details: String = "") {
+   189→        val text = if (isSafe) {
+   190→            if (details.isNotEmpty()) "${ar("الحالة: آمن - مطابق للكود")} | STATUS: SAFE\n$details"
+   191→            else "${ar("الحالة: آمن - مطابق للكود")} | STATUS: SAFE \u2714"
+   192→        } else {
+   193→            if (details.isNotEmpty()) "${ar("الحالة: غير آمن - يحتاج مراجعة")} | STATUS: UNSAFE\n$details"
+   194→            else "${ar("الحالة: غير آمن - يحتاج مراجعة")} | STATUS: UNSAFE \u2718"
+   195→        }
+   196→        val p = styledParagraph(text, 11f, true,
+   197→            if (isSafe) SUCCESS else ERROR,
+   198→            TextAlignment.CENTER
+   199→        )
+   200→        p.setPadding(8f)
+   201→        p.setBorder(com.itextpdf.layout.borders.SolidBorder(if (isSafe) SUCCESS else ERROR, 1.5f))
+   202→        document.add(p)
+   203→        document.add(Paragraph(" "))
+   204→    }
+   205→
+   206→    private fun addSectionTitle(document: Document, titleAr: String, titleEn: String) {
+   207→        val text = "$titleAr  -  $titleEn"
+   208→        val p = styledParagraph(text, 12f, true, PRIMARY, TextAlignment.CENTER)
+   209→        document.add(p)
+   210→        document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(8f))
+   211→    }
+   212→
+   213→    private fun addInfoTable(document: Document, rows: List<Pair<String, String>>, font: PdfFont) {
+   214→        val table = Table(UnitValue.createPercentArray(floatArrayOf(45f, 55f))).useAllAvailableWidth()
+   215→        var rowIndex = 0
+   216→        for ((label, value) in rows) {
+   217→            val bg = if (rowIndex % 2 == 0) null else ROW_ALT
+   218→            val labelAr = isArabic(label)
+   219→            val valueAr = isArabic(value)
+   220→
+   221→            val labelCell = Cell().setPadding(4f)
+   222→            if (labelAr) labelCell.setTextAlignment(TextAlignment.RIGHT)
+   223→            val lp = Paragraph(label).setFontSize(9f).setBold()
+   224→            if (labelAr) {
+   225→                lp.setFont(arabicBoldFont)
+   226→                lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+   227→            }
+   228→            labelCell.add(lp)
+   229→            bg?.let { labelCell.setBackgroundColor(it) }
+   230→            table.addCell(labelCell)
+   231→
+   232→            val valueCell = Cell().setPadding(4f)
+   233→            if (valueAr) valueCell.setTextAlignment(TextAlignment.RIGHT)
+   234→            val vp = Paragraph(value).setFontSize(9f)
+   235→            if (valueAr) {
+   236→                vp.setFont(arabicFont)
+   237→                vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+   238→            }
+   239→            valueCell.add(vp)
+   240→            bg?.let { valueCell.setBackgroundColor(it) }
+   241→            table.addCell(valueCell)
+   242→
+   243→            rowIndex++
+   244→        }
+   245→        document.add(table)
+   246→        document.add(Paragraph(" "))
+   247→    }
+   248→
+   249→    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
+   250→        if (bitmap == null) return
+   251→        document.add(Paragraph(" "))
+   252→        addSectionTitle(document, ar("الرسم الهندسي"), title)
+   253→        try {
+   254→            val stream = java.io.ByteArrayOutputStream()
+   255→            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+   256→            val img = Image(ImageDataFactory.create(stream.toByteArray()))
+   257→            img.setAutoScale(true)
+   258→            img.setHorizontalAlignment(HorizontalAlignment.CENTER)
+   259→            document.add(img)
+   260→        } catch (e: Exception) {
+   261→            document.add(styledParagraph("[Drawing not available]", 9f, color = ColorConstants.GRAY as DeviceRgb))
+   262→        }
+   263→        document.add(Paragraph(" "))
+   264→    }
+   265→
+   266→    private fun addFooter(document: Document) {
+   267→        document.add(Paragraph(" "))
+   268→        document.add(LineSeparator(SolidLine(0.5f)).setMarginTop(10f).setMarginBottom(5f))
+   269→        val footer = styledParagraph(
+   270→            "${ar("تم إنشاء هذا التقرير تلقائياً بواسطة تطبيق Civil EG Pro")}\nGenerated by Civil EG Pro - ${SimpleDateFormat("yyyy/MM/dd", Locale.US).format(Date())}",
+   271→            8f, color = ColorConstants.GRAY as DeviceRgb, alignment = TextAlignment.CENTER
+   272→        )
+   273→        document.add(footer)
+   274→        document.add(Paragraph(
+   275→            ar("هذا التقرير لأغراض مرجعية فقط - يجب مراجعته بواسطة مهندس مؤهل قبل التنفيذ") +
+   276→            " | This report is for reference only - must be reviewed by a qualified engineer before execution."
+   277→        ).setFontSize(7f).setFontColor(ColorConstants.LIGHT_GRAY).setTextAlignment(TextAlignment.CENTER))
+   278→    }
+   279→
+   280→    // ==================== Method 1: Beam Report ====================
+   281→    fun exportBeamReport(
+   282→        projectName: String,
+   283→        designCode: DesignCode,
+   284→        beamType: BeamType,
+   285→        inputs: BeamInputs,
+   286→        result: AdvancedBeamResult,
+   287→        inventoryAnalysis: InventoryAnalysisResult?,
+   288→        momentShearDiagrams: MomentShearDiagrams,
+   289→        outputPath: String,
+   290→        drawingBitmap: Bitmap? = null
+   291→    ): File? {
+   292→        return try {
+   293→            val (_, document, font) = createDocument(outputPath)
+   294→
+   295→            addReportHeader(document,
+   296→                ar("تقرير تصميم كمرات خرسانية"),
+   297→                "Reinforced Concrete Beam Design Report",
+   298→                "${designCode.version} | ${beamType::class.simpleName}",
+   299→                font
+   300→            )
+   301→
+   302→            addStatusBanner(document, result.flexureResult.isSafe,
+   303→                "Utilization: ${(result.flexureResult.utilizationRatio * 100).format(1)}%"
+   304→            )
+   305→
+   306→            // Design Parameters
+   307→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+   308→            addInfoTable(document, listOf(
+   309→                ar("اسم المشروع") to projectName,
+   310→                ar("الكود التصميمي") to designCode.version,
+   311→                ar("نوع الكمرة") to (beamType::class.simpleName ?: "N/A"),
+   312→                ar("العرض") to "${inputs.width.format(0)} mm",
+   313→                ar("الارتفاع الكلي") to "${inputs.totalDepth.format(0)} mm",
+   314→                ar("العمق الفعال") to "${inputs.effectiveDepth.format(0)} mm",
+   315→                ar("البحر") to "${inputs.span.format(2)} m",
+   316→                ar("الحمل الميت") to "${inputs.deadLoad.format(2)} kN/m\u00B2",
+   317→                ar("الحمل الحي") to "${inputs.liveLoad.format(2)} kN/m\u00B2",
+   318→                ar("مقاومة الخرسانة") to "f'c = ${inputs.fcu.format(0)} MPa",
+   319→                ar("مقاومة الحديد") to "fy = ${inputs.fy.format(0)} MPa",
+   320→                ar("العزم التصميمي") to "${inputs.designMoment.format(2)} kN.m",
+   321→                ar("القص التصميمي") to "${inputs.designShear.format(2)} kN"
+   322→            ), font)
+   323→
+   324→            // Flexure Design
+   325→            addSectionTitle(document, ar("نتائج التصميم - الانحناء"), "Flexure Design Results")
+   326→            val fr = result.flexureResult
+   327→            addInfoTable(document, listOf(
+   328→                ar("مساحة الحديد المطلوبة") to "${fr.astRequired.format(1)} mm\u00B2",
+   329→                ar("مساحة الحديد المزود") to "${fr.astProvided.format(1)} mm\u00B2",
+   330→                ar("قطر الحديد") to "\u00D8${fr.barDiameter.toInt()} mm",
+   331→                ar("عدد الحديد") to "${fr.numberOfBars} \u03C6${fr.barDiameter.toInt()}",
+   332→                ar("قطر الكانات") to "\u00D8${fr.tiesDiameter.toInt()} mm",
+   333→                ar("مسافة الكانات") to "@ ${fr.tiesSpacing.toInt()} mm",
+   334→                ar("نسبة الاستخدام") to "${(fr.utilizationRatio * 100).format(1)}%",
+   335→                ar("الحالة") to if (fr.isSafe) ar("آمن \u2714") else ar("غير آمن \u2718")
+   336→            ), font)
+   337→
+   338→            // Shear Design
+   339→            addSectionTitle(document, ar("نتائج التصميم - القص"), "Shear Design Results")
+   340→            val sr = result.shearResult
+   341→            addInfoTable(document, listOf(
+   342→                ar("الحالة") to if (sr.isSafe) ar("آمن \u2714") else ar("غير آمن \u2718"),
+   343→                ar("قطر الكانات") to "\u00D8${sr.stirrupDiameter.toInt()} mm",
+   344→                ar("مسافة الكانات") to "@ ${sr.stirrupSpacing.toInt()} mm",
+   345→                ar("نسبة الاستخدام") to "${(sr.utilizationRatio * 100).format(1)}%"
+   346→            ), font)
+   347→
+   348→            // Deflection Check
+   349→            addSectionTitle(document, ar("التحقق من الهبوط"), "Deflection Check")
+   350→            val dc = result.deflectionCheck
+   351→            addInfoTable(document, listOf(
+   352→                ar("الهبوط المحسوب") to "${dc.calculatedDeflection.format(2)} mm",
+   353→                ar("الهبوط المسموح") to "${dc.allowableDeflection.format(2)} mm",
+   354→                ar("الحالة") to if (dc.isSafe) ar("مطابق \u2714") else ar("غير مطابق \u2718")
+   355→            ), font)
+   356→
+   357→            // Warnings & Notes
+   358→            if (result.warnings.isNotEmpty() || result.codeNotes.isNotEmpty()) {
+   359→                addSectionTitle(document, ar("ملاحظات وتحذيرات"), "Warnings & Code Notes")
+   360→                (result.warnings + result.codeNotes).forEach { note ->
+   361→                    val p = styledParagraph("\u2022 $note", 9f, color = if (note.contains("تحذير", true) || note.contains("warning", true)) WARNING else SECONDARY)
+   362→                    document.add(p)
+   363→                }
+   364→            }
+   365→
+   366→            addDrawingSection(document, drawingBitmap, "Beam Reinforcement Detail")
+   367→            addFooter(document)
+   368→            document.close()
+   369→            File(outputPath)
+   370→        } catch (e: Exception) {
+   371→            e.printStackTrace()
+   372→            null
+   373→        }
+   374→    }
+   375→
+   376→    // ==================== Method 2: Column Report ====================
+   377→    fun exportColumnReport(
+   378→        projectName: String,
+   379→        designCode: DesignCode,
+   380→        columnType: ColumnType,
+   381→        inputs: ColumnInputs,
+   382→        result: AdvancedColumnResult,
+   383→        inventoryAnalysis: InventoryAnalysisResult?,
+   384→        alternatives: List<ColumnAlternative>,
+   385→        outputPath: String,
+   386→        drawingBitmap: Bitmap? = null
+   387→    ): File? {
+   388→        return try {
+   389→            val (_, document, font) = createDocument(outputPath)
+   390→
+   391→            addReportHeader(document,
+   392→                ar("تقرير تصميم أعمدة خرسانية"),
+   393→                "Reinforced Concrete Column Design Report",
+   394→                "${designCode.version} | ${columnType::class.simpleName}",
+   395→                font
+   396→            )
+   397→
+   398→            addStatusBanner(document, result.reinforcementResult.isSafe,
+   399→                "Capacity: ${result.axialCapacity.format(1)} kN | Applied: ${inputs.axialLoad.format(1)} kN"
+   400→            )
+   401→
+   402→            // Design Parameters
+   403→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+   404→            val colDims = when (columnType) {
+   405→                is ColumnType.Rectangular -> "${columnType.width.format(0)} x ${columnType.depth.format(0)} mm"
+   406→                is ColumnType.Circular -> "\u00D8${columnType.diameter.format(0)} mm"
+   407→                else -> columnType::class.simpleName ?: "N/A"
+   408→            }
+   409→            addInfoTable(document, listOf(
+   410→                ar("اسم المشروع") to projectName,
+   411→                ar("الكود التصميمي") to designCode.version,
+   412→                ar("نوع العمود") to colDims,
+   413→                ar("الارتفاع غير مسنود") to "${inputs.unsupportedLength.format(2)} m",
+   414→                ar("الحمل المحوري") to "${inputs.axialLoad.format(1)} kN",
+   415→                ar("العزم حول X") to "${inputs.momentX.format(2)} kN.m",
+   416→                ar("العزم حول Y") to "${inputs.momentY.format(2)} kN.m",
+   417→                ar("مقاومة الخرسانة") to "f'c = ${inputs.fcu.format(0)} MPa",
+   418→                ar("مقاومة الحديد") to "fy = ${inputs.fy.format(0)} MPa"
+   419→            ), font)
+   420→
+   421→            // Reinforcement Design
+   422→            addSectionTitle(document, ar("نتائج التصميم"), "Design Results")
+   423→            val rr = result.reinforcementResult
+   424→            addInfoTable(document, listOf(
+   425→                ar("القدرة المحورية") to "${result.axialCapacity.format(1)} kN",
+   426→                ar("قدرة الانحناء X") to "${result.momentCapacityX.format(2)} kN.m",
+   427→                ar("قدرة الانحناء Y") to "${result.momentCapacityY.format(2)} kN.m",
+   428→                ar("نسبة النحافة") to "${result.slendernessRatio.format(1)}",
+   429→                ar("عمود رفيع") to if (result.isSlender) ar("نعم") else ar("لا"),
+   430→                ar("الطول الفعال") to "${result.effectiveLength.format(0)} mm",
+   431→                ar("مساحة الحديد المطلوبة") to "${rr.astRequired.format(1)} mm\u00B2",
+   432→                ar("مساحة الحديد المزود") to "${rr.astProvided.format(1)} mm\u00B2",
+   433→                ar("قطر الحديد الرئيسي") to "\u00D8${rr.barDiameter.toInt()} mm",
+   434→                ar("عدد الحديد") to "${rr.numberOfBars} \u03C6${rr.barDiameter.toInt()}",
+   435→                ar("قطر الكانات") to "\u00D8${rr.tiesDiameter.toInt()} mm",
+   436→                ar("مسافة الكانات") to "@ ${rr.tiesSpacing.toInt()} mm",
+   437→                ar("وزن الحديد/م.ط") to "${result.steelWeightPerMeter.format(2)} kg/m",
+   438→                ar("حجم الخرسانة/م.ط") to "${result.concreteVolumePerMeter.format(4)} m\u00B3/m"
+   439→            ), font)
+   440→
+   441→            // Alternatives table
+   442→            if (alternatives.isNotEmpty()) {
+   443→                addSectionTitle(document, ar("بدائل التسليح"), "Reinforcement Alternatives")
+   444→                val table = Table(UnitValue.createPercentArray(floatArrayOf(25f, 25f, 25f, 25f))).useAllAvailableWidth()
+   445→                table.addHeaderCell(headerCell("Bar Dia. (\u00D8mm)"))
+   446→                table.addHeaderCell(headerCell("No. of Bars"))
+   447→                table.addHeaderCell(headerCell("Area (mm\u00B2)"))
+   448→                table.addHeaderCell(headerCell(ar("الحالة") + " | Status"))
+   449→                alternatives.forEachIndexed { i, alt ->
+   450→                    val bg = if (i % 2 == 0) null else ROW_ALT
+   451→                    table.addCell(tableCell("\u00D8${alt.barDiameter.toInt()}", bg = bg))
+   452→                    table.addCell(tableCell("${alt.numberOfBars}", bg = bg))
+   453→                    table.addCell(tableCell(alt.totalArea.format(1), bg = bg))
+   454→                    table.addCell(tableCell(
+   455→                        if (alt.isSafe) ar("آمن") + " \u2714" else ar("غير آمن") + " \u2718",
+   456→                        color = if (alt.isSafe) SUCCESS else ERROR, bg = bg
+   457→                    ))
+   458→                }
+   459→                document.add(table)
+   460→                document.add(Paragraph(" "))
+   461→            }
+   462→
+   463→            // Warnings & Notes
+   464→            if (result.warnings.isNotEmpty() || result.codeNotes.isNotEmpty()) {
+   465→                addSectionTitle(document, ar("ملاحظات"), "Code Notes")
+   466→                (result.warnings + result.codeNotes).forEach { note ->
+   467→                    document.add(styledParagraph("\u2022 $note", 9f, color = SECONDARY))
+   468→                }
+   469→            }
+   470→
+   471→            addDrawingSection(document, drawingBitmap, "Column Reinforcement Detail")
+   472→            addFooter(document)
+   473→            document.close()
+   474→            File(outputPath)
+   475→        } catch (e: Exception) {
+   476→            e.printStackTrace()
+   477→            null
+   478→        }
+   479→    }
+   480→
+   481→    // ==================== Method 3: Slab Report ====================
+   482→    fun exportSlabReport(
+   483→        projectName: String,
+   484→        designCode: DesignCode,
+   485→        slabType: SlabType,
+   486→        inputs: SlabInputs,
+   487→        result: AdvancedSlabResult,
+   488→        outputPath: String,
+   489→        drawingBitmap: Bitmap? = null
+   490→    ): File? {
+   491→        return try {
+   492→            val (pdfDoc, document, font) = createDocument(outputPath)
+   493→
+   494→            // Determine slab type name in Arabic
+   495→            val slabTypeNameAr = when (slabType) {
+   496→                is SlabType.Solid -> "بلاطة صلبة (Solid Slab)"
+   497→                is SlabType.FlatPlate -> "بلاطة مسطحة (Flat Plate)"
+   498→                is SlabType.Hordi -> "بلاطة هوردي (Ribbed Slab)"
+   499→                is SlabType.Waffle -> "بلاطة مجازين (Waffle Slab)"
+   500→                else -> slabType::class.simpleName ?: "N/A"
+   501→            }
+   502→
+   503→            addReportHeader(document,
+   504→                ar("تقرير تصميم بلاطات خرسانية"),
+   505→                "Reinforced Concrete Slab Design Report",
+   506→                "${designCode.version} | $slabTypeNameAr",
+   507→                font
+   508→            )
+   509→
+   510→            addStatusBanner(document, result.flexureResult.isSafe,
+   511→                if (result.flexureResult.utilizationRatio > 0) "Utilization: ${(result.flexureResult.utilizationRatio * 100).format(1)}%" else ""
+   512→            )
+   513→
+   514→            // ===== 1. Design Parameters =====
+   515→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+   516→            
+   517→            // Slab geometry info
+   518→            val ratio = if (inputs.longSpan > 0) inputs.shortSpan / inputs.longSpan else 1.0
+   519→            val isOneWay = ratio < 0.5
+   520→            val slabDirection = if (isOneWay) ar("اتجاه واحد (One-Way)") else ar("اتجاهين (Two-Way)")
+   521→            
+   522→            addInfoTable(document, listOf(
+   523→                ar("اسم المشروع") to projectName,
+   524→                ar("الكود التصميمي") to designCode.version,
+   525→                ar("نوع البلاطة") to slabTypeNameAr,
+   526→                ar("اتجاه الانحناء") to slabDirection,
+   527→                ar("نسبة البحور Lx/Ly") to "${ratio.format(3)}",
+   528→                ar("السمك الفعلي") to "${inputs.thickness.format(0)} mm",
+   529→                ar("السمك الأدنى المطلوب") to "${result.flexureResult.minThickness.format(0)} mm",
+   530→                ar("البحر القصير Lx") to "${inputs.shortSpan.format(2)} m",
+   531→                ar("البحر الطويل Ly") to "${inputs.longSpan.format(2)} m",
+   532→                ar("الحمل الميت DL") to "${inputs.deadLoad.format(2)} kN/m\u00B2",
+   533→                ar("الحمل الحي LL") to "${inputs.liveLoad.format(2)} kN/m\u00B2",
+   534→                ar("مقاومة الخرسانة") to "f'cu = ${inputs.fcu.format(0)} MPa",
+   535→                ar("مقاومة الحديد") to "fy = ${inputs.fy.format(0)} MPa"
+   536→            ), font)
+   537→
+   538→            // ===== 2. Load Calculations =====
+   539→            addSectionTitle(document, ar("حسابات الأحمال"), "Load Calculations")
+   540→            val wu = 1.4 * inputs.deadLoad + 1.6 * inputs.liveLoad
+   541→            val spanRatioStr = if (isOneWay) {
+   542→                "Lx = ${inputs.shortSpan.format(2)} m (One-Way)"
+   543→            } else {
+   544→                "Lx/Ly = ${ratio.format(2)} (Two-Way, alpha/beta factors applied)"
+   545→            }
+   546→            addInfoTable(document, listOf(
+   547→                ar("معامل التحميل الميت") to "1.4 (per ${designCode.version})",
+   548→                ar("معامل التحميل الحي") to "1.6 (per ${designCode.version})",
+   549→                ar("الحمل التصميمي Wu") to "${wu.format(2)} kN/m\u00B2",
+   550→                ar("المعادلة") to "Wu = 1.4*DL + 1.6*LL = 1.4*${inputs.deadLoad.format(1)} + 1.6*${inputs.liveLoad.format(1)} = ${wu.format(2)} kN/m\u00B2",
+   551→                ar("طريقة الحساب") to spanRatioStr
+   552→            ), font)
+   553→
+   554→            // ===== 3. Flexure Design Results =====
+   555→            addSectionTitle(document, ar("نتائج التصميم - الانحناء"), "Flexure Design Results")
+   556→            val fd = result.flexureResult
+   557→            addInfoTable(document, listOf(
+   558→                ar("مساحة الحديد المطلوبة As_req") to "${fd.requiredReinforcement.format(1)} mm\u00B2/m",
+   559→                ar("مساحة الحديد المزود As_prov") to "${fd.providedReinforcement.format(1)} mm\u00B2/m",
+   560→                ar("نسبة الاستخدام") to "${(fd.utilizationRatio * 100).format(1)}%",
+   561→                ar("الحالة") to if (fd.isSafe) ar("آمن - مطابق للكود \u2714") else ar("غير آمن - يحتاج مراجعة \u2718"),
+   562→                ar("حجم الخرسانة") to "${result.concreteVolume.format(3)} m\u00B3",
+   563→                ar("مساحة القالب") to "${result.formworkArea.format(2)} m\u00B2"
+   564→            ), font)
+   565→
+   566→            // ===== 4. Reinforcement Details =====
+   567→            addSectionTitle(document, ar("تفاصيل التسليح"), "Reinforcement Details")
+   568→            val rl = result.reinforcementLayout
+   569→            
+   570→            // Professional reinforcement schedule table
+   571→            val rebarTable = Table(UnitValue.createPercentArray(floatArrayOf(25f, 20f, 20f, 20f, 15f))).useAllAvailableWidth()
+   572→            rebarTable.addHeaderCell(headerCell(ar("الوصف") + " | Description"))
+   573→            rebarTable.addHeaderCell(headerCell(ar("القطر") + " | Dia."))
+   574→            rebarTable.addHeaderCell(headerCell(ar("المسافة") + " | Spacing"))
+   575→            rebarTable.addHeaderCell(headerCell(ar("الاتجاه") + " | Direction"))
+   576→            rebarTable.addHeaderCell(headerCell(ar("الطبقة") + " | Layer"))
+   577→            
+   578→            val bottomBars = rl.bottomBars
+   579→            val topBars = rl.topBars
+   580→            
+   581→            rebarTable.addCell(rtlCell(ar("حديد أساسي سفلي") + " | Main Bottom", bg = ROW_ALT))
+   582→            rebarTable.addCell(tableCell("\u03C6${bottomBars.diameter.format(0)} mm", bg = ROW_ALT))
+   583→            rebarTable.addCell(tableCell("@ ${bottomBars.spacing.format(0)} mm", bg = ROW_ALT))
+   584→            rebarTable.addCell(tableCell(if (isOneWay) "Lx" else "Lx (Short)", bg = ROW_ALT))
+   585→            rebarTable.addCell(tableCell(ar("سفلي"), bg = ROW_ALT))
+   586→            
+   587→            rebarTable.addCell(rtlCell(ar("حديد أساسي علوي") + " | Main Top"))
+   588→            rebarTable.addCell(tableCell("\u03C6${topBars.diameter.format(0)} mm"))
+   589→            rebarTable.addCell(tableCell("@ ${topBars.spacing.format(0)} mm"))
+   590→            rebarTable.addCell(tableCell(if (isOneWay) "Lx" else "Ly (Long)"))
+   591→            rebarTable.addCell(tableCell(ar("علوي")))
+   592→            
+   593→            if (rl.distributionBars != null) {
+   594→                val dist = rl.distributionBars
+   595→                rebarTable.addCell(rtlCell(ar("حديد التوزيع") + " | Distribution", bg = ROW_ALT))
+   596→                rebarTable.addCell(tableCell("\u03C6${dist.diameter.format(0)} mm", bg = ROW_ALT))
+   597→                rebarTable.addCell(tableCell("@ ${dist.spacing.format(0)} mm", bg = ROW_ALT))
+   598→                rebarTable.addCell(tableCell(if (isOneWay) "Ly (perp.)" else "Both", bg = ROW_ALT))
+   599→                rebarTable.addCell(tableCell(ar("سفلي"), bg = ROW_ALT))
+   600→            }
+   601→            
+   602→            document.add(rebarTable)
+   603→            document.add(Paragraph(" "))
+   604→
+   605→            // ===== 5. Shear & Punching Checks =====
+   606→            addSectionTitle(document, ar("التحقق من القص والاختراق"), "Shear & Punching Checks")
+   607→            addInfoTable(document, listOf(
+   608→                ar("القص - الحالة") to if (result.shearCheck.isSafe) ar("آمن \u2714") else ar("غير آمن \u2718"),
+   609→                ar("القص - القوة المطبقة") to "${result.shearCheck.appliedShear.format(1)} kN",
+   610→                ar("القص - القدرة القصية") to "${result.shearCheck.shearCapacity.format(1)} kN",
+   611→                ar("القص - نسبة الاستخدام") to "${(result.shearCheck.utilizationRatio * 100).format(1)}%"
+   612→            ) + (result.punchingShearCheck?.let {
+   613→                listOf(
+   614→                    ar("الاختراق - الحالة") to if (it.isSafe) ar("آمن \u2714") else ar("غير آمن \u2718"),
+   615→                    ar("الاختراق - القوة المطبقة") to "${it.appliedShear.format(1)} kN",
+   616→                    ar("الاختراق - القدرة القصية") to "${it.shearCapacity.format(1)} kN",
+   617→                    ar("الاختراق - نسبة الاستخدام") to "${(it.utilizationRatio * 100).format(1)}%"
+   618→                )
+   619→            } ?: emptyList()), font)
+   620→
+   621→            // ===== 6. Deflection Check =====
+   622→            if (result.deflectionCheck != null) {
+   623→                addSectionTitle(document, ar("التحقق من الهبوط"), "Deflection Check")
+   624→                val dc = result.deflectionCheck
+   625→                addInfoTable(document, listOf(
+   626→                    ar("الهبوط المحسوب") to "${dc.calculatedDeflection.format(2)} mm",
+   627→                    ar("الهبوط المسموح") to "${dc.allowableDeflection.format(2)} mm",
+   628→                    ar("النسبة") to "${(dc.ratio * 100).format(1)}%",
+   629→                    ar("الحالة") to if (dc.isSafe) ar("مطابق \u2714") else ar("غير مطابق \u2718")
+   630→                ), font)
+   631→            }
+   632→
+   633→            // ===== 7. Quantities =====
+   634→            addSectionTitle(document, ar("الكميات والتكلفة"), "Quantities & Cost Estimate")
+   635→            addInfoTable(document, listOf(
+   636→                ar("حجم الخرسانة") to "${result.concreteVolume.format(3)} m\u00B3",
+   637→                ar("مساحة القالب") to "${result.formworkArea.format(2)} m\u00B2"
+   638→            ), font)
+   639→
+   640→            // ===== 8. Warnings & Code Notes =====
+   641→            if (result.warnings.isNotEmpty() || result.codeNotes.isNotEmpty()) {
+   642→                addSectionTitle(document, ar("ملاحظات وتحذيرات"), "Warnings & Code Notes")
+   643→                (result.warnings + result.codeNotes).forEach { note ->
+   644→                    val isWarning = note.contains("تحذير", true) || note.contains("warning", true) || note.contains("خطر", true)
+   645→                    document.add(styledParagraph("\u2022 $note", 9f, color = if (isWarning) WARNING else SECONDARY))
+   646→                }
+   647→            }
+   648→
+   649→            // ===== 9. Engineering Drawing =====
+   650→            addDrawingSection(document, drawingBitmap, "Slab Reinforcement Layout")
+   651→            addFooter(document)
+   652→            document.close()
+   653→            File(outputPath)
+   654→        } catch (e: Exception) {
+   655→            e.printStackTrace()
+   656→            null
+   657→        }
+   658→    }
+   659→
+   660→    // ==================== Method 4: Steel Report ====================
+   661→    fun exportSteelReport(
+   662→        projectName: String,
+   663→        designCode: DesignCode,
+   664→        sectionType: SteelSectionType,
+   665→        memberType: SteelMemberType,
+   666→        inputs: SteelInputs,
+   667→        result: SteelMemberResult,
+   668→        connectionDesign: ConnectionDesignResult?,
+   669→        outputPath: String,
+   670→        drawingBitmap: Bitmap? = null
+   671→    ): File? {
+   672→        return try {
+   673→            val (_, document, font) = createDocument(outputPath)
+   674→
+   675→            addReportHeader(document,
+   676→                ar("تقرير تصميم عضو فولاذي"),
+   677→                "Steel Member Design Report",
+   678→                "${designCode.version} | ${memberType.name}",
+   679→                font
+   680→            )
+   681→
+   682→            addStatusBanner(document, result.isSafe,
+   683→                "Section: ${sectionType.displayName} | Utilization: ${(result.utilizationRatio * 100).format(1)}%"
+   684→            )
+   685→
+   686→            // Section Properties
+   687→            addSectionTitle(document, ar("خصائص القطاع"), "Section Properties")
+   688→            addInfoTable(document, listOf(
+   689→                ar("نوع القطاع") to sectionType.displayName,
+   690→                ar("نوع العضو") to memberType.name,
+   691→                ar("المساحة") to "${(sectionType.getArea() / 100.0).format(2)} cm\u00B2",
+   692→                ar("الوزن") to "${result.weight.format(2)} kg/m",
+   693→                ar("الطول غير مسنود") to "${inputs.unbracedLength.format(0)} mm",
+   694→                ar("الحمل المحوري") to "${inputs.axialLoad.format(1)} kN",
+   695→                ar("العزم") to "${inputs.moment.format(2)} kN.m",
+   696→                ar("القص") to "${inputs.shear.format(1)} kN"
+   697→            ), font)
+   698→
+   699→            // Capacity Checks
+   700→            addSectionTitle(document, ar("نتائج التصميم"), "Design Results")
+   701→            addInfoTable(document, listOf(
+   702→                ar("القدرة المحورية") to "${result.axialCapacity.format(1)} kN",
+   703→                ar("القدرة الانحنائية") to "${result.flexuralCapacity.format(2)} kN.m",
+   704→                ar("القدرة القصية") to "${result.shearCapacity.format(1)} kN",
+   705→                ar("نسبة الاستخدام") to "${(result.utilizationRatio * 100).format(1)}%",
+   706→                ar("التكلفة") to "${result.cost.format(2)} EGP/m"
+   707→            ), font)
+   708→
+   709→            // Connection Design
+   710→            if (connectionDesign != null) {
+   711→                addSectionTitle(document, ar("تصميم الوصلات"), "Connection Design")
+   712→                addInfoTable(document, listOf<Pair<String, String>>(
+   713→                    ar("نوع الوصلة") to (connectionDesign.connectionType::class.simpleName ?: "N/A"),
+   714→                    ar("القدرة") to "${connectionDesign.capacity.format(1)} kN",
+   715→                    ar("القوة المطبقة") to "${connectionDesign.appliedForce.format(1)} kN",
+   716→                    ar("نسبة الاستخدام") to "${(connectionDesign.utilizationRatio * 100).format(1)}%",
+   717→                    ar("الحالة") to if (connectionDesign.isSafe) ar("آمن \u2714") else ar("غير آمن \u2718")
+   718→                ), font)
+   719→                if (connectionDesign.detailedCalculations.isNotEmpty()) {
+   720→                    document.add(styledParagraph(connectionDesign.detailedCalculations, 8f, color = SECONDARY))
+   721→                }
+   722→            }
+   723→
+   724→            // Warnings
+   725→            if (result.warnings.isNotEmpty() || result.codeNotes.isNotEmpty()) {
+   726→                addSectionTitle(document, ar("ملاحظات"), "Notes")
+   727→                (result.warnings + result.codeNotes).forEach { note ->
+   728→                    document.add(styledParagraph("\u2022 $note", 9f, color = WARNING))
+   729→                }
+   730→            }
+   731→
+   732→            addDrawingSection(document, drawingBitmap, "Steel Member Section")
+   733→            addFooter(document)
+   734→            document.close()
+   735→            File(outputPath)
+   736→        } catch (e: Exception) {
+   737→            e.printStackTrace()
+   738→            null
+   739→        }
+   740→    }
+   741→
+   742→    // ==================== Method 5: Footing Report ====================
+   743→    fun exportFootingReport(
+   744→        projectName: String,
+   745→        designCode: CalculatorEngine.DesignCode,
+   746→        result: CalculatorEngine.FootingResult,
+   747→        outputPath: String,
+   748→        drawingBitmap: Bitmap? = null
+   749→    ): File? {
+   750→        return try {
+   751→            val (_, document, font) = createDocument(outputPath)
+   752→            val codeStr = when (designCode) {
+   753→                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
+   754→                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
+   755→                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+   756→            }
+   757→
+   758→            addReportHeader(document,
+   759→                ar("تقرير تصميم أساسات"),
+   760→                "Footing Design Report",
+   761→                "$codeStr | ${result.type.displayName}",
+   762→                font
+   763→            )
+   764→
+   765→            addStatusBanner(document, result.isSafe,
+   766→                "Soil: ${result.soilPressure.format(1)} / ${result.allowablePressure.format(1)} kPa"
+   767→            )
+   768→
+   769→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+   770→            addInfoTable(document, listOf(
+   771→                ar("اسم المشروع") to projectName,
+   772→                ar("نوع الأساس") to result.type.displayName,
+   773→                ar("العرض") to "${result.width.format(0)} mm",
+   774→                ar("الطول") to "${result.length.format(0)} mm",
+   775→                ar("السمك") to "${result.thickness.format(0)} mm",
+   776→                ar("ضغط التربة المسموح") to "${result.allowablePressure.format(1)} kPa",
+   777→                ar("ضغط التربة الفعلي") to "${result.soilPressure.format(1)} kPa"
+   778→            ), font)
+   779→
+   780→            addSectionTitle(document, ar("نتائج التسليح"), "Reinforcement Results")
+   781→            addInfoTable(document, listOf(
+   782→                ar("حديد القاع X") to "${result.barsX} \u03C6${result.barDiameter} @ 200mm",
+   783→                ar("حديد القاع Y") to "${result.barsY} \u03C6${result.barDiameter} @ 200mm",
+   784→                ar("حجم الخرسانة") to "${result.concreteVolume.format(3)} m\u00B3",
+   785→                ar("وزن الحديد") to "${result.steelWeight.format(1)} kg",
+   786→                ar("التكلفة") to "${result.cost.format(0)} EGP",
+   787→                ar("نسبة الاستخدام") to "${(result.utilizationRatio * 100).format(1)}%"
+   788→            ), font)
+   789→
+   790→            // Safety Checks
+   791→            if (result.safetyChecks.isNotEmpty()) {
+   792→                addSectionTitle(document, ar("تحققات الأمان"), "Safety Checks")
+   793→                val table = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
+   794→                table.addHeaderCell(headerCell(ar("التحقق") + " | Check"))
+   795→                table.addHeaderCell(headerCell(ar("القيمة") + " | Value"))
+   796→                table.addHeaderCell(headerCell(ar("الحد") + " | Limit"))
+   797→                table.addHeaderCell(headerCell(ar("النتيجة") + " | Result"))
+   798→                result.safetyChecks.forEachIndexed { i, check ->
+   799→                    val bg = if (i % 2 == 0) null else ROW_ALT
+   800→                    table.addCell(tableCell(check.name, bg = bg))
+   801→                    table.addCell(tableCell("${check.value.format(2)} ${check.unit}", bg = bg))
+   802→                    table.addCell(tableCell("${check.limit.format(2)} ${check.unit}", bg = bg))
+   803→                    table.addCell(tableCell(
+   804→                        if (check.isSafe) "PASS \u2714" else "FAIL \u2718",
+   805→                        color = if (check.isSafe) SUCCESS else ERROR, bg = bg
+   806→                    ))
+   807→                }
+   808→                document.add(table)
+   809→            }
+   810→
+   811→            addDrawingSection(document, drawingBitmap, "Footing Reinforcement Detail")
+   812→            addFooter(document)
+   813→            document.close()
+   814→            File(outputPath)
+   815→        } catch (e: Exception) {
+   816→            e.printStackTrace()
+   817→            null
+   818→        }
+   819→    }
+   820→
+   821→    // ==================== Method 6: Tank Report ====================
+   822→    fun exportTankReport(
+   823→        projectName: String,
+   824→        designCode: CalculatorEngine.DesignCode,
+   825→        result: CalculatorEngine.TankResult,
+   826→        outputPath: String,
+   827→        drawingBitmap: Bitmap? = null
+   828→    ): File? {
+   829→        return try {
+   830→            val (_, document, font) = createDocument(outputPath)
+   831→            val codeStr = when (designCode) {
+   832→                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
+   833→                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
+   834→                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+   835→            }
+   836→
+   837→            addReportHeader(document,
+   838→                ar("تقرير تصميم خزان مياه"),
+   839→                "Water Tank Design Report",
+   840→                "$codeStr | ${result.type.displayName}",
+   841→                font
+   842→            )
+   843→
+   844→            addStatusBanner(document, result.isSafe)
+   845→
+   846→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+   847→            addInfoTable(document, listOf(
+   848→                ar("اسم المشروع") to projectName,
+   849→                ar("نوع الخزان") to result.type.displayName,
+   850→                ar("الطول") to "${result.length.format(2)} m",
+   851→                ar("العرض") to "${result.width.format(2)} m",
+   852→                ar("الارتفاع") to "${result.height.format(2)} m",
+   853→                ar("سمك الحائط") to "${result.wallThickness.format(0)} mm",
+   854→                ar("سمك القاعدة") to "${result.baseThickness.format(0)} mm",
+   855→                ar("مقاومة الخرسانة") to "f'c = ${result.fcu.format(0)} MPa",
+   856→                ar("مقاومة الحديد") to "fy = ${result.fy.format(0)} MPa",
+   857→                ar("ضغط المياه") to "${result.waterPressure.format(1)} kN/m\u00B2"
+   858→            ), font)
+   859→
+   860→            addSectionTitle(document, ar("نتائج التسليح"), "Reinforcement Results")
+   861→            addInfoTable(document, listOf(
+   862→                ar("تسليح الحائط") to "${result.wallReinforcement.numBars}\u03C6${result.wallReinforcement.diameter} @ ${result.wallReinforcement.spacing}mm",
+   863→                ar("تسليح القاعدة") to "${result.baseReinforcement.numBars}\u03C6${result.baseReinforcement.diameter} @ ${result.baseReinforcement.spacing}mm",
+   864→                ar("حجم الخرسانة") to "${result.concreteVolume.format(3)} m\u00B3",
+   865→                ar("وزن الحديد") to "${result.steelWeight.format(1)} kg",
+   866→                ar("التكلفة") to "${result.cost.format(0)} EGP",
+   867→                ar("السعة") to "${result.capacity.format(1)} m\u00B3"
+   868→            ), font)
+   869→
+   870→            // Safety Checks
+   871→            if (result.safetyChecks.isNotEmpty()) {
+   872→                addSectionTitle(document, ar("تحققات الأمان"), "Safety Checks")
+   873→                val table = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
+   874→                table.addHeaderCell(headerCell(ar("التحقق") + " | Check"))
+   875→                table.addHeaderCell(headerCell(ar("القيمة") + " | Value"))
+   876→                table.addHeaderCell(headerCell(ar("الحد") + " | Limit"))
+   877→                table.addHeaderCell(headerCell(ar("النتيجة") + " | Result"))
+   878→                result.safetyChecks.forEachIndexed { i, check ->
+   879→                    val bg = if (i % 2 == 0) null else ROW_ALT
+   880→                    table.addCell(tableCell(check.name, bg = bg))
+   881→                    table.addCell(tableCell("${check.value.format(2)} ${check.unit}", bg = bg))
+   882→                    table.addCell(tableCell("${check.limit.format(2)} ${check.unit}", bg = bg))
+   883→                    table.addCell(tableCell(
+   884→                        if (check.isSafe) "PASS \u2714" else "FAIL \u2718",
+   885→                        color = if (check.isSafe) SUCCESS else ERROR, bg = bg
+   886→                    ))
+   887→                }
+   888→                document.add(table)
+   889→            }
+   890→
+   891→            addDrawingSection(document, drawingBitmap, "Tank Reinforcement Detail")
+   892→            addFooter(document)
+   893→            document.close()
+   894→            File(outputPath)
+   895→        } catch (e: Exception) {
+   896→            e.printStackTrace()
+   897→            null
+   898→        }
+   899→    }
+   900→
+   901→    // ==================== Method 7: Stair Report ====================
+   902→    fun exportStairReport(
+   903→        projectName: String,
+   904→        designCode: CalculatorEngine.DesignCode,
+   905→        result: CalculatorEngine.StairResult,
+   906→        outputPath: String,
+   907→        drawingBitmap: Bitmap? = null
+   908→    ): File? {
+   909→        return try {
+   910→            val (_, document, font) = createDocument(outputPath)
+   911→            val codeStr = when (designCode) {
+   912→                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
+   913→                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
+   914→                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+   915→            }
+   916→
+   917→            addReportHeader(document,
+   918→                ar("تقرير تصميم سلم"),
+   919→                "Staircase Design Report",
+   920→                "$codeStr | ${result.type.displayName}",
+   921→                font
+   922→            )
+   923→
+   924→            addStatusBanner(document, result.isSafe)
+   925→
+   926→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+   927→            addInfoTable(document, listOf(
+   928→                ar("اسم المشروع") to projectName,
+   929→                ar("نوع السلم") to result.type.displayName,
+   930→                ar("السمك") to "${result.thickness.format(0)} mm",
+   931→                ar("البحر") to "${result.span.format(2)} m",
+   932→                ar("العارضة") to "${result.riser.format(0)} mm",
+   933→                ar("الدرجة") to "${result.tread.format(0)} mm",
+   934→                ar("الحمل الموحد") to "${result.wu.format(2)} kN/m\u00B2",
+   935→                ar("العزم التصميمي") to "${result.mu.format(2)} kN.m",
+   936→                ar("مقاومة الخرسانة") to "f'c = ${result.fcu.format(0)} MPa",
+   937→                ar("مقاومة الحديد") to "fy = ${result.fy.format(0)} MPa"
+   938→            ), font)
+   939→
+   940→            addSectionTitle(document, ar("نتائج التسليح"), "Reinforcement Results")
+   941→            addInfoTable(document, listOf(
+   942→                ar("التسليح الرئيسي") to "${result.reinforcement.numBars}\u03C6${result.reinforcement.diameter} @ ${result.reinforcement.spacing}mm",
+   943→                ar("تسليح التوزيع") to "${result.distributionReinforcement.numBars}\u03C6${result.distributionReinforcement.diameter} @ ${result.distributionReinforcement.spacing}mm",
+   944→                ar("حجم الخرسانة") to "${result.concreteVolume.format(3)} m\u00B3",
+   945→                ar("وزن الحديد") to "${result.steelWeight.format(1)} kg",
+   946→                ar("التكلفة") to "${result.cost.format(0)} EGP"
+   947→            ), font)
+   948→
+   949→            // Safety Checks
+   950→            if (result.safetyChecks.isNotEmpty()) {
+   951→                addSectionTitle(document, ar("تحققات الأمان"), "Safety Checks")
+   952→                val table = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
+   953→                table.addHeaderCell(headerCell(ar("التحقق") + " | Check"))
+   954→                table.addHeaderCell(headerCell(ar("القيمة") + " | Value"))
+   955→                table.addHeaderCell(headerCell(ar("الحد") + " | Limit"))
+   956→                table.addHeaderCell(headerCell(ar("النتيجة") + " | Result"))
+   957→                result.safetyChecks.forEachIndexed { i, check ->
+   958→                    val bg = if (i % 2 == 0) null else ROW_ALT
+   959→                    table.addCell(tableCell(check.name, bg = bg))
+   960→                    table.addCell(tableCell("${check.value.format(2)} ${check.unit}", bg = bg))
+   961→                    table.addCell(tableCell("${check.limit.format(2)} ${check.unit}", bg = bg))
+   962→                    table.addCell(tableCell(
+   963→                        if (check.isSafe) "PASS \u2714" else "FAIL \u2718",
+   964→                        color = if (check.isSafe) SUCCESS else ERROR, bg = bg
+   965→                    ))
+   966→                }
+   967→                document.add(table)
+   968→            }
+   969→
+   970→            addDrawingSection(document, drawingBitmap, "Stair Reinforcement Detail")
+   971→            addFooter(document)
+   972→            document.close()
+   973→            File(outputPath)
+   974→        } catch (e: Exception) {
+   975→            e.printStackTrace()
+   976→            null
+   977→        }
+   978→    }
+   979→
+   980→    // ==================== Method 8: Retaining Wall Report ====================
+   981→    fun exportRetainingWallReport(
+   982→        projectName: String,
+   983→        designCode: CalculatorEngine.DesignCode,
+   984→        result: CalculatorEngine.RetainingWallResult,
+   985→        outputPath: String,
+   986→        drawingBitmap: Bitmap? = null
+   987→    ): File? {
+   988→        return try {
+   989→            val (_, document, font) = createDocument(outputPath)
+   990→            val codeStr = when (designCode) {
+   991→                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
+   992→                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
+   993→                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+   994→            }
+   995→
+   996→            addReportHeader(document,
+   997→                ar("تقرير تصميم حائط ساند"),
+   998→                "Retaining Wall Design Report",
+   999→                codeStr,
+  1000→                font
+  1001→            )
+  1002→
+  1003→            addStatusBanner(document, result.isSafe)
+  1004→
+  1005→            addSectionTitle(document, ar("معاملات التصميم"), "Design Parameters")
+  1006→            addInfoTable(document, listOf(
+  1007→                ar("اسم المشروع") to projectName,
+  1008→                ar("ارتفاع الحائط") to "${result.height.format(2)} m",
+  1009→                ar("سمك الجذع") to "${result.stemThickness.format(0)} mm",
+  1010→                ar("عرض القاعدة") to "${result.baseWidth.format(0)} mm",
+  1011→                ar("كثافة التربة") to "${result.soilDensity.format(1)} kN/m\u00B3",
+  1012→                ar("زاوية الاحتكاك الداخلي") to "${Math.toDegrees(Math.atan(result.ka.toDouble())).format(1)}\u00B0",
+  1013→                ar("معامل الضغط النشط") to "Ka = ${result.ka.format(3)}",
+  1014→                ar("ضغط التربة النشط") to "${result.pa.format(1)} kN/m\u00B2",
+  1015→                ar("مقاومة الخرسانة") to "f'c = ${result.fcu.format(0)} MPa",
+  1016→                ar("مقاومة الحديد") to "fy = ${result.fy.format(0)} MPa"
+  1017→            ), font)
+  1018→
+  1019→            // Stability Checks
+  1020→            addSectionTitle(document, ar("تحققات الاستقرار"), "Stability Checks")
+  1021→            addInfoTable(document, listOf(
+  1022→                ar("معامل الأمان ضد الانقلاب") to "F.S = ${result.factorOfSafetyOverturning.format(2)} (Min: 2.0)",
+  1023→                ar("معامل الأمان ضد الانزلاق") to "F.S = ${result.factorOfSafetySliding.format(2)} (Min: 1.5)"
+  1024→            ), font)
+  1025→
+  1026→            // Reinforcement
+  1027→            addSectionTitle(document, ar("نتائج التسليح"), "Reinforcement Results")
+  1028→            addInfoTable(document, listOf(
+  1029→                ar("تسليح الجذع") to "${result.stemReinforcement.numBars}\u03C6${result.stemReinforcement.diameter} @ ${result.stemReinforcement.spacing}mm",
+  1030→                ar("تسليح القاعدة") to "${result.baseReinforcement.numBars}\u03C6${result.baseReinforcement.diameter} @ ${result.baseReinforcement.spacing}mm",
+  1031→                ar("حجم الخرسانة") to "${result.concreteVolume.format(3)} m\u00B3",
+  1032→                ar("وزن الحديد") to "${result.steelWeight.format(1)} kg",
+  1033→                ar("التكلفة") to "${result.cost.format(0)} EGP"
+  1034→            ), font)
+  1035→
+  1036→            // Safety Checks
+  1037→            if (result.safetyChecks.isNotEmpty()) {
+  1038→                addSectionTitle(document, ar("تحققات الأمان"), "Safety Checks")
+  1039→                val table = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
+  1040→                table.addHeaderCell(headerCell(ar("التحقق") + " | Check"))
+  1041→                table.addHeaderCell(headerCell(ar("القيمة") + " | Value"))
+  1042→                table.addHeaderCell(headerCell(ar("الحد") + " | Limit"))
+  1043→                table.addHeaderCell(headerCell(ar("النتيجة") + " | Result"))
+  1044→                result.safetyChecks.forEachIndexed { i, check ->
+  1045→                    val bg = if (i % 2 == 0) null else ROW_ALT
+  1046→                    table.addCell(tableCell(check.name, bg = bg))
+  1047→                    table.addCell(tableCell("${check.value.format(2)} ${check.unit}", bg = bg))
+  1048→                    table.addCell(tableCell("${check.limit.format(2)} ${check.unit}", bg = bg))
+  1049→                    table.addCell(tableCell(
+  1050→                        if (check.isSafe) "PASS \u2714" else "FAIL \u2718",
+  1051→                        color = if (check.isSafe) SUCCESS else ERROR, bg = bg
+  1052→                    ))
+  1053→                }
+  1054→                document.add(table)
+  1055→            }
+  1056→
+  1057→            addDrawingSection(document, drawingBitmap, "Retaining Wall Section")
+  1058→            addFooter(document)
+  1059→            document.close()
+  1060→            File(outputPath)
+  1061→        } catch (e: Exception) {
+  1062→            e.printStackTrace()
+  1063→            null
+  1064→        }
+  1065→    }
+  1066→
+  1067→    // ==================== Helpers ====================
+  1068→    private fun Double.format(decimals: Int): String {
+  1069→        return String.format(Locale.US, "%.${decimals}f", this)
+  1070→    }
+  1071→}

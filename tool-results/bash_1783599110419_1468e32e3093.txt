@@ -1,0 +1,340 @@
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/DrawingUtils.kt:613:28 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Float' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:113:46 Unresolved reference 'x'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:113:46 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:113:112 Unresolved reference 'y'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:113:112 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:21:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:77:17 No parameter with name 'verticalArrangement' found.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:89:43 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:101:43 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:122:63 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:130:32 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:133:51 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:133:77 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:138:40 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:138:44 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:138:50 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:145:25 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:187:39 Not enough information to infer type argument for 'K'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:188:37 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:189:25 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:189:25 Not enough information to infer type argument for 'A'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:189:25 Not enough information to infer type argument for 'B'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:189:36 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:191:25 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:191:25 Not enough information to infer type argument for 'B'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:191:39 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:193:54 Function invocation 'first()' expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:194:52 Unresolved reference 'second'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:194:73 Function invocation 'first()' expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:199:40 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:199:44 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:199:50 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:206:25 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:245:49 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:246:67 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:247:60 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:253:118 Unresolved reference '_size'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:405:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:405:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:405:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:412:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:22:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:115:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:33 Unresolved reference 'x'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:33 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:79 Unresolved reference 'y'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:79 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:328:31 Unresolved reference 'x'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:328:31 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:328:77 Unresolved reference 'y'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:328:77 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:516:26 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:575:28 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:673:45 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:708:16 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:899:28 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:899:32 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:899:38 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:907:13 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:952:28 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:952:32 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:952:38 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:959:13 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1062:17 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1075:20 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1323:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1323:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1323:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1326:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1333:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1350:17 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1367:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:19:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:86:19 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:232:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:232:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:232:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:233:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:235:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:243:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:243:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:243:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:247:9 Unresolved reference 'save'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:247:17 Unresolved reference 'rotate'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:248:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:249:9 Unresolved reference 'restore'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:339:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:339:36 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:339:42 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:341:17 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:343:17 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:362:52 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:377:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:498:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:515:12 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:515:18 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:516:9 Unresolved reference 'save'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:516:17 Unresolved reference 'rotate'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:517:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:519:9 Unresolved reference 'restore'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:544:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:565:12 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:565:18 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:565:20 Unresolved reference 'save'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:565:28 Unresolved reference 'rotate'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:566:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:566:69 Unresolved reference 'restore'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:653:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:738:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:800:36 Unresolved reference 'pow'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:800:52 Unresolved reference 'pow'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:800:68 Unresolved reference 'pow'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:801:29 Unresolved reference 'pow'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:801:45 Unresolved reference 'pow'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:16:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:45:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:77:17 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:77:23 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:80:44 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:84:38 Argument type mismatch: actual type is 'android.graphics.Paint', but 'androidx.compose.ui.graphics.Color' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:142:42 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:205:50 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:219:17 None of the following candidates is applicable:
+fun drawRect(brush: Brush, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+fun drawRect(color: Color, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:370:40 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:405:42 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:611:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:611:9 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:611:15 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:614:29 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:617:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:629:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:629:9 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:629:15 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:632:29 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:635:9 Unresolved reference 'save'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:636:9 Unresolved reference 'rotate'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:637:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:638:9 Unresolved reference 'restore'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:19:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:78:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:203:5 Unresolved reference 'clipPath'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:417:5 None of the following candidates is applicable:
+fun drawLine(brush: Brush, start: Offset, end: Offset, strokeWidth: Float = ..., cap: StrokeCap = ..., pathEffect: PathEffect? = ..., alpha: Float = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+fun drawLine(color: Color, start: Offset, end: Offset, strokeWidth: Float = ..., cap: StrokeCap = ..., pathEffect: PathEffect? = ..., alpha: Float = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:665:5 Unresolved reference 'clipRect'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:681:5 Unresolved reference 'clipPath'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:736:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:736:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:736:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:745:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:17:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:45:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:75:17 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:75:23 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:78:44 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:82:38 Argument type mismatch: actual type is 'android.graphics.Paint', but 'androidx.compose.ui.graphics.Color' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:90:17 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:90:23 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:93:44 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:97:38 Argument type mismatch: actual type is 'android.graphics.Paint', but 'androidx.compose.ui.graphics.Color' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:158:42 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:335:25 None of the following candidates is applicable:
+fun drawRect(brush: Brush, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+fun drawRect(color: Color, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:634:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:634:9 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:634:15 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:637:29 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:640:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:652:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:652:9 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:652:15 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:655:29 Unresolved reference '_d'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:658:9 Unresolved reference 'save'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:659:9 Unresolved reference 'rotate'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:660:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:661:9 Unresolved reference 'restore'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:22:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:112:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:242:19 Unresolved reference 'stairWidth'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:469:9 Cannot access 'fun DrawScope.drawTextWithBackground(text: String, x: Float, y: Float, textColor: Color, bgColor: Color, textSize: Float = ...): Unit': it is private in file.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:667:20 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:698:20 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:727:21 None of the following candidates is applicable:
+fun max(a: Double, b: Double): Double
+fun max(a: Float, b: Float): Float
+fun max(a: Int, b: Int): Int
+fun max(a: Long, b: Long): Long
+fun max(a: UInt, b: UInt): UInt
+fun max(a: ULong, b: ULong): ULong
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:771:28 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:771:32 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:771:38 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:779:13 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1365:28 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1365:32 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1365:38 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1373:13 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1425:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1425:36 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1425:42 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1433:17 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1504:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1504:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1504:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1507:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1513:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1530:17 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1546:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1580:33 Unresolved reference 'x'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1580:33 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1580:82 Unresolved reference 'y'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1580:82 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1581:31 Unresolved reference 'x'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1581:31 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1581:80 Unresolved reference 'y'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1581:80 Only expressions are allowed in this context.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:18:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:70:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:319:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:320:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:323:9 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:329:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:481:9 None of the following candidates is applicable:
+fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color = ..., size: Float = ..., center: Boolean = ..., bold: Boolean = ..., rotation: Float = ...): Unit
+fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float, center: Boolean = ...): Unit
+fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float): Unit
+fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float): Unit
+fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float): Unit
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:511:33 Unresolved reference 'insetWidth'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:727:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:728:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:731:9 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:737:5 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:783:24 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:783:28 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:783:34 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:786:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:792:9 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ArchiveScreen.kt:64:48 Unresolved reference 'deleteProject'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:27:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:765:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:765:36 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:765:42 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:771:17 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:772:17 Unresolved reference 'save'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:773:17 Unresolved reference 'rotate'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:774:17 Unresolved reference 'drawText'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SeismicScreen.kt:775:17 Unresolved reference 'restore'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:24:37 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:50:15 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:635:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:646:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:647:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:648:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:651:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:660:36 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:661:36 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:662:36 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:665:36 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:677:36 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:700:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:704:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:705:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:708:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:729:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:733:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:742:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:746:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:757:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:767:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:777:32 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:789:36 Unresolved reference '_nc'.
+e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:794:36 Unresolved reference '_nc'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 27s
+EXITCODE:1

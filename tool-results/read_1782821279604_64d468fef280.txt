@@ -1,0 +1,624 @@
+     1→     1→package com.civileg.app.domain.calculations.ecp
+     2→     2→
+     3→     3→import com.civileg.app.domain.calculations.base.*
+     4→     4→import com.civileg.app.domain.entities.*
+     5→     5→import com.civileg.app.domain.usecases.AnalyzeRebarInventory
+     6→     6→import kotlin.math.*
+     7→     7→
+     8→     8→class ECPAdvancedSlab {
+     9→     9→    
+    10→    10→    private val baseSlab = ECPSlab()
+    11→    11→
+    12→    12→    /**
+    13→    13→     * تصميم شامل لجميع أنواع البلاطات حسب الكود المصري ECP 203
+    14→    14→     */
+    15→    15→    fun designSlab(
+    16→    16→        slabType: SlabType,
+    17→    17→        fcu: Double,
+    18→    18→        fy: Double,
+    19→    19→        deadLoad: Double,     // kN/m²
+    20→    20→        liveLoad: Double,     // kN/m²
+    21→    21→        inventory: RebarInventory?,
+    22→    22→        loadCombination: LoadCombination
+    23→    23→    ): AdvancedSlabResult {
+    24→    24→        val warnings = mutableListOf<String>()
+    25→    25→        val codeNotes = mutableListOf<String>()
+    26→    26→        
+    27→    27→        // الحمل الكلي (Ultimate Load)
+    28→    28→        val totalLoad = (deadLoad + liveLoad) * loadCombination.factor
+    29→    29→        
+    30→    30→        // النتيجة الأساسية حسب نوع البلاطة
+    31→    31→        val flexureResult = when (slabType) {
+    32→    32→            is SlabType.Solid -> designSolidSlab(slabType, fcu, fy, totalLoad, loadCombination)
+    33→    33→            is SlabType.OneWay -> designOneWaySlabType(slabType, fcu, fy, totalLoad, loadCombination)
+    34→    34→            is SlabType.TwoWay -> designTwoWaySlabType(slabType, fcu, fy, totalLoad, loadCombination)
+    35→    35→            is SlabType.Hordi -> designHordiSlab(slabType, fcu, fy, totalLoad)
+    36→    36→            is SlabType.Waffle -> designWaffleSlab(slabType, fcu, fy, totalLoad)
+    37→    37→            is SlabType.PostTensioned -> designPostTensionedSlab(slabType, fcu, fy, totalLoad)
+    38→    38→            is SlabType.Precast -> designPrecastSlab(slabType, fcu, fy, totalLoad)
+    39→    39→            is SlabType.FlatPlate -> designFlatPlate(slabType, fcu, fy, totalLoad)
+    40→    40→            is SlabType.FlatSlab -> designFlatSlab(slabType, fcu, fy, totalLoad)
+    41→    41→        }
+    42→    42→        
+    43→    43→        // التحقق من القص العادي (Beam-like Shear)
+    44→    44→        val shearCheck = checkSlabShear(slabType, fcu, totalLoad, loadCombination)
+    45→    45→        
+    46→    46→        // التحقق من الانحراف (Deflection)
+    47→    47→        val deflectionCheck = checkSlabDeflection(slabType, fy)
+    48→    48→        
+    49→    49→        // التحقق من القص الاختراقي (Punching Shear) للبلاطات المسطحة
+    50→    50→        val punchingCheck = if (slabType is SlabType.FlatPlate || slabType is SlabType.FlatSlab) {
+    51→    51→            checkPunchingShear(slabType, fcu, totalLoad)
+    52→    52→        } else null
+    53→    53→        
+    54→    54→        // حساب الكميات
+    55→    55→        val concreteVolume = calculateConcreteVolume(slabType)
+    56→    56→        val formworkArea = calculateFormworkArea(slabType)
+    57→    57→        
+    58→    58→        // تحليل المخزون
+    59→    59→        val inventoryAnalysis = inventory?.let { inv ->
+    60→    60→            analyzeSlabInventory(flexureResult, slabType, inv)
+    61→    61→        }
+    62→    62→        
+    63→    63→        // حسابات البوست تنشن
+    64→    64→        val postTensionCalc = if (slabType is SlabType.PostTensioned) {
+    65→    65→            calculatePostTension(slabType, fcu, fy)
+    66→    66→        } else null
+    67→    67→        
+    68→    68→        if (flexureResult.warnings.isNotEmpty()) warnings.addAll(flexureResult.warnings)
+    69→    69→        if (!shearCheck.isSafe) warnings.add("⚠️ Slab shear capacity exceeded!")
+    70→    70→        if (!deflectionCheck.isSafe) warnings.add("⚠️ Deflection limit exceeded! Increase thickness.")
+    71→    71→        if (punchingCheck?.isSafe == false) warnings.add("⚠️ Punching shear failure! Increase thickness or use shear reinforcement")
+    72→    72→        
+    73→    73→        codeNotes.add(getCodeReference(slabType))
+    74→    74→        
+    75→    75→        return AdvancedSlabResult(
+    76→    76→            slabType = slabType,
+    77→    77→            flexureResult = flexureResult,
+    78→    78→            shearCheck = shearCheck,
+    79→    79→            deflectionCheck = deflectionCheck,
+    80→    80→            punchingShearCheck = punchingCheck,
+    81→    81→            reinforcementLayout = createReinforcementLayout(flexureResult, slabType),
+    82→    82→            concreteVolume = concreteVolume,
+    83→    83→            formworkArea = formworkArea,
+    84→    84→            inventoryAnalysis = inventoryAnalysis,
+    85→    85→            postTensionCalculations = postTensionCalc,
+    86→    86→            warnings = warnings,
+    87→    87→            codeNotes = codeNotes
+    88→    88→        )
+    89→    89→    }
+    90→    90→    
+    91→    91→    private fun designHordiSlab(
+    92→    92→        slab: SlabType.Hordi,
+    93→    93→        fcu: Double,
+    94→    94→        fy: Double,
+    95→    95→        totalLoad: Double
+    96→    96→    ): SlabDesignResult {
+    97→    97→        val warnings = mutableListOf<String>()
+    98→    98→        val codeNotes = mutableListOf<String>()
+    99→    99→        val ribSpacing = slab.ribSpacing / 1000.0  // m
+   100→   100→        val loadPerRib = totalLoad * ribSpacing     // kN/m (الحمولة التصميمية لكل كمرتة)
+   101→   101→        
+   102→   102→        // عزم الانحناء الأقصى - ECP 203 البند 6-4
+   103→   103→        val maxMoment = loadPerRib * slab.span * slab.span / 8.0 // kN.m/rib
+   104→   104→        val effectiveDepth = slab.totalThickness - 30.0  // d = h - cover - bar/2
+   105→   105→        
+   106→   106→        // K-method حسب ECP 203 البند 4-2-2-1
+   107→   107→        val Mu_Nmm = maxMoment * 1e6  // N.mm
+   108→   108→        val K = Mu_Nmm / (fcu * slab.ribWidth * effectiveDepth * effectiveDepth)
+   109→   109→        val K_bal = 0.186
+   110→   110→        
+   111→   111→        if (K > K_bal) {
+   112→   112→            warnings.add("K=%.3f > K_bal=%.3f - زِد سماكة البلاطة الهوردية".format(K, K_bal))
+   113→   113→        }
+   114→   114→        
+   115→   115→        // z = d × (0.5 + √(0.25 - K/1.25))
+   116→   116→        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
+   117→   117→        val fs = fy / 1.15
+   118→   118→        val astRequired = Mu_Nmm / (fs * leverArm)
+   119→   119→        
+   120→   120→        // الحد الأدنى للتسليح للكمرات (0.15% Ac أو 0.13% للكمراتة)
+   121→   121→        val Ac = slab.ribWidth * slab.totalThickness
+   122→   122→        val asMin = 0.0015 * Ac
+   123→   123→        val asFinal = max(astRequired, asMin)
+   124→   124→        
+   125→   125→        // اختيار التسليح
+   126→   126→        val barArea = PI * 144.0 / 4.0  // 12mm
+   127→   127→        val numBars = max(ceil(asFinal / barArea).toInt(), 1)
+   128→   128→        val asProvided = numBars * barArea
+   129→   129→        
+   130→   130→        codeNotes.add("ECP 203: Hordi Slab (Section 6.4)")
+   131→   131→        codeNotes.add("Ribs: %.0fmm c/c, Load/rib: %.1f kN/m".format(slab.ribSpacing, loadPerRib))
+   132→   132→        codeNotes.add("Mu = %.1f kN.m, K = %.3f".format(maxMoment, K))
+   133→   133→        
+   134→   134→        return SlabDesignResult(
+   135→   135→            requiredReinforcement = asFinal,
+   136→   136→            providedReinforcement = asProvided,
+   137→   137→            barDiameter = 12.0,
+   138→   138→            barSpacing = ribSpacing * 1000.0,
+   139→   139→            minThickness = slab.totalThickness,
+   140→   140→            shearCapacity = 0.0,
+   141→   141→            isSafe = K <= K_bal,
+   142→   142→            utilizationRatio = K / K_bal,
+   143→   143→            warnings = warnings,
+   144→   144→            codeNotes = codeNotes
+   145→   145→        )
+   146→   146→    }
+   147→   147→
+   148→   148→    private fun designWaffleSlab(
+   149→   149→        slab: SlabType.Waffle,
+   150→   150→        fcu: Double,
+   151→   151→        fy: Double,
+   152→   152→        totalLoad: Double
+   153→   153→    ): SlabDesignResult {
+   154→   154→        val warnings = mutableListOf<String>()
+   155→   155→        val codeNotes = mutableListOf<String>()
+   156→   156→        val ribSpacing = slab.ribSpacing / 1000.0
+   157→   157→        val loadPerRib = totalLoad * ribSpacing
+   158→   158→        // عزم البلاطة ذات الاتجاهين (معامل 10 للبلاطات المستمرة)
+   159→   159→        val maxMoment = loadPerRib * slab.shortSpan * slab.shortSpan / 10.0
+   160→   160→        
+   161→   161→        val effectiveDepth = slab.totalThickness - 30.0
+   162→   162→        
+   163→   163→        // K-method حسب ECP 203
+   164→   164→        val Mu_Nmm = maxMoment * 1e6
+   165→   165→        val K = Mu_Nmm / (fcu * slab.ribWidth * effectiveDepth * effectiveDepth)
+   166→   166→        val K_bal = 0.186
+   167→   167→        
+   168→   168→        if (K > K_bal) {
+   169→   169→            warnings.add("K=%.3f > K_bal=%.3f".format(K, K_bal))
+   170→   170→        }
+   171→   171→        
+   172→   172→        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
+   173→   173→        val fs = fy / 1.15
+   174→   174→        val astRequired = Mu_Nmm / (fs * leverArm)
+   175→   175→        
+   176→   176→        val Ac = slab.ribWidth * slab.totalThickness
+   177→   177→        val asMin = 0.0015 * Ac
+   178→   178→        val asFinal = max(astRequired, asMin)
+   179→   179→        
+   180→   180→        val barArea = PI * 144.0 / 4.0
+   181→   181→        val numBars = max(ceil(asFinal / barArea).toInt(), 1)
+   182→   182→        val asProvided = numBars * barArea
+   183→   183→        
+   184→   184→        codeNotes.add("ECP 203: Waffle Slab (Section 6.4)")
+   185→   185→        codeNotes.add("Mu = %.1f kN.m/rib, K = %.3f".format(maxMoment, K))
+   186→   186→        
+   187→   187→        return SlabDesignResult(
+   188→   188→            requiredReinforcement = asFinal,
+   189→   189→            providedReinforcement = asProvided,
+   190→   190→            barDiameter = 12.0,
+   191→   191→            barSpacing = ribSpacing * 1000.0,
+   192→   192→            minThickness = slab.totalThickness,
+   193→   193→            shearCapacity = 0.0,
+   194→   194→            isSafe = K <= K_bal,
+   195→   195→            utilizationRatio = K / K_bal,
+   196→   196→            warnings = warnings,
+   197→   197→            codeNotes = codeNotes
+   198→   198→        )
+   199→   199→    }
+   200→   200→
+   201→   201→    private fun designPostTensionedSlab(
+   202→   202→        slab: SlabType.PostTensioned,
+   203→   203→        fcu: Double,
+   204→   204→        fy: Double,
+   205→   205→        totalLoad: Double
+   206→   206→    ): SlabDesignResult {
+   207→   207→        val netLoad = max(0.2 * totalLoad, totalLoad - (slab.prestressForce * 0.1))
+   208→   208→        val maxMoment = netLoad * slab.shortSpan * slab.shortSpan / 12.0
+   209→   209→        
+   210→   210→        val effectiveDepth = slab.thickness - 30.0
+   211→   211→        val astRequired = (maxMoment * 1e6) / ((fy / 1.15) * effectiveDepth * 0.9)
+   212→   212→        
+   213→   213→        return SlabDesignResult(
+   214→   214→            requiredReinforcement = astRequired,
+   215→   215→            providedReinforcement = astRequired * 1.1,
+   216→   216→            barDiameter = 10.0,
+   217→   217→            barSpacing = 200.0,
+   218→   218→            minThickness = slab.thickness,
+   219→   219→            shearCapacity = 0.0,
+   220→   220→            isSafe = true,
+   221→   221→            utilizationRatio = 0.5
+   222→   222→        )
+   223→   223→    }
+   224→   224→
+   225→   225→    private fun calculateConcreteVolume(slab: SlabType): Double {
+   226→   226→        val area = when (slab) {
+   227→   227→            is SlabType.Solid -> slab.shortSpan * slab.longSpan
+   228→   228→            is SlabType.OneWay -> slab.span * slab.width
+   229→   229→            is SlabType.TwoWay -> slab.shortSpan * slab.longSpan
+   230→   230→            is SlabType.Hordi -> slab.span * 10.0
+   231→   231→            is SlabType.Waffle -> slab.shortSpan * slab.longSpan
+   232→   232→            is SlabType.PostTensioned -> slab.shortSpan * slab.longSpan
+   233→   233→            is SlabType.Precast -> slab.length * slab.width
+   234→   234→            is SlabType.FlatPlate -> slab.panelLength * slab.panelWidth
+   235→   235→            is SlabType.FlatSlab -> slab.panelLength * slab.panelWidth
+   236→   236→        }
+   237→   237→        val thickness = when (slab) {
+   238→   238→            is SlabType.Solid -> slab.thickness
+   239→   239→            is SlabType.OneWay -> slab.thickness
+   240→   240→            is SlabType.TwoWay -> slab.thickness
+   241→   241→            is SlabType.Hordi -> slab.totalThickness - (slab.blockHeight * 0.5)
+   242→   242→            is SlabType.Waffle -> slab.totalThickness * 0.6
+   243→   243→            is SlabType.FlatSlab -> slab.thickness + (slab.dropPanelThickness * 0.2)
+   244→   244→            else -> 200.0
+   245→   245→        }
+   246→   246→        return (area * thickness) / 1000.0
+   247→   247→    }
+   248→   248→
+   249→   249→    private fun calculateFormworkArea(slab: SlabType): Double {
+   250→   250→        val baseArea = when (slab) {
+   251→   251→            is SlabType.Solid -> slab.shortSpan * slab.longSpan
+   252→   252→            is SlabType.OneWay -> slab.span * slab.width
+   253→   253→            is SlabType.TwoWay -> slab.shortSpan * slab.longSpan
+   254→   254→            is SlabType.Hordi -> slab.span * 10.0
+   255→   255→            is SlabType.Waffle -> slab.shortSpan * slab.longSpan * 1.5
+   256→   256→            else -> 100.0
+   257→   257→        }
+   258→   258→        return baseArea
+   259→   259→    }
+   260→   260→
+   261→   261→    private fun checkPunchingShear(slab: SlabType, fcu: Double, totalLoad: Double): PunchingShearCheckResult {
+   262→   262→        val thickness = when (slab) {
+   263→   263→            is SlabType.FlatPlate -> slab.thickness
+   264→   264→            is SlabType.FlatSlab -> slab.thickness + slab.dropPanelThickness
+   265→   265→            else -> 200.0
+   266→   266→        }
+   267→   267→        val d = thickness - 20.0 - 10.0  // effective depth
+   268→   268→        
+   269→   269→        val columnSide = when (slab) {
+   270→   270→            is SlabType.FlatPlate -> slab.columnSize
+   271→   271→            is SlabType.FlatSlab -> slab.columnSize
+   272→   272→            else -> 400.0
+   273→   273→        }
+   274→   274→        
+   275→   275→        // محيط الاختراق عند بعد d/2 من وجه العمود (ECP 203 البند 4-3-2)
+   276→   276→        val criticalPerimeter = 2.0 * (columnSide + columnSide) + 4.0 * d  // bo = 2(c1+c2) + 4d
+   277→   277→        
+   278→   278→        // القوة القاطعة: Vu = qu × (المنطقة - منطقة الاختراق) ≈ qu × panel area
+   279→   279→        val panelArea = when (slab) {
+   280→   280→            is SlabType.FlatPlate -> slab.panelLength * slab.panelWidth
+   281→   281→            is SlabType.FlatSlab -> slab.panelLength * slab.panelWidth
+   282→   282→            else -> 36.0  // 6m × 6m تقريبي
+   283→   283→        }
+   284→   284→        val qu = totalLoad  // kN/m² (حمولة التصميم لكل م²)
+   285→   285→        val punchingArea = (columnSide + d) * (columnSide + d) / 1e6  // m²
+   286→   286→        val netArea = panelArea / 1e6 - punchingArea  // m²
+   287→   287→        val Vu = qu * netArea  // kN
+   288→   288→        
+   289→   289→        // ضغط القص المطبق: vp = Vu / (bo × d)
+   290→   290→        val shearStress = (Vu * 1000.0) / (criticalPerimeter * d)  // N/mm² = MPa
+   291→   291→        
+   292→   292→        // قدرة قص الاختراق: qp = 0.316 × √(fcu/γc) (ECP 203 البند 4-3-2)
+   293→   293→        val capacity = 0.316 * sqrt(fcu / 1.5)  // MPa
+   294→   294→        
+   295→   295→        val isSafe = shearStress <= capacity
+   296→   296→        
+   297→   297→        return PunchingShearCheckResult(
+   298→   298→            appliedShear = Vu,
+   299→   299→            shearCapacity = capacity * criticalPerimeter * d / 1000.0,  // kN
+   300→   300→            utilizationRatio = shearStress / capacity,
+   301→   301→            isSafe = isSafe,
+   302→   302→            criticalPerimeter = criticalPerimeter,
+   303→   303→            shearHeadsRequired = shearStress > capacity,
+   304→   304→            codeReference = "ECP 203-2020: Section 4-3-2 (Punching Shear)",
+   305→   305→            warnings = if (!isSafe) listOf("قص الاختراق %.2f MPa > %.2f MPa - زِد السمك أو أضف رأس عمود".format(shearStress, capacity)) else emptyList()
+   306→   306→        )
+   307→   307→    }
+   308→   308→
+   309→   309→    private fun analyzeSlabInventory(result: SlabDesignResult, slab: SlabType, inventory: RebarInventory): InventoryAnalysisResult {
+   310→   310→        val analyzer = AnalyzeRebarInventory()
+   311→   311→        val areaRequired = result.requiredReinforcement
+   312→   312→        val span = when (slab) {
+   313→   313→            is SlabType.OneWay -> slab.span
+   314→   314→            is SlabType.Solid -> slab.shortSpan
+   315→   315→            else -> 5.0
+   316→   316→        }
+   317→   317→        return analyzer.analyze(
+   318→   318→            requiredArea = areaRequired,
+   319→   319→            requiredLength = span,
+   320→   320→            inventory = inventory,
+   321→   321→            designCode = DesignCode.ECP,
+   322→   322→            elementLength = span
+   323→   323→        )
+   324→   324→    }
+   325→   325→
+   326→   326→    private fun createReinforcementLayout(result: SlabDesignResult, slab: SlabType): ReinforcementLayout {
+   327→   327→        return ReinforcementLayout(
+   328→   328→            topBars = BarLayout(result.barDiameter, result.barSpacing, BarDirection.BOTH, 5.0, 50),
+   329→   329→            bottomBars = BarLayout(result.barDiameter, result.barSpacing, BarDirection.BOTH, 5.0, 50),
+   330→   330→            distributionBars = null,
+   331→   331→            additionalBars = emptyList()
+   332→   332→        )
+   333→   333→    }
+   334→   334→
+   335→   335→    private fun getCodeReference(slab: SlabType): String = when (slab) {
+   336→   336→        is SlabType.Solid -> CodeReference.ECP.SLAB_ONE_WAY
+   337→   337→        is SlabType.TwoWay -> CodeReference.ECP.SLAB_TWO_WAY
+   338→   338→        is SlabType.Hordi -> "ECP 203: Section 6.4 (Hollow Block)"
+   339→   339→        is SlabType.PostTensioned -> "ECP 203: Section 9 (Prestressed Concrete)"
+   340→   340→        else -> CodeReference.ECP.SLAB_ONE_WAY
+   341→   341→    }
+   342→   342→
+   343→   343→    private fun designSolidSlab(slab: SlabType.Solid, fcu: Double, fy: Double, totalLoad: Double, loadCombination: LoadCombination): SlabDesignResult {
+   344→   344→        return baseSlab.designOneWaySlab(fcu, fy, slab.thickness, slab.shortSpan * 1000, 
+   345→   345→            totalLoad * slab.shortSpan * slab.shortSpan / 8, totalLoad * slab.shortSpan / 2, loadCombination)
+   346→   346→    }
+   347→   347→
+   348→   348→    private fun designOneWaySlabType(slab: SlabType.OneWay, fcu: Double, fy: Double, totalLoad: Double, loadCombination: LoadCombination): SlabDesignResult {
+   349→   349→        return baseSlab.designOneWaySlab(fcu, fy, slab.thickness, slab.span * 1000,
+   350→   350→            totalLoad * slab.span * slab.span / 8, totalLoad * slab.span / 2, loadCombination)
+   351→   351→    }
+   352→   352→
+   353→   353→    private fun designTwoWaySlabType(slab: SlabType.TwoWay, fcu: Double, fy: Double, totalLoad: Double, loadCombination: LoadCombination): SlabDesignResult {
+   354→   354→        val res = baseSlab.designTwoWaySlab(fcu, fy, slab.thickness, slab.shortSpan * 1000, slab.longSpan * 1000, slab.supportConditions, totalLoad, loadCombination)
+   355→   355→        return res.shortDirection
+   356→   356→    }
+   357→   357→
+   358→   358→    private fun designFlatPlate(slab: SlabType.FlatPlate, fcu: Double, fy: Double, totalLoad: Double): SlabDesignResult {
+   359→   359→        return baseSlab.designOneWaySlab(fcu, fy, slab.thickness, slab.panelLength * 1000, 
+   360→   360→            totalLoad * slab.panelLength * slab.panelLength / 10, totalLoad * slab.panelLength / 2, LoadCombination.DEAD_LIVE)
+   361→   361→    }
+   362→   362→
+   363→   363→    private fun designFlatSlab(slab: SlabType.FlatSlab, fcu: Double, fy: Double, totalLoad: Double): SlabDesignResult {
+   364→   364→        return baseSlab.designOneWaySlab(fcu, fy, slab.thickness, slab.panelLength * 1000,
+   365→   365→            totalLoad * slab.panelLength * slab.panelLength / 12, totalLoad * slab.panelLength / 2, LoadCombination.DEAD_LIVE)
+   366→   366→    }
+   367→   367→
+   368→   368→    private fun designPrecastSlab(slab: SlabType.Precast, fcu: Double, fy: Double, totalLoad: Double): SlabDesignResult {
+   369→   369→        val warnings = mutableListOf<String>()
+   370→   370→        val codeNotes = mutableListOf<String>()
+   371→   371→
+   372→   372→        // تصميم البلاطة المسبقة الصب - ECP 203 البند 8 (العناصر المسبقة الصب)
+   373→   373→        // السمك الكلي = سمك البلاطة + سمك التوبينج
+   374→   374→        val totalThickness = slab.thickness + slab.toppingThickness
+   375→   375→        val effectiveDepth = totalThickness - 20.0 - 6.0  // cover + bar/2
+   376→   376→
+   377→   377→        // عزم الانحناء (بسيط: بسيط الدعم أو مستمر)
+   378→   378→        val span_m = slab.length / 1000.0
+   379→   379→        val width_m = slab.width / 1000.0
+   380→   380→        val loadPerMeter = totalLoad * width_m  // kN/m
+   381→   381→
+   382→   382→        // عزم للبساطة: M = wL²/8
+   383→   383→        val maxMoment = loadPerMeter * span_m * span_m / 8.0  // kN.m
+   384→   384→        val Mu_Nmm = maxMoment * 1e6  // N.mm
+   385→   385→
+   386→   386→        // K-method حسب ECP 203
+   387→   387→        val b = 1000.0  // mm per meter
+   388→   388→        val K = Mu_Nmm / (fcu * b * effectiveDepth * effectiveDepth)
+   389→   389→        val K_bal = 0.186
+   390→   390→
+   391→   391→        if (K > K_bal) {
+   392→   392→            warnings.add("K=%.3f > K_bal=%.3f - زِد سمك البلاطة المسبقة".format(K, K_bal))
+   393→   393→        }
+   394→   394→
+   395→   395→        // ذراع القوة
+   396→   396→        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
+   397→   397→        val fs = fy / 1.15
+   398→   398→        val astRequired = Mu_Nmm / (fs * leverArm)
+   399→   399→
+   400→   400→        // الحد الأدنى للتسليح للعناصر المسبقة: 0.15% Ag (ECP 203 جدول 4-8)
+   401→   401→        val asMin = 0.0015 * b * totalThickness
+   402→   402→        val asFinal = max(astRequired, asMin)
+   403→   403→
+   404→   404→        // اختيار القضبان
+   405→   405→        val availableBars = listOf(10.0, 12.0, 14.0, 16.0)
+   406→   406→        val barDiameter = availableBars.firstOrNull { dia ->
+   407→   407→            val area = PI * dia * dia / 4.0
+   408→   408→            val spacing = area * 1000.0 / asFinal
+   409→   409→            spacing <= 200.0 && spacing >= 75.0
+   410→   410→        } ?: 12.0
+   411→   411→
+   412→   412→        val barArea = PI * barDiameter * barDiameter / 4.0
+   413→   413→        val barSpacing = if (asFinal > 0) {
+   414→   414→            (barArea * 1000.0 / asFinal).coerceIn(75.0, 200.0)
+   415→   415→        } else 200.0
+   416→   416→        val astProvided = barArea * 1000.0 / barSpacing
+   417→   417→
+   418→   418→        // فحص القص - ECP 203 البند 4-3-1-2
+   419→   419→        val qcu = 0.24 * sqrt(fcu / 1.5)
+   420→   420→        val shearCapacity = qcu * b * effectiveDepth / 1000.0  // kN/m
+   421→   421→        val Vu = loadPerMeter * span_m / 2.0
+   422→   422→
+   423→   423→        if (Vu > shearCapacity) {
+   424→   424→            warnings.add("قص الخرسانة يتجاوز القدرة - زِد السمك")
+   425→   425→        }
+   426→   426→
+   427→   427→        // فحص طول التماسك للعناصر المسبقة (أهم من البلاطات المصبوبة موقعياً)
+   428→   428→        val Ld = max(12.0 * barDiameter, (fs * barDiameter) / (3.5 * sqrt(fcu)))  // mm (ECP 203 البند 5-2)
+   429→   429→        val availableLength = span_m * 1000.0 * 0.8  // 80% من البحر
+   430→   430→
+   431→   431→        codeNotes.add("ECP 203-2020: Precast Slab (Section 8)")
+   432→   432→        codeNotes.add("Total: %.0f + %.0f = %.0f mm".format(slab.thickness, slab.toppingThickness, totalThickness))
+   433→   433→        codeNotes.add("Mu = %.1f kN.m, K = %.3f".format(maxMoment, K))
+   434→   434→        codeNotes.add("Ld = %.0f mm, Available = %.0f mm".format(Ld, availableLength))
+   435→   435→        if (Ld > availableLength) {
+   436→   436→            warnings.add("طول التماسك المطلوب %.0f مم يتجاوز المتاح - استخدم هوك أو تعشيقة".format(Ld))
+   437→   437→        }
+   438→   438→
+   439→   439→        return SlabDesignResult(
+   440→   440→            requiredReinforcement = asFinal,
+   441→   441→            providedReinforcement = astProvided,
+   442→   442→            barDiameter = barDiameter,
+   443→   443→            barSpacing = barSpacing,
+   444→   444→            minThickness = totalThickness,
+   445→   445→            shearCapacity = shearCapacity,
+   446→   446→            isSafe = K <= K_bal && Vu <= shearCapacity,
+   447→   447→            utilizationRatio = K / K_bal,
+   448→   448→            warnings = warnings,
+   449→   449→            codeNotes = codeNotes
+   450→   450→        )
+   451→   451→    }
+   452→   452→
+   453→   453→    private fun checkSlabShear(slab: SlabType, fcu: Double, totalLoad: Double, loadCombination: LoadCombination): ShearCheckResult {
+   454→   454→        val span = when (slab) {
+   455→   455→            is SlabType.OneWay -> slab.span
+   456→   456→            is SlabType.Solid -> slab.shortSpan
+   457→   457→            is SlabType.FlatPlate -> slab.panelLength
+   458→   458→            is SlabType.FlatSlab -> slab.panelLength
+   459→   459→            is SlabType.TwoWay -> slab.shortSpan
+   460→   460→            is SlabType.Hordi -> slab.span
+   461→   461→            is SlabType.Waffle -> slab.shortSpan
+   462→   462→            else -> 5.0
+   463→   463→        }
+   464→   464→        val thickness = when (slab) {
+   465→   465→            is SlabType.OneWay -> slab.thickness
+   466→   466→            is SlabType.Solid -> slab.thickness
+   467→   467→            is SlabType.FlatPlate -> slab.thickness
+   468→   468→            is SlabType.FlatSlab -> slab.thickness
+   469→   469→            is SlabType.TwoWay -> slab.thickness
+   470→   470→            else -> 200.0
+   471→   471→        }
+   472→   472→        val d = thickness - 20.0 - 6.0  // effective depth (cover 20mm + bar/2)
+   473→   473→        val Vu = totalLoad * span / 2.0  // kN/m (القوة القصية التصميمية)
+   474→   474→        // ECP 203 البند 4-3-1-2: qcu = 0.24 × √(fcu/γc) MPa
+   475→   475→        val qcu = 0.24 * sqrt(fcu / 1.5)
+   476→   476→        val capacity = qcu * 1000.0 * d / 1000.0  // kN/m
+   477→   477→        return ShearCheckResult(
+   478→   478→            appliedShear = Vu,
+   479→   479→            shearCapacity = capacity,
+   480→   480→            isSafe = Vu <= capacity,
+   481→   481→            utilizationRatio = Vu / capacity.coerceAtLeast(0.1),
+   482→   482→            warnings = if (Vu > capacity) listOf("قص الخرسانة %.2f kN/m يتجاوز القدرة %.2f kN/m".format(Vu, capacity)) else emptyList()
+   483→   483→        )
+   484→   484→    }
+   485→   485→
+   486→   486→    private fun checkSlabDeflection(slab: SlabType, fy: Double): DeflectionCheckResult {
+   487→   487→        // حساب الانحراف حسب ECP 203 البند 6-3
+   488→   488→        // δ = 5 × w × L⁴ / (384 × Ec × I)
+   489→   489→        // Ec = 4400 × √(fcu) (يفترض fcu=25)
+   490→   490→        val fcu = 25.0
+   491→   491→        val Ec = 4400.0 * sqrt(fcu)  // MPa
+   492→   492→        
+   493→   493→        val thickness = when (slab) {
+   494→   494→            is SlabType.OneWay -> slab.thickness
+   495→   495→            is SlabType.Solid -> slab.thickness
+   496→   496→            is SlabType.TwoWay -> slab.thickness
+   497→   497→            is SlabType.FlatPlate -> slab.thickness
+   498→   498→            is SlabType.FlatSlab -> slab.thickness
+   499→   499→            is SlabType.Hordi -> slab.totalThickness
+   500→   500→            is SlabType.Waffle -> slab.totalThickness
+   501→   501→            is SlabType.PostTensioned -> slab.thickness
+   502→   502→            is SlabType.Precast -> slab.thickness
+   503→   503→        }
+   504→   504→        
+   505→   505→        val span = when (slab) {
+   506→   506→            is SlabType.OneWay -> slab.span
+   507→   507→            is SlabType.Solid -> slab.shortSpan
+   508→   508→            is SlabType.TwoWay -> slab.shortSpan
+   509→   509→            is SlabType.FlatPlate -> slab.panelLength
+   510→   510→            is SlabType.FlatSlab -> slab.panelLength
+   511→   511→            is SlabType.Hordi -> slab.span
+   512→   512→            is SlabType.Waffle -> slab.shortSpan
+   513→   513→            is SlabType.PostTensioned -> slab.shortSpan
+   514→   514→            is SlabType.Precast -> slab.length
+   515→   515→        }
+   516→   516→        
+   517→   517→        val span_m = span / 1000.0
+   518→   518→        val d = thickness - 26.0  // cover + bar/2
+   519→   519→        
+   520→   520→        // عزم القصور للوحدة العرضية (1m × h)
+   521→   521→        // باستخدام نسبة التسليح التقريبية ρ = 0.005
+   522→   522→        val rho = 0.005
+   523→   523→        val n = 200000.0 / (4400.0 * sqrt(fcu))  // معامل النسبة
+   524→   524→        val kd = (2.0 * n * rho + sqrt(4.0 * n * n * rho * rho + 4.0 * n * rho)) / 2.0
+   525→   525→        val Icr = (1000.0 * (kd * d).pow(3) / 3.0 + n * rho * 1000.0 * d * (d - kd * d).pow(2)).coerceAtLeast(1000.0 * thickness.pow(3) / 12.0 * 0.5)
+   526→   526→        
+   527→   527→        // الحمل الحي التقريبي (5 kN/m²)
+   528→   528→        val w_LL = 5.0  // kN/m²
+   529→   529→        // الانحراف الفوري: δ_i = 5 × w × L⁴ / (384 × Ec × Icr)
+   530→   530→        val deltaImmediate = 5.0 * w_LL * span_m.pow(4) * 1e12 / (384.0 * Ec * Icr)  // mm
+   531→   531→        
+   532→   532→        // الانحراف طويل المدى: δ_LT = δ_i × (1 + λ) حيث λ ≈ 2.0 للبلاطات الداخلية
+   533→   533→        val longTermMultiplier = 2.0  // تقريبي للرطوبة المتوسطة
+   534→   534→        val deltaLongTerm = deltaImmediate * (1.0 + longTermMultiplier)
+   535→   535→        
+   536→   536→        // الحد المسموح: L/250 للانحراف الكلي
+   537→   537→        val allowableDeflection = span_m * 1000.0 / 250.0
+   538→   538→        
+   539→   539→        val ratio = deltaLongTerm / allowableDeflection
+   540→   540→        
+   541→   541→        return DeflectionCheckResult(
+   542→   542→            immediateDeflection = deltaImmediate,
+   543→   543→            longTermDeflection = deltaLongTerm,
+   544→   544→            calculatedDeflection = deltaLongTerm,
+   545→   545→            allowableDeflection = allowableDeflection,
+   546→   546→            ratio = ratio,
+   547→   547→            isSafe = ratio <= 1.0,
+   548→   548→            message = "δ_i=%.1fmm, δ_LT=%.1fmm, δ_allow=%.1fmm".format(deltaImmediate, deltaLongTerm, allowableDeflection),
+   549→   549→            recommendation = if (ratio > 1.0) "زِد سماكة البلاطة أو نخفض نسبة التسليح" else "الانحراف مقبول"
+   550→   550→        )
+   551→   551→    }
+   552→   552→
+   553→   553→    private fun calculatePostTension(slab: SlabType.PostTensioned, fcu: Double, fy: Double): PostTensionCalculations {
+   554→   554→        // حساب خسائر ما قبل الشد حسب ECP 203 البند 9-5
+   555→   555→        val Pj = slab.prestressForce  // kN - قوة الشد الأولية
+   556→   556→        val fpi = 1400.0  // MPa - إجهاد الشد الأولي (تقريبي لأسلاك 7-طن)
+   557→   557→        val L = slab.shortSpan / 1000.0  // m
+   558→   558→        
+   559→   559→        // 1. خسارة الانضغاط المرن (Elastic Shortening) ≈ 2%
+   560→   560→        val elasticShortening = 0.02 * Pj
+   561→   561→        
+   562→   562→        // 2. خسارة الزحف (Creep) ≈ 3-4%
+   563→   563→        val creep = 0.035 * Pj
+   564→   564→        
+   565→   565→        // 3. خسارة الانكماش (Shrinkage) ≈ 2-3%
+   566→   566→        val shrinkage = 0.025 * Pj
+   567→   567→        
+   568→   568→        // 4. خسارة الاسترخاء (Relaxation) ≈ 3-5%
+   569→   569→        val relaxation = 0.04 * Pj
+   570→   570→        
+   571→   571→        // 5. خسارة الاحتكاك (Friction) = Pj × (KL + μθ)
+   572→   572→        // K = 0.004/m, μ = 0.2, θ ≈ 0.05 rad/m
+   573→   573→        val K_friction = 0.004
+   574→   574→        val mu_friction = 0.20
+   575→   575→        val theta = 0.05 * L
+   576→   576→        val friction = Pj * (1.0 - exp(-(K_friction * L + mu_friction * theta)))
+   577→   577→        
+   578→   578→        // 6. خسارة التثبيت (Anchorage) ≈ 5-10mm × (Ap × Ep / L)
+   579→   579→        val anchorage = 0.005 * Pj
+   580→   580→        
+   581→   581→        // إجمالي الخسائر
+   582→   582→        val totalLoss = elasticShortening + creep + shrinkage + relaxation + friction + anchorage
+   583→   583→        val totalLossPercentage = (totalLoss / Pj) * 100.0
+   584→   584→        
+   585→   585→        // القوة الفعالة بعد الخسائر
+   586→   586→        val Pe = Pj - totalLoss
+   587→   587→        
+   588→   588→        // الحمل المكافئ من الشد المسبق
+   589→   589→        val eccentricity = slab.eccentricity / 1000.0  // m
+   590→   590→        val equivalentLoad = 8.0 * Pe * eccentricity / (L * L)  // kN/m (تحميل مكافئ موزع)
+   591→   591→        
+   592→   592→        // السهم (Camber)
+   593→   593→        val Ec = 4400.0 * sqrt(fcu)  // MPa
+   594→   594→        val I = 1000.0 * (slab.thickness / 1000.0).pow(3) / 12.0 * 1e12  // mm⁴
+   595→   595→        val camber = Pe * 1000.0 * eccentricity * 1000.0 * L * L * 1e6 / (8.0 * Ec * I)  // mm
+   596→   596→        
+   597→   597→        val losses = PrestressLosses(
+   598→   598→            elasticShortening = elasticShortening,
+   599→   599→            creep = creep,
+   600→   600→            shrinkage = shrinkage,
+   601→   601→            relaxation = relaxation,
+   602→   602→            friction = friction,
+   603→   603→            anchorage = anchorage,
+   604→   604→            totalLoss = totalLoss,
+   605→   605→            totalLossPercentage = totalLossPercentage
+   606→   606→        )
+   607→   607→        
+   608→   608→        // إجهاد عند التحميل والخدمة
+   609→   609→        val A = 1000.0 * slab.thickness  // mm²/m
+   610→   610→        val stressAtTransfer = (Pj * 1000.0 / A) + (Pj * 1000.0 * slab.eccentricity / (A * slab.thickness / 6.0))  // MPa
+   611→   611→        val stressAtService = (Pe * 1000.0 / A) + (Pe * 1000.0 * slab.eccentricity / (A * slab.thickness / 6.0))  // MPa
+   612→   612→        
+   613→   613→        return PostTensionCalculations(
+   614→   614→            prestressForce = Pe,
+   615→   615→            losses = losses,
+   616→   616→            equivalentLoad = equivalentLoad,
+   617→   617→            camber = camber,
+   618→   618→            stressAtTransfer = stressAtTransfer,
+   619→   619→            stressAtService = stressAtService,
+   620→   620→            isSafe = totalLossPercentage < 30.0
+   621→   621→        )
+   622→   622→    }
+   623→   623→}
+   624→   624→

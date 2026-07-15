@@ -1,0 +1,566 @@
+     1→package com.civileg.app.ui.compose.screens
+     2→
+     3→import androidx.compose.foundation.Canvas
+     4→import androidx.compose.foundation.background
+     5→import androidx.compose.foundation.layout.*
+     6→import androidx.compose.foundation.lazy.LazyColumn
+     7→import androidx.compose.foundation.shape.RoundedCornerShape
+     8→import androidx.compose.foundation.text.KeyboardOptions
+     9→import androidx.compose.material.icons.Icons
+    10→import androidx.compose.material.icons.automirrored.filled.ArrowBack
+    11→import androidx.compose.material.icons.filled.*
+    12→import androidx.compose.material3.*
+    13→import androidx.compose.runtime.*
+    14→import androidx.compose.ui.platform.LocalContext
+    15→import androidx.compose.runtime.livedata.observeAsState
+    16→import androidx.compose.ui.Alignment
+    17→import com.civileg.app.viewmodel.ProjectViewModel
+    18→import com.civileg.app.db.Project
+    19→import kotlin.math.pow
+    20→import androidx.compose.ui.Modifier
+    21→import androidx.compose.ui.geometry.Offset
+    22→import androidx.compose.ui.geometry.Size
+    23→import androidx.compose.ui.graphics.Color
+    24→import androidx.compose.ui.graphics.Path
+    25→import androidx.compose.ui.graphics.drawscope.Stroke
+    26→import androidx.compose.ui.graphics.nativeCanvas
+    27→import androidx.compose.ui.res.painterResource
+    28→import androidx.compose.ui.text.font.FontFamily
+    29→import androidx.compose.ui.text.font.FontWeight
+    30→import androidx.compose.ui.text.input.KeyboardType
+    31→import androidx.compose.animation.core.animateFloatAsState
+    32→import androidx.compose.animation.core.tween
+    33→import androidx.compose.ui.unit.dp
+    34→import androidx.compose.ui.unit.sp
+    35→import androidx.hilt.navigation.compose.hiltViewModel
+    36→import com.civileg.app.R
+    37→import com.civileg.app.utils.CalculatorEngine
+    38→import com.civileg.app.viewmodel.BeamViewModel
+    39→import kotlin.math.min
+    40→
+    41→@OptIn(ExperimentalMaterial3Api::class)
+    42→@Composable
+    43→fun BeamScreen(
+    44→    viewModel: BeamViewModel = hiltViewModel(),
+    45→    projectViewModel: ProjectViewModel = hiltViewModel(),
+    46→    onNavigateBack: () -> Unit = {}
+    47→) {
+    48→    val context = LocalContext.current
+    49→    val result by viewModel.result.observeAsState()
+    50→    val isLoading by viewModel.isLoading.observeAsState(false)
+    51→    val isExporting by viewModel.isExporting.observeAsState(false)
+    52→    val error by viewModel.error.observeAsState()
+    53→    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    54→
+    55→    var showSaveDialog by remember { mutableStateOf(false) }
+    56→    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    57→    var designName by remember { mutableStateOf("كمرة B1") }
+    58→    
+    59→    var width by remember { mutableStateOf("250") }
+    60→    var height by remember { mutableStateOf("600") }
+    61→    var span by remember { mutableStateOf("5.0") }
+    62→    var deadLoad by remember { mutableStateOf("15.0") }
+    63→    var liveLoad by remember { mutableStateOf("10.0") }
+    64→    var fcu by remember { mutableStateOf("25") }
+    65→    var fy by remember { mutableStateOf("360") }
+    66→    var barDiameter by remember { mutableStateOf("16") }
+    67→    var numBars by remember { mutableStateOf("4") }
+    68→    var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
+    69→    var expandedSupport by remember { mutableStateOf(false) }
+    70→
+    71→    Scaffold(
+    72→        topBar = {
+    73→            TopAppBar(
+    74→                title = { Text("تصميم الكمرات الخرسانية Pro", fontWeight = FontWeight.Bold) },
+    75→                navigationIcon = {
+    76→                    IconButton(onClick = onNavigateBack) {
+    77→                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+    78→                    }
+    79→                }
+    80→            )
+    81→        }
+    82→    ) { padding ->
+    83→        LazyColumn(
+    84→            modifier = Modifier
+    85→                .fillMaxSize()
+    86→                .padding(padding)
+    87→                .background(MaterialTheme.colorScheme.background)
+    88→                .padding(horizontal = 16.dp),
+    89→            verticalArrangement = Arrangement.spacedBy(16.dp)
+    90→        ) {
+    91→            item { SectionHeader("📐 أبعاد الكمرة ونوع الارتكاز", R.drawable.ic_beam) }
+    92→
+    93→            item {
+    94→                ExposedDropdownMenuBox(
+    95→                    expanded = expandedSupport,
+    96→                    onExpandedChange = { expandedSupport = !expandedSupport },
+    97→                    modifier = Modifier.fillMaxWidth()
+    98→                ) {
+    99→                    OutlinedTextField(
+   100→                        value = selectedSupport.displayName,
+   101→                        onValueChange = {},
+   102→                        readOnly = true,
+   103→                        label = { Text("نوع نقاط الارتكاز") },
+   104→                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSupport) },
+   105→                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
+   106→                        shape = RoundedCornerShape(12.dp)
+   107→                    )
+   108→                    ExposedDropdownMenu(expanded = expandedSupport, onDismissRequest = { expandedSupport = false }) {
+   109→                        CalculatorEngine.SupportType.values().forEach { type ->
+   110→                            DropdownMenuItem(
+   111→                                text = { Text(type.displayName) },
+   112→                                onClick = {
+   113→                                    selectedSupport = type
+   114→                                    expandedSupport = false
+   115→                                }
+   116→                            )
+   117→                        }
+   118→                    }
+   119→                }
+   120→            }
+   121→
+   122→            item {
+   123→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   124→                    BeamInputField(width, "العرض b (mm)", { width = it }, Modifier.weight(1f))
+   125→                    BeamInputField(height, "العمق h (mm)", { height = it }, Modifier.weight(1f))
+   126→                }
+   127→            }
+   128→
+   129→            item {
+   130→                BeamInputField(span, "الطول الفعال L (m)", { span = it }, Modifier.fillMaxWidth())
+   131→            }
+   132→
+   133→            item {
+   134→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   135→                    BeamInputField(deadLoad, "Dead Load (kN/m)", { deadLoad = it }, Modifier.weight(1f))
+   136→                    BeamInputField(liveLoad, "Live Load (kN/m)", { liveLoad = it }, Modifier.weight(1f))
+   137→                }
+   138→            }
+   139→
+   140→            item {
+   141→                Text("اختيار حديد التسليح (لتقييم التوفير)", fontWeight = FontWeight.Bold)
+   142→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   143→                    BeamInputField(numBars, "عدد الأسياخ", { numBars = it }, Modifier.weight(1f))
+   144→                    BeamInputField(barDiameter, "القطر Ø (mm)", { barDiameter = it }, Modifier.weight(1f))
+   145→                }
+   146→            }
+   147→
+   148→            item {
+   149→                Button(
+   150→                    onClick = {
+   151→                        viewModel.calculateBeamPro(
+   152→                            width.toDoubleOrNull() ?: 250.0,
+   153→                            height.toDoubleOrNull() ?: 600.0,
+   154→                            span.toDoubleOrNull() ?: 5.0,
+   155→                            deadLoad.toDoubleOrNull() ?: 0.0,
+   156→                            liveLoad.toDoubleOrNull() ?: 0.0,
+   157→                            fcu.toDoubleOrNull() ?: 25.0,
+   158→                            fy.toDoubleOrNull() ?: 360.0,
+   159→                            barDiameter.toIntOrNull() ?: 16,
+   160→                            CalculatorEngine.DesignCode.EGYPTIAN,
+   161→                            selectedSupport
+   162→                        )
+   163→                    },
+   164→                    modifier = Modifier.fillMaxWidth(),
+   165→                    shape = RoundedCornerShape(12.dp),
+   166→                    enabled = !isLoading
+   167→                ) {
+   168→                    if (isLoading) {
+   169→                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+   170→                    } else {
+   171→                        Icon(Icons.Default.Calculate, contentDescription = null)
+   172→                        Spacer(Modifier.width(8.dp))
+   173→                        Text("تحليل وتصميم المقطع")
+   174→                    }
+   175→                }
+   176→            }
+   177→
+   178→            result?.let { res ->
+   179→                item { SectionHeader("📊 نتائج التحليل والإقتصاد", R.drawable.ic_calculator) }
+   180→                
+   181→                item {
+   182→                    val ecoColor = when {
+   183→                        res.utilizationRatio > 1.0 -> Color.Red
+   184→                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+   185→                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+   186→                        else -> Color(0xFF2196F3)
+   187→                    }
+   188→
+   189→                    Card(
+   190→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+   191→                        shape = RoundedCornerShape(16.dp)
+   192→                    ) {
+   193→                        Column(modifier = Modifier.padding(16.dp)) {
+   194→                            Row(
+   195→                                modifier = Modifier.fillMaxWidth(),
+   196→                                verticalAlignment = Alignment.CenterVertically,
+   197→                                horizontalArrangement = Arrangement.SpaceBetween
+   198→                            ) {
+   199→                                Column(modifier = Modifier.weight(1f)) {
+   200→                                    Row(verticalAlignment = Alignment.CenterVertically) {
+   201→                                        Icon(
+   202→                                            if (res.isSafe) Icons.Default.Verified 
+   203→                                            else Icons.Default.Dangerous, 
+   204→                                            contentDescription = null, 
+   205→                                            tint = ecoColor
+   206→                                        )
+   207→                                        Spacer(Modifier.width(8.dp))
+   208→                                        Text(
+   209→                                            if (res.utilizationRatio > 1.0) "المقطع غير آمن إنشائياً! ❌"
+   210→                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+   211→                                            else if (res.utilizationRatio > 0.4) "تصميم مثالي واقتصادي ✅"
+   212→                                            else "القطاع كبير (غير اقتصادي) 🔵",
+   213→                                            fontWeight = FontWeight.Bold,
+   214→                                            color = ecoColor
+   215→                                        )
+   216→                                    }
+   217→                                    Text(
+   218→                                        "المستشار الإنشائي: نسبة الاستخدام",
+   219→                                        style = MaterialTheme.typography.labelSmall,
+   220→                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+   221→                                    )
+   222→                                }
+   223→                                
+   224→                                Box(contentAlignment = Alignment.Center) {
+   225→                                    val animatedRatio by animateFloatAsState(
+   226→                                        targetValue = res.utilizationRatio.toFloat(),
+   227→                                        animationSpec = tween(1000), label = ""
+   228→                                    )
+   229→                                    CircularProgressIndicator(
+   230→                                        progress = { animatedRatio },
+   231→                                        modifier = Modifier.size(60.dp),
+   232→                                        strokeWidth = 6.dp,
+   233→                                        color = ecoColor,
+   234→                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+   235→                                    )
+   236→                                    Text(
+   237→                                        "${(res.utilizationRatio * 100).toInt()}%",
+   238→                                        fontWeight = FontWeight.Bold,
+   239→                                        fontSize = 12.sp
+   240→                                    )
+   241→                                }
+   242→                            }
+   243→                        }
+   244→                    }
+   245→                }
+   246→
+   247→                item {
+   248→                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   249→                        Button(
+   250→                            onClick = {
+   251→                                viewModel.exportToPdf(context) { file ->
+   252→                                    if (file == null) {
+   253→                                        // Handle error
+   254→                                    }
+   255→                                }
+   256→                            },
+   257→                            modifier = Modifier.weight(1f),
+   258→                            shape = RoundedCornerShape(12.dp),
+   259→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+   260→                            enabled = !isExporting
+   261→                        ) {
+   262→                            if (isExporting) {
+   263→                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+   264→                            } else {
+   265→                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+   266→                                Spacer(modifier = Modifier.width(8.dp))
+   267→                                Text("تقرير PDF")
+   268→                            }
+   269→                        }
+   270→
+   271→                        Button(
+   272→                            onClick = { showSaveDialog = true },
+   273→                            modifier = Modifier.weight(1f),
+   274→                            shape = RoundedCornerShape(12.dp),
+   275→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   276→                        ) {
+   277→                            Icon(Icons.Default.Save, contentDescription = null)
+   278→                            Spacer(modifier = Modifier.width(8.dp))
+   279→                            Text("حفظ")
+   280→                        }
+   281→                    }
+   282→                }
+   283→
+   284→                item {
+   285→                    Text("📉 مخطط العزوم (B.M.D)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   286→                    BeamDiagramCanvas(res, modifier = Modifier.fillMaxWidth().height(150.dp))
+   287→                }
+   288→
+   289→                item {
+   290→                    Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   291→                    BeamFormulasCard()
+   292→                }
+   293→
+   294→                item {
+   295→                    Text("🎨 رسم المقطع العرضي والتسليح", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   296→                    BeamSectionDrawing(res, modifier = Modifier.fillMaxWidth().height(280.dp))
+   297→                }
+   298→            }
+   299→        }
+   300→    }
+   301→
+   302→    if (showSaveDialog) {
+   303→        AlertDialog(
+   304→            onDismissRequest = { showSaveDialog = false },
+   305→            title = { Text("حفظ التصميم في مشروع") },
+   306→            text = {
+   307→                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+   308→                    OutlinedTextField(
+   309→                        value = designName,
+   310→                        onValueChange = { designName = it },
+   311→                        label = { Text("اسم الكمرة (مثلاً: B1)") },
+   312→                        modifier = Modifier.fillMaxWidth()
+   313→                    )
+   314→                    
+   315→                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+   316→                    if (projects.isEmpty()) {
+   317→                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+   318→                    } else {
+   319→                        projects.forEach { project ->
+   320→                            Row(
+   321→                                modifier = Modifier
+   322→                                    .fillMaxWidth()
+   323→                                    .padding(vertical = 4.dp),
+   324→                                verticalAlignment = Alignment.CenterVertically
+   325→                            ) {
+   326→                                RadioButton(
+   327→                                    selected = selectedProjectId == project.id,
+   328→                                    onClick = { selectedProjectId = project.id }
+   329→                                )
+   330→                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+   331→                            }
+   332→                        }
+   333→                    }
+   334→                }
+   335→            },
+   336→            confirmButton = {
+   337→                Button(onClick = {
+   338→                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+   339→                    result?.let { viewModel.saveBeam(pId, designName, it) }
+   340→                    showSaveDialog = false
+   341→                }) {
+   342→                    Text("حفظ")
+   343→                }
+   344→            },
+   345→            dismissButton = {
+   346→                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+   347→            }
+   348→        )
+   349→    }
+   350→}
+   351→
+   352→@Composable
+   353→private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
+   354→    Card(
+   355→        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+   356→        shape = RoundedCornerShape(16.dp)
+   357→    ) {
+   358→        Column(modifier = Modifier.padding(16.dp)) {
+   359→            Text("النتائج النهائية:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   360→            Spacer(modifier = Modifier.height(8.dp))
+   361→            ResultRow("التسليح السفلي", result.reinforcementBottom.barString)
+   362→            ResultRow("التسليح العلوي", result.reinforcementTop.barString)
+   363→            ResultRow("الكانات", result.stirrups.description)
+   364→            ResultRow("أقصى عزم", "${"%.1f".format(result.appliedMoment)} kN.m")
+   365→            ResultRow("أقصى قص", "${"%.1f".format(result.appliedShear)} kN")
+   366→            
+   367→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+   368→            result.safetyChecks.forEach { check ->
+   369→                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+   370→                    Text(check.name, fontSize = 12.sp)
+   371→                    Text(if (check.isSafe) "آمن ✅" else "غير آمن ❌", color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+   372→                }
+   373→            }
+   374→        }
+   375→    }
+   376→}
+   377→
+   378→@Composable
+   379→private fun BeamFormulasCard() {
+   380→    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
+   381→        Column(modifier = Modifier.padding(12.dp)) {
+   382→            FormulaItem("1. Mu = (w_ult * L²) / Factor (Structural Analysis)")
+   383→            FormulaItem("2. d = h - Concrete Cover")
+   384→            FormulaItem("3. R = Mu / (fcu/gamma_c * b * d²)")
+   385→            FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
+   386→            FormulaItem("5. Check Shear: q_u = Vu / (b * d) < q_cu_limit")
+   387→        }
+   388→    }
+   389→}
+   390→
+   391→@Composable
+   392→private fun BeamDiagramCanvas(result: CalculatorEngine.BeamResult, modifier: Modifier) {
+   393→    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
+   394→        Canvas(modifier = Modifier.fillMaxSize().background(Color.White).padding(20.dp)) {
+   395→            val w = size.width
+   396→            val h = size.height
+   397→            val baseline = h * 0.4f
+   398→            
+   399→            // Draw baseline
+   400→            drawLine(Color.DarkGray, Offset(0f, baseline), Offset(w, baseline), strokeWidth = 3f)
+   401→            
+   402→            // Draw Supports based on type
+   403→            drawSupport(result.supportType, 0f, baseline)
+   404→            drawSupport(result.supportType, w, baseline, isEnd = true)
+   405→
+   406→            // Draw BMD Path
+   407→            val path = Path()
+   408→            path.moveTo(0f, baseline)
+   409→            val segments = 50
+   410→            for (i in 0..segments) {
+   411→                val x = (i.toFloat() / segments) * w
+   412→                val normX = i.toFloat() / segments
+   413→                val y = when(result.supportType) {
+   414→                    CalculatorEngine.SupportType.CANTILEVER -> baseline - (h * 0.5f * normX * normX)
+   415→                    else -> baseline + (h * 0.5f * 4 * normX * (1 - normX))
+   416→                }
+   417→                path.lineTo(x, y)
+   418→            }
+   419→            drawPath(path, Color.Red, style = Stroke(4f))
+   420→            
+   421→            // Text for Max Moment
+   422→            drawContext.canvas.nativeCanvas.drawText(
+   423→                "M max = ${"%.1f".format(result.appliedMoment)} kN.m",
+   424→                w/2, h - 5f,
+   425→                android.graphics.Paint().apply {
+   426→                    color = android.graphics.Color.RED
+   427→                    textSize = 28f
+   428→                    textAlign = android.graphics.Paint.Align.CENTER
+   429→                    isFakeBoldText = true
+   430→                }
+   431→            )
+   432→        }
+   433→    }
+   434→}
+   435→
+   436→private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSupport(type: CalculatorEngine.SupportType, x: Float, y: Float, isEnd: Boolean = false) {
+   437→    val size = 20f
+   438→    when (type) {
+   439→        CalculatorEngine.SupportType.HINGED_HINGED, CalculatorEngine.SupportType.ROLLER_HINGED -> {
+   440→            val path = Path()
+   441→            path.moveTo(x, y)
+   442→            path.lineTo(x - size, y + size)
+   443→            path.lineTo(x + size, y + size)
+   444→            path.close()
+   445→            drawPath(path, Color.Black)
+   446→            if (type == CalculatorEngine.SupportType.ROLLER_HINGED && isEnd) {
+   447→                drawLine(Color.Black, Offset(x - size, y + size + 5f), Offset(x + size, y + size + 5f), strokeWidth = 2f)
+   448→            }
+   449→        }
+   450→        CalculatorEngine.SupportType.FIXED_HINGED, CalculatorEngine.SupportType.FIXED_FIXED -> {
+   451→            if ((!isEnd && (type == CalculatorEngine.SupportType.FIXED_HINGED || type == CalculatorEngine.SupportType.FIXED_FIXED)) || 
+   452→                (isEnd && type == CalculatorEngine.SupportType.FIXED_FIXED)) {
+   453→                drawLine(Color.Black, Offset(x, y - size), Offset(x, y + size), strokeWidth = 6f)
+   454→                for (i in -2..2) {
+   455→                    val offset = i * 8f
+   456→                    drawLine(Color.Black, Offset(x, y + offset), Offset(x + (if(isEnd) -10f else 10f), y + offset - 10f), strokeWidth = 2f)
+   457→                }
+   458→            } else {
+   459→                // Hinged part
+   460→                val path = Path()
+   461→                path.moveTo(x, y)
+   462→                path.lineTo(x - size, y + size)
+   463→                path.lineTo(x + size, y + size)
+   464→                path.close()
+   465→                drawPath(path, Color.Black)
+   466→            }
+   467→        }
+   468→        CalculatorEngine.SupportType.CANTILEVER -> {
+   469→            if (!isEnd) {
+   470→                drawLine(Color.Black, Offset(x, y - size*2), Offset(x, y + size*2), strokeWidth = 8f)
+   471→            }
+   472→        }
+   473→        else -> {}
+   474→    }
+   475→}
+   476→
+   477→@Composable
+   478→private fun BeamSectionDrawing(result: CalculatorEngine.BeamResult, modifier: Modifier) {
+   479→    Card(modifier = modifier, shape = RoundedCornerShape(12.dp)) {
+   480→        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
+   481→            val scale = minOf((size.width - 120f)/result.width, (size.height - 120f)/result.depth).toFloat()
+   482→            val w = (result.width * scale).toFloat()
+   483→            val h = (result.depth * scale).toFloat()
+   484→            val left = (size.width - w) / 2
+   485→            val top = (size.height - h) / 2
+   486→            
+   487→            // Concrete
+   488→            drawRect(Color.LightGray, Offset(left, top), Size(w, h))
+   489→            drawRect(Color.DarkGray, Offset(left, top), Size(w, h), style = Stroke(4f))
+   490→            
+   491→            // Stirrup (Ties)
+   492→            val cover = 25f * scale
+   493→            drawRect(Color.Blue.copy(alpha = 0.8f), Offset(left + cover, top + cover), Size(w - 2*cover, h - 2*cover), style = Stroke(3f))
+   494→            
+   495→            // Main Reinforcement (Bottom)
+   496→            val barR = 8f
+   497→            val nBarsBottom = result.reinforcementBottom.numBars
+   498→            for (i in 0 until nBarsBottom) {
+   499→                val x = left + cover + 20f + i * (w - 2*cover - 40f) / (if(nBarsBottom > 1) nBarsBottom - 1 else 1)
+   500→                drawCircle(Color.Black, barR, Offset(x, top + h - cover - 20f))
+   501→            }
+   502→            
+   503→            // Top Reinforcement (Hangers)
+   504→            val nBarsTop = result.reinforcementTop.numBars
+   505→            for (i in 0 until nBarsTop) {
+   506→                val x = left + cover + 20f + i * (w - 2*cover - 40f) / (if(nBarsTop > 1) nBarsTop - 1 else 1)
+   507→                drawCircle(Color.DarkGray, barR * 0.8f, Offset(x, top + cover + 20f))
+   508→            }
+   509→            
+   510→            // Dimensions
+   511→            drawContext.canvas.nativeCanvas.apply {
+   512→                val paint = android.graphics.Paint().apply { 
+   513→                    color = android.graphics.Color.BLACK
+   514→                    textSize = 30f
+   515→                    textAlign = android.graphics.Paint.Align.CENTER
+   516→                }
+   517→                drawText("${result.width.toInt()} mm", size.width/2, top - 15f, paint)
+   518→                save()
+   519→                rotate(-90f, left - 20f, size.height/2)
+   520→                drawText("${result.depth.toInt()} mm", left - 20f, size.height/2, paint)
+   521→                restore()
+   522→            }
+   523→        }
+   524→    }
+   525→}
+   526→
+   527→@Composable
+   528→private fun SectionHeader(title: String, iconRes: Int) {
+   529→    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+   530→        Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+   531→        Spacer(modifier = Modifier.width(8.dp))
+   532→        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+   533→    }
+   534→}
+   535→
+   536→@Composable
+   537→private fun BeamInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
+   538→    OutlinedTextField(
+   539→        value = value,
+   540→        onValueChange = onValueChange,
+   541→        label = { Text(label) },
+   542→        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+   543→        modifier = modifier,
+   544→        shape = RoundedCornerShape(12.dp)
+   545→    )
+   546→}
+   547→
+   548→@Composable
+   549→private fun ResultRow(label: String, value: String) {
+   550→    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+   551→        Text(label, fontSize = 14.sp)
+   552→        Text(value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+   553→    }
+   554→}
+   555→
+   556→@Composable
+   557→private fun FormulaItem(formula: String) {
+   558→    Text(
+   559→        text = formula,
+   560→        fontFamily = FontFamily.Monospace,
+   561→        fontSize = 12.sp,
+   562→        modifier = Modifier.padding(vertical = 2.dp),
+   563→        color = MaterialTheme.colorScheme.secondary
+   564→    )
+   565→}
+   566→

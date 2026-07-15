@@ -1,0 +1,1404 @@
+     1→     1→package com.civileg.app.ui.compose.components.drawings
+     2→     2→
+     3→     3→import androidx.compose.foundation.Canvas
+     4→     4→import androidx.compose.foundation.layout.fillMaxWidth
+     5→     5→import androidx.compose.foundation.layout.height
+     6→     6→import androidx.compose.runtime.Composable
+     7→     7→import androidx.compose.ui.Modifier
+     8→     8→import androidx.compose.ui.geometry.Offset
+     9→     9→import androidx.compose.ui.geometry.Size
+    10→    10→import androidx.compose.ui.graphics.Color
+    11→    11→import androidx.compose.ui.graphics.Path
+    12→    12→import androidx.compose.ui.graphics.PathEffect
+    13→    13→import androidx.compose.ui.graphics.drawscope.DrawScope
+    14→    14→import androidx.compose.ui.graphics.drawscope.Stroke
+    15→    15→import androidx.compose.ui.graphics.nativeCanvas
+    16→    16→import androidx.compose.ui.unit.dp
+    17→    17→import kotlin.math.max
+    18→    18→import kotlin.math.min
+    19→    19→
+    20→    20→// ============================================================================
+    21→    21→// COLOR PALETTE — steel structural drawing
+    22→    22→// ============================================================================
+    23→    23→
+    24→    24→/** Steel profile main fill — DARK GRAY */
+    25→    25→private val SteelGray = Color(0xFF7F8C8D)
+    26→    26→
+    27→    27→/** Steel profile top face (3D highlight) */
+    28→    28→private val SteelTopGray = Color(0xFF95A5A6)
+    29→    29→
+    30→    30→/** Steel profile side face (3D shadow) */
+    31→    31→private val SteelSideGray = Color(0xFF5D6D7E)
+    32→    32→
+    33→    33→/** Cross-section fill */
+    34→    34→private val SectionFill = Color(0xFF3D3D3D)
+    35→    35→
+    36→    36→/** Bolt circles — ORANGE/AMBER */
+    37→    37→private val BoltOrange = Color(0xFFF39C12)
+    38→    38→
+    39→    39→/** Weld symbol — RED */
+    40→    40→private val WeldRed = Color(0xFFE74C3C)
+    41→    41→
+    42→    42→/** Connection plates */
+    43→    43→private val PlateGray = Color(0xFF95A5A6)
+    44→    44→
+    45→    45→/** Dimension lines and text — WHITE */
+    46→    46→private val DimWhite = Color(0xFFFFFFFF)
+    47→    47→
+    48→    48→/** Extension lines */
+    49→    49→private val ExtGray = Color(0xFFAAAAAA)
+    50→    50→
+    51→    51→/** Table header background */
+    52→    52→private val TblHeaderBg = Color(0x33FFFFFF)
+    53→    53→
+    54→    54→/** Table row alternate */
+    55→    55→private val TblRowAlt = Color(0x1AFFFFFF)
+    56→    56→
+    57→    57→/** Center line */
+    58→    58→private val CtrLine = Color(0x4488FF88)
+    59→    59→
+    60→    60→/** Section cut indicator */
+    61→    61→private val SectionCut = Color(0xFFE74C3C)
+    62→    62→
+    63→    63→/** Stiffener highlight */
+    64→    64→private val StiffenerColor = Color(0xFF6C7A89)
+    65→    65→
+    66→    66→// ============================================================================
+    67→    67→// COMPOSABLE ENTRY POINT
+    68→    68→// ============================================================================
+    69→    69→
+    70→    70→/**
+    71→    71→ * Professional Steel Structural Member Engineering Drawing.
+    72→    72→ *
+    73→    73→ * Renders:
+    74→    74→ * - Main elevation view (left ~55%) with 3D profile, end plates, bolt groups, stiffeners
+    75→    75→ * - Cross-section view (right-top ~35% width, 40% height) with full geometry & dimension annotations
+    76→    76→ * - Connection detail (right-bottom) with bolt pattern, end plate, weld symbols
+    77→    77→ * - Properties table (bottom) with section designation, A, Ix, Sx, Zx, weight
+    78→    78→ * - Professional title block
+    79→    79→ *
+    80→    80→ * Supports: I-BEAM, W-SECTION, HSS, CHANNEL, ANGLE
+    81→    81→ *
+    82→    82→ * Background is transparent — the parent composable supplies the dark theme.
+    83→    83→ */
+    84→    84→@Composable
+    85→    85→fun ProfessionalSteelDrawing(
+    86→    86→    sectionType: String = "I-BEAM",
+    87→    87→    sectionName: String = "W12x26",
+    88→    88→    memberLength: Double = 6000.0,
+    89→    89→    depth: Double = 310.0,
+    90→    90→    flangeWidth: Double = 165.0,
+    91→    91→    flangeThickness: Double = 9.7,
+    92→    92→    webThickness: Double = 5.8,
+    93→    93→    radius: Double = 7.6,
+    94→    94→    area: Double = 49.1,
+    95→    95→    ix: Double = 8550.0,
+    96→    96→    sx: Double = 551.0,
+    97→    97→    zx: Double = 624.0,
+    98→    98→    weightPerMeter: Double = 38.6,
+    99→    99→    boltDia: Double = 20.0,
+   100→   100→    boltCount: Int = 4,
+   101→   101→    boltGauge: Double = 90.0,
+   102→   102→    boltPitch: Double = 75.0,
+   103→   103→    endPlateThickness: Double = 12.0,
+   104→   104→    hasStiffener: Boolean = false,
+   105→   105→    weldSize: Double = 6.0,
+   106→   106→    isColumn: Boolean = false,
+   107→   107→    modifier: Modifier = Modifier
+   108→   108→) {
+   109→   109→    Canvas(
+   110→   110→        modifier = modifier
+   111→   111→            .fillMaxWidth()
+   112→   112→            .height(560.dp)
+   113→   113→    ) {
+   114→   114→        val cw = size.width
+   115→   115→        val ch = size.height
+   116→   116→
+   117→   117→        val isIBeam = sectionType == "I-BEAM" || sectionType == "W-SECTION"
+   118→   118→        val isHSS = sectionType == "HSS"
+   119→   119→        val isChannel = sectionType == "CHANNEL"
+   120→   120→        val isAngle = sectionType == "ANGLE"
+   121→   121→
+   122→   122→        // ── Layout zones ──
+   123→   123→        val margin = 24f
+   124→   124→        val tableHeight = 120f
+   125→   125→        val tableTop = ch - tableHeight - margin
+   126→   126→
+   127→   127→        // Elevation view (left ~55%)
+   128→   128→        val elevLeft = margin + 50f
+   129→   129→        val elevRight = cw * 0.55f
+   130→   130→        val elevTop = margin + 30f
+   131→   131→        val elevBottom = tableTop - 16f
+   132→   132→
+   133→   133→        // Cross-section view (right-top)
+   134→   134→        val sectLeft = elevRight + 40f
+   135→   135→        val sectRight = cw - margin
+   136→   136→        val sectTop = margin + 30f
+   137→   137→        val sectBottom = elevBottom * 0.52f
+   138→   138→
+   139→   139→        // Connection detail (right-bottom)
+   140→   140→        val connLeft = sectLeft
+   141→   141→        val connRight = sectRight
+   142→   142→        val connTop = sectBottom + 30f
+   143→   143→        val connBottom = tableTop - 16f
+   144→   144→
+   145→   145→        // ════════════════════════════════════════════════════════════════════
+   146→   146→        //  1. ELEVATION VIEW
+   147→   147→        // ════════════════════════════════════════════════════════════════════
+   148→   148→        drawElevationView(
+   149→   149→            elevLeft = elevLeft, elevTop = elevTop,
+   150→   150→            elevRight = elevRight, elevBottom = elevBottom,
+   151→   151→            isIBeam = isIBeam, isHSS = isHSS, isChannel = isChannel, isAngle = isAngle,
+   152→   152→            memberLength = memberLength, depth = depth, flangeWidth = flangeWidth,
+   153→   153→            flangeThickness = flangeThickness, webThickness = webThickness,
+   154→   154→            boltDia = boltDia, boltCount = boltCount, boltGauge = boltGauge,
+   155→   155→            boltPitch = boltPitch, endPlateThickness = endPlateThickness,
+   156→   156→            hasStiffener = hasStiffener, weldSize = weldSize,
+   157→   157→            isColumn = isColumn, sectionName = sectionName
+   158→   158→        )
+   159→   159→
+   160→   160→        // Section cut indicator on elevation
+   161→   161→        if (isColumn) {
+   162→   162→            drawSectionCutLine(
+   163→   163→                x1 = elevLeft - 20f, y1 = (elevTop + elevBottom) * 0.45f,
+   164→   164→                x2 = elevRight + 10f, y2 = (elevTop + elevBottom) * 0.45f,
+   165→   165→                label = "A"
+   166→   166→            )
+   167→   167→        } else {
+   168→   168→            drawSectionCutLine(
+   169→   169→                x1 = (elevLeft + elevRight) * 0.5f, y1 = elevTop - 15f,
+   170→   170→                x2 = (elevLeft + elevRight) * 0.5f, y2 = elevBottom + 15f,
+   171→   171→                label = "A"
+   172→   172→            )
+   173→   173→        }
+   174→   174→
+   175→   175→        // ════════════════════════════════════════════════════════════════════
+   176→   176→        //  2. CROSS-SECTION VIEW
+   177→   177→        // ════════════════════════════════════════════════════════════════════
+   178→   178→        drawCrossSectionView(
+   179→   179→            sectLeft = sectLeft, sectTop = sectTop,
+   180→   180→            sectRight = sectRight, sectBottom = sectBottom,
+   181→   181→            isIBeam = isIBeam, isHSS = isHSS, isChannel = isChannel, isAngle = isAngle,
+   182→   182→            depth = depth, flangeWidth = flangeWidth,
+   183→   183→            flangeThickness = flangeThickness, webThickness = webThickness,
+   184→   184→            radius = radius, area = area, ix = ix, sx = sx, zx = zx
+   185→   185→        )
+   186→   186→
+   187→   187→        // ════════════════════════════════════════════════════════════════════
+   188→   188→        //  3. CONNECTION DETAIL
+   189→   189→        // ════════════════════════════════════════════════════════════════════
+   190→   190→        drawConnectionDetail(
+   191→   191→            connLeft = connLeft, connTop = connTop,
+   192→   192→            connRight = connRight, connBottom = connBottom,
+   193→   193→            isIBeam = isIBeam, isHSS = isHSS, isChannel = isChannel, isAngle = isAngle,
+   194→   194→            depth = depth, flangeWidth = flangeWidth,
+   195→   195→            flangeThickness = flangeThickness, webThickness = webThickness,
+   196→   196→            boltDia = boltDia, boltCount = boltCount, boltGauge = boltGauge,
+   197→   197→            boltPitch = boltPitch, endPlateThickness = endPlateThickness,
+   198→   198→            weldSize = weldSize
+   199→   199→        )
+   200→   200→
+   201→   201→        // ════════════════════════════════════════════════════════════════════
+   202→   202→        //  4. PROPERTIES TABLE
+   203→   203→        // ════════════════════════════════════════════════════════════════════
+   204→   204→        drawPropertiesTable(
+   205→   205→            x = margin, y = tableTop,
+   206→   206→            width = cw - margin * 2f, height = tableHeight,
+   207→   207→            sectionName = sectionName, sectionType = sectionType,
+   208→   208→            area = area, ix = ix, sx = sx, zx = zx,
+   209→   209→            weightPerMeter = weightPerMeter,
+   210→   210→            memberLength = memberLength
+   211→   211→        )
+   212→   212→
+   213→   213→        // ════════════════════════════════════════════════════════════════════
+   214→   214→        //  5. TITLE BLOCK
+   215→   215→        // ════════════════════════════════════════════════════════════════════
+   216→   216→        drawTitleBlock(
+   217→   217→            x = cw - 280f, y = ch - 70f,
+   218→   218→            width = 265f, height = 58f,
+   219→   219→            projectName = "CivilEG",
+   220→   220→            drawingTitle = "Steel Member - $sectionName",
+   221→   221→            scale = "NTS",
+   222→   222→            drawingNo = "S-001"
+   223→   223→        )
+   224→   224→
+   225→   225→        // ── View labels ──
+   226→   226→        drawTextAnnotated(
+   227→   227→            "ELEVATION", elevLeft + (elevRight - elevLeft) / 2f, elevTop - 14f,
+   228→   228→            DimWhite, 20f, center = true, bold = true
+   229→   229→        )
+   230→   230→        drawTextAnnotated(
+   231→   231→            "SECTION A-A", sectLeft + (sectRight - sectLeft) / 2f, sectTop - 14f,
+   232→   232→            DimWhite, 20f, center = true, bold = true
+   233→   233→        )
+   234→   234→        drawTextAnnotated(
+   235→   235→            "CONN. DETAIL", connLeft + (connRight - connLeft) / 2f, connTop - 14f,
+   236→   236→            DimWhite, 20f, center = true, bold = true
+   237→   237→        )
+   238→   238→    }
+   239→   239→}
+   240→   240→
+   241→   241→// ============================================================================
+   242→   242→// PRIVATE DRAWSCOPE EXTENSION FUNCTIONS
+   243→   243→// ============================================================================
+   244→   244→
+   245→   245→/**
+   246→   246→ * Draw the main elevation view of the steel member.
+   247→   247→ * Shows the side profile with 3D effect, end plates, bolts, and stiffeners.
+   248→   248→ */
+   249→   249→private fun DrawScope.drawElevationView(
+   250→   250→    elevLeft: Float, elevTop: Float,
+   251→   251→    elevRight: Float, elevBottom: Float,
+   252→   252→    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
+   253→   253→    memberLength: Double, depth: Double, flangeWidth: Double,
+   254→   254→    flangeThickness: Double, webThickness: Double,
+   255→   255→    boltDia: Double, boltCount: Int, boltGauge: Double,
+   256→   256→    boltPitch: Double, endPlateThickness: Double,
+   257→   257→    hasStiffener: Boolean, weldSize: Double,
+   258→   258→    isColumn: Boolean, sectionName: String
+   259→   259→) {
+   260→   260→    val viewW = elevRight - elevLeft
+   261→   261→    val viewH = elevBottom - elevTop
+   262→   262→    val pad = 40f
+   263→   263→
+   264→   264→    // Compute scale to fit member in the view
+   265→   265→    val availableW = viewW - pad * 2
+   266→   266→    val availableH = viewH - pad * 2
+   267→   267→
+   268→   268→    val drawLength = if (isColumn) depth.toFloat() else memberLength.toFloat()
+   269→   269→    val drawDepth = if (isColumn) memberLength.toFloat() else depth.toFloat()
+   270→   270→
+   271→   271→    val scaleX = availableW / drawLength
+   272→   272→    val scaleY = availableH / drawDepth
+   273→   273→    val scale = min(scaleX, scaleY) * 0.80f
+   274→   274→
+   275→   275→    val sLen = drawLength * scale
+   276→   276→    val sDep = drawDepth * scale
+   277→   277→    val sTf = flangeThickness.toFloat() * scale
+   278→   278→    val sTw = webThickness.toFloat() * scale
+   279→   279→    val sFw = flangeWidth.toFloat() * scale * 0.35f  // 3D offset
+   280→   280→    val sBd = boltDia.toFloat() * scale
+   281→   281→    val sEp = endPlateThickness.toFloat() * scale
+   282→   282→    val sWs = weldSize.toFloat() * scale
+   283→   283→
+   284→   284→    // Center the member in the view
+   285→   285→    val cx = (elevLeft + elevRight) / 2f
+   286→   286→    val cy = (elevTop + elevBottom) / 2f
+   287→   287→
+   288→   288→    // Member bounding box
+   289→   289→    val memLeft = cx - sLen / 2f
+   290→   290→    val memRight = cx + sLen / 2f
+   291→   291→    val memTop = cy - sDep / 2f
+   292→   292→    val memBot = cy + sDep / 2f
+   293→   293→
+   294→   294→    // ── 3D offset direction ──
+   295→   295→    val offset3dX = sFw
+   296→   296→    val offset3dY = -sFw * 0.5f
+   297→   297→
+   298→   298→    if (isIBeam || isChannel) {
+   299→   299→        // Draw I-beam / W-Section / Channel elevation with 3D effect
+   300→   300→        drawIBeamElevation(
+   301→   301→            memLeft, memTop, memRight, memBot,
+   302→   302→            sTf, sTw, offset3dX, offset3dY,
+   303→   303→            isChannel, sEp
+   304→   304→        )
+   305→   305→    } else if (isHSS) {
+   306→   306→        // Draw HSS elevation with 3D box
+   307→   307→        drawHSSElevation(
+   308→   308→            memLeft, memTop, memRight, memBot,
+   309→   309→            offset3dX, offset3dY, sEp
+   310→   310→        )
+   311→   311→    } else if (isAngle) {
+   312→   312→        // Draw angle elevation
+   313→   313→        drawAngleElevation(
+   314→   314→            memLeft, memTop, memRight, memBot,
+   315→   315→            sTf, sTw, offset3dX, offset3dY, sEp
+   316→   316→        )
+   317→   317→    }
+   318→   318→
+   319→   319→    // ── Center line ──
+   320→   320→    if (isColumn) {
+   321→   321→        drawCenterLine(cx, memTop - 20f, cx, memBot + 20f)
+   322→   322→    } else {
+   323→   323→        drawCenterLine(memLeft - 20f, cy, memRight + 20f, cy)
+   324→   324→    }
+   325→   325→
+   326→   326→    // ── End plates ──
+   327→   327→    drawEndPlate(
+   328→   328→        if (isColumn) memLeft else memLeft,
+   329→   329→        memTop, memBot, sEp, sDep, isColumn,
+   330→   330→        boltDia = boltDia, boltCount = boltCount,
+   331→   331→        boltGauge = boltGauge, boltPitch = boltPitch, scale = scale,
+   332→   332→        isLeft = true
+   333→   333→    )
+   334→   334→    drawEndPlate(
+   335→   335→        if (isColumn) memRight else memRight,
+   336→   336→        memTop, memBot, sEp, sDep, isColumn,
+   337→   337→        boltDia = boltDia, boltCount = boltCount,
+   338→   338→        boltGauge = boltGauge, boltPitch = boltPitch, scale = scale,
+   339→   339→        isLeft = false
+   340→   340→    )
+   341→   341→
+   342→   342→    // ── Stiffeners ──
+   343→   343→    if (hasStiffener && isIBeam) {
+   344→   344→        drawStiffeners(
+   345→   345→            cx, memTop, memBot, sTf, sDep, offset3dX, offset3dY
+   346→   346→        )
+   347→   347→    }
+   348→   348→
+   349→   349→    // ── Weld symbols at connections ──
+   350→   350→    if (!isHSS) {
+   351→   351→        drawWeldSymbolVertical(memLeft - sEp - 8f, cy - 12f, sWs)
+   352→   352→        drawWeldSymbolVertical(memRight + sEp + 8f, cy - 12f, sWs)
+   353→   353→    }
+   354→   354→
+   355→   355→    // ── Dimension lines ──
+   356→   356→    if (isColumn) {
+   357→   357→        // Horizontal dimension for depth (width of column)
+   358→   358→        drawHorizontalDimension(
+   359→   359→            memLeft, memRight, memBot,
+   360→   360→            "%.0f".format(depth), DimWhite, 18f, 24f
+   361→   361→        )
+   362→   362→        // Vertical dimension for length
+   363→   363→        drawVerticalDimension(
+   364→   364→            memTop, memBot, memRight + 10f,
+   365→   365→            "%.0f".format(memberLength), DimWhite, 18f, 24f
+   366→   366→        )
+   367→   367→    } else {
+   368→   368→        // Horizontal dimension for length
+   369→   369→        drawHorizontalDimension(
+   370→   370→            memLeft, memRight, memBot,
+   371→   371→            "%.0f".format(memberLength), DimWhite, 18f, 24f
+   372→   372→        )
+   373→   373→        // Vertical dimension for depth
+   374→   374→        drawVerticalDimension(
+   375→   375→            memTop, memBot, memRight + 10f,
+   376→   376→            "d=%.0f".format(depth), DimWhite, 18f, 28f
+   377→   377→        )
+   378→   378→    }
+   379→   379→
+   380→   380→    // Section name label
+   381→   381→    drawTextAnnotated(
+   382→   382→        sectionName, cx, memTop - 6f,
+   383→   383→        SteelTopGray, 22f, center = true, bold = true
+   384→   384→    )
+   385→   385→}
+   386→   386→
+   387→   387→/**
+   388→   388→ * Draw I-beam / W-Section elevation profile with 3D effect.
+   389→   389→ */
+   390→   390→private fun DrawScope.drawIBeamElevation(
+   391→   391→    left: Float, top: Float, right: Float, bottom: Float,
+   392→   392→    tf: Float, tw: Float,
+   393→   393→    offX: Float, offY: Float,
+   394→   394→    isChannel: Boolean,
+   395→   395→    ep: Float
+   396→   396→) {
+   397→   397→    val webTop = top + tf
+   398→   398→    val webBot = bottom - tf
+   399→   399→
+   400→   400→    // ── 3D top flange (top face parallelogram) ──
+   401→   401→    drawPath(
+   402→   402→        path = Path().apply {
+   403→   403→            moveTo(left, top)
+   404→   404→            lineTo(right, top)
+   405→   405→            lineTo(right + offX, top + offY)
+   406→   406→            lineTo(left + offX, top + offY)
+   407→   407→            close()
+   408→   408→        },
+   409→   409→        color = SteelTopGray
+   410→   410→    )
+   411→   411→
+   412→   412→    // ── 3D side face (right side) ──
+   413→   413→    drawPath(
+   414→   414→        path = Path().apply {
+   415→   415→            moveTo(right, top)
+   416→   416→            lineTo(right + offX, top + offY)
+   417→   417→            lineTo(right + offX, bottom + offY)
+   418→   418→            lineTo(right, bottom)
+   419→   419→            close()
+   420→   420→        },
+   421→   421→        color = SteelSideGray
+   422→   422→    )
+   423→   423→
+   424→   424→    // ── Front face — flanges and web ──
+   425→   425→    // Top flange
+   426→   426→    drawRect(
+   427→   427→        color = SteelGray,
+   428→   428→        topLeft = Offset(left, top),
+   429→   429→        size = Size(right - left, tf)
+   430→   430→    )
+   431→   431→    // Bottom flange
+   432→   432→    drawRect(
+   433→   433→        color = SteelGray,
+   434→   434→        topLeft = Offset(left, webBot),
+   435→   435→        size = Size(right - left, tf)
+   436→   436→    )
+   437→   437→    // Web
+   438→   438→    if (isChannel) {
+   439→   439→        // Channel: web offset to one side
+   440→   440→        val webW = max(tw * 3f, 4f)
+   441→   441→        drawRect(
+   442→   442→            color = SteelGray.copy(alpha = 0.85f),
+   443→   443→            topLeft = Offset(left, webTop),
+   444→   444→            size = Size(webW, webBot - webTop)
+   445→   445→        )
+   446→   446→    } else {
+   447→   447→        drawRect(
+   448→   448→            color = SteelGray.copy(alpha = 0.85f),
+   449→   449→            topLeft = Offset(left, webTop),
+   450→   450→            size = Size(right - left, webBot - webTop)
+   451→   451→        )
+   452→   452→    }
+   453→   453→
+   454→   454→    // ── Outline ──
+   455→   455→    drawRect(
+   456→   456→        color = Color.White.copy(alpha = 0.5f),
+   457→   457→        topLeft = Offset(left, top),
+   458→   458→        size = Size(right - left, bottom - top),
+   459→   459→        style = Stroke(1.2f)
+   460→   460→    )
+   461→   461→
+   462→   462→    // Inner flange-web lines
+   463→   463→    drawLine(SteelSideGray, Offset(left, webTop), Offset(right, webTop), 1f)
+   464→   464→    drawLine(SteelSideGray, Offset(left, webBot), Offset(right, webBot), 1f)
+   465→   465→}
+   466→   466→
+   467→   467→/**
+   468→   468→ * Draw HSS (hollow structural section) elevation with 3D box effect.
+   469→   469→ */
+   470→   470→private fun DrawScope.drawHSSElevation(
+   471→   471→    left: Float, top: Float, right: Float, bottom: Float,
+   472→   472→    offX: Float, offY: Float, ep: Float
+   473→   473→) {
+   474→   474→    // Front face
+   475→   475→    drawRect(
+   476→   476→        color = SteelGray,
+   477→   477→        topLeft = Offset(left, top),
+   478→   478→        size = Size(right - left, bottom - top)
+   479→   479→    )
+   480→   480→
+   481→   481→    // Top face (3D)
+   482→   482→    drawPath(
+   483→   483→        path = Path().apply {
+   484→   484→            moveTo(left, top)
+   485→   485→            lineTo(right, top)
+   486→   486→            lineTo(right + offX, top + offY)
+   487→   487→            lineTo(left + offX, top + offY)
+   488→   488→            close()
+   489→   489→        },
+   490→   490→        color = SteelTopGray
+   491→   491→    )
+   492→   492→
+   493→   493→    // Right face (3D)
+   494→   494→    drawPath(
+   495→   495→        path = Path().apply {
+   496→   496→            moveTo(right, top)
+   497→   497→            lineTo(right + offX, top + offY)
+   498→   498→            lineTo(right + offX, bottom + offY)
+   499→   499→            lineTo(right, bottom)
+   500→   500→            close()
+   501→   501→        },
+   502→   502→        color = SteelSideGray
+   503→   503→    )
+   504→   504→
+   505→   505→    // Outline
+   506→   506→    drawRect(
+   507→   507→        color = Color.White.copy(alpha = 0.5f),
+   508→   508→        topLeft = Offset(left, top),
+   509→   509→        size = Size(right - left, bottom - top),
+   510→   510→        style = Stroke(1.2f)
+   511→   511→    )
+   512→   512→
+   513→   513→    // Dashed hollow indicator (show it's hollow)
+   514→   514→    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
+   515→   515→    val inset = 4f
+   516→   516→    drawRect(
+   517→   517→        color = Color.White.copy(alpha = 0.2f),
+   518→   518→        topLeft = Offset(left + inset, top + inset),
+   519→   519→        size = Size(right - left - inset * 2f, bottom - top - inset * 2f),
+   520→   520→        style = Stroke(0.8f, pathEffect = dashEffect)
+   521→   521→    )
+   522→   522→}
+   523→   523→
+   524→   524→/**
+   525→   525→ * Draw angle elevation profile with 3D effect.
+   526→   526→ */
+   527→   527→private fun DrawScope.drawAngleElevation(
+   528→   528→    left: Float, top: Float, right: Float, bottom: Float,
+   529→   529→    tf: Float, tw: Float,
+   530→   530→    offX: Float, offY: Float, ep: Float
+   531→   531→) {
+   532→   532→    // Angle: L-shaped cross-section. In elevation, draw as a rectangular profile
+   533→   533→    // with the leg thickness indicated.
+   534→   534→    val legH = (bottom - top) * 0.35f  // vertical leg height
+   535→   535→
+   536→   536→    // Vertical leg
+   537→   537→    drawRect(
+   538→   538→        color = SteelGray,
+   539→   539→        topLeft = Offset(left, top),
+   540→   540→        size = Size(tw * 2.5f, bottom - top)
+   541→   541→    )
+   542→   542→    // Horizontal leg (top)
+   543→   543→    drawRect(
+   544→   544→        color = SteelGray,
+   545→   545→        topLeft = Offset(left, top),
+   546→   546→        size = Size(right - left, legH)
+   547→   547→    )
+   548→   548→
+   549→   549→    // Top face 3D
+   550→   550→    drawPath(
+   551→   551→        path = Path().apply {
+   552→   552→            moveTo(left, top)
+   553→   553→            lineTo(right, top)
+   554→   554→            lineTo(right + offX, top + offY)
+   555→   555→            lineTo(left + offX, top + offY)
+   556→   556→            close()
+   557→   557→        },
+   558→   558→        color = SteelTopGray
+   559→   559→    )
+   560→   560→
+   561→   561→    // Right face 3D
+   562→   562→    drawPath(
+   563→   563→        path = Path().apply {
+   564→   564→            moveTo(right, top)
+   565→   565→            lineTo(right + offX, top + offY)
+   566→   566→            lineTo(right + offX, bottom + offY)
+   567→   567→            lineTo(right, bottom)
+   568→   568→            close()
+   569→   569→        },
+   570→   570→        color = SteelSideGray
+   571→   571→    )
+   572→   572→
+   573→   573→    // Outline
+   574→   574→    drawRect(
+   575→   575→        color = Color.White.copy(alpha = 0.5f),
+   576→   576→        topLeft = Offset(left, top),
+   577→   577→        size = Size(right - left, bottom - top),
+   578→   578→        style = Stroke(1.2f)
+   579→   579→    )
+   580→   580→
+   581→   581→    // Inner line showing angle profile
+   582→   582→    drawLine(SteelSideGray, Offset(left, top + legH), Offset(right, top + legH), 1f)
+   583→   583→    drawLine(
+   584→   584→        SteelSideGray, Offset(left + tw * 2.5f, top),
+   585→   585→        Offset(left + tw * 2.5f, top + legH), 1f
+   586→   586→    )
+   587→   587→}
+   588→   588→
+   589→   589→/**
+   590→   590→ * Draw an end plate with bolt holes at one end of the member.
+   591→   591→ */
+   592→   592→private fun DrawScope.drawEndPlate(
+   593→   593→    plateX: Float,
+   594→   594→    memTop: Float, memBot: Float,
+   595→   595→    ep: Float, sDep: Float, isColumn: Boolean,
+   596→   596→    boltDia: Double, boltCount: Int,
+   597→   597→    boltGauge: Double, boltPitch: Double,
+   598→   598→    scale: Float,
+   599→   599→    isLeft: Boolean
+   600→   600→) {
+   601→   601→    // End plate rectangle
+   602→   602→    val plateW = max(ep, 4f)
+   603→   603→    val px = if (isLeft) plateX - plateW else plateX
+   604→   604→    drawRect(
+   605→   605→        color = PlateGray,
+   606→   606→        topLeft = Offset(px, memTop - 4f),
+   607→   607→        size = Size(plateW, sDep + 8f)
+   608→   608→    )
+   609→   609→    drawRect(
+   610→   610→        color = Color.White.copy(alpha = 0.4f),
+   611→   611→        topLeft = Offset(px, memTop - 4f),
+   612→   612→        size = Size(plateW, sDep + 8f),
+   613→   613→        style = Stroke(1f)
+   614→   614→    )
+   615→   615→
+   616→   616→    // Bolt holes on the end plate
+   617→   617→    val sGauge = boltGauge.toFloat() * scale
+   618→   618→    val sPitch = boltPitch.toFloat() * scale
+   619→   619→    val sBd = max(boltDia.toFloat() * scale, 4f)
+   620→   620→    val boltCx = px + plateW / 2f
+   621→   621→
+   622→   622→    if (isColumn) {
+   623→   623→        // Column: bolts spread horizontally across the flange width
+   624→   624→        val cy = (memTop + memBot) / 2f
+   625→   625→        val rows = max(boltCount / 2, 1)
+   626→   626→        for (i in 0 until rows) {
+   627→   627→            val yOff = (i - (rows - 1) / 2f) * sPitch
+   628→   628→            drawBoltCircle(boltCx - sGauge / 2f, cy + yOff, sBd)
+   629→   629→            drawBoltCircle(boltCx + sGauge / 2f, cy + yOff, sBd)
+   630→   630→        }
+   631→   631→    } else {
+   632→   632→        // Beam: bolts along depth of end plate
+   633→   633→        val boltStartY = memTop + 10f
+   634→   634→        val usableH = sDep - 20f
+   635→   635→        for (i in 0 until boltCount) {
+   636→   636→            val by = if (boltCount > 1) {
+   637→   637→                boltStartY + i * usableH / (boltCount - 1)
+   638→   638→            } else {
+   639→   639→                cy_center(memTop, memBot)
+   640→   640→            }
+   641→   641→            drawBoltCircle(boltCx, by, sBd)
+   642→   642→        }
+   643→   643→    }
+   644→   644→}
+   645→   645→
+   646→   646→/**
+   647→   647→ * Draw a single bolt circle with cross mark.
+   648→   648→ */
+   649→   649→private fun DrawScope.drawBoltCircle(
+   650→   650→    x: Float, y: Float, diameter: Float
+   651→   651→) {
+   652→   652→    val r = max(diameter / 2f, 3f)
+   653→   653→
+   654→   654→    // Filled bolt circle
+   655→   655→    drawCircle(color = BoltOrange, radius = r, center = Offset(x, y))
+   656→   656→    // Inner cross mark
+   657→   657→    val cr = r * 0.5f
+   658→   658→    drawLine(Color(0xFF1A1A1A), Offset(x - cr, y), Offset(x + cr, y), 1.2f)
+   659→   659→    drawLine(Color(0xFF1A1A1A), Offset(x, y - cr), Offset(x, y + cr), 1.2f)
+   660→   660→    // Outer ring
+   661→   661→    drawCircle(
+   662→   662→        color = BoltOrange.copy(alpha = 0.7f), radius = r + 1.5f, center = Offset(x, y),
+   663→   663→        style = Stroke(0.8f)
+   664→   664→    )
+   665→   665→}
+   666→   666→
+   667→   667→/**
+   668→   668→ * Draw stiffener plates at mid-span of I-beam.
+   669→   669→ */
+   670→   670→private fun DrawScope.drawStiffeners(
+   671→   671→    cx: Float, memTop: Float, memBot: Float,
+   672→   672→    tf: Float, sDep: Float,
+   673→   673→    offX: Float, offY: Float
+   674→   674→) {
+   675→   675→    val stiffW = max(tf * 1.2f, 3f)
+   676→   676→    val stiffH = sDep - tf * 2f
+   677→   677→    val stiffY = memTop + tf
+   678→   678→
+   679→   679→    // Left stiffener
+   680→   680→    drawRect(
+   681→   681→        color = StiffenerColor,
+   682→   682→        topLeft = Offset(cx - stiffW - 6f, stiffY),
+   683→   683→        size = Size(stiffW, stiffH)
+   684→   684→    )
+   685→   685→    drawRect(
+   686→   686→        color = Color.White.copy(alpha = 0.3f),
+   687→   687→        topLeft = Offset(cx - stiffW - 6f, stiffY),
+   688→   688→        size = Size(stiffW, stiffH),
+   689→   689→        style = Stroke(0.8f)
+   690→   690→    )
+   691→   691→
+   692→   692→    // Right stiffener
+   693→   693→    drawRect(
+   694→   694→        color = StiffenerColor,
+   695→   695→        topLeft = Offset(cx + 6f, stiffY),
+   696→   696→        size = Size(stiffW, stiffH)
+   697→   697→    )
+   698→   698→    drawRect(
+   699→   699→        color = Color.White.copy(alpha = 0.3f),
+   700→   700→        topLeft = Offset(cx + 6f, stiffY),
+   701→   701→        size = Size(stiffW, stiffH),
+   702→   702→        style = Stroke(0.8f)
+   703→   703→    )
+   704→   704→
+   705→   705→    // Label
+   706→   706→    drawTextAnnotated(
+   707→   707→        "STIFF.", cx, stiffY + stiffH + 14f,
+   708→   708→        StiffenerColor, 14f, center = true
+   709→   709→    )
+   710→   710→}
+   711→   711→
+   712→   712→/**
+   713→   713→ * Draw a fillet weld symbol (triangle pointing down).
+   714→   714→ */
+   715→   715→private fun DrawScope.drawWeldSymbolVertical(
+   716→   716→    x: Float, y: Float, size: Float
+   717→   717→) {
+   718→   718→    val s = max(size, 4f)
+   719→   719→    drawPath(
+   720→   720→        path = Path().apply {
+   721→   721→            moveTo(x, y)
+   722→   722→            lineTo(x - s, y + s * 1.5f)
+   723→   723→            lineTo(x + s, y + s * 1.5f)
+   724→   724→            close()
+   725→   725→        },
+   726→   726→        color = WeldRed
+   727→   727→    )
+   728→   728→    // Horizontal reference line
+   729→   729→    drawLine(
+   730→   730→        WeldRed, Offset(x - s * 1.5f, y), Offset(x + s * 1.5f, y), 1f
+   731→   731→    )
+   732→   732→    // Tail line
+   733→   733→    drawLine(
+   734→   734→        WeldRed, Offset(x + s * 1.5f, y), Offset(x + s * 2.2f, y - s), 1f
+   735→   735→    )
+   736→   736→}
+   737→   737→
+   738→   738→/**
+   739→   739→ * Draw the cross-section view showing full section geometry.
+   740→   740→ */
+   741→   741→private fun DrawScope.drawCrossSectionView(
+   742→   742→    sectLeft: Float, sectTop: Float,
+   743→   743→    sectRight: Float, sectBottom: Float,
+   744→   744→    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
+   745→   745→    depth: Double, flangeWidth: Double,
+   746→   746→    flangeThickness: Double, webThickness: Double,
+   747→   747→    radius: Double, area: Double,
+   748→   748→    ix: Double, sx: Double, zx: Double
+   749→   749→) {
+   750→   750→    val viewW = sectRight - sectLeft
+   751→   751→    val viewH = sectBottom - sectTop
+   752→   752→    val cx = (sectLeft + sectRight) / 2f
+   753→   753→    val cy = (sectTop + sectBottom) / 2f
+   754→   754→
+   755→   755→    // Available drawing area (leave room for dimensions on sides)
+   756→   756→    val dimSpace = 50f
+   757→   757→    val availW = viewW - dimSpace * 2
+   758→   758→    val availH = viewH - dimSpace * 1.5f
+   759→   759→
+   760→   760→    // Determine section extents
+   761→   761→    val secW = flangeWidth.toFloat()   // width across
+   762→   762→    val secH = depth.toFloat()         // height across
+   763→   763→
+   764→   764→    val scaleX = availW / secW
+   765→   765→    val scaleY = availH / secH
+   766→   766→    val scale = min(scaleX, scaleY) * 0.65f
+   767→   767→
+   768→   768→    val sBf = secW * scale
+   769→   769→    val sD = secH * scale
+   770→   770→    val sTf = flangeThickness.toFloat() * scale
+   771→   771→    val sTw = webThickness.toFloat() * scale
+   772→   772→    val sR = max(radius.toFloat() * scale, 2f)
+   773→   773→
+   774→   774→    // Section center in view
+   775→   775→    val scx = cx
+   776→   776→    val scy = cy - 8f
+   777→   777→
+   778→   778→    // Background panel
+   779→   779→    drawRect(
+   780→   780→        Color(0x0AFFFFFF),
+   781→   781→        topLeft = Offset(sectLeft, sectTop),
+   782→   782→        size = Size(viewW, viewH)
+   783→   783→    )
+   784→   784→    drawRect(
+   785→   785→        Color(0x33FFFFFF),
+   786→   786→        topLeft = Offset(sectLeft, sectTop),
+   787→   787→        size = Size(viewW, viewH),
+   788→   788→        style = Stroke(0.8f)
+   789→   789→    )
+   790→   790→
+   791→   791→    if (isIBeam) {
+   792→   792→        drawIBeamCrossSection(scx, scy, sD, sBf, sTf, sTw, sR)
+   793→   793→    } else if (isHSS) {
+   794→   794→        drawHSSCrossSection(scx, scy, sD, sBf, sTw)
+   795→   795→    } else if (isChannel) {
+   796→   796→        drawChannelCrossSection(scx, scy, sD, sBf, sTf, sTw, sR)
+   797→   797→    } else if (isAngle) {
+   798→   798→        drawAngleCrossSection(scx, scy, sD, sBf, sTf, sTw)
+   799→   799→    }
+   800→   800→
+   801→   801→    // ── Center lines ──
+   802→   802→    drawCenterLine(scx - sBf / 2f - 14f, scy, scx + sBf / 2f + 14f, scy)
+   803→   803→    drawCenterLine(scx, scy - sD / 2f - 14f, scx, scy + sD / 2f + 14f)
+   804→   804→
+   805→   805→    // ── Dimension annotations ──
+   806→   806→    // Horizontal: bf (flange width)
+   807→   807→    drawHorizontalDimension(
+   808→   808→        scx - sBf / 2f, scx + sBf / 2f, scy + sD / 2f + 4f,
+   809→   809→        "bf=%.1f".format(flangeWidth), DimWhite, 14f, 20f
+   810→   810→    )
+   811→   811→    // Vertical: d (depth)
+   812→   812→    drawVerticalDimension(
+   813→   813→        scy - sD / 2f, scy + sD / 2f, scx + sBf / 2f + 4f,
+   814→   814→        "d=%.0f".format(depth), DimWhite, 14f, 22f
+   815→   815→    )
+   816→   816→
+   817→   817→    // tf and tw callout
+   818→   818→    if (isIBeam || isChannel) {
+   819→   819→        // tf label at top flange
+   820→   820→        drawTextAnnotated(
+   821→   821→            "tf=%.1f".format(flangeThickness),
+   822→   822→            scx + sBf / 4f + 10f, scy - sD / 2f + sTf / 2f + 4f,
+   823→   823→            Color(0xFFAADDFF), 13f
+   824→   824→        )
+   825→   825→        // tw label at web
+   826→   826→        drawTextAnnotated(
+   827→   827→            "tw=%.1f".format(webThickness),
+   828→   828→            scx + 6f, scy + 4f,
+   829→   829→            Color(0xFFAADDFF), 13f
+   830→   830→        )
+   831→   831→    }
+   832→   832→
+   833→   833→    // ── Section properties mini-table ──
+   834→   834→    drawSectionPropsMiniTable(
+   835→   835→        sectLeft + 8f, sectBottom - 80f,
+   836→   836→        area, ix, sx, zx
+   837→   837→    )
+   838→   838→}
+   839→   839→
+   840→   840→/**
+   841→   841→ * Draw I-beam cross-section with fillets.
+   842→   842→ */
+   843→   843→private fun DrawScope.drawIBeamCrossSection(
+   844→   844→    cx: Float, cy: Float,
+   845→   845→    d: Float, bf: Float, tf: Float, tw: Float, r: Float
+   846→   846→) {
+   847→   847→    val halfBf = bf / 2f
+   848→   848→    val halfD = d / 2f
+   849→   849→    val halfTw = tw / 2f
+   850→   850→    val webTop = cy - halfD + tf
+   851→   851→    val webBot = cy + halfD - tf
+   852→   852→
+   853→   853→    // Fill entire section
+   854→   854→    drawPath(
+   855→   855→        path = Path().apply {
+   856→   856→            moveTo(cx - halfBf, cy - halfD)
+   857→   857→            lineTo(cx + halfBf, cy - halfD)
+   858→   858→            lineTo(cx + halfBf, cy - halfD + tf)
+   859→   859→            lineTo(cx + halfTw + r, cy - halfD + tf)
+   860→   860→            arcTo(
+   861→   861→                rect = androidx.compose.ui.geometry.Rect(
+   862→   862→                    cx + halfTw, cy - halfD + tf,
+   863→   863→                    cx + halfTw + r * 2f, cy - halfD + tf + r * 2f
+   864→   864→                ),
+   865→   865→                startAngleDegrees = 270f,
+   866→   866→                sweepAngleDegrees = 90f,
+   867→   867→                forceMoveTo = false
+   868→   868→            )
+   869→   869→            lineTo(cx + halfTw, webBot - r)
+   870→   870→            arcTo(
+   871→   871→                rect = androidx.compose.ui.geometry.Rect(
+   872→   872→                    cx + halfTw, webBot - r * 2f,
+   873→   873→                    cx + halfTw + r * 2f, webBot
+   874→   874→                ),
+   875→   875→                startAngleDegrees = 180f,
+   876→   876→                sweepAngleDegrees = 90f,
+   877→   877→                forceMoveTo = false
+   878→   878→            )
+   879→   879→            lineTo(cx + halfBf, webBot)
+   880→   880→            lineTo(cx + halfBf, cy + halfD)
+   881→   881→            lineTo(cx - halfBf, cy + halfD)
+   882→   882→            lineTo(cx - halfBf, webBot)
+   883→   883→            lineTo(cx - halfTw - r, webBot)
+   884→   884→            arcTo(
+   885→   885→                rect = androidx.compose.ui.geometry.Rect(
+   886→   886→                    cx - halfTw - r * 2f, webBot - r * 2f,
+   887→   887→                    cx - halfTw, webBot
+   888→   888→                ),
+   889→   889→                startAngleDegrees = 90f,
+   890→   890→                sweepAngleDegrees = 90f,
+   891→   891→                forceMoveTo = false
+   892→   892→            )
+   893→   893→            lineTo(cx - halfTw, cy - halfD + tf + r)
+   894→   894→            arcTo(
+   895→   895→                rect = androidx.compose.ui.geometry.Rect(
+   896→   896→                    cx - halfTw - r * 2f, cy - halfD + tf,
+   897→   897→                    cx - halfTw, cy - halfD + tf + r * 2f
+   898→   898→                ),
+   899→   899→                startAngleDegrees = 0f,
+   900→   900→                sweepAngleDegrees = 90f,
+   901→   901→                forceMoveTo = false
+   902→   902→            )
+   903→   903→            lineTo(cx - halfBf, cy - halfD + tf)
+   904→   904→            close()
+   905→   905→        },
+   906→   906→        color = SectionFill
+   907→   907→    )
+   908→   908→
+   909→   909→    // Outline
+   910→   910→    drawPath(
+   911→   911→        path = Path().apply {
+   912→   912→            moveTo(cx - halfBf, cy - halfD)
+   913→   913→            lineTo(cx + halfBf, cy - halfD)
+   914→   914→            lineTo(cx + halfBf, cy + halfD)
+   915→   915→            lineTo(cx - halfBf, cy + halfD)
+   916→   916→            close()
+   917→   917→        },
+   918→   918→        color = SteelGray,
+   919→   919→        style = Stroke(1.5f)
+   920→   920→    )
+   921→   921→
+   922→   922→    // Flange-web junction lines
+   923→   923→    drawLine(
+   924→   924→        SteelGray, Offset(cx - halfTw, webTop), Offset(cx + halfTw, webTop), 1f
+   925→   925→    )
+   926→   926→    drawLine(
+   927→   927→        SteelGray, Offset(cx - halfTw, webBot), Offset(cx + halfTw, webBot), 1f
+   928→   928→    )
+   929→   929→    // Web vertical lines
+   930→   930→    drawLine(
+   931→   931→        SteelGray, Offset(cx - halfTw, webTop), Offset(cx - halfTw, webBot), 1f
+   932→   932→    )
+   933→   933→    drawLine(
+   934→   934→        SteelGray, Offset(cx + halfTw, webTop), Offset(cx + halfTw, webBot), 1f
+   935→   935→    )
+   936→   936→}
+   937→   937→
+   938→   938→/**
+   939→   939→ * Draw HSS (rectangular) cross-section.
+   940→   940→ */
+   941→   941→private fun DrawScope.drawHSSCrossSection(
+   942→   942→    cx: Float, cy: Float, d: Float, bf: Float, tw: Float
+   943→   943→) {
+   944→   944→    val halfBf = bf / 2f
+   945→   945→    val halfD = d / 2f
+   946→   946→    val halfTw = tw / 2f
+   947→   947→
+   948→   948→    // Outer rectangle
+   949→   949→    drawRect(
+   950→   950→        color = SectionFill,
+   951→   951→        topLeft = Offset(cx - halfBf, cy - halfD),
+   952→   952→        size = Size(bf, d)
+   953→   953→    )
+   954→   954→    // Inner hollow (dark cut-out)
+   955→   955→    drawRect(
+   956→   956→        color = Color(0xFF1A1A1A),
+   957→   957→        topLeft = Offset(cx - halfBf + halfTw, cy - halfD + halfTw),
+   958→   958→        size = Size(bf - tw, d - tw)
+   959→   959→    )
+   960→   960→    // Outer outline
+   961→   961→    drawRect(
+   962→   962→        color = SteelGray,
+   963→   963→        topLeft = Offset(cx - halfBf, cy - halfD),
+   964→   964→        size = Size(bf, d),
+   965→   965→        style = Stroke(1.5f)
+   966→   966→    )
+   967→   967→    // Inner outline
+   968→   968→    drawRect(
+   969→   969→        color = SteelGray.copy(alpha = 0.5f),
+   970→   970→        topLeft = Offset(cx - halfBf + halfTw, cy - halfD + halfTw),
+   971→   971→        size = Size(bf - tw, d - tw),
+   972→   972→        style = Stroke(1f)
+   973→   973→    )
+   974→   974→}
+   975→   975→
+   976→   976→/**
+   977→   977→ * Draw channel (C-shape) cross-section.
+   978→   978→ */
+   979→   979→private fun DrawScope.drawChannelCrossSection(
+   980→   980→    cx: Float, cy: Float,
+   981→   981→    d: Float, bf: Float, tf: Float, tw: Float, r: Float
+   982→   982→) {
+   983→   983→    val halfD = d / 2f
+   984→   984→    val webLeft = cx - bf / 2f
+   985→   985→    val webRight = webLeft + tw
+   986→   986→    val webTop = cy - halfD + tf
+   987→   987→    val webBot = cy + halfD - tf
+   988→   988→
+   989→   989→    // Fill
+   990→   990→    drawPath(
+   991→   991→        path = Path().apply {
+   992→   992→            // Start top-left of top flange
+   993→   993→            moveTo(webLeft, cy - halfD)
+   994→   994→            lineTo(webLeft + bf, cy - halfD)
+   995→   995→            lineTo(webLeft + bf, cy - halfD + tf)
+   996→   996→            lineTo(webRight + r, cy - halfD + tf)
+   997→   997→            arcTo(
+   998→   998→                rect = androidx.compose.ui.geometry.Rect(
+   999→   999→                    webRight, cy - halfD + tf,
+  1000→  1000→                    webRight + r * 2f, cy - halfD + tf + r * 2f
+  1001→  1001→                ),
+  1002→  1002→                startAngleDegrees = 270f, sweepAngleDegrees = 90f, forceMoveTo = false
+  1003→  1003→            )
+  1004→  1004→            lineTo(webRight, webBot - r)
+  1005→  1005→            arcTo(
+  1006→  1006→                rect = androidx.compose.ui.geometry.Rect(
+  1007→  1007→                    webRight, webBot - r * 2f,
+  1008→  1008→                    webRight + r * 2f, webBot
+  1009→  1009→                ),
+  1010→  1010→                startAngleDegrees = 180f, sweepAngleDegrees = 90f, forceMoveTo = false
+  1011→  1011→            )
+  1012→  1012→            lineTo(webLeft + bf, webBot)
+  1013→  1013→            lineTo(webLeft, webBot)
+  1014→  1014→            lineTo(webLeft, cy + halfD)
+  1015→  1015→            lineTo(webLeft, cy - halfD)
+  1016→  1016→            close()
+  1017→  1017→        },
+  1018→  1018→        color = SectionFill
+  1019→  1019→    )
+  1020→  1020→
+  1021→  1021→    // Outline
+  1022→  1022→    drawPath(
+  1023→  1023→        path = Path().apply {
+  1024→  1024→            moveTo(webLeft, cy - halfD)
+  1025→  1025→            lineTo(webLeft + bf, cy - halfD)
+  1026→  1026→            lineTo(webLeft + bf, cy + halfD)
+  1027→  1027→            lineTo(webLeft, cy + halfD)
+  1028→  1028→            close()
+  1029→  1029→        },
+  1030→  1030→        color = SteelGray,
+  1031→  1031→        style = Stroke(1.5f)
+  1032→  1032→    )
+  1033→  1033→
+  1034→  1034→    // Flange-web lines
+  1035→  1035→    drawLine(SteelGray, Offset(webRight, webTop), Offset(webLeft + bf, webTop), 1f)
+  1036→  1036→    drawLine(SteelGray, Offset(webRight, webBot), Offset(webLeft + bf, webBot), 1f)
+  1037→  1037→    drawLine(SteelGray, Offset(webRight, webTop), Offset(webRight, webBot), 1f)
+  1038→  1038→}
+  1039→  1039→
+  1040→  1040→/**
+  1041→  1041→ * Draw angle (L-shape) cross-section.
+  1042→  1042→ */
+  1043→  1043→private fun DrawScope.drawAngleCrossSection(
+  1044→  1044→    cx: Float, cy: Float,
+  1045→  1045→    d: Float, bf: Float, tf: Float, tw: Float
+  1046→  1046→) {
+  1047→  1047→    val halfBf = bf / 2f
+  1048→  1048→    val halfD = d / 2f
+  1049→  1049→    val legW = tw * 3f  // scale up for visibility
+  1050→  1050→
+  1051→  1051→    // Vertical leg
+  1052→  1052→    drawRect(
+  1053→  1053→        color = SectionFill,
+  1054→  1054→        topLeft = Offset(cx - halfBf, cy - halfD),
+  1055→  1055→        size = Size(legW, d)
+  1056→  1056→    )
+  1057→  1057→    // Horizontal leg
+  1058→  1058→    drawRect(
+  1059→  1059→        color = SectionFill,
+  1060→  1060→        topLeft = Offset(cx - halfBf, cy - halfD),
+  1061→  1061→        size = Size(bf, legW)
+  1062→  1062→    )
+  1063→  1063→
+  1064→  1064→    // Outlines
+  1065→  1065→    drawPath(
+  1066→  1066→        path = Path().apply {
+  1067→  1067→            moveTo(cx - halfBf, cy - halfD)
+  1068→  1068→            lineTo(cx - halfBf + bf, cy - halfD)
+  1069→  1069→            lineTo(cx - halfBf + bf, cy - halfD + legW)
+  1070→  1070→            lineTo(cx - halfBf + legW, cy - halfD + legW)
+  1071→  1071→            lineTo(cx - halfBf + legW, cy + halfD)
+  1072→  1072→            lineTo(cx - halfBf, cy + halfD)
+  1073→  1073→            close()
+  1074→  1074→        },
+  1075→  1075→        color = SteelGray,
+  1076→  1076→        style = Stroke(1.5f)
+  1077→  1077→    )
+  1078→  1078→}
+  1079→  1079→
+  1080→  1080→/**
+  1081→  1081→ * Mini table showing section properties (A, Ix, Sx, Zx).
+  1082→  1082→ */
+  1083→  1083→private fun DrawScope.drawSectionPropsMiniTable(
+  1084→  1084→    x: Float, y: Float,
+  1085→  1085→    area: Double, ix: Double, sx: Double, zx: Double
+  1086→  1086→) {
+  1087→  1087→    val colW = 80f
+  1088→  1088→    val rowH = 18f
+  1089→  1089→    val headerH = 20f
+  1090→  1090→
+  1091→  1091→    // Header
+  1092→  1092→    drawRect(TblHeaderBg, Offset(x, y), Size(colW * 2f, headerH))
+  1093→  1093→    drawTextAnnotated("Property", x + 4f, y + headerH / 2f - 5f, DimWhite, 13f, bold = true)
+  1094→  1094→    drawTextAnnotated("Value", x + colW + 4f, y + headerH / 2f - 5f, DimWhite, 13f, bold = true)
+  1095→  1095→
+  1096→  1096→    // Rows
+  1097→  1097→    val props = listOf(
+  1098→  1098→        "A" to "%.1f cm²".format(area),
+  1099→  1099→        "Ix" to "%.0f cm⁴".format(ix),
+  1100→  1100→        "Sx" to "%.0f cm³".format(sx),
+  1101→  1101→        "Zx" to "%.0f cm³".format(zx)
+  1102→  1102→    )
+  1103→  1103→
+  1104→  1104→    props.forEachIndexed { i, (name, value) ->
+  1105→  1105→        val ry = y + headerH + i * rowH
+  1106→  1106→        if (i % 2 == 1) {
+  1107→  1107→            drawRect(TblRowAlt, Offset(x, ry), Size(colW * 2f, rowH))
+  1108→  1108→        }
+  1109→  1109→        drawTextAnnotated(name, x + 4f, ry + rowH / 2f - 4f, ExtGray, 12f)
+  1110→  1110→        drawTextAnnotated(value, x + colW + 4f, ry + rowH / 2f - 4f, DimWhite, 12f)
+  1111→  1111→        drawLine(ExtGray.copy(alpha = 0.3f), Offset(x, ry + rowH), Offset(x + colW * 2f, ry + rowH), 0.5f)
+  1112→  1112→    }
+  1113→  1113→
+  1114→  1114→    // Border
+  1115→  1115→    drawRect(
+  1116→  1116→        Color(0x44FFFFFF), Offset(x, y), Size(colW * 2f, headerH + props.size * rowH),
+  1117→  1117→        style = Stroke(0.8f)
+  1118→  1118→    )
+  1119→  1119→}
+  1120→  1120→
+  1121→  1121→/**
+  1122→  1122→ * Draw the connection detail view with bolt pattern, end plate, and weld symbols.
+  1123→  1123→ */
+  1124→  1124→private fun DrawScope.drawConnectionDetail(
+  1125→  1125→    connLeft: Float, connTop: Float,
+  1126→  1126→    connRight: Float, connBottom: Float,
+  1127→  1127→    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
+  1128→  1128→    depth: Double, flangeWidth: Double,
+  1129→  1129→    flangeThickness: Double, webThickness: Double,
+  1130→  1130→    boltDia: Double, boltCount: Int, boltGauge: Double,
+  1131→  1131→    boltPitch: Double, endPlateThickness: Double,
+  1132→  1132→    weldSize: Double
+  1133→  1133→) {
+  1134→  1134→    val viewW = connRight - connLeft
+  1135→  1135→    val viewH = connBottom - connTop
+  1136→  1136→    val cx = (connLeft + connRight) / 2f
+  1137→  1137→    val cy = (connTop + connBottom) / 2f
+  1138→  1138→
+  1139→  1139→    // Background panel
+  1140→  1140→    drawRect(
+  1141→  1141→        Color(0x0AFFFFFF),
+  1142→  1142→        topLeft = Offset(connLeft, connTop),
+  1143→  1143→        size = Size(viewW, viewH)
+  1144→  1144→    )
+  1145→  1145→    drawRect(
+  1146→  1146→        Color(0x33FFFFFF),
+  1147→  1147→        topLeft = Offset(connLeft, connTop),
+  1148→  1148→        size = Size(viewW, viewH),
+  1149→  1149→        style = Stroke(0.8f)
+  1150→  1150→    )
+  1151→  1151→
+  1152→  1152→    // Scale to fit the connection in the view
+  1153→  1153→    val pad = 36f
+  1154→  1154→    val availW = viewW - pad * 2
+  1155→  1155→    val availH = viewH - pad * 2
+  1156→  1156→
+  1157→  1157→    // Connection extent: flange width + some margin for gauge/pitch
+  1158→  1158→    val connExtentW = max(flangeWidth + boltGauge * 1.5, boltPitch * (boltCount + 1))
+  1159→  1159→    val connExtentH = depth
+  1160→  1160→
+  1161→  1161→    val scaleX = availW / connExtentW.toFloat()
+  1162→  1162→    val scaleY = availH / connExtentH.toFloat()
+  1163→  1163→    val scale = min(scaleX, scaleY) * 0.7f
+  1164→  1164→
+  1165→  1165→    val sD = depth.toFloat() * scale
+  1166→  1166→    val sBf = flangeWidth.toFloat() * scale
+  1167→  1167→    val sTf = flangeThickness.toFloat() * scale
+  1168→  1168→    val sTw = webThickness.toFloat() * scale
+  1169→  1169→    val sEp = max(endPlateThickness.toFloat() * scale, 4f)
+  1170→  1170→    val sGauge = boltGauge.toFloat() * scale
+  1171→  1171→    val sPitch = boltPitch.toFloat() * scale
+  1172→  1172→    val sBd = max(boltDia.toFloat() * scale, 5f)
+  1173→  1173→
+  1174→  1174→    // End plate (face-on view from the connection side)
+  1175→  1175→    val epLeft = cx - sBf / 2f - sEp / 2f
+  1176→  1176→    val epTop = cy - sD / 2f
+  1177→  1177→
+  1178→  1178→    // Draw end plate rectangle
+  1179→  1179→    drawRect(
+  1180→  1180→        color = PlateGray.copy(alpha = 0.3f),
+  1181→  1181→        topLeft = Offset(epLeft, epTop),
+  1182→  1182→        size = Size(sBf, sD)
+  1183→  1183→    )
+  1184→  1184→    drawRect(
+  1185→  1185→        color = PlateGray,
+  1186→  1186→        topLeft = Offset(epLeft, epTop),
+  1187→  1187→        size = Size(sBf, sD),
+  1188→  1188→        style = Stroke(1.5f)
+  1189→  1189→    )
+  1190→  1190→
+  1191→  1191→    // Draw flange outlines on end plate (dashed)
+  1192→  1192→    if (isIBeam) {
+  1193→  1193→        val dashEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+  1194→  1194→        // Top flange zone
+  1195→  1195→        drawRect(
+  1196→  1196→            color = SteelGray.copy(alpha = 0.4f),
+  1197→  1197→            topLeft = Offset(epLeft, epTop),
+  1198→  1198→            size = Size(sBf, sTf),
+  1199→  1199→            style = Stroke(0.8f, pathEffect = dashEffect)
+  1200→  1200→        )
+  1201→  1201→        // Bottom flange zone
+  1202→  1202→        drawRect(
+  1203→  1203→            color = SteelGray.copy(alpha = 0.4f),
+  1204→  1204→            topLeft = Offset(epLeft, epTop + sD - sTf),
+  1205→  1205→            size = Size(sBf, sTf),
+  1206→  1206→            style = Stroke(0.8f, pathEffect = dashEffect)
+  1207→  1207→        )
+  1208→  1208→        // Web zone
+  1209→  1209→        drawRect(
+  1210→  1210→            color = SteelGray.copy(alpha = 0.3f),
+  1211→  1211→            topLeft = Offset(cx - sTw / 2f, epTop + sTf),
+  1212→  1212→            size = Size(sTw, sD - sTf * 2f),
+  1213→  1213→            style = Stroke(0.6f, pathEffect = dashEffect)
+  1214→  1214→        )
+  1215→  1215→    } else if (isHSS) {
+  1216→  1216→        val dashEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+  1217→  1217→        val wt = webThickness.toFloat() * scale
+  1218→  1218→        drawRect(
+  1219→  1219→            color = SteelGray.copy(alpha = 0.3f),
+  1220→  1220→            topLeft = Offset(epLeft + wt, epTop + wt),
+  1221→  1221→            size = Size(sBf - wt * 2f, sD - wt * 2f),
+  1222→  1222→            style = Stroke(0.6f, pathEffect = dashEffect)
+  1223→  1223→        )
+  1224→  1224→    }
+  1225→  1225→
+  1226→  1226→    // ── Bolt pattern ──
+  1227→  1227→    // Flange bolts: arranged in rows at top and bottom flange
+  1228→  1228→    val flangeBoltsPerRow = max(boltCount / 2, 2)
+  1229→  1229→    val topFlangeCY = epTop + sTf / 2f
+  1230→  1230→    val botFlangeCY = epTop + sD - sTf / 2f
+  1231→  1231→    val webCY = cy
+  1232→  1232→
+  1233→  1233→    // Top flange bolts
+  1234→  1234→    val topBoltStartX = cx - (flangeBoltsPerRow - 1) / 2f * sGauge
+  1235→  1235→    for (i in 0 until flangeBoltsPerRow) {
+  1236→  1236→        drawBoltCircle(topBoltStartX + i * sGauge, topFlangeCY, sBd)
+  1237→  1237→    }
+  1238→  1238→
+  1239→  1239→    // Bottom flange bolts
+  1240→  1240→    for (i in 0 until flangeBoltsPerRow) {
+  1241→  1241→        drawBoltCircle(topBoltStartX + i * sGauge, botFlangeCY, sBd)
+  1242→  1242→    }
+  1243→  1243→
+  1244→  1244→    // Web bolts (if boltCount > 2)
+  1245→  1245→    if (boltCount > 2 && isIBeam) {
+  1246→  1246→        val webBoltsVert = max((boltCount - 2) / 2, 1)
+  1247→  1247→        for (i in 0 until webBoltsVert) {
+  1248→  1248→            val yOff = (i + 1) * sPitch
+  1249→  1249→            if (cy + yOff < botFlangeCY - sTf) {
+  1250→  1250→                drawBoltCircle(cx, cy + yOff, sBd * 0.9f)
+  1251→  1251→            }
+  1252→  1252→            if (cy - yOff > topFlangeCY + sTf) {
+  1253→  1253→                drawBoltCircle(cx, cy - yOff, sBd * 0.9f)
+  1254→  1254→            }
+  1255→  1255→        }
+  1256→  1256→    }
+  1257→  1257→
+  1258→  1258→    // ── Gauge dimension (horizontal between bolt rows) ──
+  1259→  1259→    if (flangeBoltsPerRow >= 2) {
+  1260→  1260→        drawHorizontalDimension(
+  1261→  1261→            topBoltStartX, topBoltStartX + (flangeBoltsPerRow - 1) * sGauge,
+  1262→  1262→            topFlangeCY,
+  1263→  1263→            "g=%.0f".format(boltGauge), Color(0xFFAADDFF), 12f, 16f
+  1264→  1264→        )
+  1265→  1265→    }
+  1266→  1266→
+  1267→  1267→    // ── Pitch dimension (vertical between flange bolt rows) ──
+  1268→  1268→    drawVerticalDimension(
+  1269→  1269→        topFlangeCY, botFlangeCY, epLeft - 8f,
+  1270→  1270→        "p=%.0f".format(depth - flangeThickness * 2), Color(0xFFAADDFF), 12f, 18f
+  1271→  1271→    )
+  1272→  1272→
+  1273→  1273→    // ── Bolt diameter callout ──
+  1274→  1274→    drawTextAnnotated(
+  1275→  1275→        "⌀%.0f".format(boltDia),
+  1276→  1276→        epLeft + sBf + 6f, topFlangeCY + 4f,
+  1277→  1277→        BoltOrange, 14f
+  1278→  1278→    )
+  1279→  1279→
+  1280→  1280→    // ── End plate thickness callout ──
+  1281→  1281→    drawTextAnnotated(
+  1282→  1282→        "tp=%.0f".format(endPlateThickness),
+  1283→  1283→        epLeft + sBf + 6f, botFlangeCY + 4f,
+  1284→  1284→        PlateGray, 14f
+  1285→  1285→    )
+  1286→  1286→
+  1287→  1287→    // ── Weld symbol ──
+  1288→  1288→    drawWeldSymbolHorizontal(epLeft - 4f, cy - 10f, max(weldSize.toFloat() * scale, 3f))
+  1289→  1289→    drawTextAnnotated(
+  1290→  1290→        "%.0f".format(weldSize), epLeft - 22f, cy - 14f,
+  1291→  1291→        WeldRed, 12f
+  1292→  1292→    )
+  1293→  1293→}
+  1294→  1294→
+  1295→  1295→/**
+  1296→  1296→ * Draw a horizontal weld symbol (triangle pointing right).
+  1297→  1297→ */
+  1298→  1298→private fun DrawScope.drawWeldSymbolHorizontal(
+  1299→  1299→    x: Float, y: Float, size: Float
+  1300→  1300→) {
+  1301→  1301→    val s = max(size, 3f)
+  1302→  1302→    drawPath(
+  1303→  1303→        path = Path().apply {
+  1304→  1304→            moveTo(x, y)
+  1305→  1305→            lineTo(x + s * 1.5f, y - s)
+  1306→  1306→            lineTo(x + s * 1.5f, y + s)
+  1307→  1307→            close()
+  1308→  1308→        },
+  1309→  1309→        color = WeldRed
+  1310→  1310→    )
+  1311→  1311→    // Reference line
+  1312→  1312→    drawLine(WeldRed, Offset(x, y), Offset(x, y + s * 2f), 1f)
+  1313→  1313→}
+  1314→  1314→
+  1315→  1315→/**
+  1316→  1316→ * Draw the properties table at the bottom of the drawing.
+  1317→  1317→ */
+  1318→  1318→private fun DrawScope.drawPropertiesTable(
+  1319→  1319→    x: Float, y: Float,
+  1320→  1320→    width: Float, height: Float,
+  1321→  1321→    sectionName: String, sectionType: String,
+  1322→  1322→    area: Double, ix: Double, sx: Double, zx: Double,
+  1323→  1323→    weightPerMeter: Double, memberLength: Double
+  1324→  1324→) {
+  1325→  1325→    // Background
+  1326→  1326→    drawRect(Color(0x11FFFFFF), Offset(x, y), Size(width, height))
+  1327→  1327→    // Border
+  1328→  1328→    drawRect(ExtGray.copy(alpha = 0.4f), Offset(x, y), Size(width, height), style = Stroke(1f))
+  1329→  1329→
+  1330→  1330→    // Table title
+  1331→  1331→    drawTextAnnotated(
+  1332→  1332→        "STEEL MEMBER PROPERTIES", x + 12f, y + 22f,
+  1333→  1333→        DimWhite, 18f, bold = true
+  1334→  1334→    )
+  1335→  1335→
+  1336→  1336→    // Divider
+  1337→  1337→    drawLine(ExtGray.copy(alpha = 0.3f), Offset(x, y + 32f), Offset(x + width, y + 32f), 0.8f)
+  1338→  1338→
+  1339→  1339→    // Column definitions
+  1340→  1340→    val colWidths = listOf(
+  1341→  1341→        width * 0.18f,  // Section
+  1342→  1342→        width * 0.12f,  // Type
+  1343→  1343→        width * 0.13f,  // Area
+  1344→  1344→        width * 0.17f,  // Ix
+  1345→  1345→        width * 0.13f,  // Sx
+  1346→  1346→        width * 0.13f,  // Zx
+  1347→  1347→        width * 0.14f   // Weight/m
+  1348→  1348→    )
+  1349→  1349→
+  1350→  1350→    val headers = listOf("Section", "Type", "A (cm²)", "Ix (cm⁴)", "Sx (cm³)", "Zx (cm³)", "W (kg/m)")
+  1351→  1351→    val values = listOf(
+  1352→  1352→        sectionName,
+  1353→  1353→        sectionType,
+  1354→  1354→        "%.1f".format(area),
+  1355→  1355→        "%.0f".format(ix),
+  1356→  1356→        "%.0f".format(sx),
+  1357→  1357→        "%.0f".format(zx),
+  1358→  1358→        "%.1f".format(weightPerMeter)
+  1359→  1359→    )
+  1360→  1360→
+  1361→  1361→    val rowY = y + 50f
+  1362→  1362→    val rowH = 24f
+  1363→  1363→
+  1364→  1364→    // Header background
+  1365→  1365→    drawRect(TblHeaderBg, Offset(x, rowY - 6f), Size(width, 22f))
+  1366→  1366→
+  1367→  1367→    // Draw header
+  1368→  1368→    var cx = x + 8f
+  1369→  1369→    headers.forEachIndexed { i, header ->
+  1370→  1370→        drawTextAnnotated(header, cx, rowY + 6f, DimWhite, 14f, bold = true)
+  1371→  1371→        cx += colWidths[i]
+  1372→  1372→    }
+  1373→  1373→
+  1374→  1374→    // Draw values
+  1375→  1375→    cx = x + 8f
+  1376→  1376→    values.forEachIndexed { i, value ->
+  1377→  1377→        drawTextAnnotated(value, cx, rowY + 30f, SteelTopGray, 15f, bold = (i == 0))
+  1378→  1378→        cx += colWidths[i]
+  1379→  1379→    }
+  1380→  1380→
+  1381→  1381→    // Column dividers
+  1382→  1382→    cx = x + colWidths[0]
+  1383→  1383→    for (i in 1 until colWidths.size) {
+  1384→  1384→        drawLine(
+  1385→  1385→            ExtGray.copy(alpha = 0.2f), Offset(cx, y + 32f), Offset(cx, y + height), 0.5f
+  1386→  1386→        )
+  1387→  1387→        cx += colWidths[i]
+  1388→  1388→    }
+  1389→  1389→
+  1390→  1390→    // Bottom row: member length and bolt info
+  1391→  1391→    drawLine(ExtGray.copy(alpha = 0.2f), Offset(x, rowY + 42f), Offset(x + width, rowY + 42f), 0.5f)
+  1392→  1392→    drawTextAnnotated(
+  1393→  1393→        "Member Length: %.0f mm".format(memberLength),
+  1394→  1394→        x + 8f, rowY + 60f,
+  1395→  1395→        ExtGray, 13f
+  1396→  1396→    )
+  1397→  1397→}
+  1398→  1398→
+  1399→  1399→// ============================================================================
+  1400→  1400→// UTILITY HELPERS
+  1401→  1401→// ============================================================================
+  1402→  1402→
+  1403→  1403→/** Center Y between two Y coordinates. */
+  1404→  1404→private fun cy_center(top: Float, bottom: Float): Float = (top + bottom) / 2f

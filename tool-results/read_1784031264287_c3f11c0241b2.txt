@@ -1,0 +1,656 @@
+     1→     1→package com.civileg.app.domain.calculations
+     2→     2→
+     3→     3→import com.civileg.app.domain.entities.*
+     4→     4→import kotlin.math.*
+     5→     5→
+     6→     6→/**
+     7→     7→ * محرك تحليل الهياكل الإنشائية بطريقة مصفوفة الجساءة (Stiffness Matrix Method)
+     8→     8→ * 
+     9→     9→ * يدعم:
+    10→    10→ * - إطارات ثنائية الأبعاد (2D Frames)
+    11→    11→ * - عقد بحرية ومقيدة (حرة، مفصلية، بكرة، تثبيت كامل)
+    12→    12→ * - أحمال عقدية (قوى + عزوم)
+    13→    13→ * - أحمال على الأعضاء (منتظمة، مركزة، عزوم)
+    14→    14→ * - حساب القوى الداخلية ورسم المخططات
+    15→    15→ */
+    16→    16→object FrameAnalysisEngine {
+    17→    17→
+    18→    18→    private const val DOF_PER_NODE = 3  // dx, dy, rz
+    19→    19→
+    20→    20→    // ========================================================================
+    21→    21→    // Main Solver
+    22→    22→    // ========================================================================
+    23→    23→
+    24→    24→    /**
+    25→    25→     * حل الإطار بالكامل
+    26→    26→     * @return FrameAnalysisResult يحتوي على إزاحات، قوى داخلية، ومخططات
+    27→    27→     */
+    28→    28→    fun solveFrame(
+    29→    29→        nodes: List<FrameNode>,
+    30→    30→        members: List<FrameMember>,
+    31→    31→        nodalLoads: List<NodalLoad>,
+    32→    32→        memberLoads: List<MemberLoad>,
+    33→    33→        settings: FrameAnalysisSettings
+    34→    34→    ): FrameAnalysisResult {
+    35→    35→        try {
+    36→    36→            if (nodes.size < 2) return FrameAnalysisResult(errorMessage = "يجب إدخال عقدتين على الأقل")
+    37→    37→            if (members.isEmpty()) return FrameAnalysisResult(errorMessage = "يجب إدخال عضو واحد على الأقل")
+    38→    38→
+    39→    39→            val numNodes = nodes.size
+    40→    40→            val totalDOF = numNodes * DOF_PER_NODE
+    41→    41→
+    42→    42→            // 1. Build global stiffness matrix
+    43→    43→            val Kg = Array(totalDOF) { DoubleArray(totalDOF) }
+    44→    44→            for (member in members) {
+    45→    45→                assembleMemberStiffness(member, nodes, settings, Kg)
+    46→    46→            }
+    47→    47→
+    48→    48→            // 2. Build load vector (with member load equivalent nodal loads)
+    49→    49→            val F = DoubleArray(totalDOF)
+    50→    50→            for (load in nodalLoads) {
+    51→    51→                val nodeIdx = nodes.indexOfFirst { it.id == load.nodeId }
+    52→    52→                if (nodeIdx >= 0) {
+    53→    53→                    F[nodeIdx * 3] += load.fx
+    54→    54→                    F[nodeIdx * 3 + 1] += load.fy
+    55→    55→                    F[nodeIdx * 3 + 2] += load.mz
+    56→    56→                }
+    57→    57→            }
+    58→    58→            // Add fixed-end forces from member loads
+    59→    59→            val fixedEndForces = mutableListOf<Pair<Int, DoubleArray>>() // (memberIdx, FEF[6])
+    60→    60→            for (mLoad in memberLoads) {
+    61→    61→                val mIdx = members.indexOfFirst { it.id == mLoad.memberId }
+    62→    62→                if (mIdx < 0) continue
+    63→    63→                val member = members[mIdx]
+    64→    64→                val fef = getFixedEndForces(member, mLoad, nodes)
+    65→    65→                fixedEndForces.add(Pair(mIdx, fef))
+    66→    66→                // Subtract FEF from global load vector (negative because we move to RHS)
+    67→    67→                val ni = nodes.indexOfFirst { it.id == member.nodeI }
+    68→    68→                val nj = nodes.indexOfFirst { it.id == member.nodeJ }
+    69→    69→                if (ni >= 0 && nj >= 0) {
+    70→    70→                    F[ni * 3] -= fef[0]; F[ni * 3 + 1] -= fef[1]; F[ni * 3 + 2] -= fef[2]
+    71→    71→                    F[nj * 3] -= fef[3]; F[nj * 3 + 1] -= fef[4]; F[nj * 3 + 2] -= fef[5]
+    72→    72→                }
+    73→    73→            }
+    74→    74→
+    75→    75→            // 3. Identify restrained DOFs
+    76→    76→            val restrainedDOFs = mutableListOf<Int>()
+    77→    77→            for ((idx, node) in nodes.withIndex()) {
+    78→    78→                for (dof in node.support.restrainedDOFs) {
+    79→    79→                    restrainedDOFs.add(idx * 3 + dof)
+    80→    80→                }
+    81→    81→            }
+    82→    82→
+    83→    83→            // 4. Partition and solve
+    84→    84→            val freeDOFs = (0 until totalDOF).filter { it !in restrainedDOFs }
+    85→    85→            if (freeDOFs.isEmpty()) return FrameAnalysisResult(errorMessage = "لا توجد درجات حرية - الإطار مقيّد بالكامل")
+    86→    86→
+    87→    87→            val Kff = Array(freeDOFs.size) { i -> DoubleArray(freeDOFs.size) { j -> Kg[freeDOFs[i]][freeDOFs[j]] } }
+    88→    88→            val Ff = DoubleArray(freeDOFs.size) { F[freeDOFs[it]] }
+    89→    89→
+    90→    90→            val Uf = solveLinearSystem(Kff, Ff) ?: return FrameAnalysisResult(errorMessage = "فشل حل نظام المعادلات - تحقق من الارتكازات")
+    91→    91→
+    92→    92→            // 5. Full displacement vector
+    93→    93→            val U = DoubleArray(totalDOF)
+    94→    94→            for (i in freeDOFs.indices) U[freeDOFs[i]] = Uf[i]
+    95→    95→
+    96→    96→            // 6. Compute reactions
+    97→    97→            val reactions = DoubleArray(totalDOF)
+    98→    98→            for (i in 0 until totalDOF) {
+    99→    99→                var sum = 0.0
+   100→   100→                for (j in 0 until totalDOF) sum += Kg[i][j] * U[j]
+   101→   101→                reactions[i] = sum - F[i]
+   102→   102→            }
+   103→   103→
+   104→   104→            // 7. Member end forces
+   105→   105→            val memberForces = mutableListOf<MemberEndForces>()
+   106→   106→            val memberDiagrams = mutableListOf<MemberDiagram>()
+   107→   107→            var fefIdx = 0
+   108→   108→
+   109→   109→            for ((mIdx, member) in members.withIndex()) {
+   110→   110→                val ni = nodes.indexOfFirst { it.id == member.nodeI }
+   111→   111→                val nj = nodes.indexOfFirst { it.id == member.nodeJ }
+   112→   112→                if (ni < 0 || nj < 0) continue
+   113→   113→
+   114→   114→                val L = member.getLength(nodes)
+   115→   115→                val cosA = member.getCosTheta(nodes)
+   116→   116→                val sinA = member.getSinTheta(nodes)
+   117→   117→
+   118→   118→                // Member stiffness properties
+   119→   119→                val E = getE(member, settings)
+   120→   120→                val (A, I) = getSectionProperties(member, settings, L)
+   121→   121→                val k = memberLocalStiffness(E, A, I, L)
+   122→   122→
+   123→   123→                // Local end displacements
+   124→   124→                val uGlobalI = doubleArrayOf(U[ni * 3], U[ni * 3 + 1], U[ni * 3 + 2])
+   125→   125→                val uGlobalJ = doubleArrayOf(U[nj * 3], U[nj * 3 + 1], U[nj * 3 + 2])
+   126→   126→                val uLocal = globalToLocalDisplacements(uGlobalI, uGlobalJ, cosA, sinA)
+   127→   127→
+   128→   128→                // Local member forces = k * u_local
+   129→   129→                val fLocal = DoubleArray(6) {
+   130→   130→                    var sum = 0.0
+   131→   131→                    for (j in 0..5) sum += k[it][j] * uLocal[j]
+   132→   132→                    sum
+   133→   133→                }
+   134→   134→
+   135→   135→                // Add fixed-end forces for member loads on this member
+   136→   136→                var fefThisMember = DoubleArray(6)
+   137→   137→                val memberLoadList = memberLoads.filter { it.memberId == member.id }
+   138→   138→                for (mLoad in memberLoadList) {
+   139→   139→                    val fef = getFixedEndForces(member, mLoad, nodes)
+   140→   140→                    for (i in 0..5) fefThisMember[i] += fef[i]
+   141→   141→                }
+   142→   142→
+   143→   143→                // Total local forces = k*u + FEF
+   144→   144→                val fTotal = DoubleArray(6) { fLocal[it] + fefThisMember[it] }
+   145→   145→
+   146→   146→                // Convert to global
+   147→   147→                val fiX = fTotal[0] * cosA - fTotal[1] * sinA
+   148→   148→                val fiY = fTotal[0] * sinA + fTotal[1] * cosA
+   149→   149→                val fjX = fTotal[3] * cosA - fTotal[4] * sinA
+   150→   150→                val fjY = fTotal[3] * sinA + fTotal[4] * cosA
+   151→   151→
+   152→   152→                memberForces.add(MemberEndForces(
+   153→   153→                    memberId = member.id,
+   154→   154→                    fi_x = fiX, fi_y = fiY, mi_z = fTotal[2],
+   155→   155→                    fj_x = fjX, fj_y = fjY, mj_z = fTotal[5]
+   156→   156→                ))
+   157→   157→
+   158→   158→                // Generate diagrams
+   159→   159→                val diagram = generateDiagrams(member, nodes, fTotal, memberLoadList, settings)
+   160→   160→                memberDiagrams.add(diagram)
+   161→   161→            }
+   162→   162→
+   163→   163→            // 8. Node results
+   164→   164→            val nodeResults = nodes.mapIndexed { idx, node ->
+   165→   165→                val localRestraints = node.support.restrainedDOFs
+   166→   166→                NodeResult(
+   167→   167→                    nodeId = node.id,
+   168→   168→                    dx = U[idx * 3],
+   169→   169→                    dy = U[idx * 3 + 1],
+   170→   170→                    rz = U[idx * 3 + 2],
+   171→   171→                    reactionFx = if (0 in localRestraints) reactions[idx * 3] else 0.0,
+   172→   172→                    reactionFy = if (1 in localRestraints) reactions[idx * 3 + 1] else 0.0,
+   173→   173→                    reactionMz = if (2 in localRestraints) reactions[idx * 3 + 2] else 0.0
+   174→   174→                )
+   175→   175→            }
+   176→   176→
+   177→   177→            return FrameAnalysisResult(
+   178→   178→                nodeResults = nodeResults,
+   179→   179→                memberEndForces = memberForces,
+   180→   180→                memberDiagrams = memberDiagrams,
+   181→   181→                isSolved = true
+   182→   182→            )
+   183→   183→        } catch (e: Exception) {
+   184→   184→            return FrameAnalysisResult(errorMessage = "خطأ في التحليل: ${e.message}")
+   185→   185→        }
+   186→   186→    }
+   187→   187→
+   188→   188→    // ========================================================================
+   189→   189→    // Stiffness Matrix Assembly
+   190→   190→    // ========================================================================
+   191→   191→
+   192→   192→    private fun assembleMemberStiffness(
+   193→   193→        member: FrameMember,
+   194→   194→        nodes: List<FrameNode>,
+   195→   195→        settings: FrameAnalysisSettings,
+   196→   196→        Kg: Array<DoubleArray>
+   197→   197→    ) {
+   198→   198→        val ni = nodes.indexOfFirst { it.id == member.nodeI }
+   199→   199→        val nj = nodes.indexOfFirst { it.id == member.nodeJ }
+   200→   200→        if (ni < 0 || nj < 0) return
+   201→   201→
+   202→   202→        val L = member.getLength(nodes)
+   203→   203→        if (L < 1e-12) return
+   204→   204→        val cosA = member.getCosTheta(nodes)
+   205→   205→        val sinA = member.getSinTheta(nodes)
+   206→   206→        val E = getE(member, settings)
+   207→   207→        val (A, I) = getSectionProperties(member, settings, L)
+   208→   208→
+   209→   209→        val kl = memberLocalStiffness(E, A, I, L)
+   210→   210→        val T = transformationMatrix(cosA, sinA)
+   211→   211→        val Tt = transpose(T, 6, 6)
+   212→   212→        val klT = multiply(Tt, kl, 6, 6, 6)
+   213→   213→        val KgMember = multiply(klT, T, 6, 6, 6)
+   214→   214→
+   215→   215→        // Assemble into global
+   216→   216→        val dofs = intArrayOf(ni * 3, ni * 3 + 1, ni * 3 + 2, nj * 3, nj * 3 + 1, nj * 3 + 2)
+   217→   217→        for (i in 0..5) {
+   218→   218→            for (j in 0..5) {
+   219→   219→                Kg[dofs[i]][dofs[j]] += KgMember[i][j]
+   220→   220→            }
+   221→   221→        }
+   222→   222→    }
+   223→   223→
+   224→   224→    /**
+   225→   225→     * مصفوفة الجساءة المحلية للعضو (6x6)
+   226→   226→     * DOFs: [u_i, v_i, θ_i, u_j, v_j, θ_j]
+   227→   227→     */
+   228→   228→    private fun memberLocalStiffness(E: Double, A: Double, I: Double, L: Double): Array<DoubleArray> {
+   229→   229→        val k = Array(6) { DoubleArray(6) }
+   230→   230→        val c = E * A / L
+   231→   231→        val a = 12.0 * E * I / (L * L * L)
+   232→   232→        val b = 6.0 * E * I / (L * L)
+   233→   233→        val d = 4.0 * E * I / L
+   234→   234→        val e = 2.0 * E * I / L
+   235→   235→
+   236→   236→        k[0][0] = c;  k[0][3] = -c
+   237→   237→        k[1][1] = a;  k[1][2] = b;   k[1][4] = -a;  k[1][5] = b
+   238→   238→        k[2][1] = b;  k[2][2] = d;   k[2][4] = -b;  k[2][5] = e
+   239→   239→        k[3][0] = -c; k[3][3] = c
+   240→   240→        k[4][1] = -a; k[4][2] = -b;  k[4][4] = a;   k[4][5] = -b
+   241→   241→        k[5][1] = b;  k[5][2] = e;   k[5][4] = -b;  k[5][5] = d
+   242→   242→        return k
+   243→   243→    }
+   244→   244→
+   245→   245→    /**
+   246→   246→     * مصفوفة التحويل من المحلي للعام (6x6)
+   247→   247→     */
+   248→   248→    private fun transformationMatrix(c: Double, s: Double): Array<DoubleArray> {
+   249→   249→        return arrayOf(
+   250→   250→            doubleArrayOf(c, s, 0.0, 0.0, 0.0, 0.0),
+   251→   251→            doubleArrayOf(-s, c, 0.0, 0.0, 0.0, 0.0),
+   252→   252→            doubleArrayOf(0.0, 0.0, 1.0, 0.0, 0.0, 0.0),
+   253→   253→            doubleArrayOf(0.0, 0.0, 0.0, c, s, 0.0),
+   254→   254→            doubleArrayOf(0.0, 0.0, 0.0, -s, c, 0.0),
+   255→   255→            doubleArrayOf(0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+   256→   256→        )
+   257→   257→    }
+   258→   258→
+   259→   259→    // ========================================================================
+   260→   260→    // Fixed-End Forces
+   261→   261→    // ========================================================================
+   262→   262→
+   263→   263→    /**
+   264→   264→     * حساب قوى النهاية الثابتة (Fixed-End Forces) للحمولات على الأعضاء
+   265→   265→     */
+   266→   266→    private fun getFixedEndForces(
+   267→   267→        member: FrameMember,
+   268→   268→        load: MemberLoad,
+   269→   269→        nodes: List<FrameNode>
+   270→   270→    ): DoubleArray {
+   271→   271→        val L = member.getLength(nodes)
+   272→   272→        val w = load.value
+   273→   273→        val a = load.position
+   274→   274→
+   275→   275→        return when (load.loadType) {
+   276→   276→            MemberLoadType.UDL -> {
+   277→   277→                // FEF for UDL w (kN/m) over full span L
+   278→   278→                // Local: [0, -wL/2, -wL²/12, 0, -wL/2, wL²/12]
+   279→   279→                doubleArrayOf(0.0, -w * L / 2.0, -w * L * L / 12.0, 0.0, -w * L / 2.0, w * L * L / 12.0)
+   280→   280→            }
+   281→   281→            MemberLoadType.PointLoad -> {
+   282→   282→                // FEF for point load P at distance 'a' from node I
+   283→   283→                val b = L - a
+   284→   284→                if (a < 1e-12 || b < 1e-12) {
+   285→   285→                    doubleArrayOf(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+   286→   286→                } else {
+   287→   287→                    val P = w
+   288→   288→                    doubleArrayOf(
+   289→   289→                        0.0,
+   290→   290→                        -P * b * b * (L + 2 * a) / (L * L * L),
+   291→   291→                        -P * a * b * b / (L * L),
+   292→   292→                        0.0,
+   293→   293→                        -P * a * a * (L + 2 * b) / (L * L * L),
+   294→   294→                        P * a * a * b / (L * L)
+   295→   295→                    )
+   296→   296→                }
+   297→   297→            }
+   298→   298→            MemberLoadType.Moment -> {
+   299→   299→                // FEF for moment M at distance 'a' from node I
+   300→   300→                val b = L - a
+   301→   301→                doubleArrayOf(
+   302→   302→                    0.0,
+   303→   303→                    6.0 * w * a * b / (L * L * L),
+   304→   304→                    w * b * (2.0 * a - b) / (L * L),
+   305→   305→                    0.0,
+   306→   306→                    -6.0 * w * a * b / (L * L * L),
+   307→   307→                    w * a * (2.0 * b - a) / (L * L)
+   308→   308→                )
+   309→   309→            }
+   310→   310→            MemberLoadType.LinearVarying -> {
+   311→   311→                // FEF for triangular load (0 at I, w at J)
+   312→   312→                doubleArrayOf(
+   313→   313→                    0.0,
+   314→   314→                    -w * L * 7.0 / 20.0,
+   315→   315→                    -w * L * L / 20.0,
+   316→   316→                    0.0,
+   317→   317→                    -w * L * 3.0 / 20.0,
+   318→   318→                    w * L * L / 30.0
+   319→   319→                )
+   320→   320→            }
+   321→   321→        }
+   322→   322→    }
+   323→   323→
+   324→   324→    // ========================================================================
+   325→   325→    // Diagram Generation
+   326→   326→    // ========================================================================
+   327→   327→
+   328→   328→    /**
+   329→   329→     * توليد مخططات القوى الداخلية (عزم، قص، محوري) لعضو واحد
+   330→   330→     *
+   331→   331→     * ملاحظة هندسية مهمة:
+   332→   332→     * - معادلات التوازن مبنية على الاتجاه المحلي للعضو (local)
+   333→   333→     * - في النظام المحلي: x محوري، y عمودي على المحور
+   334→   334→     * - UDL تعمل في اتجاه -y المحلي → القص ينقص مع المسافة
+   335→   335→     * - المعادلة: V(x) = VI - w*x  و  M(x) = MI + VI*x - w*x^2/2
+   336→   336→     */
+   337→   337→    private fun generateDiagrams(
+   338→   338→        member: FrameMember,
+   339→   339→        nodes: List<FrameNode>,
+   340→   340→        fLocalTotal: DoubleArray,
+   341→   341→        memberLoadList: List<MemberLoad>,
+   342→   342→        settings: FrameAnalysisSettings
+   343→   343→    ): MemberDiagram {
+   344→   344→        val L = member.getLength(nodes)
+   345→   345→        if (L < 1e-12) return MemberDiagram(memberId = member.id)
+   346→   346→
+   347→   347→        val numPoints = 31
+   348→   348→        val momentPoints = mutableListOf<DiagramPoint>()
+   349→   349→        val shearPoints = mutableListOf<DiagramPoint>()
+   350→   350→        val axialPoints = mutableListOf<DiagramPoint>()
+   351→   351→
+   352→   352→        // End forces in local system: [NI, VI, MI, NJ, VJ, MJ]
+   353→   353→        val vI = fLocalTotal[1]  // shear at I (local y)
+   354→   354→        val mI = fLocalTotal[2]  // moment at I
+   355→   355→        val nI = fLocalTotal[0]  // axial at I (constant along member)
+   356→   356→
+   357→   357→        for (i in 0..numPoints) {
+   358→   358→            val x = L * i / numPoints
+   359→   359→            var V = vI
+   360→   360→            var M = mI
+   361→   361→            val N = nI
+   362→   362→
+   363→   363→            for (mLoad in memberLoadList) {
+   364→   364→                when (mLoad.loadType) {
+   365→   365→                    MemberLoadType.UDL -> {
+   366→   366→                        V -= mLoad.value * x
+   367→   367→                        M -= mLoad.value * x * x / 2.0
+   368→   368→                    }
+   369→   369→                    MemberLoadType.PointLoad -> {
+   370→   370→                        val a = mLoad.position
+   371→   371→                        if (x >= a) {
+   372→   372→                            V -= mLoad.value
+   373→   373→                            M -= mLoad.value * (x - a)
+   374→   374→                        }
+   375→   375→                    }
+   376→   376→                    MemberLoadType.Moment -> {
+   377→   377→                        val a = mLoad.position
+   378→   378→                        if (x >= a) {
+   379→   379→                            M -= mLoad.value
+   380→   380→                        }
+   381→   381→                    }
+   382→   382→                    MemberLoadType.LinearVarying -> {
+   383→   383→                        // Triangular: 0 at I, w at J → V(x) = -w*x^2/(2L), M(x) = -w*x^3/(6L)
+   384→   384→                        V -= mLoad.value * x * x / (2.0 * L)
+   385→   385→                        M -= mLoad.value * x * x * x / (6.0 * L)
+   386→   386→                    }
+   387→   387→                }
+   388→   388→            }
+   389→   389→
+   390→   390→            momentPoints.add(DiagramPoint(x, M))
+   391→   391→            shearPoints.add(DiagramPoint(x, V))
+   392→   392→            axialPoints.add(DiagramPoint(x, N))
+   393→   393→        }
+   394→   394→
+   395→   395→        return MemberDiagram(
+   396→   396→            memberId = member.id,
+   397→   397→            momentDiagram = momentPoints,
+   398→   398→            shearDiagram = shearPoints,
+   399→   399→            axialDiagram = axialPoints,
+   400→   400→            maxMoment = momentPoints.maxOfOrNull { abs(it.value) } ?: 0.0,
+   401→   401→            maxShear = shearPoints.maxOfOrNull { abs(it.value) } ?: 0.0,
+   402→   402→            maxAxial = axialPoints.maxOfOrNull { abs(it.value) } ?: 0.0
+   403→   403→        )
+   404→   404→    }
+   405→   405→
+   406→   406→    // ========================================================================
+   407→   407→    // Section Properties Helper
+   408→   408→    // ========================================================================
+   409→   409→
+   410→   410→    private fun getE(member: FrameMember, settings: FrameAnalysisSettings): Double {
+   411→   411→        return when (member.materialType) {
+   412→   412→            FrameMaterialType.Concrete -> {
+   413→   413→                val fcu = member.concreteSection?.fcu ?: 25.0
+   414→   414→                // E_c = 4700 * sqrt(fcu) MPa = 4700 * sqrt(fcu) * 1e3 kN/m²
+   415→   415→                4700.0 * sqrt(fcu) * 1e3
+   416→   416→            }
+   417→   417→            FrameMaterialType.Steel -> settings.eSteel
+   418→   418→        }
+   419→   419→    }
+   420→   420→
+   421→   421→    private fun getSectionProperties(
+   422→   422→        member: FrameMember,
+   423→   423→        settings: FrameAnalysisSettings,
+   424→   424→        L: Double
+   425→   425→    ): Pair<Double, Double> {
+   426→   426→        // Returns (A in m², I in m⁴)
+   427→   427→        return when (member.materialType) {
+   428→   428→            FrameMaterialType.Concrete -> {
+   429→   429→                val cs = member.concreteSection ?: ConcreteSectionProps(250.0, 500.0)
+   430→   430→                val b = cs.width / 1000.0  // mm -> m
+   431→   431→                val h = cs.depth / 1000.0
+   432→   432→                Pair(b * h, b * h * h * h / 12.0)
+   433→   433→            }
+   434→   434→            FrameMaterialType.Steel -> {
+   435→   435→                // Default IPE 300 if no section specified
+   436→   436→                val sec = com.civileg.app.utils.SteelTables.getSectionByName(member.steelSectionName ?: "IPE 300")
+   437→   437→                    ?: com.civileg.app.utils.SteelTables.ipeSections[13] // IPE 300
+   438→   438→                val A = sec.area * 1e-4      // cm² -> m²
+   439→   439→                // European convention: iy = strong axis (major), iz = weak axis (minor)
+   440→   440→                // Frame bending is about the strong axis
+   441→   441→                val I = sec.iy * 1e-8         // cm⁴ -> m⁴ (strong axis)
+   442→   442→                Pair(A, I)
+   443→   443→            }
+   444→   444→        }
+   445→   445→    }
+   446→   446→
+   447→   447→    // ========================================================================
+   448→   448→    // Linear Algebra Utilities
+   449→   449→    // ========================================================================
+   450→   450→
+   451→   451→    /**
+   452→   452→     * حل نظام معادلات خطية Ax = b بطريقة Gauss Elimination مع Pivoting
+   453→   453→     */
+   454→   454→    fun solveLinearSystem(A: Array<DoubleArray>, b: DoubleArray): DoubleArray? {
+   455→   455→        val n = A.size
+   456→   456→        if (n == 0) return null
+   457→   457→
+   458→   458→        // Augmented matrix
+   459→   459→        val aug = Array(n) { i -> DoubleArray(n + 1) { j -> if (j < n) A[i][j] else b[i] } }
+   460→   460→
+   461→   461→        // Forward elimination with partial pivoting
+   462→   462→        for (col in 0 until n) {
+   463→   463→            // Find pivot
+   464→   464→            var maxVal = abs(aug[col][col])
+   465→   465→            var maxRow = col
+   466→   466→            for (row in col + 1 until n) {
+   467→   467→                if (abs(aug[row][col]) > maxVal) {
+   468→   468→                    maxVal = abs(aug[row][col])
+   469→   469→                    maxRow = row
+   470→   470→                }
+   471→   471→            }
+   472→   472→            if (maxVal < 1e-15) return null // Singular
+   473→   473→            if (maxRow != col) {
+   474→   474→                val tmp = aug[col]; aug[col] = aug[maxRow]; aug[maxRow] = tmp
+   475→   475→            }
+   476→   476→            // Eliminate
+   477→   477→            for (row in col + 1 until n) {
+   478→   478→                val factor = aug[row][col] / aug[col][col]
+   479→   479→                for (j in col..n) {
+   480→   480→                    aug[row][j] -= factor * aug[col][j]
+   481→   481→                }
+   482→   482→            }
+   483→   483→        }
+   484→   484→
+   485→   485→        // Back substitution
+   486→   486→        val x = DoubleArray(n)
+   487→   487→        for (i in n - 1 downTo 0) {
+   488→   488→            var sum = aug[i][n]
+   489→   489→            for (j in i + 1 until n) sum -= aug[i][j] * x[j]
+   490→   490→            x[i] = sum / aug[i][i]
+   491→   491→        }
+   492→   492→        return x
+   493→   493→    }
+   494→   494→
+   495→   495→    private fun transpose(m: Array<DoubleArray>, rows: Int, cols: Int): Array<DoubleArray> {
+   496→   496→        return Array(cols) { i -> DoubleArray(rows) { j -> m[j][i] } }
+   497→   497→    }
+   498→   498→
+   499→   499→    private fun multiply(A: Array<DoubleArray>, B: Array<DoubleArray>, m: Int, n: Int, p: Int): Array<DoubleArray> {
+   500→   500→        val C = Array(m) { DoubleArray(p) }
+   501→   501→        for (i in 0 until m) {
+   502→   502→            for (j in 0 until p) {
+   503→   503→                var sum = 0.0
+   504→   504→                for (k in 0 until n) sum += A[i][k] * B[k][j]
+   505→   505→                C[i][j] = sum
+   506→   506→            }
+   507→   507→        }
+   508→   508→        return C
+   509→   509→    }
+   510→   510→
+   511→   511→    private fun globalToLocalDisplacements(
+   512→   512→        uI: DoubleArray, uJ: DoubleArray, c: Double, s: Double
+   513→   513→    ): DoubleArray {
+   514→   514→        return doubleArrayOf(
+   515→   515→            c * uI[0] + s * uI[1],
+   516→   516→            -s * uI[0] + c * uI[1],
+   517→   517→            uI[2],
+   518→   518→            c * uJ[0] + s * uJ[1],
+   519→   519→            -s * uJ[0] + c * uJ[1],
+   520→   520→            uJ[2]
+   521→   521→        )
+   522→   522→    }
+   523→   523→
+   524→   524→    // ========================================================================
+   525→   525→    // Preset Frame Templates
+   526→   526→    // ========================================================================
+   527→   527→
+   528→   528→    /**
+   529→   529→     * قالب إطار بسيط (عمودين + كمر واحد)
+   530→   530→     */
+   531→   531→    fun createSimplePortalFrame(
+   532→   532→        span: Double = 6.0,
+   533→   533→        height: Double = 4.0,
+   534→   534→        udl: Double = 20.0
+   535→   535→    ): Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>> {
+   536→   536→        val nodes = listOf(
+   537→   537→            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+   538→   538→            FrameNode(2, span, 0.0, SupportType.Fixed),
+   539→   539→            FrameNode(3, span, height, SupportType.Free),
+   540→   540→            FrameNode(4, 0.0, height, SupportType.Free)
+   541→   541→        )
+   542→   542→        val concreteSec = ConcreteSectionProps(300.0, 600.0)
+   543→   543→        val members = listOf(
+   544→   544→            FrameMember(1, 1, 4, FrameMaterialType.Concrete, FrameMemberType.Column, concreteSec, name = "عمود أيسر"),
+   545→   545→            FrameMember(2, 2, 3, FrameMaterialType.Concrete, FrameMemberType.Column, concreteSec, name = "عمود أيمن"),
+   546→   546→            FrameMember(3, 4, 3, FrameMaterialType.Concrete, FrameMemberType.Beam, ConcreteSectionProps(250.0, 500.0), name = "كمر سقف")
+   547→   547→        )
+   548→   548→        val loads = listOf(
+   549→   549→            MemberLoad(3, MemberLoadType.UDL, udl, loadCase = "DL")
+   550→   550→        )
+   551→   551→        return Triple(nodes, members, loads)
+   552→   552→    }
+   553→   553→
+   554→   554→    /**
+   555→   555→     * قالب إطار معدني بسيط (عمودين IPE + كمر IPE)
+   556→   556→     */
+   557→   557→    fun createSteelPortalFrame(
+   558→   558→        span: Double = 8.0,
+   559→   559→        height: Double = 5.0,
+   560→   560→        udl: Double = 15.0
+   561→   561→    ): Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>> {
+   562→   562→        val nodes = listOf(
+   563→   563→            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+   564→   564→            FrameNode(2, span, 0.0, SupportType.Fixed),
+   565→   565→            FrameNode(3, span, height, SupportType.Free),
+   566→   566→            FrameNode(4, 0.0, height, SupportType.Free)
+   567→   567→        )
+   568→   568→        val members = listOf(
+   569→   569→            FrameMember(1, 1, 4, FrameMaterialType.Steel, FrameMemberType.Column, steelSectionName = "IPE 300", name = "عمود أيسر معدني"),
+   570→   570→            FrameMember(2, 2, 3, FrameMaterialType.Steel, FrameMemberType.Column, steelSectionName = "IPE 300", name = "عمود أيمن معدني"),
+   571→   571→            FrameMember(3, 4, 3, FrameMaterialType.Steel, FrameMemberType.Beam, steelSectionName = "IPE 400", name = "كمر سقف معدني")
+   572→   572→        )
+   573→   573→        val loads = listOf(
+   574→   574→            MemberLoad(3, MemberLoadType.UDL, udl, loadCase = "DL")
+   575→   575→        )
+   576→   576→        return Triple(nodes, members, loads)
+   577→   577→    }
+   578→   578→
+   579→   579→    /**
+   580→   580→     * قالب إطار متعدد الطوابق
+   581→   581→     */
+   582→   582→    fun createMultiStoryFrame(
+   583→   583→        spans: List<Double> = listOf(5.0, 5.0),
+   584→   584→        storyHeights: List<Double> = listOf(3.5, 3.0),
+   585→   585→        udlPerFloor: Double = 15.0
+   586→   586→    ): Triple<List<FrameNode>, List<FrameNode>, Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>>> {
+   587→   587→        val numSpans = spans.size
+   588→   588→        val numStories = storyHeights.size
+   589→   589→        val nodes = mutableListOf<FrameNode>()
+   590→   590→        var nodeId = 1
+   591→   591→
+   592→   592→        // Ground nodes
+   593→   593→        val groundNodes = mutableListOf<FrameNode>()
+   594→   594→        for (i in 0..numSpans) {
+   595→   595→            val x = spans.take(i).sum()
+   596→   596→            val node = FrameNode(nodeId++, x, 0.0, SupportType.Fixed)
+   597→   597→            nodes.add(node)
+   598→   598→            groundNodes.add(node)
+   599→   599→        }
+   600→   600→
+   601→   601→        // Upper floor nodes
+   602→   602→        for (s in 0 until numStories) {
+   603→   603→            val y = storyHeights.take(s + 1).sum()
+   604→   604→            for (i in 0..numSpans) {
+   605→   605→                val x = spans.take(i).sum()
+   606→   606→                nodes.add(FrameNode(nodeId++, x, y, SupportType.Free))
+   607→   607→            }
+   608→   608→        }
+   609→   609→
+   610→   610→        // Members
+   611→   611→        val members = mutableListOf<FrameMember>()
+   612→   612→        var memberId = 1
+   613→   613→        val colSec = ConcreteSectionProps(300.0, 600.0)
+   614→   614→        val beamSec = ConcreteSectionProps(250.0, 500.0)
+   615→   615→
+   616→   616→        // Columns
+   617→   617→        for (s in 0 until numStories) {
+   618→   618→            for (i in 0..numSpans) {
+   619→   619→                val lowerNode = s * (numSpans + 1) + i + 1
+   620→   620→                val upperNode = (s + 1) * (numSpans + 1) + i + 1
+   621→   621→                members.add(FrameMember(
+   622→   622→                    memberId++, lowerNode, upperNode,
+   623→   623→                    FrameMaterialType.Concrete, FrameMemberType.Column, colSec,
+   624→   624→                    name = "عمود $i طابق ${s + 1}"
+   625→   625→                ))
+   626→   626→            }
+   627→   627→        }
+   628→   628→
+   629→   629→        // Beams
+   630→   630→        for (s in 0 until numStories) {
+   631→   631→            for (i in 0 until numSpans) {
+   632→   632→                val leftNode = (s + 1) * (numSpans + 1) + i + 1
+   633→   633→                val rightNode = leftNode + 1
+   634→   634→                members.add(FrameMember(
+   635→   635→                    memberId++, leftNode, rightNode,
+   636→   636→                    FrameMaterialType.Concrete, FrameMemberType.Beam, beamSec,
+   637→   637→                    name = "كمر $i طابق ${s + 1}"
+   638→   638→                ))
+   639→   639→            }
+   640→   640→        }
+   641→   641→
+   642→   642→        // Loads (UDL on beams)
+   643→   643→        val loads = mutableListOf<MemberLoad>()
+   644→   644→        val numColumns = (numSpans + 1) * numStories  // total columns added before beams
+   645→   645→        for (s in 0 until numStories) {
+   646→   646→            for (i in 0 until numSpans) {
+   647→   647→                val beamIdx = numColumns + s * numSpans + i
+   648→   648→                if (beamIdx < members.size) {
+   649→   649→                    loads.add(MemberLoad(members[beamIdx].id, MemberLoadType.UDL, udlPerFloor, loadCase = "DL"))
+   650→   650→                }
+   651→   651→            }
+   652→   652→        }
+   653→   653→
+   654→   654→        return Triple(groundNodes, nodes.toTypedArray().toList(), Triple(nodes, members, loads))
+   655→   655→    }
+   656→   656→}

@@ -1,0 +1,1958 @@
+     1→package com.civileg.app.domain.calculations.aci
+     2→
+     3→import android.os.Parcelable
+     4→import com.civileg.app.domain.entities.*
+     5→import kotlinx.parcelize.Parcelize
+     6→import kotlin.math.*
+     7→
+     8→// =====================================================================
+     9→// AISC 360-16 LRFD Steel Design Engine — محرك تصميم المنشآت المعدنية
+    10→// Comprehensive implementation following AISC 360-16 specifications
+    11→// =====================================================================
+    12→
+    13→// ======================== RESULT DATA CLASSES ========================
+    14→
+    15→@Parcelize
+    16→enum class ElementClassification : Parcelable { COMPACT, NONCOMPACT, SLENDER }
+    17→
+    18→@Parcelize
+    19→data class SectionClassification(
+    20→    val flangeStatus: ElementClassification,
+    21→    val webStatus: ElementClassification,
+    22→    val overall: String,
+    23→    val flangeSlenderness: Double,
+    24→    val webSlenderness: Double,
+    25→    val flangeCompactLimit: Double,
+    26→    val flangeSlenderLimit: Double
+    27→) : Parcelable
+    28→
+    29→@Parcelize
+    30→data class SteelTensionResult(
+    31→    val grossYielding: Double,
+    32→    val netRupture: Double,
+    33→    val blockShear: Double,
+    34→    val designCapacity: Double,
+    35→    val utilizationRatio: Double,
+    36→    val isSafe: Boolean,
+    37→    val governingCase: String,
+    38→    val warnings: List<String>,
+    39→    val codeNotes: List<String>
+    40→) : Parcelable
+    41→
+    42→@Parcelize
+    43→data class SteelCompressionResult(
+    44→    val Fcr: Double,
+    45→    val Pn: Double,
+    46→    val phiPn: Double,
+    47→    val slendernessRatio: Double,
+    48→    val bucklingMode: String,
+    49→    val utilizationRatio: Double,
+    50→    val isSafe: Boolean,
+    51→    val warnings: List<String>,
+    52→    val codeNotes: List<String>
+    53→) : Parcelable
+    54→
+    55→@Parcelize
+    56→data class SteelFlexuralResult(
+    57→    val momentCapacityX: Double,
+    58→    val momentCapacityY: Double,
+    59→    val shearCapacityX: Double,
+    60→    val shearCapacityY: Double,
+    61→    val ltbCapacity: Double,
+    62→    val deflectionRatio: Double,
+    63→    val isSafe: Boolean,
+    64→    val governingCheck: String,
+    65→    val warnings: List<String>,
+    66→    val codeNotes: List<String>
+    67→) : Parcelable
+    68→
+    69→@Parcelize
+    70→data class CombinedLoadingResult(
+    71→    val interactionRatio: Double,
+    72→    val axialRatio: Double,
+    73→    val flexuralRatioX: Double,
+    74→    val flexuralRatioY: Double,
+    75→    val equation: String,
+    76→    val isSafe: Boolean,
+    77→    val warnings: List<String>,
+    78→    val codeNotes: List<String>
+    79→) : Parcelable
+    80→
+    81→@Parcelize
+    82→data class SteelBracingResult(
+    83→    val compressionCapacity: Double,
+    84→    val slendernessRatio: Double,
+    85→    val isSafe: Boolean,
+    86→    val connectionAdequate: Boolean,
+    87→    val warnings: List<String>,
+    88→    val codeNotes: List<String>
+    89→) : Parcelable
+    90→
+    91→@Parcelize
+    92→data class CompositeBeamResult(
+    93→    val compositeMomentCapacity: Double,
+    94→    val studsRequired: Int,
+    95→    val studsProvided: Int,
+    96→    val shearStudsAdequate: Boolean,
+    97→    val isSafe: Boolean,
+    98→    val warnings: List<String>,
+    99→    val codeNotes: List<String>
+   100→) : Parcelable
+   101→
+   102→// ======================== MAIN ENGINE CLASS ==========================
+   103→
+   104→/**
+   105→ * محرك تصميم شامل حسب مواصفة AISC 360-16
+   106→ * يغطي: تصنيف المقاطع، الشد، الضغط، الانحناء، القص، الحمل المركب، الكمرات المركبة
+   107→ * Comprehensive AISC 360-16 (LRFD) steel design engine
+   108→ */
+   109→class AISCSteelDesignEngine {
+   110→
+   111→    companion object {
+   112→        // AISC 360-16 Resistance Factors
+   113→        const val PHI_TENSION = 0.90        // AISC D2
+   114→        const val PHI_COMPRESSION = 0.90    // AISC E1
+   115→        const val PHI_FLEXURE = 0.90        // AISC F1
+   116→        const val PHI_SHEAR = 0.90          // AISC G1
+   117→        const val PHI_BEARING = 0.75        // AISC J3.10
+   118→
+   119→        // Material Properties
+   120→        const val E_STEEL = 200000.0         // MPa (29,000 ksi)
+   121→        const val G_STEEL = 76923.0          // MPa (11,200 ksi)
+   122→        const val STEEL_DENSITY = 7.85e-6    // kg/mm³
+   123→
+   124→        // Slenderness Limits (AISC D1, Table B4.1a/b)
+   125→        const val MAX_SLENDERNESS_COMPRESSION = 200.0
+   126→        const val MAX_SLENDERNESS_TENSION = 300.0
+   127→        const val MAX_SLENDERNESS_BRACING = 200.0
+   128→
+   129→        // Standard bolt hole diameter (mm) — AISC J3.3
+   130→        const val STANDARD_BOLT_HOLE_INCREMENT = 2.0  // mm added to bolt diameter
+   131→    }
+   132→
+   133→    // ===================== SECTION PROPERTY HELPERS =====================
+   134→
+   135→    /** Weak axis moment of inertia Iy — mm⁴ (AISC properties) */
+   136→    private fun getIy(section: SteelSectionType): Double = when (section) {
+   137→        is SteelSectionType.ISection -> {
+   138→            val b = section.bf
+   139→            val tf = section.tf
+   140→            val h = section.h
+   141→            val tw = section.tw
+   142→            val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   143→            2.0 * (tf * b.pow(3) / 12.0) + (hw * tw.pow(3) / 12.0)
+   144→        }
+   145→        is SteelSectionType.CSection -> {
+   146→            val b = section.bf
+   147→            val tf = section.tf
+   148→            val h = section.h
+   149→            val tw = section.tw
+   150→            val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   151→            // Simplified Iy for channel (about centroidal y-axis, not shear center)
+   152→            2.0 * (tf * b.pow(3) / 12.0) + (hw * tw.pow(3) / 12.0)
+   153→        }
+   154→        is SteelSectionType.RHS -> {
+   155→            val w = section.width
+   156→            val h = section.height
+   157→            val t = section.thickness
+   158→            val hw = (h - 2 * t).coerceAtLeast(0.001)
+   159→            val bw = (w - 2 * t).coerceAtLeast(0.001)
+   160→            (h * w.pow(3) - hw * bw.pow(3)) / 12.0
+   161→        }
+   162→        is SteelSectionType.CHS -> {
+   163→            // Iy = Ix for circular section
+   164→            val D = section.outerDiameter
+   165→            val t = section.thickness
+   166→            PI / 64.0 * (D.pow(4) - (D - 2 * t).pow(4))
+   167→        }
+   168→        is SteelSectionType.LSection -> {
+   169→            // Approximate Iy for angle
+   170→            val a = section.legA
+   171→            val b = section.legB
+   172→            val t = section.thickness
+   173→            val A = (a + b - t) * t
+   174→            val IyApprox = (b * t.pow(3) / 12.0) + (t * (a - t) * (b / 2.0).pow(2)) +
+   175→                    ((a - t) * t.pow(3) / 12.0) + ((a - t) * t * (t / 2.0).pow(2))
+   176→            IyApprox.coerceAtLeast(0.0)
+   177→        }
+   178→        is SteelSectionType.TSection -> {
+   179→            val bf = section.flangeWidth
+   180→            val tf = section.flangeThickness
+   181→            val dw = section.webDepth
+   182→            val tw = section.webThickness
+   183→            val IyFlange = tf * bf.pow(3) / 12.0
+   184→            val IyWeb = dw * tw.pow(3) / 12.0
+   185→            IyFlange + IyWeb
+   186→        }
+   187→        is SteelSectionType.BuiltUp -> 0.0
+   188→    }
+   189→
+   190→    /** Weak axis elastic section modulus Sy — mm³ */
+   191→    private fun getSy(section: SteelSectionType): Double {
+   192→        val Iy = getIy(section)
+   193→        return when (section) {
+   194→            is SteelSectionType.ISection -> Iy / (section.bf / 2.0)
+   195→            is SteelSectionType.CSection -> Iy / (section.bf / 2.0)
+   196→            is SteelSectionType.RHS -> Iy / (section.width / 2.0)
+   197→            is SteelSectionType.CHS -> Iy / (section.outerDiameter / 2.0)
+   198→            is SteelSectionType.LSection -> Iy / (section.legB / 2.0)
+   199→            is SteelSectionType.TSection -> Iy / (section.flangeWidth / 2.0)
+   200→            is SteelSectionType.BuiltUp -> 0.0
+   201→        }
+   202→    }
+   203→
+   204→    /** Weak axis plastic section modulus Zy — mm³ (approximate) */
+   205→    private fun getZy(section: SteelSectionType): Double {
+   206→        val Sy = getSy(section)
+   207→        return when (section) {
+   208→            is SteelSectionType.ISection -> Sy * 1.12
+   209→            is SteelSectionType.CSection -> Sy * 1.10
+   210→            is SteelSectionType.RHS -> Sy * 1.08
+   211→            is SteelSectionType.CHS -> Sy * 1.12
+   212→            is SteelSectionType.LSection -> Sy * 1.05
+   213→            is SteelSectionType.TSection -> Sy * 1.05
+   214→            is SteelSectionType.BuiltUp -> 0.0
+   215→        }
+   216→    }
+   217→
+   218→    /** Weak axis radius of gyration ry — mm */
+   219→    private fun getRy(section: SteelSectionType): Double {
+   220→        val A = section.area
+   221→        return if (A > 0.0) sqrt(getIy(section) / A) else 0.0
+   222→    }
+   223→
+   224→    /** St. Venant torsional constant J — mm⁴ */
+   225→    private fun getJ(section: SteelSectionType): Double = when (section) {
+   226→        is SteelSectionType.ISection -> {
+   227→            val b = section.bf
+   228→            val tf = section.tf
+   229→            val h = section.h
+   230→            val tw = section.tw
+   231→            val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   232→            // J = (2*b*tf³ + hw*tw³) / 3 (simplified AISC)
+   233→            (2.0 * b * tf.pow(3) + hw * tw.pow(3)) / 3.0
+   234→        }
+   235→        is SteelSectionType.CSection -> {
+   236→            val b = section.bf
+   237→            val tf = section.tf
+   238→            val h = section.h
+   239→            val tw = section.tw
+   240→            val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   241→            (2.0 * b * tf.pow(3) + hw * tw.pow(3)) / 3.0
+   242→        }
+   243→        is SteelSectionType.RHS -> {
+   244→            val w = section.width
+   245→            val h = section.height
+   246→            val t = section.thickness
+   247→            val hw = (h - 2 * t).coerceAtLeast(0.001)
+   248→            val bw = (w - 2 * t).coerceAtLeast(0.001)
+   249→            // J for hollow section = 2*t₁*t₂*(b-t₂)²*(h-t₁)² / (b*t₁ + h*t₂ - 2*t₁*t₂)
+   250→            2.0 * t * t * bw * bw * hw * hw / (w * t + h * t - 2.0 * t * t)
+   251→        }
+   252→        is SteelSectionType.CHS -> {
+   253→            val D = section.outerDiameter
+   254→            val t = section.thickness
+   255→            PI / 32.0 * (D.pow(4) - (D - 2 * t).pow(4))
+   256→        }
+   257→        is SteelSectionType.LSection -> {
+   258→            val a = section.legA
+   259→            val b = section.legB
+   260→            val t = section.thickness
+   261→            (a + b - t) * t.pow(3) / 3.0
+   262→        }
+   263→        is SteelSectionType.TSection -> {
+   264→            val bf = section.flangeWidth
+   265→            val tf = section.flangeThickness
+   266→            val dw = section.webDepth
+   267→            val tw = section.webThickness
+   268→            (bf * tf.pow(3) + dw * tw.pow(3)) / 3.0
+   269→        }
+   270→        is SteelSectionType.BuiltUp -> 0.0
+   271→    }
+   272→
+   273→    /** Warping constant Cw — mm⁶ */
+   274→    private fun getCw(section: SteelSectionType): Double = when (section) {
+   275→        is SteelSectionType.ISection -> {
+   276→            val b = section.bf
+   277→            val tf = section.tf
+   278→            val h = section.h
+   279→            val tw = section.tw
+   280→            val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   281→            // Cw = Iy * h² / 4 (doubly symmetric I-shape, AISC)
+   282→            hw * hw * b * b * tf / 12.0
+   283→        }
+   284→        is SteelSectionType.CSection -> {
+   285→            val b = section.bf
+   286→            val tf = section.tf
+   287→            val h = section.h
+   288→            val tw = section.tw
+   289→            val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   290→            // Approximate for channel
+   291→            hw * hw * b * b * tf / 24.0
+   292→        }
+   293→        is SteelSectionType.TSection -> {
+   294→            val bf = section.flangeWidth
+   295→            val tf = section.flangeThickness
+   296→            val dw = section.webDepth
+   297→            val tw = section.webThickness
+   298→            bf.pow(3) * tf * dw * dw / 12.0
+   299→        }
+   300→        is SteelSectionType.RHS -> {
+   301→            // Negligible warping for closed sections
+   302→            0.0
+   303→        }
+   304→        is SteelSectionType.CHS -> 0.0
+   305→        is SteelSectionType.LSection -> 0.0
+   306→        is SteelSectionType.BuiltUp -> 0.0
+   307→    }
+   308→
+   309→    /** Polar radius of gyration r₀ — mm (for torsional buckling) */
+   310→    private fun getRo(section: SteelSectionType): Double {
+   311→        val rx = section.rx
+   312→        val ry = getRy(section)
+   313→        return sqrt(rx * rx + ry * ry)
+   314→    }
+   315→
+   316→    /** Sanitize polar radius of gyration r₀² — mm² (for torsional buckling, AISC E4) */
+   317→    private fun getRoSquared(section: SteelSectionType): Double {
+   318→        val rx = section.rx
+   319→        val ry = getRy(section)
+   320→        return rx * rx + ry * ry
+   321→    }
+   322→
+   323→    // ===================== SECTION CLASSIFICATION (AISC Table B4.1a/b) =====================
+   324→
+   325→    /**
+   326→     * تصنيف المقطع حسب AISC Table B4.1a (للانحناء) و B4.1b (للضغط)
+   327→     * Classify section as Compact, Noncompact, or Slender
+   328→     */
+   329→    fun classifySection(section: SteelSectionType, grade: SteelGrade): SectionClassification {
+   330→        val Fy = grade.fy
+   331→        val warnings = mutableListOf<String>()
+   332→
+   333→        when (section) {
+   334→            is SteelSectionType.ISection -> {
+   335→                val bf = section.bf
+   336→                val tf = section.tf
+   337→                val h = section.h
+   338→                val tw = section.tw
+   339→
+   340→                // Flange slenderness (AISC Table B4.1a, Case 1/10)
+   341→                val lambdaF = (bf - tw) / (2.0 * tf)
+   342→                val lambdaFp = 0.38 * sqrt(E_STEEL / Fy)
+   343→                val lambdaFr = 1.0 * sqrt(E_STEEL / Fy)
+   344→
+   345→                // Web slenderness for flexure (AISC Table B4.1a, Case 15)
+   346→                val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   347→                val lambdaW = hw / tw
+   348→                val lambdaWp = 3.76 * sqrt(E_STEEL / Fy)
+   349→                val lambdaWr = 5.70 * sqrt(E_STEEL / Fy)
+   350→
+   351→                val flangeStatus = when {
+   352→                    lambdaF <= lambdaFp -> ElementClassification.COMPACT
+   353→                    lambdaF <= lambdaFr -> ElementClassification.NONCOMPACT
+   354→                    else -> ElementClassification.SLENDER
+   355→                }
+   356→                val webStatus = when {
+   357→                    lambdaW <= lambdaWp -> ElementClassification.COMPACT
+   358→                    lambdaW <= lambdaWr -> ElementClassification.NONCOMPACT
+   359→                    else -> ElementClassification.SLENDER
+   360→                }
+   361→
+   362→                val overall = when {
+   363→                    flangeStatus == ElementClassification.SLENDER || webStatus == ElementClassification.SLENDER -> "Slender"
+   364→                    flangeStatus == ElementClassification.NONCOMPACT || webStatus == ElementClassification.NONCOMPACT -> "Noncompact"
+   365→                    else -> "Compact"
+   366→                }
+   367→
+   368→                if (overall == "Slender") {
+   369→                    warnings.add("المقطع نحيف (Slender) — يجب تطبيق عوامل تخفيض Q")
+   370→                }
+   371→
+   372→                return SectionClassification(
+   373→                    flangeStatus = flangeStatus,
+   374→                    webStatus = webStatus,
+   375→                    overall = overall,
+   376→                    flangeSlenderness = lambdaF,
+   377→                    webSlenderness = lambdaW,
+   378→                    flangeCompactLimit = lambdaFp,
+   379→                    flangeSlenderLimit = lambdaFr
+   380→                )
+   381→            }
+   382→
+   383→            is SteelSectionType.CSection -> {
+   384→                val bf = section.bf
+   385→                val tf = section.tf
+   386→                val h = section.h
+   387→                val tw = section.tw
+   388→
+   389→                val lambdaF = (bf - tw) / (2.0 * tf)
+   390→                val lambdaFp = 0.38 * sqrt(E_STEEL / Fy)
+   391→                val lambdaFr = 1.0 * sqrt(E_STEEL / Fy)
+   392→
+   393→                val hw = (h - 2 * tf).coerceAtLeast(0.001)
+   394→                val lambdaW = hw / tw
+   395→                val lambdaWp = 3.76 * sqrt(E_STEEL / Fy)
+   396→                val lambdaWr = 5.70 * sqrt(E_STEEL / Fy)
+   397→
+   398→                val flangeStatus = when {
+   399→                    lambdaF <= lambdaFp -> ElementClassification.COMPACT
+   400→                    lambdaF <= lambdaFr -> ElementClassification.NONCOMPACT
+   401→                    else -> ElementClassification.SLENDER
+   402→                }
+   403→                val webStatus = when {
+   404→                    lambdaW <= lambdaWp -> ElementClassification.COMPACT
+   405→                    lambdaW <= lambdaWr -> ElementClassification.NONCOMPACT
+   406→                    else -> ElementClassification.SLENDER
+   407→                }
+   408→
+   409→                val overall = when {
+   410→                    flangeStatus == ElementClassification.SLENDER || webStatus == ElementClassification.SLENDER -> "Slender"
+   411→                    flangeStatus == ElementClassification.NONCOMPACT || webStatus == ElementClassification.NONCOMPACT -> "Noncompact"
+   412→                    else -> "Compact"
+   413→                }
+   414→
+   415→                return SectionClassification(
+   416→                    flangeStatus = flangeStatus,
+   417→                    webStatus = webStatus,
+   418→                    overall = overall,
+   419→                    flangeSlenderness = lambdaF,
+   420→                    webSlenderness = lambdaW,
+   421→                    flangeCompactLimit = lambdaFp,
+   422→                    flangeSlenderLimit = lambdaFr
+   423→                )
+   424→            }
+   425→
+   426→            is SteelSectionType.RHS -> {
+   427→                val w = section.width
+   428→                val h = section.height
+   429→                val t = section.thickness
+   430→
+   431→                // AISC Table B4.1a, Case 12 (flanges of rectangular HSS)
+   432→                val lambdaF = (w - 2 * t) / t
+   433→                val lambdaFp = 1.12 * sqrt(E_STEEL / Fy)
+   434→                val lambdaFr = 1.40 * sqrt(E_STEEL / Fy)
+   435→
+   436→                // AISC Table B4.1a, Case 13 (webs of rectangular HSS)
+   437→                val lambdaW = (h - 2 * t) / t
+   438→                val lambdaWp = 2.42 * sqrt(E_STEEL / Fy)
+   439→                val lambdaWr = 5.70 * sqrt(E_STEEL / Fy)
+   440→
+   441→                val flangeStatus = when {
+   442→                    lambdaF <= lambdaFp -> ElementClassification.COMPACT
+   443→                    lambdaF <= lambdaFr -> ElementClassification.NONCOMPACT
+   444→                    else -> ElementClassification.SLENDER
+   445→                }
+   446→                val webStatus = when {
+   447→                    lambdaW <= lambdaWp -> ElementClassification.COMPACT
+   448→                    lambdaW <= lambdaWr -> ElementClassification.NONCOMPACT
+   449→                    else -> ElementClassification.SLENDER
+   450→                }
+   451→
+   452→                val overall = when {
+   453→                    flangeStatus == ElementClassification.SLENDER || webStatus == ElementClassification.SLENDER -> "Slender"
+   454→                    flangeStatus == ElementClassification.NONCOMPACT || webStatus == ElementClassification.NONCOMPACT -> "Noncompact"
+   455→                    else -> "Compact"
+   456→                }
+   457→
+   458→                return SectionClassification(
+   459→                    flangeStatus = flangeStatus,
+   460→                    webStatus = webStatus,
+   461→                    overall = overall,
+   462→                    flangeSlenderness = lambdaF,
+   463→                    webSlenderness = lambdaW,
+   464→                    flangeCompactLimit = lambdaFp,
+   465→                    flangeSlenderLimit = lambdaFr
+   466→                )
+   467→            }
+   468→
+   469→            is SteelSectionType.CHS -> {
+   470→                val D = section.outerDiameter
+   471→                val t = section.thickness
+   472→                // AISC Table B4.1a, Case 9 (round HSS in flexure)
+   473→                val lambda = D / t
+   474→                val lambdaP = 0.07 * E_STEEL / Fy
+   475→                val lambdaR = 0.31 * E_STEEL / Fy
+   476→
+   477→                val status = when {
+   478→                    lambda <= lambdaP -> ElementClassification.COMPACT
+   479→                    lambda <= lambdaR -> ElementClassification.NONCOMPACT
+   480→                    else -> ElementClassification.SLENDER
+   481→                }
+   482→
+   483→                return SectionClassification(
+   484→                    flangeStatus = status,
+   485→                    webStatus = ElementClassification.COMPACT,
+   486→                    overall = when (status) {
+   487→                        ElementClassification.COMPACT -> "Compact"
+   488→                        ElementClassification.NONCOMPACT -> "Noncompact"
+   489→                        ElementClassification.SLENDER -> "Slender"
+   490→                    },
+   491→                    flangeSlenderness = lambda,
+   492→                    webSlenderness = 0.0,
+   493→                    flangeCompactLimit = lambdaP,
+   494→                    flangeSlenderLimit = lambdaR
+   495→                )
+   496→            }
+   497→
+   498→            is SteelSectionType.LSection -> {
+   499→                val a = section.legA
+   500→                val b = section.legB
+   501→                val t = section.thickness
+   502→                // AISC Table B4.1a, Case 3 (legs of angles in flexure)
+   503→                val lambda = b / t
+   504→                val lambdaP = 0.54 * sqrt(E_STEEL / Fy)
+   505→                val lambdaR = 0.91 * sqrt(E_STEEL / Fy)
+   506→
+   507→                val status = when {
+   508→                    lambda <= lambdaP -> ElementClassification.COMPACT
+   509→                    lambda <= lambdaR -> ElementClassification.NONCOMPACT
+   510→                    else -> ElementClassification.SLENDER
+   511→                }
+   512→
+   513→                return SectionClassification(
+   514→                    flangeStatus = status,
+   515→                    webStatus = ElementClassification.COMPACT,
+   516→                    overall = when (status) {
+   517→                        ElementClassification.COMPACT -> "Compact"
+   518→                        ElementClassification.NONCOMPACT -> "Noncompact"
+   519→                        ElementClassification.SLENDER -> "Slender"
+   520→                    },
+   521→                    flangeSlenderness = lambda,
+   522→                    webSlenderness = a / t,
+   523→                    flangeCompactLimit = lambdaP,
+   524→                    flangeSlenderLimit = lambdaR
+   525→                )
+   526→            }
+   527→
+   528→            is SteelSectionType.TSection -> {
+   529→                val bf = section.flangeWidth
+   530→                val tf = section.flangeThickness
+   531→                val dw = section.webDepth
+   532→                val tw = section.webThickness
+   533→
+   534→                // Flange (same as I-shape)
+   535→                val lambdaF = (bf - tw) / (2.0 * tf)
+   536→                val lambdaFp = 0.38 * sqrt(E_STEEL / Fy)
+   537→                val lambdaFr = 1.0 * sqrt(E_STEEL / Fy)
+   538→
+   539→                // Stem of T-section (AISC Table B4.1a, Case 15 with modified limits)
+   540→                val lambdaW = dw / tw
+   541→                val lambdaWp = 0.84 * sqrt(E_STEEL / Fy)
+   542→                val lambdaWr = 1.03 * sqrt(E_STEEL / Fy)
+   543→
+   544→                val flangeStatus = when {
+   545→                    lambdaF <= lambdaFp -> ElementClassification.COMPACT
+   546→                    lambdaF <= lambdaFr -> ElementClassification.NONCOMPACT
+   547→                    else -> ElementClassification.SLENDER
+   548→                }
+   549→                val webStatus = when {
+   550→                    lambdaW <= lambdaWp -> ElementClassification.COMPACT
+   551→                    lambdaW <= lambdaWr -> ElementClassification.NONCOMPACT
+   552→                    else -> ElementClassification.SLENDER
+   553→                }
+   554→
+   555→                val overall = when {
+   556→                    flangeStatus == ElementClassification.SLENDER || webStatus == ElementClassification.SLENDER -> "Slender"
+   557→                    flangeStatus == ElementClassification.NONCOMPACT || webStatus == ElementClassification.NONCOMPACT -> "Noncompact"
+   558→                    else -> "Compact"
+   559→                }
+   560→
+   561→                return SectionClassification(
+   562→                    flangeStatus = flangeStatus,
+   563→                    webStatus = webStatus,
+   564→                    overall = overall,
+   565→                    flangeSlenderness = lambdaF,
+   566→                    webSlenderness = lambdaW,
+   567→                    flangeCompactLimit = lambdaFp,
+   568→                    flangeSlenderLimit = lambdaFr
+   569→                )
+   570→            }
+   571→
+   572→            is SteelSectionType.BuiltUp -> {
+   573→                return SectionClassification(
+   574→                    flangeStatus = ElementClassification.NONCOMPACT,
+   575→                    webStatus = ElementClassification.NONCOMPACT,
+   576→                    overall = "Noncompact",
+   577→                    flangeSlenderness = 0.0,
+   578→                    webSlenderness = 0.0,
+   579→                    flangeCompactLimit = 0.0,
+   580→                    flangeSlenderLimit = 0.0
+   581→                )
+   582→            }
+   583→        }
+   584→    }
+   585→
+   586→    // ===================== TENSION MEMBER DESIGN (AISC Chapter D) =====================
+   587→
+   588→    /**
+   589→     * تصميم عضو الشد حسب AISC Chapter D
+   590→     * @param Pu Factored tension force in kN
+   591→     * @param connectionType Type of connection (bolted, welded, etc.)
+   592→     */
+   593→    fun designTensionMember(
+   594→        section: SteelSectionType,
+   595→        grade: SteelGrade,
+   596→        Pu: Double,
+   597→        connectionType: ConnectionType
+   598→    ): SteelTensionResult {
+   599→        val warnings = mutableListOf<String>()
+   600→        val codeNotes = mutableListOf<String>()
+   601→        val Ag = section.area  // mm²
+   602→        val Fy = grade.fy
+   603→        val Fu = grade.fu
+   604→
+   605→        // --- D2: Tensile Strength ---
+   606→        // D2-1: Gross section yielding
+   607→        // φPn = φ × Fy × Ag
+   608→        val PnGross = Fy * Ag / 1000.0  // kN
+   609→        val phiPnGross = PHI_TENSION * PnGross
+   610→
+   611→        // D2-2: Net section rupture
+   612→        // An = Ag - n_holes × (d_hole + 2mm) × t
+   613→        // Ae = An × U (effective net area)
+   614→        val (An, U, Ae) = calculateNetArea(section, connectionType, Fy)
+   615→        val PnNet = Fu * Ae / 1000.0  // kN
+   616→        val phiPnNet = PHI_TENSION * PnNet
+   617→
+   618→        // --- J4.3: Block Shear Strength ---
+   619→        // Two cases: (a) yielding on shear + rupture on tension
+   620→        //            (b) rupture on shear + rupture on tension
+   621→        val phiRnBlockShear = calculateBlockShear(section, grade, connectionType, warnings)
+   622→
+   623→        // Design capacity = minimum of all
+   624→        val designCapacity = minOf(phiPnGross, phiPnNet, phiRnBlockShear)
+   625→        val utilizationRatio = if (designCapacity > 0) Pu / designCapacity else Double.MAX_VALUE
+   626→
+   627→        val governingCase = when {
+   628→            designCapacity == phiPnGross -> "خضوع المقطع الكلي (Gross Section Yielding — D2-1)"
+   629→            designCapacity == phiPnNet -> "تمزق المقطع الصافي (Net Section Rupture — D2-2)"
+   630→            else -> "قص الكتلة (Block Shear — J4.3)"
+   631→        }
+   632→
+   633→        // Code notes
+   634→        codeNotes.add("AISC 360-16 Chapter D: تصميم عضو الشد")
+   635→        codeNotes.add("Fy = ${Fy.toInt()} MPa, Fu = ${Fu.toInt()} MPa")
+   636→        codeNotes.add("Ag = ${"%.0f".format(Ag)} mm²")
+   637→        codeNotes.add("φ×Pn (yielding) = ${"%.1f".format(phiPnGross)} kN — D2-1")
+   638→        codeNotes.add("φ×Pn (rupture) = ${"%.1f".format(phiPnNet)} kN — D2-2 (U=${"%.2f".format(U)})")
+   639→        codeNotes.add("φ×Rn (block shear) = ${"%.1f".format(phiRnBlockShear)} kN — J4.3")
+   640→        codeNotes.add("القدرة التصميمية = ${"%.1f".format(designCapacity)} kN")
+   641→
+   642→        // Warnings
+   643→        if (utilizationRatio > 1.0) {
+   644→            warnings.add("المقطع غير كافٍ للشد — نسبة الإجهاد = ${"%.2f".format(utilizationRatio)} > 1.0")
+   645→        }
+   646→        if (U < 0.85) {
+   647→            warnings.add("معامل التأخير القصي U = ${"%.2f".format(U)} — يُنصح بزيادة طول الوصلة")
+   648→        }
+   649→
+   650→        // Slenderness check (AISC D1)
+   651→        val minR = minOf(section.rx, getRy(section))
+   652→        if (minR > 0) {
+   653→            val Lmax = MAX_SLENDERNESS_TENSION * minR
+   654→            codeNotes.add("الحد الأقصى للطول غير المدعوم = ${"%.0f".format(Lmax)} mm (KL/r ≤ ${MAX_SLENDERNESS_TENSION.toInt()})")
+   655→        }
+   656→
+   657→        return SteelTensionResult(
+   658→            grossYielding = phiPnGross,
+   659→            netRupture = phiPnNet,
+   660→            blockShear = phiRnBlockShear,
+   661→            designCapacity = designCapacity,
+   662→            utilizationRatio = utilizationRatio,
+   663→            isSafe = utilizationRatio <= 1.0,
+   664→            governingCase = governingCase,
+   665→            warnings = warnings,
+   666→            codeNotes = codeNotes
+   667→        )
+   668→    }
+   669→
+   670→    /** Calculate net section properties for tension (AISC D2-2, D3) */
+   671→    private fun calculateNetArea(
+   672→        section: SteelSectionType,
+   673→        connectionType: ConnectionType,
+   674→        Fy: Double
+   675→    ): Triple<Double, Double, Double> {
+   676→        val Ag = section.area
+   677→        val t = section.flangeThickness
+   678→
+   679→        when (connectionType) {
+   680→            is ConnectionType.Bolted -> {
+   681→                val dHole = connectionType.boltDiameter + STANDARD_BOLT_HOLE_INCREMENT
+   682→                val nBolts = connectionType.numberOfBolts
+   683→
+   684→                // Determine number of holes in the failure path
+   685→                val nHoles = when (connectionType.boltPattern) {
+   686→                    BoltPattern.SINGLE_ROW -> nBolts
+   687→                    BoltPattern.DOUBLE_ROW -> nBolts
+   688→                    BoltPattern.STAGGERED -> nBolts  // simplified: one line of holes
+   689→                    BoltPattern.GRID -> nBolts       // simplified
+   690→                }
+   691→
+   692→                val An = (Ag - nHoles * dHole * t).coerceAtLeast(0.0)
+   693→
+   694→                // Shear lag factor U (AISC Table D3.1)
+   695→                val U = calculateShearLagFactor(section, connectionType)
+   696→                val Ae = An * U
+   697→
+   698→                return Triple(An, U, Ae)
+   699→            }
+   700→            is ConnectionType.Welded -> {
+   701→                // For welded connections with transverse welds: U = 1.0
+   702→                // For welded connections with longitudinal welds: per Table D3.1
+   703→                val U = 1.0
+   704→                val Ae = Ag * U
+   705→                return Triple(Ag, U, Ae)
+   706→            }
+   707→            is ConnectionType.Hybrid -> {
+   708→                // Use bolted portion for conservative estimate
+   709→                val dHole = connectionType.bolted.boltDiameter + STANDARD_BOLT_HOLE_INCREMENT
+   710→                val nHoles = connectionType.bolted.numberOfBolts
+   711→                val An = (Ag - nHoles * dHole * t).coerceAtLeast(0.0)
+   712→                val U = calculateShearLagFactor(section, connectionType.bolted)
+   713→                val Ae = An * U
+   714→                return Triple(An, U, Ae)
+   715→            }
+   716→            is ConnectionType.Pressed -> {
+   717→                // Pressed connection — no holes
+   718→                return Triple(Ag, 1.0, Ag)
+   719→            }
+   720→        }
+   721→    }
+   722→
+   723→    /** Shear lag factor U per AISC Table D3.1 */
+   724→    private fun calculateShearLagFactor(
+   725→        section: SteelSectionType,
+   726→        connection: ConnectionType.Bolted
+   727→    ): Double {
+   728→        val L = when (connection.boltPattern) {
+   729→            BoltPattern.SINGLE_ROW, BoltPattern.DOUBLE_ROW -> {
+   730→                // Estimate connection length as n_bolts * 3*d (minimum spacing)
+   731→                connection.numberOfBolts * 3.0 * connection.boltDiameter
+   732→            }
+   733→            BoltPattern.STAGGERED -> {
+   734→                connection.numberOfBolts * 2.5 * connection.boltDiameter
+   735→            }
+   736→            BoltPattern.GRID -> {
+   737→                val rows = if (connection.boltPattern == BoltPattern.GRID) 2 else 1
+   738→                connection.numberOfBolts / rows * 3.0 * connection.boltDiameter
+   739→            }
+   740→        }
+   741→
+   742→        return when (section) {
+   743→            is SteelSectionType.ISection -> {
+   744→                // Case 2 (connected by flanges with 3+ bolts, bf ≥ 2/3 d)
+   745→                // U = 1 - x̄/L, approximate x̄ for I-section flange connection
+   746→                val xBar = section.bf / 2.0
+   747→                val uCalc = 1.0 - xBar / L.coerceAtLeast(1.0)
+   748→                uCalc.coerceIn(0.6, 1.0)
+   749→            }
+   750→            is SteelSectionType.CSection -> {
+   751→                val xBar = section.bf / 2.0
+   752→                val uCalc = 1.0 - xBar / L.coerceAtLeast(1.0)
+   753→                uCalc.coerceIn(0.6, 1.0)
+   754→            }
+   755→            is SteelSectionType.LSection -> {
+   756→                // Case 4: Single angle with bolts in one leg
+   757→                // U = 0.60 for 4+ bolts, U = 0.80 for 2-3 bolts
+   758→                if (connection.numberOfBolts >= 4) 0.60 else 0.80
+   759→            }
+   760→            is SteelSectionType.RHS -> {
+   761→                val xBar = section.width / 2.0
+   762→                val uCalc = 1.0 - xBar / L.coerceAtLeast(1.0)
+   763→                uCalc.coerceIn(0.6, 1.0)
+   764→            }
+   765→            is SteelSectionType.CHS -> 0.90
+   766→            is SteelSectionType.TSection -> {
+   767→                val xBar = section.flangeWidth / 2.0
+   768→                val uCalc = 1.0 - xBar / L.coerceAtLeast(1.0)
+   769→                uCalc.coerceIn(0.5, 1.0)
+   770→            }
+   771→            is SteelSectionType.BuiltUp -> 0.80
+   772→        }
+   773→    }
+   774→
+   775→    /** Block shear strength per AISC J4.3 — returns φRn in kN */
+   776→    private fun calculateBlockShear(
+   777→        section: SteelSectionType,
+   778→        grade: SteelGrade,
+   779→        connectionType: ConnectionType,
+   780→        warnings: MutableList<String>
+   781→    ): Double {
+   782→        val Fy = grade.fy
+   783→        val Fu = grade.fu
+   784→        val t = section.flangeThickness
+   785→
+   786→        when (connectionType) {
+   787→            is ConnectionType.Bolted -> {
+   788→                val dHole = connectionType.boltDiameter + STANDARD_BOLT_HOLE_INCREMENT
+   789→                val nBolts = connectionType.numberOfBolts
+   790→                val db = connectionType.boltDiameter
+   791→
+   792→                // Estimate connection geometry
+   793→                val gauge = section.width.coerceAtLeast(db * 3.0)  // mm
+   794→                val edgeDist = (2.0 * db).coerceAtLeast(30.0)     // mm
+   795→                val pitch = (3.0 * db).coerceAtLeast(65.0)        // mm
+   796→
+   797→                // Tension area (Ant): one line through bolt holes at edge
+   798→                val Ant = ((gauge - dHole) * t).coerceAtLeast(0.0)
+   799→
+   800→                // Gross shear area (Agv): along two lines of bolts
+   801→                val lv = edgeDist + (nBolts - 1) * pitch
+   802→                val Agv = 2.0 * lv * t
+   803→
+   804→                // Net shear area (Anv): shear area minus bolt holes
+   805→                val Anv = (Agv - (nBolts - 1) * dHole * t).coerceAtLeast(Agv * 0.5)
+   806→
+   807→                // Ubs = 1.0 for uniform tension (AISC J4.3)
+   808→                val Ubs = 1.0
+   809→
+   810→                // Case (a): Shear yielding + tension rupture
+   811→                val Rn_a = 0.6 * Fy * Agv + Ubs * Fu * Ant
+   812→
+   813→                // Case (b): Shear rupture + tension rupture
+   814→                val Rn_b = 0.6 * Fu * Anv + Ubs * Fu * Ant
+   815→
+   816→                val Rn = minOf(Rn_a, Rn_b)
+   817→                return PHI_TENSION * Rn / 1000.0  // kN
+   818→            }
+   819→            is ConnectionType.Welded -> {
+   820→                // For welded connections, block shear is not typically governing
+   821→                // Return a high value (not applicable)
+   822→                val Ag = section.area
+   823→                return PHI_TENSION * 0.6 * grade.fy * Ag / 1000.0
+   824→            }
+   825→            is ConnectionType.Hybrid -> {
+   826→                return calculateBlockShear(section, grade, connectionType.bolted, warnings)
+   827→            }
+   828→            is ConnectionType.Pressed -> {
+   829→                val Ag = section.area
+   830→                return PHI_TENSION * 0.6 * grade.fy * Ag / 1000.0
+   831→            }
+   832→        }
+   833→    }
+   834→
+   835→    // ===================== COMPRESSION MEMBER DESIGN (AISC Chapter E) =====================
+   836→
+   837→    /**
+   838→     * تصميم عضو الضغط حسب AISC Chapter E
+   839→     * @param Pu Factored compression force in kN
+   840→     * @param Kx, Ky Effective length factors
+   841→     * @param Lx, Ly Unbraced lengths in mm
+   842→     */
+   843→    fun designCompressionMember(
+   844→        section: SteelSectionType,
+   845→        grade: SteelGrade,
+   846→        Pu: Double,
+   847→        Kx: Double,
+   848→        Ky: Double,
+   849→        Lx: Double,
+   850→        Ly: Double,
+   851→        @Suppress("UNUSED_PARAMETER") isBraced: Boolean = true
+   852→    ): SteelCompressionResult {
+   853→        val warnings = mutableListOf<String>()
+   854→        val codeNotes = mutableListOf<String>()
+   855→        val Ag = section.area  // mm²
+   856→        val Fy = grade.fy
+   857→        val rx = section.rx
+   858→        val ry = getRy(section)
+   859→
+   860→        // E2: Effective length and slenderness
+   861→        val lambdaX = (Kx * Lx) / rx.coerceAtLeast(0.1)
+   862→        val lambdaY = (Ky * Ly) / ry.coerceAtLeast(0.1)
+   863→        val lambdaMax = maxOf(lambdaX, lambdaY)
+   864→
+   865→        codeNotes.add("AISC 360-16 Chapter E: تصميم عضو الضغط")
+   866→        codeNotes.add("Fy = ${Fy.toInt()} MPa, Ag = ${"%.0f".format(Ag)} mm²")
+   867→        codeNotes.add("λx = ${"%.1f".format(lambdaX)}, λy = ${"%.1f".format(lambdaY)}")
+   868→        codeNotes.add("نسبة النحافة الحاكمة λ = ${"%.1f".format(lambdaMax)}")
+   869→
+   870→        // Slenderness check (AISC D1)
+   871→        if (lambdaMax > MAX_SLENDERNESS_COMPRESSION) {
+   872→            warnings.add("نسبة النحافة تتجاوز الحد المسموح (λ=${"%.1f".format(lambdaMax)} > ${MAX_SLENDERNESS_COMPRESSION.toInt()})")
+   873→        }
+   874→
+   875→        // E3: Flexural buckling
+   876→        val Fe = PI * PI * E_STEEL / (lambdaMax * lambdaMax)  // MPa
+   877→        val lambdaC = 4.71 * sqrt(E_STEEL / Fy)
+   878→
+   879→        val FcrFlexural = if (lambdaMax <= lambdaC) {
+   880→            // Inelastic buckling — AISC E3-3
+   881→            0.658.pow(Fy / Fe) * Fy
+   882→        } else {
+   883→            // Elastic buckling — AISC E3-4
+   884→            0.877 * Fe
+   885→        }
+   886→
+   887→        // E4: Torsional buckling (for doubly symmetric sections)
+   888→        val FcrTorsional = calculateTorsionalBucklingStress(section, grade, Kx, Lx, Ky, Ly, lambdaMax)
+   889→
+   890→        // E7: Local buckling reduction factors
+   891→        val (Qs, Qa) = calculateLocalBucklingFactors(section, grade)
+   892→
+   893→        // Governing critical stress
+   894→        val Fcr = minOf(FcrFlexural, FcrTorsional)
+   895→
+   896→        // Apply local buckling factor
+   897→        val FcrAdjusted = Qs * Fcr
+   898→
+   899→        // Nominal strength
+   900→        val Pn = FcrAdjusted * Ag / 1000.0  // kN
+   901→        val phiPn = PHI_COMPRESSION * Pn
+   902→
+   903→        val utilizationRatio = if (phiPn > 0) Pu / phiPn else Double.MAX_VALUE
+   904→
+   905→        // Determine buckling mode
+   906→        val bucklingMode = when {
+   907→            FcrTorsional < FcrFlexural -> "انبعاج الالتواء (Torsional Buckling — E4)"
+   908→            lambdaX > lambdaY -> "انبعاج مرن حول المحور الضعيف (Flexural Buckling — E3, X-axis)"
+   909→            else -> "انبعاج مرن حول المحور الضعيف (Flexural Buckling — E3, Y-axis)"
+   910→        }
+   911→
+   912→        codeNotes.add("Fe = ${"%.1f".format(Fe)} MPa (Euler)")
+   913→        codeNotes.add("Fcr = ${"%.1f".format(Fcr)} MPa")
+   914→        codeNotes.add("Qs = ${"%.3f".format(Qs)}, Qa = ${"%.3f".format(Qa)}")
+   915→        codeNotes.add("Fcr (مُعدّل) = ${"%.1f".format(FcrAdjusted)} MPa")
+   916→        codeNotes.add("φPn = ${"%.1f".format(phiPn)} kN")
+   917→        codeNotes.add("نسبة الإجهاد = ${"%.3f".format(utilizationRatio)}")
+   918→
+   919→        if (utilizationRatio > 1.0) {
+   920→            warnings.add("المقطع غير كافٍ للضغط — اختر مقطعاً أكبر")
+   921→        }
+   922→        if (FcrTorsional < 0.95 * FcrFlexural) {
+   923→            warnings.add("الانبعاج الالتوائي حاكم — يُنصح باستخدام مقاطع مغلقة أو زيادة الدعم الجانبي")
+   924→        }
+   925→        if (Qs < 0.99) {
+   926→            warnings.add("عوامل تخفيض الانبعاج المحلي فعّالة (Qs=${"%.2f".format(Qs)})")
+   927→        }
+   928→
+   929→        return SteelCompressionResult(
+   930→            Fcr = FcrAdjusted,
+   931→            Pn = Pn,
+   932→            phiPn = phiPn,
+   933→            slendernessRatio = lambdaMax,
+   934→            bucklingMode = bucklingMode,
+   935→            utilizationRatio = utilizationRatio,
+   936→            isSafe = utilizationRatio <= 1.0,
+   937→            warnings = warnings,
+   938→            codeNotes = codeNotes
+   939→        )
+   940→    }
+   941→
+   942→    /** Torsional buckling stress (AISC E4) */
+   943→    private fun calculateTorsionalBucklingStress(
+   944→        section: SteelSectionType,
+   945→        grade: SteelGrade,
+   946→        Kx: Double, Lx: Double,
+   947→        Ky: Double, Ly: Double,
+   948→        lambdaFlexural: Double
+   949→    ): Double {
+   950→        val Fy = grade.fy
+   951→        val Ag = section.area
+   952→
+   953→        // For closed sections (HSS), torsional buckling is not critical
+   954→        when (section) {
+   955→            is SteelSectionType.RHS -> return Fy * 2.0  // Not governing
+   956→            is SteelSectionType.CHS -> return Fy * 2.0  // Not governing
+   957→            else -> {}
+   958→        }
+   959→
+   960→        // For open sections, calculate Fe for torsional buckling
+   961→        val J = getJ(section)
+   962→        val Cw = getCw(section)
+   963→        val ro2 = getRoSquared(section)
+   964→        val L = minOf(Kx * Lx, Ky * Ly).coerceAtLeast(1.0)
+   965→
+   966→        // AISC E4-3: Fe = [π²×E×Cw/(KL)² + G×J] / (Ar²)
+   967→        val term1 = PI * PI * E_STEEL * Cw / (L * L)
+   968→        val term2 = G_STEEL * J
+   969→        val Fe = (term1 + term2) / (Ag * ro2).coerceAtLeast(1.0)
+   970→
+   971→        // Apply AISC E3-3/E3-4 to get Fcr from Fe
+   972→        val lambdaC = 4.71 * sqrt(E_STEEL / Fy)
+   973→        return if (lambdaFlexural <= lambdaC) {
+   974→            minOf(0.658.pow(Fy / Fe) * Fy, Fy)
+   975→        } else {
+   976→            minOf(0.877 * Fe, Fy)
+   977→        }
+   978→    }
+   979→
+   980→    /** Local buckling reduction factors Qs and Qa (AISC E7) */
+   981→    private fun calculateLocalBucklingFactors(
+   982→        section: SteelSectionType,
+   983→        grade: SteelGrade
+   984→    ): Pair<Double, Double> {
+   985→        val Fy = grade.fy
+   986→
+   987→        val classification = classifySection(section, grade)
+   988→
+   989→        // If section is compact or noncompact, Qs = Qa = 1.0
+   990→        if (classification.flangeStatus != ElementClassification.SLENDER &&
+   991→            classification.webStatus != ElementClassification.SLENDER
+   992→        ) {
+   993→            return Pair(1.0, 1.0)
+   994→        }
+   995→
+   996→        // E7.1: Slender element reduction factor Qs
+   997→        var Qs = 1.0
+   998→        var Qa = 1.0
+   999→
+  1000→        when (section) {
+  1001→            is SteelSectionType.ISection -> {
+  1002→                val bf = section.bf
+  1003→                val tf = section.tf
+  1004→                val tw = section.tw
+  1005→                val h = section.h
+  1006→                val hw = (h - 2 * tf).coerceAtLeast(0.001)
+  1007→
+  1008→                // E7.1a: Stiffened elements (webs)
+  1009→                val lambdaW = hw / tw
+  1010→                val lambdaR = 1.49 * sqrt(E_STEEL / Fy)  // AISC Table B4.1b, Case 15
+  1011→                if (lambdaW > lambdaR) {
+  1012→                    Qa = (1.0 - 0.15 * lambdaR / lambdaW)  // AISC E7-7 approximation
+  1013→                }
+  1014→
+  1015→                // E7.1b: Unstiffened elements (flanges)
+  1016→                val lambdaF = (bf - tw) / (2.0 * tf)
+  1017→                val lambdaRF = 0.56 * sqrt(E_STEEL / Fy)  // AISC Table B4.1b, Case 10
+  1018→                if (lambdaF > lambdaRF) {
+  1019→                    // AISC E7-6: Qs reduction for slender flanges
+  1020→                    Qs = (lambdaRF / lambdaF).pow(2)
+  1021→                }
+  1022→
+  1023→                Qs = Qs.coerceIn(0.0, 1.0)
+  1024→                Qa = Qa.coerceIn(0.0, 1.0)
+  1025→            }
+  1026→            is SteelSectionType.RHS -> {
+  1027→                val w = section.width
+  1028→                val h = section.height
+  1029→                val t = section.thickness
+  1030→
+  1031→                // Flanges
+  1032→                val lambdaF = (w - 2 * t) / t
+  1033→                val lambdaRF = 1.12 * sqrt(E_STEEL / Fy)  // B4.1b Case 12
+  1034→                if (lambdaF > lambdaRF) {
+  1035→                    Qs = (lambdaRF / lambdaF).pow(2)
+  1036→                }
+  1037→
+  1038→                // Webs
+  1039→                val lambdaW = (h - 2 * t) / t
+  1040→                val lambdaRW = 1.40 * sqrt(E_STEEL / Fy)  // B4.1b Case 13
+  1041→                if (lambdaW > lambdaRW) {
+  1042→                    Qa = (1.0 - 0.15 * lambdaRW / lambdaW)
+  1043→                }
+  1044→
+  1045→                Qs = Qs.coerceIn(0.0, 1.0)
+  1046→                Qa = Qa.coerceIn(0.0, 1.0)
+  1047→            }
+  1048→            is SteelSectionType.CHS -> {
+  1049→                val D = section.outerDiameter
+  1050→                val t = section.thickness
+  1051→                val lambda = D / t
+  1052→                val lambdaR = 0.11 * E_STEEL / Fy  // B4.1b Case 9
+  1053→                if (lambda > lambdaR) {
+  1054→                    Qs = (lambdaR / lambda).pow(2)
+  1055→                }
+  1056→                Qs = Qs.coerceIn(0.0, 1.0)
+  1057→            }
+  1058→            else -> {
+  1059→                // For angles, channels, T-sections — conservative Qs = 1.0 if not specifically calculated
+  1060→                if (classification.flangeStatus == ElementClassification.SLENDER) {
+  1061→                    Qs = 0.9
+  1062→                }
+  1063→            }
+  1064→        }
+  1065→
+  1066→        return Pair(Qs, Qa)
+  1067→    }
+  1068→
+  1069→    // ===================== FLEXURAL MEMBER DESIGN (AISC Chapter F) =====================
+  1070→
+  1071→    /**
+  1072→     * تصميم كمرة شامل حسب AISC Chapter F
+  1073→     * @param Mux Factored moment about strong axis (kN.m)
+  1074→     * @param Muy Factored moment about weak axis (kN.m)
+  1075→     * @param Vux Factored shear about strong axis (kN)
+  1076→     * @param Vuy Factored shear about weak axis (kN)
+  1077→     * @param Lb Unbraced length for LTB (mm)
+  1078→     * @param Cb Moment gradient factor (default 1.0 for uniform moment)
+  1079→     */
+  1080→    fun designFlexuralMember(
+  1081→        section: SteelSectionType,
+  1082→        grade: SteelGrade,
+  1083→        Mux: Double,
+  1084→        Muy: Double,
+  1085→        Vux: Double,
+  1086→        Vuy: Double,
+  1087→        Lb: Double,
+  1088→        Cb: Double = 1.0,
+  1089→        isLaterallyBraced: Boolean = false
+  1090→    ): SteelFlexuralResult {
+  1091→        val warnings = mutableListOf<String>()
+  1092→        val codeNotes = mutableListOf<String>()
+  1093→        val Fy = grade.fy
+  1094→
+  1095→        val classification = classifySection(section, grade)
+  1096→        codeNotes.add("AISC 360-16 Chapter F: تصميم الكمرة")
+  1097→        codeNotes.add("Fy = ${Fy.toInt()} MPa, تصنيف المقطع: ${classification.overall}")
+  1098→        codeNotes.add("Ag = ${"%.0f".format(section.area)} mm², Zx = ${"%.0f".format(section.zx)} mm³")
+  1099→
+  1100→        // ---- Strong axis flexure (F2, F3, F4, F6, F7) ----
+  1101→        val Mnx = calculateNominalMomentX(section, grade, Lb, Cb, isLaterallyBraced, classification, warnings, codeNotes)
+  1102→        val phiMnx = PHI_FLEXURE * Mnx
+  1103→
+  1104→        // ---- Weak axis flexure (F3, F6, F7) ----
+  1105→        val Mny = calculateNominalMomentY(section, grade, classification, warnings, codeNotes)
+  1106→        val phiMny = PHI_FLEXURE * Mny
+  1107→
+  1108→        // ---- Shear (Chapter G) ----
+  1109→        val phiVnx = calculateShearCapacityX(section, grade, warnings, codeNotes)
+  1110→        val phiVny = calculateShearCapacityY(section, grade, warnings, codeNotes)
+  1111→
+  1112→        // ---- LTB capacity (reported separately) ----
+  1113→        val ltbCapacity = if (Lb > 0 && !isLaterallyBraced) {
+  1114→            calculateLTBCapacity(section, grade, Lb, Cb, classification, codeNotes)
+  1115→        } else {
+  1116→            Mnx  // No LTB concern
+  1117→        }
+  1118→
+  1119→        // ---- Deflection check (serviceability) ----
+  1120→        // Use Lb as span if provided, otherwise use a reference span
+  1121→        val span = if (Lb > 0) Lb else 6000.0  // mm
+  1122→        val Ix = section.ix  // mm⁴
+  1123→        val deltaMax = span / 360.0  // L/360 for floors
+  1124→        // Assume a reference distributed load to give Mux: w*L²/8 = Mux → w = 8*Mux/(L²)
+  1125→        val wRef = 8.0 * Mux / ((span / 1000.0).pow(2))  // kN/m
+  1126→        val Lm = span / 1000.0
+  1127→        val Im4 = Ix / 1e12  // m⁴
+  1128→        val delta = if (Im4 > 0) {
+  1129→            5.0 * wRef * Lm.pow(4) / (384.0 * (E_STEEL / 1e6) * Im4) * 1000.0  // mm
+  1130→        } else 0.0
+  1131→        val deflectionRatio = if (deltaMax > 0) delta / deltaMax else 0.0
+  1132→
+  1133→        // ---- Determine governing check ----
+  1134→        val ratioMx = if (phiMnx > 0) Mux / phiMnx else if (Mux > 0) Double.MAX_VALUE else 0.0
+  1135→        val ratioMy = if (phiMny > 0) Muy / phiMny else if (Muy > 0) Double.MAX_VALUE else 0.0
+  1136→        val ratioVx = if (phiVnx > 0) Vux / phiVnx else if (Vux > 0) Double.MAX_VALUE else 0.0
+  1137→        val ratioVy = if (phiVny > 0) Vuy / phiVny else if (Vuy > 0) Double.MAX_VALUE else 0.0
+  1138→
+  1139→        val governingCheck = when {
+  1140→            ratioMx >= ratioMy && ratioMx >= ratioVx && ratioMx >= ratioVy -> "انحناء حول المحور القوي (Strong Axis Bending)"
+  1141→            ratioMy >= ratioVx && ratioMy >= ratioVy -> "انحناء حول المحور الضعيف (Weak Axis Bending)"
+  1142→            ratioVx >= ratioVy -> "قص حول المحور القوي (Strong Axis Shear)"
+  1143→            else -> "قص حول المحور الضعيف (Weak Axis Shear)"
+  1144→        }
+  1145→
+  1146→        val maxRatio = maxOf(ratioMx, ratioMy, ratioVx, ratioVy)
+  1147→        val isSafe = maxRatio <= 1.0
+  1148→
+  1149→        codeNotes.add("φMnx = ${"%.1f".format(phiMnx)} kN.m (η = ${"%.3f".format(ratioMx)})")
+  1150→        codeNotes.add("φMny = ${"%.1f".format(phiMny)} kN.m (η = ${"%.3f".format(ratioMy)})")
+  1151→        codeNotes.add("φVnx = ${"%.1f".format(phiVnx)} kN (η = ${"%.3f".format(ratioVx)})")
+  1152→        codeNotes.add("φVny = ${"%.1f".format(phiVny)} kN (η = ${"%.3f".format(ratioVy)})")
+  1153→        if (deflectionRatio > 0) {
+  1154→            codeNotes.add("الانحراف = ${"%.1f".format(delta)} mm (الحد = ${"%.1f".format(deltaMax)} mm, η = ${"%.3f".format(deflectionRatio)})")
+  1155→        }
+  1156→
+  1157→        if (maxRatio > 1.0) {
+  1158→            warnings.add("المقطع غير كافٍ — نسبة الإجهاد القصوى = ${"%.3f".format(maxRatio)} > 1.0")
+  1159→        }
+  1160→        if (deflectionRatio > 1.0) {
+  1161→            warnings.add("الانحراف يتجاوز الحد المسموح (L/${(360.0 / deltaMax * span).toInt()})")
+  1162→        }
+  1163→
+  1164→        return SteelFlexuralResult(
+  1165→            momentCapacityX = phiMnx,
+  1166→            momentCapacityY = phiMny,
+  1167→            shearCapacityX = phiVnx,
+  1168→            shearCapacityY = phiVny,
+  1169→            ltbCapacity = PHI_FLEXURE * ltbCapacity,
+  1170→            deflectionRatio = deflectionRatio,
+  1171→            isSafe = isSafe,
+  1172→            governingCheck = governingCheck,
+  1173→            warnings = warnings,
+  1174→            codeNotes = codeNotes
+  1175→        )
+  1176→    }
+  1177→
+  1178→    /** Calculate nominal moment about strong axis (AISC F2, F3, F4, F6, F7) */
+  1179→    private fun calculateNominalMomentX(
+  1180→        section: SteelSectionType,
+  1181→        grade: SteelGrade,
+  1182→        Lb: Double,
+  1183→        Cb: Double,
+  1184→        isLaterallyBraced: Boolean,
+  1185→        classification: SectionClassification,
+  1186→        warnings: MutableList<String>,
+  1187→        codeNotes: MutableList<String>
+  1188→    ): Double {
+  1189→        val Fy = grade.fy
+  1190→
+  1191→        return when (section) {
+  1192→            is SteelSectionType.ISection -> {
+  1193→                calculateMomentISection(section, Fy, Lb, Cb, isLaterallyBraced, classification, codeNotes)
+  1194→            }
+  1195→            is SteelSectionType.CSection -> {
+  1196→                calculateMomentCSection(section, Fy, Lb, Cb, isLaterallyBraced, classification, codeNotes)
+  1197→            }
+  1198→            is SteelSectionType.RHS -> {
+  1199→                // AISC F6: Rectangular HSS
+  1200→                calculateMomentRHS(section, Fy, classification)
+  1201→            }
+  1202→            is SteelSectionType.CHS -> {
+  1203→                // AISC F7: Round HSS
+  1204→                calculateMomentCHS(section, Fy, classification)
+  1205→            }
+  1206→            is SteelSectionType.LSection -> {
+  1207→                // AISC F8: Single angles
+  1208→                val Zx = section.zx
+  1209→                val Sx = section.sx
+  1210→                val Mp = Fy * Zx / 1e6  // kN.m
+  1211→                if (classification.flangeStatus == ElementClassification.SLENDER) {
+  1212→                    Mp * 0.85  // Reduced for slender legs
+  1213→                } else {
+  1214→                    Mp
+  1215→                }
+  1216→            }
+  1217→            is SteelSectionType.TSection -> {
+  1218→                // AISC F4: Singly symmetric I-shapes (T-sections)
+  1219→                calculateMomentTSection(section, Fy, Lb, Cb, isLaterallyBraced, classification, codeNotes)
+  1220→            }
+  1221→            is SteelSectionType.BuiltUp -> {
+  1222→                section.zx * Fy / 1e6  // Simplified
+  1223→            }
+  1224→        }
+  1225→    }
+  1226→
+  1227→    /** AISC F2: Doubly symmetric I-shapes, strong axis */
+  1228→    private fun calculateMomentISection(
+  1229→        section: SteelSectionType.ISection,
+  1230→        Fy: Double,
+  1231→        Lb: Double,
+  1232→        Cb: Double,
+  1233→        isLaterallyBraced: Boolean,
+  1234→        classification: SectionClassification,
+  1235→        codeNotes: MutableList<String>
+  1236→    ): Double {
+  1237→        val Zx = section.zx
+  1238→        val Sx = section.sx
+  1239→        val ry = getRy(section)
+  1240→        val Iy = getIy(section)
+  1241→        val Cw = getCw(section)
+  1242→
+  1243→        // Plastic moment
+  1244→        val Mp = Fy * Zx / 1e6  // kN.m
+  1245→
+  1246→        // LTB parameters (AISC F2)
+  1247→        val Lp = 1.76 * ry * sqrt(E_STEEL / Fy)  // mm, F2-5
+  1248→
+  1249→        // rt per AISC F2-6
+  1250→        val rt = sqrt(sqrt(Iy * Cw) / Sx.coerceAtLeast(1.0))  // mm
+  1251→        val Lr = 1.95 * rt * sqrt(E_STEEL / (0.7 * Fy))  // mm, F2-6
+  1252→
+  1253→        codeNotes.add("Lp = ${"%.0f".format(Lp)} mm, Lr = ${"%.0f".format(Lr)} mm, rt = ${"%.1f".format(rt)} mm")
+  1254→        codeNotes.add("Lb = ${"%.0f".format(Lb)} mm, Cb = ${"%.2f".format(Cb)}")
+  1255→
+  1256→        val Mn = if (isLaterallyBraced || Lb <= Lp) {
+  1257→            // Fully braced or within plastic range: Mn = Mp
+  1258→            codeNotes.add("Lb ≤ Lp → Mn = Mp (قدرة بلاستيكية كاملة)")
+  1259→            Mp
+  1260→        } else if (Lb <= Lr) {
+  1261→            // Inelastic LTB — AISC F2-2
+  1262→            val MnLr = 0.7 * Fy * Sx / 1e6  // kN.m
+  1263→            val MnLtb = Cb * Mp - (Cb * Mp - MnLr) * ((Lb - Lp) / (Lr - Lp).coerceAtLeast(1.0))
+  1264→            codeNotes.add("Lp < Lb ≤ Lr → انبعاج لدن (Inelastic LTB) — F2-2")
+  1265→            MnLtb.coerceAtMost(Mp)  // Cb * Mn ≤ Mp
+  1266→        } else {
+  1267→            // Elastic LTB — AISC F2-3, F2-4
+  1268→            val FcrLtb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))  // MPa
+  1269→            val MnLtb = FcrLtb * Sx / 1e6  // kN.m
+  1270→            codeNotes.add("Lb > Lr → انبعاج مرن (Elastic LTB) — F2-4, Fcr = ${"%.1f".format(FcrLtb)} MPa")
+  1271→            MnLtb.coerceAtMost(Mp)
+  1272→        }
+  1273→
+  1274→        // Local buckling reduction for noncompact/slender flanges
+  1275→        return when (classification.flangeStatus) {
+  1276→            ElementClassification.COMPACT -> Mn
+  1277→            ElementClassification.NONCOMPACT -> {
+  1278→                // AISC F3-2: Mn reduced linearly
+  1279→                val lambdaF = classification.flangeSlenderness
+  1280→                val lambdaP = classification.flangeCompactLimit
+  1281→                val lambdaR = classification.flangeSlenderLimit
+  1282→                val MnR = minOf(Mn, 0.7 * Fy * Sx / 1e6)
+  1283→                val MnReduced = Mn - (Mn - MnR) * ((lambdaF - lambdaP) / (lambdaR - lambdaP).coerceAtLeast(0.001))
+  1284→                MnReduced.coerceAtLeast(0.0)
+  1285→            }
+  1286→            ElementClassification.SLENDER -> {
+  1287→                // AISC F3-2 for slender flanges
+  1288→                val lambdaF = classification.flangeSlenderness
+  1289→                val lambdaR = classification.flangeSlenderLimit
+  1290→                val MnR = 0.7 * Fy * Sx / 1e6
+  1291→                val FcrFlange = 0.9 * E_STEEL / lambdaF.pow(2)  // AISC F3-3
+  1292→                val MnSlender = FcrFlange * Sx / 1e6
+  1293→                minOf(MnSlender, Mn)
+  1294→            }
+  1295→        }
+  1296→    }
+  1297→
+  1298→    /** AISC F2 (modified): Channels, strong axis */
+  1299→    private fun calculateMomentCSection(
+  1300→        section: SteelSectionType.CSection,
+  1301→        Fy: Double,
+  1302→        Lb: Double,
+  1303→        Cb: Double,
+  1304→        isLaterallyBraced: Boolean,
+  1305→        classification: SectionClassification,
+  1306→        codeNotes: MutableList<String>
+  1307→    ): Double {
+  1308→        val Zx = section.zx
+  1309→        val Sx = section.sx
+  1310→        val ry = getRy(section)
+  1311→
+  1312→        val Mp = Fy * Zx / 1e6
+  1313→        val Lp = 1.76 * ry * sqrt(E_STEEL / Fy)
+  1314→
+  1315→        codeNotes.add("Lp = ${"%.0f".format(Lp)} mm, Lb = ${"%.0f".format(Lb)} mm")
+  1316→
+  1317→        val Mn = if (isLaterallyBraced || Lb <= Lp) {
+  1318→            Mp
+  1319→        } else {
+  1320→            // Elastic LTB for channels (conservative)
+  1321→            val FcrLtb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))
+  1322→            val MnLtb = minOf(FcrLtb * Sx / 1e6, Mp)
+  1323→            codeNotes.add("انبعاج مرن للقناة (Elastic LTB) — Fcr = ${"%.1f".format(FcrLtb)} MPa")
+  1324→            MnLtb
+  1325→        }
+  1326→
+  1327→        return when (classification.flangeStatus) {
+  1328→            ElementClassification.COMPACT -> Mn
+  1329→            ElementClassification.NONCOMPACT -> {
+  1330→                val lambdaP = classification.flangeCompactLimit
+  1331→                val lambdaR = classification.flangeSlenderLimit
+  1332→                val MnR = minOf(Mn, 0.7 * Fy * Sx / 1e6)
+  1333→                val reduction = (classification.flangeSlenderness - lambdaP) / (lambdaR - lambdaP).coerceAtLeast(0.001)
+  1334→                Mn - (Mn - MnR) * reduction
+  1335→            }
+  1336→            ElementClassification.SLENDER -> {
+  1337→                val FcrFlange = 0.9 * E_STEEL / classification.flangeSlenderness.pow(2)
+  1338→                minOf(FcrFlange * Sx / 1e6, Mn)
+  1339→            }
+  1340→        }
+  1341→    }
+  1342→
+  1343→    /** AISC F6: Rectangular HSS */
+  1344→    private fun calculateMomentRHS(
+  1345→        section: SteelSectionType.RHS,
+  1346→        Fy: Double,
+  1347→        classification: SectionClassification
+  1348→    ): Double {
+  1349→        val Zx = section.zx
+  1350→        val Sx = section.sx
+  1351→        val Mp = Fy * Zx / 1e6
+  1352→
+  1353→        // No LTB for closed sections
+  1354→        return when (classification.flangeStatus) {
+  1355→            ElementClassification.COMPACT -> Mp
+  1356→            ElementClassification.NONCOMPACT -> {
+  1357→                val MnR = 0.7 * Fy * Sx / 1e6
+  1358→                val lambdaP = classification.flangeCompactLimit
+  1359→                val lambdaR = classification.flangeSlenderLimit
+  1360→                val reduction = (classification.flangeSlenderness - lambdaP) / (lambdaR - lambdaP).coerceAtLeast(0.001)
+  1361→                MnR + (Mp - MnR) * (1.0 - reduction)
+  1362→            }
+  1363→            ElementClassification.SLENDER -> {
+  1364→                val Fcr = 0.9 * E_STEEL / classification.flangeSlenderness.pow(2)
+  1365→                Fcr * Sx / 1e6
+  1366→            }
+  1367→        }
+  1368→    }
+  1369→
+  1370→    /** AISC F7: Round HSS */
+  1371→    private fun calculateMomentCHS(
+  1372→        section: SteelSectionType.CHS,
+  1373→        Fy: Double,
+  1374→        classification: SectionClassification
+  1375→    ): Double {
+  1376→        val Zx = section.zx
+  1377→        val Sx = section.sx
+  1378→        val Mp = Fy * Zx / 1e6
+  1379→
+  1380→        return when (classification.flangeStatus) {
+  1381→            ElementClassification.COMPACT -> Mp
+  1382→            ElementClassification.NONCOMPACT -> {
+  1383→                val MnR = 0.7 * Fy * Sx / 1e6
+  1384→                val lambdaP = classification.flangeCompactLimit
+  1385→                val lambdaR = classification.flangeSlenderLimit
+  1386→                val reduction = (classification.flangeSlenderness - lambdaP) / (lambdaR - lambdaP).coerceAtLeast(0.001)
+  1387→                MnR + (Mp - MnR) * (1.0 - reduction)
+  1388→            }
+  1389→            ElementClassification.SLENDER -> {
+  1390→                val D = section.outerDiameter
+  1391→                val t = section.thickness
+  1392→                val Fcr = 0.38 * E_STEEL / (D / t)
+  1393→                Fcr * Sx / 1e6
+  1394→            }
+  1395→        }
+  1396→    }
+  1397→
+  1398→    /** AISC F4: T-sections (singly symmetric) */
+  1399→    private fun calculateMomentTSection(
+  1400→        section: SteelSectionType.TSection,
+  1401→        Fy: Double,
+  1402→        Lb: Double,
+  1403→        Cb: Double,
+  1404→        isLaterallyBraced: Boolean,
+  1405→        classification: SectionClassification,
+  1406→        codeNotes: MutableList<String>
+  1407→    ): Double {
+  1408→        val Zx = section.zx
+  1409→        val Sx = section.sx
+  1410→        val ry = getRy(section)
+  1411→
+  1412→        val Mp = Fy * Zx / 1e6
+  1413→
+  1414→        if (isLaterallyBraced) return Mp
+  1415→
+  1416→        // Simplified LTB for T-sections
+  1417→        val Lp = 1.76 * ry * sqrt(E_STEEL / Fy)
+  1418→        if (Lb <= Lp) {
+  1419→            codeNotes.add("T-section: Lb ≤ Lp → Mn = Mp")
+  1420→            return Mp
+  1421→        }
+  1422→
+  1423→        // Elastic LTB (conservative for T-sections)
+  1424→        val FcrLtb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))
+  1425→        val MnLtb = minOf(FcrLtb * Sx / 1e6, Mp)
+  1426→        codeNotes.add("T-section: انبعاج مرن — Fcr = ${"%.1f".format(FcrLtb)} MPa")
+  1427→        return MnLtb
+  1428→    }
+  1429→
+  1430→    /** Calculate LTB capacity (separate, for reporting) */
+  1431→    private fun calculateLTBCapacity(
+  1432→        section: SteelSectionType,
+  1433→        grade: SteelGrade,
+  1434→        Lb: Double,
+  1435→        Cb: Double,
+  1436→        classification: SectionClassification,
+  1437→        codeNotes: MutableList<String>
+  1438→    ): Double {
+  1439→        return calculateNominalMomentX(
+  1440→            section, grade, Lb, Cb, false, classification,
+  1441→            mutableListOf(), codeNotes
+  1442→        )
+  1443→    }
+  1444→
+  1445→    /** Calculate nominal moment about weak axis (AISC F3, F6, F7) */
+  1446→    private fun calculateNominalMomentY(
+  1447→        section: SteelSectionType,
+  1448→        grade: SteelGrade,
+  1449→        classification: SectionClassification,
+  1450→        warnings: MutableList<String>,
+  1451→        codeNotes: MutableList<String>
+  1452→    ): Double {
+  1453→        val Fy = grade.fy
+  1454→        val Zy = getZy(section)
+  1455→        val Sy = getSy(section)
+  1456→        val Mp = Fy * Zy / 1e6  // kN.m
+  1457→
+  1458→        // No LTB about weak axis for I-shapes
+  1459→        return when (classification.webStatus) {
+  1460→            ElementClassification.COMPACT -> Mp
+  1461→            ElementClassification.NONCOMPACT -> {
+  1462→                val MnR = 0.7 * Fy * Sy / 1e6
+  1463→                val lambdaW = classification.webSlenderness
+  1464→                // For weak axis, use web slenderness as a proxy
+  1465→                val Mn = Mp - (Mp - MnR) * 0.3  // Simplified reduction
+  1466→                Mn
+  1467→            }
+  1468→            ElementClassification.SLENDER -> {
+  1469→                val Fcr = 0.9 * E_STEEL / classification.webSlenderness.pow(2).coerceAtLeast(1.0)
+  1470→                Fcr * Sy / 1e6
+  1471→            }
+  1472→        }
+  1473→    }
+  1474→
+  1475→    /** Shear capacity (AISC Chapter G) — strong axis (web shear) */
+  1476→    private fun calculateShearCapacityX(
+  1477→        section: SteelSectionType,
+  1478→        grade: SteelGrade,
+  1479→        warnings: MutableList<String>,
+  1480→        codeNotes: MutableList<String>
+  1481→    ): Double {
+  1482→        val Fy = grade.fy
+  1483→
+  1484→        return when (section) {
+  1485→            is SteelSectionType.ISection -> {
+  1486→                calculateWebShear(section.h, section.tw, section.tf, Fy, codeNotes)
+  1487→            }
+  1488→            is SteelSectionType.CSection -> {
+  1489→                calculateWebShear(section.h, section.tw, section.tf, Fy, codeNotes)
+  1490→            }
+  1491→            is SteelSectionType.TSection -> {
+  1492→                // Shear through the stem
+  1493→                val Aw = section.webDepth * section.webThickness
+  1494→                0.6 * Fy * Aw / 1000.0 * PHI_SHEAR
+  1495→            }
+  1496→            is SteelSectionType.RHS -> {
+  1497→                // AISC G5: HSS shear — Vn = 0.6*Fy*2*D*t (two webs)
+  1498→                val h = section.height
+  1499→                val w = section.width
+  1500→                val t = section.thickness
+  1501→                val Aw = 2.0 * (h - 2.0 * t) * t  // Two side walls
+  1502→                val Cv = 1.0  // HSS typically compact in shear
+  1503→                PHI_SHEAR * 0.6 * Fy * Cv * Aw / 1000.0
+  1504→            }
+  1505→            is SteelSectionType.CHS -> {
+  1506→                // AISC G5: Round HSS
+  1507→                val D = section.outerDiameter
+  1508→                val t = section.thickness
+  1509→                val Aw = PI * (D - t) * t / 2.0
+  1510→                val Fcr = when {
+  1511→                    D / t <= 1.15 * sqrt(E_STEEL / Fy) -> {
+  1512→                        0.6 * Fy  // Full capacity
+  1513→                    }
+  1514→                    else -> {
+  1515→                        0.6 * Fy * (1.15 * sqrt(E_STEEL / Fy) / (D / t))
+  1516→                    }
+  1517→                }
+  1518→                PHI_SHEAR * Fcr * Aw / 1000.0
+  1519→            }
+  1520→            is SteelSectionType.LSection -> {
+  1521→                // Single angle — shear through the leg
+  1522→                val Aw = section.legA * section.thickness
+  1523→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1524→            }
+  1525→            is SteelSectionType.BuiltUp -> 0.0
+  1526→        }
+  1527→    }
+  1528→
+  1529→    /** AISC G2: Shear capacity for I-shapes with unstiffened webs */
+  1530→    private fun calculateWebShear(
+  1531→        h: Double,
+  1532→        tw: Double,
+  1533→        tf: Double,
+  1534→        Fy: Double,
+  1535→        codeNotes: MutableList<String>
+  1536→    ): Double {
+  1537→        val hw = (h - 2.0 * tf).coerceAtLeast(0.001)
+  1538→        val Aw = hw * tw  // mm²
+  1539→        val hOverTw = hw / tw
+  1540→
+  1541→        // AISC G2-1: Vn = 0.6 * Fy * Aw * Cv
+  1542→        // Cv per AISC G2-1(a,b,c)
+  1543→        val k = 5.0  // unstiffened web (AISC G2.1b)
+  1544→        val Cv = when {
+  1545→            hOverTw <= 1.10 * sqrt(k * E_STEEL / Fy) -> {
+  1546→                // Case (a): Full web yield
+  1547→                1.0
+  1548→            }
+  1549→            hOverTw <= 1.37 * sqrt(k * E_STEEL / Fy) -> {
+  1550→                // Case (b): Inelastic web buckling
+  1551→                1.10 * sqrt(k * E_STEEL / Fy) / hOverTw
+  1552→            }
+  1553→            else -> {
+  1554→                // Case (c): Elastic web buckling
+  1555→                1.51 * k * E_STEEL / (hOverTw * hOverTw * Fy)
+  1556→            }
+  1557→        }
+  1558→
+  1559→        val Vn = 0.6 * Fy * Aw * Cv / 1000.0  // kN
+  1560→        val phiVn = PHI_SHEAR * Vn
+  1561→
+  1562→        codeNotes.add("القص: h/tw = ${"%.1f".format(hOverTw)}, Cv = ${"%.3f".format(Cv)}, Aw = ${"%.0f".format(Aw)} mm²")
+  1563→        codeNotes.add("φVn = ${"%.1f".format(phiVn)} kN")
+  1564→
+  1565→        return phiVn
+  1566→    }
+  1567→
+  1568→    /** Shear capacity — weak axis (flange shear for I-shapes) */
+  1569→    private fun calculateShearCapacityY(
+  1570→        section: SteelSectionType,
+  1571→        grade: SteelGrade,
+  1572→        warnings: MutableList<String>,
+  1573→        codeNotes: MutableList<String>
+  1574→    ): Double {
+  1575→        val Fy = grade.fy
+  1576→        val t = section.flangeThickness
+  1577→
+  1578→        return when (section) {
+  1579→            is SteelSectionType.ISection -> {
+  1580→                // Shear through flanges: 2 * bf * tf
+  1581→                val Aw = 2.0 * section.bf * t
+  1582→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1583→            }
+  1584→            is SteelSectionType.CSection -> {
+  1585→                val Aw = 2.0 * section.bf * t
+  1586→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1587→            }
+  1588→            is SteelSectionType.RHS -> {
+  1589→                val Aw = 2.0 * (section.width - 2.0 * t) * t
+  1590→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1591→            }
+  1592→            is SteelSectionType.CHS -> {
+  1593→                // Same as strong axis for round HSS
+  1594→                val D = section.outerDiameter
+  1595→                val Aw = PI * (D - t) * t / 2.0
+  1596→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1597→            }
+  1598→            is SteelSectionType.LSection -> {
+  1599→                val Aw = section.legB * t
+  1600→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1601→            }
+  1602→            is SteelSectionType.TSection -> {
+  1603→                val Aw = section.flangeWidth * section.flangeThickness
+  1604→                PHI_SHEAR * 0.6 * Fy * Aw / 1000.0
+  1605→            }
+  1606→            is SteelSectionType.BuiltUp -> 0.0
+  1607→        }
+  1608→    }
+  1609→
+  1610→    // ===================== COMBINED LOADING (AISC Chapter H) =====================
+  1611→
+  1612→    /**
+  1613→     * فحص الحمل المركب (محوري + انحناء) حسب AISC Chapter H
+  1614→     * @param Pu Factored axial load (kN, positive = compression, negative = tension)
+  1615→     * @param Mux Factored moment about strong axis (kN.m)
+  1616→     * @param Muy Factored moment about weak axis (kN.m)
+  1617→     * @param isSwayFrame If true, use amplified moments (second-order effects)
+  1618→     */
+  1619→    fun checkCombinedLoading(
+  1620→        Pu: Double,
+  1621→        Mux: Double,
+  1622→        Muy: Double,
+  1623→        section: SteelSectionType,
+  1624→        grade: SteelGrade,
+  1625→        Kx: Double,
+  1626→        Ky: Double,
+  1627→        Lx: Double,
+  1628→        Ly: Double,
+  1629→        Cb: Double = 1.0,
+  1630→        isSwayFrame: Boolean = false
+  1631→    ): CombinedLoadingResult {
+  1632→        val warnings = mutableListOf<String>()
+  1633→        val codeNotes = mutableListOf<String>()
+  1634→
+  1635→        // --- Calculate individual capacities ---
+  1636→
+  1637→        // Axial capacity (compression or tension)
+  1638→        val phiPn: Double
+  1639→        if (Pu >= 0) {
+  1640→            // Compression
+  1641→            val compressionResult = designCompressionMember(section, grade, Pu, Kx, Ky, Lx, Ly)
+  1642→            phiPn = compressionResult.phiPn
+  1643→            codeNotes.add("ضغط: φPn = ${"%.1f".format(phiPn)} kN, Fcr = ${"%.1f".format(compressionResult.Fcr)} MPa")
+  1644→        } else {
+  1645→            // Tension (use a default welded connection if none provided)
+  1646→            val tensionResult = designTensionMember(
+  1647→                section, grade, abs(Pu),
+  1648→                ConnectionType.Welded(WeldType.FILLET, 6.0, 100.0, ElectrodeType.E70XX)
+  1649→            )
+  1650→            phiPn = tensionResult.designCapacity
+  1651→            codeNotes.add("شد: φPn = ${"%.1f".format(phiPn)} kN")
+  1652→        }
+  1653→
+  1654→        // Flexural capacities
+  1655→        val flexResult = designFlexuralMember(section, grade, Mux, Muy, 0.0, 0.0, 0.0, Cb, true)
+  1656→        val phiMnx = flexResult.momentCapacityX
+  1657→        val phiMny = flexResult.momentCapacityY
+  1658→
+  1659→        // --- AISC H1: Doubly and singly symmetric members ---
+  1660→
+  1661→        // Amplified moments for sway frames (simplified second-order analysis)
+  1662→        var MuxAmplified = Mux
+  1663→        var MuyAmplified = Muy
+  1664→        if (isSwayFrame && Pu > 0) {
+  1665→            // Simplified B1 factor (notional amplification for non-sway within sway frame)
+  1666→            val Cm = 1.0  // Conservative for gravity-only columns
+  1667→            val Pe1x = PI * PI * E_STEEL * section.ix / ((Kx * Lx).pow(2).coerceAtLeast(1.0)) / 1000.0  // kN
+  1668→            val Pe1y = PI * PI * E_STEEL * getIy(section) / ((Ky * Ly).pow(2).coerceAtLeast(1.0)) / 1000.0
+  1669→            val B1x = Cm / (1.0 - (abs(Pu) / Pe1x.coerceAtLeast(1.0))).coerceAtLeast(1.0)
+  1670→            val B1y = Cm / (1.0 - (abs(Pu) / Pe1y.coerceAtLeast(1.0))).coerceAtLeast(1.0)
+  1671→            MuxAmplified = B1x * Mux
+  1672→            MuyAmplified = B1y * Muy
+  1673→            codeNotes.add("B1x = ${"%.2f".format(B1x)}, B1y = ${"%.2f".format(B1y)} (تضخيم العزوم — إطار جانبي)")
+  1674→        }
+  1675→
+  1676→        // --- Interaction equations ---
+  1677→        val absPu = abs(Pu)
+  1678→        val pr = if (phiPn > 0) absPu / phiPn else if (absPu > 0) Double.MAX_VALUE else 0.0
+  1679→        val mrX = if (phiMnx > 0) MuxAmplified / phiMnx else if (MuxAmplified > 0) Double.MAX_VALUE else 0.0
+  1680→        val mrY = if (phiMny > 0) MuyAmplified / phiMny else if (MuyAmplified > 0) Double.MAX_VALUE else 0.0
+  1681→
+  1682→        val (interactionRatio, equation) = if (pr >= 0.2) {
+  1683→            // AISC H1-1a: Pu/(φPn) + (8/9)*(Mux/(φMnx) + Muy/(φMny)) ≤ 1.0
+  1684→            val ratio = pr + (8.0 / 9.0) * (mrX + mrY)
+  1685→            Pair(ratio, "H1-1a")
+  1686→        } else {
+  1687→            // AISC H1-1b: Pu/(2φPn) + (Mux/(φMnx) + Muy/(φMny)) ≤ 1.0
+  1688→            val ratio = pr / 2.0 + (mrX + mrY)
+  1689→            Pair(ratio, "H1-1b")
+  1690→        }
+  1691→
+  1692→        codeNotes.add("AISC 360-16 Chapter H: الحمل المركب")
+  1693→        codeNotes.add("المعادلة: ${equation}")
+  1694→        codeNotes.add("Pu/(φPn) = ${"%.3f".format(pr)}")
+  1695→        codeNotes.add("Mux/(φMnx) = ${"%.3f".format(mrX)}, Muy/(φMny) = ${"%.3f".format(mrY)}")
+  1696→        codeNotes.add("نسبة التفاعل = ${"%.3f".format(interactionRatio)}")
+  1697→
+  1698→        if (interactionRatio > 1.0) {
+  1699→            warnings.add("معادلة التفاعل تتجاوز 1.0 (η = ${"%.3f".format(interactionRatio)}) — زِد المقطع أو قلل الأحمال")
+  1700→        }
+  1701→        if (isSwayFrame) {
+  1702→            warnings.add("إطار جانبي — فحص الاستقرار الكلي مطلوب (AISC C2)")
+  1703→        }
+  1704→
+  1705→        return CombinedLoadingResult(
+  1706→            interactionRatio = interactionRatio,
+  1707→            axialRatio = pr,
+  1708→            flexuralRatioX = mrX,
+  1709→            flexuralRatioY = mrY,
+  1710→            equation = equation,
+  1711→            isSafe = interactionRatio <= 1.0,
+  1712→            warnings = warnings,
+  1713→            codeNotes = codeNotes
+  1714→        )
+  1715→    }
+  1716→
+  1717→    // ===================== BRACING DESIGN (AISC Chapter C & Appendix 6) =====================
+  1718→
+  1719→    /**
+  1720→     * تصميم الكوبري (عضو الدعم الجانبي) حسب AISC
+  1721→     * @param axialLoad Factored axial load in kN (compression in brace)
+  1722→     * @param unbracedLength Unbraced length in mm
+  1723→     */
+  1724→    fun designBracing(
+  1725→        section: SteelSectionType,
+  1726→        grade: SteelGrade,
+  1727→        axialLoad: Double,
+  1728→        unbracedLength: Double,
+  1729→        connectionType: ConnectionType
+  1730→    ): SteelBracingResult {
+  1731→        val warnings = mutableListOf<String>()
+  1732→        val codeNotes = mutableListOf<String>()
+  1733→
+  1734→        // Bracing members typically have K = 1.0 (pinned-pinned)
+  1735→        // Check both axes — use the larger slenderness
+  1736→        val rx = section.rx
+  1737→        val ry = getRy(section)
+  1738→        val lambdaX = unbracedLength / rx.coerceAtLeast(0.1)
+  1739→        val lambdaY = unbracedLength / ry.coerceAtLeast(0.1)
+  1740→        val lambdaMax = maxOf(lambdaX, lambdaY)
+  1741→
+  1742→        // Compression capacity (same as compression member with K=1.0)
+  1743→        val compressionResult = designCompressionMember(
+  1744→            section, grade, axialLoad, 1.0, 1.0, unbracedLength, unbracedLength
+  1745→        )
+  1746→
+  1747→        // Connection adequacy check
+  1748→        var connectionAdequate = true
+  1749→        when (connectionType) {
+  1750→            is ConnectionType.Bolted -> {
+  1751→                // Check if bolt capacity exceeds applied load
+  1752→                val fu = connectionType.boltGrade.fu
+  1753→                val db = connectionType.boltDiameter
+  1754→                val Ab = PI * db * db / 4.0  // mm²
+  1755→                // Single bolt shear capacity: φRn = φ × 0.6 × Fu × Ab (AISC J3-6)
+  1756→                val phiRnBolt = 0.75 * 0.6 * fu * Ab / 1000.0  // kN per bolt (double shear possible)
+  1757→                val totalBoltCapacity = phiRnBolt * connectionType.numberOfBolts
+  1758→                connectionAdequate = totalBoltCapacity >= axialLoad
+  1759→                codeNotes.add("قدرة المسامير = ${"%.1f".format(totalBoltCapacity)} kN (${connectionType.numberOfBolts} × ${"%.1f".format(phiRnBolt)} kN)")
+  1760→            }
+  1761→            is ConnectionType.Welded -> {
+  1762→                // Weld capacity check
+  1763→                val Fexx = connectionType.electrodeType.tensileStrength
+  1764→                val a = connectionType.weldSize
+  1765→                val L = connectionType.weldLength
+  1766→                // Fillet weld capacity per AISC J2.4
+  1767→                val Rnw = 0.60 * Fexx * (a / sqrt(2.0)) * L / 1000.0  // kN
+  1768→                val phiRnw = 0.75 * Rnw
+  1769→                connectionAdequate = phiRnw >= axialLoad
+  1770→                codeNotes.add("قدرة اللحام = ${"%.1f".format(phiRnw)} kN")
+  1771→            }
+  1772→            else -> {
+  1773→                connectionAdequate = true
+  1774→            }
+  1775→        }
+  1776→
+  1777→        // Slenderness check
+  1778→        if (lambdaMax > MAX_SLENDERNESS_BRACING) {
+  1779→            warnings.add("نسبة النحافة تتجاوز الحد (λ=${"%.1f".format(lambdaMax)} > ${MAX_SLENDERNESS_BRACING.toInt()})")
+  1780→        }
+  1781→
+  1782→        codeNotes.add("AISC 360-16: تصميم الكوبري (Bracing)")
+  1783→        codeNotes.add("λx = ${"%.1f".format(lambdaX)}, λy = ${"%.1f".format(lambdaY)}")
+  1784→        codeNotes.add("قدرة الضغط = ${"%.1f".format(compressionResult.phiPn)} kN")
+  1785→        codeNotes.add("الحمل المطلوب = ${"%.1f".format(axialLoad)} kN")
+  1786→        codeNotes.add("نسبة الإجهاد = ${"%.3f".format(compressionResult.utilizationRatio)}")
+  1787→
+  1788→        val isSafe = compressionResult.isSafe && connectionAdequate
+  1789→
+  1790→        return SteelBracingResult(
+  1791→            compressionCapacity = compressionResult.phiPn,
+  1792→            slendernessRatio = lambdaMax,
+  1793→            isSafe = isSafe,
+  1794→            connectionAdequate = connectionAdequate,
+  1795→            warnings = warnings,
+  1796→            codeNotes = codeNotes
+  1797→        )
+  1798→    }
+  1799→
+  1800→    // ===================== COMPOSITE BEAM DESIGN (AISC Chapter I) =====================
+  1801→
+  1802→    /**
+  1803→     * تصميم كمرة مركبة (صلب + خرسانة) حسب AISC Chapter I
+  1804→     * @param fcu Concrete compressive strength (fc') in MPa
+  1805→     * @param slabThickness Total slab thickness in mm
+  1806→     * @param effectiveWidth Effective width of concrete slab in mm
+  1807→     * @param studDiameter Shear stud diameter in mm
+  1808→     * @param studSpacing Stud center-to-center spacing in mm
+  1809→     * @param Mu Factored moment in kN.m
+  1810→     * @param Span Beam span in mm
+  1811→     */
+  1812→    fun designCompositeBeam(
+  1813→        steelSection: SteelSectionType,
+  1814→        grade: SteelGrade,
+  1815→        fcu: Double,
+  1816→        slabThickness: Double,
+  1817→        effectiveWidth: Double,
+  1818→        studDiameter: Double,
+  1819→        studSpacing: Double,
+  1820→        Mu: Double,
+  1821→        span: Double
+  1822→    ): CompositeBeamResult {
+  1823→        val warnings = mutableListOf<String>()
+  1824→        val codeNotes = mutableListOf<String>()
+  1825→        val Fy = grade.fy
+  1826→
+  1827→        // Concrete properties
+  1828→        val Ec = 4700.0 * sqrt(fcu)  // MPa (ACI 318)
+  1829→        val concreteModularRatio = E_STEEL / Ec
+  1830→
+  1831→        codeNotes.add("AISC 360-16 Chapter I: تصميم الكمرة المركبة")
+  1832→        codeNotes.add("Fy = ${Fy.toInt()} MPa, fc' = ${fcu.toInt()} MPa")
+  1833→        codeNotes.add("Ec = ${"%.0f".format(Ec)} MPa, n = ${"%.1f".format(concreteModularRatio)}")
+  1834→
+  1835→        // Steel section properties
+  1836→        val As = steelSection.area  // mm²
+  1837→        val d = steelSection.depth  // mm
+  1838→        val Zx = steelSection.zx    // mm³
+  1839→        val Ix = steelSection.ix    // mm⁴
+  1840→
+  1841→        // Transformed concrete area
+  1842→        val Ac = effectiveWidth * slabThickness  // mm² (concrete area)
+  1843→        val AcTransformed = Ac / concreteModularRatio  // mm² (transformed to steel)
+  1844→
+  1845→        // Shear stud capacity (AISC I8.1a)
+  1846→        val AsStud = PI * studDiameter * studDiameter / 4.0  // mm²
+  1847→        val FuStud = 450.0  // MPa (typical for welded studs)
+  1848→        val EsStud = 200000.0  // MPa
+  1849→
+  1850→        // Qn = 0.5 × As × √(fc' × Ec) × (Es/Fu) but not exceeding Fu × As (AISC I8-1)
+  1851→        val QnValue1 = 0.5 * AsStud * sqrt(fcu * Ec) * (EsStud / FuStud)
+  1852→        val QnValue2 = FuStud * AsStud
+  1853→        val Qn = minOf(QnValue1, QnValue2)  // N per stud
+  1854→
+  1855→        codeNotes.add("قطر الوتد = ${studDiameter.toInt()} mm, مساحة الوتد = ${"%.0f".format(AsStud)} mm²")
+  1856→        codeNotes.add("قدرة الوتد Qn = ${"%.1f".format(Qn / 1000.0)} kN")
+  1857→
+  1858→        // Horizontal shear (AISC I3)
+  1859→        // Vh = min(0.85 × fc' × Ac, Fy × As) (full composite)
+  1860→        val Vh1 = 0.85 * fcu * Ac / 1000.0  // kN (concrete crushing)
+  1861→        val Vh2 = Fy * As / 1000.0  // kN (steel yielding)
+  1862→        val Vh = minOf(Vh1, Vh2)
+  1863→
+  1864→        codeNotes.add("Vh (قص أفقي) = ${"%.1f".format(Vh)} kN")
+  1865→        codeNotes.add("  0.85×fc'×Ac = ${"%.1f".format(Vh1)} kN")
+  1866→        codeNotes.add("  Fy×As = ${"%.1f".format(Vh2)} kN")
+  1867→
+  1868→        // Number of studs required (half-span studs on each side)
+  1869→        val studsRequired = if (Qn > 0) {
+  1870→            val totalStuds = ceil(Vh * 1000.0 / Qn).toInt()
+  1871→            totalStuds
+  1872→        } else {
+  1873→            0
+  1874→        }
+  1875→
+  1876→        // Number of studs provided based on spacing and span
+  1877→        val studsProvided = if (studSpacing > 0) {
+  1878→            maxOf(0, (span / studSpacing).toInt() + 1)
+  1879→        } else {
+  1880→            0
+  1881→        }
+  1882→
+  1883→        codeNotes.add("عدد الأوتاد المطلوبة = $studsRequired")
+  1884→        codeNotes.add("عدد الأوتاد المتوفرة = $studsProvided (مسافة = ${studDiameter.toInt()} mm)")
+  1885→        val shearStudsAdequate = studsProvided >= studsRequired
+  1886→
+  1887→        if (!shearStudsAdequate) {
+  1888→            warnings.add("عدد الأوتاد غير كافٍ — المطلوب $studsRequired والمتوفر $studsProvided")
+  1889→        }
+  1890→
+  1891→        // Determine composite section properties
+  1892→        // Locate plastic neutral axis (PNA)
+  1893→        // Cc = 0.85 × fc' × a × beff (compression in concrete)
+  1894→        // T = Fy × As (tension in steel)
+  1895→        val beff = effectiveWidth
+  1896→        val aFull = (Fy * As) / (0.85 * fcu * beff)  // mm (full composite)
+  1897→
+  1898→        // Check if PNA is in slab
+  1899→        val pnainSlab = aFull <= slabThickness
+  1900→
+  1901→        val compositeMomentCapacity: Double
+  1902→        if (pnainSlab) {
+  1903→            // PNA in concrete slab — full composite action
+  1904→            // Mn = Fy × As × (d + a/2 - a/2) simplified:
+  1905→            // Mn = Fy × As × (d/2 + slabThickness/2) approximately
+  1906→            val yt = d / 2.0 + slabThickness / 2.0 - aFull / 2.0
+  1907→            compositeMomentCapacity = Fy * As * yt / 1e6  // kN.m
+  1908→            codeNotes.add("PNA داخل البلاطة الخرسانية (a = ${"%.1f".format(aFull)} mm)")
+  1909→        } else {
+  1910→            // PNA in steel section — partial composite
+  1911→            // Use steel moment capacity as lower bound (conservative)
+  1912→            compositeMomentCapacity = Fy * Zx / 1e6  // kN.m
+  1913→            warnings.add("المحور المحايد البلاستيكي خارج البلاطة — استخدم كمرة مركبة جزئية")
+  1914→            codeNotes.add("PNA خارج البلاطة — تصميم جزئي")
+  1915→        }
+  1916→
+  1917→        codeNotes.add("القدرة اللدنة المركبة = ${"%.1f".format(compositeMomentCapacity)} kN.m")
+  1918→
+  1919→        // Compare with non-composite capacity
+  1920→        val nonCompositeMp = Fy * Zx / 1e6
+  1921→        codeNotes.add("القدرة اللدنة غير المركبة = ${"%.1f".format(nonCompositeMp)} kN.m")
+  1922→        if (compositeMomentCapacity > nonCompositeMp) {
+  1923→            codeNotes.add("الزيادة بسبب التركيب = ${"%.1f".format(compositeMomentCapacity - nonCompositeMp)} kN.m (${"%.0f".format((compositeMomentCapacity / nonCompositeMp - 1) * 100)}%)")
+  1924→        }
+  1925→
+  1926→        val utilizationRatio = if (compositeMomentCapacity > 0) Mu / compositeMomentCapacity else Double.MAX_VALUE
+  1927→        val phiMn = PHI_FLEXURE * compositeMomentCapacity
+  1928→        val phiUtilization = Mu / phiMn
+  1929→
+  1930→        codeNotes.add("φMn = ${"%.1f".format(phiMn)} kN.m")
+  1931→        codeNotes.add("Mu = ${"%.1f".format(Mu)} kN.m, نسبة الإجهاد = ${"%.3f".format(phiUtilization)}")
+  1932→
+  1933→        if (phiUtilization > 1.0) {
+  1934→            warnings.add("الكمرة المركبة غير كافية — نسبة الإجهاد = ${"%.3f".format(phiUtilization)} > 1.0")
+  1935→        }
+  1936→
+  1937→        // Check minimum slab thickness (AISC I3.1)
+  1938→        if (slabThickness < 64.0) {
+  1939→            warnings.add("سمك البلاطة أقل من 64 mm — تأكد من تغطية الأوتاد بالكامل")
+  1940→        }
+  1941→
+  1942→        // Check maximum stud spacing (AISC I8.2d)
+  1943→        val maxStudSpacing = minOf(8.0 * (slabThickness / 1.0), 915.0)  // mm
+  1944→        if (studSpacing > maxStudSpacing) {
+  1945→            warnings.add("مسافة الأوتاد تتجاوز الحد الأقصى ${"%.0f".format(maxStudSpacing)} mm")
+  1946→        }
+  1947→
+  1948→        return CompositeBeamResult(
+  1949→            compositeMomentCapacity = compositeMomentCapacity,
+  1950→            studsRequired = studsRequired,
+  1951→            studsProvided = studsProvided,
+  1952→            shearStudsAdequate = shearStudsAdequate,
+  1953→            isSafe = phiUtilization <= 1.0,
+  1954→            warnings = warnings,
+  1955→            codeNotes = codeNotes
+  1956→        )
+  1957→    }
+  1958→}

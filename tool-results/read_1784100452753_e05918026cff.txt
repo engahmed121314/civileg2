@@ -1,0 +1,202 @@
+     1→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:63:    var designName by remember { mutableStateOf("عمود الدور الأرضي") }
+     2→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:68:                title = { Text("تصميم الأعمدة الخرسانية Pro", fontWeight = FontWeight.Bold) },
+     3→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:125:                                "💡 Dead Load Only: يستخدم عادة في المنشآت المؤقتة أو تحت ظروف خاصة حيث لا يوجد أحمال حية مؤثرة."
+     4→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:126:                                else "💡 Dead + Live: المزيج التصميمي الأكثر شيوعاً وأماناً، يشمل وزن المنشأ والأثاث والأشخاص.",
+     5→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:135:            item { SectionHeader("📐 أبعاد المقطع والخصائص", R.drawable.ic_column) }
+     6→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:139:                    ColumnInputField(uiState.width, "العرض b (mm)", { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
+     7→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:140:                    ColumnInputField(uiState.depth, "العمق t (mm)", { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
+     8→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:151:            item { SectionHeader("⚡ الأحمال المطبقة", R.drawable.ic_design) }
+     9→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:154:                ColumnInputField(uiState.axialLoad, "الحمل المحوري Pu (kN)", { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
+    10→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:166:                    Text("حساب المقطع (Design Now)", fontWeight = FontWeight.Bold)
+    11→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:171:                item { SectionHeader("📊 نتائج التصميم ومؤشر التوفير", R.drawable.ic_calculator) }
+    12→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:201:                                            if (result.utilizationRatio > 1.0) "القطاع غير آمن إنشائياً! ❌"
+    13→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:202:                                            else if (result.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+    14→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:203:                                            else if (result.utilizationRatio > 0.4) "قطاع مثالي واقتصادي ✅"
+    15→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:204:                                            else "قطاع كبير جداً (غير اقتصادي) 🔵",
+    16→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:210:                                        "المستشار الإنشائي: نسبة الاستخدام",
+    17→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:252:                            Text("خيار موفر 💰", fontSize = 12.sp)
+    18→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:260:                            Text("الأكثر أماناً 🛡️", fontSize = 12.sp)
+    19→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:273:                                Text("تخصيص التسليح (لتحقيق التوفير)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    20→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:284:                                    label = "عدد الأسياخ",
+    21→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:291:                                    label = "القطر Ø (mm)",
+    22→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:304:                                    Text("تحديث التسليح المخصص")
+    23→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:321:                            Text("تقرير PDF")
+    24→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:332:                            Text("حفظ")
+    25→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:338:                    Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    26→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:344:                        title = "📐 الرسم الهندسي التفصيلي",
+    27→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:346:                        viewModes = listOf("الكل", "المنظور", "المقطع العرضي", "جدول التسليح"),
+    28→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:370:            title = { Text("حفظ التصميم في مشروع") },
+    29→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:376:                        label = { Text("اسم العمود (مثلاً: C1)") },
+    30→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:380:                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+    31→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:382:                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+    32→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:407:                    Text("حفظ")
+    33→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:411:                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+    34→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:435:                    if (result.isSafe) "المقطع آمن (SAFE)" else "المقطع غير آمن (UNSAFE)",
+    35→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:442:            ResultDataRow("التسليح الموفر", result.reinforcement.barString)
+    36→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:443:            ResultDataRow("الكانات", result.stirrups.description)
+    37→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:444:            ResultDataRow("نسبة التسليح (μ)", String.format("%.2f %%", result.reinforcementRatio))
+    38→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:448:            Text("الكميات والتقديرات:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    39→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:449:            ResultDataRow("حجم الخرسانة", String.format("%.3f m³", result.concreteVolume))
+    40→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:450:            ResultDataRow("وزن الحديد", String.format("%.2f kg", result.steelWeight))
+    41→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:451:            ResultDataRow("التكلفة التقديرية", String.format("%.2f", result.cost))
+    42→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:455:            Text("التحقق من الكود (Safety Checks):", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    43→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:472:            if (check.isSafe) "آمن ✅" else "غير آمن ❌",
+    44→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:555:    Text("اختر كود التصميم", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    45→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ColumnScreen.kt:587:    Text("تركيبة الأحمال", style = MaterialTheme.typography.labelMedium)
+    46→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:48:    var designName by remember { mutableStateOf("قاعدة منفصلة F1") }
+    47→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:69:                title = { Text("تصميم القواعد الاحترافي Pro", fontWeight = FontWeight.Bold) },
+    48→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:93:            item { SectionHeader("🏗️ نوع القاعدة والمدخلات", R.drawable.ic_footing) }
+    49→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:97:                    Text("نوع القاعدة", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+    50→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:130:                    FootingInputField(colLength, "طول العمود (mm)", { colLength = it }, Modifier.weight(1f))
+    51→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:131:                    FootingInputField(colWidth, "عرض العمود (mm)", { colWidth = it }, Modifier.weight(1f))
+    52→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:160:                Text("خيارات التسليح (لتقييم التوفير)", fontWeight = FontWeight.Bold)
+    53→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:162:                    FootingInputField(barDiameter, "قطر السيخ Ø", { barDiameter = it }, Modifier.weight(1f))
+    54→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:163:                    FootingInputField(barSpacing, "المسافة S (mm)", { barSpacing = it }, Modifier.weight(1f))
+    55→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:196:                        Text("تحليل وتصميم القاعدة")
+    56→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:202:                item { SectionHeader("📊 نتائج التصميم", R.drawable.ic_calculator) }
+    57→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:222:                                            if (res.isOptimal) "تصميم آمن واقتصادي" 
+    58→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:223:                                            else "آمن (تحت المراجعة)",
+    59→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:229:                                        "المستشار الإنشائي: نسبة الاستخدام",
+    60→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:264:                            ResultRow("أبعاد القاعدة", "${res.width.toInt()} x ${res.length.toInt()} mm")
+    61→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:265:                            ResultRow("سمك القاعدة", "${res.thickness.toInt()} mm")
+    62→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:266:                            ResultRow("حجم الخرسانة", "${"%.2f".format(res.concreteVolume)} m³")
+    63→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:267:                            ResultRow("التكلفة التقديرية", "${"%.2f".format(res.cost)}")
+    64→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:289:                            Text(if (isExporting) "جاري التصدير..." else "تقرير PDF")
+    65→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:300:                            Text("حفظ")
+    66→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:307:                        title = "📐 رسم القاعدة التفصيلي",
+    67→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:309:                        viewModes = listOf("الكل", "المخطط", "المقطع", "جدول التسليح"),
+    68→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:336:            title = { Text("حفظ التصميم في مشروع") },
+    69→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:342:                        label = { Text("اسم القاعدة (مثلاً: F1)") },
+    70→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:346:                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+    71→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:348:                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+    72→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:373:                    Text("حفظ")
+    73→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:377:                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+    74→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:79:    val tabs = listOf("المستودعات", "القطاعات", "اللحام", "المسامير", "قواعد معدنية", "وصلات")
+    75→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:91:                title = { Text("تصميم المنشآت المعدنية", fontWeight = FontWeight.Bold) },
+    76→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:94:                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+    77→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:99:                        Icon(Icons.Default.Refresh, contentDescription = "إعادة تعيين")
+    78→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:165:        item { SectionHeader("🏢 مدخلات تصميم المنشأ المعدني", R.drawable.ic_tools) }
+    79→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:170:                    Text("الكود المعتمد", fontWeight = FontWeight.Bold)
+    80→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:186:                SteelInputField(span, "البحر Span (m)", { span = it }, Modifier.weight(1f))
+    81→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:187:                SteelInputField(length, "الطول (m)", { length = it }, Modifier.weight(1f))
+    82→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:193:                SteelInputField(eaveHeight, "الارتفاع (m)", { eaveHeight = it }, Modifier.weight(1f))
+    83→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:194:                SteelInputField(ridgeHeight, "ارتفاع القمة (m)", { ridgeHeight = it }, Modifier.weight(1f))
+    84→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:200:                SteelInputField(baySpacing, "الباكية Bay (m)", { baySpacing = it }, Modifier.weight(1f))
+    85→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:201:                SteelInputField(floors, "الأدوار", { floors = it }, Modifier.weight(1f))
+    86→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:212:                else Text("تحليل وتصميم المنشأ")
+    87→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:220:                Text("📐 تفاصيل المنظور الإنشائي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+    88→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:225:                Text("📊 تحليل الإجهادات والأحمال", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+    89→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:234:                            clientAr = "عميل افتراضي",
+    90→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:236:                            projAr = "مشروع مستودع معدني",
+    91→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:245:                    Text("إصدار التقرير الفني الهندسي (Pro Drawings)")
+    92→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:249:            item { Text("📈 نتائج التحليل الحسابي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+    93→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:252:            item { Text("🏗️ تفاصيل القطاعات", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+    94→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:253:            item { SectionResultCard("الأعمدة الرئيسية", res.mainFrame.columnSection) }
+    95→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:254:            item { SectionResultCard("الكمرات (Rafters)", res.mainFrame.rafterSection) }
+    96→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:257:            item { Text("🔗 وصلات الربط (Connections)", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+    97→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:271:            Text("💰 دراسة الجدوى الاقتصادية", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    98→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:273:            SummaryLine("إجمالي وزن الحديد", "%.2f Ton".format(res.totalWeight), isBold = true)
+    99→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:274:            SummaryLine("التكلفة التقديرية", "%,.0f EGP".format(res.estimatedTotalCost), isBold = true)
+   100→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:275:            SummaryLine("تكلفة المتر المسطح", "%.0f EGP/m²".format(res.costPerM2))
+   101→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:276:            SummaryLine("صافي الربح المتوقع", "%,.0f EGP".format(res.netProfit))
+   102→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:277:            SummaryLine("العائد على الاستثمار (ROI)", "%.1f %%".format(res.roi), isBold = true)
+   103→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:359:            Text("إجهادات التصميم القصوى", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   104→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:360:            ResultRow("أقصى عزم (M_max)", "%.1f kN.m".format(res.maxMoment))
+   105→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:361:            ResultRow("أقصى قص (V_max)", "%.1f kN".format(res.maxShear))
+   106→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:362:            ResultRow("حمل محوري (P_max)", "%.1f kN".format(res.maxAxial))
+   107→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:363:            ResultRow("الترخيم (Deflection)", "%.1f mm".format(res.maxDeflection))
+   108→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:364:            Text(if (res.isSafe) "تحليل الأمان: آمن ✅" else "تحليل الأمان: تجاوز الحدود ❌", 
+   109→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:376:    val views = listOf("الواجهة الأمامية", "المسقط الأفقي", "الواجهة الجانبية", "رسم ثلاثي الأبعاد")
+   110→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:519:    canvas.drawText("الواجهة الأمامية", 100f, 50f, textP)
+   111→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:523:    canvas.drawText("المسقط الأفقي", 700f, 50f, textP)
+   112→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:527:    canvas.drawText("الواجهة الجانبية", 100f, 550f, textP)
+   113→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:530:    canvas.drawText("ملخص التصميم", 700f, 550f, textP)
+   114→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:532:    canvas.drawText("إجمالي الوزن: ${"%.2f".format(result.totalWeight)} طن", 700f, 600f, infoP)
+   115→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:533:    canvas.drawText("التكلفة/م²: ${"%.0f".format(result.costPerM2)} جنيه", 700f, 640f, infoP)
+   116→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:534:    canvas.drawText("العائد على الاستثمار: ${"%.1f".format(result.roi)} %", 700f, 680f, infoP)
+   117→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:672:    drawDimensionLine(canvas, x, y + 40f, x + w, y + 40f, "البحر: ${inputs.span}m", dimPaint)
+   118→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:674:    drawDimensionLine(canvas, x + w + 40f, planTop, x + w + 40f, y, "الطول: ${inputs.length}m", dimPaint)
+   119→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:694:    canvas.drawText("الطول الكلي: ${inputs.length}m", x + l/2, y + 35f, textP)
+   120→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:706:        Toast.makeText(context, "لا يوجد قارئ PDF", Toast.LENGTH_SHORT).show()
+   121→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:736:            Text("العناصر الثانوية والتربيط", fontWeight = FontWeight.Bold)
+   122→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:737:            ResultRow("المدادات (Purlins)", res.purlinSection.displayName)
+   123→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:738:            ResultRow("مدادات الجوانب (Girts)", res.girtSection.displayName)
+   124→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:739:            ResultRow("البريسينج (Bracing)", res.bracingSection.displayName)
+   125→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:740:            ResultRow("عدد المدادات الكلي", "${res.purlinCount}")
+   126→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:757:                Text(if (conn.isSafe) "آمن ✅" else "فشل ❌", color = if (conn.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold)
+   127→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:771:                Text("توصيات التصميم والنصائح", fontWeight = FontWeight.Bold)
+   128→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:810:        item { SectionHeader("📐 قاموس القطاعات والتحليل الذكي", R.drawable.ic_tools) }
+   129→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:816:                    Text("كود التصميم المعدني", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+   130→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:855:                label = { Text("ابحث برقم القطاع (مثال: 300)") },
+   131→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:873:                Text("نتائج البحث:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+   132→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:906:                    Text("فئة القطاع", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+   133→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:939:                    Text("القطاع المحدد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+   134→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:945:                            value = selectedSection?.sectionName ?: "اختر قطاعاً",
+   135→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:982:                            Text("الخصائص الهندسية للقطاع:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+   136→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:988:                                PropertyLine("المساحة (A)", "%.2f cm²".format(section.getArea()/100.0))
+   137→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:989:                                PropertyLine("الوزن (W)", "%.1f kg/m".format(section.weight))
+   138→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:990:                                PropertyLine("الارتفاع (h)", "${section.depth} mm")
+   139→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:993:                                PropertyLine("الشفة (bf)", "${section.width} mm")
+   140→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:994:                                PropertyLine("سمك الشفة (tf)", "${section.flangeThickness} mm")
+   141→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:995:                                PropertyLine("سمك العصب (tw)", "${section.webThickness} mm")
+   142→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1018:                    Text("مدخلات التصميم", fontWeight = FontWeight.Bold)
+   143→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1039:                    Text("كود التصميم", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+   144→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1075:                else Text("تحليل وتصميم القطاع")
+   145→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1103:                                Text("معامل الاستغلال", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+   146→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1106:                                    if (res.isSafe) "القطاع آمن ✅" else "القطاع غير آمن ❌",
+   147→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1134:                Text("🎨 الرسم الهندسي للقطاع", fontWeight = FontWeight.Bold)
+   148→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1140:                    title = "رسم القطاع الحديدي",
+   149→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1142:                    viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "التوصيلات"),
+   150→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1170:                val status = if (res.utilizationRatio in 0.7..0.95) "مثالي ومقتصد" 
+   151→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1171:                            else if (res.utilizationRatio > 1.0) "غير آمن — يحتاج قطاع أكبر" 
+   152→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1172:                            else "تصميم محافظ — هدر في الحديد"
+   153→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1179:                            Text("مؤشر التوفير والأمان", fontWeight = FontWeight.Bold, color = color)
+   154→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1199:        item { SectionHeader("🔥 تصميم وصلات اللحام الاحترافي", R.drawable.ic_tools) }
+   155→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1203:                SteelInputField(size, "مقاس اللحام s (mm)", { size = it }, Modifier.weight(1f))
+   156→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1204:                SteelInputField(length, "طول اللحام L (mm)", { length = it }, Modifier.weight(1f))
+   157→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1209:            Text("نوع الإلكترود (Electrode)", fontWeight = FontWeight.Bold)
+   158→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1223:            Text("كود التصميم", fontWeight = FontWeight.Bold)
+   159→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1241:                Text("حساب مقاومة القص (Design Rn)")
+   160→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1249:                        Text("مقاومة اللحام التصميمية (Design Capacity):", fontWeight = FontWeight.Bold)
+   161→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1252:                        Text("مساحة الحلق الفعالة: ${"%.1f".format(0.707 * (size.toDoubleOrNull() ?: 0.0) * (length.toDoubleOrNull() ?: 0.0))} mm²", fontSize = 12.sp)
+   162→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1270:        item { SectionHeader("🔩 تصميم وصلات المسامير الاحترافي", R.drawable.ic_tools) }
+   163→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1274:                SteelInputField(diameter, "قطر المسمار M (mm)", { diameter = it }, Modifier.weight(1f))
+   164→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1275:                SteelInputField(numBolts, "عدد المسامير", { numBolts = it }, Modifier.weight(1f))
+   165→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1280:            Text("رتبة المسمار (Grade)", fontWeight = FontWeight.Bold)
+   166→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1294:            Text("كود التصميم", fontWeight = FontWeight.Bold)
+   167→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1312:                Text("حساب مقاومة القص للمجموعة")
+   168→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1320:                        Text("مقاومة القص الكلية (Total Rn):", fontWeight = FontWeight.Bold)
+   169→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1323:                        Text("مقاومة المسمار الواحد: ${"%.1f".format(capacity / (numBolts.toIntOrNull() ?: 1))} kN", fontSize = 12.sp)
+   170→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1338:            ResultRow("مساحة القطاع", "%.1f mm²".format(res.sectionType.getArea()))
+   171→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1339:            ResultRow("سعة الضغط", "%.1f kN".format(res.axialCapacity))
+   172→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1340:            ResultRow("سعة الانحناء", "%.1f kN.m".format(res.flexuralCapacity))
+   173→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1341:            ResultRow("نسبة الاستخدام", "%.2f".format(res.utilizationRatio))
+   174→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1342:            Text(if (res.isSafe) "آمن ✅" else "غير آمن ❌", fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+   175→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1390:            Text("توزيع الإجهادات المرن", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+   176→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1412:        item { SectionHeader("🔧 تصميم القواعد المعدنية", R.drawable.ic_tools) }
+   177→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1417:                    Text("بيانات العمود", fontWeight = FontWeight.Bold)
+   178→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1419:                        SteelInputField(colSection, "القطاع (مثال: HEB 300)", { colSection = it }, Modifier.weight(1f))
+   179→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1422:                        SteelInputField(bf, "عرض الشفة bf (mm)", { bf = it }, Modifier.weight(1f))
+   180→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1423:                        SteelInputField(dc, "عمق العمود dc (mm)", { dc = it }, Modifier.weight(1f))
+   181→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1432:                    Text("الأحمال المؤثرة", fontWeight = FontWeight.Bold)
+   182→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1434:                        SteelInputField(axialLoad, "القوة المحورية P (kN)", { axialLoad = it }, Modifier.weight(1f))
+   183→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1435:                        SteelInputField(momentM, "العزم M (kN.m) — اختياري", { momentM = it }, Modifier.weight(1f))
+   184→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1444:                    Text("خواص المواد", fontWeight = FontWeight.Bold)
+   185→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1446:                        SteelInputField(fpc, "مقاومة الخرسانة f'c (MPa)", { fpc = it }, Modifier.weight(1f))
+   186→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1447:                        SteelInputField(fy, "إجهاد الخضوع Fy (MPa)", { fy = it }, Modifier.weight(1f))
+   187→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1450:                    Text("درجة براغي الارتكاز", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+   188→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1500:                Text("تصميم القاعدة المعدنية")
+   189→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1515:                            Text(if (res.isSafe) "التصميم آمن ✅" else "التصميم غير آمن ❌", fontWeight = FontWeight.Bold, color = urColor, fontSize = 16.sp)
+   190→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1518:                        ResultRow("أبعاد اللوح (B × N)", "%.0f × %.0f mm".format(res.plateWidth, res.plateLength))
+   191→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1519:                        ResultRow("سماكة اللوح tp", "%.0f mm".format(res.plateThickness))
+   192→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1520:                        ResultRow("أقصى ضغط تحمل", "%.2f MPa".format(res.maxBearingPressure))
+   193→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1521:                        ResultRow("سعة الخرسانة", "%.2f MPa".format(res.concreteCapacity))
+   194→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1523:                        Text("البراغي الارتكازية", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+   195→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1524:                        ResultRow("عدد البراغي", "${res.anchorBolts.numberOfBolts}")
+   196→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1525:                        ResultRow("قطر البرغي", "M${res.anchorBolts.boltDiameter.toInt()} (${res.anchorBolts.boltGrade})")
+   197→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1526:                        ResultRow("مسافة بين البراغي", "%.0f mm".format(res.anchorBolts.boltSpacing))
+   198→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1527:                        ResultRow("المسافة من الحافة", "%.0f mm".format(res.anchorBolts.edgeDistance))
+   199→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1528:                        ResultRow("سعة الشد لكل برغي", "%.1f kN".format(res.anchorBolts.tensionCapacity))
+   200→/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1529:                        ResultRow("طول التثبيت", "%.0f mm".format(res.anchorBolts.embedmentLength))
+
+[showing lines 1-200 of 252; use offset=201 with limit to continue reading]
