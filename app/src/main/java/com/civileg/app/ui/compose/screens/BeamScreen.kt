@@ -313,8 +313,6 @@ fun BeamScreen(
                                 stirrupDia = res.stirrups.diameter.toDouble(),
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
-                                developmentLength = res.developmentLength ?: 0.0,
-                                lapLength = 0.0,
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),
@@ -326,13 +324,19 @@ fun BeamScreen(
                 }
 
                 item {
+                    val diagramCode = when (selectedCode) {
+                        CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
+                        CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+                        CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+                    }
                     MomentShearForceDiagram(
-                        span = res.span ?: 5.0,
+                        span = span.toDoubleOrNull() ?: 5.0,
                         supportType = res.supportType.name,
                         deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
                         liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,
                         appliedMoment = res.appliedMoment,
                         appliedShear = res.appliedShear,
+                        designCode = diagramCode,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

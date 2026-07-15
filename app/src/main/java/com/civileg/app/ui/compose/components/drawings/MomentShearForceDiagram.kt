@@ -44,6 +44,7 @@ fun MomentShearForceDiagram(
     liveLoad: Double = 0.0,         // kN/m
     appliedMoment: Double = 0.0,    // kN.m (max moment from design)
     appliedShear: Double = 0.0,     // kN (max shear from design)
+    designCode: com.civileg.app.domain.entities.DesignCode = com.civileg.app.domain.entities.DesignCode.ECP,
     // Diagram data (optional - if provided, overrides calculated diagrams)
     momentValues: List<Pair<Float, Float>>? = null, // (x_ratio, moment_value)
     shearValues: List<Pair<Float, Float>>? = null,  // (x_ratio, shear_value)
@@ -56,8 +57,8 @@ fun MomentShearForceDiagram(
     var selectedMoment by remember { mutableStateOf(0f) }
     var selectedShear by remember { mutableStateOf(0f) }
 
-    // Calculate diagrams if not provided
-    val wu = (deadLoad * 1.4 + liveLoad * 1.6) // ECP ultimate load factor
+    // Calculate diagrams if not provided - use code-specific load factors
+    val wu = (deadLoad * designCode.getDeadLoadFactor() + liveLoad * designCode.getLiveLoadFactor())
     val momentData = momentValues ?: calculateMomentDiagram(span, wu, supportType)
     val shearData = shearValues ?: calculateShearDiagram(span, wu, supportType)
 

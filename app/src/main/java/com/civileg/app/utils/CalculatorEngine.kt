@@ -682,9 +682,20 @@ class CalculatorEngine @Inject constructor(
         }
         val totalLoad = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
         
-        // Structural Analysis (Simple Beam Approximation)
-        val mu = customMoment ?: (totalLoad * span.pow(2.0) / 8.0)
-        val vu = customShear ?: (totalLoad * span / 2.0)
+        // Structural Analysis based on support type
+        val momentFactor = when (supportType) {
+            SupportType.CANTILEVER -> 2.0        // wL²/2
+            SupportType.FIXED_FIXED -> 12.0      // wL²/12
+            SupportType.FIXED_HINGED -> 8.0      // wL²/8 (fixed end moment)
+            else -> 8.0                           // wL²/8 (SS, roller-hinged)
+        }
+        val shearFactor = when (supportType) {
+            SupportType.CANTILEVER -> 1.0         // wL
+            SupportType.FIXED_FIXED -> 2.0        // wL/2
+            else -> 2.0                           // wL/2
+        }
+        val mu = customMoment ?: (totalLoad * span.pow(2.0) / momentFactor)
+        val vu = customShear ?: (totalLoad * span / shearFactor)
         val d = height - 50.0 // Effective depth (Assuming 25mm cover + stirrup + bar/2)
         
         var asReq = 0.0
