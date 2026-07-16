@@ -168,7 +168,7 @@ fun FrameAnalysisScreen(
             ) {
                 for ((index, title) in tabs.withIndex()) {
                     Tab(
-                        selected = selectedTab = index,
+                        selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         text = { Text(title, fontSize = 13.sp) }
                     )
