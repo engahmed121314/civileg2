@@ -570,27 +570,41 @@ fun SeismicScreen(
 
                 // ── Action Buttons (PDF + Save) ──────────────────────────────
                 item {
+                    val labelPdfCode = stringResource(R.string.seismic_pdf_code)
+                    val labelZone = stringResource(R.string.seismic_zone)
+                    val labelSoilType = stringResource(R.string.seismic_soil_type)
+                    val labelNumFloors = stringResource(R.string.seismic_num_floors)
+                    val labelHeight = stringResource(R.string.seismic_pdf_height)
+                    val labelWeight = stringResource(R.string.seismic_pdf_weight)
+                    val labelImportance = stringResource(R.string.seismic_importance_factor)
+                    val labelReduction = stringResource(R.string.seismic_response_modification)
+                    val labelBaseShear = stringResource(R.string.seismic_base_shear_v)
+                    val labelPeriod = stringResource(R.string.seismic_fundamental_period)
+                    val labelSpectral = stringResource(R.string.seismic_spectral_accel)
+                    val labelEquation = stringResource(R.string.seismic_pdf_equation)
+                    val labelCodeRef = stringResource(R.string.seismic_pdf_code_ref)
+                    val labelTitle = stringResource(R.string.seismic_pdf_title, selectedCode.displayName)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = {
                                 val details = mapOf(
-                                    stringResource(R.string.seismic_pdf_code) to selectedCode.displayName,
-                                    stringResource(R.string.seismic_zone) to selectedZone.displayName,
-                                    stringResource(R.string.seismic_soil_type) to "${selectedSoil.displayName} - ${selectedSoil.description}",
-                                    stringResource(R.string.seismic_num_floors) to (numFloors.toIntOrNull() ?: 5).toString(),
-                                    stringResource(R.string.seismic_pdf_height) to "${"%.1f".format(totalHeight)} m",
-                                    stringResource(R.string.seismic_pdf_weight) to "${totalWeight} kN",
-                                    stringResource(R.string.seismic_importance_factor) to importanceFactor,
-                                    stringResource(R.string.seismic_response_modification) to reductionFactor,
-                                    stringResource(R.string.seismic_base_shear_v) to "${"%.2f".format(res.baseShearResult.baseShear)} kN",
-                                    stringResource(R.string.seismic_fundamental_period) to "${"%.3f".format(res.fundamentalPeriod)} sec",
-                                    stringResource(R.string.seismic_spectral_accel) to "${"%.4f".format(res.spectralAccel)} g",
-                                    stringResource(R.string.seismic_pdf_equation) to res.baseShearResult.calculationFormula,
-                                    stringResource(R.string.seismic_pdf_code_ref) to res.baseShearResult.codeReference
+                                    labelPdfCode to selectedCode.displayName,
+                                    labelZone to selectedZone.displayName,
+                                    labelSoilType to "${selectedSoil.displayName} - ${selectedSoil.description}",
+                                    labelNumFloors to (numFloors.toIntOrNull() ?: 5).toString(),
+                                    labelHeight to "${"%.1f".format(totalHeight)} m",
+                                    labelWeight to "${totalWeight} kN",
+                                    labelImportance to importanceFactor,
+                                    labelReduction to reductionFactor,
+                                    labelBaseShear to "${"%.2f".format(res.baseShearResult.baseShear)} kN",
+                                    labelPeriod to "${"%.3f".format(res.fundamentalPeriod)} sec",
+                                    labelSpectral to "${"%.4f".format(res.spectralAccel)} g",
+                                    labelEquation to res.baseShearResult.calculationFormula,
+                                    labelCodeRef to res.baseShearResult.codeReference
                                 )
                                 val filePath = PdfExportHelper.exportCalculationReport(
                                     context = context,
-                                    title = stringResource(R.string.seismic_pdf_title, selectedCode.displayName),
+                                    title = labelTitle,
                                     details = details,
                                     fileName = "Seismic_Report_${System.currentTimeMillis()}"
                                 )

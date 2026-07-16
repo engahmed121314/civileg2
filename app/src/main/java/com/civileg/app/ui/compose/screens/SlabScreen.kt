@@ -77,7 +77,8 @@ fun SlabScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
     var pdfError by remember { mutableStateOf<String?>(null) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.slab_default_name)) }
+    val defaultSlabName = stringResource(R.string.slab_default_name)
+    var designName by remember { mutableStateOf(defaultSlabName) }
 
     Scaffold(
         topBar = {
@@ -310,12 +311,13 @@ fun SlabScreen(
                 }
                 
                 item {
+                    val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
-                                        pdfError = stringResource(R.string.beam_pdf_error)
+                                        pdfError = pdfErrorMsg
                                     } else {
                                         pdfError = null
                                     }

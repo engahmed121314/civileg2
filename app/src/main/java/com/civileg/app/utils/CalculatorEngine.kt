@@ -17,10 +17,10 @@ class CalculatorEngine @Inject constructor(
         ACI("الكود الأمريكي - ACI 318", "American Code - ACI 318"),
         SAUDI("الكود السعودي - SBC 304", "Saudi Code - SBC 304");
 
-        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
+        val displayName: String get() = displayNameEn
 
         companion object {
-            fun fromDomain(code: com.civileg.app.domain.entities.DesignCode, sm: SettingsManager): DesignCode {
+            fun fromDomain(code: com.civileg.app.domain.entities.DesignCode): DesignCode {
                 return when (code) {
                     com.civileg.app.domain.entities.DesignCode.ECP -> EGYPTIAN
                     com.civileg.app.domain.entities.DesignCode.ACI -> ACI
@@ -38,7 +38,7 @@ class CalculatorEngine @Inject constructor(
         POST_TENSION("بوست تنشن", "Post-Tensioned"),
         WAFFLE("بلاطة وافل", "Waffle Slab");
 
-        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
+        val displayName: String get() = displayNameEn
     }
     
     enum class SupportType(val displayName: String) {
@@ -54,7 +54,7 @@ class CalculatorEngine @Inject constructor(
         RECTANGULAR_ELEVATED("علوي مستطيل", "Rectangular Elevated"), CIRCULAR_ELEVATED("علوي دائري", "Circular Elevated"),
         UNDERGROUND("تحت الأرض مستطيل", "Underground Rectangular"), CIRCULAR_UNDERGROUND("تحت الأرض دائري", "Underground Circular");
 
-        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
+        val displayName: String get() = displayNameEn
     }
 
     @Parcelize
@@ -143,8 +143,8 @@ class CalculatorEngine @Inject constructor(
         RAFT("لبشة خرسانية", "Raft"),
         PILE_CAP("هامة خوازيق", "Pile Cap");
 
-        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
-        }
+        val displayName: String get() = displayNameEn
+    }
 
     @Parcelize
     data class FootingResult(
@@ -512,7 +512,7 @@ class CalculatorEngine @Inject constructor(
         val axial = frameReaction * 0.35 + inputs.windLoad * tributaryArea * 0.18
         val baseShear = max(0.0, inputs.windLoad * tributaryArea * 0.33)
         
-        val drift = when (CalculatorEngine.DesignCode.fromDomain(inputs.code, settingsManager)) {
+        val drift = when (CalculatorEngine.DesignCode.fromDomain(inputs.code)) {
             CalculatorEngine.DesignCode.EGYPTIAN -> spanM * 1000.0 / 500.0
             CalculatorEngine.DesignCode.ACI -> spanM * 1000.0 / 400.0
             CalculatorEngine.DesignCode.SAUDI -> spanM * 1000.0 / 450.0
@@ -1875,4 +1875,5 @@ class CalculatorEngine @Inject constructor(
         val phi = if (code == DesignCode.ACI) 0.75 else 0.65
         return (phi * 0.5 * grade.fu * area * count) / 1000.0 // kN
     }
+
 }

@@ -55,7 +55,8 @@ fun StairScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.stair_default_name)) }
+    val defaultStairName = stringResource(R.string.stair_default_name)
+    var designName by remember { mutableStateOf(defaultStairName) }
     
     var selectedType by remember { mutableStateOf(CalculatorEngine.StairType.SINGLE_FLIGHT) }
     var span by remember { mutableStateOf("4.0") }

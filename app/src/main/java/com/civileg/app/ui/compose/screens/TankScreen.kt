@@ -47,7 +47,8 @@ fun TankScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.tank_default_name)) }
+    val defaultTankName = stringResource(R.string.tank_default_name)
+    var designName by remember { mutableStateOf(defaultTankName) }
     
     // تصحيح: تحديد النوع صراحة وحل مشكلة المسميات المفقودة
     var selectedType by remember { mutableStateOf<CalculatorEngine.TankType>(CalculatorEngine.TankType.RECTANGULAR_GROUND) }
