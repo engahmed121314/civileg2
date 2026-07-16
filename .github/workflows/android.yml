@@ -64,7 +64,7 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: lint
+    needs: [lint]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,7 +101,8 @@ jobs:
     name: Build Debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: test
+    needs: [lint, test]
+    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
