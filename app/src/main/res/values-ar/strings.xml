@@ -678,7 +678,6 @@
     <string name="frame_load_type">نوع الحمولة:</string>
     <string name="frame_load_value">قيمة الحمولة</string>
     <string name="frame_position_from_start">الموقع من بداية العضو (م)</string>
-    <string name="frame_press_solve">اضغط على زر \'حل\' لبدء التحليل</string>
     <string name="frame_result_displacements">الإزاحات</string>
     <string name="frame_result_reactions">ردود الأفعال</string>
     <string name="frame_result_concrete_design">تصميم خرسانة</string>

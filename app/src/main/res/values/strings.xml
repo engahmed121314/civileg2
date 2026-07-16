@@ -686,7 +686,6 @@
     <string name="frame_load_type">Load Type:</string>
     <string name="frame_load_value">Load Value</string>
     <string name="frame_position_from_start">Position from start (m)</string>
-    <string name="frame_press_solve">Press \'Solve\' to start analysis</string>
     <string name="frame_result_displacements">Displacements</string>
     <string name="frame_result_reactions">Reactions</string>
     <string name="frame_result_concrete_design">Concrete Design</string>
