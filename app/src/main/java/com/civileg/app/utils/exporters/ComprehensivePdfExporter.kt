@@ -7,6 +7,8 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
 import com.civileg.app.utils.CalculatorEngine
 import com.itextpdf.io.font.PdfEncodings
+import com.itextpdf.io.font.constants.StandardFonts
+import com.itextpdf.io.font.PdfFontFactory
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb
@@ -52,6 +54,7 @@ class ComprehensivePdfExporter(private val context: Context) {
     // ArabicFontProvider.getArabicPdfFont() now NEVER returns null
     private val arabicFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = false) }
     private val arabicBoldFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = true) }
+    private val helveticaFont: PdfFont by lazy { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
 
     private var currentLanguage: String = "ar"
 
@@ -73,20 +76,45 @@ class ComprehensivePdfExporter(private val context: Context) {
         alignment: TextAlignment? = null,
         rtl: Boolean? = null
     ): Paragraph {
-        val p = Paragraph(text).setFontSize(fontSize)
-        if (bold) {
-            p.setBold()
-            if (isArabic(text)) p.setFont(arabicBoldFont)
-        }
+        val p = Paragraph().setFontSize(fontSize)
         color?.let { p.setFontColor(it) }
         alignment?.let { p.setTextAlignment(it) }
 
-        val useRtl = rtl ?: isArabic(text)
-        if (useRtl) {
-            p.setFont(if (bold) arabicBoldFont else arabicFont)
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        if (isArabic(text)) {
+            // Split text into Arabic and English segments for bilingual support
+            val segments = splitBilingualText(text)
+            for ((segText, isArabicSeg) in segments) {
+                val font = if (isArabicSeg) (if (bold) arabicBoldFont else arabicFont) else helveticaFont
+                val run = Text(segText).setFont(font)
+                if (isArabicSeg) run.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                p.add(run)
+            }
+            val useRtl = rtl ?: true
+            if (useRtl) p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        } else {
+            p.add(Text(text).setFont(helveticaFont))
         }
         return p
+    }
+
+    private fun splitBilingualText(text: String): List<Pair<String, Boolean>> {
+        val segments = mutableListOf<Pair<String, Boolean>>()
+        var currentSeg = StringBuilder()
+        var currentIsArabic = isArabic(text.firstOrNull()?.toString() ?: "")
+
+        for (char in text) {
+            val charIsArabic = isArabic(char.toString())
+            if (charIsArabic != currentIsArabic && currentSeg.isNotEmpty()) {
+                segments.add(Pair(currentSeg.toString(), currentIsArabic))
+                currentSeg = StringBuilder()
+                currentIsArabic = charIsArabic
+            }
+            currentSeg.append(char)
+        }
+        if (currentSeg.isNotEmpty()) {
+            segments.add(Pair(currentSeg.toString(), currentIsArabic))
+        }
+        return segments
     }
 
     private fun rtlParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null): Paragraph {

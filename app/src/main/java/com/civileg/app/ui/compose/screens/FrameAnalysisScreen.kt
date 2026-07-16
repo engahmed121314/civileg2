@@ -89,10 +89,10 @@ fun FrameAnalysisScreen(
                         var span = 6.0; var h = 4.0; var udl = 20.0
                         viewModel.loadSimplePortalFrame(span, h, udl)
                     }) {
-                        Icon(Icons.Default.ViewInAr, "قالب إطار بسيط", tint = Color.White)
+                        Icon(Icons.Default.ViewInAr, stringResource(R.string.frame_template_simple), tint = Color.White)
                     }
                     IconButton(onClick = { viewModel.clearAll() }) {
-                        Icon(Icons.Default.DeleteSweep, "مسح الكل", tint = Color.White)
+                        Icon(Icons.Default.DeleteSweep, stringResource(R.string.frame_clear_all), tint = Color.White)
                     }
                     // PDF Export
                     if (result?.hasResults == true) {
@@ -112,12 +112,12 @@ fun FrameAnalysisScreen(
                                     putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(intent, "مشاركة التقرير"))
+                                context.startActivity(Intent.createChooser(intent, stringResource(R.string.frame_share_report)))
                             } catch (e: Exception) {
-                                Toast.makeText(context, "خطأ في إنشاء PDF: ${e.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, stringResource(R.string.frame_pdf_error, e.message ?: ""), Toast.LENGTH_LONG).show()
                             }
                         }) {
-                            Icon(Icons.Default.PictureAsPdf, "تصدير PDF", tint = Color.White)
+                            Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
                         }
                     }
                 }
@@ -281,7 +281,7 @@ private fun NodesTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("العقد (${nodes.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.frame_nodes_count, nodes.size), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Button(
                 onClick = {
                     editX = ""
@@ -294,7 +294,7 @@ private fun NodesTab(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("إضافة عقدة")
+                Text(stringResource(R.string.frame_add_node))
             }
         }
 
@@ -303,8 +303,8 @@ private fun NodesTab(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.AddLocation, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("لا توجد عقد بعد", color = Color.Gray)
-                    Text("أضف عقد أو استخدم قالب جاهز", color = Color.Gray, fontSize = 12.sp)
+                    Text(stringResource(R.string.frame_no_nodes), color = Color.Gray)
+                    Text(stringResource(R.string.frame_add_or_template), color = Color.Gray, fontSize = 12.sp)
                 }
             }
             return@Column
@@ -320,7 +320,7 @@ private fun NodesTab(
             Text("ID", modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Text("X (m)", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Text("Y (m)", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("الارتكاز", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(stringResource(R.string.frame_support), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Text("", modifier = Modifier.width(60.dp))
         }
 
@@ -345,7 +345,7 @@ private fun NodesTab(
                         editSupport = node.support
                         showAddDialog = true
                     }) {
-                        Icon(Icons.Default.Edit, "تعديل", modifier = Modifier.size(18.dp), tint = Color(0xFF1565C0))
+                        Icon(Icons.Default.Edit, stringResource(R.string.frame_edit), modifier = Modifier.size(18.dp), tint = Color(0xFF1565C0))
                     }
                 }
                 HorizontalDivider()
@@ -357,24 +357,24 @@ private fun NodesTab(
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text(if (editingNode != null) "تعديل عقدة" else "إضافة عقدة") },
+            title = { Text(if (editingNode != null) stringResource(R.string.frame_edit_node) else stringResource(R.string.frame_add_node_title)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = editX, onValueChange = { editX = it },
-                        label = { Text("X (متر)") },
+                        label = { Text(stringResource(R.string.frame_x_m)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = editY, onValueChange = { editY = it },
-                        label = { Text("Y (متر)") },
+                        label = { Text(stringResource(R.string.frame_y_m)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("نوع الارتكاز:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.frame_support_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     for (st in SupportType.entries) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(2.dp)) {
@@ -397,10 +397,10 @@ private fun NodesTab(
                         viewModel.addNode(x, y, editSupport)
                     }
                     showAddDialog = false
-                }) { Text("حفظ", color = Color(0xFF1565C0)) }
+                }) { Text(stringResource(R.string.save), color = Color(0xFF1565C0)) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showAddDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -437,7 +437,7 @@ private fun MembersTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("الأعضاء (${members.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(stringResource(R.string.frame_members_count, members.size), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Button(
                 onClick = {
                     editNodeI = ""; editNodeJ = ""; editMaterial = FrameMaterialType.Concrete
@@ -450,7 +450,7 @@ private fun MembersTab(
             ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("إضافة عضو")
+                Text(stringResource(R.string.frame_add_member))
             }
         }
 
@@ -459,7 +459,7 @@ private fun MembersTab(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.Straighten, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("لا توجد أعضاء بعد", color = Color.Gray)
+                    Text(stringResource(R.string.frame_no_members), color = Color.Gray)
                 }
             }
             return@Column
@@ -481,7 +481,7 @@ private fun MembersTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("#${member.id} - ${member.name.ifEmpty { "بدون اسم" }}", fontWeight = FontWeight.Bold)
+                            Text("#${member.id} - ${member.name.ifEmpty { stringResource(R.string.frame_no_name) }}", fontWeight = FontWeight.Bold)
                             Text(
                                 "عقدة ${member.nodeI} ← عقدة ${member.nodeJ}  |  ${member.memberType.displayNameAr}  |  ${member.materialType.displayNameAr}",
                                 fontSize = 11.sp, color = Color.Gray
@@ -496,7 +496,7 @@ private fun MembersTab(
                             }
                         }
                         IconButton(onClick = { viewModel.removeMember(member.id) }) {
-                            Icon(Icons.Default.Delete, "حذف", tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -508,13 +508,13 @@ private fun MembersTab(
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text(if (editingMemberId != null) "تعديل عضو" else "إضافة عضو") },
+            title = { Text(if (editingMemberId != null) stringResource(R.string.frame_edit_member) else stringResource(R.string.frame_add_member_title)) },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     item {
                         OutlinedTextField(
                             value = editNodeI, onValueChange = { editNodeI = it },
-                            label = { Text("رقم العقدة البداية (I)") },
+                            label = { Text(stringResource(R.string.frame_node_i)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -522,17 +522,17 @@ private fun MembersTab(
                     item {
                         OutlinedTextField(
                             value = editNodeJ, onValueChange = { editNodeJ = it },
-                            label = { Text("رقم العقدة النهاية (J)") },
+                            label = { Text(stringResource(R.string.frame_node_j)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                     item {
                         OutlinedTextField(value = editName, onValueChange = { editName = it },
-                            label = { Text("اسم العضو (اختياري)") }, modifier = Modifier.fillMaxWidth())
+                            label = { Text(stringResource(R.string.frame_member_name_hint)) }, modifier = Modifier.fillMaxWidth())
                     }
                     item {
-                        Text("نوع المادة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.frame_material_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row {
                             for (mt in FrameMaterialType.entries) {
                                 FilterChip(
@@ -545,7 +545,7 @@ private fun MembersTab(
                         }
                     }
                     item {
-                        Text("نوع العضو:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.frame_member_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row {
                             for (mtype in FrameMemberType.entries) {
                                 FilterChip(
@@ -559,7 +559,7 @@ private fun MembersTab(
                     }
                     if (editMaterial == FrameMaterialType.Concrete) {
                         item {
-                            Text("خصائص المقطع الخرساني:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(stringResource(R.string.frame_concrete_section_props), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -583,9 +583,9 @@ private fun MembersTab(
                         }
                     } else {
                         item {
-                            Text("القطاع المعدني:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(stringResource(R.string.frame_steel_section), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             OutlinedTextField(value = editSteelSection, onValueChange = { editSteelSection = it },
-                                label = { Text("اسم القطاع (مثل: IPE 300)") }, modifier = Modifier.fillMaxWidth())
+                                label = { Text(stringResource(R.string.frame_section_name_hint)) }, modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }
@@ -615,10 +615,10 @@ private fun MembersTab(
                         viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, editSteelSection, editName)
                     }
                     showAddDialog = false
-                }) { Text("حفظ", color = Color(0xFF1565C0)) }
+                }) { Text(stringResource(R.string.save), color = Color(0xFF1565C0)) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showAddDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -657,20 +657,20 @@ private fun LoadsTab(
             selectedTabIndex = loadTabIndex,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Tab(selected = loadTabIndex == 0, onClick = { loadTabIndex = 0 }, text = { Text("حمولات عقدية") })
-            Tab(selected = loadTabIndex == 1, onClick = { loadTabIndex = 1 }, text = { Text("حمولات على الأعضاء") })
+            Tab(selected = loadTabIndex == 0, onClick = { loadTabIndex = 0 }, text = { Text(stringResource(R.string.frame_nodal_loads_tab)) })
+            Tab(selected = loadTabIndex == 1, onClick = { loadTabIndex = 1 }, text = { Text(stringResource(R.string.frame_member_loads_tab)) })
         }
 
         if (loadTabIndex == 0) {
             // Nodal loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("حمولات العقد", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.frame_nodal_loads), fontWeight = FontWeight.Bold)
                 Button(onClick = { showNodalDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text(stringResource(R.string.add))
                 }
             }
             if (nodalLoads.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("لا توجد حمولات عقدية", color = Color.Gray) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.frame_no_nodal_loads), color = Color.Gray) }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(nodalLoads) { index, load ->
@@ -691,13 +691,13 @@ private fun LoadsTab(
         } else {
             // Member loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("حمولات الأعضاء", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.frame_member_loads), fontWeight = FontWeight.Bold)
                 Button(onClick = { showMemberDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text(stringResource(R.string.add))
                 }
             }
             if (memberLoads.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("لا توجد حمولات على الأعضاء", color = Color.Gray) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.frame_no_member_loads), color = Color.Gray) }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(memberLoads) { index, load ->
@@ -805,7 +805,7 @@ private fun ResultsTab(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.Analytics, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                 Spacer(Modifier.height(8.dp))
-                Text("اضغط على زر 'حل' لبدء التحليل", color = Color.Gray, fontSize = 14.sp)
+                Text(stringResource(R.string.frame_press_solve), color = Color.Gray, fontSize = 14.sp)
             }
         }
         return
@@ -813,10 +813,10 @@ private fun ResultsTab(
 
     var resultSubTab by remember { mutableIntStateOf(0) }
     val subTabs = buildList {
-        add("الإزاحات")
-        add("ردود الأفعال")
-        if (concreteResults.isNotEmpty()) add("تصميم خرسانة")
-        if (steelResults.isNotEmpty()) add("تصميم حديد")
+        add(stringResource(R.string.frame_result_displacements))
+        add(stringResource(R.string.frame_result_reactions))
+        if (concreteResults.isNotEmpty()) add(stringResource(R.string.frame_result_concrete_design))
+        if (steelResults.isNotEmpty()) add(stringResource(R.string.frame_result_steel_design))
     }
 
     TabRow(selectedTabIndex = resultSubTab) {
@@ -831,7 +831,7 @@ private fun ResultsTab(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5))) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("إزاحات العقد", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.frame_node_displacements), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (nr in result.nodeResults.filter { it.nodeId in (viewModel.nodes.value?.map { it.id } ?: emptyList()) }) {
                             Text(
@@ -849,7 +849,7 @@ private fun ResultsTab(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("ردود الأفعال", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.frame_reactions), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (nr in result.nodeResults.filter { abs(it.reactionFx) > 0.01 || abs(it.reactionFy) > 0.01 || abs(it.reactionMz) > 0.01 }) {
                             Text(
@@ -865,7 +865,7 @@ private fun ResultsTab(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("القوى الداخلية عند النهايات", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.frame_internal_forces), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (mf in result.memberEndForces) {
                             val mname = viewModel.members.value?.find { it.id == mf.memberId }?.name ?: "عضو ${mf.memberId}"

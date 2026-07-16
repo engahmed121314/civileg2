@@ -78,7 +78,14 @@ fun SteelDesignScreen(
     
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("المستودعات", "القطاعات", "اللحام", "المسامير", "قواعد معدنية", "وصلات")
+    val tabs = listOf(
+        stringResource(R.string.steel_tab_warehouses),
+        stringResource(R.string.steel_tab_sections),
+        stringResource(R.string.steel_tab_welds),
+        stringResource(R.string.steel_tab_bolts),
+        stringResource(R.string.steel_tab_baseplates),
+        stringResource(R.string.steel_tab_connections)
+    )
 
     // Handle error messages from ViewModel
     LaunchedEffect(errorMessage) {
@@ -93,12 +100,12 @@ fun SteelDesignScreen(
                 title = { Text(stringResource(R.string.screen_steel_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.resetResult() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "إعادة تعيين")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
                     }
                 }
             )
@@ -164,12 +171,12 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { SectionHeader("🏢 مدخلات تصميم المنشأ المعدني", R.drawable.ic_steel) }
+        item { SectionHeader(stringResource(R.string.steel_warehouse_input_header), R.drawable.ic_steel) }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("الكود المعتمد", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.steel_approved_code), fontWeight = FontWeight.Bold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         CalculatorEngine.DesignCode.entries.forEach { code ->
                             FilterChip(
@@ -185,22 +192,22 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SteelInputField(span, "البحر Span (m)", { span = it }, Modifier.weight(1f))
-                SteelInputField(length, "الطول (m)", { length = it }, Modifier.weight(1f))
+                SteelInputField(span, stringResource(R.string.steel_span_hint), { span = it }, Modifier.weight(1f))
+                SteelInputField(length, stringResource(R.string.steel_length_hint), { length = it }, Modifier.weight(1f))
             }
         }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SteelInputField(eaveHeight, "الارتفاع (m)", { eaveHeight = it }, Modifier.weight(1f))
-                SteelInputField(ridgeHeight, "ارتفاع القمة (m)", { ridgeHeight = it }, Modifier.weight(1f))
+                SteelInputField(eaveHeight, stringResource(R.string.steel_eave_height_hint), { eaveHeight = it }, Modifier.weight(1f))
+                SteelInputField(ridgeHeight, stringResource(R.string.steel_ridge_height_hint), { ridgeHeight = it }, Modifier.weight(1f))
             }
         }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SteelInputField(baySpacing, "الباكية Bay (m)", { baySpacing = it }, Modifier.weight(1f))
-                SteelInputField(floors, "الأدوار", { floors = it }, Modifier.weight(1f))
+                SteelInputField(baySpacing, stringResource(R.string.steel_bay_spacing_hint), { baySpacing = it }, Modifier.weight(1f))
+                SteelInputField(floors, stringResource(R.string.steel_floors_hint), { floors = it }, Modifier.weight(1f))
             }
         }
 
@@ -211,7 +218,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                 enabled = !isLoading
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
-                else Text("تحليل وتصميم المنشأ")
+                else Text(stringResource(R.string.steel_analyze_structure))
             }
         }
 
@@ -219,12 +226,12 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             item { WarehouseResultSummary(res) }
             
             item { 
-                Text("📐 تفاصيل المنظور الإنشائي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                Text(stringResource(R.string.steel_perspective_details), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                 SteelWarehouseVisualizer(currentInputs, res)
             }
 
             item {
-                Text("📊 تحليل الإجهادات والأحمال", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                Text(stringResource(R.string.steel_stress_analysis), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                 StructuralAnalysisVisualizer(currentInputs, res)
             }
 
@@ -233,10 +240,10 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                     onClick = {
                         viewModel.exportWarehouseProToPdf(
                             context = context,
-                            clientAr = "عميل افتراضي",
-                            clientEn = "Default Client",
-                            projAr = "مشروع مستودع معدني",
-                            projEn = "Steel Warehouse Project"
+                            clientAr = stringResource(R.string.steel_default_client),
+                            clientEn = stringResource(R.string.steel_default_client),
+                            projAr = stringResource(R.string.steel_warehouse_project),
+                            projEn = stringResource(R.string.steel_warehouse_project)
                         ) { /* handled by VM */ }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -244,19 +251,19 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                 ) {
                     Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("إصدار التقرير الفني الهندسي (Pro Drawings)")
+                    Text(stringResource(R.string.steel_export_pro_report))
                 }
             }
 
-            item { Text("📈 نتائج التحليل الحسابي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+            item { Text(stringResource(R.string.steel_analysis_results), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
             item { AnalysisDetailCard(res.mainFrame) }
 
-            item { Text("🏗️ تفاصيل القطاعات", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
-            item { SectionResultCard("الأعمدة الرئيسية", res.mainFrame.columnSection) }
-            item { SectionResultCard("الكمرات (Rafters)", res.mainFrame.rafterSection) }
+            item { Text(stringResource(R.string.steel_section_details), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+            item { SectionResultCard(stringResource(R.string.steel_main_columns), res.mainFrame.columnSection) }
+            item { SectionResultCard(stringResource(R.string.steel_rafters), res.mainFrame.rafterSection) }
             item { SecondaryMembersCard(res.secondaryMembers) }
             
-            item { Text("🔗 وصلات الربط (Connections)", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+            item { Text(stringResource(R.string.steel_connections), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
             items(res.connections) { conn ->
                 ConnectionDetailCard(conn)
             }
@@ -270,13 +277,13 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
 fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("💰 دراسة الجدوى الاقتصادية", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.steel_feasibility_study), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
-            SummaryLine("إجمالي وزن الحديد", "%.2f Ton".format(res.totalWeight), isBold = true)
-            SummaryLine("التكلفة التقديرية", "%,.0f EGP".format(res.estimatedTotalCost), isBold = true)
-            SummaryLine("تكلفة المتر المسطح", "%.0f EGP/m²".format(res.costPerM2))
-            SummaryLine("صافي الربح المتوقع", "%,.0f EGP".format(res.netProfit))
-            SummaryLine("العائد على الاستثمار (ROI)", "%.1f %%".format(res.roi), isBold = true)
+            SummaryLine(stringResource(R.string.steel_total_weight), "%.2f Ton".format(res.totalWeight), isBold = true)
+            SummaryLine(stringResource(R.string.steel_estimated_cost), "%,.0f EGP".format(res.estimatedTotalCost), isBold = true)
+            SummaryLine(stringResource(R.string.steel_cost_per_m2), "%.0f EGP/m²".format(res.costPerM2))
+            SummaryLine(stringResource(R.string.steel_net_profit), "%,.0f EGP".format(res.netProfit))
+            SummaryLine(stringResource(R.string.steel_roi), "%.1f %%".format(res.roi), isBold = true)
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             Text(res.resultsByCode, fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
         }
@@ -286,7 +293,7 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
 @Composable
 fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
     InteractiveDrawingScreen(
-        title = "تحليل الإطار الإنشائي",
+        title = stringResource(R.string.steel_frame_analysis),
         subtitle = "Frame Analysis & BMD"
     ) {
         ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFF0D1117))) {
@@ -539,12 +546,12 @@ private fun SummaryLine(label: String, value: String, isBold: Boolean = false) {
 fun AnalysisDetailCard(res: MainFrameResult) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("إجهادات التصميم القصوى", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            ResultRow("أقصى عزم (M_max)", "%.1f kN.m".format(res.maxMoment))
-            ResultRow("أقصى قص (V_max)", "%.1f kN".format(res.maxShear))
-            ResultRow("حمل محوري (P_max)", "%.1f kN".format(res.maxAxial))
-            ResultRow("الترخيم (Deflection)", "%.1f mm".format(res.maxDeflection))
-            Text(if (res.isSafe) "تحليل الأمان: آمن ✅" else "تحليل الأمان: تجاوز الحدود ❌", 
+            Text(stringResource(R.string.steel_max_design_stress), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            ResultRow(stringResource(R.string.steel_max_moment), "%.1f kN.m".format(res.maxMoment))
+            ResultRow(stringResource(R.string.steel_max_shear), "%.1f kN".format(res.maxShear))
+            ResultRow(stringResource(R.string.steel_max_axial), "%.1f kN".format(res.maxAxial))
+            ResultRow(stringResource(R.string.steel_deflection), "%.1f mm".format(res.maxDeflection))
+            Text(if (res.isSafe) stringResource(R.string.steel_safety_analysis_safe) else stringResource(R.string.steel_safety_analysis_unsafe), 
                 fontWeight = FontWeight.Bold, 
                 color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
                 modifier = Modifier.padding(top = 8.dp)
@@ -558,9 +565,14 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
     var viewMode by remember { mutableStateOf(0) } // 0: Front, 1: Plan, 2: Side, 3: 3D
 
     InteractiveDrawingScreen(
-        title = "المنظور الإنشائي",
+        title = stringResource(R.string.steel_structural_perspective),
         subtitle = "Structural Views",
-        viewModes = listOf("الواجهة الأمامية", "المسقط الأفقي", "الواجهة الجانبية", "رسم ثلاثي الأبعاد"),
+        viewModes = listOf(
+            stringResource(R.string.steel_front_view),
+            stringResource(R.string.steel_plan_view),
+            stringResource(R.string.steel_side_view),
+            stringResource(R.string.steel_3d_view)
+        ),
         selectedViewMode = viewMode,
         onViewModeChanged = { viewMode = it }
     ) {
@@ -1148,11 +1160,11 @@ fun SectionResultCard(title: String, section: SteelSectionType) {
 fun SecondaryMembersCard(res: SecondaryMembersResult) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("العناصر الثانوية والتربيط", fontWeight = FontWeight.Bold)
-            ResultRow("المدادات (Purlins)", res.purlinSection.displayName)
-            ResultRow("مدادات الجوانب (Girts)", res.girtSection.displayName)
-            ResultRow("البريسينج (Bracing)", res.bracingSection.displayName)
-            ResultRow("عدد المدادات الكلي", "${res.purlinCount}")
+            Text(stringResource(R.string.steel_secondary_members), fontWeight = FontWeight.Bold)
+            ResultRow(stringResource(R.string.steel_purlins), res.purlinSection.displayName)
+            ResultRow(stringResource(R.string.steel_girts), res.girtSection.displayName)
+            ResultRow(stringResource(R.string.steel_bracing), res.bracingSection.displayName)
+            ResultRow(stringResource(R.string.steel_total_purlin_count), "${res.purlinCount}")
         }
     }
 }
@@ -1169,7 +1181,7 @@ fun ConnectionDetailCard(conn: SteelConnectionDetail) {
                 Text(conn.type.displayName, fontSize = 12.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(if (conn.isSafe) "آمن ✅" else "فشل ❌", color = if (conn.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold)
+                Text(if (conn.isSafe) stringResource(R.string.steel_safe) else stringResource(R.string.steel_fail), color = if (conn.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold)
                 Text("U.R: %.2f".format(conn.demand / conn.capacity), fontSize = 12.sp)
             }
         }
@@ -1183,7 +1195,7 @@ fun RecommendationsCard(recs: List<String>) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFBC02D))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("توصيات التصميم والنصائح", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.steel_recommendations), fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
             recs.forEach { rec ->
@@ -1222,13 +1234,13 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { SectionHeader("📐 قاموس القطاعات والتحليل الذكي", R.drawable.ic_steel) }
+        item { SectionHeader(stringResource(R.string.steel_section_dictionary), R.drawable.ic_steel) }
 
         // Steel Code Selector
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("كود التصميم المعدني", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.steel_design_code_metal), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     ExposedDropdownMenuBox(
                         expanded = expandedSteelCode,
@@ -1267,7 +1279,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     searchQuery = it
                     viewModel.searchSections(it)
                 },
-                label = { Text("ابحث برقم القطاع (مثال: 300)") },
+                label = { Text(stringResource(R.string.steel_search_hint)) },
                 placeholder = { Text("IPE 300, HEB 240...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
@@ -1285,7 +1297,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         // Show Search Results if searching
         if (searchQuery.isNotEmpty()) {
             item {
-                Text("نتائج البحث:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.steel_search_results), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     searchResults.take(8).forEach { section ->
                         Surface(
@@ -1318,7 +1330,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("فئة القطاع", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(stringResource(R.string.steel_section_category), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     ExposedDropdownMenuBox(
                         expanded = expandedCategory,
                         onExpandedChange = { expandedCategory = !expandedCategory }
@@ -1351,13 +1363,13 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 }
                 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("القطاع المحدد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(stringResource(R.string.steel_selected_section), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     ExposedDropdownMenuBox(
                         expanded = expandedSection,
                         onExpandedChange = { expandedSection = !expandedSection }
                     ) {
                         OutlinedTextField(
-                            value = selectedSection?.sectionName ?: "اختر قطاعاً",
+                            value = selectedSection?.sectionName ?: stringResource(R.string.steel_select_section),
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
@@ -1394,20 +1406,20 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("الخصائص الهندسية للقطاع:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+                            Text(stringResource(R.string.steel_section_properties), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
                         }
                         Spacer(Modifier.height(12.dp))
                         
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {
-                                PropertyLine("المساحة (A)", "%.2f cm²".format(section.getArea()/100.0))
-                                PropertyLine("الوزن (W)", "%.1f kg/m".format(section.weight))
-                                PropertyLine("الارتفاع (h)", "${section.depth} mm")
+                                PropertyLine(stringResource(R.string.steel_area), "%.2f cm²".format(section.getArea()/100.0))
+                                PropertyLine(stringResource(R.string.steel_weight_per_m), "%.1f kg/m".format(section.weight))
+                                PropertyLine(stringResource(R.string.steel_height), "${section.depth} mm")
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                PropertyLine("الشفة (bf)", "${section.width} mm")
-                                PropertyLine("سمك الشفة (tf)", "${section.flangeThickness} mm")
-                                PropertyLine("سمك العصب (tw)", "${section.webThickness} mm")
+                                PropertyLine(stringResource(R.string.steel_flange), "${section.width} mm")
+                                PropertyLine(stringResource(R.string.steel_flange_thickness), "${section.flangeThickness} mm")
+                                PropertyLine(stringResource(R.string.steel_web_thickness), "${section.webThickness} mm")
                             }
                         }
                         
@@ -1430,7 +1442,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         item {
             Card {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("مدخلات التصميم", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.steel_design_inputs), fontWeight = FontWeight.Bold)
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         SteelMemberType.entries.forEach { type ->
@@ -1451,7 +1463,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                         SteelInputField(length, "L (m)", { length = it }, Modifier.weight(1f))
                     }
 
-                    Text("كود التصميم", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(stringResource(R.string.design_code_label), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         CalculatorEngine.DesignCode.entries.forEach { code ->
                             FilterChip(
@@ -1487,7 +1499,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 enabled = !isLoading && selectedSection != null
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("تحليل وتصميم القطاع")
+                else Text(stringResource(R.string.steel_analyze_section))
             }
         }
 
@@ -1515,10 +1527,10 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("معامل الاستغلال", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(stringResource(R.string.steel_utilization_ratio), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    if (res.isSafe) "القطاع آمن ✅" else "القطاع غير آمن ❌",
+                                    if (res.isSafe) stringResource(R.string.steel_section_safe) else stringResource(R.string.steel_section_unsafe),
                                     fontWeight = FontWeight.Bold,
                                     color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
                                     fontSize = 13.sp
@@ -1628,16 +1640,16 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 val color = if (res.utilizationRatio in 0.7..0.95) Color(0xFF2E7D32) 
                            else if (res.utilizationRatio > 1.0) Color.Red 
                            else Color(0xFFF57C00)
-                val status = if (res.utilizationRatio in 0.7..0.95) "مثالي ومقتصد" 
-                            else if (res.utilizationRatio > 1.0) "غير آمن — يحتاج قطاع أكبر" 
-                            else "تصميم محافظ — هدر في الحديد"
+                val status = if (res.utilizationRatio in 0.7..0.95) stringResource(R.string.steel_ideal_economical) 
+                            else if (res.utilizationRatio > 1.0) stringResource(R.string.steel_unsafe_need_larger) 
+                            else stringResource(R.string.steel_conservative_design)
                             
                 Card(colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)), border = BorderStroke(1.dp, color)) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(if (res.utilizationRatio <= 1.0) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = color)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("مؤشر التوفير والأمان", fontWeight = FontWeight.Bold, color = color)
+                            Text(stringResource(R.string.steel_economy_indicator), fontWeight = FontWeight.Bold, color = color)
                             Text(status, fontSize = 13.sp)
                         }
                     }
@@ -1657,17 +1669,17 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
     var capacity by remember { mutableDoubleStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔥 تصميم وصلات اللحام الاحترافي", R.drawable.ic_steel) }
+        item { SectionHeader(stringResource(R.string.steel_weld_design_header), R.drawable.ic_steel) }
         
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SteelInputField(size, "مقاس اللحام s (mm)", { size = it }, Modifier.weight(1f))
-                SteelInputField(length, "طول اللحام L (mm)", { length = it }, Modifier.weight(1f))
+                SteelInputField(size, stringResource(R.string.steel_weld_size_hint), { size = it }, Modifier.weight(1f))
+                SteelInputField(length, stringResource(R.string.steel_weld_length_hint), { length = it }, Modifier.weight(1f))
             }
         }
         
         item {
-            Text("نوع الإلكترود (Electrode)", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.steel_electrode_type), fontWeight = FontWeight.Bold)
             FlowRow {
                 ElectrodeType.entries.forEach { type ->
                     FilterChip(
@@ -1699,7 +1711,7 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
                 val l = length.toDoubleOrNull() ?: 200.0
                 capacity = viewModel.calculateWeldCapacity(s, l, selectedElectrode, selectedCode)
             }, modifier = Modifier.fillMaxWidth()) {
-                Text("حساب مقاومة القص (Design Rn)")
+                Text(stringResource(R.string.steel_calc_shear_rn))
             }
         }
 
@@ -1707,7 +1719,7 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("مقاومة اللحام التصميمية (Design Capacity):", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.steel_weld_capacity), fontWeight = FontWeight.Bold)
                         Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(4.dp))
                         Text("مساحة الحلق الفعالة: ${"%.1f".format(0.707 * (size.toDoubleOrNull() ?: 0.0) * (length.toDoubleOrNull() ?: 0.0))} mm²", fontSize = 12.sp)
@@ -1728,17 +1740,17 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
     var capacity by remember { mutableDoubleStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔩 تصميم وصلات المسامير الاحترافي", R.drawable.ic_steel) }
+        item { SectionHeader(stringResource(R.string.steel_bolt_design_header), R.drawable.ic_steel) }
         
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SteelInputField(diameter, "قطر المسمار M (mm)", { diameter = it }, Modifier.weight(1f))
-                SteelInputField(numBolts, "عدد المسامير", { numBolts = it }, Modifier.weight(1f))
+                SteelInputField(diameter, stringResource(R.string.steel_bolt_diameter_hint), { diameter = it }, Modifier.weight(1f))
+                SteelInputField(numBolts, stringResource(R.string.steel_bolt_count_hint), { numBolts = it }, Modifier.weight(1f))
             }
         }
 
         item {
-            Text("رتبة المسمار (Grade)", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.steel_bolt_grade), fontWeight = FontWeight.Bold)
             FlowRow {
                 for (grade in BoltGrade.entries) {
                     FilterChip(
@@ -1770,7 +1782,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
                 val n = numBolts.toIntOrNull() ?: 1
                 capacity = viewModel.calculateBoltCapacity(d, selectedGrade, n, selectedCode)
             }, modifier = Modifier.fillMaxWidth()) {
-                Text("حساب مقاومة القص للمجموعة")
+                Text(stringResource(R.string.steel_calc_bolt_shear))
             }
         }
 
@@ -1778,7 +1790,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("مقاومة القص الكلية (Total Rn):", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.steel_total_shear_rn), fontWeight = FontWeight.Bold)
                         Text("${"%.2f".format(capacity)} kN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.secondary)
                         Spacer(Modifier.height(4.dp))
                         Text("مقاومة المسمار الواحد: ${"%.1f".format(capacity / (numBolts.toIntOrNull() ?: 1))} kN", fontSize = 12.sp)
@@ -1800,7 +1812,7 @@ fun SteelResultCard(res: SteelMemberResult) {
             ResultRow("سعة الضغط", "%.1f kN".format(res.axialCapacity))
             ResultRow("سعة الانحناء", "%.1f kN.m".format(res.flexuralCapacity))
             ResultRow("نسبة الاستخدام", "%.2f".format(res.utilizationRatio))
-            Text(if (res.isSafe) "آمن ✅" else "غير آمن ❌", fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+            Text(if (res.isSafe) stringResource(R.string.steel_safe) else stringResource(R.string.steel_fail), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
         }
     }
 }
@@ -1848,7 +1860,7 @@ fun SteelSectionDrawing(section: SteelSectionType) {
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("توزيع الإجهادات المرن", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text(stringResource(R.string.steel_elastic_stress_dist), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
         }
     }
 }
@@ -1870,18 +1882,18 @@ fun BasePlateDesignTab() {
     val boltGradeOptions = com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign.Companion.BoltGrade.entries.map { it.getGradeName() }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔧 تصميم القواعد المعدنية", R.drawable.ic_footing) }
+        item { SectionHeader(stringResource(R.string.steel_baseplate_header), R.drawable.ic_footing) }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("بيانات العمود", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.steel_column_data), fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(colSection, "القطاع (مثال: HEB 300)", { colSection = it }, Modifier.weight(1f))
+                        SteelInputField(colSection, stringResource(R.string.steel_section_hint), { colSection = it }, Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(bf, "عرض الشفة bf (mm)", { bf = it }, Modifier.weight(1f))
-                        SteelInputField(dc, "عمق العمود dc (mm)", { dc = it }, Modifier.weight(1f))
+                        SteelInputField(bf, stringResource(R.string.steel_flange_width_hint), { bf = it }, Modifier.weight(1f))
+                        SteelInputField(dc, stringResource(R.string.steel_column_depth_hint), { dc = it }, Modifier.weight(1f))
                     }
                 }
             }
@@ -1890,10 +1902,10 @@ fun BasePlateDesignTab() {
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("الأحمال المؤثرة", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.steel_applied_loads), fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(axialLoad, "القوة المحورية P (kN)", { axialLoad = it }, Modifier.weight(1f))
-                        SteelInputField(momentM, "العزم M (kN.m) — اختياري", { momentM = it }, Modifier.weight(1f))
+                        SteelInputField(axialLoad, stringResource(R.string.steel_axial_force_hint), { axialLoad = it }, Modifier.weight(1f))
+                        SteelInputField(momentM, stringResource(R.string.steel_moment_hint), { momentM = it }, Modifier.weight(1f))
                     }
                 }
             }
@@ -1902,13 +1914,13 @@ fun BasePlateDesignTab() {
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("خواص المواد", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.material_properties), fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(fpc, "مقاومة الخرسانة f'c (MPa)", { fpc = it }, Modifier.weight(1f))
-                        SteelInputField(fy, "إجهاد الخضوع Fy (MPa)", { fy = it }, Modifier.weight(1f))
+                        SteelInputField(fpc, stringResource(R.string.steel_fcu_mpa), { fpc = it }, Modifier.weight(1f))
+                        SteelInputField(fy, stringResource(R.string.steel_fy_mpa), { fy = it }, Modifier.weight(1f))
                     }
 
-                    Text("درجة براغي الارتكاز", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.steel_anchor_bolt_grade), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     ExposedDropdownMenuBox(
                         expanded = expandedBoltGrade,
                         onExpandedChange = { expandedBoltGrade = !expandedBoltGrade }
@@ -1958,7 +1970,7 @@ fun BasePlateDesignTab() {
             }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("تصميم القاعدة المعدنية")
+                Text(stringResource(R.string.steel_design_baseplate))
             }
         }
 
@@ -1973,7 +1985,7 @@ fun BasePlateDesignTab() {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (res.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = urColor)
                             Spacer(Modifier.width(8.dp))
-                            Text(if (res.isSafe) "التصميم آمن ✅" else "التصميم غير آمن ❌", fontWeight = FontWeight.Bold, color = urColor, fontSize = 16.sp)
+                            Text(if (res.isSafe) stringResource(R.string.steel_design_safe) else stringResource(R.string.steel_design_unsafe_full), fontWeight = FontWeight.Bold, color = urColor, fontSize = 16.sp)
                         }
                         Spacer(Modifier.height(12.dp))
                         ResultRow("أبعاد اللوح (B × N)", "%.0f × %.0f mm".format(res.plateWidth, res.plateLength))

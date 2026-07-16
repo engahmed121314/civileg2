@@ -60,6 +60,10 @@ fun SlabScreen(
     var dropPanelThickness by remember { mutableStateOf("0.0") }
     var columnSize by remember { mutableStateOf("400") }
 
+    var ribWidth by remember { mutableStateOf("100") }
+    var ribSpacing by remember { mutableStateOf("500") }
+    var ribSpacingY by remember { mutableStateOf("500") }
+
     var selectedType by remember { mutableStateOf(CalculatorEngine.SlabType.SOLID) }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
     var expandedType by remember { mutableStateOf(false) }
@@ -210,6 +214,33 @@ fun SlabScreen(
                 }
             }
 
+            if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK) {
+                item {
+                    SectionHeader("📦 أبعاد الهردي", R.drawable.ic_slab)
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SlabInputField(ribWidth, "عرض الضلع (mm)", { ribWidth = it }, Modifier.weight(1f))
+                        SlabInputField(ribSpacing, "مسافة بين الأضلاع (mm)", { ribSpacing = it }, Modifier.weight(1f))
+                    }
+                }
+            }
+
+            if (selectedType == CalculatorEngine.SlabType.WAFFLE) {
+                item {
+                    SectionHeader("📦 أبعاد الوافل (Waffle)", R.drawable.ic_slab)
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SlabInputField(ribWidth, "عرض الضلع (mm)", { ribWidth = it }, Modifier.weight(1f))
+                        SlabInputField(ribSpacing, "مسافة X (mm)", { ribSpacing = it }, Modifier.weight(1f))
+                    }
+                }
+                item {
+                    SlabInputField(ribSpacingY, "مسافة Y (mm)", { ribSpacingY = it }, Modifier.fillMaxWidth())
+                }
+            }
+
             item {
                 Button(
                     onClick = {
@@ -270,8 +301,8 @@ fun SlabScreen(
                                 distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
                                 cover = 25.0,
                                 dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                ribWidth = 0.0,
-                                ribSpacing = 0.0,
+                                ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
+                                ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

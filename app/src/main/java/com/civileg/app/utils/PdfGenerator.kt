@@ -34,7 +34,7 @@ object PdfGenerator {
     private val SUCCESS_COLOR = DeviceRgb(46, 125, 50)
     private val ERROR_COLOR = DeviceRgb(198, 40, 40)
     
-    // ... (rest of the file until generateBOQReport)
+    private val helveticaFont: PdfFont by lazy { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
 
     private fun getArabicFont(context: Context): PdfFont {
         return ArabicFontProvider.getArabicPdfFont(context)
@@ -44,12 +44,43 @@ object PdfGenerator {
         return ArabicFontProvider.containsArabic(text)
     }
 
+    private fun splitBilingualText(text: String): List<Pair<String, Boolean>> {
+        val segments = mutableListOf<Pair<String, Boolean>>()
+        var currentSeg = StringBuilder()
+        var currentIsArabic = containsArabic(text.firstOrNull()?.toString() ?: "")
+
+        for (char in text) {
+            val charIsArabic = containsArabic(char.toString())
+            if (charIsArabic != currentIsArabic && currentSeg.isNotEmpty()) {
+                segments.add(Pair(currentSeg.toString(), currentIsArabic))
+                currentSeg = StringBuilder()
+                currentIsArabic = charIsArabic
+            }
+            currentSeg.append(char)
+        }
+        if (currentSeg.isNotEmpty()) {
+            segments.add(Pair(currentSeg.toString(), currentIsArabic))
+        }
+        return segments
+    }
+
     private fun createStyledParagraph(text: String, font: PdfFont?, fontSize: Float = 12f, isBold: Boolean = false): Paragraph {
-        val p = Paragraph(text).setFontSize(fontSize)
-        if (isBold) p.setBold()
-        if (font != null && containsArabic(text)) {
-            p.setFont(font)
+        val p = Paragraph().setFontSize(fontSize)
+
+        if (containsArabic(text)) {
+            // Split text into Arabic and English segments for bilingual support
+            val segments = splitBilingualText(text)
+            val arabicBold = font != null // use the passed font as bold font (it's already bold from caller)
+            for ((segText, isArabicSeg) in segments) {
+                val segFont = if (isArabicSeg) font else helveticaFont
+                val run = Text(segText)
+                if (segFont != null) run.setFont(segFont) else run.setFont(helveticaFont)
+                if (isArabicSeg) run.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                p.add(run)
+            }
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        } else {
+            p.add(Text(text).setFont(helveticaFont))
         }
         return p
     }

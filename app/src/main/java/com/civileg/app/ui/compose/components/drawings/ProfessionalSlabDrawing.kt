@@ -165,7 +165,7 @@ fun ProfessionalSlabDrawing(
         drawContext.canvas.nativeCanvas.restore()
 
         // ── Hordi / Waffle ribs & blocks ───────────────────────────
-        if (slabType == "Hordi" || slabType == "Waffle") {
+        if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
             val rs = if (ribSpacing > 0) ribSpacing else 500.0
             val rw = if (ribWidth > 0) ribWidth else 100.0
             val ribStepPx = (rs * scale).toFloat()
@@ -180,7 +180,7 @@ fun ProfessionalSlabDrawing(
                 )
                 rx += ribStepPx
             }
-            if (slabType == "Waffle") {
+            if (slabType.contains("Waffle") || slabType.contains("وافل")) {
                 var ry = slabTop + ribStepPx
                 while (ry < slabBottom) {
                     drawRect(
@@ -208,7 +208,7 @@ fun ProfessionalSlabDrawing(
         }
 
         // ── Flat Plate: column strip / middle strip / drop panel ──
-        if (slabType == "FlatPlate") {
+        if (slabType.contains("Flat") || slabType.contains("مسطحة")) {
             val stripW = drawSpanY / 6f
             // Column strips (top/bottom)
             drawRect(
@@ -326,12 +326,12 @@ fun ProfessionalSlabDrawing(
                     drawRect(color = columnFill, topLeft = it, size = Size(colSize, colSize))
                 }
                 // Centre columns for TwoWay/FlatPlate
-                if (slabType == "TwoWay" || slabType == "FlatPlate") {
+                if (slabType == "TwoWay" || slabType.contains("Flat") || slabType.contains("مسطحة")) {
                     val cx = slabLeft + drawSpanX / 2f - colSize / 2f
                     val cy = slabTop + drawSpanY / 2f - colSize / 2f
                     drawRect(color = columnFill, topLeft = Offset(cx, cy), size = Size(colSize, colSize))
                     // Punching shear perimeter for FlatPlate
-                    if (slabType == "FlatPlate") {
+                    if (slabType.contains("Flat") || slabType.contains("مسطحة")) {
                         val d = slabThickness - cover
                         val dPx = (d * scale).toFloat().coerceAtLeast(colSize * 0.6f)
                         val psSize = colSize + dPx
@@ -389,7 +389,7 @@ fun ProfessionalSlabDrawing(
         val sSlabBottom = sSlabTop + thickPx
 
         // Hordi/Waffle: show rib profile
-        if (slabType == "Hordi" || slabType == "Waffle") {
+        if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
             val toppingH = (slabThickness * 0.3 * sectionScale).toFloat().coerceAtLeast(10f)
             val ribH = thickPx - toppingH
             val ribWPx = (ribWidth * sectionScale).toFloat().coerceAtLeast(6f)
@@ -591,7 +591,7 @@ fun ProfessionalSlabDrawing(
             rows.add(listOf("\u2462", "Top (support)", mainRebarDia.toInt().toString(), mainRebarSpacing.toInt().toString(), topBarLength.toInt().toString()))
         }
         // Hordi/Waffle: rib bars
-        if (slabType == "Hordi" || slabType == "Waffle") {
+        if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
             val ribBarLen = if (slabThickness > 0) (slabThickness * 0.7).toInt().toString() else "0"
             rows.add(listOf("\u2463", "Rib bars", mainRebarDia.toInt().toString(), (ribSpacing).toInt().toString(), ribBarLen))
         }
