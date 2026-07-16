@@ -236,14 +236,16 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             }
 
             item {
+                val clientStr = stringResource(R.string.steel_default_client)
+                val projStr = stringResource(R.string.steel_warehouse_project)
                 Button(
                     onClick = {
                         viewModel.exportWarehouseProToPdf(
                             context = context,
-                            clientAr = stringResource(R.string.steel_default_client),
-                            clientEn = stringResource(R.string.steel_default_client),
-                            projAr = stringResource(R.string.steel_warehouse_project),
-                            projEn = stringResource(R.string.steel_warehouse_project)
+                            clientAr = clientStr,
+                            clientEn = clientStr,
+                            projAr = projStr,
+                            projEn = projStr
                         ) { /* handled by VM */ }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -972,7 +974,10 @@ data class WarehouseCanvasLabels(
     val costPerM2: String = "Cost/m²",
     val roi: String = "ROI",
     val tons: String = "tons",
-    val currency: String = "EGP"
+    val currency: String = "EGP",
+    val span: String = "Span",
+    val length: String = "Length",
+    val totalLength: String = "Total Length"
 )
 
 private fun drawCanvasElevation(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float, result: SteelWarehouseAnalysisResult? = null) {
