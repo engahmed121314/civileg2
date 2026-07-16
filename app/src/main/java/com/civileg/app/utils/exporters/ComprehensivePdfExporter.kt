@@ -9,7 +9,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.LocaleHelper
 import com.itextpdf.io.font.PdfEncodings
 import com.itextpdf.io.font.constants.StandardFonts
-import com.itextpdf.io.font.PdfFontFactory
+import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb

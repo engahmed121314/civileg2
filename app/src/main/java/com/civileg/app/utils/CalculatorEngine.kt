@@ -1477,7 +1477,7 @@ class CalculatorEngine @Inject constructor(
         val suggestions = mutableListOf<String>()
         val H = height
         val isCircular = type in listOf(TankType.CIRCULAR_GROUND, TankType.CIRCULAR_ELEVATED, TankType.CIRCULAR_UNDERGROUND)
-        val isUnderground = type in listOf(TankType.RECTANGULAR_UNDERGROUND, TankType.CIRCULAR_UNDERGROUND)
+        val isUnderground = type in listOf(TankType.UNDERGROUND, TankType.CIRCULAR_UNDERGROUND)
 
         // Dimensions from capacity
         val area = capacity / H
