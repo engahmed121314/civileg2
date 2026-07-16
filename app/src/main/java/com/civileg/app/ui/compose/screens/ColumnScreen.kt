@@ -61,7 +61,8 @@ fun ColumnScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.column_default_name)) }
+    val columnDefaultName = stringResource(R.string.column_default_name)
+    var designName by remember { mutableStateOf(columnDefaultName) }
 
     Scaffold(
         topBar = {

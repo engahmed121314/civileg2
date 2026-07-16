@@ -201,16 +201,17 @@ fun CalculatorScreen(
                     }
                     CalcButton("0", Modifier.weight(1f)) { appendNumber("0", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton(".", Modifier.weight(1f)) { expression += "."; isNewCalculation = false }
+                    val calcErrorMsg = stringResource(R.string.error)
                     CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
                         try {
                             val evalResult = evaluateExpression(expression)
-                            val formatted = formatResult(evalResult)
+                            val formatted = formatResult(evalResult, calcErrorMsg)
                             history = history + "$expression = $formatted"
                             result = formatted
                             expression = formatted
                             isNewCalculation = true
                         } catch (e: Exception) {
-                            result = stringResource(R.string.error)
+                            result = calcErrorMsg
                         }
                     }
                 }
@@ -455,8 +456,8 @@ private class ExprParser(private val tokens: List<Token>) {
     }
 }
 
-private fun formatResult(value: Double): String {
-    if (value.isNaN() || value.isInfinite()) return stringResource(R.string.error)
+private fun formatResult(value: Double, errorString: String): String {
+    if (value.isNaN() || value.isInfinite()) return errorString
     return if (value == value.toLong().toDouble()) {
         value.toLong().toString()
     } else {

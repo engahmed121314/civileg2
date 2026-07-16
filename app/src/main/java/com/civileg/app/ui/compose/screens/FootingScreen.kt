@@ -47,7 +47,8 @@ fun FootingScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.footing_default_name)) }
+    val footingDefaultName = stringResource(R.string.footing_default_name)
+    var designName by remember { mutableStateOf(footingDefaultName) }
     
     var selectedType by remember { mutableStateOf(CalculatorEngine.FootingType.ISOLATED) }
     var expandedType by remember { mutableStateOf(false) }

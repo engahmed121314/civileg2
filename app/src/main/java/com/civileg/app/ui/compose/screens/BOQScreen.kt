@@ -241,13 +241,13 @@ private fun exportProjectBOQPdf(context: Context, name: String, designs: List<co
     try {
         val file = PdfGenerator.generateBOQReport(context, name, designs.sumOf { it.totalCost }, designs.sumOf { it.concreteVolume }, designs.sumOf { it.steelWeight }, designs.map { it.name to it.totalCost })
         sharePdf(context, file)
-    } catch (e: Exception) { Toast.makeText(context, stringResource(R.string.boq_export_failed_title), Toast.LENGTH_SHORT).show() }
+    } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.boq_export_failed_title), Toast.LENGTH_SHORT).show() }
 }
 
 private fun sharePdf(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
     val intent = Intent(Intent.ACTION_VIEW).apply { setDataAndType(uri, "application/pdf"); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-    context.startActivity(Intent.createChooser(intent, stringResource(R.string.boq_open_report)))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.boq_open_report)))
 }
 
 @Composable

@@ -55,7 +55,8 @@ fun BeamScreen(
     // ... existing state vars ...
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.beam_default_name)) }
+    val beamDefaultName = stringResource(R.string.beam_default_name)
+    var designName by remember { mutableStateOf(beamDefaultName) }
     
     var width by remember { mutableStateOf("250") }
     var height by remember { mutableStateOf("600") }
@@ -263,11 +264,12 @@ fun BeamScreen(
 
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val beamPdfErrorMsg = stringResource(R.string.beam_pdf_error)
                         Button(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
-                                        pdfError = stringResource(R.string.beam_pdf_error)
+                                        pdfError = beamPdfErrorMsg
                                     } else {
                                         pdfError = null
                                     }

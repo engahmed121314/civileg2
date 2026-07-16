@@ -195,7 +195,8 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(InventoryType.RAW_MATERIAL) }
     var quantity by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf(stringResource(R.string.inventory_bag_ton)) }
+    val defaultUnit = stringResource(R.string.inventory_bag_ton)
+    var unit by remember { mutableStateOf(defaultUnit) }
     var alertQty by remember { mutableStateOf("10") }
     var expanded by remember { mutableStateOf(false) }
 
@@ -247,6 +248,7 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
     )
 }
 
+@Composable
 fun getInventoryTypeNameAr(type: InventoryType): String = when (type) {
     InventoryType.EQUIPMENT -> stringResource(R.string.inventory_category_heavy)
     InventoryType.TOOLS -> stringResource(R.string.inventory_category_tools)

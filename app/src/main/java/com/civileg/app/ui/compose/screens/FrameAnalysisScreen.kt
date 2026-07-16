@@ -96,6 +96,8 @@ fun FrameAnalysisScreen(
                     }
                     // PDF Export
                     if (result?.hasResults == true) {
+                        val frameShareReport = stringResource(R.string.frame_share_report)
+                        val framePdfErrorMsg = stringResource(R.string.frame_pdf_error)
                         IconButton(onClick = {
                             val inputs = viewModel.getStoredInputs()
                             try {
@@ -112,9 +114,9 @@ fun FrameAnalysisScreen(
                                     putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(intent, stringResource(R.string.frame_share_report)))
+                                context.startActivity(Intent.createChooser(intent, frameShareReport))
                             } catch (e: Exception) {
-                                Toast.makeText(context, stringResource(R.string.frame_pdf_error, e.message ?: ""), Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
                             }
                         }) {
                             Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)

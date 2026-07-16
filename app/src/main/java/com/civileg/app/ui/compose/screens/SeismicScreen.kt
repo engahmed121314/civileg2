@@ -51,9 +51,9 @@ import kotlin.math.pow
 
 // ─── Soil Type Display Names per Code ───────────────────────────────────────
 private enum class SeismicCodeOption(val displayName: String, val designCode: DesignCode) {
-    ECP_201(stringResource(R.string.seismic_code_ecp), DesignCode.ECP),
+    ECP_201("ECP 201 - Egyptian Code", DesignCode.ECP),
     ASCE_7("ASCE 7-16 / ACI 318", DesignCode.ACI),
-    SBC_301(stringResource(R.string.seismic_code_sbc), DesignCode.SBC)
+    SBC_301("SBC 301 - Saudi Code", DesignCode.SBC)
 }
 
 private fun getSoilTypesForCode(code: SeismicCodeOption): List<SoilType> = SoilType.entries
@@ -99,7 +99,8 @@ fun SeismicScreen(
     var isCalculating by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.seismic_default_name)) }
+    val seismicDefaultName = stringResource(R.string.seismic_default_name)
+    var designName by remember { mutableStateOf(seismicDefaultName) }
     var showSuccessMsg by remember { mutableStateOf(false) }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -174,9 +175,10 @@ fun SeismicScreen(
 
     // ── Snackbar ────────────────────────────────────────────────────────────
     val snackbarHostState = remember { SnackbarHostState() }
+    val savedSuccessMsg = stringResource(R.string.seismic_saved_success)
     LaunchedEffect(showSuccessMsg) {
         if (showSuccessMsg) {
-            snackbarHostState.showSnackbar(stringResource(R.string.seismic_saved_success))
+            snackbarHostState.showSnackbar(savedSuccessMsg)
             showSuccessMsg = false
         }
     }

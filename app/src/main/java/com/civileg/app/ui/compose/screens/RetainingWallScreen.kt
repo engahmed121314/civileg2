@@ -50,7 +50,8 @@ fun RetainingWallScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf(stringResource(R.string.rw_default_name)) }
+    val rwDefaultName = stringResource(R.string.rw_default_name)
+    var designName by remember { mutableStateOf(rwDefaultName) }
 
     var height by remember { mutableStateOf("4.0") }
     var soilDensity by remember { mutableStateOf("18.0") }
