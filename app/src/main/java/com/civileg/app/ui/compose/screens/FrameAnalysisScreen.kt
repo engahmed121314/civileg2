@@ -175,16 +175,18 @@ fun FrameAnalysisScreen(
                 }
             }
 
-            // Tab Content — weight(1f) ensures drawing fills remaining space
-            when (selectedTab) {
-                0 -> DrawingTab(
-                    modifier = Modifier.weight(1f),
-                    nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel
-                )
-                1 -> NodesTab(nodes, members, viewModel)
-                2 -> MembersTab(nodes, members, settings, viewModel)
-                3 -> LoadsTab(nodes, members, nodalLoads, memberLoads, viewModel)
-                4 -> ResultsTab(result, concreteResults, steelResults, selectedMemberId, viewModel)
+            // Tab Content
+            Box(modifier = Modifier.weight(1f)) {
+                when (selectedTab) {
+                    0 -> DrawingTab(
+                        modifier = Modifier.fillMaxSize(),
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel
+                    )
+                    1 -> NodesTab(nodes, members, viewModel)
+                    2 -> MembersTab(nodes, members, settings, viewModel)
+                    3 -> LoadsTab(nodes, members, nodalLoads, memberLoads, viewModel)
+                    4 -> ResultsTab(result, concreteResults, steelResults, selectedMemberId, viewModel)
+                }
             }
         }
     }
