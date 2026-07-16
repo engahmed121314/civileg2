@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,8 +100,8 @@ private val FooterDarkBg          = Color(0xFF161622)
 @Immutable
 data class DesignModuleItem(
     val screen: AppScreen,
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val supportedCodes: List<String>,
     val accentColor: Color,
     val icon: ImageVector
@@ -108,8 +109,8 @@ data class DesignModuleItem(
 
 @Immutable
 data class QuickTool(
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val icon: ImageVector,
     val bgColor: Color,
     val accentColor: Color,
@@ -126,24 +127,24 @@ data class RecentProject(
 )
 
 private val enhancedDesignModules = listOf(
-    DesignModuleItem(AppScreen.BeamDesign,     "الكمرات",           "تصميم الكمرات الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentBeam,   Icons.Default.AccountBalance),
-    DesignModuleItem(AppScreen.ColumnDesign,    "الأعمدة",           "تصميم الأعمدة الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
-    DesignModuleItem(AppScreen.SlabDesign,      "البلاطات",          "البلاطات المصمتة والهوردية", listOf("ECP", "ACI"),        CardAccentSlab,    Icons.Default.ViewWeek),
-    DesignModuleItem(AppScreen.FootingDesign,   "القواعد",           "تصميم القواعد المنفصلة",    listOf("ECP", "ACI"),        CardAccentFooting, Icons.Default.Layers),
-    DesignModuleItem(AppScreen.TankDesign,      "الخزانات",          "خزانات المياه (علوي/أرضي)", listOf("ECP", "ACI"),        CardAccentTank,    Icons.Default.WaterDrop),
-    DesignModuleItem(AppScreen.RetainingWall,   "حوائط السند",       "حوائط السند واستقرار التربة", listOf("ECP", "ACI"),     CardAccentWall,    Icons.Default.SensorDoor),
-    DesignModuleItem(AppScreen.StairDesign,     "السلالم",           "تصميم السلالم الخرسانية",   listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
-    DesignModuleItem(AppScreen.SteelDesign,     "المنشآت المعدنية",  "تصميم الوصلات والأعضاء",     listOf("AISC", "ECP"),      CardAccentSteel,   Icons.Default.Build),
-    DesignModuleItem(AppScreen.SeismicAnalysis, "الزلازل",           "قوى الزلازل والرياح",       listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning),
-    DesignModuleItem(AppScreen.FrameAnalysis,  "تحليل الإطارات",   "تحليل وتصميم الهياكل ثنائية الأبعاد", listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree)
+    DesignModuleItem(AppScreen.BeamDesign,     R.string.home_beam,     R.string.home_beam_sub,     listOf("ECP", "ACI", "SBC"), CardAccentBeam,   Icons.Default.AccountBalance),
+    DesignModuleItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
+    DesignModuleItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI"),        CardAccentSlab,    Icons.Default.ViewWeek),
+    DesignModuleItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI"),        CardAccentFooting, Icons.Default.Layers),
+    DesignModuleItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.home_tank_sub,     listOf("ECP", "ACI"),        CardAccentTank,    Icons.Default.WaterDrop),
+    DesignModuleItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI"), CardAccentWall, Icons.Default.SensorDoor),
+    DesignModuleItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
+    DesignModuleItem(AppScreen.SteelDesign,     R.string.home_steel,    R.string.home_steel_sub,    listOf("AISC", "ECP"),      CardAccentSteel,   Icons.Default.Build),
+    DesignModuleItem(AppScreen.SeismicAnalysis, R.string.home_seismic,  R.string.home_seismic_sub,  listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning),
+    DesignModuleItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.home_frame_sub,    listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree)
 )
 
 private val quickTools = listOf(
-    QuickTool("حاسبة علمية",    "Scientific Calculator",  Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  AppScreen.Calculator.route),
-    QuickTool("محول الوحدات",   "Unit Converter",         Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
-    QuickTool("جداول الحديد",   "Steel Rebar Tables",     Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
-    QuickTool("كميات الأعمال",  "Quantity Surveying",     Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
-    QuickTool("مخزن الموقع",    "Site Inventory",         Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
+    QuickTool(R.string.home_calculator,    R.string.home_calculator_sub,    Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  AppScreen.Calculator.route),
+    QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
+    QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
+    QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+    QuickTool(R.string.home_inventory,     R.string.home_inventory_sub,     Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
 )
 
 // Recent projects now loaded from DB via ViewModel in HomeScreen composable
@@ -171,17 +172,17 @@ fun HomeScreen(
         .take(5)
         .map { design ->
             val typeLabel = when (design.type) {
-                DesignType.BEAM -> "كمرات"
-                DesignType.COLUMN -> "أعمدة"
-                DesignType.SLAB -> "بلاطات"
-                DesignType.FOOTING -> "قواعد"
-                DesignType.STAIRCASE -> "سلالم"
-                DesignType.RETAINING_WALL -> "حوائط سند"
-                DesignType.WATER_TANK -> "خزانات"
-                DesignType.SEISMIC -> "زلازل"
-                DesignType.STEEL_MEMBER -> "معدني"
-                DesignType.PILE -> "ركائز"
-                DesignType.STEEL_WAREHOUSE -> "مخزن معدني"
+                DesignType.BEAM -> stringResource(R.string.design_type_beam)
+                DesignType.COLUMN -> stringResource(R.string.design_type_column)
+                DesignType.SLAB -> stringResource(R.string.design_type_slab)
+                DesignType.FOOTING -> stringResource(R.string.design_type_footing)
+                DesignType.STAIRCASE -> stringResource(R.string.design_type_staircase)
+                DesignType.RETAINING_WALL -> stringResource(R.string.design_type_retaining_wall)
+                DesignType.WATER_TANK -> stringResource(R.string.design_type_water_tank)
+                DesignType.SEISMIC -> stringResource(R.string.design_type_seismic)
+                DesignType.STEEL_MEMBER -> stringResource(R.string.design_type_steel_member)
+                DesignType.PILE -> stringResource(R.string.design_type_pile)
+                DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
             }
             val icon = when (design.type) {
                 DesignType.BEAM -> Icons.Default.AccountBalance
@@ -195,7 +196,7 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> Icons.Default.Build
                 else -> Icons.Default.Description
             }
-            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale("ar")).format(design.createdAt)
+            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(design.createdAt)
             RecentProject(
                 name = design.name,
                 elementType = typeLabel,
@@ -278,8 +279,8 @@ fun HomeScreen(
             item(span = { GridItemSpan(2) }) {
                 SectionHeader(
                     icon = Icons.Default.Engineering,
-                    title = "التصميم الإنشائي",
-                    subtitle = "9 وحدات تصميم متكاملة"
+                    title = stringResource(R.string.home_section_design_title),
+                    subtitle = stringResource(R.string.home_section_design_sub)
                 )
             }
 
@@ -297,8 +298,8 @@ fun HomeScreen(
             item(span = { GridItemSpan(2) }) {
                 SectionHeader(
                     icon = Icons.Default.Build,
-                    title = "أدوات سريعة",
-                    subtitle = "أدوات مساعدة للمهندس المدني"
+                    title = stringResource(R.string.home_section_tools_title),
+                    subtitle = stringResource(R.string.home_section_tools_sub)
                 )
             }
 
@@ -315,8 +316,8 @@ fun HomeScreen(
             item(span = { GridItemSpan(2) }) {
                 SectionHeader(
                     icon = Icons.Default.History,
-                    title = "آخر التصاميم",
-                    subtitle = "تصاميمك المحفوظة مؤخراً"
+                    title = stringResource(R.string.home_section_recent_title),
+                    subtitle = stringResource(R.string.home_section_recent_sub)
                 )
             }
 
@@ -400,7 +401,7 @@ private fun HeaderSection(isDark: Boolean) {
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        "مهندس المدني",
+                        stringResource(R.string.home_welcome),
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 26.sp,
@@ -412,7 +413,7 @@ private fun HeaderSection(isDark: Boolean) {
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
                         Text(
-                            text = "تصميم هندسي احترافي متعدد الأكواد",
+                        text = stringResource(R.string.home_tagline),
                             color = Color.White.copy(alpha = 0.9f),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
@@ -426,7 +427,7 @@ private fun HeaderSection(isDark: Boolean) {
 
             // Subtitle
             Text(
-                "ابدأ مشروعك الإنشائي القادم بدقة واحترافية\nيدعم الكود المصري ECP 203 والأمريكي ACI 318 والسعودي SBC 304",
+                text = stringResource(R.string.home_cta),
                 color = Color.White.copy(alpha = 0.75f),
                 fontSize = 12.sp,
                 lineHeight = 18.sp
@@ -461,7 +462,7 @@ private fun HeaderSection(isDark: Boolean) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        "v2.0 — إصدار احترافي",
+                        stringResource(R.string.home_version_badge),
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium
@@ -502,7 +503,7 @@ private fun QuickStatsRow(isDark: Boolean, designCount: Int, codeCount: Int, typ
     ) {
         StatCard(
             value = "$designCount",
-            label = "تصميمات محفوظة",
+            label = stringResource(R.string.home_stat_saved),
             accentColor = StatCardBlue,
             icon = Icons.Default.Save,
             isDark = isDark,
@@ -510,7 +511,7 @@ private fun QuickStatsRow(isDark: Boolean, designCount: Int, codeCount: Int, typ
         )
         StatCard(
             value = "$codeCount",
-            label = "الأكواد المستخدمة",
+            label = stringResource(R.string.home_stat_codes),
             accentColor = StatCardGreen,
             icon = Icons.Default.Gavel,
             isDark = isDark,
@@ -518,7 +519,7 @@ private fun QuickStatsRow(isDark: Boolean, designCount: Int, codeCount: Int, typ
         )
         StatCard(
             value = "$typeCount+",
-            label = "أنواع العناصر",
+            label = stringResource(R.string.home_stat_types),
             accentColor = StatCardOrange,
             icon = Icons.Default.Grid3x3,
             isDark = isDark,
@@ -659,7 +660,7 @@ private fun EnhancedModuleCard(
                 // Title + subtitle
                 Column {
                     Text(
-                        text = module.title,
+                        text = stringResource(module.titleRes),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = if (isDark) Color.White else Color(0xFF1A1A2E),
@@ -667,7 +668,7 @@ private fun EnhancedModuleCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = module.subtitle,
+                        text = stringResource(module.subtitleRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
                         maxLines = 2,
@@ -768,7 +769,7 @@ private fun QuickToolCard(
 
             // Title
             Text(
-                text = tool.title,
+                text = stringResource(tool.titleRes),
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = if (isDark) Color.White else Color(0xFF1A1A2E),
@@ -780,7 +781,7 @@ private fun QuickToolCard(
 
             // Subtitle
             Text(
-                text = tool.subtitle,
+                text = stringResource(tool.subtitleRes),
                 fontSize = 9.sp,
                 color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF9E9E9E),
                 maxLines = 1,
@@ -823,14 +824,14 @@ private fun RecentProjectsSection(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "لا توجد تصاميم محفوظة",
+                    text = stringResource(R.string.home_no_designs),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "ابدأ تصميمك الأول وسيظهر هنا",
+                    text = stringResource(R.string.home_no_designs_sub),
                     fontSize = 12.sp,
                     color = if (isDark) Color(0xFF6B6B8A) else Color(0xFFBDBDBD)
                 )
@@ -967,7 +968,7 @@ private fun FooterSection(isDark: Boolean) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "محفظة المهندس المدني الاحترافية",
+                text = stringResource(R.string.home_footer_title),
                 fontSize = 11.sp,
                 color = textColor
             )
@@ -990,7 +991,7 @@ private fun FooterSection(isDark: Boolean) {
 
             // Developer credit
             Text(
-                text = "تطوير فريق CivilEG — هندسة برمجية متخصصة",
+                text = stringResource(R.string.home_footer_team),
                 fontSize = 10.sp,
                 color = textColor.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center

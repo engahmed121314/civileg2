@@ -57,6 +57,8 @@ fun FootingScreen(
     var soilCapacity by remember { mutableStateOf("150") }
     var colLength by remember { mutableStateOf("600") }
     var colWidth by remember { mutableStateOf("300") }
+    var fcu by remember { mutableStateOf("25") }
+    var fy by remember { mutableStateOf("360") }
     
     // Combined Footing and Boundary Parameters
     var axialLoad2 by remember { mutableStateOf("1000") }
@@ -136,6 +138,13 @@ fun FootingScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FootingInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
+                    FootingInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
+                }
+            }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(axialLoad, "Pu1 (kN)", { axialLoad = it }, Modifier.weight(1f))
                     FootingInputField(soilCapacity, "Soil (kPa)", { soilCapacity = it }, Modifier.weight(1f))
                 }
@@ -179,8 +188,8 @@ fun FootingScreen(
                         viewModel.calculateFooting(
                             type = selectedType,
                             p = axialLoad.toDoubleOrNull() ?: 1200.0,
-                            fcu = 25.0,
-                            fy = 360.0,
+                            fcu = fcu.toDoubleOrNull() ?: 25.0,
+                            fy = fy.toDoubleOrNull() ?: 360.0,
                             soil = soilCapacity.toDoubleOrNull() ?: 150.0,
                             colB = colWidth.toDoubleOrNull() ?: 300.0,
                             colT = colLength.toDoubleOrNull() ?: 600.0,
@@ -274,6 +283,49 @@ fun FootingScreen(
                             ResultRow("سمك القاعدة", "${res.thickness.toInt()} mm")
                             ResultRow("حجم الخرسانة", "${"%.2f".format(res.concreteVolume)} m³")
                             ResultRow("التكلفة التقديرية", "${"%.2f".format(res.cost)}")
+                        }
+                    }
+                }
+
+                if (res.safetyChecks.isNotEmpty()) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "التحقق من الكود (Safety Checks):",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                res.safetyChecks.forEach { check ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            if (check.isSafe) "✓" else "✗",
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                            Text(check.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                            Text(
+                                                "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
+                                                fontSize = 11.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

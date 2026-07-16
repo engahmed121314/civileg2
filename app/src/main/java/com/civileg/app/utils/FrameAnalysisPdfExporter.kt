@@ -1,6 +1,7 @@
 package com.civileg.app.utils
 
 import android.content.Context
+import android.util.Log
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -28,6 +29,11 @@ import kotlin.math.*
  */
 object FrameAnalysisPdfExporter {
 
+    private fun Paragraph.arabicStyle(font: PdfFont, fontSize: Float): Paragraph {
+        return this.setFont(font).setFontSize(fontSize)
+            .setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+    }
+
     fun generateFrameAnalysisPdf(
         context: Context,
         nodes: List<FrameNode>,
@@ -38,6 +44,7 @@ object FrameAnalysisPdfExporter {
         result: FrameAnalysisResult?
     ): File {
         val file = File(context.getExternalFilesDir(null), "FrameAnalysis_${System.currentTimeMillis()}.pdf")
+        try {
         val writer = PdfWriter(file)
         val pdfDoc = PdfDocument(writer)
         val document = Document(pdfDoc, PageSize.A4)
@@ -50,13 +57,13 @@ object FrameAnalysisPdfExporter {
         // === Page 1: Frame Geometry + Drawing ===
         // Title
         document.add(Paragraph("Frame Structural Analysis Report")
-            .setFont(arabicBold).setFontSize(20f).setTextAlignment(TextAlignment.CENTER)
+            .setFontSize(20f).setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(5f))
         document.add(Paragraph("تقرير تحليل وتصميم الإطار")
-            .setFont(arabicFont).setFontSize(16f).setTextAlignment(TextAlignment.CENTER)
+            .arabicStyle(arabicFont, 16f).setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(5f))
         document.add(Paragraph("Design Code: ${settings.designCode.version}")
-            .setFont(arabicFont).setFontSize(11f).setTextAlignment(TextAlignment.CENTER)
+            .setFontSize(11f).setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(15f))
 
         // Frame drawing as bitmap
@@ -70,39 +77,39 @@ object FrameAnalysisPdfExporter {
         }
 
         // === Nodes Table ===
-        document.add(Paragraph("Nodes / العقد").setFont(arabicBold).setFontSize(14f).setMarginTop(15f))
+        document.add(Paragraph("Nodes / العقد").arabicStyle(arabicBold, 14f).setMarginTop(15f))
         val nodeTable = Table(UnitValue.createPercentArray(floatArrayOf(15f, 25f, 25f, 35f))).useAllAvailableWidth()
-        nodeTable.addHeaderCell(Cell().add(Paragraph("ID").setFont(arabicBold).setFontSize(9f)))
-        nodeTable.addHeaderCell(Cell().add(Paragraph("X (m)").setFont(arabicBold).setFontSize(9f)))
-        nodeTable.addHeaderCell(Cell().add(Paragraph("Y (m)").setFont(arabicBold).setFontSize(9f)))
-        nodeTable.addHeaderCell(Cell().add(Paragraph("Support").setFont(arabicBold).setFontSize(9f)))
+        nodeTable.addHeaderCell(Cell().add(Paragraph("ID").setFontSize(9f).setBold()))
+        nodeTable.addHeaderCell(Cell().add(Paragraph("X (m)").setFontSize(9f).setBold()))
+        nodeTable.addHeaderCell(Cell().add(Paragraph("Y (m)").setFontSize(9f).setBold()))
+        nodeTable.addHeaderCell(Cell().add(Paragraph("Support").setFontSize(9f).setBold()))
         for (node in nodes) {
-            nodeTable.addCell(Cell().add(Paragraph("${node.id}").setFont(arabicFont).setFontSize(8f)))
-            nodeTable.addCell(Cell().add(Paragraph(String.format("%.2f", node.x)).setFont(arabicFont).setFontSize(8f)))
-            nodeTable.addCell(Cell().add(Paragraph(String.format("%.2f", node.y)).setFont(arabicFont).setFontSize(8f)))
-            nodeTable.addCell(Cell().add(Paragraph(node.support.displayNameEn).setFont(arabicFont).setFontSize(8f)))
+            nodeTable.addCell(Cell().add(Paragraph("${node.id}").setFontSize(8f)))
+            nodeTable.addCell(Cell().add(Paragraph(String.format("%.2f", node.x)).setFontSize(8f)))
+            nodeTable.addCell(Cell().add(Paragraph(String.format("%.2f", node.y)).setFontSize(8f)))
+            nodeTable.addCell(Cell().add(Paragraph(node.support.displayNameEn).setFontSize(8f)))
         }
         document.add(nodeTable)
 
         // === Members Table ===
-        document.add(Paragraph("Members / الأعضاء").setFont(arabicBold).setFontSize(14f).setMarginTop(15f))
+        document.add(Paragraph("Members / الأعضاء").arabicStyle(arabicBold, 14f).setMarginTop(15f))
         val memTable = Table(UnitValue.createPercentArray(floatArrayOf(8f, 20f, 12f, 12f, 15f, 33f))).useAllAvailableWidth()
-        memTable.addHeaderCell(Cell().add(Paragraph("#").setFont(arabicBold).setFontSize(9f)))
-        memTable.addHeaderCell(Cell().add(Paragraph("Name").setFont(arabicBold).setFontSize(9f)))
-        memTable.addHeaderCell(Cell().add(Paragraph("I → J").setFont(arabicBold).setFontSize(9f)))
-        memTable.addHeaderCell(Cell().add(Paragraph("Type").setFont(arabicBold).setFontSize(9f)))
-        memTable.addHeaderCell(Cell().add(Paragraph("Material").setFont(arabicBold).setFontSize(9f)))
-        memTable.addHeaderCell(Cell().add(Paragraph("Section").setFont(arabicBold).setFontSize(9f)))
+        memTable.addHeaderCell(Cell().add(Paragraph("#").setFontSize(9f).setBold()))
+        memTable.addHeaderCell(Cell().add(Paragraph("Name").setFontSize(9f).setBold()))
+        memTable.addHeaderCell(Cell().add(Paragraph("I → J").setFontSize(9f).setBold()))
+        memTable.addHeaderCell(Cell().add(Paragraph("Type").setFontSize(9f).setBold()))
+        memTable.addHeaderCell(Cell().add(Paragraph("Material").setFontSize(9f).setBold()))
+        memTable.addHeaderCell(Cell().add(Paragraph("Section").setFontSize(9f).setBold()))
         for (m in members) {
-            memTable.addCell(Cell().add(Paragraph("${m.id}").setFont(arabicFont).setFontSize(8f)))
-            memTable.addCell(Cell().add(Paragraph(m.name.ifEmpty { "M${m.id}" }).setFont(arabicFont).setFontSize(8f)))
-            memTable.addCell(Cell().add(Paragraph("${m.nodeI}→${m.nodeJ}").setFont(arabicFont).setFontSize(8f)))
-            memTable.addCell(Cell().add(Paragraph(m.memberType.displayNameEn).setFont(arabicFont).setFontSize(8f)))
-            memTable.addCell(Cell().add(Paragraph(m.materialType.displayNameEn).setFont(arabicFont).setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph("${m.id}").setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph(m.name.ifEmpty { "M${m.id}" }).setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph("${m.nodeI}→${m.nodeJ}").setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph(m.memberType.displayNameEn).setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph(m.materialType.displayNameEn).setFontSize(8f)))
             val secDesc = if (m.materialType == FrameMaterialType.Concrete && m.concreteSection != null)
                 "b=${m.concreteSection!!.width} h=${m.concreteSection!!.depth} mm"
             else m.steelSectionName ?: "N/A"
-            memTable.addCell(Cell().add(Paragraph(secDesc).setFont(arabicFont).setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph(secDesc).setFontSize(8f)))
         }
         document.add(memTable)
 
@@ -113,7 +120,7 @@ object FrameAnalysisPdfExporter {
             // BMD Drawing
             val bmdBitmap = generateFrameBitmap(nodes, members, memberLoads, nodalLoads, result, DiagramType.BMD)
             if (bmdBitmap != null) {
-                document.add(Paragraph("Bending Moment Diagram (BMD)").setFont(arabicBold).setFontSize(14f).setMarginTop(10f))
+                document.add(Paragraph("Bending Moment Diagram (BMD)").setFontSize(14f).setMarginTop(10f))
                 val imgBmd = com.itextpdf.layout.element.Image(
                     com.itextpdf.io.image.ImageDataFactory.create(bmdBitmap.toByteArray(Bitmap.CompressFormat.PNG, 100))
                 )
@@ -126,7 +133,7 @@ object FrameAnalysisPdfExporter {
             val sfdBitmap = generateFrameBitmap(nodes, members, memberLoads, nodalLoads, result, DiagramType.SFD)
             if (sfdBitmap != null) {
                 document.add(AreaBreak())
-                document.add(Paragraph("Shear Force Diagram (SFD)").setFont(arabicBold).setFontSize(14f).setMarginTop(10f))
+                document.add(Paragraph("Shear Force Diagram (SFD)").setFontSize(14f).setMarginTop(10f))
                 val imgSfd = com.itextpdf.layout.element.Image(
                     com.itextpdf.io.image.ImageDataFactory.create(sfdBitmap.toByteArray(Bitmap.CompressFormat.PNG, 100))
                 )
@@ -136,55 +143,59 @@ object FrameAnalysisPdfExporter {
             }
 
             // Member End Forces Table
-            document.add(Paragraph("Member End Forces / القوى الداخلية").setFont(arabicBold).setFontSize(14f).setMarginTop(15f))
+            document.add(Paragraph("Member End Forces / القوى الداخلية").arabicStyle(arabicBold, 14f).setMarginTop(15f))
             val forcesTable = Table(UnitValue.createPercentArray(floatArrayOf(15f, 17f, 17f, 17f, 17f, 17f))).useAllAvailableWidth()
-            forcesTable.addHeaderCell(Cell().add(Paragraph("Member").setFont(arabicBold).setFontSize(8f)))
-            forcesTable.addHeaderCell(Cell().add(Paragraph("NI (kN)").setFont(arabicBold).setFontSize(8f)))
-            forcesTable.addHeaderCell(Cell().add(Paragraph("VI (kN)").setFont(arabicBold).setFontSize(8f)))
-            forcesTable.addHeaderCell(Cell().add(Paragraph("MI (kN.m)").setFont(arabicBold).setFontSize(8f)))
-            forcesTable.addHeaderCell(Cell().add(Paragraph("NJ (kN)").setFont(arabicBold).setFontSize(8f)))
-            forcesTable.addHeaderCell(Cell().add(Paragraph("MJ (kN.m)").setFont(arabicBold).setFontSize(8f)))
+            forcesTable.addHeaderCell(Cell().add(Paragraph("Member").setFontSize(8f).setBold()))
+            forcesTable.addHeaderCell(Cell().add(Paragraph("NI (kN)").setFontSize(8f).setBold()))
+            forcesTable.addHeaderCell(Cell().add(Paragraph("VI (kN)").setFontSize(8f).setBold()))
+            forcesTable.addHeaderCell(Cell().add(Paragraph("MI (kN.m)").setFontSize(8f).setBold()))
+            forcesTable.addHeaderCell(Cell().add(Paragraph("NJ (kN)").setFontSize(8f).setBold()))
+            forcesTable.addHeaderCell(Cell().add(Paragraph("MJ (kN.m)").setFontSize(8f).setBold()))
             for (mf in result.memberEndForces) {
                 val name = members.find { it.id == mf.memberId }?.name ?: "#${mf.memberId}"
-                forcesTable.addCell(Cell().add(Paragraph(name).setFont(arabicFont).setFontSize(7f)))
-                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.fi_x)).setFont(arabicFont).setFontSize(7f)))
-                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.fi_y)).setFont(arabicFont).setFontSize(7f)))
-                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.mi_z)).setFont(arabicFont).setFontSize(7f)))
-                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.fj_y)).setFont(arabicFont).setFontSize(7f)))
-                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.mj_z)).setFont(arabicFont).setFontSize(7f)))
+                forcesTable.addCell(Cell().add(Paragraph(name).setFontSize(7f)))
+                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.fi_x)).setFontSize(7f)))
+                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.fi_y)).setFontSize(7f)))
+                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.mi_z)).setFontSize(7f)))
+                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.fj_y)).setFontSize(7f)))
+                forcesTable.addCell(Cell().add(Paragraph(fmt(mf.mj_z)).setFontSize(7f)))
             }
             document.add(forcesTable)
 
             // Concrete Design Results
             if (result.concreteDesignResults.isNotEmpty()) {
                 document.add(AreaBreak())
-                document.add(Paragraph("Concrete Design Results / نتائج التصميم الخرساني").setFont(arabicBold).setFontSize(14f))
+                document.add(Paragraph("Concrete Design Results / نتائج التصميم الخرساني").arabicStyle(arabicBold, 14f))
                 for (cr in result.concreteDesignResults) {
-                    document.add(Paragraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}").setFont(arabicBold).setFontSize(11f).setMarginTop(8f))
-                    document.add(Paragraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa").setFont(arabicFont).setFontSize(9f))
-                    document.add(Paragraph("Max M = ${fmt(cr.maxMoment)} kN.m | Max V = ${fmt(cr.maxShear)} kN | N = ${fmt(cr.axialForce)} kN").setFont(arabicFont).setFontSize(9f))
-                    document.add(Paragraph("As req = ${String.format("%.0f", cr.asRequired)} mm² | Bottom: ${cr.numBarsBot}Ø${cr.barDia.toInt()} = ${String.format("%.0f", cr.asBot)} mm²").setFont(arabicFont).setFontSize(9f))
+                    document.add(Paragraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}").setFontSize(11f).setBold().setMarginTop(8f))
+                    document.add(Paragraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa").setFontSize(9f))
+                    document.add(Paragraph("Max M = ${fmt(cr.maxMoment)} kN.m | Max V = ${fmt(cr.maxShear)} kN | N = ${fmt(cr.axialForce)} kN").setFontSize(9f))
+                    document.add(Paragraph("As req = ${String.format("%.0f", cr.asRequired)} mm² | Bottom: ${cr.numBarsBot}Ø${cr.barDia.toInt()} = ${String.format("%.0f", cr.asBot)} mm²").setFontSize(9f))
                     if (cr.stirrupDia > 0)
-                        document.add(Paragraph("Stirrups: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm").setFont(arabicFont).setFontSize(9f))
-                    document.add(Paragraph("Utilization - Moment: ${String.format("%.0f", cr.momentUtilization * 100)}% | Shear: ${String.format("%.0f", cr.shearUtilization * 100)}% | ${if (cr.isSafe) "SAFE ✓" else "UNSAFE ✗"}").setFont(arabicFont).setFontSize(9f))
+                        document.add(Paragraph("Stirrups: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm").setFontSize(9f))
+                    document.add(Paragraph("Utilization - Moment: ${String.format("%.0f", cr.momentUtilization * 100)}% | Shear: ${String.format("%.0f", cr.shearUtilization * 100)}% | ${if (cr.isSafe) "SAFE ✓" else "UNSAFE ✗"}").setFontSize(9f))
                 }
             }
 
             // Steel Design Results
             if (result.steelDesignResults.isNotEmpty()) {
                 document.add(AreaBreak())
-                document.add(Paragraph("Steel Design Results / نتائج التصميم المعدني").setFont(arabicBold).setFontSize(14f))
+                document.add(Paragraph("Steel Design Results / نتائج التصميم المعدني").arabicStyle(arabicBold, 14f))
                 for (sr in result.steelDesignResults) {
-                    document.add(Paragraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}").setFont(arabicBold).setFontSize(11f).setMarginTop(8f))
-                    document.add(Paragraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm⁴").setFont(arabicFont).setFontSize(9f))
-                    document.add(Paragraph("Max M = ${fmt(sr.maxMoment)} kN.m | Max V = ${fmt(sr.maxShear)} kN | N = ${fmt(sr.axialForce)} kN").setFont(arabicFont).setFontSize(9f))
-                    document.add(Paragraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE ✓" else "UNSAFE ✗"}").setFont(arabicFont).setFontSize(9f))
+                    document.add(Paragraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}").setFontSize(11f).setBold().setMarginTop(8f))
+                    document.add(Paragraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm⁴").setFontSize(9f))
+                    document.add(Paragraph("Max M = ${fmt(sr.maxMoment)} kN.m | Max V = ${fmt(sr.maxShear)} kN | N = ${fmt(sr.axialForce)} kN").setFontSize(9f))
+                    document.add(Paragraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE ✓" else "UNSAFE ✗"}").setFontSize(9f))
                 }
             }
         }
 
         document.close()
         return file
+        } catch (e: Exception) {
+            Log.e("FrameAnalysisPdf", "PDF generation failed", e)
+            throw RuntimeException("خطأ في إنشاء تقرير PDF: ${e.message}", e)
+        }
     }
 
     // ========================================================================

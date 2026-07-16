@@ -24,6 +24,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.SettingsViewModel
+import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,10 +39,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("الإعدادات", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -59,15 +61,15 @@ fun SettingsScreen(
         ) {
             // ─── الكود الافتراضي ───
             SettingsSectionCard(
-                title = "الكود الإنشائي الافتراضي",
+                title = stringResource(R.string.settings_design_code),
                 icon = Icons.Default.Gavel,
                 iconColor = Color(0xFF1565C0)
             ) {
                 DesignCode.entries.forEach { code ->
                     val codeName = when (code) {
-                        DesignCode.ECP -> "الكود المصري ECP 203"
-                        DesignCode.ACI -> "الكود الأمريكي ACI 318"
-                        DesignCode.SBC -> "الكود السعودي SBC 304"
+                        DesignCode.ECP -> stringResource(R.string.code_ecp)
+                        DesignCode.ACI -> stringResource(R.string.code_aci)
+                        DesignCode.SBC -> stringResource(R.string.code_sbc)
                     }
                     SettingsRadioRow(
                         label = codeName,
@@ -79,12 +81,12 @@ fun SettingsScreen(
 
             // ─── لغة التطبيق ───
             SettingsSectionCard(
-                title = "لغة التطبيق",
+                title = stringResource(R.string.settings_language),
                 icon = Icons.Default.Language,
                 iconColor = Color(0xFF2E7D32)
             ) {
                 SettingsRadioRow(
-                    label = "العربية",
+                    label = stringResource(R.string.language_arabic),
                     subtitle = "Arabic",
                     selected = LocaleHelper.getLocale(context) == "ar",
                     onClick = {
@@ -94,7 +96,7 @@ fun SettingsScreen(
                     }
                 )
                 SettingsRadioRow(
-                    label = "English (الإنجليزية)",
+                    label = stringResource(R.string.language_english),
                     subtitle = "English",
                     selected = LocaleHelper.getLocale(context) == "en",
                     onClick = {
@@ -107,17 +109,17 @@ fun SettingsScreen(
 
             // ─── نظام الوحدات ───
             SettingsSectionCard(
-                title = "نظام الوحدات",
+                title = stringResource(R.string.settings_unit_system),
                 icon = Icons.Default.Straighten,
                 iconColor = Color(0xFF7B1FA2)
             ) {
                 SettingsRadioRow(
-                    label = "النظام الدولي SI (mm, kN, MPa)",
+                    label = stringResource(R.string.settings_unit_si),
                     selected = settings.unitSystem == "SI",
                     onClick = { viewModel.setUnitSystem("SI") }
                 )
                 SettingsRadioRow(
-                    label = "النظام الإمبريالي (in, kip, psi)",
+                    label = stringResource(R.string.settings_unit_imperial),
                     selected = settings.unitSystem == "Imperial",
                     onClick = { viewModel.setUnitSystem("Imperial") }
                 )
@@ -125,12 +127,12 @@ fun SettingsScreen(
 
             // ─── أسعار المواد ───
             SettingsSectionCard(
-                title = "أسعار المواد",
+                title = stringResource(R.string.settings_material_prices),
                 icon = Icons.Default.Payments,
                 iconColor = Color(0xFFE65100)
             ) {
                 SettingsPriceInput(
-                    label = "سعر الخرسانة (لكل م³)",
+                    label = stringResource(R.string.settings_price_concrete),
                     value = settings.concretePrice.toString(),
                     currency = settings.currency,
                     onValueChange = {
@@ -138,7 +140,7 @@ fun SettingsScreen(
                     }
                 )
                 SettingsPriceInput(
-                    label = "سعر الحديد (لكل طن)",
+                    label = stringResource(R.string.settings_price_steel),
                     value = settings.steelPrice.toString(),
                     currency = settings.currency,
                     onValueChange = {
@@ -146,7 +148,7 @@ fun SettingsScreen(
                     }
                 )
                 SettingsPriceInput(
-                    label = "سعر الشدات (لكل م²)",
+                    label = stringResource(R.string.settings_price_formwork),
                     value = settings.formworkPrice.toString(),
                     currency = settings.currency,
                     onValueChange = {
@@ -157,15 +159,15 @@ fun SettingsScreen(
 
             // ─── العملة ───
             SettingsSectionCard(
-                title = "العملة الافتراضية",
+                title = stringResource(R.string.settings_currency),
                 icon = Icons.Default.AttachMoney,
                 iconColor = Color(0xFF00838F)
             ) {
                 listOf(
-                    "EGP" to "جنيه مصري",
-                    "SAR" to "ريال سعودي",
-                    "USD" to "دولار أمريكي",
-                    "AED" to "درهم إماراتي"
+                    "EGP" to stringResource(R.string.settings_currency_egp),
+                    "SAR" to stringResource(R.string.settings_currency_sar),
+                    "USD" to stringResource(R.string.settings_currency_usd),
+                    "AED" to stringResource(R.string.settings_currency_aed)
                 ).forEach { (code, name) ->
                     SettingsRadioRow(
                         label = "$name ($code)",
@@ -177,7 +179,7 @@ fun SettingsScreen(
 
             // ─── حول التطبيق ───
             SettingsSectionCard(
-                title = "حول التطبيق",
+                title = stringResource(R.string.settings_about),
                 icon = Icons.Default.Info,
                 iconColor = Color(0xFF37474F)
             ) {
@@ -189,7 +191,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("الإصدار", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Text(stringResource(R.string.settings_version), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         Text("v2.0.0", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     HorizontalDivider()
@@ -197,20 +199,19 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("الأكواد المدعومة", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Text(stringResource(R.string.settings_supported_codes), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         Text("ECP 203 • ACI 318 • SBC 304", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     HorizontalDivider()
                     Text(
-                        text = "تنبيه: هذا التطبيق للأغراض التعليمية والتصميم المبدئي فقط. " +
-                                "جميع الحسابات يجب أن يتم مراجعتها من قبل مهندس إنشائي مرخص.",
+                        text = stringResource(R.string.settings_disclaimer_notice),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "تطوير فريق CivilEG — هندسة برمجية متخصصة",
+                        text = stringResource(R.string.settings_developer_team),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )

@@ -144,4 +144,134 @@
     <string name="security_warning_root">يبدو أن هذا الجهاز معدل (Root). لأسباب أمنية، قد تكون بعض الميزات محدودة.</string>
     <string name="security_warning_tamper">فشل التحقق من سلامة التطبيق. يرجى إعادة التثبيت من المصدر الرسمي.</string>
     <string name="legal_disclaimer_full">إخلاء مسؤولية: هذا التطبيق هو أداة احترافية للأغراض التعليمية والتصميم الأولي فقط. يجب التحقق من جميع الحسابات والتصاميم والنتائج بواسطة مهندس إنشائي مرخص قبل أي استخدام في الإنشاءات. المطور (المهندس أحمد مجدي) غير مسؤول عن أي أخطار أو أضرار أو عواقب ناتجة عن استخدام هذا التطبيق. الاستخدام على مسؤوليتك الخاصة.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Localization System – Navigation & Tabs -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="nav_design_hub">التصميم</string>
+    <string name="nav_steel">المنشآت المعدنية</string>
+    <string name="nav_drawer_title">القائمة الرئيسية</string>
+    <string name="nav_inventory">مخزن الموقع</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Home Screen – Design Modules -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="home_beam">الكمرات</string>
+    <string name="home_beam_sub">تصميم الكمرات الخرسانية</string>
+    <string name="home_column">الأعمدة</string>
+    <string name="home_column_sub">تصميم الأعمدة الخرسانية</string>
+    <string name="home_slab">البلاطات</string>
+    <string name="home_slab_sub">البلاطات المصمتة والهوردية</string>
+    <string name="home_footing">القواعد</string>
+    <string name="home_footing_sub">تصميم القواعد المنفصلة</string>
+    <string name="home_tank">الخزانات</string>
+    <string name="home_tank_sub">خزانات المياه (علوي/أرضي)</string>
+    <string name="home_retaining_wall">حوائط السند</string>
+    <string name="home_retaining_wall_sub">حوائط السند واستقرار التربة</string>
+    <string name="home_stair">السلالم</string>
+    <string name="home_stair_sub">تصميم السلالم الخرسانية</string>
+    <string name="home_steel">المنشآت المعدنية</string>
+    <string name="home_steel_sub">تصميم الوصلات والأعضاء</string>
+    <string name="home_seismic">الزلازل</string>
+    <string name="home_seismic_sub">قوى الزلازل والرياح</string>
+    <string name="home_frame">تحليل الإطارات</string>
+    <string name="home_frame_sub">تحليل وتصميم الهياكل ثنائية الأبعاد</string>
+
+    <!-- Home Screen – Quick Tools -->
+    <string name="home_calculator">حاسبة علمية</string>
+    <string name="home_calculator_sub">Scientific Calculator</string>
+    <string name="home_unit_converter">محول الوحدات</string>
+    <string name="home_unit_converter_sub">Unit Converter</string>
+    <string name="home_steel_tables">جداول الحديد</string>
+    <string name="home_steel_tables_sub">Steel Rebar Tables</string>
+    <string name="home_boq">كميات الأعمال</string>
+    <string name="home_boq_sub">Quantity Surveying</string>
+    <string name="home_inventory">مخزن الموقع</string>
+    <string name="home_inventory_sub">Site Inventory</string>
+
+    <!-- Home Screen – Header & Sections -->
+    <string name="home_welcome">مهندس المدني</string>
+    <string name="home_tagline">تصميم هندسي احترافي متعدد الأكواد</string>
+    <string name="home_cta">ابدأ مشروعك الإنشائي القادم بدقة واحترافية\nيدعم الكود المصري ECP 203 والأمريكي ACI 318 والسعودي SBC 304</string>
+    <string name="home_version_badge">v2.0 — إصدار احترافي</string>
+    <string name="home_stat_saved">تصميمات محفوظة</string>
+    <string name="home_stat_codes">الأكواد المستخدمة</string>
+    <string name="home_stat_types">أنواع العناصر</string>
+    <string name="home_section_design_title">التصميم الإنشائي</string>
+    <string name="home_section_design_sub">9 وحدات تصميم متكاملة</string>
+    <string name="home_section_tools_title">أدوات سريعة</string>
+    <string name="home_section_tools_sub">أدوات مساعدة للمهندس المدني</string>
+    <string name="home_section_recent_title">آخر التصاميم</string>
+    <string name="home_section_recent_sub">تصاميمك المحفوظة مؤخراً</string>
+    <string name="home_no_designs">لا توجد تصاميم محفوظة</string>
+    <string name="home_no_designs_sub">ابدأ تصميمك الأول وسيظهر هنا</string>
+    <string name="home_footer_title">محفظة المهندس المدني الاحترافية</string>
+    <string name="home_footer_team">تطوير فريق CivilEG — هندسة برمجية متخصصة</string>
+
+    <!-- Design Type Labels (for recent designs) -->
+    <string name="design_type_beam">كمرات</string>
+    <string name="design_type_column">أعمدة</string>
+    <string name="design_type_slab">بلاطات</string>
+    <string name="design_type_footing">قواعد</string>
+    <string name="design_type_staircase">سلالم</string>
+    <string name="design_type_retaining_wall">حوائط سند</string>
+    <string name="design_type_water_tank">خزانات</string>
+    <string name="design_type_seismic">زلازل</string>
+    <string name="design_type_steel_member">معدني</string>
+    <string name="design_type_pile">ركائز</string>
+    <string name="design_type_steel_warehouse">مخزن معدني</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Settings Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_language">لغة التطبيق</string>
+    <string name="settings_design_code">الكود الإنشائي الافتراضي</string>
+    <string name="settings_unit_system">نظام الوحدات</string>
+    <string name="settings_material_prices">أسعار المواد</string>
+    <string name="settings_currency">العملة الافتراضية</string>
+    <string name="settings_about">حول التطبيق</string>
+    <string name="settings_version">الإصدار</string>
+    <string name="settings_unit_si">النظام الدولي SI (mm, kN, MPa)</string>
+    <string name="settings_unit_imperial">النظام الإمبريالي (in, kip, psi)</string>
+    <string name="settings_price_concrete">سعر الخرسانة (لكل م³)</string>
+    <string name="settings_price_steel">سعر الحديد (لكل طن)</string>
+    <string name="settings_price_formwork">سعر الشدات (لكل م²)</string>
+    <string name="settings_currency_egp">جنيه مصري</string>
+    <string name="settings_currency_sar">ريال سعودي</string>
+    <string name="settings_currency_usd">دولار أمريكي</string>
+    <string name="settings_currency_aed">درهم إماراتي</string>
+    <string name="settings_supported_codes">الأكواد المدعومة</string>
+    <string name="settings_disclaimer_notice">تنبيه: هذا التطبيق للأغراض التعليمية والتصميم المبدئي فقط. جميع الحسابات يجب أن يتم مراجعتها من قبل مهندس إنشائي مرخص.</string>
+    <string name="settings_developer_team">تطوير فريق CivilEG — هندسة برمجية متخصصة</string>
+
+    <!-- Design Codes -->
+    <string name="code_ecp">الكود المصري ECP 203</string>
+    <string name="code_sbc">الكود السعودي SBC 304</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Frame Analysis Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="frame_title">تحليل وتصميم الإطارات</string>
+    <string name="frame_tab_drawing">الرسم</string>
+    <string name="frame_tab_nodes">العقد</string>
+    <string name="frame_tab_members">الأعضاء</string>
+    <string name="frame_tab_loads">الحمولات</string>
+    <string name="frame_tab_results">النتائج</string>
+    <string name="frame_solve">حل</string>
+    <string name="frame_info_nodes">العقد: %d</string>
+    <string name="frame_info_members">الأعضاء: %d</string>
+    <string name="frame_info_solved">تم الحل ✓  |  الحمولات: %d</string>
+    <string name="frame_press_solve">اضغط على زر \'حل\' لبدء التحليل</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- General -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="error_calculation">خطأ في الحساب</string>
+    <string name="safe">آمن</string>
+    <string name="unsafe">غير آمن</string>
+    <string name="save">حفظ</string>
+    <string name="back">رجوع</string>
+    <string name="language_arabic">العربية</string>
+    <string name="language_english">English</string>
 </resources>

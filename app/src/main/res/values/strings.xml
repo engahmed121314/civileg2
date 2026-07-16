@@ -221,4 +221,134 @@
     <string name="security_warning_root">This device appears to be rooted. For security reasons, some features may be limited.</string>
     <string name="security_warning_tamper">App integrity check failed. Please reinstall from the official source.</string>
     <string name="legal_disclaimer_full">DISCLAIMER: This application is a professional tool for educational and preliminary design purposes only. All structural calculations, designs, and outputs must be verified by a licensed structural engineer before any construction use. The developer (Eng. Ahmed Magdy) assumes no liability for errors, damages, or any consequences resulting from the use of this application. Use at your own risk.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Localization System – Navigation & Tabs -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="nav_design_hub">Design Hub</string>
+    <string name="nav_steel">Steel Design</string>
+    <string name="nav_drawer_title">Main Menu</string>
+    <string name="nav_inventory">Site Inventory</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Home Screen – Design Modules -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="home_beam">Beams</string>
+    <string name="home_beam_sub">Concrete Beam Design</string>
+    <string name="home_column">Columns</string>
+    <string name="home_column_sub">Concrete Column Design</string>
+    <string name="home_slab">Slabs</string>
+    <string name="home_slab_sub">Solid &amp; Ribbed Slabs</string>
+    <string name="home_footing">Footings</string>
+    <string name="home_footing_sub">Isolated Footing Design</string>
+    <string name="home_tank">Tanks</string>
+    <string name="home_tank_sub">Water Tanks (Above/Below Ground)</string>
+    <string name="home_retaining_wall">Ret. Walls</string>
+    <string name="home_retaining_wall_sub">Retaining Walls &amp; Soil Stability</string>
+    <string name="home_stair">Staircases</string>
+    <string name="home_stair_sub">Concrete Staircase Design</string>
+    <string name="home_steel">Steel Structures</string>
+    <string name="home_steel_sub">Connection &amp; Member Design</string>
+    <string name="home_seismic">Seismic</string>
+    <string name="home_seismic_sub">Seismic &amp; Wind Forces</string>
+    <string name="home_frame">Frame Analysis</string>
+    <string name="home_frame_sub">2D Structural Analysis &amp; Design</string>
+
+    <!-- Home Screen – Quick Tools -->
+    <string name="home_calculator">Calculator</string>
+    <string name="home_calculator_sub">Scientific Calculator</string>
+    <string name="home_unit_converter">Unit Converter</string>
+    <string name="home_unit_converter_sub">Unit Converter</string>
+    <string name="home_steel_tables">Steel Tables</string>
+    <string name="home_steel_tables_sub">Steel Rebar Tables</string>
+    <string name="home_boq">Bill of Quantities</string>
+    <string name="home_boq_sub">Quantity Surveying</string>
+    <string name="home_inventory">Site Inventory</string>
+    <string name="home_inventory_sub">Site Inventory</string>
+
+    <!-- Home Screen – Header & Sections -->
+    <string name="home_welcome">Civil Engineer</string>
+    <string name="home_tagline">Professional multi-code engineering design</string>
+    <string name="home_cta">Start your next structural project with precision and professionalism\nSupports Egyptian Code ECP 203, American ACI 318, and Saudi SBC 304</string>
+    <string name="home_version_badge">v2.0 — Professional Edition</string>
+    <string name="home_stat_saved">Saved Designs</string>
+    <string name="home_stat_codes">Codes Used</string>
+    <string name="home_stat_types">Element Types</string>
+    <string name="home_section_design_title">Structural Design</string>
+    <string name="home_section_design_sub">9 integrated design modules</string>
+    <string name="home_section_tools_title">Quick Tools</string>
+    <string name="home_section_tools_sub">Utilities for civil engineers</string>
+    <string name="home_section_recent_title">Recent Designs</string>
+    <string name="home_section_recent_sub">Your recently saved designs</string>
+    <string name="home_no_designs">No saved designs</string>
+    <string name="home_no_designs_sub">Start your first design and it will appear here</string>
+    <string name="home_footer_title">Professional Civil Engineer Portfolio</string>
+    <string name="home_footer_team">Developed by CivilEG Team — Specialized Software Engineering</string>
+
+    <!-- Design Type Labels (for recent designs) -->
+    <string name="design_type_beam">Beams</string>
+    <string name="design_type_column">Columns</string>
+    <string name="design_type_slab">Slabs</string>
+    <string name="design_type_footing">Footings</string>
+    <string name="design_type_staircase">Staircases</string>
+    <string name="design_type_retaining_wall">Ret. Walls</string>
+    <string name="design_type_water_tank">Tanks</string>
+    <string name="design_type_seismic">Seismic</string>
+    <string name="design_type_steel_member">Steel</string>
+    <string name="design_type_pile">Piles</string>
+    <string name="design_type_steel_warehouse">Steel Warehouse</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Settings Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">App Language</string>
+    <string name="settings_design_code">Default Design Code</string>
+    <string name="settings_unit_system">Unit System</string>
+    <string name="settings_material_prices">Material Prices</string>
+    <string name="settings_currency">Default Currency</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_unit_si">SI System (mm, kN, MPa)</string>
+    <string name="settings_unit_imperial">Imperial System (in, kip, psi)</string>
+    <string name="settings_price_concrete">Concrete price (per m³)</string>
+    <string name="settings_price_steel">Steel price (per ton)</string>
+    <string name="settings_price_formwork">Formwork price (per m²)</string>
+    <string name="settings_currency_egp">Egyptian Pound</string>
+    <string name="settings_currency_sar">Saudi Riyal</string>
+    <string name="settings_currency_usd">US Dollar</string>
+    <string name="settings_currency_aed">UAE Dirham</string>
+    <string name="settings_supported_codes">Supported Codes</string>
+    <string name="settings_disclaimer_notice">Notice: This application is for educational and preliminary design purposes only. All calculations should be verified by a licensed structural engineer.</string>
+    <string name="settings_developer_team">Developed by CivilEG Team — Specialized Software Engineering</string>
+
+    <!-- Design Codes -->
+    <string name="code_ecp">Egyptian Code ECP 203</string>
+    <string name="code_sbc">Saudi Code SBC 304</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Frame Analysis Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="frame_title">Frame Analysis &amp; Design</string>
+    <string name="frame_tab_drawing">Drawing</string>
+    <string name="frame_tab_nodes">Nodes</string>
+    <string name="frame_tab_members">Members</string>
+    <string name="frame_tab_loads">Loads</string>
+    <string name="frame_tab_results">Results</string>
+    <string name="frame_solve">Solve</string>
+    <string name="frame_info_nodes">Nodes: %d</string>
+    <string name="frame_info_members">Members: %d</string>
+    <string name="frame_info_solved">Solved ✓  |  Loads: %d</string>
+    <string name="frame_press_solve">Press \'Solve\' to start analysis</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- General -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="error_calculation">Calculation Error</string>
+    <string name="safe">Safe</string>
+    <string name="unsafe">Unsafe</string>
+    <string name="save">Save</string>
+    <string name="back">Back</string>
+    <string name="language_arabic">Arabic</string>
+    <string name="language_english">English</string>
 </resources>

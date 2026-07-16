@@ -31,6 +31,8 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.viewmodel.DiagramType
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
 import com.civileg.app.utils.FrameAnalysisPdfExporter
+import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +56,13 @@ fun FrameAnalysisScreen(
     val context = LocalContext.current
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("الرسم", "العقد", "الأعضاء", "الحمولات", "النتائج")
+    val tabs = listOf(
+        stringResource(R.string.frame_tab_drawing),
+        stringResource(R.string.frame_tab_nodes),
+        stringResource(R.string.frame_tab_members),
+        stringResource(R.string.frame_tab_loads),
+        stringResource(R.string.frame_tab_results)
+    )
 
     // Show errors
     LaunchedEffect(errorMsg) {
@@ -64,10 +72,10 @@ fun FrameAnalysisScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تحليل وتصميم الإطارات", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.frame_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -151,7 +159,7 @@ fun FrameAnalysisScreen(
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             // Tab Row
             TabRow(
                 selectedTabIndex = selectedTab,
@@ -160,16 +168,19 @@ fun FrameAnalysisScreen(
             ) {
                 for ((index, title) in tabs.withIndex()) {
                     Tab(
-                        selected = selectedTab == index,
+                        selected = selectedTab = index,
                         onClick = { selectedTab = index },
                         text = { Text(title, fontSize = 13.sp) }
                     )
                 }
             }
 
-            // Tab Content
+            // Tab Content — weight(1f) ensures drawing fills remaining space
             when (selectedTab) {
-                0 -> DrawingTab(nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel)
+                0 -> DrawingTab(
+                    modifier = Modifier.weight(1f),
+                    nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel
+                )
                 1 -> NodesTab(nodes, members, viewModel)
                 2 -> MembersTab(nodes, members, settings, viewModel)
                 3 -> LoadsTab(nodes, members, nodalLoads, memberLoads, viewModel)
@@ -184,6 +195,7 @@ fun FrameAnalysisScreen(
 // ============================================================================
 @Composable
 private fun DrawingTab(
+    modifier: Modifier = Modifier,
     nodes: List<FrameNode>,
     members: List<FrameMember>,
     memberLoads: List<MemberLoad>,
@@ -193,7 +205,7 @@ private fun DrawingTab(
     selectedMemberId: Int?,
     viewModel: FrameAnalysisViewModel
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         FrameDrawingCanvas(
             nodes = nodes,
             members = members,
@@ -216,9 +228,9 @@ private fun DrawingTab(
                 contentColor = Color.White
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.PlayArrow, "حل")
+                    Icon(Icons.Default.PlayArrow, stringResource(R.string.frame_solve))
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text("حل", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.frame_solve), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -231,10 +243,10 @@ private fun DrawingTab(
             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
-                Text("العقد: ${nodes.size}  |  الأعضاء: ${members.size}", fontSize = 11.sp, color = Color.Gray)
+                Text("${stringResource(R.string.frame_tab_nodes)}: ${nodes.size}  |  ${stringResource(R.string.frame_tab_members)}: ${members.size}", fontSize = 11.sp, color = Color.Gray)
                 if (result?.hasResults == true) {
                     Text(
-                        "تم الحل ✓  |  الحمولات: ${memberLoads.size + nodalLoads.size}",
+                        "${stringResource(R.string.safe)} ✓  |  ${stringResource(R.string.frame_tab_loads)}: ${memberLoads.size + nodalLoads.size}",
                         fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold
                     )
                 }

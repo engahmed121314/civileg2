@@ -1550,6 +1550,36 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     subtitle = "Steel Member Detail",
                     viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "التوصيلات"),
                     drawingContent = {
+                        // Extract connection parameters from result
+                        val conn = res.connectionDesign
+                        val (boltDia, boltCount, boltGauge, boltPitch, endPlateThk, hasStiffener, weldSize) = when {
+                            conn == null -> Tuple7(20.0, 4, 90.0, 75.0, 12.0, false, 6.0)
+                            conn.connectionType is ConnectionType.Bolted -> {
+                                val bt = conn.connectionType as ConnectionType.Bolted
+                                val gauge = when (bt.boltPattern) {
+                                    BoltPattern.DOUBLE_ROW, BoltPattern.STAGGERED, BoltPattern.GRID -> res.sectionType.width * 0.4
+                                    else -> 90.0
+                                }
+                                val pitch = when (bt.boltPattern) {
+                                    BoltPattern.GRID, BoltPattern.STAGGERED -> 75.0
+                                    else -> 0.0
+                                }
+                                Tuple7(bt.boltDiameter, bt.numberOfBolts, gauge, pitch, 12.0, false, 6.0)
+                            }
+                            conn.connectionType is ConnectionType.Welded -> {
+                                val wt = conn.connectionType as ConnectionType.Welded
+                                Tuple7(20.0, 0, 90.0, 75.0, 0.0, false, wt.weldSize)
+                            }
+                            conn.connectionType is ConnectionType.Hybrid -> {
+                                val hy = conn.connectionType as ConnectionType.Hybrid
+                                val gauge = when (hy.bolted.boltPattern) {
+                                    BoltPattern.DOUBLE_ROW, BoltPattern.STAGGERED, BoltPattern.GRID -> res.sectionType.width * 0.4
+                                    else -> 90.0
+                                }
+                                Tuple7(hy.bolted.boltDiameter, hy.bolted.numberOfBolts, gauge, 75.0, 12.0, true, hy.welded.weldSize)
+                            }
+                            else -> Tuple7(20.0, 4, 90.0, 75.0, 12.0, false, 6.0)
+                        }
                         ProfessionalSteelDrawing(
                             sectionType = res.sectionType.displayName,
                             sectionName = res.sectionType.sectionName,
@@ -1564,6 +1594,13 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             sx = res.sectionType.sx,
                             zx = res.sectionType.zx,
                             weightPerMeter = res.sectionType.weight,
+                            boltDia = boltDia,
+                            boltCount = boltCount,
+                            boltGauge = boltGauge,
+                            boltPitch = boltPitch,
+                            endPlateThickness = endPlateThk,
+                            hasStiffener = hasStiffener,
+                            weldSize = weldSize,
                             isColumn = res.memberType == SteelMemberType.COLUMN,
                             modifier = Modifier.fillMaxWidth()
                         )

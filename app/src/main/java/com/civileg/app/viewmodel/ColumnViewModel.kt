@@ -203,11 +203,30 @@ class ColumnViewModel @Inject constructor(
                 }
 
                 val colType = if (res.columnType == "CIRCULAR") ColumnType.Circular(res.width) else ColumnType.Rectangular(res.width, res.depth)
+                // Compute moment capacities from the column result
+                // res.momentCapacity is the uniaxial moment capacity; approximate Y based on aspect ratio
+                val mcX = res.momentCapacity
+                val mcY = if (res.depth > 0 && res.width > 0) {
+                    res.momentCapacity * (res.width / res.depth).coerceIn(0.5, 2.0)
+                } else res.momentCapacity
+                // Compute punching shear capacity estimate (ECP 203 approximation)
+                val cover = 40.0
+                val barDia = res.reinforcement.diameter.toDouble()
+                val effectiveDepth = (res.depth - cover - barDia / 2.0).coerceAtLeast(50.0)
+                val criticalPerimeter = if (res.columnType == "CIRCULAR") {
+                    // Circular column: perimeter at d/2 from column face
+                    Math.PI * (res.width + effectiveDepth)
+                } else {
+                    // Rectangular column: 2*(b + h) + 4*d at d/2 from faces
+                    2.0 * (res.width + res.depth) + 4.0 * effectiveDepth
+                }
+                val punchingShearStress = 0.8 * 1.0 * kotlin.math.sqrt(fcuVal) // MPa, simplified ECP 203
+                val punchingCapacity = punchingShearStress * criticalPerimeter * effectiveDepth / 1000.0 // kN
                 val advResult = AdvancedColumnResult(
                     columnType = colType,
                     axialCapacity = res.axialCapacity,
-                    momentCapacityX = 0.0,
-                    momentCapacityY = 0.0,
+                    momentCapacityX = mcX,
+                    momentCapacityY = mcY,
                     slendernessRatio = res.slenderness,
                     isSlender = res.isSlender,
                     effectiveLength = h * 1000.0,
@@ -223,7 +242,7 @@ class ColumnViewModel @Inject constructor(
                     ),
                     inventoryAnalysis = null,
                     biaxialCheck = null,
-                    punchingCheck = PunchingCheckResult(res.pu, 1000.0, res.punchingSafe, false, 2000.0),
+                    punchingCheck = PunchingCheckResult(res.pu, punchingCapacity, res.punchingSafe, false, criticalPerimeter),
                     warnings = emptyList(),
                     codeNotes = listOf("تم التصدير من تطبيق Civil EG Pro"),
                     steelWeightPerMeter = res.steelWeight / if(h > 0) h else 1.0,

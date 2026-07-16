@@ -47,9 +47,11 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 
 // ══════════════════════════════════════════════════════════════════
 // Color Palette – Deep Navy Dark Theme for Bottom Nav
@@ -68,17 +70,17 @@ private val IndicatorColor    = Color(0xFF0F9DFF)
 // ══════════════════════════════════════════════════════════════════
 @Immutable
 data class BottomNavItem(
-    val label: String,
+    val labelRes: Int,
     val icon: ImageVector,
     val route: String
 )
 
 private val bottomNavItems = listOf(
-    BottomNavItem("الرئيسية",          Icons.Default.Home,      "home"),
-    BottomNavItem("التصميم",           Icons.Default.AccountBalance, "design"),
-    BottomNavItem("المنشآت المعدنية",   Icons.Default.Build,    "steel"),
-    BottomNavItem("الأدوات",            Icons.Default.Calculate, "tools"),
-    BottomNavItem("المزيد",            Icons.Default.MoreHoriz,  "more")
+    BottomNavItem(R.string.nav_home,      Icons.Default.Home,      "home"),
+    BottomNavItem(R.string.nav_design_hub, Icons.Default.AccountBalance, "design"),
+    BottomNavItem(R.string.nav_steel,    Icons.Default.Build,    "steel"),
+    BottomNavItem(R.string.nav_tools,    Icons.Default.Calculate, "tools"),
+    BottomNavItem(R.string.nav_more,     Icons.Default.MoreHoriz,  "more")
 )
 
 // ══════════════════════════════════════════════════════════════════
@@ -237,7 +239,7 @@ private fun TabItem(
             // The actual icon
             Icon(
                 imageVector = item.icon,
-                contentDescription = item.label,
+                contentDescription = stringResource(item.labelRes),
                 tint = iconTint,
                 modifier = Modifier
                     .size(24.dp)
@@ -273,7 +275,7 @@ private fun TabItem(
 
         // Label
         Text(
-            text = item.label,
+            text = stringResource(item.labelRes),
             color = labelColor,
             fontSize = 10.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,

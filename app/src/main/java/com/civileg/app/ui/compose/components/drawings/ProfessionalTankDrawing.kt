@@ -152,7 +152,7 @@ fun ProfessionalTankDrawing(
         // Dimension lines
         drawTankDimensions(
             tankLeft, tankTop, tankRight, tankBottom, baseBottom,
-            drawWT, drawBT, drawL, drawH, isCircular, length
+            drawWT, drawBT, drawL, drawH, isCircular, length, height
         )
 
         // Plan view (top-right)
@@ -409,14 +409,14 @@ private fun DrawScope.drawElevationReinforcement(
 private fun DrawScope.drawTankDimensions(
     left: Float, top: Float, right: Float, bottom: Float,
     baseBottom: Float, wt: Float, bt: Float, l: Float, h: Float,
-    isCircular: Boolean, length: Double
+    isCircular: Boolean, length: Double, heightM: Double
 ) {
     val dimOffset = 35f
     // Height dimension (left side)
-    drawDimLine(left - dimOffset, top, left - dimOffset, bottom,
-        if (isCircular) "H = ${h.toInt()/0.72f}mm" else "H", true)
+    val heightLabel = "H = ${(heightM * 1000).toInt()}mm"
+    drawDimLine(left - dimOffset, top, left - dimOffset, bottom, heightLabel, true)
     // Length dimension (top)
-    val label = if (isCircular) "Ø${length.toInt()}mm" else "L = ${length.toInt()}mm"
+    val label = if (isCircular) "Ø${(length * 1000).toInt()}mm" else "L = ${(length * 1000).toInt()}mm"
     drawDimLine(left, top - dimOffset, right, top - dimOffset, label, false)
     // Wall thickness (left)
     drawDimLine(left - dimOffset - 30f, top + 10f, left, top + 10f, "t", false)

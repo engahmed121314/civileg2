@@ -240,9 +240,13 @@ fun RetainingWallScreen(
                             baseRebarDia = res.baseReinforcement.diameter.toDouble(),
                             baseRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                             cover = 50.0,
-                            backfillAngle = res.ka.toDouble(),
+                            backfillAngle = res.backfillAngle,
                             hasKey = true,
                             keyDepth = 150.0,
+                            fsOverturning = res.factorOfSafetyOverturning,
+                            fsSliding = res.factorOfSafetySliding,
+                            maxBearingPressure = res.maxBearingPressure,
+                            allowableBearingPressure = 200.0,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

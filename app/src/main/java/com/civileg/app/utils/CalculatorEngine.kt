@@ -226,7 +226,11 @@ class CalculatorEngine @Inject constructor(
         val ka: Double = 0.0,
         val soilDensity: Double = 18.0,
         val fcu: Double = 25.0,
-        val fy: Double = 400.0
+        val fy: Double = 400.0,
+        val backfillAngle: Double = 30.0,
+        val maxBearingPressure: Double = 0.0,
+        val minBearingPressure: Double = 0.0,
+        val bearingFS: Double = 0.0
     ) : Parcelable
 
     @Parcelize
@@ -1491,9 +1495,18 @@ class CalculatorEngine @Inject constructor(
         val totalVerticalWeight = wStem + wBase + wSoil
         val fsOverturning = resistingMoment / drivingMoment.coerceAtLeast(1.0)
         val fsSliding = (0.5 * totalVerticalWeight) / (pa + ps).coerceAtLeast(1.0)
-        
+
+        // Bearing pressure calculation
+        val netMoment = resistingMoment - drivingMoment
+        val eccentricity = (baseW / 2.0) - (netMoment / totalVerticalWeight.coerceAtLeast(1.0))
+        val allowableBearingCapacity = 200.0 // kPa default
+        val maxBearingPressure = (totalVerticalWeight / baseW) * (1.0 + 6.0 * eccentricity / baseW)
+        val minBearingPressure = (totalVerticalWeight / baseW) * (1.0 - 6.0 * eccentricity / baseW)
+        val bearingLimit = 1.0
+        val bearingFS = if (maxBearingPressure > 0) allowableBearingCapacity / maxBearingPressure else 0.0
+
         val utilizationRatio = max(otLimit / fsOverturning, slideLimit / fsSliding)
-        val isSafe = fsOverturning >= otLimit && fsSliding >= slideLimit
+        val isSafe = fsOverturning >= otLimit && fsSliding >= slideLimit && bearingFS >= bearingLimit
         
         // 4. Design for Stem Moment
         val muStem = drivingMoment * lf // Factored
@@ -1511,7 +1524,8 @@ class CalculatorEngine @Inject constructor(
         val safetyChecks = mutableListOf<DesignSafetyCheck>()
         safetyChecks.add(DesignSafetyCheck("Overturning Stability", fsOverturning, otLimit, "", fsOverturning >= otLimit))
         safetyChecks.add(DesignSafetyCheck("Sliding Stability", fsSliding, slideLimit, "", fsSliding >= slideLimit))
-        
+        safetyChecks.add(DesignSafetyCheck("Bearing Capacity", bearingFS, bearingLimit, "kPa", bearingFS >= bearingLimit))
+
         return RetainingWallResult(
             height = height,
             stemThickness = stemT,
@@ -1533,7 +1547,11 @@ class CalculatorEngine @Inject constructor(
             ka = ka,
             soilDensity = soilDensity,
             fcu = fcu,
-            fy = fy
+            fy = fy,
+            backfillAngle = frictionAngle,
+            maxBearingPressure = maxBearingPressure,
+            minBearingPressure = minBearingPressure,
+            bearingFS = bearingFS
         )
         }
 

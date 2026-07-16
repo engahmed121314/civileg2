@@ -70,9 +70,13 @@ fun ProfessionalRetainingWallDrawing(
     baseRebarDia: Double,
     baseRebarSpacing: Double,
     cover: Double,
-    backfillAngle: Double = 0.0,
+    backfillAngle: Double = 30.0,
     hasKey: Boolean = false,
     keyDepth: Double = 0.0,
+    fsOverturning: Double = 2.0,
+    fsSliding: Double = 1.5,
+    maxBearingPressure: Double = 0.0,
+    allowableBearingPressure: Double = 200.0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -153,7 +157,8 @@ fun ProfessionalRetainingWallDrawing(
         // 6. Stability checks visual
         drawStabilityChecks(
             baseLeft, baseBottom, drawBaseW, drawBaseT, drawH,
-            stemTop, backfillAngle, wallHeight
+            stemTop, wallHeight,
+            fsOverturning, fsSliding, maxBearingPressure, allowableBearingPressure
         )
 
         // 7. Reinforcement table
@@ -399,8 +404,8 @@ private fun DrawScope.drawEarthPressureDiagram(
     val stemBackX = stemLeft + drawBotT
     val diagramW = 50f
 
-    // Ka coefficient (Rankine simplified)
-    val ka = max(0.25, (1.0 - sin(Math.toRadians(30.0))) / (1.0 + sin(Math.toRadians(30.0))))
+    // Ka coefficient (Rankine) using actual backfill friction angle
+    val ka = max(0.25, (1.0 - sin(Math.toRadians(backfillAngle))) / (1.0 + sin(Math.toRadians(backfillAngle))))
 
     // Triangular active earth pressure
     val pressurePath = Path().apply {
@@ -485,25 +490,34 @@ private fun DrawScope.drawDimensions(
 
 private fun DrawScope.drawStabilityChecks(
     baseLeft: Float, baseBottom: Float, drawBaseW: Float, drawBaseT: Float,
-    drawH: Float, stemTop: Float, backfillAngle: Double, wallHeight: Double
+    drawH: Float, stemTop: Float, wallHeight: Double,
+    fsOverturning: Double, fsSliding: Double,
+    maxBearingPressure: Double, allowableBearingPressure: Double
 ) {
     val checkX = 20f
     val checkY = stemTop + drawH * 0.15f
     val lineH = 22f
 
+    val otPass = fsOverturning >= 1.5
+    val slidePass = fsSliding >= 1.5
+    val bearingPass = maxBearingPressure <= allowableBearingPressure && maxBearingPressure > 0
+
     // Overturning check
     drawTextAnnotated("STABILITY CHECKS", checkX, checkY, DimensionWhite, 17f)
     // F.S. Overturning
-    drawTextAnnotated("F.S.(O.T.) ≥ 1.5", checkX, checkY + lineH, SafeGreen, 15f)
-    drawTextAnnotated("✓ OK", checkX + 120f, checkY + lineH, SafeGreen, 14f)
+    val otColor = if (otPass) SafeGreen else Color(0xFFE74C3C)
+    drawTextAnnotated("F.S.(O.T.) = ${"%.2f".format(fsOverturning)}", checkX, checkY + lineH, otColor, 15f)
+    drawTextAnnotated(if (otPass) "✓ OK" else "✗ FAIL", checkX + 160f, checkY + lineH, otColor, 14f)
 
     // Sliding check
-    drawTextAnnotated("F.S.(Slide) ≥ 1.5", checkX, checkY + lineH * 2, SafeGreen, 15f)
-    drawTextAnnotated("✓ OK", checkX + 120f, checkY + lineH * 2, SafeGreen, 14f)
+    val slideColor = if (slidePass) SafeGreen else Color(0xFFE74C3C)
+    drawTextAnnotated("F.S.(Slide) = ${"%.2f".format(fsSliding)}", checkX, checkY + lineH * 2, slideColor, 15f)
+    drawTextAnnotated(if (slidePass) "✓ OK" else "✗ FAIL", checkX + 160f, checkY + lineH * 2, slideColor, 14f)
 
     // Bearing check
-    drawTextAnnotated("σ_max ≤ q_all", checkX, checkY + lineH * 3, SafeGreen, 15f)
-    drawTextAnnotated("✓ OK", checkX + 120f, checkY + lineH * 3, SafeGreen, 14f)
+    val bpColor = if (bearingPass) SafeGreen else Color(0xFFE74C3C)
+    drawTextAnnotated("σ_max = ${"%.1f".format(maxBearingPressure)} kPa", checkX, checkY + lineH * 3, bpColor, 15f)
+    drawTextAnnotated(if (bearingPass) "✓ OK" else "✗ FAIL", checkX + 160f, checkY + lineH * 3, bpColor, 14f)
 
     // Bearing pressure diagram under base (trapezoidal)
     val bpLeft = baseLeft + drawBaseW * 0.05f

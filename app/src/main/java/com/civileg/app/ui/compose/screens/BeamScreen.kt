@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
 import kotlin.math.pow
+import kotlin.math.sqrt
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -313,8 +314,19 @@ fun BeamScreen(
                                 stirrupDia = res.stirrups.diameter.toDouble(),
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
-                                developmentLength = 0.0,
-                                lapLength = 0.0,
+                                developmentLength = {
+                                    val fcuVal = fcu.toDoubleOrNull() ?: 25.0
+                                    val fyVal = fy.toDoubleOrNull() ?: 360.0
+                                    val db = res.reinforcementBottom.diameter.toDouble()
+                                    (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
+                                }(),
+                                lapLength = {
+                                    val fcuVal = fcu.toDoubleOrNull() ?: 25.0
+                                    val fyVal = fy.toDoubleOrNull() ?: 360.0
+                                    val db = res.reinforcementBottom.diameter.toDouble()
+                                    val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
+                                    1.3 * ld
+                                }(),
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),

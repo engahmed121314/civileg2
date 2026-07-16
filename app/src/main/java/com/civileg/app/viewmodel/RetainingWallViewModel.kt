@@ -99,7 +99,7 @@ class RetainingWallViewModel @Inject constructor(
                             baseRebarDia = currentResult.baseReinforcement.diameter.toDouble(),
                             baseRebarSpacing = currentResult.baseReinforcement.spacing.toDouble(),
                             cover = 50.0,
-                            backfillAngle = currentResult.ka.toDouble(),
+                            backfillAngle = currentResult.backfillAngle,
                             hasKey = true,
                             keyDepth = 150.0
                         )

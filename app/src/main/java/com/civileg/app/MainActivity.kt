@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -115,29 +116,29 @@ fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(12.dp))
-                Text("القائمة الرئيسية", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.nav_drawer_title), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
                 HorizontalDivider()
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("الرئيسية") },
+                    label = { Text(stringResource(R.string.nav_home)) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Home.route) { popUpTo(0) { inclusive = true } } }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Folder, null) },
-                    label = { Text("مشاريعي") },
+                    label = { Text(stringResource(R.string.nav_projects)) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Projects.route) }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, null) },
-                    label = { Text("الإعدادات") },
+                    label = { Text(stringResource(R.string.nav_settings)) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Settings.route) }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(painterResource(id = R.drawable.ic_costing), null) },
-                    label = { Text("مخزن الموقع") },
+                    label = { Text(stringResource(R.string.nav_inventory)) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; navController.navigate(AppScreen.Inventory.route) }
                 )

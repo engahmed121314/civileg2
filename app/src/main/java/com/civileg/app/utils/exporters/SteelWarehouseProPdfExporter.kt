@@ -440,7 +440,12 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // Project cell
         val projCell = Cell(1, 1).setPadding(5f)
-        projCell.add(Paragraph("PROJECT / المشروع").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
+        val projLabelP = Paragraph("PROJECT / المشروع").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY)
+        if (arabicFont != null) {
+            projLabelP.setFont(arabicFont)
+            projLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        }
+        projCell.add(projLabelP)
         val projText = Paragraph("$projEn").setFontSize(8f).setBold()
         projCell.add(projText)
         val projArP = Paragraph(projAr).setFontSize(7f)
@@ -453,7 +458,12 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // Client cell
         val clientCell = Cell(1, 1).setPadding(5f)
-        clientCell.add(Paragraph("CLIENT / العميل").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
+        val clientLabelP = Paragraph("CLIENT / العميل").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY)
+        if (arabicFont != null) {
+            clientLabelP.setFont(arabicFont)
+            clientLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        }
+        clientCell.add(clientLabelP)
         val clientText = Paragraph(clientEn).setFontSize(8f).setBold()
         clientCell.add(clientText)
         val clientArP = Paragraph(clientAr).setFontSize(7f)
