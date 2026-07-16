@@ -298,7 +298,7 @@ fun TankScreen(
                                 verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
                                 horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                                foundationDepth = if (isUnderground) res.height * 0.3 else 0.0,
+                                foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
