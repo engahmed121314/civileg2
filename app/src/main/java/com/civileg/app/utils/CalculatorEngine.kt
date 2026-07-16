@@ -1545,7 +1545,8 @@ class CalculatorEngine @Inject constructor(
             val tankWeight = totalVol * 25.0 // kN
             val upliftForce = gammaW * capacity // kN
             val fsUplift = tankWeight / upliftForce.coerceAtLeast(0.01)
-            suggestions.add("معامل أمان الرفع (Uplift FS) = ${"%.2f".format(fsUplift)} ${if (fsUplift >= 1.2) "(آمن)" else "(غير آمن - يحتاج وزن زائد أو أرضيات)}")
+            val fsLabel = if (fsUplift >= 1.2) "(آمن)" else "(غير آمن - يحتاج وزن زائد أو أرضيات)"
+            suggestions.add("معامل أمان الرفع (Uplift FS) = " + "%.2f".format(fsUplift) + " " + fsLabel)
             if (soilPressure > 0) {
                 suggestions.add("ضغط التربة الخارجي على الحوائط = ${"%.1f".format(soilPressure)} kN/m²")
             }
