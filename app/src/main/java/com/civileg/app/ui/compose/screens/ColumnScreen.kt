@@ -61,7 +61,7 @@ fun ColumnScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("عمود الدور الأرضي") }
+    var designName by remember { mutableStateOf(stringResource(R.string.column_default_name)) }
 
     Scaffold(
         topBar = {
@@ -123,8 +123,8 @@ fun ColumnScreen(
                         
                         Text(
                             text = if (uiState.loadCombination == LoadCombination.DEAD_ONLY) 
-                                "💡 Dead Load Only: يستخدم عادة في المنشآت المؤقتة أو تحت ظروف خاصة حيث لا يوجد أحمال حية مؤثرة."
-                                else "💡 Dead + Live: المزيج التصميمي الأكثر شيوعاً وأماناً، يشمل وزن المنشأ والأثاث والأشخاص.",
+                                stringResource(R.string.column_load_combo_dead_only)
+                                else stringResource(R.string.column_load_combo_dead_live),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.padding(top = 8.dp)
@@ -133,12 +133,12 @@ fun ColumnScreen(
                 }
             }
             
-            item { SectionHeader("📐 أبعاد المقطع والخصائص", R.drawable.ic_column) }
+            item { SectionHeader(stringResource(R.string.column_section_props), R.drawable.ic_column) }
             
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(uiState.width, "العرض b (mm)", { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
-                    ColumnInputField(uiState.depth, "العمق t (mm)", { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
+                    ColumnInputField(uiState.width, stringResource(R.string.column_width_t_mm), { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
+                    ColumnInputField(uiState.depth, stringResource(R.string.column_depth_t_mm), { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
                 }
             }
 
@@ -149,10 +149,10 @@ fun ColumnScreen(
                 }
             }
 
-            item { SectionHeader("⚡ الأحمال المطبقة", R.drawable.ic_design) }
+            item { SectionHeader(stringResource(R.string.column_applied_loads), R.drawable.ic_design) }
             
             item {
-                ColumnInputField(uiState.axialLoad, "الحمل المحوري Pu (kN)", { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
+                ColumnInputField(uiState.axialLoad, stringResource(R.string.column_axial_load_pu), { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -164,12 +164,12 @@ fun ColumnScreen(
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("حساب المقطع (Design Now)", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.column_design_now), fontWeight = FontWeight.Bold)
                 }
             }
 
             uiState.result?.let { result ->
-                item { SectionHeader("📊 نتائج التصميم ومؤشر التوفير", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.column_results_economy), R.drawable.ic_calculator) }
                 
                 item {
                     val ecoColor = when {
@@ -199,16 +199,16 @@ fun ColumnScreen(
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            if (result.utilizationRatio > 1.0) "القطاع غير آمن إنشائياً! ❌"
-                                            else if (result.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
-                                            else if (result.utilizationRatio > 0.4) "قطاع مثالي واقتصادي ✅"
-                                            else "قطاع كبير جداً (غير اقتصادي) 🔵",
+                                            if (result.utilizationRatio > 1.0) stringResource(R.string.column_section_unsafe)
+                                            else if (result.utilizationRatio > 0.9) stringResource(R.string.design_caution)
+                                            else if (result.utilizationRatio > 0.4) stringResource(R.string.column_section_ideal)
+                                            else stringResource(R.string.column_section_large),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     Text(
-                                        "المستشار الإنشائي: نسبة الاستخدام",
+                                        stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -250,7 +250,7 @@ fun ColumnScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("خيار موفر 💰", fontSize = 12.sp)
+                            Text(stringResource(R.string.column_economy_option), fontSize = 12.sp)
                         }
                         Button(
                             onClick = { viewModel.applySafetyDesign() },
@@ -258,7 +258,7 @@ fun ColumnScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("الأكثر أماناً 🛡️", fontSize = 12.sp)
+                            Text(stringResource(R.string.column_safest_option), fontSize = 12.sp)
                         }
                     }
                 }
@@ -271,7 +271,7 @@ fun ColumnScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                Text("تخصيص التسليح (لتحقيق التوفير)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Text(stringResource(R.string.column_custom_rebar), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                 Switch(
                                     checked = uiState.autoOptimize,
                                     onCheckedChange = { viewModel.updateAutoOptimize(it) },
@@ -282,14 +282,14 @@ fun ColumnScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 ColumnInputField(
                                     value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (result.reinforcement.numBars.toString()) else uiState.manualNumBars,
-                                    label = "عدد الأسياخ",
+                                    label = stringResource(R.string.column_num_bars_label),
                                     onValueChange = { viewModel.updateInputs(manualNumBars = it) },
                                     modifier = Modifier.weight(1f),
                                     enabled = true
                                 )
                                 ColumnInputField(
                                     value = uiState.preferredDiameter,
-                                    label = "القطر Ø (mm)",
+                                    label = stringResource(R.string.column_bar_diameter_label),
                                     onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
                                     modifier = Modifier.weight(1f),
                                     enabled = true
@@ -302,7 +302,7 @@ fun ColumnScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                                 ) {
-                                    Text("تحديث التسليح المخصص")
+                                    Text(stringResource(R.string.column_update_rebar))
                                 }
                             }
                         }
@@ -319,7 +319,7 @@ fun ColumnScreen(
                         ) {
                             Icon(painterResource(id = R.drawable.ic_pdf), contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("تقرير PDF")
+                            Text(stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -330,21 +330,21 @@ fun ColumnScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("حفظ")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
 
                 item {
-                    Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     EngineeringFormulasCard()
                 }
 
                 item {
                     InteractiveDrawingScreen(
-                        title = "📐 الرسم الهندسي التفصيلي",
+                        title = stringResource(R.string.column_drawing_title),
                         subtitle = "Column Reinforcement Detail",
-                        viewModes = listOf("الكل", "المنظور", "المقطع العرضي", "جدول التسليح"),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
@@ -368,19 +368,19 @@ fun ColumnScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم العمود (مثلاً: C1)") },
+                        label = { Text(stringResource(R.string.column_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -405,11 +405,11 @@ fun ColumnScreen(
                     uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -433,27 +433,27 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    if (result.isSafe) "المقطع آمن (SAFE)" else "المقطع غير آمن (UNSAFE)",
+                    if (result.isSafe) stringResource(R.string.column_section_safe) else stringResource(R.string.column_section_unsafe_label),
                     fontWeight = FontWeight.Bold,
                     color = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.Gray.copy(alpha = 0.2f))
             
-            ResultDataRow("التسليح الموفر", result.reinforcement.barString)
-            ResultDataRow("الكانات", result.stirrups.description)
-            ResultDataRow("نسبة التسليح (μ)", String.format("%.2f %%", result.reinforcementRatio))
+            ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
+            ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
+            ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
             
-            Text("الكميات والتقديرات:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            ResultDataRow("حجم الخرسانة", String.format("%.3f m³", result.concreteVolume))
-            ResultDataRow("وزن الحديد", String.format("%.2f kg", result.steelWeight))
-            ResultDataRow("التكلفة التقديرية", String.format("%.2f", result.cost))
+            Text(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            ResultDataRow(stringResource(R.string.column_concrete_vol), String.format("%.3f m³", result.concreteVolume))
+            ResultDataRow(stringResource(R.string.column_steel_weight), String.format("%.2f kg", result.steelWeight))
+            ResultDataRow(stringResource(R.string.column_estimated_cost), String.format("%.2f", result.cost))
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
             
-            Text("التحقق من الكود (Safety Checks):", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text(stringResource(R.string.safety_checks), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             result.safetyChecks.forEach { check ->
                 ResultCheckRow(check)
             }
@@ -470,7 +470,7 @@ private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            if (check.isSafe) "آمن ✅" else "غير آمن ❌",
+            if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check),
             color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp
@@ -553,7 +553,7 @@ private fun FormulaItem(formula: String) {
 
 @Composable
 private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (DesignCode) -> Unit) {
-    Text("اختر كود التصميم", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Text(stringResource(R.string.column_select_code), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -585,7 +585,7 @@ private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (Design
 
 @Composable
 private fun LoadCombinationSelector(selected: LoadCombination, onSelected: (LoadCombination) -> Unit) {
-    Text("تركيبة الأحمال", style = MaterialTheme.typography.labelMedium)
+    Text(stringResource(R.string.column_load_combo), style = MaterialTheme.typography.labelMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         LoadCombination.values().take(2).forEach { combo ->
             FilterChip(

@@ -50,7 +50,7 @@ fun RetainingWallScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("حائط ساند RW1") }
+    var designName by remember { mutableStateOf(stringResource(R.string.rw_default_name)) }
 
     var height by remember { mutableStateOf("4.0") }
     var soilDensity by remember { mutableStateOf("18.0") }
@@ -99,13 +99,13 @@ fun RetainingWallScreen(
                 .padding(16.dp)
                 .verticalScroll(scrollState)
         ) {
-            Text("إدخال البيانات الفنية", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.rw_data_input), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text("ارتفاع الحائط (m)") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text("كثافة التربة (kN/m³)") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { Text("زاوية الاحتكاك Φ (deg)") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text("حمل إضافي Surcharge (kN/m²)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text(stringResource(R.string.rw_soil_density)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { Text(stringResource(R.string.rw_friction_angle)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text(stringResource(R.string.rw_surcharge)) }, modifier = Modifier.fillMaxWidth())
             
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text("fcu") }, modifier = Modifier.weight(1f))
@@ -144,7 +144,7 @@ fun RetainingWallScreen(
                 } else {
                     Icon(Icons.Default.Calculate, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("تحليل الاستقرار وتصميم الحائط")
+                    Text(stringResource(R.string.rw_analyze))
                 }
             }
 
@@ -177,14 +177,14 @@ fun RetainingWallScreen(
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        if (res.isSafe) "الحائط آمن تماماً" else "الحائط غير آمن (حرِج)",
+                                        if (res.isSafe) stringResource(R.string.rw_safe) else stringResource(R.string.rw_unsafe),
                                         fontWeight = FontWeight.Bold,
                                         color = ecoColor,
                                         fontSize = 18.sp
                                     )
                                 }
                                 Text(
-                                    "المستشار الإنشائي: نسبة الاستخدام",
+                                    stringResource(R.string.consultant_ratio),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -214,18 +214,18 @@ fun RetainingWallScreen(
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        ResultRow("سمك الجذع (Stem)", "${res.stemThickness * 100} cm")
-                        ResultRow("عرض القاعدة", "${res.baseWidth} m")
-                        ResultRow("تسليح الجذع", res.stemReinforcement.barString)
-                        ResultRow("تسليح القاعدة", res.baseReinforcement.barString)
+                        ResultRow(stringResource(R.string.rw_stem_thickness), "${res.stemThickness * 100} cm")
+                        ResultRow(stringResource(R.string.rw_base_width), "${res.baseWidth} m")
+                        ResultRow(stringResource(R.string.rw_stem_reinforcement), res.stemReinforcement.barString)
+                        ResultRow(stringResource(R.string.rw_base_reinforcement), res.baseReinforcement.barString)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
                 InteractiveDrawingScreen(
-                    title = "📐 رسم حائط السند التفصيلي",
+                    title = stringResource(R.string.rw_drawing_title),
                     subtitle = "Retaining Wall Detail",
-                    viewModes = listOf("الكل", "المقطع", "ضغط التربة", "جدول التسليح"),
+                    viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
                     drawingContent = {
                         ProfessionalRetainingWallDrawing(
                             wallHeight = res.height,
@@ -260,19 +260,19 @@ fun RetainingWallScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم الحائط (مثلاً: RW1)") },
+                        label = { Text(stringResource(R.string.rw_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.rw_no_projects), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         Column(modifier = Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState())) {
                             projects.forEach { project ->
@@ -300,11 +300,11 @@ fun RetainingWallScreen(
                     result?.let { viewModel.saveRetainingWall(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

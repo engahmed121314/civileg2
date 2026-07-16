@@ -77,7 +77,7 @@ fun SlabScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
     var pdfError by remember { mutableStateOf<String?>(null) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("بلاطة سقف الدور") }
+    var designName by remember { mutableStateOf(stringResource(R.string.slab_default_name)) }
 
     Scaffold(
         topBar = {
@@ -117,7 +117,7 @@ fun SlabScreen(
                             value = selectedType.displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("نوع البلاطة") },
+                            label = { Text(stringResource(R.string.slab_type_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp)
@@ -144,7 +144,7 @@ fun SlabScreen(
                             value = selectedCode.displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("الكود") },
+                            label = { Text(stringResource(R.string.seismic_pdf_code)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp)
@@ -164,7 +164,7 @@ fun SlabScreen(
                 }
             }
 
-            item { SectionHeader("📐 أبعاد البلاطة والتحميل", R.drawable.ic_slab) }
+            item { SectionHeader(stringResource(R.string.slab_dimensions_loading), R.drawable.ic_slab) }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -181,7 +181,7 @@ fun SlabScreen(
                 }
             }
 
-            item { SectionHeader("🔩 خواص المادة", R.drawable.ic_calculator) }
+            item { SectionHeader(stringResource(R.string.beam_material_props), R.drawable.ic_calculator) }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -193,51 +193,51 @@ fun SlabScreen(
             
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    SlabInputField(thickness, "السماكة (mm)", { thickness = it }, Modifier.weight(1f))
+                    SlabInputField(thickness, stringResource(R.string.slab_thickness_mm), { thickness = it }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    SlabInputField(preferredDiameter, "قطر السيخ (mm)", { preferredDiameter = it }, Modifier.weight(1f))
+                    SlabInputField(preferredDiameter, stringResource(R.string.slab_bar_diameter_mm), { preferredDiameter = it }, Modifier.weight(1f))
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.FLAT) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SlabInputField(columnSize, "عرض العمود (mm)", { columnSize = it }, Modifier.weight(1f))
-                        SlabInputField(dropPanelThickness, "سمك السقوط (mm)", { dropPanelThickness = it }, Modifier.weight(1f))
+                        SlabInputField(columnSize, stringResource(R.string.slab_column_width_mm), { columnSize = it }, Modifier.weight(1f))
+                        SlabInputField(dropPanelThickness, stringResource(R.string.slab_drop_thickness_mm), { dropPanelThickness = it }, Modifier.weight(1f))
                     }
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.POST_TENSION) {
                 item {
-                    SlabInputField(prestressForce, "قوة الضغط P (kN)", { prestressForce = it }, Modifier.fillMaxWidth())
+                    SlabInputField(prestressForce, stringResource(R.string.slab_compressive_force), { prestressForce = it }, Modifier.fillMaxWidth())
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK) {
                 item {
-                    SectionHeader("📦 أبعاد الهردي", R.drawable.ic_slab)
+                    SectionHeader(stringResource(R.string.slab_ribbed_dims), R.drawable.ic_slab)
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SlabInputField(ribWidth, "عرض الضلع (mm)", { ribWidth = it }, Modifier.weight(1f))
-                        SlabInputField(ribSpacing, "مسافة بين الأضلاع (mm)", { ribSpacing = it }, Modifier.weight(1f))
+                        SlabInputField(ribWidth, stringResource(R.string.slab_rib_width_mm), { ribWidth = it }, Modifier.weight(1f))
+                        SlabInputField(ribSpacing, stringResource(R.string.slab_rib_spacing_mm), { ribSpacing = it }, Modifier.weight(1f))
                     }
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.WAFFLE) {
                 item {
-                    SectionHeader("📦 أبعاد الوافل (Waffle)", R.drawable.ic_slab)
+                    SectionHeader(stringResource(R.string.slab_waffle_dims), R.drawable.ic_slab)
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SlabInputField(ribWidth, "عرض الضلع (mm)", { ribWidth = it }, Modifier.weight(1f))
-                        SlabInputField(ribSpacing, "مسافة X (mm)", { ribSpacing = it }, Modifier.weight(1f))
+                        SlabInputField(ribWidth, stringResource(R.string.slab_rib_width_mm), { ribWidth = it }, Modifier.weight(1f))
+                        SlabInputField(ribSpacing, stringResource(R.string.slab_waffle_spacing_x_mm), { ribSpacing = it }, Modifier.weight(1f))
                     }
                 }
                 item {
-                    SlabInputField(ribSpacingY, "مسافة Y (mm)", { ribSpacingY = it }, Modifier.fillMaxWidth())
+                    SlabInputField(ribSpacingY, stringResource(R.string.slab_waffle_spacing_y_mm), { ribSpacingY = it }, Modifier.fillMaxWidth())
                 }
             }
 
@@ -269,26 +269,26 @@ fun SlabScreen(
                     } else {
                         Icon(Icons.Default.Calculate, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("تحليل وتصميم")
+                        Text(stringResource(R.string.slab_design_now))
                     }
                 }
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التصميم", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
                 
                 item { SlabResultCard(res) }
 
                 item {
-                    Text("📝 المعادلات (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.slab_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     SlabFormulasCard()
                 }
 
                 item {
                     InteractiveDrawingScreen(
-                        title = "📐 رسم البلاطة التفصيلي",
+                        title = stringResource(R.string.slab_drawing_title),
                         subtitle = "Slab Reinforcement Detail",
-                        viewModes = listOf("الكل", "المخطط", "المقطع", "جدول التسليح"),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalSlabDrawing(
                                 slabType = selectedType.displayName,
@@ -315,7 +315,7 @@ fun SlabScreen(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
-                                        pdfError = "حدث خطأ أثناء إنشاء تقرير PDF"
+                                        pdfError = stringResource(R.string.beam_pdf_error)
                                     } else {
                                         pdfError = null
                                     }
@@ -331,7 +331,7 @@ fun SlabScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("تقرير PDF")
+                                Text(stringResource(R.string.pdf_report))
                             }
                         }
 
@@ -343,7 +343,7 @@ fun SlabScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("حفظ في مشروع")
+                            Text(stringResource(R.string.save_in_project))
                         }
                     }
                 }
@@ -354,19 +354,19 @@ fun SlabScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم العنصر (مثلاً: سقف المتكرر)") },
+                        label = { Text(stringResource(R.string.slab_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -391,11 +391,11 @@ fun SlabScreen(
                     result?.let { viewModel.saveSlab(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -422,7 +422,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "المستشار الإنشائي: نسبة الاستخدام",
+                        stringResource(R.string.consultant_ratio),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -435,7 +435,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            if (res.isSafe) "البلاطة آمنة إنشائياً" else "البلاطة غير آمنة!",
+                            if (res.isSafe) stringResource(R.string.slab_safe) else stringResource(R.string.slab_unsafe),
                             fontWeight = FontWeight.Bold,
                             color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red
                         )
@@ -465,16 +465,16 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ResultItem("سمك البلاطة", "${res.thickness} mm")
-                ResultItem("عزم Mx", "${"%.1f".format(res.momentX)} kN.m")
+                ResultItem(stringResource(R.string.slab_thickness_label2), "${res.thickness} mm")
+                ResultItem(stringResource(R.string.slab_moment_mx), "${"%.1f".format(res.momentX)} kN.m")
             }
             
             Spacer(Modifier.height(8.dp))
             
-            Text("الحديد الرئيسي (Lx):", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.slab_main_steel_lx), style = MaterialTheme.typography.labelMedium)
             Text(res.reinforcementMain.barString, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             
-            Text("الحديد الثانوي (Ly):", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+            Text(stringResource(R.string.slab_secondary_steel_ly), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
             Text(res.reinforcementSecondary.barString, fontWeight = FontWeight.Bold)
         }
     }

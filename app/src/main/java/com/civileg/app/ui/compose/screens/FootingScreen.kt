@@ -47,7 +47,7 @@ fun FootingScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("قاعدة منفصلة F1") }
+    var designName by remember { mutableStateOf(stringResource(R.string.footing_default_name)) }
     
     var selectedType by remember { mutableStateOf(CalculatorEngine.FootingType.ISOLATED) }
     var expandedType by remember { mutableStateOf(false) }
@@ -95,11 +95,11 @@ fun FootingScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { SectionHeader("🏗️ نوع القاعدة والمدخلات", R.drawable.ic_footing) }
+            item { SectionHeader(stringResource(R.string.footing_inputs), R.drawable.ic_footing) }
 
             item {
                 Column {
-                    Text("نوع القاعدة", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(stringResource(R.string.footing_type_label), fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
                     ExposedDropdownMenuBox(
                         expanded = expandedType,
                         onExpandedChange = { expandedType = !expandedType }
@@ -132,8 +132,8 @@ fun FootingScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(colLength, "طول العمود (mm)", { colLength = it }, Modifier.weight(1f))
-                    FootingInputField(colWidth, "عرض العمود (mm)", { colWidth = it }, Modifier.weight(1f))
+                    FootingInputField(colLength, stringResource(R.string.footing_column_length_mm), { colLength = it }, Modifier.weight(1f))
+                    FootingInputField(colWidth, stringResource(R.string.slab_column_width_mm), { colWidth = it }, Modifier.weight(1f))
                 }
             }
 
@@ -169,10 +169,10 @@ fun FootingScreen(
             }
 
             item {
-                Text("خيارات التسليح (لتقييم التوفير)", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.footing_rebar_options), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(barDiameter, "قطر السيخ Ø", { barDiameter = it }, Modifier.weight(1f))
-                    FootingInputField(barSpacing, "المسافة S (mm)", { barSpacing = it }, Modifier.weight(1f))
+                    FootingInputField(barDiameter, stringResource(R.string.footing_bar_diameter), { barDiameter = it }, Modifier.weight(1f))
+                    FootingInputField(barSpacing, stringResource(R.string.footing_bar_spacing), { barSpacing = it }, Modifier.weight(1f))
                 }
             }
 
@@ -212,13 +212,13 @@ fun FootingScreen(
                     } else {
                         Icon(Icons.Default.Calculate, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("تحليل وتصميم القاعدة")
+                        Text(stringResource(R.string.footing_design_now))
                     }
                 }
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التصميم", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
                 
                 item {
                     val ecoColor = if (res.isOptimal) Color(0xFF2E7D32) else Color(0xFFF57C00)
@@ -238,14 +238,14 @@ fun FootingScreen(
                                             contentDescription = null, tint = ecoColor)
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            if (res.isOptimal) "تصميم آمن واقتصادي" 
-                                            else "آمن (تحت المراجعة)",
+                                            if (res.isOptimal) stringResource(R.string.footing_safe_economical) 
+                                            else stringResource(R.string.footing_safe_review),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     Text(
-                                        "المستشار الإنشائي: نسبة الاستخدام",
+                                        stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -280,10 +280,10 @@ fun FootingScreen(
                             HorizontalDivider()
                             Spacer(Modifier.height(12.dp))
 
-                            ResultRow("أبعاد القاعدة", "${res.width.toInt()} x ${res.length.toInt()} mm")
-                            ResultRow("سمك القاعدة", "${res.thickness.toInt()} mm")
-                            ResultRow("حجم الخرسانة", "${"%.2f".format(res.concreteVolume)} m³")
-                            ResultRow("التكلفة التقديرية", "${"%.2f".format(res.cost)}")
+                            ResultRow(stringResource(R.string.footing_dims), "${res.width.toInt()} x ${res.length.toInt()} mm")
+                            ResultRow(stringResource(R.string.footing_thickness_label2), "${res.thickness.toInt()} mm")
+                            ResultRow(stringResource(R.string.column_concrete_vol), "${"%.2f".format(res.concreteVolume)} m³")
+                            ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
                         }
                     }
                 }
@@ -296,7 +296,7 @@ fun FootingScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    "التحقق من الكود (Safety Checks):",
+                                    stringResource(R.string.safety_checks),
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = Color.Gray
@@ -348,7 +348,7 @@ fun FootingScreen(
                                 Icon(Icons.Default.PictureAsPdf, null)
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text(if (isExporting) "جاري التصدير..." else "تقرير PDF")
+                            Text(if (isExporting) stringResource(R.string.footing_exporting) else stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -359,7 +359,7 @@ fun FootingScreen(
                         ) {
                             Icon(Icons.Default.Save, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("حفظ")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
@@ -385,9 +385,9 @@ fun FootingScreen(
                         Pair(0.0, 0.0)
                     }
                     InteractiveDrawingScreen(
-                        title = "📐 رسم القاعدة التفصيلي",
+                        title = stringResource(R.string.footing_drawing_title),
                         subtitle = "Footing Reinforcement Detail",
-                        viewModes = listOf("الكل", "المخطط", "المقطع", "جدول التسليح"),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalFootingDrawing(
                                 footingType = footingTypeEnglish,
@@ -416,19 +416,19 @@ fun FootingScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم القاعدة (مثلاً: F1)") },
+                        label = { Text(stringResource(R.string.footing_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -453,11 +453,11 @@ fun FootingScreen(
                     result?.let { viewModel.saveFooting(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

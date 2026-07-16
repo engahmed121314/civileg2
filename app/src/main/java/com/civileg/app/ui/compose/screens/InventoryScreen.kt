@@ -69,7 +69,7 @@ fun InventoryScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("بحث عن بند...") },
+                placeholder = { Text(stringResource(R.string.inventory_search_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp)
             )
@@ -86,7 +86,7 @@ fun InventoryScreen(
                 }
             } else if (filteredItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(if(searchQuery.isEmpty()) "المخزن فارغ. أضف بنوداً جديدة." else "لا توجد نتائج للبحث.", color = Color.Gray)
+                    Text(if(searchQuery.isEmpty()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_results), color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -125,7 +125,7 @@ fun TypeFilterRow(selectedType: InventoryType?, onTypeSelected: (InventoryType?)
         FilterChip(
             selected = selectedType == null,
             onClick = { onTypeSelected(null) },
-            label = { Text("الكل") }
+            label = { Text(stringResource(R.string.view_all)) }
         )
         InventoryType.entries.forEach { type ->
             FilterChip(
@@ -180,9 +180,9 @@ fun InventoryItemCard(item: InventoryItem, onUpdateQuantity: (Double) -> Unit, o
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("آخر تحديث: ${dateFormat.format(item.lastUpdated)}", fontSize = 10.sp, color = Color.Gray)
+                Text(stringResource(R.string.inventory_last_updated, dateFormat.format(item.lastUpdated)), fontSize = 10.sp, color = Color.Gray)
                 if (isLowStock) {
-                    Text("مخزون منخفض!", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(stringResource(R.string.inventory_low_stock), color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
@@ -195,23 +195,23 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(InventoryType.RAW_MATERIAL) }
     var quantity by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("كيس/طن") }
+    var unit by remember { mutableStateOf(stringResource(R.string.inventory_bag_ton)) }
     var alertQty by remember { mutableStateOf("10") }
     var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("إضافة بند جديد للمخزن") },
+        title = { Text(stringResource(R.string.inventory_add_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم (أسمنت، رمل، طوب...)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.inventory_name_hint)) }, modifier = Modifier.fillMaxWidth())
                 
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
                         value = getInventoryTypeNameAr(type),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("النوع") },
+                        label = { Text(stringResource(R.string.water_level_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
@@ -229,27 +229,27 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("الكمية") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("الوحدة") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text(stringResource(R.string.inventory_quantity_label)) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text(stringResource(R.string.inventory_unit_label)) }, modifier = Modifier.weight(1f))
                 }
                 
-                OutlinedTextField(value = alertQty, onValueChange = { alertQty = it }, label = { Text("تنبيه عند نقص الكمية عن...") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = alertQty, onValueChange = { alertQty = it }, label = { Text(stringResource(R.string.inventory_alert_hint)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         },
         confirmButton = {
             Button(onClick = {
                 onConfirm(name, type, quantity.toDoubleOrNull() ?: 0.0, unit, alertQty.toDoubleOrNull() ?: 0.0)
-            }) { Text("إضافة") }
+            }) { Text(stringResource(R.string.add)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("إلغاء") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
 
 fun getInventoryTypeNameAr(type: InventoryType): String = when (type) {
-    InventoryType.EQUIPMENT -> "معدات ثقيلة"
-    InventoryType.TOOLS -> "أدوات ومعدات صغيرة"
-    InventoryType.RAW_MATERIAL -> "خامات (أسمنت، رمل...)"
-    InventoryType.ACCESSORIES -> "إكسسوارات ومستلزمات"
+    InventoryType.EQUIPMENT -> stringResource(R.string.inventory_category_heavy)
+    InventoryType.TOOLS -> stringResource(R.string.inventory_category_tools)
+    InventoryType.RAW_MATERIAL -> stringResource(R.string.inventory_category_materials)
+    InventoryType.ACCESSORIES -> stringResource(R.string.inventory_category_accessories)
 }

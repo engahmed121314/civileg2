@@ -37,7 +37,7 @@ fun CalculatorScreen(
                 title = { Text(stringResource(R.string.screen_calculator_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -102,7 +102,7 @@ fun CalculatorScreen(
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                         Text(
-                            "السجل",
+                            stringResource(R.string.calc_history),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -210,7 +210,7 @@ fun CalculatorScreen(
                             expression = formatted
                             isNewCalculation = true
                         } catch (e: Exception) {
-                            result = "خطأ"
+                            result = stringResource(R.string.error)
                         }
                     }
                 }
@@ -456,7 +456,7 @@ private class ExprParser(private val tokens: List<Token>) {
 }
 
 private fun formatResult(value: Double): String {
-    if (value.isNaN() || value.isInfinite()) return "خطأ"
+    if (value.isNaN() || value.isInfinite()) return stringResource(R.string.error)
     return if (value == value.toLong().toDouble()) {
         value.toLong().toString()
     } else {

@@ -92,19 +92,19 @@ fun WaterLevelScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text("أداة المساح engineer's level", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("حساب HI و RL للنقاط المختلفة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.water_level_tool), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(stringResource(R.string.water_level_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
             // ── Step 1: Benchmark & Back Sight ──
-            SectionLabel("📌 الخطوة ١: مستوى الرجوع والبصيرة الخلفية")
+            SectionLabel(stringResource(R.string.water_level_step1))
 
             OutlinedTextField(
                 value = benchmarkRL,
                 onValueChange = { benchmarkRL = it },
-                label = { Text("مستوى الرجوم BM (م)") },
+                label = { Text(stringResource(R.string.water_level_bm)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -114,7 +114,7 @@ fun WaterLevelScreen(
             OutlinedTextField(
                 value = backSight,
                 onValueChange = { backSight = it },
-                label = { Text("قراءة البصيرة الخلفية BS (م)") },
+                label = { Text(stringResource(R.string.water_level_bs)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -122,7 +122,7 @@ fun WaterLevelScreen(
             )
 
             // ── Step 2: Number of Points ──
-            SectionLabel("📌 الخطوة ٢: عدد النقاط")
+            SectionLabel(stringResource(R.string.water_level_step2))
 
             OutlinedTextField(
                 value = numPoints,
@@ -137,7 +137,7 @@ fun WaterLevelScreen(
                         pointReadings.take(clamped)
                     }
                 },
-                label = { Text("عدد النقاط (قراءات الأمامية)") },
+                label = { Text(stringResource(R.string.water_level_num_points)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -145,7 +145,7 @@ fun WaterLevelScreen(
             )
 
             // ── Step 3: Staff Readings ──
-            SectionLabel("📌 الخطوة ٣: قراءات المسطرة (FS)")
+            SectionLabel(stringResource(R.string.water_level_step3))
 
             pointReadings.forEachIndexed { index, reading ->
                 OutlinedTextField(
@@ -153,7 +153,7 @@ fun WaterLevelScreen(
                     onValueChange = { newValue ->
                         pointReadings = pointReadings.toMutableList().also { it[index] = newValue }
                     },
-                    label = { Text("قراءة النقطة ${index + 1} FS (م)") },
+                    label = { Text(stringResource(R.string.water_level_fs_n, index + 1)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -204,10 +204,10 @@ fun WaterLevelScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("ارتفاع الجهاز HI", style = MaterialTheme.typography.labelMedium, color = Color(0xFF757575))
+                            Text(stringResource(R.string.water_level_hi), style = MaterialTheme.typography.labelMedium, color = Color(0xFF757575))
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "%.3f م".format(hi),
+                                stringResource(R.string.water_level_value_m, hi),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 28.sp,
                                 color = Color(0xFF1B5E20)
@@ -229,7 +229,7 @@ fun WaterLevelScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // ── Results Table ──
-                Text("📋 جدول النتائج", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.water_level_results_table), fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
                 // Table header
                 Card(
@@ -242,10 +242,10 @@ fun WaterLevelScreen(
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        TableHeaderCell("النقطة", Modifier.weight(1.2f))
-                        TableHeaderCell("النوع", Modifier.weight(1f))
-                        TableHeaderCell("القراءة", Modifier.weight(1f))
-                        TableHeaderCell("RL (م)", Modifier.weight(1.2f))
+                        TableHeaderCell(stringResource(R.string.water_level_point), Modifier.weight(1.2f))
+                        TableHeaderCell(stringResource(R.string.water_level_type), Modifier.weight(1f))
+                        TableHeaderCell(stringResource(R.string.water_level_reading), Modifier.weight(1f))
+                        TableHeaderCell(stringResource(R.string.water_level_rl), Modifier.weight(1.2f))
                     }
                 }
 
@@ -262,7 +262,7 @@ fun WaterLevelScreen(
                 // Back Sight row
                 TableRow(
                     pointName = "BS",
-                    typeLabel = "بصيرة خلفية",
+                    typeLabel = stringResource(R.string.water_level_backsight),
                     typeColor = Color(0xFF1565C0),
                     reading = "%.3f".format(bsValue),
                     rl = "—",
@@ -274,7 +274,7 @@ fun WaterLevelScreen(
                     val hasReading = pointReadings[index].toDoubleOrNull() != null
                     TableRow(
                         pointName = point.pointName,
-                        typeLabel = "بصيرة أمامية",
+                        typeLabel = stringResource(R.string.water_level_foresight),
                         typeColor = Color(0xFFE65100),
                         reading = if (hasReading) "%.3f".format(point.staffReading) else "—",
                         rl = if (hasReading) "%.3f".format(point.rl) else "—",
@@ -295,7 +295,7 @@ fun WaterLevelScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "HI = %.3f م | عدد النقاط: ${results.size}".format(hi),
+                            stringResource(R.string.water_level_hi_summary, hi, results.size),
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f),
                             fontWeight = FontWeight.Medium
@@ -311,7 +311,7 @@ fun WaterLevelScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("ملخص", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.water_level_summary), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -321,9 +321,9 @@ fun WaterLevelScreen(
                             val minRL = validResults.minOf { it.rl }
                             val diff = maxRL - minRL
 
-                            SummaryRow("أعلى RL", "%.3f م".format(maxRL))
-                            SummaryRow("أدنى RL", "%.3f م".format(minRL))
-                            SummaryRow("فرق المنسوب", "%.3f م".format(diff))
+                            SummaryRow(stringResource(R.string.water_level_max_rl), stringResource(R.string.water_level_value_m, maxRL))
+                            SummaryRow(stringResource(R.string.water_level_min_rl), stringResource(R.string.water_level_value_m, minRL))
+                            SummaryRow(stringResource(R.string.water_level_diff), stringResource(R.string.water_level_value_m, diff))
                         }
                     }
                 }
@@ -336,7 +336,7 @@ fun WaterLevelScreen(
                 ) {
                     Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("تصدير PDF (قريباً)")
+                    Text(stringResource(R.string.water_level_export_pdf))
                 }
             } else {
                 // No results yet - show formula card
@@ -355,10 +355,10 @@ fun WaterLevelScreen(
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("أدخل البيانات لحساب المناسيب", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.water_level_enter_data), fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "HI = RL (BM) + قراءة البصيرة الخلفية\nRL (نقطة) = HI - قراءة البصيرة الأمامية",
+                            stringResource(R.string.water_level_formula_hint),
                             fontSize = 13.sp,
                             color = Color.Gray,
                             lineHeight = 22.sp

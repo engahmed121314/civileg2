@@ -700,4 +700,421 @@
     <string name="frame_combined">مدمج:   </string>
     <string name="frame_selected_section">القطاع المختار: %s</string>
     <string name="frame_section_weight">الوزن: %s kg/m | Ix=%s cm⁴ | Sx=%s cm³</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Seismic Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="seismic_code_ecp">ECP 201 - الكود المصري</string>
+    <string name="seismic_code_sbc">SBC 301 - الكود السعودي</string>
+    <string name="seismic_default_name">تصميم زلزالي S1</string>
+    <string name="seismic_saved_success">تم حفظ التصميم بنجاح ✓</string>
+    <string name="seismic_section_code">📋 اختيار الكود الإنشائي</string>
+    <string name="seismic_site_data">🌍 بيانات الموقع</string>
+    <string name="seismic_zone">المنطقة الزلزالية</string>
+    <string name="seismic_soil_type">نوع التربة</string>
+    <string name="seismic_building_data">🏢 بيانات المنشأ</string>
+    <string name="seismic_num_floors">عدد الأدوار</string>
+    <string name="seismic_avg_floor_height">متوسط ارتفاع الدور (m)</string>
+    <string name="seismic_total_weight">الوزن الكلي W (kN)</string>
+    <string name="seismic_importance_factor">عامل الأهمية (I)</string>
+    <string name="seismic_response_modification">معامل تعديل الاستجابة (R)</string>
+    <string name="seismic_est_height">الارتفاع الكلي التقديري: %.1f م  •  %d أدوار</string>
+    <string name="seismic_calc_button">حساب قوى القص القاعدي وتوزيع الأدوار</string>
+    <string name="seismic_results">📊 نتائج التحليل الزلزالي</string>
+    <string name="seismic_base_shear_v">قوة القص القاعدي (V)</string>
+    <string name="seismic_fundamental_period">الدور الأساسي T</string>
+    <string name="seismic_spectral_accel">عجلة التصميم Sa(T)</string>
+    <string name="seismic_zone_factor">عامل المنطقة Z</string>
+    <string name="seismic_soil_factor">معامل التربة S</string>
+    <string name="seismic_importance_factor_val">عامل الأهمية I</string>
+    <string name="seismic_response_mod_val">معامل التعديل R</string>
+    <string name="seismic_reference">مرجع: %s</string>
+    <string name="seismic_code_warnings">تحذيرات الكود</string>
+    <string name="seismic_force_distribution">توزيع القوى على الأدوار</string>
+    <string name="seismic_floor">الدور</string>
+    <string name="seismic_force_kn">القوة (kN)</string>
+    <string name="seismic_shear_kn">القص (kN)</string>
+    <string name="seismic_moment_knm">عزم (kN.m)</string>
+    <string name="seismic_floor_n">الدور %d</string>
+    <string name="seismic_total">المجموع</string>
+    <string name="seismic_response_spectrum">📈 منحنى طيف الاستجابة</string>
+    <string name="seismic_pdf_code">الكود</string>
+    <string name="seismic_pdf_zone">المنطقة الزلزالية</string>
+    <string name="seismic_pdf_soil">نوع التربة</string>
+    <string name="seismic_pdf_floors">عدد الأدوار</string>
+    <string name="seismic_pdf_height">الارتفاع الكلي</string>
+    <string name="seismic_pdf_weight">الوزن الكلي</string>
+    <string name="seismic_pdf_equation">المعادلة</string>
+    <string name="seismic_pdf_code_ref">مرجع الكود</string>
+    <string name="seismic_pdf_title">تقرير التحليل الزلزالي - %s</string>
+    <string name="seismic_pdf_report">تقرير PDF</string>
+    <string name="seismic_save_in_project">حفظ في المشروع</string>
+    <string name="seismic_reference_equations">📝 المعادلات المرجعية</string>
+    <string name="seismic_formula_period">T₁ ≈ 0.075 × H^0.75  (إطارات خرسانية)</string>
+    <string name="seismic_formula_v">Vi = Σ Fj (من أعلى لأسفل)</string>
+    <string name="seismic_formula_mot">MOTi = Vi × hi (عزوم الانقلاب)</string>
+    <string name="seismic_save_dialog_title">حفظ التصميم الزلزالي في مشروع</string>
+    <string name="seismic_design_name_hint">اسم التصميم (مثلاً: S1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Column Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="column_default_name">عمود الدور الأرضي</string>
+    <string name="column_load_combo_dead_only">💡 Dead Load Only: يستخدم عادة في المنشآت المؤقتة أو تحت ظروف خاصة حيث لا يوجد أحمال حية مؤثرة.</string>
+    <string name="column_load_combo_dead_live">💡 Dead + Live: المزيج التصميمي الأكثر شيوعاً وأماناً، يشمل وزن المنشأ والأثاث والأشخاص.</string>
+    <string name="column_section_props">📐 أبعاد المقطع والخصائص</string>
+    <string name="column_width_t_mm">العرض b (mm)</string>
+    <string name="column_depth_t_mm">العمق t (mm)</string>
+    <string name="column_applied_loads">⚡ الأحمال المطبقة</string>
+    <string name="column_axial_load_pu">الحمل المحوري Pu (kN)</string>
+    <string name="column_design_now">حساب المقطع (Design Now)</string>
+    <string name="column_results_economy">📊 نتائج التصميم ومؤشر التوفير</string>
+    <string name="column_section_unsafe">القطاع غير آمن إنشائياً! ❌</string>
+    <string name="column_section_ideal">قطاع مثالي واقتصادي ✅</string>
+    <string name="column_section_large">قطاع كبير جداً (غير اقتصادي) 🔵</string>
+    <string name="column_economy_option">خيار موفر 💰</string>
+    <string name="column_safest_option">الأكثر أماناً 🛡️</string>
+    <string name="column_custom_rebar">تخصيص التسليح (لتحقيق التوفير)</string>
+    <string name="column_num_bars_label">عدد الأسياخ</string>
+    <string name="column_bar_diameter_label">القطر Ø (mm)</string>
+    <string name="column_update_rebar">تحديث التسليح المخصص</string>
+    <string name="column_equations_title">📝 المعادلات الهندسية (بدون نتائج)</string>
+    <string name="column_drawing_title">📐 الرسم الهندسي التفصيلي</string>
+    <string name="column_view_perspective">المنظور</string>
+    <string name="column_view_rebar_table">جدول التسليح</string>
+    <string name="column_save_dialog_title">حفظ التصميم في مشروع</string>
+    <string name="column_name_hint">اسم العمود (مثلاً: C1)</string>
+    <string name="column_section_safe">المقطع آمن (SAFE)</string>
+    <string name="column_section_unsafe_label">المقطع غير آمن (UNSAFE)</string>
+    <string name="column_provided_reinforcement">التسليح الموفر</string>
+    <string name="column_reinforcement_ratio">نسبة التسليح (μ)</string>
+    <string name="column_quantities">الكميات والتقديرات:</string>
+    <string name="column_concrete_vol">حجم الخرسانة</string>
+    <string name="column_steel_weight">وزن الحديد</string>
+    <string name="column_estimated_cost">التكلفة التقديرية</string>
+    <string name="column_select_code">اختر كود التصميم</string>
+    <string name="column_load_combo">تركيبة الأحمال</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Beam Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="beam_default_name">كمرة B1</string>
+    <string name="beam_section_support">📐 أبعاد الكمرة ونوع الارتكاز</string>
+    <string name="beam_support_type">نوع نقاط الارتكاز</string>
+    <string name="beam_width_b_mm">العرض b (mm)</string>
+    <string name="beam_depth_h_mm">العمق h (mm)</string>
+    <string name="beam_effective_length">الطول الفعال L (m)</string>
+    <string name="beam_material_props">🔩 خواص المادة</string>
+    <string name="beam_rebar_selection">اختيار حديد التسليح (لتقييم التوفير)</string>
+    <string name="beam_num_bars_label">عدد الأسياخ</string>
+    <string name="beam_bar_diameter_label">القطر Ø (mm)</string>
+    <string name="beam_design_now">تحليل وتصميم المقطع</string>
+    <string name="beam_results_economy">📊 نتائج التحليل والإقتصاد</string>
+    <string name="beam_section_unsafe">المقطع غير آمن إنشائياً! ❌</string>
+    <string name="beam_section_ideal">تصميم مثالي واقتصادي ✅</string>
+    <string name="beam_section_large">القطاع كبير (غير اقتصادي) 🔵</string>
+    <string name="beam_pdf_error">حدث خطأ أثناء إنشاء تقرير PDF</string>
+    <string name="beam_view_perspective">المنظور</string>
+    <string name="beam_view_rebar_table">جدول التسليح</string>
+    <string name="beam_equations_title">📝 المعادلات الهندسية (بدون نتائج)</string>
+    <string name="beam_save_dialog_title">حفظ التصميم في مشروع</string>
+    <string name="beam_name_hint">اسم الكمرة (مثلاً: B1)</string>
+    <string name="beam_final_results">النتائج النهائية:</string>
+    <string name="beam_bottom_reinforcement">التسليح السفلي</string>
+    <string name="beam_top_reinforcement">التسليح العلوي</string>
+    <string name="beam_max_moment">أقصى عزم</string>
+    <string name="beam_max_shear">أقصى قص</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Tank Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="tank_default_name">خزان مياه T1</string>
+    <string name="tank_type_section">📐 نوع الخزان والبيانات</string>
+    <string name="tank_location">موقع الخزان:</string>
+    <string name="tank_location_ground">أرضي</string>
+    <string name="tank_location_elevated">علوي</string>
+    <string name="tank_location_underground">تحت الأرض</string>
+    <string name="tank_section_shape">شكل القطاع (هندسي):</string>
+    <string name="tank_shape_rectangular">مستطيل (Bending)</string>
+    <string name="tank_shape_circular">دائري (Hoop Tension)</string>
+    <string name="tank_capacity_m3">السعة (m³)</string>
+    <string name="tank_height_m">الارتفاع (m)</string>
+    <string name="tank_start_design">بدء التصميم الإنشائي</string>
+    <string name="tank_analysis_results">📊 نتائج التحليل المائي</string>
+    <string name="tank_design_unsafe">تصميم غير آمن! ❌</string>
+    <string name="tank_design_ideal">خزان مثالي واقتصادي ✅</string>
+    <string name="tank_section_large">قطاع كبير (غير اقتصادي) 🔵</string>
+    <string name="tank_wall_thickness">سمك الحوائط</string>
+    <string name="tank_base_thickness">سمك اللبشة (Base)</string>
+    <string name="tank_max_water_pressure">ضغط الماء الأقصى</string>
+    <string name="tank_wall_reinforcement">تسليح الحوائط</string>
+    <string name="tank_drawing_title">📐 رسم الخزان التفصيلي</string>
+    <string name="tank_view_perspective">المنظور</string>
+    <string name="tank_save_dialog_title">حفظ التصميم في مشروع</string>
+    <string name="tank_name_hint">اسم الخزان (مثلاً: T1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Steel Tables Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="steel_tables_angles">زوايا</string>
+    <string name="steel_tables_depth_h">العمق h</string>
+    <string name="steel_tables_width_b">العرض b</string>
+    <string name="steel_tables_web_tw">سماكة النفق tw</string>
+    <string name="steel_tables_flange_tf">سماكة الشنش tf</string>
+    <string name="steel_tables_area">المساحة</string>
+    <string name="steel_tables_weight">الوزن</string>
+    <string name="steel_tables_iy">عزم القصور القوي Iy</string>
+    <string name="steel_tables_iz">عزم القصور الضعيف Iz</string>
+    <string name="steel_tables_sy">معامل المقطع القوي Sy</string>
+    <string name="steel_tables_sz">معامل المقطع الضعيف Sz</string>
+    <string name="steel_tables_ry">نصف قطر الدوران القوي ry</string>
+    <string name="steel_tables_rz">نصف قطر الدوران الضعيف rz</string>
+    <string name="steel_tables_zx">معامل البلاستك القوي Zx</string>
+    <string name="steel_tables_zy">معامل البلاستك الضعيف Zy</string>
+    <string name="steel_tables_search_hint">بحث بالمقاطع…</string>
+    <string name="steel_tables_count">%d مقطع</string>
+    <string name="steel_tables_section">المقطع</string>
+    <string name="steel_tables_weight_label">وزن</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- BOQ Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="boq_title">مقايسة التصميمات</string>
+    <string name="boq_subtitle">المقدّر الذكي Pro</string>
+    <string name="boq_what_to_calculate">ماذا تريد أن تحسب اليوم؟</string>
+    <string name="boq_currency">العملة</string>
+    <string name="boq_full_project">مشروع كامل</string>
+    <string name="boq_apartment_finish">تشطيب شقة</string>
+    <string name="boq_specific_item">بند معين</string>
+    <string name="boq_feasibility_study">دراسة جدوى</string>
+    <string name="boq_structure_type">نوع المنشأ</string>
+    <string name="boq_land_area">مساحة الأرض (م²)</string>
+    <string name="boq_land_price_per_m">سعر متر الأرض</string>
+    <string name="boq_expected_sell_price">سعر بيع المتر المتوقع</string>
+    <string name="boq_num_floors">عدد الأدوار</string>
+    <string name="boq_basement">بدروم</string>
+    <string name="boq_apartment_area">مساحة الشقة (م²)</string>
+    <string name="boq_generate_report">إصدار كشف الكميات والجدوى الاستثمارية</string>
+    <string name="boq_data_safety_report">🛡️ تقرير سلامة البيانات (Trial Run)</string>
+    <string name="boq_export_pdf">تصدير كشف كميات المشروع PDF</string>
+    <string name="boq_export_failed">فشل التصدير: %s</string>
+    <string name="boq_export_failed_title">فشل التصدير</string>
+    <string name="boq_open_report">فتح التقرير</string>
+    <string name="boq_integrated_estimate">تقدير مالي وفني متكامل</string>
+    <string name="boq_feasibility_section">📊 دراسة الجدوى</string>
+    <string name="boq_expected_roi">العائد المتوقع (ROI)</string>
+    <string name="boq_net_profit">صافي الربح</string>
+    <string name="boq_profit_margin">هامش الربح</string>
+    <string name="boq_num_units">عدد الوحدات</string>
+    <string name="boq_construction_duration">مدة التنفيذ</string>
+    <string name="boq_duration_months">%d شهر</string>
+    <string name="boq_export_report_pdf">تصدير التقرير PDF</string>
+    <string name="boq_total_saved_cost">إجمالي تكلفة التصميمات المحفوظة</string>
+    <string name="boq_no_projects_found">لم يتم العثور على مشاريع</string>
+    <string name="boq_add_first_project">قم بإضافة مشروعك الأول للبدء</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Slab Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="slab_default_name">بلاطة سقف الدور</string>
+    <string name="slab_type_label">نوع البلاطة</string>
+    <string name="slab_code_label">الكود</string>
+    <string name="slab_dimensions_loading">📐 أبعاد البلاطة والتحميل</string>
+    <string name="slab_material_props">🔧 خواص المادة</string>
+    <string name="slab_thickness_mm">السماكة (mm)</string>
+    <string name="slab_bar_diameter_mm">قطر السيخ (mm)</string>
+    <string name="slab_column_width_mm">عرض العمود (mm)</string>
+    <string name="slab_drop_thickness_mm">سمك السقوط (mm)</string>
+    <string name="slab_compressive_force">قوة الضغط P (kN)</string>
+    <string name="slab_ribbed_dims">📦 أبعاد الهردي</string>
+    <string name="slab_rib_width_mm">عرض الضلع (mm)</string>
+    <string name="slab_rib_spacing_mm">مسافة بين الأضلاع (mm)</string>
+    <string name="slab_waffle_dims">📦 أبعاد الوافل (Waffle)</string>
+    <string name="slab_waffle_rib_width_mm">عرض الضلع (mm)</string>
+    <string name="slab_waffle_spacing_x_mm">مسافة X (mm)</string>
+    <string name="slab_waffle_spacing_y_mm">مسافة Y (mm)</string>
+    <string name="slab_design_now">تحليل وتصميم</string>
+    <string name="slab_results">📊 نتائج التصميم</string>
+    <string name="slab_equations_title">📝 المعادلات (بدون نتائج)</string>
+    <string name="slab_drawing_title">📐 رسم البلاطة التفصيلي</string>
+    <string name="slab_view_plan">المخطط</string>
+    <string name="slab_pdf_error">حدث خطأ أثناء إنشاء تقرير PDF</string>
+    <string name="slab_save_in_project">حفظ في مشروع</string>
+    <string name="slab_name_hint">اسم العنصر (مثلاً: سقف المتكرر)</string>
+    <string name="slab_safe">البلاطة آمنة إنشائياً</string>
+    <string name="slab_unsafe">البلاطة غير آمنة!</string>
+    <string name="slab_thickness_label2">سمك البلاطة</string>
+    <string name="slab_moment_mx">عزم Mx</string>
+    <string name="slab_main_steel_lx">الحديد الرئيسي (Lx):</string>
+    <string name="slab_secondary_steel_ly">الحديد الثانوي (Ly):</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Footing Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="footing_default_name">قاعدة منفصلة F1</string>
+    <string name="footing_inputs">🏗️ نوع القاعدة والمدخلات</string>
+    <string name="footing_type_label">نوع القاعدة</string>
+    <string name="footing_column_length_mm">طول العمود (mm)</string>
+    <string name="footing_column_width_mm">عرض العمود (mm)</string>
+    <string name="footing_rebar_options">خيارات التسليح (لتقييم التوفير)</string>
+    <string name="footing_bar_diameter">قطر السيخ Ø</string>
+    <string name="footing_bar_spacing">المسافة S (mm)</string>
+    <string name="footing_design_now">تحليل وتصميم القاعدة</string>
+    <string name="footing_results">📊 نتائج التصميم</string>
+    <string name="footing_safe_economical">تصميم آمن واقتصادي</string>
+    <string name="footing_safe_review">آمن (تحت المراجعة)</string>
+    <string name="footing_dims">أبعاد القاعدة</string>
+    <string name="footing_thickness_label2">سمك القاعدة</string>
+    <string name="footing_exporting">جاري التصدير…</string>
+    <string name="footing_drawing_title">📐 رسم القاعدة التفصيلي</string>
+    <string name="footing_view_plan">المخطط</string>
+    <string name="footing_save_dialog_title">حفظ التصميم في مشروع</string>
+    <string name="footing_name_hint">اسم القاعدة (مثلاً: F1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Water Level Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="water_level_tool">أداة المساح engineer\'s level</string>
+    <string name="water_level_subtitle">حساب HI و RL للنقاط المختلفة</string>
+    <string name="water_level_step1">📌 الخطوة ١: مستوى الرجوع والبصيرة الخلفية</string>
+    <string name="water_level_bm">مستوى الرجوم BM (م)</string>
+    <string name="water_level_bs">قراءة البصيرة الخلفية BS (م)</string>
+    <string name="water_level_step2">📌 الخطوة ٢: عدد النقاط</string>
+    <string name="water_level_num_points">عدد النقاط (قراءات الأمامية)</string>
+    <string name="water_level_step3">📌 الخطوة ٣: قراءات المسطرة (FS)</string>
+    <string name="water_level_fs_n">قراءة النقطة %d FS (م)</string>
+    <string name="water_level_hi">ارتفاع الجهاز HI</string>
+    <string name="water_level_value_m">%.3f م</string>
+    <string name="water_level_results_table">📋 جدول النتائج</string>
+    <string name="water_level_point">النقطة</string>
+    <string name="water_level_type">النوع</string>
+    <string name="water_level_reading">القراءة</string>
+    <string name="water_level_rl">RL (م)</string>
+    <string name="water_level_backsight">بصيرة خلفية</string>
+    <string name="water_level_foresight">بصيرة أمامية</string>
+    <string name="water_level_hi_summary">HI = %.3f م | عدد النقاط: %d</string>
+    <string name="water_level_summary">ملخص</string>
+    <string name="water_level_max_rl">أعلى RL</string>
+    <string name="water_level_min_rl">أدنى RL</string>
+    <string name="water_level_diff">فرق المنسوب</string>
+    <string name="water_level_export_pdf">تصدير PDF (قريباً)</string>
+    <string name="water_level_enter_data">أدخل البيانات لحساب المناسيب</string>
+    <string name="water_level_formula_hint">HI = RL (BM) + قراءة البصيرة الخلفية\nRL (نقطة) = HI - قراءة البصيرة الأمامية</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Stair Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="stair_default_name">سلم S1</string>
+    <string name="stair_dimensions">📐 نوع وأبعاد السلم</string>
+    <string name="stair_type_label">نوع السلم</string>
+    <string name="stair_horizontal_length">الطول الأفقي L (m)</string>
+    <string name="stair_riser">القائمة R (mm)</string>
+    <string name="stair_design_now">إجراء الحسابات والرسم</string>
+    <string name="stair_results">📊 نتائج التصميم الإنشائي</string>
+    <string name="stair_design_unsafe">تصميم غير آمن! ❌</string>
+    <string name="stair_design_ideal">تصميم مثالي واقتصادي ✅</string>
+    <string name="stair_section_large">قطاع كبير (غير اقتصادي) 🔵</string>
+    <string name="stair_slab_thickness">سمك البلاطة ts</string>
+    <string name="stair_main_reinforcement">التسليح الرئيسي</string>
+    <string name="stair_distribution_reinforcement">تسليح التوزيع</string>
+    <string name="stair_reinforcement_drawing">🎨 رسم تفصيلي للتسليح (Full Reinforcement)</string>
+    <string name="stair_drawing_title">رسم السلم التفصيلي</string>
+    <string name="stair_equations_title">📝 المعادلات الهندسية</string>
+    <string name="stair_save_dialog_title">حفظ التصميم في مشروع</string>
+    <string name="stair_name_hint">اسم السلم (مثلاً: S1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Archive Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="archive_search_hint">بحث في المشروعات…</string>
+    <string name="archive_saved_projects">المشروعات المحفوظة</string>
+    <string name="archive_no_projects">لا توجد مشروعات محفوظة</string>
+    <string name="archive_add_new">اضغط + لإنشاء مشروع جديد</string>
+    <string name="archive_no_results_for">لا توجد نتائج لـ </string>
+    <string name="archive_results_count">عدد النتائج: %d</string>
+    <string name="archive_create_new">إنشاء مشروع جديد</string>
+    <string name="archive_project_name_required">اسم المشروع *</string>
+    <string name="archive_design_code_hint">كود التصميم (ECP / ACI / SBC)</string>
+    <string name="archive_location_hint">الموقع (اختياري)</string>
+    <string name="archive_create">إنشاء</string>
+    <string name="archive_code_label">كود التصميم: %s</string>
+    <string name="archive_design_count">%d تصميم</string>
+    <string name="archive_type_beams">كمرات</string>
+    <string name="archive_type_columns">أعمدة</string>
+    <string name="archive_type_footings">قواعد</string>
+    <string name="archive_type_slabs">بلاطات</string>
+    <string name="archive_type_stairs">سلالم</string>
+    <string name="archive_type_walls">سند</string>
+    <string name="archive_type_tanks">خزانات</string>
+    <string name="archive_type_piles">خوازيق</string>
+    <string name="archive_type_seismic">زلزال</string>
+    <string name="archive_type_steel_rebar">حديد</string>
+    <string name="archive_type_steel_structure">معدني</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Retaining Wall Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="rw_default_name">حائط ساند RW1</string>
+    <string name="rw_data_input">إدخال البيانات الفنية</string>
+    <string name="rw_wall_height">ارتفاع الحائط (m)</string>
+    <string name="rw_soil_density">كثافة التربة (kN/m³)</string>
+    <string name="rw_friction_angle">زاوية الاحتكاك Φ (deg)</string>
+    <string name="rw_surcharge">حمل إضافي Surcharge (kN/m²)</string>
+    <string name="rw_analyze">تحليل الاستقرار وتصميم الحائط</string>
+    <string name="rw_safe">الحائط آمن تماماً</string>
+    <string name="rw_unsafe">الحائط غير آمن (حرِج)</string>
+    <string name="rw_stem_thickness">سمك الجذع (Stem)</string>
+    <string name="rw_base_width">عرض القاعدة</string>
+    <string name="rw_stem_reinforcement">تسليح الجذع</string>
+    <string name="rw_base_reinforcement">تسليح القاعدة</string>
+    <string name="rw_drawing_title">📐 رسم حائط السند التفصيلي</string>
+    <string name="rw_view_soil_pressure">ضغط التربة</string>
+    <string name="rw_save_dialog_title">حفظ التصميم في مشروع</string>
+    <string name="rw_name_hint">اسم الحائط (مثلاً: RW1)</string>
+    <string name="rw_no_projects">لا توجد مشاريع حالية.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Inventory Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="inventory_search_hint">بحث عن بند…</string>
+    <string name="inventory_empty">المخزن فارغ. أضف بنوداً جديدة.</string>
+    <string name="inventory_no_results">لا توجد نتائج للبحث.</string>
+    <string name="inventory_last_updated">آخر تحديث: %s</string>
+    <string name="inventory_low_stock">مخزون منخفض!</string>
+    <string name="inventory_bag_ton">كيس/طن</string>
+    <string name="inventory_add_dialog_title">إضافة بند جديد للمخزن</string>
+    <string name="inventory_name_hint">الاسم (أسمنت، رمل، طوب…)</string>
+    <string name="inventory_quantity_label">الكمية</string>
+    <string name="inventory_unit_label">الوحدة</string>
+    <string name="inventory_alert_hint">تنبيه عند نقص الكمية عن…</string>
+    <string name="inventory_category_heavy">معدات ثقيلة</string>
+    <string name="inventory_category_tools">أدوات ومعدات صغيرة</string>
+    <string name="inventory_category_materials">خامات (أسمنت، رمل…)</string>
+    <string name="inventory_category_accessories">إكسسوارات ومستلزمات</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Unit Converter Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="converter_length">طول</string>
+    <string name="converter_area">مساحة</string>
+    <string name="converter_volume">حجم</string>
+    <string name="converter_weight">وزن</string>
+    <string name="converter_force">قوة</string>
+    <string name="converter_pressure">ضغط</string>
+    <string name="converter_moment">عزم</string>
+    <string name="converter_input_value">القيمة</string>
+    <string name="converter_result">النتيجة</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Calculator Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="calc_history">السجل</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Shared: Used Across Multiple Screens -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="pdf_report">تقرير PDF</string>
+    <string name="save_in_project">حفظ في المشروع</string>
+    <string name="view_perspective">المنظور</string>
+    <string name="view_plan">المخطط</string>
 </resources>

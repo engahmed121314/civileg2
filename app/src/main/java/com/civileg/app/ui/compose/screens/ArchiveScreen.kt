@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import com.civileg.app.db.Design
 import com.civileg.app.db.DesignType
 import com.civileg.app.db.Project
@@ -80,7 +82,7 @@ fun ArchiveScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("بحث في المشروعات...") },
+                            placeholder = { Text(stringResource(R.string.archive_search_hint)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -88,7 +90,7 @@ fun ArchiveScreen(
                             textStyle = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        Text("المشروعات المحفوظة", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.archive_saved_projects), fontWeight = FontWeight.Bold)
                     }
                 },
                 navigationIcon = {
@@ -141,9 +143,9 @@ fun ArchiveScreen(
                         tint = MaterialTheme.colorScheme.outline
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("لا توجد مشروعات محفوظة", color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.archive_no_projects), color = MaterialTheme.colorScheme.outline)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("اضغط + لإنشاء مشروع جديد", color = MaterialTheme.colorScheme.outline, fontSize = 13.sp)
+                    Text(stringResource(R.string.archive_add_new), color = MaterialTheme.colorScheme.outline, fontSize = 13.sp)
                 }
             }
         } else if (filteredProjects.isEmpty()) {
@@ -161,7 +163,7 @@ fun ArchiveScreen(
                         tint = MaterialTheme.colorScheme.outline
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("لا توجد نتائج لـ \"$searchQuery\"", color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.archive_no_results_for) + "\"$searchQuery\"", color = MaterialTheme.colorScheme.outline)
                 }
             }
         } else {
@@ -175,7 +177,7 @@ fun ArchiveScreen(
                 item {
                     AnimatedVisibility(visible = searchQuery.isNotBlank()) {
                         Text(
-                            "عدد النتائج: ${filteredProjects.size}",
+                            stringResource(R.string.archive_results_count, filteredProjects.size),
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.Gray,
                             modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
@@ -199,13 +201,13 @@ fun ArchiveScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("إنشاء مشروع جديد", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.archive_create_new), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = newProjectName,
                         onValueChange = { newProjectName = it },
-                        label = { Text("اسم المشروع *") },
+                        label = { Text(stringResource(R.string.archive_project_name_required)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -213,7 +215,7 @@ fun ArchiveScreen(
                     OutlinedTextField(
                         value = newProjectCode,
                         onValueChange = { newProjectCode = it },
-                        label = { Text("كود التصميم (ECP / ACI / SBC)") },
+                        label = { Text(stringResource(R.string.archive_design_code_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -221,7 +223,7 @@ fun ArchiveScreen(
                     OutlinedTextField(
                         value = newProjectLocation,
                         onValueChange = { newProjectLocation = it },
-                        label = { Text("الموقع (اختياري)") },
+                        label = { Text(stringResource(R.string.archive_location_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -247,11 +249,11 @@ fun ArchiveScreen(
                     },
                     enabled = newProjectName.isNotBlank()
                 ) {
-                    Text("إنشاء")
+                    Text(stringResource(R.string.archive_create))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -298,7 +300,7 @@ private fun ProjectCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "كود التصميم: ${project.code}",
+                        text = stringResource(R.string.archive_code_label, project.code),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
@@ -345,7 +347,7 @@ private fun ProjectCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "$designCount تصميم",
+                                text = stringResource(R.string.archive_design_count, designCount),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.tertiary
@@ -387,17 +389,17 @@ private fun ProjectCard(
 @Composable
 private fun DesignTypeBadge(type: DesignType, count: Int) {
     val (label, color) = when (type) {
-        DesignType.BEAM -> "كمرات" to Color(0xFF1565C0)
-        DesignType.COLUMN -> "أعمدة" to Color(0xFF2E7D32)
-        DesignType.FOOTING -> "قواعد" to Color(0xFFE65100)
-        DesignType.SLAB -> "بلاطات" to Color(0xFF6A1B9A)
-        DesignType.STAIRCASE -> "سلالم" to Color(0xFF00695C)
-        DesignType.RETAINING_WALL -> "سند" to Color(0xFFBF360C)
-        DesignType.WATER_TANK -> "خزانات" to Color(0xFF01579B)
-        DesignType.PILE -> "خوازيق" to Color(0xFF37474F)
-        DesignType.SEISMIC -> "زلزال" to Color(0xFFC62828)
-        DesignType.STEEL_MEMBER -> "حديد" to Color(0xFF455A64)
-        DesignType.STEEL_WAREHOUSE -> "معدني" to Color(0xFF4E342E)
+        DesignType.BEAM -> stringResource(R.string.archive_type_beams) to Color(0xFF1565C0)
+        DesignType.COLUMN -> stringResource(R.string.archive_type_columns) to Color(0xFF2E7D32)
+        DesignType.FOOTING -> stringResource(R.string.archive_type_footings) to Color(0xFFE65100)
+        DesignType.SLAB -> stringResource(R.string.archive_type_slabs) to Color(0xFF6A1B9A)
+        DesignType.STAIRCASE -> stringResource(R.string.archive_type_stairs) to Color(0xFF00695C)
+        DesignType.RETAINING_WALL -> stringResource(R.string.archive_type_walls) to Color(0xFFBF360C)
+        DesignType.WATER_TANK -> stringResource(R.string.archive_type_tanks) to Color(0xFF01579B)
+        DesignType.PILE -> stringResource(R.string.archive_type_piles) to Color(0xFF37474F)
+        DesignType.SEISMIC -> stringResource(R.string.archive_type_seismic) to Color(0xFFC62828)
+        DesignType.STEEL_MEMBER -> stringResource(R.string.archive_type_steel_rebar) to Color(0xFF455A64)
+        DesignType.STEEL_WAREHOUSE -> stringResource(R.string.archive_type_steel_structure) to Color(0xFF4E342E)
     }
     Surface(
         shape = RoundedCornerShape(6.dp),

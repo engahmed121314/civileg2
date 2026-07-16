@@ -47,7 +47,7 @@ fun TankScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("خزان مياه T1") }
+    var designName by remember { mutableStateOf(stringResource(R.string.tank_default_name)) }
     
     // تصحيح: تحديد النوع صراحة وحل مشكلة المسميات المفقودة
     var selectedType by remember { mutableStateOf<CalculatorEngine.TankType>(CalculatorEngine.TankType.RECTANGULAR_GROUND) }
@@ -84,22 +84,22 @@ fun TankScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { SectionHeader("📐 نوع الخزان والبيانات", R.drawable.ic_water) }
+            item { SectionHeader(stringResource(R.string.tank_type_section), R.drawable.ic_water) }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("موقع الخزان:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.tank_location), style = MaterialTheme.typography.labelMedium)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         val isGround = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_GROUND
                         val isElevated = selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED
                         val isUnderground = selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND
 
-                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { Text("أرضي") })
-                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { Text("علوي") })
-                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { Text("تحت الأرض") })
+                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { Text(stringResource(R.string.tank_location_ground)) })
+                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { Text(stringResource(R.string.tank_location_elevated)) })
+                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { Text(stringResource(R.string.tank_location_underground)) })
                     }
                     
-                    Text("شكل القطاع (هندسي):", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.tank_section_shape), style = MaterialTheme.typography.labelMedium)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val isRect = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.UNDERGROUND
                         
@@ -113,7 +113,7 @@ fun TankScreen(
                                     else -> selectedType
                                 }
                             }, 
-                            label = { Text("مستطيل (Bending)") }
+                            label = { Text(stringResource(R.string.tank_shape_rectangular)) }
                         )
                         FilterChip(
                             selected = !isRect, 
@@ -125,7 +125,7 @@ fun TankScreen(
                                     else -> selectedType
                                 }
                             }, 
-                            label = { Text("دائري (Hoop Tension)") }
+                            label = { Text(stringResource(R.string.tank_shape_circular)) }
                         )
                     }
                 }
@@ -133,8 +133,8 @@ fun TankScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TankInputField(capacity, "السعة (m³)", { capacity = it }, Modifier.weight(1f))
-                    TankInputField(height, "الارتفاع (m)", { height = it }, Modifier.weight(1f))
+                    TankInputField(capacity, stringResource(R.string.tank_capacity_m3), { capacity = it }, Modifier.weight(1f))
+                    TankInputField(height, stringResource(R.string.tank_height_m), { height = it }, Modifier.weight(1f))
                 }
             }
 
@@ -167,13 +167,13 @@ fun TankScreen(
                     } else {
                         Icon(Icons.Default.Calculate, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("بدء التصميم الإنشائي")
+                        Text(stringResource(R.string.tank_start_design))
                     }
                 }
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التحليل المائي", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.tank_analysis_results), R.drawable.ic_calculator) }
 
                 item {
                     val ecoColor = when {
@@ -203,16 +203,16 @@ fun TankScreen(
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            if (res.utilizationRatio > 1.0) "تصميم غير آمن! ❌"
-                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
-                                            else if (res.utilizationRatio > 0.4) "خزان مثالي واقتصادي ✅"
-                                            else "قطاع كبير (غير اقتصادي) 🔵",
+                                            if (res.utilizationRatio > 1.0) stringResource(R.string.tank_design_unsafe)
+                                            else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
+                                            else if (res.utilizationRatio > 0.4) stringResource(R.string.tank_design_ideal)
+                                            else stringResource(R.string.tank_section_large),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     Text(
-                                        "المستشار الإنشائي: نسبة الاستهلاك",
+                                        stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -247,10 +247,10 @@ fun TankScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            ResultRow("سمك الحوائط", "${res.wallThickness.toInt()} mm")
-                            ResultRow("سمك اللبشة (Base)", "${res.baseThickness.toInt()} mm")
-                            ResultRow("ضغط الماء الأقصى", "${"%.1f".format(res.waterPressure)} kN/m²")
-                            ResultRow("تسليح الحوائط", res.wallReinforcement.barString)
+                            ResultRow(stringResource(R.string.tank_wall_thickness), "${res.wallThickness.toInt()} mm")
+                            ResultRow(stringResource(R.string.tank_base_thickness), "${res.baseThickness.toInt()} mm")
+                            ResultRow(stringResource(R.string.tank_max_water_pressure), "${"%.1f".format(res.waterPressure)} kN/m²")
+                            ResultRow(stringResource(R.string.tank_wall_reinforcement), res.wallReinforcement.barString)
                         }
                     }
                 }
@@ -265,7 +265,7 @@ fun TankScreen(
                         ) {
                             Icon(Icons.Default.PictureAsPdf, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("تقرير PDF")
+                            Text(stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -276,16 +276,16 @@ fun TankScreen(
                         ) {
                             Icon(Icons.Default.Save, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("حفظ")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
 
                 item {
                     InteractiveDrawingScreen(
-                        title = "📐 رسم الخزان التفصيلي",
+                        title = stringResource(R.string.tank_drawing_title),
                         subtitle = "Water Tank Detail",
-                        viewModes = listOf("الكل", "المنظور", "المقطع", "جدول التسليح"),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalTankDrawing(
                                 tankType = selectedType.displayName,
@@ -313,19 +313,19 @@ fun TankScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم الخزان (مثلاً: T1)") },
+                        label = { Text(stringResource(R.string.tank_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -350,11 +350,11 @@ fun TankScreen(
                     result?.let { viewModel.saveTank(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

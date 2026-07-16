@@ -55,7 +55,7 @@ fun BeamScreen(
     // ... existing state vars ...
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("كمرة B1") }
+    var designName by remember { mutableStateOf(stringResource(R.string.beam_default_name)) }
     
     var width by remember { mutableStateOf("250") }
     var height by remember { mutableStateOf("600") }
@@ -90,7 +90,7 @@ fun BeamScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { SectionHeader("📐 أبعاد الكمرة ونوع الارتكاز", R.drawable.ic_beam) }
+            item { SectionHeader(stringResource(R.string.beam_section_support), R.drawable.ic_beam) }
 
             item {
                 ExposedDropdownMenuBox(
@@ -102,7 +102,7 @@ fun BeamScreen(
                         value = selectedSupport.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("نوع نقاط الارتكاز") },
+                        label = { Text(stringResource(R.string.beam_support_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSupport) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -123,13 +123,13 @@ fun BeamScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(width, "العرض b (mm)", { width = it }, Modifier.weight(1f))
-                    BeamInputField(height, "العمق h (mm)", { height = it }, Modifier.weight(1f))
+                    BeamInputField(width, stringResource(R.string.column_width_t_mm), { width = it }, Modifier.weight(1f))
+                    BeamInputField(height, stringResource(R.string.beam_depth_h_mm), { height = it }, Modifier.weight(1f))
                 }
             }
 
             item {
-                BeamInputField(span, "الطول الفعال L (m)", { span = it }, Modifier.fillMaxWidth())
+                BeamInputField(span, stringResource(R.string.beam_effective_length), { span = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -147,7 +147,7 @@ fun BeamScreen(
             }
 
             item {
-                Text("🔩 خواص المادة", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.beam_material_props), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BeamInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
                     BeamInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
@@ -155,10 +155,10 @@ fun BeamScreen(
             }
 
             item {
-                Text("اختيار حديد التسليح (لتقييم التوفير)", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.beam_rebar_selection), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(numBars, "عدد الأسياخ", { numBars = it }, Modifier.weight(1f))
-                    BeamInputField(barDiameter, "القطر Ø (mm)", { barDiameter = it }, Modifier.weight(1f))
+                    BeamInputField(numBars, stringResource(R.string.column_num_bars_label), { numBars = it }, Modifier.weight(1f))
+                    BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.weight(1f))
                 }
             }
 
@@ -187,13 +187,13 @@ fun BeamScreen(
                     } else {
                         Icon(Icons.Default.Calculate, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("تحليل وتصميم المقطع")
+                        Text(stringResource(R.string.beam_design_now))
                     }
                 }
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التحليل والإقتصاد", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.beam_results_economy), R.drawable.ic_calculator) }
                 
                 item {
                     val ecoColor = when {
@@ -223,16 +223,16 @@ fun BeamScreen(
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            if (res.utilizationRatio > 1.0) "المقطع غير آمن إنشائياً! ❌"
-                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
-                                            else if (res.utilizationRatio > 0.4) "تصميم مثالي واقتصادي ✅"
-                                            else "القطاع كبير (غير اقتصادي) 🔵",
+                                            if (res.utilizationRatio > 1.0) stringResource(R.string.beam_section_unsafe)
+                                            else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
+                                            else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
+                                            else stringResource(R.string.beam_section_large),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     Text(
-                                        "المستشار الإنشائي: نسبة الاستخدام",
+                                        stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -267,7 +267,7 @@ fun BeamScreen(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
-                                        pdfError = "حدث خطأ أثناء إنشاء تقرير PDF"
+                                        pdfError = stringResource(R.string.beam_pdf_error)
                                     } else {
                                         pdfError = null
                                     }
@@ -283,7 +283,7 @@ fun BeamScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("تقرير PDF")
+                                Text(stringResource(R.string.pdf_report))
                             }
                         }
 
@@ -295,16 +295,16 @@ fun BeamScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("حفظ")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
 
                 item {
                     InteractiveDrawingScreen(
-                        title = "📐 الرسم الهندسي التفصيلي",
+                        title = stringResource(R.string.column_drawing_title),
                         subtitle = "Beam Reinforcement Detail",
-                        viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "جدول التسليح"),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
@@ -356,7 +356,7 @@ fun BeamScreen(
                 }
 
                 item {
-                    Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     BeamFormulasCard()
                 }
             }
@@ -366,19 +366,19 @@ fun BeamScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم الكمرة (مثلاً: B1)") },
+                        label = { Text(stringResource(R.string.beam_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -403,11 +403,11 @@ fun BeamScreen(
                     result?.let { viewModel.saveBeam(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -420,19 +420,19 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("النتائج النهائية:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.beam_final_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
-            ResultRow("التسليح السفلي", result.reinforcementBottom.barString)
-            ResultRow("التسليح العلوي", result.reinforcementTop.barString)
-            ResultRow("الكانات", result.stirrups.description)
-            ResultRow("أقصى عزم", "${"%.1f".format(result.appliedMoment)} kN.m")
-            ResultRow("أقصى قص", "${"%.1f".format(result.appliedShear)} kN")
+            ResultRow(stringResource(R.string.beam_bottom_reinforcement), result.reinforcementBottom.barString)
+            ResultRow(stringResource(R.string.beam_top_reinforcement), result.reinforcementTop.barString)
+            ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
+            ResultRow(stringResource(R.string.beam_max_moment), "${"%.1f".format(result.appliedMoment)} kN.m")
+            ResultRow(stringResource(R.string.beam_max_shear), "${"%.1f".format(result.appliedShear)} kN")
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
             result.safetyChecks.forEach { check ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(check.name, fontSize = 12.sp)
-                    Text(if (check.isSafe) "آمن ✅" else "غير آمن ❌", color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check), color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }

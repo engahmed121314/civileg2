@@ -51,9 +51,9 @@ import kotlin.math.pow
 
 // ─── Soil Type Display Names per Code ───────────────────────────────────────
 private enum class SeismicCodeOption(val displayName: String, val designCode: DesignCode) {
-    ECP_201("ECP 201 - الكود المصري", DesignCode.ECP),
+    ECP_201(stringResource(R.string.seismic_code_ecp), DesignCode.ECP),
     ASCE_7("ASCE 7-16 / ACI 318", DesignCode.ACI),
-    SBC_301("SBC 301 - الكود السعودي", DesignCode.SBC)
+    SBC_301(stringResource(R.string.seismic_code_sbc), DesignCode.SBC)
 }
 
 private fun getSoilTypesForCode(code: SeismicCodeOption): List<SoilType> = SoilType.entries
@@ -99,7 +99,7 @@ fun SeismicScreen(
     var isCalculating by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("تصميم زلزالي S1") }
+    var designName by remember { mutableStateOf(stringResource(R.string.seismic_default_name)) }
     var showSuccessMsg by remember { mutableStateOf(false) }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ fun SeismicScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(showSuccessMsg) {
         if (showSuccessMsg) {
-            snackbarHostState.showSnackbar("تم حفظ التصميم بنجاح ✓")
+            snackbarHostState.showSnackbar(stringResource(R.string.seismic_saved_success))
             showSuccessMsg = false
         }
     }
@@ -209,7 +209,7 @@ fun SeismicScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ═══ Section 1: Code Selector ═════════════════════════════════════
-            item { SectionHeader("📋 اختيار الكود الإنشائي", R.drawable.ic_design) }
+            item { SectionHeader(stringResource(R.string.seismic_section_code), R.drawable.ic_design) }
 
             item {
                 ExposedDropdownMenuBox(
@@ -221,7 +221,7 @@ fun SeismicScreen(
                         value = selectedCode.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("الكود الإنشائي") },
+                        label = { Text(stringResource(R.string.design_code_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -238,7 +238,7 @@ fun SeismicScreen(
             }
 
             // ═══ Section 2: Site Parameters ═══════════════════════════════════
-            item { SectionHeader("🌍 بيانات الموقع", R.drawable.ic_calculator) }
+            item { SectionHeader(stringResource(R.string.seismic_site_data), R.drawable.ic_calculator) }
 
             item {
                 ExposedDropdownMenuBox(
@@ -250,7 +250,7 @@ fun SeismicScreen(
                         value = selectedZone.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("المنطقة الزلزالية") },
+                        label = { Text(stringResource(R.string.seismic_zone)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedZone) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -276,7 +276,7 @@ fun SeismicScreen(
                         value = "${selectedSoil.displayName} - ${selectedSoil.description}",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("نوع التربة") },
+                        label = { Text(stringResource(R.string.seismic_soil_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSoil) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -293,24 +293,24 @@ fun SeismicScreen(
             }
 
             // ═══ Section 3: Building Parameters ══════════════════════════════
-            item { SectionHeader("🏢 بيانات المنشأ", R.drawable.ic_beam) }
+            item { SectionHeader(stringResource(R.string.seismic_building_data), R.drawable.ic_beam) }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SeismicInputField(numFloors, "عدد الأدوار", { numFloors = it }, Modifier.weight(1f), KeyboardType.Number)
-                    SeismicInputField(avgFloorHeight, "متوسط ارتفاع الدور (m)", { avgFloorHeight = it }, Modifier.weight(1f))
+                    SeismicInputField(numFloors, stringResource(R.string.seismic_num_floors), { numFloors = it }, Modifier.weight(1f), KeyboardType.Number)
+                    SeismicInputField(avgFloorHeight, stringResource(R.string.seismic_avg_floor_height), { avgFloorHeight = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SeismicInputField(totalWeight, "الوزن الكلي W (kN)", { totalWeight = it }, Modifier.weight(1f))
-                    SeismicInputField(importanceFactor, "عامل الأهمية (I)", { importanceFactor = it }, Modifier.weight(1f))
+                    SeismicInputField(totalWeight, stringResource(R.string.seismic_total_weight), { totalWeight = it }, Modifier.weight(1f))
+                    SeismicInputField(importanceFactor, stringResource(R.string.seismic_importance_factor), { importanceFactor = it }, Modifier.weight(1f))
                 }
             }
 
             item {
-                SeismicInputField(reductionFactor, "معامل تعديل الاستجابة (R)", { reductionFactor = it }, Modifier.fillMaxWidth())
+                SeismicInputField(reductionFactor, stringResource(R.string.seismic_response_modification), { reductionFactor = it }, Modifier.fillMaxWidth())
             }
 
             // Total height info chip
@@ -326,7 +326,7 @@ fun SeismicScreen(
                         Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "الارتفاع الكلي التقديري: ${"%.1f".format(totalHeight)} m  •  ${numFloors.toIntOrNull() ?: 0} أدوار",
+                            stringResource(R.string.seismic_est_height, "%.1f".format(totalHeight), numFloors.toIntOrNull() ?: 0),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -348,14 +348,14 @@ fun SeismicScreen(
                     } else {
                         Icon(Icons.Default.Calculate, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("حساب قوى القص القاعدي وتوزيع الأدوار", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.seismic_calc_button), style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
 
             // ═══ Results ══════════════════════════════════════════════════════
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التحليل الزلزالي", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.seismic_results), R.drawable.ic_calculator) }
 
                 // ── Base Shear Card with Utilization Bar ──────────────────────
                 item {
@@ -381,7 +381,7 @@ fun SeismicScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        "قوة القص القاعدي (V)",
+                                        stringResource(R.string.seismic_base_shear_v),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -449,14 +449,14 @@ fun SeismicScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            ResultRow("الدور الأساسي T", "${"%.3f".format(res.fundamentalPeriod)} sec")
-                            ResultRow("عجلة التصميم Sa(T)", "${"%.4f".format(res.spectralAccel)} g")
-                            ResultRow("عامل المنطقة Z", "${"%.3f".format(res.baseShearResult.zoneFactor)}")
-                            ResultRow("معامل التربة S", "${"%.2f".format(res.baseShearResult.soilFactor)}")
-                            ResultRow("عامل الأهمية I", "${"%.2f".format(res.baseShearResult.importanceFactor)}")
-                            ResultRow("معامل التعديل R", "${"%.1f".format(res.baseShearResult.responseModification)}")
+                            ResultRow(stringResource(R.string.seismic_fundamental_period), "${"%.3f".format(res.fundamentalPeriod)} sec")
+                            ResultRow(stringResource(R.string.seismic_spectral_accel), "${"%.4f".format(res.spectralAccel)} g")
+                            ResultRow(stringResource(R.string.seismic_zone_factor), "${"%.3f".format(res.baseShearResult.zoneFactor)}")
+                            ResultRow(stringResource(R.string.seismic_soil_factor), "${"%.2f".format(res.baseShearResult.soilFactor)}")
+                            ResultRow(stringResource(R.string.seismic_importance_factor_val), "${"%.2f".format(res.baseShearResult.importanceFactor)}")
+                            ResultRow(stringResource(R.string.seismic_response_mod_val), "${"%.1f".format(res.baseShearResult.responseModification)}")
                             Text(
-                                "مرجع: ${res.baseShearResult.codeReference}",
+                                stringResource(R.string.seismic_reference, res.baseShearResult.codeReference),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 8.dp)
@@ -476,7 +476,7 @@ fun SeismicScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Warning, null, tint = Color(0xFFFF9800), modifier = Modifier.size(20.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("تحذيرات الكود", fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                                    Text(stringResource(R.string.seismic_code_warnings), fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 res.baseShearResult.warnings.forEach { w ->
@@ -501,7 +501,7 @@ fun SeismicScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                         Icon(Icons.Default.Business, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("توزيع القوى على الأدوار", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.seismic_force_distribution), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -516,10 +516,10 @@ fun SeismicScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("الدور", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                                Text("القوة (kN)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-                                Text("القص (kN)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-                                Text("عزم (kN.m)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                Text(stringResource(R.string.seismic_floor), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                Text(stringResource(R.string.seismic_force_kn), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                Text(stringResource(R.string.seismic_shear_kn), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                Text(stringResource(R.string.seismic_moment_knm), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
                             }
                             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
 
@@ -530,7 +530,7 @@ fun SeismicScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("الدور ${f.floorIndex + 1}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                    Text(stringResource(R.string.seismic_floor_n, f.floorIndex + 1), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     Text("${"%.2f".format(f.lateralForce)}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.primary)
                                     Text("${"%.2f".format(f.storyShear)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.secondary)
                                     Text("${"%.1f".format(f.overturningMoment)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
@@ -543,7 +543,7 @@ fun SeismicScreen(
                                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("المجموع", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                Text(stringResource(R.string.seismic_total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                                 Text(
                                     "${"%.2f".format(res.floorForces.sumOf { it.lateralForce })}",
                                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium,
@@ -558,7 +558,7 @@ fun SeismicScreen(
 
                 // ── Spectrum Canvas (mini inline) ────────────────────────────
                 item {
-                    Text("📈 منحنى طيف الاستجابة", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(stringResource(R.string.seismic_response_spectrum), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
                     SeismicSpectrumCanvas(
                         spectrumValues = res.spectrumValues,
                         designPeriod = res.fundamentalPeriod,
@@ -572,23 +572,23 @@ fun SeismicScreen(
                         Button(
                             onClick = {
                                 val details = mapOf(
-                                    "الكود" to selectedCode.displayName,
-                                    "المنطقة الزلزالية" to selectedZone.displayName,
-                                    "نوع التربة" to "${selectedSoil.displayName} - ${selectedSoil.description}",
-                                    "عدد الأدوار" to (numFloors.toIntOrNull() ?: 5).toString(),
-                                    "الارتفاع الكلي" to "${"%.1f".format(totalHeight)} m",
-                                    "الوزن الكلي" to "${totalWeight} kN",
-                                    "عامل الأهمية (I)" to importanceFactor,
-                                    "معامل التعديل (R)" to reductionFactor,
-                                    "قوة القص القاعدي (V)" to "${"%.2f".format(res.baseShearResult.baseShear)} kN",
-                                    "الدور الأساسي (T)" to "${"%.3f".format(res.fundamentalPeriod)} sec",
-                                    "عجلة التصميم Sa(T)" to "${"%.4f".format(res.spectralAccel)} g",
-                                    "المعادلة" to res.baseShearResult.calculationFormula,
-                                    "مرجع الكود" to res.baseShearResult.codeReference
+                                    stringResource(R.string.seismic_pdf_code) to selectedCode.displayName,
+                                    stringResource(R.string.seismic_zone) to selectedZone.displayName,
+                                    stringResource(R.string.seismic_soil_type) to "${selectedSoil.displayName} - ${selectedSoil.description}",
+                                    stringResource(R.string.seismic_num_floors) to (numFloors.toIntOrNull() ?: 5).toString(),
+                                    stringResource(R.string.seismic_pdf_height) to "${"%.1f".format(totalHeight)} m",
+                                    stringResource(R.string.seismic_pdf_weight) to "${totalWeight} kN",
+                                    stringResource(R.string.seismic_importance_factor) to importanceFactor,
+                                    stringResource(R.string.seismic_response_modification) to reductionFactor,
+                                    stringResource(R.string.seismic_base_shear_v) to "${"%.2f".format(res.baseShearResult.baseShear)} kN",
+                                    stringResource(R.string.seismic_fundamental_period) to "${"%.3f".format(res.fundamentalPeriod)} sec",
+                                    stringResource(R.string.seismic_spectral_accel) to "${"%.4f".format(res.spectralAccel)} g",
+                                    stringResource(R.string.seismic_pdf_equation) to res.baseShearResult.calculationFormula,
+                                    stringResource(R.string.seismic_pdf_code_ref) to res.baseShearResult.codeReference
                                 )
                                 val filePath = PdfExportHelper.exportCalculationReport(
                                     context = context,
-                                    title = "تقرير التحليل الزلزالي - ${selectedCode.displayName}",
+                                    title = stringResource(R.string.seismic_pdf_title, selectedCode.displayName),
                                     details = details,
                                     fileName = "Seismic_Report_${System.currentTimeMillis()}"
                                 )
@@ -602,7 +602,7 @@ fun SeismicScreen(
                         ) {
                             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("تقرير PDF")
+                            Text(stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -613,7 +613,7 @@ fun SeismicScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("حفظ في المشروع")
+                            Text(stringResource(R.string.save_in_project))
                         }
                     }
                 }
@@ -625,13 +625,13 @@ fun SeismicScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text("📝 المعادلات المرجعية", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.seismic_reference_equations), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
                             FormulaItem("V = Sd(T₁) × W")
-                            FormulaItem("T₁ ≈ 0.075 × H^0.75  (إطارات خرسانية)")
+                            FormulaItem(stringResource(R.string.seismic_formula_period))
                             FormulaItem("Fi = (Wi × hi) / Σ(Wj × hj) × V")
-                            FormulaItem("Vi = Σ Fj (من أعلى لأسفل)")
-                            FormulaItem("MOTi = Vi × hi (عزوم الانقلاب)")
+                            FormulaItem(stringResource(R.string.seismic_formula_v))
+                            FormulaItem(stringResource(R.string.seismic_formula_mot))
                         }
                     }
                 }
@@ -645,19 +645,19 @@ fun SeismicScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم الزلزالي في مشروع") },
+            title = { Text(stringResource(R.string.seismic_save_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم التصميم (مثلاً: S1)") },
+                        label = { Text(stringResource(R.string.seismic_design_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -699,10 +699,10 @@ fun SeismicScreen(
                         showSuccessMsg = true
                     }
                     showSaveDialog = false
-                }) { Text("حفظ") }
+                }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

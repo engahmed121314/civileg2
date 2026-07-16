@@ -81,13 +81,13 @@ fun UnitConverterScreen(
                 containerColor = Color.Transparent,
                 divider = {}
             ) {
-                CategoryTab("طول", selectedCategory is UnitConverter.UnitCategory.Length) { selectedCategory = UnitConverter.UnitCategory.Length }
-                CategoryTab("مساحة", selectedCategory is UnitConverter.UnitCategory.Area) { selectedCategory = UnitConverter.UnitCategory.Area }
-                CategoryTab("حجم", selectedCategory is UnitConverter.UnitCategory.Volume) { selectedCategory = UnitConverter.UnitCategory.Volume }
-                CategoryTab("وزن", selectedCategory is UnitConverter.UnitCategory.Weight) { selectedCategory = UnitConverter.UnitCategory.Weight }
-                CategoryTab("قوة", selectedCategory is UnitConverter.UnitCategory.Force) { selectedCategory = UnitConverter.UnitCategory.Force }
-                CategoryTab("ضغط", selectedCategory is UnitConverter.UnitCategory.Pressure) { selectedCategory = UnitConverter.UnitCategory.Pressure }
-                CategoryTab("عزم", selectedCategory is UnitConverter.UnitCategory.Moment) { selectedCategory = UnitConverter.UnitCategory.Moment }
+                CategoryTab(stringResource(R.string.converter_length), selectedCategory is UnitConverter.UnitCategory.Length) { selectedCategory = UnitConverter.UnitCategory.Length }
+                CategoryTab(stringResource(R.string.converter_area), selectedCategory is UnitConverter.UnitCategory.Area) { selectedCategory = UnitConverter.UnitCategory.Area }
+                CategoryTab(stringResource(R.string.converter_volume), selectedCategory is UnitConverter.UnitCategory.Volume) { selectedCategory = UnitConverter.UnitCategory.Volume }
+                CategoryTab(stringResource(R.string.steel_tables_weight_label), selectedCategory is UnitConverter.UnitCategory.Weight) { selectedCategory = UnitConverter.UnitCategory.Weight }
+                CategoryTab(stringResource(R.string.converter_force), selectedCategory is UnitConverter.UnitCategory.Force) { selectedCategory = UnitConverter.UnitCategory.Force }
+                CategoryTab(stringResource(R.string.converter_pressure), selectedCategory is UnitConverter.UnitCategory.Pressure) { selectedCategory = UnitConverter.UnitCategory.Pressure }
+                CategoryTab(stringResource(R.string.converter_moment), selectedCategory is UnitConverter.UnitCategory.Moment) { selectedCategory = UnitConverter.UnitCategory.Moment }
             }
 
             Card(
@@ -101,7 +101,7 @@ fun UnitConverterScreen(
                         OutlinedTextField(
                             value = inputValue,
                             onValueChange = { inputValue = it },
-                            label = { Text("القيمة") },
+                            label = { Text(stringResource(R.string.converter_input_value)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             shape = RoundedCornerShape(12.dp)
@@ -126,7 +126,7 @@ fun UnitConverterScreen(
                             value = "%.4f".format(result),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("النتيجة") },
+                            label = { Text(stringResource(R.string.converter_result)) },
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,

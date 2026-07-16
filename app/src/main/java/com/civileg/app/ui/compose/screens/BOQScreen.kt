@@ -47,7 +47,7 @@ fun BOQScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     var selectedMainTab by remember { mutableIntStateOf(1) }
-    val mainTabs = listOf("مقايسة التصميمات", "المقدّر الذكي Pro")
+    val mainTabs = listOf(stringResource(R.string.boq_title), stringResource(R.string.boq_subtitle))
 
     Scaffold(
         topBar = {
@@ -104,9 +104,9 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("ماذا تريد أن تحسب اليوم؟", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.boq_what_to_calculate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 ExposedDropdownMenuBox(expanded = showCurrencyMenu, onExpandedChange = { showCurrencyMenu = !showCurrencyMenu }, modifier = Modifier.width(100.dp)) {
-                    OutlinedTextField(value = selectedCurrency, onValueChange = {}, readOnly = true, label = { Text("العملة", fontSize = 10.sp) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCurrencyMenu) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable), textStyle = LocalTextStyle.current.copy(fontSize = 12.sp))
+                    OutlinedTextField(value = selectedCurrency, onValueChange = {}, readOnly = true, label = { Text(stringResource(R.string.boq_currency), fontSize = 10.sp) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCurrencyMenu) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable), textStyle = LocalTextStyle.current.copy(fontSize = 12.sp))
                     ExposedDropdownMenu(expanded = showCurrencyMenu, onDismissRequest = { showCurrencyMenu = false }) {
                         listOf("EGP", "SAR", "USD", "AED").forEach { curr -> DropdownMenuItem(text = { Text(curr) }, onClick = { selectedCurrency = curr; showCurrencyMenu = false }) }
                     }
@@ -115,10 +115,10 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
             FlowRow(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 EstimationEngine.ProjectCategory.entries.forEach { cat ->
                     val label = when(cat) {
-                        EstimationEngine.ProjectCategory.FULL_PROJECT -> "مشروع كامل"
-                        EstimationEngine.ProjectCategory.APARTMENT_FINISHING -> "تشطيب شقة"
-                        EstimationEngine.ProjectCategory.SPECIFIC_ITEM -> "بند معين"
-                        EstimationEngine.ProjectCategory.INVESTMENT_STUDY -> "دراسة جدوى"
+                        EstimationEngine.ProjectCategory.FULL_PROJECT -> stringResource(R.string.boq_full_project)
+                        EstimationEngine.ProjectCategory.APARTMENT_FINISHING -> stringResource(R.string.boq_apartment_finish)
+                        EstimationEngine.ProjectCategory.SPECIFIC_ITEM -> stringResource(R.string.boq_specific_item)
+                        EstimationEngine.ProjectCategory.INVESTMENT_STUDY -> stringResource(R.string.boq_feasibility_study)
                     }
                     FilterChip(selected = category == cat, onClick = { category = cat; viewModel.clearResult() }, label = { Text(label) })
                 }
@@ -129,27 +129,27 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (category == EstimationEngine.ProjectCategory.FULL_PROJECT || category == EstimationEngine.ProjectCategory.INVESTMENT_STUDY) {
-                        Text("نوع المنشأ", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.boq_structure_type), style = MaterialTheme.typography.labelMedium)
                         FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             EstimationEngine.FullProjectType.entries.forEach { type ->
                                 ElevatedFilterChip(selected = projectType == type, onClick = { projectType = type }, label = { Text(type.displayName) })
                             }
                         }
-                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text("مساحة الأرض (م٢)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.AspectRatio, null) })
+                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text(stringResource(R.string.boq_land_area)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.AspectRatio, null) })
                         if (category == EstimationEngine.ProjectCategory.INVESTMENT_STUDY) {
-                            OutlinedTextField(value = landPrice, onValueChange = { landPrice = it }, label = { Text("سعر متر الأرض") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.Payments, null) }, suffix = { Text(selectedCurrency) })
-                            OutlinedTextField(value = sellingPrice, onValueChange = { sellingPrice = it }, label = { Text("سعر بيع المتر المتوقع") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) }, suffix = { Text(selectedCurrency) })
+                            OutlinedTextField(value = landPrice, onValueChange = { landPrice = it }, label = { Text(stringResource(R.string.boq_land_price_per_m)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.Payments, null) }, suffix = { Text(selectedCurrency) })
+                            OutlinedTextField(value = sellingPrice, onValueChange = { sellingPrice = it }, label = { Text(stringResource(R.string.boq_expected_sell_price)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) }, suffix = { Text(selectedCurrency) })
                         }
                         if (projectType != EstimationEngine.FullProjectType.FACTORY) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(value = floors, onValueChange = { floors = it }, label = { Text("عدد الأدوار") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                                OutlinedTextField(value = floors, onValueChange = { floors = it }, label = { Text(stringResource(R.string.seismic_num_floors)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                                 Spacer(Modifier.width(16.dp))
                                 Switch(checked = hasBasement, onCheckedChange = { hasBasement = it })
-                                Text("بدروم", modifier = Modifier.padding(start = 8.dp))
+                                Text(stringResource(R.string.boq_basement), modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     } else if (category == EstimationEngine.ProjectCategory.APARTMENT_FINISHING) {
-                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text("مساحة الشقة (م٢)") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text(stringResource(R.string.boq_apartment_area)) }, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -167,7 +167,7 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                 trialRunLog = TrialRunManager.runFullProjectSimulation()
             }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                else Text("إصدار كشف الكميات والجدوى الاستثمارية", fontWeight = FontWeight.Bold)
+                else Text(stringResource(R.string.boq_generate_report), fontWeight = FontWeight.Bold)
             }
         }
 
@@ -178,7 +178,7 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("🛡️ تقرير سلامة البيانات (Trial Run)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(stringResource(R.string.boq_data_safety_report), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Text(log, fontSize = 10.sp, color = Color.DarkGray)
                     }
                 }
@@ -220,7 +220,7 @@ fun DesignsBOQContent(viewModel: ProjectViewModel) {
                 }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
                     Icon(Icons.Default.PictureAsPdf, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("تصدير كشف كميات المشروع PDF")
+                    Text(stringResource(R.string.boq_export_pdf))
                 }
             }
             items(projectDesigns) { design -> DesignBOQCard(design) }
@@ -234,27 +234,27 @@ private fun exportEstimationPdf(context: Context, result: EstimationEngine.Estim
     try {
         val file = PdfGenerator.generateEstimationReport(context, result)
         sharePdf(context, file)
-    } catch (e: Exception) { Toast.makeText(context, "فشل التصدير: ${e.message}", Toast.LENGTH_SHORT).show() }
+    } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.boq_export_failed, e.message), Toast.LENGTH_SHORT).show() }
 }
 
 private fun exportProjectBOQPdf(context: Context, name: String, designs: List<com.civileg.app.db.Design>) {
     try {
         val file = PdfGenerator.generateBOQReport(context, name, designs.sumOf { it.totalCost }, designs.sumOf { it.concreteVolume }, designs.sumOf { it.steelWeight }, designs.map { it.name to it.totalCost })
         sharePdf(context, file)
-    } catch (e: Exception) { Toast.makeText(context, "فشل التصدير", Toast.LENGTH_SHORT).show() }
+    } catch (e: Exception) { Toast.makeText(context, stringResource(R.string.boq_export_failed_title), Toast.LENGTH_SHORT).show() }
 }
 
 private fun sharePdf(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
     val intent = Intent(Intent.ACTION_VIEW).apply { setDataAndType(uri, "application/pdf"); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-    context.startActivity(Intent.createChooser(intent, "فتح التقرير"))
+    context.startActivity(Intent.createChooser(intent, stringResource(R.string.boq_open_report)))
 }
 
 @Composable
 fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text("تقدير مالي وفني متكامل", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.boq_integrated_estimate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(String.format(Locale.US, "%,.0f %s", res.totalCost, res.currencySymbol), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             res.items.forEach { item ->
@@ -266,20 +266,20 @@ fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport:
             res.investmentData?.let { invest ->
                 Box(modifier = Modifier.padding(top = 16.dp).background(MaterialTheme.colorScheme.primary.copy(0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
                     Column {
-                        Text("📊 دراسة الجدوى", fontWeight = FontWeight.Bold)
-                        ResultSummaryRow("العائد المتوقع (ROI)", "${"%.1f".format(invest.roi)}%")
-                        ResultSummaryRow("صافي الربح", String.format(Locale.US, "%,.0f %s", invest.netProfit, res.currencySymbol))
-                        ResultSummaryRow("هامش الربح", "${"%.1f".format(invest.profitMargin)}%")
+                        Text(stringResource(R.string.boq_feasibility_section), fontWeight = FontWeight.Bold)
+                        ResultSummaryRow(stringResource(R.string.boq_expected_roi), "${"%.1f".format(invest.roi)}%")
+                        ResultSummaryRow(stringResource(R.string.boq_net_profit), String.format(Locale.US, "%,.0f %s", invest.netProfit, res.currencySymbol))
+                        ResultSummaryRow(stringResource(R.string.boq_profit_margin), "${"%.1f".format(invest.profitMargin)}%")
                         Spacer(Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            InvestmentSmallCard("عدد الوحدات", "${invest.estimatedUnits}")
-                            InvestmentSmallCard("مدة التنفيذ", "${invest.constructionDurationMonths} شهر")
+                            InvestmentSmallCard(stringResource(R.string.boq_num_units), "${invest.estimatedUnits}")
+                            InvestmentSmallCard(stringResource(R.string.boq_construction_duration), stringResource(R.string.boq_duration_months, invest.constructionDurationMonths))
                         }
                     }
                 }
             }
             Button(onClick = onExport, modifier = Modifier.fillMaxWidth().padding(top = 16.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
-                Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text("تصدير التقرير PDF")
+                Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.boq_export_report_pdf))
             }
         }
     }
@@ -320,7 +320,7 @@ fun DesignBOQCard(design: com.civileg.app.db.Design) {
 fun TotalCostCard(cost: Double) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text("إجمالي تكلفة التصميمات المحفوظة", color = Color.White.copy(alpha = 0.8f))
+            Text(stringResource(R.string.boq_total_saved_cost), color = Color.White.copy(alpha = 0.8f))
             Text(String.format(Locale.US, "%,.0f EGP", cost), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
         }
     }
@@ -331,7 +331,7 @@ fun EmptyStateView() {
     Box(modifier = Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.FolderOpen, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-            Text("لم يتم العثور على مشاريع", color = Color.Gray); Text("قم بإضافة مشروعك الأول للبدء", fontSize = 12.sp, color = Color.Gray)
+            Text(stringResource(R.string.boq_no_projects_found), color = Color.Gray); Text(stringResource(R.string.boq_add_first_project), fontSize = 12.sp, color = Color.Gray)
         }
     }
 }

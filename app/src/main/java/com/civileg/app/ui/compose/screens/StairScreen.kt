@@ -55,7 +55,7 @@ fun StairScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
-    var designName by remember { mutableStateOf("سلم S1") }
+    var designName by remember { mutableStateOf(stringResource(R.string.stair_default_name)) }
     
     var selectedType by remember { mutableStateOf(CalculatorEngine.StairType.SINGLE_FLIGHT) }
     var span by remember { mutableStateOf("4.0") }
@@ -106,7 +106,7 @@ fun StairScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { SectionHeader("📐 نوع وأبعاد السلم", R.drawable.ic_stairs) }
+            item { SectionHeader(stringResource(R.string.stair_dimensions), R.drawable.ic_stairs) }
 
             item {
                 ExposedDropdownMenuBox(
@@ -118,7 +118,7 @@ fun StairScreen(
                         value = selectedType.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("نوع السلم") },
+                        label = { Text(stringResource(R.string.stair_type_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -139,8 +139,8 @@ fun StairScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(span, "الطول الأفقي L (m)", { span = it }, Modifier.weight(1f))
-                    StairInputField(riser, "القائمة R (mm)", { riser = it }, Modifier.weight(1f))
+                    StairInputField(span, stringResource(R.string.stair_horizontal_length), { span = it }, Modifier.weight(1f))
+                    StairInputField(riser, stringResource(R.string.stair_riser), { riser = it }, Modifier.weight(1f))
                 }
             }
 
@@ -180,12 +180,12 @@ fun StairScreen(
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("إجراء الحسابات والرسم")
+                    Text(stringResource(R.string.stair_design_now))
                 }
             }
 
             result?.let { res ->
-                item { SectionHeader("📊 نتائج التصميم الإنشائي", R.drawable.ic_calculator) }
+                item { SectionHeader(stringResource(R.string.stair_results), R.drawable.ic_calculator) }
                 
                 item {
                     val ecoColor = when {
@@ -215,16 +215,16 @@ fun StairScreen(
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            if (res.utilizationRatio > 1.0) "تصميم غير آمن! ❌"
-                                            else if (res.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
-                                            else if (res.utilizationRatio > 0.4) "تصميم مثالي واقتصادي ✅"
-                                            else "قطاع كبير (غير اقتصادي) 🔵",
+                                            if (res.utilizationRatio > 1.0) stringResource(R.string.tank_design_unsafe)
+                                            else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
+                                            else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
+                                            else stringResource(R.string.tank_section_large),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     Text(
-                                        "المستشار الإنشائي: نسبة الاستهلاك",
+                                        stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -259,9 +259,9 @@ fun StairScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            ResultRow("سمك البلاطة ts", "${res.thickness.toInt()} mm")
-                            ResultRow("التسليح الرئيسي", res.reinforcement.barString)
-                            ResultRow("تسليح التوزيع", res.distributionReinforcement.barString)
+                            ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")
+                            ResultRow(stringResource(R.string.stair_main_reinforcement), res.reinforcement.barString)
+                            ResultRow(stringResource(R.string.stair_distribution_reinforcement), res.distributionReinforcement.barString)
                         }
                     }
                 }
@@ -280,7 +280,7 @@ fun StairScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("تقرير PDF")
+                                Text(stringResource(R.string.pdf_report))
                             }
                         }
 
@@ -292,19 +292,19 @@ fun StairScreen(
                         ) {
                             Icon(Icons.Default.Save, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("حفظ")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
 
                 item {
-                    Text("🎨 رسم تفصيلي للتسليح (Full Reinforcement)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.stair_reinforcement_drawing), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(400.dp))
                 }
 
                 item {
                     InteractiveDrawingScreen(
-                        title = "رسم السلم التفصيلي",
+                        title = stringResource(R.string.stair_drawing_title),
                         subtitle = "Staircase Reinforcement Detail",
                         drawingContent = {
                             ProfessionalStairDrawing(
@@ -325,7 +325,7 @@ fun StairScreen(
                 }
 
                 item {
-                    Text("📝 المعادلات الهندسية", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     StairFormulasCard()
                 }
             }
@@ -336,19 +336,19 @@ fun StairScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("حفظ التصميم في مشروع") },
+            title = { Text(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text("اسم السلم (مثلاً: S1)") },
+                        label = { Text(stringResource(R.string.stair_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -373,11 +373,11 @@ fun StairScreen(
                     result?.let { viewModel.saveStair(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text("حفظ")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

@@ -34,7 +34,7 @@ fun SteelTablesScreen(
     var selectedType by remember { mutableStateOf(0) }
     var selectedSection by remember { mutableStateOf<SectionProperties?>(null) }
 
-    val sectionTypes = listOf("IPE", "HEA", "HEB", "UPN", "زوايا", "الكل")
+    val sectionTypes = listOf("IPE", "HEA", "HEB", "UPN", stringResource(R.string.steel_tables_angles), stringResource(R.string.view_all))
     val typeColors = listOf(
         Color(0xFF1976D2), Color(0xFF7B1FA2), Color(0xFF00838F),
         Color(0xFFE65100), Color(0xFF2E7D32), Color(0xFF37474F)
@@ -78,35 +78,35 @@ fun SteelTablesScreen(
                 ) {
                     val displayProps = if (section.Zx > 0) {
                         listOf(
-                            "العمق h" to "${section.depth} mm",
-                            "العرض b" to "${section.width} mm",
-                            "سماكة النفق tw" to "${section.tw} mm",
-                            "سماكة الشنش tf" to "${section.tf} mm",
-                            "المساحة" to "${section.area} cm²",
-                            "الوزن" to "${section.weight} kg/m",
-                            "عزم القصور القوي Iy" to "${section.iy} cm⁴",
-                            "عزم القصور الضعيف Iz" to "${section.iz} cm⁴",
-                            "معامل المقطع القوي Sy" to "${section.sy} cm³",
-                            "معامل المقطع الضعيف Sz" to "${section.sz} cm³",
-                            "نصف قطر الدوران القوي ry" to "${section.ry} cm",
-                            "نصف قطر الدوران الضعيف rz" to "${section.rz} cm",
-                            "معامل البلاستك القوي Zx" to "${section.Zx} cm³",
-                            "معامل البلاستك الضعيف Zy" to "${section.Zy} cm³"
+                            stringResource(R.string.steel_tables_depth_h) to "${section.depth} mm",
+                            stringResource(R.string.steel_tables_width_b) to "${section.width} mm",
+                            stringResource(R.string.steel_tables_web_tw) to "${section.tw} mm",
+                            stringResource(R.string.steel_tables_flange_tf) to "${section.tf} mm",
+                            stringResource(R.string.steel_tables_area) to "${section.area} cm²",
+                            stringResource(R.string.steel_tables_weight) to "${section.weight} kg/m",
+                            stringResource(R.string.steel_tables_iy) to "${section.iy} cm⁴",
+                            stringResource(R.string.steel_tables_iz) to "${section.iz} cm⁴",
+                            stringResource(R.string.steel_tables_sy) to "${section.sy} cm³",
+                            stringResource(R.string.steel_tables_sz) to "${section.sz} cm³",
+                            stringResource(R.string.steel_tables_ry) to "${section.ry} cm",
+                            stringResource(R.string.steel_tables_rz) to "${section.rz} cm",
+                            stringResource(R.string.steel_tables_zx) to "${section.Zx} cm³",
+                            stringResource(R.string.steel_tables_zy) to "${section.Zy} cm³"
                         )
                     } else {
                         listOf(
-                            "العمق h" to "${section.depth} mm",
-                            "العرض b" to "${section.width} mm",
-                            "سماكة النفق tw" to "${section.tw} mm",
-                            "سماكة الشنش tf" to "${section.tf} mm",
-                            "المساحة" to "${section.area} cm²",
-                            "الوزن" to "${section.weight} kg/m",
-                            "عزم القصور القوي Iy" to "${section.iy} cm⁴",
-                            "عزم القصور الضعيف Iz" to "${section.iz} cm⁴",
-                            "معامل المقطع القوي Sy" to "${section.sy} cm³",
-                            "معامل المقطع الضعيف Sz" to "${section.sz} cm³",
-                            "نصف قطر الدوران القوي ry" to "${section.ry} cm",
-                            "نصف قطر الدوران الضعيف rz" to "${section.rz} cm"
+                            stringResource(R.string.steel_tables_depth_h) to "${section.depth} mm",
+                            stringResource(R.string.steel_tables_width_b) to "${section.width} mm",
+                            stringResource(R.string.steel_tables_web_tw) to "${section.tw} mm",
+                            stringResource(R.string.steel_tables_flange_tf) to "${section.tf} mm",
+                            stringResource(R.string.steel_tables_area) to "${section.area} cm²",
+                            stringResource(R.string.steel_tables_weight) to "${section.weight} kg/m",
+                            stringResource(R.string.steel_tables_iy) to "${section.iy} cm⁴",
+                            stringResource(R.string.steel_tables_iz) to "${section.iz} cm⁴",
+                            stringResource(R.string.steel_tables_sy) to "${section.sy} cm³",
+                            stringResource(R.string.steel_tables_sz) to "${section.sz} cm³",
+                            stringResource(R.string.steel_tables_ry) to "${section.ry} cm",
+                            stringResource(R.string.steel_tables_rz) to "${section.rz} cm"
                         )
                     }
                     displayProps.forEach { (label, value) ->
@@ -124,7 +124,7 @@ fun SteelTablesScreen(
             },
             confirmButton = {
                 TextButton(onClick = { selectedSection = null }) {
-                    Text("إغلاق", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.close), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -136,7 +136,7 @@ fun SteelTablesScreen(
                 title = { Text(stringResource(R.string.screen_steel_tables_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -152,7 +152,7 @@ fun SteelTablesScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("بحث بالمقاطع...") },
+                label = { Text(stringResource(R.string.steel_tables_search_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -185,7 +185,7 @@ fun SteelTablesScreen(
 
             // Count
             Text(
-                text = "${filteredSections.size} مقطع",
+                text = stringResource(R.string.steel_tables_count, filteredSections.size),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -208,11 +208,11 @@ fun SteelTablesScreen(
                             .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        TableHeaderCell("المقطع", 90.dp)
+                        TableHeaderCell(stringResource(R.string.view_section), 90.dp)
                         TableHeaderCell("h", 50.dp)
                         TableHeaderCell("b", 50.dp)
                         TableHeaderCell("A", 55.dp)
-                        TableHeaderCell("وزن", 55.dp)
+                        TableHeaderCell(stringResource(R.string.steel_tables_weight_label), 55.dp)
                         TableHeaderCell("Iy", 65.dp)
                         TableHeaderCell("Iz", 65.dp)
                         TableHeaderCell("Sy", 55.dp)
