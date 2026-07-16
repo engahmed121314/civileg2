@@ -12,13 +12,15 @@ class CalculatorEngine @Inject constructor(
     private val settingsManager: SettingsManager
 ) {
 
-    enum class DesignCode(val displayName: String) {
-        EGYPTIAN("الكود المصري - ECP 203"),
-        ACI("الكود الأمريكي - ACI 318"),
-        SAUDI("الكود السعودي - SBC 304");
+    enum class DesignCode(val displayNameAr: String, val displayNameEn: String) {
+        EGYPTIAN("الكود المصري - ECP 203", "Egyptian Code - ECP 203"),
+        ACI("الكود الأمريكي - ACI 318", "American Code - ACI 318"),
+        SAUDI("الكود السعودي - SBC 304", "Saudi Code - SBC 304");
+
+        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
 
         companion object {
-            fun fromDomain(code: com.civileg.app.domain.entities.DesignCode): DesignCode {
+            fun fromDomain(code: com.civileg.app.domain.entities.DesignCode, sm: SettingsManager): DesignCode {
                 return when (code) {
                     com.civileg.app.domain.entities.DesignCode.ECP -> EGYPTIAN
                     com.civileg.app.domain.entities.DesignCode.ACI -> ACI
@@ -29,12 +31,14 @@ class CalculatorEngine @Inject constructor(
         }
     }
 
-    enum class SlabType(val displayName: String) {
-        SOLID("بلاطة صلبة (Solid)"),
-        FLAT("بلاطة مسطحة (Flat Slab)"),
-        HOLLOW_BLOCK("هردي (Hollow Block)"),
-        POST_TENSION("بوست تنشن (PT)"),
-        WAFFLE("بلاطة وافل (Waffle)")
+    enum class SlabType(val displayNameAr: String, val displayNameEn: String) {
+        SOLID("بلاطة صلبة", "Solid Slab"),
+        FLAT("بلاطة مسطحة", "Flat Slab"),
+        HOLLOW_BLOCK("هردي", "Hollow Block"),
+        POST_TENSION("بوست تنشن", "Post-Tensioned"),
+        WAFFLE("بلاطة وافل", "Waffle Slab");
+
+        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
     }
     
     enum class SupportType(val displayName: String) {
@@ -45,10 +49,12 @@ class CalculatorEngine @Inject constructor(
         SINGLE_FLIGHT("Single Flight"), DOUBLE_FLIGHT("Double Flight"), SPIRAL("Spiral") 
     }
     
-    enum class TankType(val displayName: String) { 
-        RECTANGULAR_GROUND("أرضي مستطيل"), CIRCULAR_GROUND("أرضي دائري"), 
-        RECTANGULAR_ELEVATED("علوي مستطيل"), CIRCULAR_ELEVATED("علوي دائري"),
-        UNDERGROUND("تحت الأرض مستطيل"), CIRCULAR_UNDERGROUND("تحت الأرض دائري")
+    enum class TankType(val displayNameAr: String, val displayNameEn: String) { 
+        RECTANGULAR_GROUND("أرضي مستطيل", "Rectangular Ground"), CIRCULAR_GROUND("أرضي دائري", "Circular Ground"), 
+        RECTANGULAR_ELEVATED("علوي مستطيل", "Rectangular Elevated"), CIRCULAR_ELEVATED("علوي دائري", "Circular Elevated"),
+        UNDERGROUND("تحت الأرض مستطيل", "Underground Rectangular"), CIRCULAR_UNDERGROUND("تحت الأرض دائري", "Underground Circular");
+
+        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
     }
 
     @Parcelize
@@ -56,7 +62,7 @@ class CalculatorEngine @Inject constructor(
         val numBars: Int = 0,
         val diameter: Int = 12,
         val spacing: Double = 0.0,
-        val type: String = "الرئيسي",
+        val type: String = "Main",
         val description: String = "",
         val weightKg: Double = 0.0,
         val barLength: Double = 0.0, // in meters
@@ -130,12 +136,14 @@ class CalculatorEngine @Inject constructor(
         val utilizationRatio: Double = 0.0
     ) : Parcelable
 
-    enum class FootingType(val displayName: String) {
-        ISOLATED("منفصلة"),
-        COMBINED("مشتركة"),
-        STRIP("شريطية"),
-        RAFT("لبشة خرسانية"),
-        PILE_CAP("هامة خوازيق")
+    enum class FootingType(val displayNameAr: String, val displayNameEn: String) {
+        ISOLATED("منفصلة", "Isolated"),
+        COMBINED("مشتركة", "Combined"),
+        STRIP("شريطية", "Strip"),
+        RAFT("لبشة خرسانية", "Raft"),
+        PILE_CAP("هامة خوازيق", "Pile Cap");
+
+        val displayName: String get() = if (settingsManager.language == "en") displayNameEn else displayNameAr
         }
 
     @Parcelize
@@ -348,14 +356,19 @@ class CalculatorEngine @Inject constructor(
         // 1. Axial Capacity (Nominal) - Simplified AISC/ECP
         val axialCapacity = (0.85 * fy * area) / 1000.0 // kN
         
-        // 2. Flexural Capacity - Simplified Sx calculation for I/C/RHS
+        // 2. Flexural Capacity - Sx calculation for I-Section (correct elastic section modulus)
+        // Sx = I / (h/2) where I = (tw*(h-2tf)^3)/12 + 2*[(bf*tf^3)/12 + bf*tf*((h-tf)/2)^2]
+        // Simplified: Sx = tw*(h-2tf)^2/6 + bf*tf*(h-tf)
         val sx = when (section) {
             is SteelSectionType.ISection -> {
-                (section.tw * (section.h - 2 * section.tf).pow(2) / 6) + 
-                (2 * section.bf * section.tf * (section.h / 2 - section.tf / 2))
+                val hw = section.h - 2 * section.tf // web depth
+                (section.tw * hw.pow(2) / 6.0) +
+                (section.bf * section.tf * (section.h - section.tf))
                 }
             is SteelSectionType.RHS -> {
-                (section.height.pow(2) * section.width / 6.0) - ((section.height - 2*section.thickness).pow(2) * (section.width - 2*section.thickness) / 6.0)
+                val oh = section.height - 2*section.thickness
+                val ow = section.width - 2*section.thickness
+                (section.height.pow(2) * section.width - oh.pow(2) * ow) / 6.0
                 }
             else -> 1000.0 // Minimum placeholder
             }
@@ -499,7 +512,7 @@ class CalculatorEngine @Inject constructor(
         val axial = frameReaction * 0.35 + inputs.windLoad * tributaryArea * 0.18
         val baseShear = max(0.0, inputs.windLoad * tributaryArea * 0.33)
         
-        val drift = when (CalculatorEngine.DesignCode.fromDomain(inputs.code)) {
+        val drift = when (CalculatorEngine.DesignCode.fromDomain(inputs.code, settingsManager)) {
             CalculatorEngine.DesignCode.EGYPTIAN -> spanM * 1000.0 / 500.0
             CalculatorEngine.DesignCode.ACI -> spanM * 1000.0 / 400.0
             CalculatorEngine.DesignCode.SAUDI -> spanM * 1000.0 / 450.0
@@ -1304,13 +1317,25 @@ class CalculatorEngine @Inject constructor(
         // --- A. Geometric Design Auto-Checks ---
         val twoRPlusT = 2.0 * riser + tread
         if (twoRPlusT < 550.0 || twoRPlusT > 700.0) {
-            suggestions.add("تحذير: 2R+T = ${"%.0f".format(twoRPlusT)}mm (المفروض 550-700mm)")
+            val msg = if (settingsManager.language == "en")
+                "Warning: 2R+T = ${"%.0f".format(twoRPlusT)}mm (required 550-700mm)"
+            else
+                "تحذير: 2R+T = ${"%.0f".format(twoRPlusT)}mm (المفروض 550-700mm)"
+            suggestions.add(msg)
         }
         if (riser > 180.0) {
-            suggestions.add("تحذير: ارتفاع الدرجة = ${"%.0f".format(riser)}mm (الأقصى 180mm)")
+            val msg = if (settingsManager.language == "en")
+                "Warning: Riser height = ${"%.0f".format(riser)}mm (max 180mm)"
+            else
+                "تحذير: ارتفاع الدرجة = ${"%.0f".format(riser)}mm (الأقصى 180mm)"
+            suggestions.add(msg)
         }
         if (tread < 250.0) {
-            suggestions.add("تحذير: عرض الدرجة = ${"%.0f".format(tread)}mm (الأدنى 250mm)")
+            val msg = if (settingsManager.language == "en")
+                "Warning: Tread width = ${"%.0f".format(tread)}mm (min 250mm)"
+            else
+                "تحذير: عرض الدرجة = ${"%.0f".format(tread)}mm (الأدنى 250mm)"
+            suggestions.add(msg)
         }
 
         // Number of steps: n = totalRise / riser
@@ -1318,12 +1343,20 @@ class CalculatorEngine @Inject constructor(
         val nSteps = ceil(totalRise / riser)
         val actualSpan = nSteps * tread / 1000.0 // m (actual horizontal span from steps)
         if (abs(actualSpan - span) > 0.5) {
-            suggestions.add("ملاحظة: عدد الدرجات = ${nSteps.toInt()}، Span الفعلي ≈ ${"%.2f".format(actualSpan)}m")
+            val msg = if (settingsManager.language == "en")
+                "Note: Number of steps = ${nSteps.toInt()}, Actual span = ${"%.2f".format(actualSpan)}m"
+            else
+                "ملاحظة: عدد الدرجات = ${nSteps.toInt()}، Span الفعلي ≈ ${"%.2f".format(actualSpan)}m"
+            suggestions.add(msg)
         }
 
         // --- F. Spiral stair warning ---
         if (type == StairType.SPIRAL) {
-            suggestions.add("تحذير: السلم الحلزوني يحتاج تحليل مختلف (عزم ليّ وفتل)")
+            val msg = if (settingsManager.language == "en")
+                "Warning: Spiral stair requires different analysis (torsion & warping)"
+            else
+                "تحذير: السلم الحلزوني يحتاج تحليل مختلف (عزم ليّ وفتل)"
+            suggestions.add(msg)
         }
 
         // --- 1. Thickness (L/25 or L/20 depending on support) ---
@@ -1545,10 +1578,19 @@ class CalculatorEngine @Inject constructor(
             val tankWeight = totalVol * 25.0 // kN
             val upliftForce = gammaW * capacity // kN
             val fsUplift = tankWeight / upliftForce.coerceAtLeast(0.01)
-            val fsLabel = if (fsUplift >= 1.2) "(آمن)" else "(غير آمن - يحتاج وزن زائد أو أرضيات)"
-            suggestions.add("معامل أمان الرفع (Uplift FS) = " + "%.2f".format(fsUplift) + " " + fsLabel)
+            val fsLabel = if (settingsManager.language == "en") {
+                if (fsUplift >= 1.2) "(Safe)" else "(Unsafe - needs extra weight or floor slabs)"
+            } else {
+                if (fsUplift >= 1.2) "(آمن)" else "(غير آمن - يحتاج وزن زائد أو أرضيات)"
+            }
+            val upliftPrefix = if (settingsManager.language == "en") "Uplift Factor of Safety (FS)" else "معامل أمان الرفع (Uplift FS)"
+            suggestions.add("$upliftPrefix = ${"%.2f".format(fsUplift)} $fsLabel")
             if (soilPressure > 0) {
-                suggestions.add("ضغط التربة الخارجي على الحوائط = ${"%.1f".format(soilPressure)} kN/m²")
+                val soilMsg = if (settingsManager.language == "en")
+                    "External soil pressure on walls = ${"%.1f".format(soilPressure)} kN/m²"
+                else
+                    "ضغط التربة الخارجي على الحوائط = ${"%.1f".format(soilPressure)} kN/m²"
+                suggestions.add(soilMsg)
             }
         }
 
@@ -1659,7 +1701,11 @@ class CalculatorEngine @Inject constructor(
             ps = ka * surcharge * height
             
             if (pa > 0) {
-                suggestions.add("مستوى المياه الجوفية = ${"%.1f".format(waterTableHeight)}m - تم حساب ضغط المياه الهيدروستاتيكي")
+                val wtMsg = if (settingsManager.language == "en")
+                    "Groundwater level = ${"%.1f".format(waterTableHeight)}m - hydrostatic pressure calculated"
+                else
+                    "مستوى المياه الجوفية = ${"%.1f".format(waterTableHeight)}m - تم حساب ضغط المياه الهيدروستاتيكي"
+                suggestions.add(wtMsg)
             }
         } else {
             pa = 0.5 * ka * soilDensity * height.pow(2)

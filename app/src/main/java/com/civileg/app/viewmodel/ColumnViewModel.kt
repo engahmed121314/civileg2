@@ -177,7 +177,7 @@ class ColumnViewModel @Inject constructor(
         _uiState.update { it.copy(isExporting = true) }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val exporter = ComprehensivePdfExporter(context)
+                val exporter = ComprehensivePdfExporter(context).setLanguage(settingsManager.language)
                 val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
                 

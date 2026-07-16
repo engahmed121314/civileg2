@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,9 +18,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ExportViewModel @Inject constructor(
-    private val pdfExporter: ComprehensivePdfExporter
+    private val pdfExporter: ComprehensivePdfExporter,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
     
+    private fun applyLanguage() {
+        pdfExporter.setLanguage(settingsManager.language)
+    }
     private val _exportState = MutableStateFlow<ExportState>(ExportState.Idle)
     val exportState: StateFlow<ExportState> = _exportState
     
@@ -36,6 +41,7 @@ class ExportViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _exportState.value = ExportState.Exporting
+            applyLanguage()
             
             try {
                 val outputDir = context.getExternalFilesDir(null) ?: context.filesDir
@@ -78,6 +84,7 @@ class ExportViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _exportState.value = ExportState.Exporting
+            applyLanguage()
             
             try {
                 val outputDir = context.getExternalFilesDir(null) ?: context.filesDir
@@ -133,6 +140,7 @@ class ExportViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _exportState.value = ExportState.Exporting
+            applyLanguage()
             
             try {
                 val outputDir = context.getExternalFilesDir(null) ?: context.filesDir
@@ -172,6 +180,7 @@ class ExportViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _exportState.value = ExportState.Exporting
+            applyLanguage()
             
             try {
                 val outputDir = context.getExternalFilesDir(null) ?: context.filesDir

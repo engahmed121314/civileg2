@@ -931,7 +931,7 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
     }
 }
 
-fun createWarehouseBitmap(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult): Bitmap {
+fun createWarehouseBitmap(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult, labels: WarehouseCanvasLabels): Bitmap {
     val bitmap = Bitmap.createBitmap(1200, 1600, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(android.graphics.Color.WHITE)
@@ -943,25 +943,37 @@ fun createWarehouseBitmap(inputs: SteelWarehouseInputs, result: SteelWarehouseAn
     
     // 1. Elevation (Top Left)
     drawCanvasElevation(canvas, inputs, 100f, 400f, 0.5f, result)
-    canvas.drawText("الواجهة الأمامية", 100f, 50f, textP)
+    canvas.drawText(labels.frontElevation, 100f, 50f, textP)
     
     // 2. Plan (Top Right)
-    drawCanvasPlan(canvas, inputs, 700f, 400f, 0.4f)
-    canvas.drawText("المسقط الأفقي", 700f, 50f, textP)
+    drawCanvasPlan(canvas, inputs, 700f, 400f, 0.4f, labels)
+    canvas.drawText(labels.planView, 700f, 50f, textP)
     
     // 3. Side (Bottom Left)
-    drawCanvasSide(canvas, inputs, 100f, 900f, 0.4f)
-    canvas.drawText("الواجهة الجانبية", 100f, 550f, textP)
+    drawCanvasSide(canvas, inputs, 100f, 900f, 0.4f, labels)
+    canvas.drawText(labels.sideElevation, 100f, 550f, textP)
     
     // 4. 3D/Schedule Info (Bottom Right)
-    canvas.drawText("ملخص التصميم", 700f, 550f, textP)
+    canvas.drawText(labels.designSummary, 700f, 550f, textP)
     val infoP = Paint().apply { color = android.graphics.Color.BLACK; textSize = 24f }
-    canvas.drawText("إجمالي الوزن: ${"%.2f".format(result.totalWeight)} طن", 700f, 600f, infoP)
-    canvas.drawText("التكلفة/م²: ${"%.0f".format(result.costPerM2)} جنيه", 700f, 640f, infoP)
-    canvas.drawText("العائد على الاستثمار: ${"%.1f".format(result.roi)} %", 700f, 680f, infoP)
+    canvas.drawText("${labels.totalWeight}: ${"%.2f".format(result.totalWeight)} ${labels.tons}", 700f, 600f, infoP)
+    canvas.drawText("${labels.costPerM2}: ${"%.0f".format(result.costPerM2)} ${labels.currency}", 700f, 640f, infoP)
+    canvas.drawText("${labels.roi}: ${"%.1f".format(result.roi)} %", 700f, 680f, infoP)
 
     return bitmap
 }
+
+data class WarehouseCanvasLabels(
+    val frontElevation: String = "Front Elevation",
+    val planView: String = "Plan View",
+    val sideElevation: String = "Side Elevation",
+    val designSummary: String = "Design Summary",
+    val totalWeight: String = "Total Weight",
+    val costPerM2: String = "Cost/m²",
+    val roi: String = "ROI",
+    val tons: String = "tons",
+    val currency: String = "EGP"
+)
 
 private fun drawCanvasElevation(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float, result: SteelWarehouseAnalysisResult? = null) {
     val p = Paint().apply { 
@@ -1066,7 +1078,7 @@ private fun drawDimensionLine(canvas: Canvas, x1: Float, y1: Float, x2: Float, y
     }
 }
 
-private fun drawCanvasPlan(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float) {
+private fun drawCanvasPlan(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float, labels: WarehouseCanvasLabels) {
     val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 4f; style = Paint.Style.STROKE; isAntiAlias = true }
     val dimPaint = Paint().apply { color = android.graphics.Color.DKGRAY; strokeWidth = 1.5f; textSize = 20f; isAntiAlias = true }
     
@@ -1096,12 +1108,12 @@ private fun drawCanvasPlan(canvas: Canvas, inputs: SteelWarehouseInputs, x: Floa
     }
     
     // Span Dimension
-    drawDimensionLine(canvas, x, y + 40f, x + w, y + 40f, "البحر: ${inputs.span}m", dimPaint)
+    drawDimensionLine(canvas, x, y + 40f, x + w, y + 40f, "${labels.span}: ${inputs.span}m", dimPaint)
     // Total Length Dimension
-    drawDimensionLine(canvas, x + w + 40f, planTop, x + w + 40f, y, "الطول: ${inputs.length}m", dimPaint)
+    drawDimensionLine(canvas, x + w + 40f, planTop, x + w + 40f, y, "${labels.length}: ${inputs.length}m", dimPaint)
 }
 
-private fun drawCanvasSide(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float) {
+private fun drawCanvasSide(canvas: Canvas, inputs: SteelWarehouseInputs, x: Float, y: Float, scale: Float, labels: WarehouseCanvasLabels) {
     val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 5f; isAntiAlias = true }
     val textP = Paint().apply { color = android.graphics.Color.DKGRAY; textSize = 22f; textAlign = Paint.Align.CENTER }
     
@@ -1118,7 +1130,7 @@ private fun drawCanvasSide(canvas: Canvas, inputs: SteelWarehouseInputs, x: Floa
     }
     canvas.drawLine(x, y - eh, x + l, y - eh, p)
     
-    canvas.drawText("الطول الكلي: ${inputs.length}m", x + l/2, y + 35f, textP)
+    canvas.drawText("${labels.totalLength}: ${inputs.length}m", x + l/2, y + 35f, textP)
 }
 
 fun openPdf(context: Context, file: File) {
@@ -1130,7 +1142,7 @@ fun openPdf(context: Context, file: File) {
     try {
         context.startActivity(intent)
     } catch (e: Exception) {
-        Toast.makeText(context, "لا يوجد قارئ PDF", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.steel_no_pdf_reader), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -1559,9 +1571,14 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             item { SteelResultCard(res) }
             item {
                 InteractiveDrawingScreen(
-                    title = "رسم القطاع الحديدي",
+                    title = stringResource(R.string.steel_section_drawing),
                     subtitle = "Steel Member Detail",
-                    viewModes = listOf("الكل", "المقطع الطولي", "المقطع العرضي", "التوصيلات"),
+                    viewModes = listOf(
+                        stringResource(R.string.steel_view_all),
+                        stringResource(R.string.steel_view_longitudinal),
+                        stringResource(R.string.steel_view_cross),
+                        stringResource(R.string.steel_view_connections)
+                    ),
                     drawingContent = {
                         // Extract connection parameters from result
                         val conn = res.connectionDesign
@@ -1808,10 +1825,10 @@ fun SteelResultCard(res: SteelMemberResult) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            ResultRow("مساحة القطاع", "%.1f mm²".format(res.sectionType.getArea()))
-            ResultRow("سعة الضغط", "%.1f kN".format(res.axialCapacity))
-            ResultRow("سعة الانحناء", "%.1f kN.m".format(res.flexuralCapacity))
-            ResultRow("نسبة الاستخدام", "%.2f".format(res.utilizationRatio))
+            ResultRow(stringResource(R.string.steel_section_area), "%.1f mm²".format(res.sectionType.getArea()))
+            ResultRow(stringResource(R.string.steel_compress_capacity), "%.1f kN".format(res.axialCapacity))
+            ResultRow(stringResource(R.string.steel_flexural_capacity), "%.1f kN.m".format(res.flexuralCapacity))
+            ResultRow(stringResource(R.string.steel_util_ratio), "%.2f".format(res.utilizationRatio))
             Text(if (res.isSafe) stringResource(R.string.steel_safe) else stringResource(R.string.steel_fail), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
         }
     }
@@ -1988,28 +2005,28 @@ fun BasePlateDesignTab() {
                             Text(if (res.isSafe) stringResource(R.string.steel_design_safe) else stringResource(R.string.steel_design_unsafe_full), fontWeight = FontWeight.Bold, color = urColor, fontSize = 16.sp)
                         }
                         Spacer(Modifier.height(12.dp))
-                        ResultRow("أبعاد اللوح (B × N)", "%.0f × %.0f mm".format(res.plateWidth, res.plateLength))
-                        ResultRow("سماكة اللوح tp", "%.0f mm".format(res.plateThickness))
-                        ResultRow("أقصى ضغط تحمل", "%.2f MPa".format(res.maxBearingPressure))
-                        ResultRow("سعة الخرسانة", "%.2f MPa".format(res.concreteCapacity))
+        ResultRow(stringResource(R.string.steel_plate_dims), "%.0f × %.0f mm".format(res.plateWidth, res.plateLength))
+                        ResultRow(stringResource(R.string.steel_plate_thickness), "%.0f mm".format(res.plateThickness))
+                        ResultRow(stringResource(R.string.steel_max_bearing), "%.2f MPa".format(res.maxBearingPressure))
+                        ResultRow(stringResource(R.string.steel_concrete_capacity), "%.2f MPa".format(res.concreteCapacity))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("البراغي الارتكازية", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        ResultRow("عدد البراغي", "${res.anchorBolts.numberOfBolts}")
-                        ResultRow("قطر البرغي", "M${res.anchorBolts.boltDiameter.toInt()} (${res.anchorBolts.boltGrade})")
-                        ResultRow("مسافة بين البراغي", "%.0f mm".format(res.anchorBolts.boltSpacing))
-                        ResultRow("المسافة من الحافة", "%.0f mm".format(res.anchorBolts.edgeDistance))
-                        ResultRow("سعة الشد لكل برغي", "%.1f kN".format(res.anchorBolts.tensionCapacity))
-                        ResultRow("طول التثبيت", "%.0f mm".format(res.anchorBolts.embedmentLength))
+                        Text(stringResource(R.string.steel_anchor_bolts), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        ResultRow(stringResource(R.string.steel_num_bolts), "${res.anchorBolts.numberOfBolts}")
+                        ResultRow(stringResource(R.string.steel_bolt_diameter), "M${res.anchorBolts.boltDiameter.toInt()} (${res.anchorBolts.boltGrade})")
+                        ResultRow(stringResource(R.string.steel_bolt_spacing_label), "%.0f mm".format(res.anchorBolts.boltSpacing))
+                        ResultRow(stringResource(R.string.steel_edge_distance), "%.0f mm".format(res.anchorBolts.edgeDistance))
+                        ResultRow(stringResource(R.string.steel_tension_cap_bolt), "%.1f kN".format(res.anchorBolts.tensionCapacity))
+                        ResultRow(stringResource(R.string.steel_embedment_length), "%.0f mm".format(res.anchorBolts.embedmentLength))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("المونة (Grout)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        ResultRow("سماكة المونة", "%.0f mm".format(res.grout.thickness))
-                        ResultRow("مقاومة المونة", "%.0f MPa".format(res.grout.providedStrength))
+                        Text(stringResource(R.string.steel_grout), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        ResultRow(stringResource(R.string.steel_grout_thickness), "%.0f mm".format(res.grout.thickness))
+                        ResultRow(stringResource(R.string.steel_grout_strength), "%.0f MPa".format(res.grout.providedStrength))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        ResultRow("معامل الاستغلال (U.R)", "%.2f".format(res.utilizationRatio))
+                        ResultRow(stringResource(R.string.steel_ur_label), "%.2f".format(res.utilizationRatio))
 
                         if (res.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            Text("⚠️ تحذيرات:", fontWeight = FontWeight.Bold, color = Color(0xFFF57C00), fontSize = 12.sp)
+                            Text(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, color = Color(0xFFF57C00), fontSize = 12.sp)
                             res.warnings.forEach { w ->
                                 Text("• $w", fontSize = 11.sp, color = Color.Gray)
                             }
@@ -2025,7 +2042,7 @@ fun BasePlateDesignTab() {
 @Composable
 fun ConnectionDesignTab() {
     var connectionType by remember { mutableIntStateOf(0) }
-    val connTypes = listOf("وصلة مساميرية قص", "وصلة مساميرية عزم", "وصلة ملحومة", "وصلة مركبة")
+    val connTypes = listOf(stringResource(R.string.steel_conn_bolted_shear), stringResource(R.string.steel_conn_bolted_moment), stringResource(R.string.steel_conn_welded), stringResource(R.string.steel_conn_combined))
 
     // Bolted inputs
     var boltDiameter by remember { mutableStateOf("20") }
@@ -2050,12 +2067,12 @@ fun ConnectionDesignTab() {
     var weldResult by remember { mutableStateOf<WeldDesignResult?>(null) }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { SectionHeader("🔗 تصميم الوصلات الإنشائية", R.drawable.ic_frame) }
+        item { SectionHeader(stringResource(R.string.steel_connection_design), R.drawable.ic_frame) }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("نوع الوصلة", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.steel_conn_type), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     FlowRow {
                         connTypes.forEachIndexed { idx, name ->
@@ -2076,17 +2093,17 @@ fun ConnectionDesignTab() {
             item {
                 Card(elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("بيانات المسامير", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.steel_bolt_data), fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SteelInputField(boltDiameter, "قطر المسمار (mm)", { boltDiameter = it }, Modifier.weight(1f))
-                            SteelInputField(numBolts, "عدد المسامير", { numBolts = it }, Modifier.weight(1f))
+                            SteelInputField(boltDiameter, stringResource(R.string.steel_bolt_dia_hint), { boltDiameter = it }, Modifier.weight(1f))
+                            SteelInputField(numBolts, stringResource(R.string.steel_bolt_count_hint), { numBolts = it }, Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SteelInputField(boltSpacing, "المسافة بين المسامير (mm)", { boltSpacing = it }, Modifier.weight(1f))
-                            SteelInputField(edgeDistance, "المسافة من الحافة (mm)", { edgeDistance = it }, Modifier.weight(1f))
+                            SteelInputField(boltSpacing, stringResource(R.string.steel_bolt_spacing_hint), { boltSpacing = it }, Modifier.weight(1f))
+                            SteelInputField(edgeDistance, stringResource(R.string.steel_edge_dist_hint), { edgeDistance = it }, Modifier.weight(1f))
                         }
 
-                        Text("رتبة المسمار", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.steel_bolt_grade_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         ExposedDropdownMenuBox(
                             expanded = expandedBoltGrade,
                             onExpandedChange = { expandedBoltGrade = !expandedBoltGrade }
@@ -2113,7 +2130,7 @@ fun ConnectionDesignTab() {
                             }
                         }
 
-                        Text("نمط التوزيع", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.steel_dist_pattern), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         ExposedDropdownMenuBox(
                             expanded = expandedPattern,
                             onExpandedChange = { expandedPattern = !expandedPattern }
@@ -2146,11 +2163,11 @@ fun ConnectionDesignTab() {
             item {
                 Card(elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("الأحمال المؤثرة", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.steel_applied_loads), fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SteelInputField(appliedShear, "القص Vu (kN)", { appliedShear = it }, Modifier.weight(1f))
+                            SteelInputField(appliedShear, stringResource(R.string.steel_shear_vu), { appliedShear = it }, Modifier.weight(1f))
                             if (connectionType != 0) {
-                                SteelInputField(appliedTension, "الشد Tu (kN)", { appliedTension = it }, Modifier.weight(1f))
+                                SteelInputField(appliedTension, stringResource(R.string.steel_tension_tu), { appliedTension = it }, Modifier.weight(1f))
                             }
                         }
                     }
@@ -2163,14 +2180,14 @@ fun ConnectionDesignTab() {
             item {
                 Card(elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("بيانات اللحام", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.steel_weld_data), fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SteelInputField(weldSize, "مقاس اللحام (mm)", { weldSize = it }, Modifier.weight(1f))
-                            SteelInputField(weldLength, "طول اللحام (mm)", { weldLength = it }, Modifier.weight(1f))
+                            SteelInputField(weldSize, stringResource(R.string.steel_weld_size_hint), { weldSize = it }, Modifier.weight(1f))
+                            SteelInputField(weldLength, stringResource(R.string.steel_weld_length_hint), { weldLength = it }, Modifier.weight(1f))
                         }
-                        SteelInputField(appliedWeldForce, "القوة المؤثرة (kN)", { appliedWeldForce = it }, Modifier.fillMaxWidth())
+                        SteelInputField(appliedWeldForce, stringResource(R.string.steel_applied_force_hint), { appliedWeldForce = it }, Modifier.fillMaxWidth())
 
-                        Text("نوع القطب (Electrode)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.steel_electrode_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         ExposedDropdownMenuBox(
                             expanded = expandedElectrode,
                             onExpandedChange = { expandedElectrode = !expandedElectrode }
@@ -2234,7 +2251,7 @@ fun ConnectionDesignTab() {
             }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("تصميم وفحص الوصلة")
+                Text(stringResource(R.string.steel_design_check_conn))
             }
         }
 
@@ -2249,21 +2266,21 @@ fun ConnectionDesignTab() {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (res.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = urColor)
                             Spacer(Modifier.width(8.dp))
-                            Text("نتيجة الوصلة المساميرية — ${if (res.isSafe) "آمنة ✅" else "فاشلة ❌"}", fontWeight = FontWeight.Bold, color = urColor)
+                            Text(if (res.isSafe) stringResource(R.string.steel_bolt_result_safe) else stringResource(R.string.steel_bolt_result_fail), fontWeight = FontWeight.Bold, color = urColor)
                         }
                         Spacer(Modifier.height(12.dp))
-                        ResultRow("مقاومة القص لكل مسمار", "%.1f kN".format(res.shearCapacity))
-                        ResultRow("مقاومة التحمل لكل مسمار", "%.1f kN".format(res.bearingCapacity))
-                        ResultRow("مقاومة الشد لكل مسمار", "%.1f kN".format(res.tensionCapacity))
-                        ResultRow("المقاومة الحاكمة", "%.1f kN".format(res.controllingCapacity))
-                        ResultRow("معامل الاستغلال (U.R)", "%.2f".format(res.utilizationRatio))
-                        ResultRow("المسافة من الحافة", "%.0f mm".format(res.edgeDistance))
-                        ResultRow("المسافة بين المسامير", "%.0f mm".format(res.boltSpacing))
+                        ResultRow(stringResource(R.string.steel_shear_cap_bolt), "%.1f kN".format(res.shearCapacity))
+                        ResultRow(stringResource(R.string.steel_bearing_cap_bolt), "%.1f kN".format(res.bearingCapacity))
+                        ResultRow(stringResource(R.string.steel_tensile_cap_bolt), "%.1f kN".format(res.tensionCapacity))
+                        ResultRow(stringResource(R.string.steel_controlling_cap), "%.1f kN".format(res.controllingCapacity))
+                        ResultRow(stringResource(R.string.steel_ur_label), "%.2f".format(res.utilizationRatio))
+                        ResultRow(stringResource(R.string.steel_edge_distance), "%.0f mm".format(res.edgeDistance))
+                        ResultRow(stringResource(R.string.steel_bolt_spacing_label), "%.0f mm".format(res.boltSpacing))
                         res.blockShearCheck?.let { bs ->
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("فحص القص الكتلي (Block Shear)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            ResultRow("سعة القص الكتلي", "%.1f kN".format(bs.capacity))
-                            ResultRow("معامل الاستغلال", "%.2f".format(bs.utilizationRatio))
+                            Text(stringResource(R.string.steel_block_shear), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            ResultRow(stringResource(R.string.steel_block_shear_cap), "%.1f kN".format(bs.capacity))
+                            ResultRow(stringResource(R.string.steel_ur_label), "%.2f".format(bs.utilizationRatio))
                         }
                         if (res.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
@@ -2285,15 +2302,15 @@ fun ConnectionDesignTab() {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (res.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = urColor)
                             Spacer(Modifier.width(8.dp))
-                            Text("نتيجة اللحام — ${if (res.isSafe) "آمن ✅" else "فاشل ❌"}", fontWeight = FontWeight.Bold, color = urColor)
+                            Text(if (res.isSafe) stringResource(R.string.steel_weld_result_safe) else stringResource(R.string.steel_weld_result_fail), fontWeight = FontWeight.Bold, color = urColor)
                         }
                         Spacer(Modifier.height(12.dp))
-                        ResultRow("نوع اللحام", res.weldType.displayName)
-                        ResultRow("مقاس اللحام", "%.1f mm".format(res.weldSize))
-                        ResultRow("الطول الفعال", "%.1f mm".format(res.weldLength))
-                        ResultRow("مساحة الحلق الفعالة", "%.1f mm²".format(res.throatArea))
-                        ResultRow("مقاومة اللحام", "%.2f kN".format(res.capacity))
-                        ResultRow("معامل الاستغلال (U.R)", "%.2f".format(res.utilizationRatio))
+                        ResultRow(stringResource(R.string.steel_weld_type_label), res.weldType.displayName)
+                        ResultRow(stringResource(R.string.steel_weld_size_label), "%.1f mm".format(res.weldSize))
+                        ResultRow(stringResource(R.string.steel_effective_length), "%.1f mm".format(res.weldLength))
+                        ResultRow(stringResource(R.string.steel_throat_area), "%.1f mm²".format(res.throatArea))
+                        ResultRow(stringResource(R.string.steel_weld_capacity), "%.2f kN".format(res.capacity))
+                        ResultRow(stringResource(R.string.steel_ur_label), "%.2f".format(res.utilizationRatio))
                         if (res.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
                             for (w in res.warnings) { Text("• $w", fontSize = 11.sp, color = Color.Gray) }
