@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.calculations.ecp.TrialRunManager
 import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.utils.PdfGenerator
@@ -51,7 +52,7 @@ fun BOQScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("حساب الكميات والتكاليف Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_boq_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

@@ -17,13 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 
 private data class ToolItem(
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val icon: ImageVector,
     val bgColor: Color,
     val accentColor: Color,
@@ -31,11 +33,11 @@ private data class ToolItem(
 )
 
 private val toolsList = listOf(
-    ToolItem("حاسبة علمية", "عمليات حسابية هندسية", Icons.Default.Calculate, Color(0xFF1B5E20).copy(alpha = 0.12f), Color(0xFF2E7D32), AppScreen.Calculator.route),
-    ToolItem("محول الوحدات", "تحويل 7 فئات وحدات", Icons.Default.SwapHoriz, Color(0xFF0D47A1).copy(alpha = 0.12f), Color(0xFF1565C0), AppScreen.UnitConverter.route),
-    ToolItem("جداول الحديد", "IPE, HEA, HEB, UPN, زوايا", Icons.Default.TableChart, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF5D4037), AppScreen.SteelTables.route),
-    ToolItem("كميات الأعمال", "تقدير التكاليف والجدوى", Icons.Default.Assignment, Color(0xFFE65100).copy(alpha = 0.12f), Color(0xFFEF6C00), AppScreen.BOQ.route),
-    ToolItem("مخزن الموقع", "إدارة الحديد والخامات", Icons.Default.Inventory2, Color(0xFFB71C1C).copy(alpha = 0.12f), Color(0xFFD32F2F), AppScreen.Inventory.route)
+    ToolItem(R.string.home_calculator,    R.string.tool_calculator_sub,    Icons.Default.Calculate, Color(0xFF1B5E20).copy(alpha = 0.12f), Color(0xFF2E7D32), AppScreen.Calculator.route),
+    ToolItem(R.string.home_unit_converter, R.string.tool_converter_sub,   Icons.Default.SwapHoriz, Color(0xFF0D47A1).copy(alpha = 0.12f), Color(0xFF1565C0), AppScreen.UnitConverter.route),
+    ToolItem(R.string.home_steel_tables,  R.string.tool_steel_tables_sub, Icons.Default.TableChart, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF5D4037), AppScreen.SteelTables.route),
+    ToolItem(R.string.home_boq,           R.string.tool_boq_sub,          Icons.Default.Assignment, Color(0xFFE65100).copy(alpha = 0.12f), Color(0xFFEF6C00), AppScreen.BOQ.route),
+    ToolItem(R.string.home_inventory,     R.string.tool_inventory_sub,    Icons.Default.Inventory2, Color(0xFFB71C1C).copy(alpha = 0.12f), Color(0xFFD32F2F), AppScreen.Inventory.route)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,10 +49,10 @@ fun ToolsHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("الأدوات المساعدة", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.home_section_tools_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -68,7 +70,7 @@ fun ToolsHubScreen(
         ) {
             item(span = { GridItemSpan(2) }) {
                 Text(
-                    "أدوات هندسية سريعة",
+                    stringResource(R.string.hub_tools_quick_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -118,7 +120,7 @@ private fun ToolHubCard(tool: ToolItem, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = tool.title,
+                text = stringResource(tool.titleRes),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = if (isDark) Color.White else Color(0xFF1A1A2E),
@@ -126,7 +128,7 @@ private fun ToolHubCard(tool: ToolItem, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = tool.subtitle,
+                text = stringResource(tool.subtitleRes),
                 fontSize = 10.sp,
                 color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
                 maxLines = 2

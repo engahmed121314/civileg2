@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.entities.*
@@ -45,14 +46,15 @@ fun FrameDrawingCanvas(
     val colorScheme = MaterialTheme.colorScheme
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val canvasW = maxWidth
-        val canvasH = maxHeight
+        val density = LocalDensity.current
+        val canvasW = with(density) { maxWidth.toPx() }
+        val canvasH = with(density) { maxHeight.toPx() }
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
-        // Calculate scale to fit frame in canvas with padding
-        val padding = 28.dp
-        val drawW = canvasW - padding * 2
-        val drawH = canvasH - padding * 2
+        // Calculate scale to fit frame in canvas with padding (all in pixels)
+        val paddingPx = with(density) { 16.dp.toPx() }
+        val drawW = canvasW - paddingPx * 2
+        val drawH = canvasH - paddingPx * 2
 
         val xRange = if (nodes.isNotEmpty()) (nodes.minOf { it.x }..nodes.maxOf { it.x }) else 0.0..1.0
         val yRange = if (nodes.isNotEmpty()) (nodes.minOf { it.y }..nodes.maxOf { it.y }) else 0.0..1.0
@@ -60,12 +62,12 @@ fun FrameDrawingCanvas(
         val ySpan = max(yRange.endInclusive - yRange.start, 1.0)
 
         val scale = min(
-            drawW.value / xSpan,
-            drawH.value / ySpan
-        ).toFloat() * 0.95f
+            drawW / xSpan,
+            drawH / ySpan
+        ).toFloat()
 
-        val offsetX = (padding.value + (drawW.value - xSpan * scale) / 2 - xRange.start * scale).toFloat()
-        val offsetY = (padding.value + (drawH.value - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
+        val offsetX = (paddingPx + (drawW - xSpan * scale) / 2 - xRange.start * scale).toFloat()
+        val offsetY = (paddingPx + (drawH - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
 
         val toScreen: (Double, Double) -> Offset = { x, y ->
             Offset(
@@ -137,7 +139,7 @@ fun FrameDrawingCanvas(
                     color = memberColor,
                     start = p1,
                     end = p2,
-                    strokeWidth = if (isSelected) 6.dp.toPx() else 4.dp.toPx(),
+                    strokeWidth = if (isSelected) 7.dp.toPx() else 5.dp.toPx(),
                     cap = StrokeCap.Round
                 )
 
@@ -156,7 +158,7 @@ fun FrameDrawingCanvas(
                         topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
                         style = TextStyle(
                             color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     )
@@ -167,7 +169,7 @@ fun FrameDrawingCanvas(
                     textMeasurer = textMeasurer,
                     text = "#${member.id}",
                     topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
-                    style = TextStyle(color = Color.Gray, fontSize = 8.sp)
+                    style = TextStyle(color = Color.Gray, fontSize = 9.sp)
                 )
             }
 
@@ -199,12 +201,12 @@ fun FrameDrawingCanvas(
                 val p = toScreen(node.x, node.y)
                 drawCircle(
                     color = Color.White,
-                    radius = 8f,
+                    radius = 10f,
                     center = p
                 )
                 drawCircle(
                     color = Color(0xFF333333),
-                    radius = 8f,
+                    radius = 10f,
                     center = p,
                     style = Stroke(width = 2.5f)
                 )
@@ -213,8 +215,8 @@ fun FrameDrawingCanvas(
                 drawText(
                     textMeasurer = textMeasurer,
                     text = "${node.id}",
-                    topLeft = Offset(p.x - 4, p.y - 20),
-                    style = TextStyle(color = Color(0xFF1565C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    topLeft = Offset(p.x - 4, p.y - 22),
+                    style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 )
             }
 
@@ -250,8 +252,8 @@ private fun DrawScope.drawGrid(
     val yMin = yRange.start - 1
     val yMax = yRange.endInclusive + 1
 
-    val gridColor = Color(0xFFE0E0E0)
-    val axisColor = Color(0xFFBDBDBD)
+    val gridColor = Color(0xFFEEEEEE)
+    val axisColor = Color(0xFFD0D0D0)
 
     // Vertical grid lines
     var x = floor(xMin / gridSpacing) * gridSpacing

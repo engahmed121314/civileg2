@@ -209,6 +209,7 @@ class BeamViewModel @Inject constructor(
             } catch (e: Exception) {
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
                     _isExporting.value = false
                     onComplete(null)
                 }

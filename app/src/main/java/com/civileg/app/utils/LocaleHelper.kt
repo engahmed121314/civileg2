@@ -31,6 +31,22 @@ object LocaleHelper {
     }
 
     /**
+     * Wrap a base Context with the correct locale configuration.
+     * Use in Activity.attachBaseContext() for proper per-activity locale.
+     */
+    fun wrapContext(base: Context): Context {
+        val lang = getLocale(base)
+        val locale = Locale(lang)
+        Locale.setDefault(locale)
+
+        val config = Configuration(base.resources.configuration)
+        config.setLocale(locale)
+        config.setLayoutDirection(locale)
+
+        return base.createConfigurationContext(config)
+    }
+
+    /**
      * Apply saved locale to an Activity's resources.
      * Call this in onCreate() BEFORE setContent().
      */

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -68,7 +69,7 @@ fun StairScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تصميم وتسليح السلالم Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_stair_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -713,47 +714,7 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
             )
             drawContext.canvas.nativeCanvas.restore()
 
-            // ===== 10. REINFORCEMENT LABELS =====
-            val labelPaint = android.graphics.Paint().apply {
-                textSize = 19f
-                textAlign = android.graphics.Paint.Align.LEFT
-                isFakeBoldText = true
-            }
-            val labelSmPaint = android.graphics.Paint().apply {
-                textSize = 13f
-                textAlign = android.graphics.Paint.Align.LEFT
-            }
-
-            // Main reinforcement label with leader line
-            val mlX = (mbStartX + mbEndX) / 2f
-            val mlY = (mbStartY + mbEndY) / 2f
-            val mlLabelX = mlX + 18f
-            val mlLabelY = mlY - 12f
-            drawLine(mainSteel, Offset(mlX, mlY), Offset(mlLabelX, mlLabelY), strokeWidth = 1f)
-            drawLine(mainSteel, Offset(mlLabelX, mlLabelY), Offset(mlLabelX + 6f, mlLabelY), strokeWidth = 1f)
-            labelPaint.color = android.graphics.Color.parseColor("#C62828")
-            drawContext.canvas.nativeCanvas.drawText(
-                res.reinforcement.barString, mlLabelX + 10f, mlLabelY - 2f, labelPaint
-            )
-            labelSmPaint.color = android.graphics.Color.parseColor("#C62828")
-            drawContext.canvas.nativeCanvas.drawText(
-                "(Main Bottom)", mlLabelX + 10f, mlLabelY + 14f, labelSmPaint
-            )
-
-            // Distribution reinforcement label
-            val dlY = mlY + 22f
-            drawLine(distSteel, Offset(mlX, mlY + 5f), Offset(mlLabelX, dlY), strokeWidth = 1f)
-            drawLine(distSteel, Offset(mlLabelX, dlY), Offset(mlLabelX + 6f, dlY), strokeWidth = 1f)
-            labelPaint.color = android.graphics.Color.parseColor("#0D47A1")
-            drawContext.canvas.nativeCanvas.drawText(
-                res.distributionReinforcement.barString, mlLabelX + 10f, dlY - 2f, labelPaint
-            )
-            labelSmPaint.color = android.graphics.Color.parseColor("#0D47A1")
-            drawContext.canvas.nativeCanvas.drawText(
-                "(Distribution)", mlLabelX + 10f, dlY + 14f, labelSmPaint
-            )
-
-            // ===== 11. TITLE & SCALE TEXT =====
+            // ===== 10. TITLE & SCALE TEXT =====
             val titlePaint = android.graphics.Paint().apply {
                 color = android.graphics.Color.parseColor("#1A1A1A")
                 textSize = 15f

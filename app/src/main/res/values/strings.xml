@@ -265,6 +265,8 @@
     <string name="home_boq_sub">Quantity Surveying</string>
     <string name="home_inventory">Site Inventory</string>
     <string name="home_inventory_sub">Site Inventory</string>
+    <string name="home_water_level">Water Level</string>
+    <string name="home_water_level_sub">RL &amp; HI Level Calculations</string>
 
     <!-- Home Screen – Header & Sections -->
     <string name="home_welcome">Civil Engineer</string>
@@ -351,4 +353,55 @@
     <string name="back">Back</string>
     <string name="language_arabic">Arabic</string>
     <string name="language_english">English</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Section Headers -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="hub_design_choose">Select a Design Element</string>
+    <string name="hub_tools_quick_title">Quick Engineering Tools</string>
+    <string name="hub_more_title">More</string>
+    <string name="hub_more_management">Management &amp; More Tools</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Tool Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="tool_calculator_sub">Engineering Calculations</string>
+    <string name="tool_converter_sub">Convert 7 Unit Categories</string>
+    <string name="tool_steel_tables_sub">IPE, HEA, HEB, UPN, Angles</string>
+    <string name="tool_boq_sub">Cost Estimation &amp; Feasibility</string>
+    <string name="tool_inventory_sub">Manage Steel &amp; Materials on Site</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Design Hub Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="hub_design_tank_sub">Water Tanks</string>
+    <string name="hub_design_frame_sub">2D Structural Analysis</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – More Hub Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="more_projects_sub">Saved Designs &amp; Archive</string>
+    <string name="more_settings_sub">Default Code, Language, Units</string>
+    <string name="more_inventory_sub">Manage Steel &amp; Materials on Site</string>
+    <string name="more_frame_sub">2D Structural Analysis</string>
+    <string name="more_seismic_sub">Seismic &amp; Wind Forces</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Screen TopAppBar Titles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="screen_beam_title">Concrete Beam Design Pro</string>
+    <string name="screen_column_title">Concrete Column Design Pro</string>
+    <string name="screen_slab_title">Slab Design Pro</string>
+    <string name="screen_footing_title">Footing Design Pro</string>
+    <string name="screen_stair_title">Staircase Design Pro</string>
+    <string name="screen_tank_title">Water Tank Design Pro</string>
+    <string name="screen_retaining_wall_title">Retaining Wall Design Pro</string>
+    <string name="screen_seismic_title">Seismic Analysis Pro</string>
+    <string name="screen_steel_title">Steel Structure Design</string>
+    <string name="screen_steel_tables_title">Steel Section Tables</string>
+    <string name="screen_boq_title">Quantity Surveying &amp; Costing Pro</string>
+    <string name="screen_calculator_title">Scientific Calculator</string>
+    <string name="screen_inventory_title">Site Inventory</string>
+    <string name="screen_water_level_title">Water Level Calculator</string>
+    <string name="screen_unit_converter_title">Engineering Unit Converter</string>
 </resources>

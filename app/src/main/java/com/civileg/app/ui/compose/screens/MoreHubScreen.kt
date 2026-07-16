@@ -14,24 +14,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 
 private data class MoreItem(
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val icon: ImageVector,
     val accentColor: Color,
     val route: String
 )
 
 private val moreItems = listOf(
-    MoreItem("مشاريعي", "التصاميم والأرشيف المحفوظ", Icons.Default.Folder, Color(0xFF1565C0), AppScreen.Projects.route),
-    MoreItem("الإعدادات", "الكود الافتراضي، اللغة، الوحدات", Icons.Default.Settings, Color(0xFF37474F), AppScreen.Settings.route),
-    MoreItem("مخزن الموقع", "إدارة الحديد والخامات على الموقع", Icons.Default.Inventory2, Color(0xFF2E7D32), AppScreen.Inventory.route),
-    MoreItem("تحليل الإطارات", "تحليل الهياكل ثنائية الأبعاد", Icons.Default.AccountTree, Color(0xFF1A237E), AppScreen.FrameAnalysis.route),
-    MoreItem("الأحمال الزلزالية", "قوى الزلازل والرياح", Icons.Default.Warning, Color(0xFFBF360C), AppScreen.SeismicAnalysis.route)
+    MoreItem(R.string.nav_projects,    R.string.more_projects_sub,    Icons.Default.Folder,     Color(0xFF1565C0), AppScreen.Projects.route),
+    MoreItem(R.string.nav_settings,    R.string.more_settings_sub,    Icons.Default.Settings,   Color(0xFF37474F), AppScreen.Settings.route),
+    MoreItem(R.string.nav_inventory,   R.string.more_inventory_sub,   Icons.Default.Inventory2, Color(0xFF2E7D32), AppScreen.Inventory.route),
+    MoreItem(R.string.home_frame,      R.string.more_frame_sub,       Icons.Default.AccountTree,Color(0xFF1A237E), AppScreen.FrameAnalysis.route),
+    MoreItem(R.string.home_seismic,    R.string.more_seismic_sub,     Icons.Default.Warning,    Color(0xFFBF360C), AppScreen.SeismicAnalysis.route)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,10 +45,10 @@ fun MoreHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("المزيد", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.hub_more_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -62,7 +64,7 @@ fun MoreHubScreen(
         ) {
             item {
                 Text(
-                    "إدارة ومزيد من الأدوات",
+                    stringResource(R.string.hub_more_management),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -100,13 +102,13 @@ fun MoreHubScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = item.title,
+                                text = stringResource(item.titleRes),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = if (isDark) Color.White else Color(0xFF1A1A2E)
                             )
                             Text(
-                                text = item.subtitle,
+                                text = stringResource(item.subtitleRes),
                                 fontSize = 11.sp,
                                 color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
                             )

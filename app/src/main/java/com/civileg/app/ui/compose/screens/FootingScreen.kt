@@ -25,6 +25,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
@@ -70,7 +71,7 @@ fun FootingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تصميم القواعد الاحترافي Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_footing_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -364,13 +365,32 @@ fun FootingScreen(
                 }
 
                 item {
+                    // Map footing type to English name expected by the drawing
+                    val footingTypeEnglish = when (selectedType) {
+                        CalculatorEngine.FootingType.ISOLATED -> "Isolated"
+                        CalculatorEngine.FootingType.COMBINED -> "Combined"
+                        CalculatorEngine.FootingType.RAFT -> "Raft"
+                        CalculatorEngine.FootingType.STRIP -> "Isolated"
+                        CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
+                    }
+                    // For combined footings, compute column positions relative to footing left edge
+                    val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                        val dist = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0
+                        val p1 = axialLoad.toDoubleOrNull() ?: 1200.0
+                        val p2 = axialLoad2.toDoubleOrNull() ?: 1000.0
+                        val xR = (p2 * dist) / (p1 + p2)
+                        val s1 = 600.0
+                        Pair(s1, s1 + dist)
+                    } else {
+                        Pair(0.0, 0.0)
+                    }
                     InteractiveDrawingScreen(
                         title = "📐 رسم القاعدة التفصيلي",
                         subtitle = "Footing Reinforcement Detail",
                         viewModes = listOf("الكل", "المخطط", "المقطع", "جدول التسليح"),
                         drawingContent = {
                             ProfessionalFootingDrawing(
-                                footingType = selectedType.displayName,
+                                footingType = footingTypeEnglish,
                                 footingLengthX = res.length.toDouble(),
                                 footingLengthY = res.width.toDouble(),
                                 footingThickness = res.thickness.toDouble(),
@@ -381,6 +401,8 @@ fun FootingScreen(
                                 rebarYDia = res.barDiameter.toDouble(),
                                 rebarYCount = res.barsY,
                                 cover = 75.0,
+                                col1X = col1XPos,
+                                col2X = col2XPos,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

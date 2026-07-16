@@ -32,6 +32,8 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.RetainingWallViewModel
+import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +65,7 @@ fun RetainingWallScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تصميم حوائط السند Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_retaining_wall_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

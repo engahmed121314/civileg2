@@ -281,7 +281,7 @@ class ColumnDesignFragment : Fragment() {
             val projectName = project?.name ?: "Unnamed Project"
             
             val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
-            val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
+            val filePath = File(requireContext().getExternalFilesDir(null) ?: requireContext().cacheDir, fileName).absolutePath
             
             // Convert CalculatorEngine result to AdvancedColumnResult for the exporter
             val columnType = if (result.columnType == "CIRCULAR") ColumnType.Circular(result.width) else ColumnType.Rectangular(result.width, result.depth)

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.utils.CalculatorEngine
@@ -65,7 +66,7 @@ fun ColumnScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تصميم الأعمدة الخرسانية Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_column_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

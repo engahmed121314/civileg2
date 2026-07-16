@@ -39,8 +39,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private val ROW_ALT = DeviceRgb(248, 249, 250)
     private val WHITE = DeviceRgb(255, 255, 255)
 
-    private val arabicFont: PdfFont? by lazy { ArabicFontProvider.getArabicPdfFont(context) }
-    private val arabicBoldFont: PdfFont? by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = true) }
+    private val arabicFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context) }
+    private val arabicBoldFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = true) }
 
     private fun isArabic(text: String) = ArabicFontProvider.containsArabic(text)
 
@@ -51,18 +51,16 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         if (bold) p.setBold()
         color?.let { p.setFontColor(it) }
         alignment?.let { p.setTextAlignment(it) }
-        if (arabicFont != null) {
-            p.setFont(if (bold) arabicBoldFont ?: arabicFont else arabicFont)
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        p.setFont(if (bold) arabicBoldFont else arabicFont)
+        p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         return p
     }
 
     private fun headerCell(text: String, colSpan: Int = 1): Cell {
         val cell = Cell(colSpan, 1).setPadding(5f).setBackgroundColor(HEADER_BG).setTextAlignment(TextAlignment.CENTER)
         val p = Paragraph(text).setFontSize(8f).setBold().setFontColor(WHITE)
-        if (arabicFont != null && isArabic(text)) {
-            p.setFont(arabicBoldFont ?: arabicFont)
+        if (isArabic(text)) {
+            p.setFont(arabicBoldFont)
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
         cell.add(p)
@@ -74,7 +72,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val p = Paragraph(text).setFontSize(fontSize)
         if (bold) p.setBold()
         color?.let { p.setFontColor(it) }
-        if (arabicFont != null && isArabic(text)) {
+        if (isArabic(text)) {
             p.setFont(arabicFont)
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }

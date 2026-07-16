@@ -289,7 +289,7 @@ class BeamDesignFragment : Fragment() {
             val exporter = ComprehensivePdfExporter(requireContext())
             val projectName = projectsList.firstOrNull { it.id == projectId }?.name ?: "Unnamed Project"
             val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
-            val filePath = File(requireContext().getExternalFilesDir(null), fileName).absolutePath
+            val filePath = File(requireContext().getExternalFilesDir(null) ?: requireContext().cacheDir, fileName).absolutePath
             
             val beamType = BeamType.SimplySupported(result.depth / 100.0) // Mock span
             val inputs = BeamInputs(

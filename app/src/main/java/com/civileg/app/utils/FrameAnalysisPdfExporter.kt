@@ -43,7 +43,7 @@ object FrameAnalysisPdfExporter {
         settings: FrameAnalysisSettings,
         result: FrameAnalysisResult?
     ): File {
-        val file = File(context.getExternalFilesDir(null), "FrameAnalysis_${System.currentTimeMillis()}.pdf")
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, "FrameAnalysis_${System.currentTimeMillis()}.pdf")
         try {
         val writer = PdfWriter(file)
         val pdfDoc = PdfDocument(writer)

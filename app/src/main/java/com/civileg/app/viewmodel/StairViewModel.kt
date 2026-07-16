@@ -121,6 +121,7 @@ class StairViewModel @Inject constructor(
                 onComplete(exportedFile)
             } catch (e: Exception) {
                 e.printStackTrace()
+                _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
                 onComplete(null)
             } finally {
                 _isExporting.value = false

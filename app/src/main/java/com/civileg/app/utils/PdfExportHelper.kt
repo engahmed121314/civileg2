@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.itextpdf.io.font.PdfEncodings
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
@@ -25,7 +24,7 @@ object PdfExportHelper {
         fileName: String
     ): String? {
         return try {
-            val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
             val file = File(directory, "$fileName.pdf")
             val writer = PdfWriter(FileOutputStream(file))
             val pdf = PdfDocument(writer)
@@ -44,7 +43,7 @@ object PdfExportHelper {
             
             // Title
             val titleP = Paragraph(title).setFontSize(16f).setBold().setUnderline()
-            if (arabicFont != null && ArabicFontProvider.containsArabic(title)) {
+            if (ArabicFontProvider.containsArabic(title)) {
                 titleP.setFont(arabicFont)
                 titleP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             }
@@ -55,7 +54,7 @@ object PdfExportHelper {
             // Details
             for ((key, value) in details) {
                 val p = Paragraph("$key: $value").setFontSize(12f)
-                if (arabicFont != null && (ArabicFontProvider.containsArabic(key) || ArabicFontProvider.containsArabic(value))) {
+                if (ArabicFontProvider.containsArabic(key) || ArabicFontProvider.containsArabic(value)) {
                     p.setFont(arabicFont)
                     p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
                 }

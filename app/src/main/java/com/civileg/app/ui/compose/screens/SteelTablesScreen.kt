@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.civileg.app.utils.SteelTables
 import com.civileg.app.utils.SteelTables.SectionProperties
+import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +133,7 @@ fun SteelTablesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("جداول مقاطع الحديد", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_steel_tables_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")

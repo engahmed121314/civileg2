@@ -24,6 +24,8 @@ import com.civileg.app.db.InventoryType
 import com.civileg.app.viewmodel.InventoryViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +44,7 @@ fun InventoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("مخزن الموقع - Inventory", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_inventory_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

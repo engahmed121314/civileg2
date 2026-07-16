@@ -432,7 +432,7 @@ private fun DrawScope.drawEarthPressureDiagram(
     // Labels
     drawTextAnnotated("Pa", stemBackX + 10f + arrowLen, resultY - 6f, PressureOrange, 16f)
     drawTextAnnotated("فعال", stemBackX + diagramW + 14f, stemTop + drawH / 2f, PressureOrange, 14f)
-    drawTextAnnotated("Ka = ${"%.2f".format(ka)}", stemBackX + 10f, stemTop + drawH + 16f,
+    drawTextAnnotated("Ka = ${"%.2f".format(ka)}", stemBackX + 10f, stemTop + drawH + 40f,
         PressureOrange, 13f)
 
     // Zero at top
@@ -495,7 +495,7 @@ private fun DrawScope.drawStabilityChecks(
     maxBearingPressure: Double, allowableBearingPressure: Double
 ) {
     val checkX = 20f
-    val checkY = stemTop + drawH * 0.15f
+    val checkY = baseBottom + 60f
     val lineH = 22f
 
     val otPass = fsOverturning >= 1.5
@@ -522,7 +522,7 @@ private fun DrawScope.drawStabilityChecks(
     // Bearing pressure diagram under base (trapezoidal)
     val bpLeft = baseLeft + drawBaseW * 0.05f
     val bpRight = baseLeft + drawBaseW * 0.95f
-    val bpBaseY = baseBottom + 8f
+    val bpBaseY = baseBottom + 145f
     val bpMaxH = 20f
     val bpMinH = 6f
 
@@ -541,23 +541,6 @@ private fun DrawScope.drawStabilityChecks(
     drawTextAnnotated("σ_min", bpLeft - 8f, bpBaseY + bpMinH + 14f, BearingBlue.copy(alpha = 0.7f), 10f)
     drawTextAnnotated("σ_max", bpRight - 12f, bpBaseY + bpMaxH + 14f, BearingBlue.copy(alpha = 0.7f), 10f)
 
-    // Overturning moment arrows (curved arrows concept using lines)
-    val arrowY = stemTop + drawH * 0.5f
-    // Resisting moment (clockwise arrow on left)
-    drawLine(color = SafeGreen.copy(alpha = 0.6f),
-        start = Offset(baseLeft - 15f, arrowY - 15f),
-        end = Offset(baseLeft - 15f, arrowY + 15f), strokeWidth = 2f)
-    drawArrowHead(baseLeft - 15f, arrowY + 15f, 1f, SafeGreen, vertical = true)
-    drawTextAnnotated("Mr", baseLeft - 30f, arrowY + 4f, SafeGreen.copy(alpha = 0.7f), 12f)
-
-    // Sliding force arrows
-    val slideY = baseBottom - 4f
-    drawLine(color = WarningYellow.copy(alpha = 0.6f),
-        start = Offset(baseLeft + drawBaseW * 0.5f - 20f, slideY),
-        end = Offset(baseLeft + drawBaseW * 0.5f + 20f, slideY), strokeWidth = 2f)
-    drawArrowHead(baseLeft + drawBaseW * 0.5f + 20f, slideY, 1f, WarningYellow, vertical = false)
-    drawTextAnnotated("F_slide", baseLeft + drawBaseW * 0.5f - 16f, slideY - 8f,
-        WarningYellow.copy(alpha = 0.7f), 11f)
 }
 
 // ============================================================================

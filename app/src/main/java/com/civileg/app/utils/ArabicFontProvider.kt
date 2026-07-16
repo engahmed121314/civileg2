@@ -60,22 +60,37 @@ object ArabicFontProvider {
         // Strategy 1: Load from bundled assets (RELIABLE - always available)
         try {
             val assetManager = context.assets
-            val inputStream = assetManager.open(fontPath)
-            // Copy to cache file (iText needs a file path, not stream, for IDENTITY_H)
             val cacheFile = File(context.cacheDir, "arabic_${if (bold) "bold" else "regular"}.ttf")
-            if (!cacheFile.exists() || cacheFile.length() == 0L) {
+
+            fun copyFromAssets() {
                 cacheFile.parentFile?.mkdirs()
-                cacheFile.outputStream().use { output ->
-                    inputStream.copyTo(output)
+                assetManager.open(fontPath).use { input ->
+                    cacheFile.outputStream().use { output -> input.copyTo(output) }
                 }
             }
-            inputStream.close()
+
+            if (!cacheFile.exists() || cacheFile.length() == 0L) {
+                copyFromAssets()
+            }
 
             if (cacheFile.exists() && cacheFile.length() > 0) {
-                val font = PdfFontFactory.createFont(cacheFile.absolutePath, PdfEncodings.IDENTITY_H)
-                targetCache.set(font)
-                Log.d(TAG, "Arabic font loaded successfully from assets: ${cacheFile.absolutePath} (${cacheFile.length()} bytes)")
-                return font
+                try {
+                    val font = PdfFontFactory.createFont(cacheFile.absolutePath, PdfEncodings.IDENTITY_H)
+                    targetCache.set(font)
+                    Log.d(TAG, "Arabic font loaded successfully from assets: ${cacheFile.absolutePath} (${cacheFile.length()} bytes)")
+                    return font
+                } catch (fontLoadError: Exception) {
+                    // Cache file may be corrupted - delete and retry once
+                    Log.w(TAG, "Cached font file appears corrupted, re-copying from assets: ${fontLoadError.message}")
+                    cacheFile.delete()
+                    copyFromAssets()
+                    if (cacheFile.exists() && cacheFile.length() > 0) {
+                        val font = PdfFontFactory.createFont(cacheFile.absolutePath, PdfEncodings.IDENTITY_H)
+                        targetCache.set(font)
+                        Log.d(TAG, "Arabic font loaded on retry from assets: ${cacheFile.absolutePath}")
+                        return font
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load Arabic font from assets: ${e.message}", e)
@@ -128,15 +143,16 @@ object ArabicFontProvider {
             Log.e(TAG, "Cache fallback failed: ${e.message}")
         }
 
-        // Strategy 4: Last resort - try built-in fonts that support some Unicode
-        // WARNING: This will NOT properly render Arabic, but prevents NPE/crash
-        Log.e(TAG, "WARNING: No Arabic font found! Arabic text may not render correctly in PDF.")
+        // Strategy 4: Last resort - use Helvetica
+        // WARNING: This will NOT properly render Arabic (shows as boxes/tofu), but prevents crash
+        Log.e(TAG, "CRITICAL: No Arabic font found! Arabic text will NOT render correctly in PDF. " +
+            "Verify assets/fonts/NotoNaskhArabic-Regular.ttf exists and is not corrupted.")
         return try {
-            PdfFontFactory.createFont("STSong-Light", "UniGB-UCS2-H")
-        } catch (e: Exception) {
-            // Absolute last resort - use Helvetica (Arabic won't render properly)
-            Log.e(TAG, "CRITICAL: All font loading strategies failed. Using Helvetica as absolute fallback.")
             PdfFontFactory.createFont("Helvetica")
+        } catch (e: Exception) {
+            Log.e(TAG, "FATAL: Even Helvetica fallback failed: ${e.message}")
+            // This should never happen - Helvetica is a built-in iText font
+            throw RuntimeException("All PDF font loading strategies failed", e)
         }
     }
 

@@ -15,7 +15,7 @@ object ExcelExporter {
 
     fun exportBOQToCsv(context: Context, projectName: String, materials: List<MaterialItem>): File? {
         val fileName = "${projectName}_BOQ_${System.currentTimeMillis()}.csv"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
         
         try {
             val writer = FileOutputStream(file).bufferedWriter()
@@ -41,7 +41,7 @@ object ExcelExporter {
 
     fun exportDesignToCsv(context: Context, design: Design): File? {
         val fileName = "Design_${design.name}_${System.currentTimeMillis()}.csv"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
 
         try {
             val writer = FileOutputStream(file).bufferedWriter()

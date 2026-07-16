@@ -1,5 +1,6 @@
 package com.civileg.app
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,6 +37,10 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private var openDrawerAction: (() -> Unit)? = null
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
 
     fun openDrawer() {
         openDrawerAction?.invoke()
@@ -239,6 +244,9 @@ fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
                 }
                 composable(AppScreen.BOQ.route) {
                     BOQScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.WaterLevel.route) {
+                    WaterLevelScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
                 // ═══ PROJECT & SETTINGS ═══

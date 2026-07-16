@@ -19,6 +19,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.utils.UnitConverter
+import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +57,7 @@ fun UnitConverterScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("محول الوحدات الهندسية", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_unit_converter_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

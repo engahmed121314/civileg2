@@ -36,7 +36,7 @@ object PdfGenerator {
     
     // ... (rest of the file until generateBOQReport)
 
-    private fun getArabicFont(context: Context): PdfFont? {
+    private fun getArabicFont(context: Context): PdfFont {
         return ArabicFontProvider.getArabicPdfFont(context)
     }
 
@@ -98,7 +98,7 @@ object PdfGenerator {
         drawingBitmap: Bitmap? = null
     ): File {
         val fileName = "CivilEngPro_${designType}_${System.currentTimeMillis()}.pdf"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
 
         val writer = PdfWriter(file)
         val pdf = PdfDocument(writer)
@@ -207,7 +207,7 @@ object PdfGenerator {
         drawingBitmap: Bitmap? = null
     ): File {
         val fileName = "SteelWarehouse_Full_Design_${System.currentTimeMillis()}.pdf"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
 
         val writer = PdfWriter(file)
         val pdf = PdfDocument(writer)
@@ -386,7 +386,7 @@ object PdfGenerator {
         drawingBitmap: Bitmap? = null
     ): File {
         val fileName = "SteelSection_Analysis_${System.currentTimeMillis()}.pdf"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
 
         val writer = PdfWriter(file)
         val pdf = PdfDocument(writer)
@@ -495,7 +495,7 @@ object PdfGenerator {
         items: kotlin.collections.List<Pair<String, Double>>
     ): File {
         val fileName = "CivilEngPro_BOQ_${System.currentTimeMillis()}.pdf"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
         
         val pdf = android.graphics.pdf.PdfDocument()
         val helper = PdfLayoutHelper(context)
@@ -587,7 +587,7 @@ object PdfGenerator {
         result: EstimationEngine.EstimationResult
     ): File {
         val fileName = "CivilEngPro_Estimation_${System.currentTimeMillis()}.pdf"
-        val file = File(context.getExternalFilesDir(null), fileName)
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
 
         val pdf = android.graphics.pdf.PdfDocument()
         val helper = PdfLayoutHelper(context)

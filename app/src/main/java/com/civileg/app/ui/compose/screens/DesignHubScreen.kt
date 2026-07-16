@@ -19,30 +19,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 
 private data class DesignHubItem(
     val screen: AppScreen,
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val codes: List<String>,
     val accentColor: Color,
     val icon: ImageVector
 )
 
 private val designHubItems = listOf(
-    DesignHubItem(AppScreen.BeamDesign, "الكمرات", "تصميم الكمرات الخرسانية", listOf("ECP", "ACI", "SBC"), Color(0xFF1976D2), Icons.Default.AccountBalance),
-    DesignHubItem(AppScreen.ColumnDesign, "الأعمدة", "تصميم الأعمدة الخرسانية", listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewColumn),
-    DesignHubItem(AppScreen.SlabDesign, "البلاطات", "البلاطات المصمتة والهوردية", listOf("ECP", "ACI"), Color(0xFF00838F), Icons.Default.ViewWeek),
-    DesignHubItem(AppScreen.FootingDesign, "القواعد", "تصميم القواعد المنفصلة", listOf("ECP", "ACI"), Color(0xFF4E342E), Icons.Default.Layers),
-    DesignHubItem(AppScreen.TankDesign, "الخزانات", "خزانات المياه", listOf("ECP", "ACI"), Color(0xFF0277BD), Icons.Default.WaterDrop),
-    DesignHubItem(AppScreen.RetainingWall, "حوائط السند", "حوائط السند واستقرار التربة", listOf("ECP", "ACI"), Color(0xFF558B2F), Icons.Default.SensorDoor),
-    DesignHubItem(AppScreen.StairDesign, "السلالم", "تصميم السلالم الخرسانية", listOf("ECP", "ACI"), Color(0xFFAD1457), Icons.Default.Stairs),
-    DesignHubItem(AppScreen.SeismicAnalysis, "الزلازل", "قوى الزلازل والرياح", listOf("ASCE", "SBC"), Color(0xFFBF360C), Icons.Default.Warning),
-    DesignHubItem(AppScreen.FrameAnalysis, "تحليل الإطارات", "تحليل الهياكل ثنائية الأبعاد", listOf("ECP", "ACI", "AISC"), Color(0xFF1A237E), Icons.Default.AccountTree)
+    DesignHubItem(AppScreen.BeamDesign,     R.string.home_beam,     R.string.home_beam_sub,     listOf("ECP", "ACI", "SBC"), Color(0xFF1976D2), Icons.Default.AccountBalance),
+    DesignHubItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewColumn),
+    DesignHubItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI"),        Color(0xFF00838F), Icons.Default.ViewWeek),
+    DesignHubItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI"),        Color(0xFF4E342E), Icons.Default.Layers),
+    DesignHubItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.hub_design_tank_sub, listOf("ECP", "ACI"),       Color(0xFF0277BD), Icons.Default.WaterDrop),
+    DesignHubItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI"), Color(0xFF558B2F), Icons.Default.SensorDoor),
+    DesignHubItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI"),        Color(0xFFAD1457), Icons.Default.Stairs),
+    DesignHubItem(AppScreen.SeismicAnalysis, R.string.home_seismic,  R.string.home_seismic_sub,  listOf("ASCE", "SBC"),       Color(0xFFBF360C), Icons.Default.Warning),
+    DesignHubItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.hub_design_frame_sub, listOf("ECP", "ACI", "AISC"), Color(0xFF1A237E), Icons.Default.AccountTree)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,10 +56,10 @@ fun DesignHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("التصميم الإنشائي", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.home_section_design_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -75,7 +77,7 @@ fun DesignHubScreen(
         ) {
             item(span = { GridItemSpan(2) }) {
                 Text(
-                    "اختر عنصر التصميم",
+                    stringResource(R.string.hub_design_choose),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -124,14 +126,14 @@ private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
                 }
                 Column {
                     Text(
-                        text = item.title,
+                        text = stringResource(item.titleRes),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         maxLines = 1,
                         color = if (isDark) Color.White else Color(0xFF1A1A2E)
                     )
                     Text(
-                        text = item.subtitle,
+                        text = stringResource(item.subtitleRes),
                         fontSize = 10.sp,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
                         maxLines = 2,

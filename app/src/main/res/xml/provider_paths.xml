@@ -4,5 +4,8 @@
 <paths>
     <!-- Only expose the exports directory, not the entire storage -->
     <external-files-path name="pdf_exports" path="CivilEngineerPro/exports/" />
-    <cache-path name="temp_cache" path="temp/" />
+    <!-- Allow sharing any file from the app's external files dir (used by PdfGenerator, AdvancedPdfExporter) -->
+    <external-files-path name="external_root" path="." />
+    <!-- Allow sharing any file from cache dir (used by ComprehensivePdfExporter + ViewModels) -->
+    <cache-path name="cache" path="." />
 </paths>

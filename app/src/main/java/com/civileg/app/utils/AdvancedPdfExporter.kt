@@ -37,7 +37,7 @@ object AdvancedPdfExporter {
     private val PRIMARY_COLOR = DeviceRgb(21, 101, 192)
 
     // ==================== Arabic Support ====================
-    private fun getArabicFont(context: Context): PdfFont? {
+    private fun getArabicFont(context: Context): PdfFont {
         return ArabicFontProvider.getArabicPdfFont(context)
     }
 
@@ -99,7 +99,7 @@ object AdvancedPdfExporter {
     ): String? {
         return try {
             val file = File(
-                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir,
                 "$fileName.pdf"
             )
 
@@ -176,7 +176,7 @@ object AdvancedPdfExporter {
     ): String? {
         return try {
             val file = File(
-                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir,
                 "$fileName.pdf"
             )
 
@@ -339,7 +339,7 @@ object AdvancedPdfExporter {
     ): String? {
         return try {
             val file = File(
-                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir,
                 "$fileName.pdf"
             )
 

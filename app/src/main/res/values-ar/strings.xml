@@ -274,4 +274,126 @@
     <string name="back">رجوع</string>
     <string name="language_arabic">العربية</string>
     <string name="language_english">English</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Missing Translations (present in values/strings.xml) -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="design_code">الكود الإنشائي</string>
+    <string name="ok">حسناً</string>
+    <string name="cancel">إلغاء</string>
+    <string name="results">النتائج</string>
+    <string name="calculation_complete">تمت الحسابات بنجاح</string>
+    <string name="moment_capacity">قدرة العزم</string>
+    <string name="shear_capacity">قدرة القص</string>
+    <string name="required_reinforcement">التسليح المطلوب</string>
+    <string name="bottom_steel">حديد سفلي</string>
+    <string name="top_steel">حديد علوي</string>
+    <string name="stirrups">الكانات</string>
+    <string name="column_dimensions">أبعاد العمود</string>
+    <string name="beam_dimensions">أبعاد الكمرة</string>
+    <string name="slab_dimensions">أبعاد البلاطة</string>
+    <string name="material_properties">خصائص المواد</string>
+    <string name="loading">التحميل</string>
+    <string name="cross_section_view">عرض المقطع</string>
+    <string name="longitudinal_bars">أسياخ طولية</string>
+    <string name="ties">الكانات</string>
+    <string name="column_type">نوع العمود</string>
+    <string name="rectangular">مستطيل</string>
+    <string name="circular">دائري</string>
+    <string name="width_label">العرض (b):</string>
+    <string name="height_label">الارتفاع (h):</string>
+    <string name="length_label">الطول (L):</string>
+    <string name="cover_label">الغطاء (c):</string>
+    <string name="diameter_label">القطر (D):</string>
+    <string name="concrete_strength_label">مقاومة الخرسانة fc\' (MPa):</string>
+    <string name="steel_strength_label">مقاومة الحديد fy (MPa):</string>
+    <string name="dead_load_label">الحمل الميت:</string>
+    <string name="live_load_label">الحمل الحي:</string>
+    <string name="axial_load_label">الحمل المحوري (Pu):</string>
+    <string name="moment_x_label">عزم X:</string>
+    <string name="moment_y_label">عزم Y:</string>
+    <string name="span_x_label">البحر Lx (m):</string>
+    <string name="span_y_label">البحر Ly (m):</string>
+    <string name="thickness_label">السمك (t):</string>
+    <string name="bottom_reinforcement">تسليح سفلي</string>
+    <string name="top_reinforcement">تسليح علوي</string>
+    <string name="beam_width_hint">العرض بملم</string>
+    <string name="beam_height_hint">الارتفاع بملم</string>
+    <string name="beam_length_hint">الطول بملم</string>
+    <string name="concrete_cover_hint">الغطاء بملم</string>
+    <string name="concrete_strength_hint">مقاومة الخرسانة fcu/fc\' بـ MPa</string>
+    <string name="steel_strength_hint">مقاومة الحديد fy بـ MPa</string>
+    <string name="dead_load_hint">الحمل الميت بـ kN/m</string>
+    <string name="live_load_hint">الحمل الحي بـ kN/m</string>
+    <string name="column_width_hint">العرض بملم</string>
+    <string name="column_height_hint">الارتفاع بملم</string>
+    <string name="column_diameter_hint">القطر بملم</string>
+    <string name="column_length_hint">الطول بملم</string>
+    <string name="axial_load_hint">الحمل بـ kN</string>
+    <string name="moment_x_hint">عزم X بـ kNm</string>
+    <string name="moment_y_hint">عزم Y بـ kNm</string>
+    <string name="solid_slab">بلاطة مصمتة</string>
+    <string name="flat_slab">بلاطة مسطحة</string>
+    <string name="waffle_slab">بلاطة وافل</string>
+    <string name="ribbed_slab">بلاطة هوردية</string>
+    <string name="hollow_block">هوردى بلوك</string>
+    <string name="error">خطأ</string>
+    <string name="check_inputs">يرجى مراجعة قيم المدخلات</string>
+    <string name="save_success">تم الحفظ بنجاح</string>
+    <string name="save_design">حفظ التصميم</string>
+    <string name="tank_capacity">السعة: %.2f م³</string>
+    <string name="wall_thickness_label">سمك الحائط: %.0f مم</string>
+    <string name="base_thickness_label">سمك القاعدة: %.0f مم</string>
+    <string name="reinforcement_label">التسليح: %s</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Section Headers -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="hub_design_choose">اختر عنصر التصميم</string>
+    <string name="hub_tools_quick_title">أدوات هندسية سريعة</string>
+    <string name="hub_more_title">المزيد</string>
+    <string name="hub_more_management">إدارة ومزيد من الأدوات</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Tool Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="tool_calculator_sub">عمليات حسابية هندسية</string>
+    <string name="tool_converter_sub">تحويل 7 فئات وحدات</string>
+    <string name="tool_steel_tables_sub">IPE, HEA, HEB, UPN, زوايا</string>
+    <string name="tool_boq_sub">تقدير التكاليف والجدوى</string>
+    <string name="tool_inventory_sub">إدارة الحديد والخامات على الموقع</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Design Hub Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="hub_design_tank_sub">خزانات المياه</string>
+    <string name="hub_design_frame_sub">تحليل الهياكل ثنائية الأبعاد</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – More Hub Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="more_projects_sub">التصاميم والأرشيف المحفوظ</string>
+    <string name="more_settings_sub">الكود الافتراضي، اللغة، الوحدات</string>
+    <string name="more_inventory_sub">إدارة الحديد والخامات على الموقع</string>
+    <string name="more_frame_sub">تحليل الهياكل ثنائية الأبعاد</string>
+    <string name="more_seismic_sub">قوى الزلازل والرياح</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Screen TopAppBar Titles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="screen_beam_title">تصميم الكمرات الخرسانية Pro</string>
+    <string name="screen_column_title">تصميم الأعمدة الخرسانية Pro</string>
+    <string name="screen_slab_title">تصميم البلاطات Pro</string>
+    <string name="screen_footing_title">تصميم القواعد الاحترافي Pro</string>
+    <string name="screen_stair_title">تصميم وتسليح السلالم Pro</string>
+    <string name="screen_tank_title">تصميم خزانات المياه Pro</string>
+    <string name="screen_retaining_wall_title">تصميم حوائط السند Pro</string>
+    <string name="screen_seismic_title">تحليل الأحمال الزلزالية Pro</string>
+    <string name="screen_steel_title">تصميم المنشآت المعدنية</string>
+    <string name="screen_steel_tables_title">جداول مقاطع الحديد</string>
+    <string name="screen_boq_title">حساب الكميات والتكاليف Pro</string>
+    <string name="screen_calculator_title">الحاسبة العلمية</string>
+    <string name="screen_inventory_title">مخزن الموقع</string>
+    <string name="screen_water_level_title">ميزان مياه - حساب المناسيب</string>
+    <string name="screen_unit_converter_title">محول الوحدات الهندسية</string>
 </resources>

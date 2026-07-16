@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import com.civileg.app.db.Project
 import com.civileg.app.domain.calculations.aci.ACISeismic
 import com.civileg.app.domain.calculations.base.*
@@ -185,7 +186,7 @@ fun SeismicScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("تحليل الأحمال الزلزالية Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_seismic_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

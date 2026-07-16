@@ -1,9 +1,6 @@
 package com.civileg.app.ui.compose.components.drawings
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,19 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Interactive drawing wrapper that adds:
- * - Pinch-to-zoom (0.5x to 5x)
- * - Pan/drag
- * - Double-tap to reset
+ * Drawing wrapper that adds:
  * - View mode tabs (Elevation / Section / Plan / All)
  * - Info overlay with drawing title
  * - Dark card background
@@ -41,8 +31,6 @@ fun InteractiveDrawingScreen(
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
 ) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
     var showInfo by remember { mutableStateOf(false) }
 
     val resolvedViewModes = if (viewModes.isEmpty()) listOf(
@@ -65,11 +53,6 @@ fun InteractiveDrawingScreen(
             DrawingToolbar(
                 title = title,
                 subtitle = subtitle,
-                scale = scale,
-                onResetZoom = {
-                    scale = 1f
-                    offset = Offset.Zero
-                },
                 onToggleInfo = { showInfo = !showInfo },
                 showInfo = showInfo
             )
@@ -106,48 +89,14 @@ fun InteractiveDrawingScreen(
                 }
             }
 
-            // Drawing area with zoom/pan
+            // Drawing area
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(620.dp)
                     .background(Color(0xFF1A1A2E))
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(0.5f, 5f)
-                            offset = Offset(
-                                x = (offset.x + pan.x * scale).coerceIn(-500f, 500f),
-                                y = (offset.y + pan.y * scale).coerceIn(-500f, 500f)
-                            )
-                        }
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onDoubleTap = {
-                                scale = 1f
-                                offset = Offset.Zero
-                            }
-                        )
-                    }
             ) {
-                // Apply transform to drawing content
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // Empty canvas - actual drawing is below
-                }
-
-                Box(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            translationX = offset.x
-                            translationY = offset.y
-                        }
-                ) {
-                    drawingContent()
-                }
+                drawingContent()
             }
 
             // Info overlay
@@ -162,8 +111,6 @@ fun InteractiveDrawingScreen(
                     ) {
                         InfoRow("📌 ${"Title"}", title)
                         InfoRow("📐 ${"Type"}", subtitle)
-                        InfoRow("🔍 ${"Zoom"}", "${"%.0f".format(scale * 100)}%")
-                        InfoRow("👆 ${"Gesture"}", "Pinch to zoom, drag to pan, double-tap to reset")
                     }
                 }
             }
@@ -175,8 +122,6 @@ fun InteractiveDrawingScreen(
 private fun DrawingToolbar(
     title: String,
     subtitle: String,
-    scale: Float,
-    onResetZoom: () -> Unit,
     onToggleInfo: () -> Unit,
     showInfo: Boolean
 ) {
@@ -211,30 +156,6 @@ private fun DrawingToolbar(
         }
 
         Row {
-            // Zoom indicator
-            Surface(
-                color = Color(0x33FFFFFF),
-                shape = RoundedCornerShape(6.dp)
-            ) {
-                Text(
-                    "${"%.0f".format(scale * 100)}%",
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-
-            // Reset zoom
-            IconButton(onClick = onResetZoom, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    Icons.Default.ZoomOutMap,
-                    contentDescription = "Reset",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
             // Info toggle
             IconButton(onClick = onToggleInfo, modifier = Modifier.size(32.dp)) {
                 Icon(

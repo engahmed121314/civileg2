@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
@@ -59,7 +60,7 @@ fun TankScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تصميم خزانات المياه Pro", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.screen_tank_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
