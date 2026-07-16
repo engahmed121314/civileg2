@@ -50,7 +50,7 @@ fun FrameDrawingCanvas(
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
         // Calculate scale to fit frame in canvas with padding
-        val padding = 60.dp
+        val padding = 28.dp
         val drawW = canvasW - padding * 2
         val drawH = canvasH - padding * 2
 
@@ -62,7 +62,7 @@ fun FrameDrawingCanvas(
         val scale = min(
             drawW.value / xSpan,
             drawH.value / ySpan
-        ).toFloat() * 0.85f
+        ).toFloat() * 0.95f
 
         val offsetX = (padding.value + (drawW.value - xSpan * scale) / 2 - xRange.start * scale).toFloat()
         val offsetY = (padding.value + (drawH.value - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
@@ -137,7 +137,7 @@ fun FrameDrawingCanvas(
                     color = memberColor,
                     start = p1,
                     end = p2,
-                    strokeWidth = if (isSelected) 5.dp.toPx() else 3.dp.toPx(),
+                    strokeWidth = if (isSelected) 6.dp.toPx() else 4.dp.toPx(),
                     cap = StrokeCap.Round
                 )
 
@@ -199,14 +199,14 @@ fun FrameDrawingCanvas(
                 val p = toScreen(node.x, node.y)
                 drawCircle(
                     color = Color.White,
-                    radius = 6f,
+                    radius = 8f,
                     center = p
                 )
                 drawCircle(
                     color = Color(0xFF333333),
-                    radius = 6f,
+                    radius = 8f,
                     center = p,
-                    style = Stroke(width = 2f)
+                    style = Stroke(width = 2.5f)
                 )
 
                 // Node ID label

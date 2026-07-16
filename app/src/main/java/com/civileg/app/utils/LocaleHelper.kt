@@ -1,36 +1,49 @@
 package com.civileg.app.utils
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.res.Configuration
 import java.util.*
 
 object LocaleHelper {
-    private const val SELECTED_LANGUAGE = "Locale.Helper.Selected.Language"
-    
-    fun setLocale(context: Context, language: String): Context {
-        persist(context, language)
-        return updateResources(context, language)
-    }
-    
-    fun getLocale(context: Context): String {
-        val prefs: SharedPreferences = context.getSharedPreferences("locale_prefs", Context.MODE_PRIVATE)
-        return prefs.getString(SELECTED_LANGUAGE, "en") ?: "en"
-    }
-    
-    private fun persist(context: Context, language: String) {
-        val prefs: SharedPreferences = context.getSharedPreferences("locale_prefs", Context.MODE_PRIVATE)
+    private const val PREFS_NAME = "locale_prefs"
+    private const val SELECTED_LANGUAGE = "app_language"
+
+    fun setLocale(context: Context, language: String) {
+        // Persist to SharedPreferences (synchronous, available immediately)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(SELECTED_LANGUAGE, language).apply()
-    }
-    
-    private fun updateResources(context: Context, language: String): Context {
+
+        // Apply locale to the activity's resources directly
         val locale = Locale(language)
         Locale.setDefault(locale)
-        
-        val config = context.resources.configuration
+
+        val config = Configuration(context.resources.configuration)
         config.setLocale(locale)
         config.setLayoutDirection(locale)
-        
-        return context.createConfigurationContext(config)
+
+        @Suppress("DEPRECATION")
+        context.resources.updateConfiguration(config, context.resources.displayMetrics)
+    }
+
+    fun getLocale(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(SELECTED_LANGUAGE, "ar") ?: "ar"
+    }
+
+    /**
+     * Apply saved locale to an Activity's resources.
+     * Call this in onCreate() BEFORE setContent().
+     */
+    fun applySavedLocale(context: Context) {
+        val lang = getLocale(context)
+        val locale = Locale(lang)
+        Locale.setDefault(locale)
+
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        config.setLayoutDirection(locale)
+
+        @Suppress("DEPRECATION")
+        context.resources.updateConfiguration(config, context.resources.displayMetrics)
     }
 }

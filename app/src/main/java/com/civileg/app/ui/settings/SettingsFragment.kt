@@ -71,7 +71,11 @@ class SettingsFragment : Fragment() {
                 .setSingleChoiceItems(languages, selected) { dialog, which ->
                     val newLang = if (which == 0) "en" else "ar"
                     if (newLang != current) {
-                        (activity as? com.civileg.app.MainActivity)?.setLocale(newLang)
+                        LocaleHelper.setLocale(requireContext(), newLang)
+                        val intent = requireContext().packageManager.getLaunchIntentForPackage(requireContext().packageName)
+                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        requireContext().startActivity(intent)
+                        requireActivity().finish()
                     }
                     dialog.dismiss()
                 }

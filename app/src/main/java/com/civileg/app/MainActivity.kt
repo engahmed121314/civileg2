@@ -1,7 +1,6 @@
 package com.civileg.app
 
 import android.os.Bundle
-import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -44,14 +43,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val savedLang = LocaleHelper.getLocale(this)
-        val config = resources.configuration
-        val locale = Locale(savedLang)
-        Locale.setDefault(locale)
-        config.setLocale(locale)
-        config.setLayoutDirection(locale)
-        @Suppress("DEPRECATION")
-        resources.updateConfiguration(config, resources.displayMetrics)
+        // Apply saved language before any UI is created
+        LocaleHelper.applySavedLocale(this)
 
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()

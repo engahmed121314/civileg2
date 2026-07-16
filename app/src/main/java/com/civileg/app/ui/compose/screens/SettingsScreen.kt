@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import android.content.Intent
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -21,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.SettingsViewModel
-import androidx.activity.ComponentActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,33 +86,21 @@ fun SettingsScreen(
                 SettingsRadioRow(
                     label = "العربية",
                     subtitle = "Arabic",
-                    selected = settings.reportLanguage == "ar",
+                    selected = LocaleHelper.getLocale(context) == "ar",
                     onClick = {
                         viewModel.setReportLanguage("ar")
-                        viewModel.setAppLanguage("ar")
-                        try {
-                            val activity = context.findActivity()
-                            activity?.let { act ->
-                                com.civileg.app.utils.LocaleHelper.setLocale(act, "ar")
-                                act.recreate()
-                            }
-                        } catch (_: Exception) {}
+                        LocaleHelper.setLocale(context, "ar")
+                        restartActivity(context)
                     }
                 )
                 SettingsRadioRow(
                     label = "English (الإنجليزية)",
                     subtitle = "English",
-                    selected = settings.reportLanguage == "en",
+                    selected = LocaleHelper.getLocale(context) == "en",
                     onClick = {
                         viewModel.setReportLanguage("en")
-                        viewModel.setAppLanguage("en")
-                        try {
-                            val activity = context.findActivity()
-                            activity?.let { act ->
-                                com.civileg.app.utils.LocaleHelper.setLocale(act, "en")
-                                act.recreate()
-                            }
-                        } catch (_: Exception) {}
+                        LocaleHelper.setLocale(context, "en")
+                        restartActivity(context)
                     }
                 )
             }
@@ -318,11 +307,11 @@ private fun SettingsPriceInput(
     Spacer(modifier = Modifier.height(8.dp))
 }
 
-private fun android.content.Context.findActivity(): ComponentActivity? {
-    var ctx = this
-    while (ctx is android.content.ContextWrapper) {
-        if (ctx is ComponentActivity) return ctx
-        ctx = ctx.baseContext
+private fun restartActivity(context: android.content.Context) {
+    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+    intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+    if (context is android.app.Activity) {
+        context.finish()
     }
-    return null
 }
