@@ -106,13 +106,18 @@ class SlabViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter instead of iText
+                // iText 8 AGPL lacks pdfCalligraph module → garbled Arabic text.
+                // NativePdfExporter uses Android's native HarfBuzz for proper shaping.
                 val fileName = "Slab_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
 
-                // Generate drawing for PDF using actual inputs
+                // Generate drawing bitmap
                 val drawingBitmap = try {
-                    PdfDrawingGenerator.generateSlabDrawing(
+                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawing(
                         spanX = inputs.lx, spanY = inputs.ly, thickness = res.thickness,
                         mainDia = res.reinforcementMain.diameter.toDouble(),
                         mainSpacing = res.reinforcementMain.spacing,
@@ -121,108 +126,60 @@ class SlabViewModel @Inject constructor(
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 
-                // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
-                val domainCode = when(inputs.code) {
-                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
-                    else -> com.civileg.app.domain.entities.DesignCode.ECP
+                // Build inputs/results maps
+                val codeName = when(inputs.code) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
+                }
+                val inputsMap = mapOf(
+                    "Slab Type" to inputs.type.displayName,
+                    "Design Code" to codeName,
+                    "Short Span Lx" to "${inputs.lx} m",
+                    "Long Span Ly" to "${inputs.ly} m",
+                    "Dead Load" to "${inputs.deadLoad} kN/m²",
+                    "Live Load" to "${inputs.liveLoad} kN/m²",
+                    "f'cu" to "${inputs.fcu} MPa",
+                    "fy" to "${inputs.fy} MPa",
+                    "Thickness" to "${res.thickness} mm",
+                    "Bar Diameter" to "${inputs.preferredDiameter} mm"
+                )
+                val resultsMap = mapOf(
+                    "Moment Mx" to "${String.format("%.2f", res.momentX)} kN.m",
+                    "Moment My" to "${String.format("%.2f", res.momentY)} kN.m",
+                    "Main Reinforcement" to res.reinforcementMain.barString,
+                    "Secondary Reinforcement" to res.reinforcementSecondary.barString,
+                    "Min Thickness" to "${String.format("%.0f", res.minThickness)} mm",
+                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Concrete Volume" to "${String.format("%.2f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                )
+                val safetyChecks = res.safetyChecks.map { chk ->
+                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = chk.name,
+                        calculated = chk.value,
+                        limit = chk.limit,
+                        unit = chk.unit,
+                        passed = chk.isSafe
+                    )
                 }
 
-                // Map CalculatorEngine.SlabType to domain.entities.SlabType using actual inputs
-                val supportCond = com.civileg.app.domain.entities.SlabSupportConditions(
-                    com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED,
-                    com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED,
-                    com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED,
-                    com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED
-                )
-                val domainSlabType = when(inputs.type) {
-                    CalculatorEngine.SlabType.FLAT -> com.civileg.app.domain.entities.SlabType.FlatPlate(
-                        res.thickness, inputs.lx, inputs.ly, inputs.columnSize
-                    )
-                    CalculatorEngine.SlabType.HOLLOW_BLOCK -> com.civileg.app.domain.entities.SlabType.Hordi(
-                        res.thickness, 100.0, 500.0, 400.0, 200.0, inputs.lx, supportCond
-                    )
-                    CalculatorEngine.SlabType.WAFFLE -> com.civileg.app.domain.entities.SlabType.Waffle(
-                        res.thickness, 150.0, res.thickness - 50.0, 600.0,
-                        inputs.lx, inputs.ly, supportCond
-                    )
-                    CalculatorEngine.SlabType.POST_TENSION -> com.civileg.app.domain.entities.SlabType.PostTensioned(
-                        res.thickness, inputs.lx, inputs.ly,
-                        com.civileg.app.domain.entities.TendonType.UNBONDED,
-                        1500.0, // kN typical prestress force
-                        res.thickness / 2.0 - 50.0,
-                        supportCond
-                    )
-                    else -> com.civileg.app.domain.entities.SlabType.Solid(
-                        res.thickness, inputs.lx, inputs.ly, supportCond
-                    )
-                }
-
-                val advResult = com.civileg.app.domain.entities.AdvancedSlabResult(
-                    slabType = domainSlabType,
-                    flexureResult = com.civileg.app.domain.entities.SlabDesignResult(
-                        requiredReinforcement = res.reinforcementMain.area,
-                        providedReinforcement = res.reinforcementMain.area,
-                        barDiameter = res.reinforcementMain.diameter.toDouble(),
-                        barSpacing = res.reinforcementMain.spacing,
-                        minThickness = res.minThickness,
-                        shearCapacity = 0.0,
-                        isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio
-                    ),
-                    shearCheck = com.civileg.app.domain.entities.ShearCheckResult(
-                        isSafe = true, appliedShear = 0.0, shearCapacity = 0.0, utilizationRatio = 0.0
-                    ),
-                    deflectionCheck = com.civileg.app.domain.entities.DeflectionCheckResult(
-                        isSafe = true, calculatedDeflection = 0.0, allowableDeflection = 0.0, ratio = 0.0
-                    ),
-                    punchingShearCheck = if (inputs.type == CalculatorEngine.SlabType.FLAT)
-                        com.civileg.app.domain.entities.PunchingShearCheckResult(
-                            isSafe = res.punchingSafe, appliedShear = 0.0,
-                            shearCapacity = 0.0, utilizationRatio = 0.0
-                        ) else null,
-                    reinforcementLayout = com.civileg.app.domain.entities.ReinforcementLayout(
-                        topBars = com.civileg.app.domain.entities.BarLayout(
-                            res.reinforcementSecondary.diameter.toDouble(),
-                            res.reinforcementSecondary.spacing,
-                            com.civileg.app.domain.entities.BarDirection.BOTH, inputs.ly, 5
-                        ),
-                        bottomBars = com.civileg.app.domain.entities.BarLayout(
-                            res.reinforcementMain.diameter.toDouble(),
-                            res.reinforcementMain.spacing,
-                            com.civileg.app.domain.entities.BarDirection.BOTH, inputs.lx, 5
-                        ),
-                        distributionBars = null,
-                        additionalBars = emptyList()
-                    ),
-                    concreteVolume = res.concreteVolume,
-                    formworkArea = inputs.lx * inputs.ly,
-                    inventoryAnalysis = null,
-                    postTensionCalculations = null,
-                    warnings = res.suggestions,
-                    codeNotes = emptyList()
-                )
-
-                // Use actual input values instead of hardcoded
-                val slabInputs = com.civileg.app.domain.entities.SlabInputs(
-                    fcu = inputs.fcu, fy = inputs.fy, thickness = res.thickness,
-                    deadLoad = inputs.deadLoad, liveLoad = inputs.liveLoad,
-                    shortSpan = inputs.lx, longSpan = inputs.ly
-                )
-
-                val exportedFile = exporter.exportSlabReport(
-                    projectName = "تقرير تصميم بلاطة - ${inputs.type.displayName}",
-                    designCode = domainCode,
-                    slabType = domainSlabType,
-                    inputs = slabInputs,
-                    result = advResult,
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
+                val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                val generated = exporter.generateReport(
+                    title = "Slab Design Report — ${inputs.type.displayName}",
+                    subtitle = "Code: $codeName  •  Lx=${inputs.lx}m, Ly=${inputs.ly}m",
+                    designType = inputs.type.displayName,
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
                 )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
-                    onComplete(exportedFile)
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Exception) {

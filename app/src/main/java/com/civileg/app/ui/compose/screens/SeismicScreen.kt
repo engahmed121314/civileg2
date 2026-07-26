@@ -331,7 +331,7 @@ fun SeismicScreen(
                         Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            stringResource(R.string.seismic_est_height, "%.1f".format(totalHeight), numFloors.toIntOrNull() ?: 0),
+                            stringResource(R.string.seismic_est_height, totalHeight, numFloors.toIntOrNull() ?: 0),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

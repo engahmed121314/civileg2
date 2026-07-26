@@ -7,29 +7,32 @@ import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.itextpdf.kernel.pdf.PdfDocument
-import com.itextpdf.kernel.pdf.PdfWriter
-import com.itextpdf.layout.Document
-import com.itextpdf.layout.element.Paragraph
-import com.itextpdf.layout.element.Text
-import com.itextpdf.layout.properties.BaseDirection
-import com.itextpdf.layout.properties.TextAlignment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
 /**
- * PdfExportHelper — Robust PDF export helper with proper Arabic shaping.
+ * PdfExportHelper — Robust PDF export helper using NativePdfExporter.
  *
- * ********************************************************************
- * CRITICAL FIX (2026-07-27):
- * ********************************************************************
- * 1. Runs ALL PDF generation on Dispatchers.IO (was on main thread → ANR/crash)
- * 2. Uses ArabicShaper.shapeIfArabic() to pre-shape Arabic to Presentation
- *    Forms before rendering (root cause of garbled/encrypted text)
- * 3. Comprehensive try/catch with Toast feedback for any failure
- * 4. Auto-opens PDF after successful generation
+ * ********************************************************************************
+ * CRITICAL FIX (2026-07-27): Switched from iText to Android Native PDF
+ * ********************************************************************************
+ * The previous iText 8 AGPL-based pipeline produced garbled Arabic text
+ * ("encrypted/squares") on every device. Root cause: iText 8 AGPL lacks
+ * pdfCalligraph (commercial-only module needed for Arabic GSUB shaping).
+ *
+ * The new NativePdfExporter uses Android's built-in android.graphics.pdf.PdfDocument
+ * API, which leverages Android's native HarfBuzz engine for proper Arabic
+ * letter shaping and Bidi algorithm for RTL reordering.
+ *
+ * This produces correctly-rendered Arabic on EVERY Android device, with NO
+ * dependency on commercial modules or fragile manual shaping logic.
+ *
+ * ********************************************************************************
+ * Thread Safety
+ * ********************************************************************************
+ * All PDF generation runs on Dispatchers.IO to avoid blocking the UI thread.
+ * Use [exportCalculationReportAsync] from coroutines / Composables.
  */
 object PdfExportHelper {
 
@@ -38,9 +41,7 @@ object PdfExportHelper {
     /**
      * Generate a calculation report PDF with mixed Arabic/Latin text.
      *
-     * CRITICAL: This function performs IO (file write + font loading) and MUST
-     * be called from Dispatchers.IO. Use the suspend overload [exportCalculationReportAsync]
-     * to be safe — it dispatches to IO automatically.
+     * Uses NativePdfExporter for proper Arabic shaping via Android's HarfBuzz.
      *
      * @return Absolute path to generated PDF, or null on failure
      */
@@ -56,71 +57,20 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val writer = PdfWriter(FileOutputStream(file))
-            val pdf = PdfDocument(writer)
-            val document = Document(pdf)
-            document.setMargins(40f, 40f, 40f, 40f)
+            val exporter = NativePdfExporter(context)
+            val generated = exporter.generateCalculationReport(
+                title = title,
+                details = details,
+                outputPath = file.absolutePath
+            )
 
-            try {
-                // Header — Latin-only, use Helvetica
-                val titlePara = Paragraph("Civil EG - Calculation Report")
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setFontSize(20f)
-                    .setBold()
-                    .setFont(com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica-Bold"))
-                document.add(titlePara)
-
-                document.add(com.itextpdf.layout.element.LineSeparator(
-                    com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1f)
-                ))
-                document.add(Paragraph("\n"))
-
-                // Title (mixed Arabic/Latin) — properly shaped via PdfTextSegmenter
-                val arabicFont = ArabicFontProvider.getArabicPdfFont(context, bold = true)
-                val latinFont = try {
-                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica-Bold")
-                } catch (_: Exception) {
-                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
-                }
-                val titleP = PdfTextSegmenter.buildMixedParagraph(
-                    text = title,
-                    arabicFont = arabicFont,
-                    latinFont = latinFont,
-                    fontSize = 16f,
-                    alignment = TextAlignment.CENTER
-                ).setBold().setUnderline()
-                document.add(titleP)
-
-                document.add(Paragraph("\n"))
-
-                // Details — proper Arabic shaping per line via segmenter
-                val arabicFontDetails = ArabicFontProvider.getArabicPdfFont(context)
-                val latinFontDetails = try {
-                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
-                } catch (_: Exception) {
-                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
-                }
-                for ((key, value) in details) {
-                    val lineText = "$key: $value"
-                    val p = PdfTextSegmenter.buildMixedParagraph(
-                        text = lineText,
-                        arabicFont = arabicFontDetails,
-                        latinFont = latinFontDetails,
-                        fontSize = 12f
-                    )
-                    document.add(p)
-                }
-
-                document.add(Paragraph("\n\nGenerated by Civil EG App")
-                    .setFontSize(10f)
-                    .setItalic()
-                    .setFont(latinFontDetails))
-            } finally {
-                document.close()
+            if (generated != null) {
+                openPdf(context, generated)
+                generated.absolutePath
+            } else {
+                Log.e(TAG, "NativePdfExporter returned null")
+                null
             }
-
-            openPdf(context, file)
-            file.absolutePath
         } catch (e: Exception) {
             Log.e(TAG, "Failed to generate PDF: ${e.message}", e)
             android.os.Handler(android.os.Looper.getMainLooper()).post {
@@ -132,8 +82,6 @@ object PdfExportHelper {
 
     /**
      * SUSPEND version of [exportCalculationReport] — runs PDF generation on IO dispatcher.
-     *
-     * Use this from any Composable / Coroutine to avoid blocking the main thread.
      */
     suspend fun exportCalculationReportAsync(
         context: Context,
@@ -142,6 +90,71 @@ object PdfExportHelper {
         fileName: String
     ): String? = withContext(Dispatchers.IO) {
         exportCalculationReport(context, title, details, fileName)
+    }
+
+    /**
+     * Generate a complete structural design report PDF with drawing and safety checks.
+     */
+    fun exportDesignReport(
+        context: Context,
+        title: String,
+        subtitle: String = "",
+        designType: String = "",
+        inputs: Map<String, String> = emptyMap(),
+        results: Map<String, String> = emptyMap(),
+        safetyChecks: List<NativePdfExporter.SafetyCheck> = emptyList(),
+        isSafe: Boolean = true,
+        drawingBitmap: android.graphics.Bitmap? = null,
+        fileName: String
+    ): String? {
+        return try {
+            val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                ?: context.cacheDir
+            directory.mkdirs()
+            val file = File(directory, "$fileName.pdf")
+
+            val exporter = NativePdfExporter(context)
+            val generated = exporter.generateReport(
+                title = title,
+                subtitle = subtitle,
+                designType = designType,
+                inputs = inputs,
+                results = results,
+                safetyChecks = safetyChecks,
+                isSafe = isSafe,
+                drawingBitmap = drawingBitmap,
+                outputPath = file.absolutePath
+            )
+
+            if (generated != null) {
+                openPdf(context, generated)
+                generated.absolutePath
+            } else null
+        } catch (e: Exception) {
+            Log.e(TAG, "Design report generation failed: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * SUSPEND version of [exportDesignReport].
+     */
+    suspend fun exportDesignReportAsync(
+        context: Context,
+        title: String,
+        subtitle: String = "",
+        designType: String = "",
+        inputs: Map<String, String> = emptyMap(),
+        results: Map<String, String> = emptyMap(),
+        safetyChecks: List<NativePdfExporter.SafetyCheck> = emptyList(),
+        isSafe: Boolean = true,
+        drawingBitmap: android.graphics.Bitmap? = null,
+        fileName: String
+    ): String? = withContext(Dispatchers.IO) {
+        exportDesignReport(
+            context, title, subtitle, designType, inputs, results,
+            safetyChecks, isSafe, drawingBitmap, fileName
+        )
     }
 
     private fun openPdf(context: Context, file: File) {
