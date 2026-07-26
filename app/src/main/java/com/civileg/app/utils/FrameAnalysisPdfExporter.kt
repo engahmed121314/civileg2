@@ -47,18 +47,24 @@ object FrameAnalysisPdfExporter {
      *
      * CRITICAL FIX: Shapes Arabic letters to Presentation Forms (0xFE80-0xFEFF)
      * BEFORE passing to iText. iText 8 AGPL does NOT shape Arabic automatically.
+     *
+     * CRITICAL FIX (2026-07-26): Use PdfTextSegmenter to split mixed Arabic/Latin
+     * text into segments, rendering each with the appropriate font. This prevents
+     * the "encrypted-looking" output that occurred when Latin chars in mixed text
+     * were rendered with the Arabic font (which only has 15 Latin chars).
      */
     private fun styledArabicParagraph(text: String, font: PdfFont, fontSize: Float, bold: Boolean = false): Paragraph {
-        val p = Paragraph().setFontSize(fontSize)
-        if (bold) p.setBold()
-        // Shape Arabic letters to Presentation Forms before iText rendering
-        val shapedText = ArabicShaper.shapeIfArabic(text)
-        p.add(Text(shapedText).setFont(font))
-        if (ArabicFontProvider.containsArabic(text)) {
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            p.setTextAlignment(TextAlignment.RIGHT)
+        val latinFont = try {
+            PdfFontFactory.createFont(if (bold) "Helvetica-Bold" else "Helvetica")
+        } catch (_: Exception) {
+            PdfFontFactory.createFont("Helvetica")
         }
-        return p
+        return PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = font,
+            latinFont = latinFont,
+            fontSize = fontSize
+        )
     }
 
     fun generateFrameAnalysisPdf(
@@ -194,13 +200,13 @@ object FrameAnalysisPdfExporter {
                 document.add(AreaBreak())
                 document.add(styledArabicParagraph("Concrete Design Results / نتائج التصميم الخرساني", arabicBold, 14f, bold = true))
                 for (cr in result.concreteDesignResults) {
-                    document.add(Paragraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}").setFontSize(11f).setBold().setMarginTop(8f))
-                    document.add(Paragraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa").setFontSize(9f))
-                    document.add(Paragraph("Max M = ${fmt(cr.maxMoment)} kN.m | Max V = ${fmt(cr.maxShear)} kN | N = ${fmt(cr.axialForce)} kN").setFontSize(9f))
-                    document.add(Paragraph("As req = ${String.format("%.0f", cr.asRequired)} mm² | Bottom: ${cr.numBarsBot}Ø${cr.barDia.toInt()} = ${String.format("%.0f", cr.asBot)} mm²").setFontSize(9f))
+                    document.add(styledArabicParagraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
+                    document.add(styledArabicParagraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Max M = ${fmt(cr.maxMoment)} kN.m | Max V = ${fmt(cr.maxShear)} kN | N = ${fmt(cr.axialForce)} kN", arabicFont, 9f))
+                    document.add(styledArabicParagraph("As req = ${String.format("%.0f", cr.asRequired)} mm² | Bottom: ${cr.numBarsBot}Ø${cr.barDia.toInt()} = ${String.format("%.0f", cr.asBot)} mm²", arabicFont, 9f))
                     if (cr.stirrupDia > 0)
-                        document.add(Paragraph("Stirrups: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm").setFontSize(9f))
-                    document.add(Paragraph("Utilization - Moment: ${String.format("%.0f", cr.momentUtilization * 100)}% | Shear: ${String.format("%.0f", cr.shearUtilization * 100)}% | ${if (cr.isSafe) "SAFE ✓" else "UNSAFE ✗"}").setFontSize(9f))
+                        document.add(styledArabicParagraph("Stirrups: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Utilization - Moment: ${String.format("%.0f", cr.momentUtilization * 100)}% | Shear: ${String.format("%.0f", cr.shearUtilization * 100)}% | ${if (cr.isSafe) "SAFE ✓" else "UNSAFE ✗"}", arabicFont, 9f))
                 }
             }
 
@@ -209,10 +215,10 @@ object FrameAnalysisPdfExporter {
                 document.add(AreaBreak())
                 document.add(styledArabicParagraph("Steel Design Results / نتائج التصميم المعدني", arabicBold, 14f, bold = true))
                 for (sr in result.steelDesignResults) {
-                    document.add(Paragraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}").setFontSize(11f).setBold().setMarginTop(8f))
-                    document.add(Paragraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm⁴").setFontSize(9f))
-                    document.add(Paragraph("Max M = ${fmt(sr.maxMoment)} kN.m | Max V = ${fmt(sr.maxShear)} kN | N = ${fmt(sr.axialForce)} kN").setFontSize(9f))
-                    document.add(Paragraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE ✓" else "UNSAFE ✗"}").setFontSize(9f))
+                    document.add(styledArabicParagraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
+                    document.add(styledArabicParagraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm⁴", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Max M = ${fmt(sr.maxMoment)} kN.m | Max V = ${fmt(sr.maxShear)} kN | N = ${fmt(sr.axialForce)} kN", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE ✓" else "UNSAFE ✗"}", arabicFont, 9f))
                 }
             }
         }

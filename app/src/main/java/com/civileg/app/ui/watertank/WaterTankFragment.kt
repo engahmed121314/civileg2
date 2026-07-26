@@ -198,7 +198,7 @@ class WaterTankFragment : Fragment() {
             try {
                 val file = PdfGenerator.generateDesignReport(requireContext(), "Water Tank Report", "TANK", inputs, results, res.isSafe)
                 ExportUtils.openPdf(requireContext(), file)
-            } catch (e: Exception) { showError("Export failed") }
+            } catch (e: Exception) { android.util.Log.e("TankExport", "PDF export failed", e); showError("Export failed: ${e.message ?: "unknown error"}") }
         }
     }
 

@@ -90,31 +90,25 @@ object PdfGenerator {
         isBold: Boolean = false,
         color: DeviceRgb?
     ): Paragraph {
-        val p = Paragraph().setFontSize(fontSize)
-        color?.let { p.setFontColor(it) }
-
-        val hasArabic = containsArabic(text)
-        if (hasArabic && font != null) {
-            // CRITICAL FIX: Shape Arabic letters to Presentation Forms (0xFE80-0xFEFF)
-            // BEFORE passing to iText. iText 8 AGPL does NOT apply Arabic shaping
-            // automatically — without this, letters render DISCONNECTED or as SQUARES.
-            // ArabicShaper converts base letters (0x0621-0x064A) based on contextual
-            // position (isolated/initial/medial/final) and handles Lam-Alef ligatures.
-            val shapedText = ArabicShaper.shapeIfArabic(text)
-            // Use a SINGLE Text run with the shaped text + Arabic font (which also has Latin glyphs)
-            val run = Text(shapedText).setFont(font)
-            p.add(run)
-            // Set BaseDirection on the Paragraph (not on individual Text runs)
-            // This triggers iText's Unicode Bidi Algorithm for proper RTL ordering
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            p.setTextAlignment(TextAlignment.RIGHT)
-        } else {
-            // Pure Latin/numeric text — create a FRESH Helvetica for this PdfDocument.
-            // Never reuse across PDFs (iText 8 font caching bug).
-            val latinFont = freshHelvetica(isBold)
-            p.add(Text(text).setFont(latinFont))
-        }
-        return p
+        // CRITICAL FIX (2026-07-26): Use PdfTextSegmenter to properly render mixed
+        // Arabic/Latin text. Previous approach used the Arabic font for the ENTIRE
+        // text when any Arabic was detected. But the bundled NotoNaskhArabic static
+        // font only contains 15 Latin chars (digits + basic punctuation) — so Latin
+        // letters in mixed text rendered as TOFU (□), producing "encrypted-looking"
+        // output. Now we split into segments and use the appropriate font per segment.
+        //
+        // The Arabic font passed in `font` is used for Arabic segments. Latin segments
+        // use a fresh Helvetica (or Helvetica-Bold if isBold=true) so they render
+        // correctly even though the Arabic font lacks Latin glyphs.
+        val arabicFont = font ?: freshHelvetica(false)
+        val latinFont = freshHelvetica(isBold)
+        return PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = arabicFont,
+            latinFont = latinFont,
+            fontSize = fontSize,
+            color = color
+        )
     }
 
     private fun addArabicCell(table: Table, text: String, font: PdfFont?, isBold: Boolean = false, fontSize: Float = 9f) {

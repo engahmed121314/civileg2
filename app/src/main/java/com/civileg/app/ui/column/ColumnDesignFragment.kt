@@ -17,6 +17,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.entities.DesignCode as DomainDesignCode
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.DesignCode
+import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import com.civileg.app.views.ColumnSectionView
@@ -316,7 +317,7 @@ class ColumnDesignFragment : Fragment() {
                 loadCombination = LoadCombination.DEAD_LIVE, columnType = columnType
             )
 
-            exporter.exportColumnReport(
+            val exportedFile = exporter.exportColumnReport(
                 projectName = projectName,
                 designCode = DomainDesignCode.ECP,
                 columnType = columnType,
@@ -326,9 +327,15 @@ class ColumnDesignFragment : Fragment() {
                 alternatives = emptyList(),
                 outputPath = filePath
             )
-            
-            Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+
+            if (exportedFile != null && exportedFile.exists()) {
+                Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+                ExportUtils.openPdf(requireContext(), exportedFile)
+            } else {
+                showError("PDF Export failed: exporter returned null. Check logcat for details.")
+            }
         } catch (e: Exception) {
+            android.util.Log.e("ColumnExport", "PDF export failed", e)
             showError("PDF Export Error: ${e.message}")
         }
     }

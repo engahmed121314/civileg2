@@ -156,25 +156,30 @@ class PileFoundationFragment : Fragment() {
             val res = lastResult ?: return@setOnClickListener
             val input = lastInput ?: return@setOnClickListener
 
-            val inputs = mapOf(
-                "Pile Diameter" to "${input.diameter} mm",
-                "Pile Length" to "${input.length} m",
-                "Soil Type" to input.soilType,
-                "SPT Value" to "${input.spt}",
-                "Number of Piles" to "${input.numPiles}"
-            )
-            val results = mapOf(
-                "End Bearing" to String.format(Locale.getDefault(), "%.2f kN", res.endBearing),
-                "Skin Friction" to String.format(Locale.getDefault(), "%.2f kN", res.skinFriction),
-                "Allowable Capacity" to String.format(Locale.getDefault(), "%.2f kN", res.allowableCapacity),
-                "Est. Settlement" to String.format(Locale.getDefault(), "%.2f mm", res.settlement)
-            )
+            try {
+                val inputs = mapOf(
+                    "Pile Diameter" to "${input.diameter} mm",
+                    "Pile Length" to "${input.length} m",
+                    "Soil Type" to input.soilType,
+                    "SPT Value" to "${input.spt}",
+                    "Number of Piles" to "${input.numPiles}"
+                )
+                val results = mapOf(
+                    "End Bearing" to String.format(Locale.getDefault(), "%.2f kN", res.endBearing),
+                    "Skin Friction" to String.format(Locale.getDefault(), "%.2f kN", res.skinFriction),
+                    "Allowable Capacity" to String.format(Locale.getDefault(), "%.2f kN", res.allowableCapacity),
+                    "Est. Settlement" to String.format(Locale.getDefault(), "%.2f mm", res.settlement)
+                )
 
-            val file = PdfGenerator.generateDesignReport(
-                requireContext(), getString(R.string.pile_foundation), "PILE",
-                inputs, results, true
-            )
-            ExportUtils.openPdf(requireContext(), file)
+                val file = PdfGenerator.generateDesignReport(
+                    requireContext(), getString(R.string.pile_foundation), "PILE",
+                    inputs, results, true
+                )
+                ExportUtils.openPdf(requireContext(), file)
+            } catch (e: Exception) {
+                android.util.Log.e("PileExport", "PDF export failed", e)
+                showError("PDF Export failed: ${e.message ?: "unknown error"}")
+            }
         }
     }
     

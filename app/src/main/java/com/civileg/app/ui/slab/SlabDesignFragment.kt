@@ -18,6 +18,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.CalculatorEngine.SlabType
+import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -184,7 +185,7 @@ class SlabDesignFragment : Fragment() {
                 codeNotes = listOf("Exported from Civil EG")
             )
 
-            exporter.exportSlabReport(
+            val exportedFile = exporter.exportSlabReport(
                 projectName = projectName,
                 designCode = com.civileg.app.domain.entities.DesignCode.ECP,
                 slabType = slabTypeDomain,
@@ -192,8 +193,14 @@ class SlabDesignFragment : Fragment() {
                 result = advResult,
                 outputPath = filePath
             )
-            Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+            if (exportedFile != null && exportedFile.exists()) {
+                Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+                ExportUtils.openPdf(requireContext(), exportedFile)
+            } else {
+                showError("PDF Export failed: exporter returned null. Check logcat for details.")
+            }
         } catch (e: Exception) {
+            android.util.Log.e("SlabExport", "PDF export failed", e)
             showError("Export Error: ${e.message}")
         }
     }

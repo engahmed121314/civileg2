@@ -5,6 +5,7 @@ import com.civileg.app.R
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
 import com.civileg.app.utils.ArabicShaper
+import com.civileg.app.utils.PdfTextSegmenter
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb
 import com.itextpdf.kernel.font.PdfFont
@@ -63,47 +64,54 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private fun ar(text: String): String = text
 
     private fun arParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null, alignment: TextAlignment? = null): Paragraph {
-        // CRITICAL FIX: Shape Arabic to Presentation Forms BEFORE iText rendering.
-        // iText 8 AGPL does NOT shape Arabic automatically.
-        val p = Paragraph().setFontSize(fontSize)
-        if (bold) p.setBold()
-        color?.let { p.setFontColor(it) }
-        alignment?.let { p.setTextAlignment(it) }
-        val font = if (bold) arabicBoldFont() else arabicFont()
-        val shapedText = ArabicShaper.shapeIfArabic(text)
-        p.add(Text(shapedText).setFont(font))
-        if (isArabic(text)) {
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            if (alignment == null) p.setTextAlignment(TextAlignment.RIGHT)
-        }
-        return p
+        // CRITICAL FIX (2026-07-26): Use PdfTextSegmenter to split mixed Arabic/Latin text.
+        // Previous approach used Arabic font for the whole text when Arabic was detected,
+        // causing Latin chars to render as TOFU (□) because the static Arabic font only
+        // contains 15 Latin chars. Now we use Arabic font for Arabic segments and
+        // Helvetica for Latin segments, letting iText's bidi algorithm order them.
+        val arabicFont = if (bold) arabicBoldFont() else arabicFont()
+        val latinFont = helveticaFont(bold)
+        return PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = arabicFont,
+            latinFont = latinFont,
+            fontSize = fontSize,
+            color = color,
+            alignment = alignment
+        )
     }
 
     private fun headerCell(text: String, colSpan: Int = 1): Cell {
         val cell = Cell(colSpan, 1).setPadding(5f).setBackgroundColor(HEADER_BG).setTextAlignment(TextAlignment.CENTER)
-        val p = Paragraph().setFontSize(8f).setBold().setFontColor(WHITE)
-        // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-        val shapedText = ArabicShaper.shapeIfArabic(text)
-        val font = if (isArabic(text)) arabicBoldFont() else helveticaFont(bold = true)
-        p.add(Text(shapedText).setFont(font))
-        if (isArabic(text)) {
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        // CRITICAL FIX (2026-07-26): Use segmenter for mixed Arabic/Latin text
+        val arabicFont = arabicBoldFont()
+        val latinFont = helveticaFont(bold = true)
+        val p = PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = arabicFont,
+            latinFont = latinFont,
+            fontSize = 8f,
+            color = WHITE,
+            alignment = TextAlignment.CENTER
+        )
         cell.add(p)
         return cell
     }
 
     private fun dataCell(text: String, fontSize: Float = 8f, bold: Boolean = false, bg: DeviceRgb? = null, color: DeviceRgb? = null): Cell {
         val cell = Cell().setPadding(3f).setTextAlignment(TextAlignment.CENTER)
-        val p = Paragraph().setFontSize(fontSize)
-        if (bold) p.setBold()
-        color?.let { p.setFontColor(it) }
-        // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-        val shapedText = ArabicShaper.shapeIfArabic(text)
-        val font = if (isArabic(text)) arabicFont() else helveticaFont(bold = false)
-        p.add(Text(shapedText).setFont(font))
+        // CRITICAL FIX (2026-07-26): Use segmenter for mixed Arabic/Latin text
+        val arabicFont = if (bold) arabicBoldFont() else arabicFont()
+        val latinFont = helveticaFont(bold = bold)
+        val p = PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = arabicFont,
+            latinFont = latinFont,
+            fontSize = fontSize,
+            color = color,
+            alignment = TextAlignment.CENTER
+        )
         if (isArabic(text)) {
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             cell.setTextAlignment(TextAlignment.RIGHT)
         }
         cell.add(p)

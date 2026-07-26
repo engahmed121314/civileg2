@@ -8,6 +8,7 @@ import com.civileg.app.utils.ArabicFontProvider
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.utils.ArabicShaper
+import com.civileg.app.utils.PdfTextSegmenter
 import com.itextpdf.io.font.PdfEncodings
 import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.kernel.font.PdfFontFactory
@@ -105,33 +106,22 @@ class ComprehensivePdfExporter(private val context: Context) {
         alignment: TextAlignment? = null,
         rtl: Boolean? = null
     ): Paragraph {
-        val p = Paragraph().setFontSize(fontSize)
-        color?.let { p.setFontColor(it) }
-        alignment?.let { p.setTextAlignment(it) }
-
-        if (isArabic(text)) {
-            // CRITICAL FIX: Shape Arabic letters to Presentation Forms BEFORE
-            // passing to iText. iText 8 AGPL does NOT shape Arabic automatically.
-            // ArabicShaper converts base letters (0x0621-0x064A) to their
-            // contextual Presentation Forms (0xFE80-0xFEFF) based on letter
-            // position (isolated/initial/medial/final). Also handles Lam-Alef ligatures.
-            val shapedText = ArabicShaper.shapeIfArabic(text)
-            val font = if (bold) arabicBoldFont() else arabicFont()
-            val run = Text(shapedText).setFont(font)
-            p.add(run)
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            if (alignment == null) {
-                p.setTextAlignment(TextAlignment.RIGHT)
-            }
-        } else {
-            // Pure Latin/numeric text — use a FRESH Helvetica for this PdfDocument
-            val font = helveticaFont(bold)
-            p.add(Text(text).setFont(font))
-            if (alignment == null) {
-                p.setTextAlignment(TextAlignment.LEFT)
-            }
-        }
-        return p
+        // CRITICAL FIX (2026-07-26): Use PdfTextSegmenter to properly render mixed
+        // Arabic/Latin text. Previous approach used the Arabic font for the ENTIRE
+        // text when any Arabic was detected. But the bundled NotoNaskhArabic static
+        // font only contains 15 Latin chars (digits + basic punctuation) — so Latin
+        // letters in mixed text rendered as TOFU (□), producing "encrypted-looking"
+        // output. Now we split into segments and use the appropriate font per segment.
+        val arabicFont = if (bold) arabicBoldFont() else arabicFont()
+        val latinFont = helveticaFont(bold)
+        return PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = arabicFont,
+            latinFont = latinFont,
+            fontSize = fontSize,
+            color = color,
+            alignment = alignment
+        )
     }
 
     private fun rtlParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null): Paragraph {
@@ -349,10 +339,15 @@ class ComprehensivePdfExporter(private val context: Context) {
         }
         val footer = styledParagraph(footerText, 8f, color = ColorConstants.GRAY as DeviceRgb, alignment = TextAlignment.CENTER)
         document.add(footer)
-        document.add(Paragraph(
+        // CRITICAL FIX (Bug #1): Use styledParagraph instead of raw Paragraph(text)
+        // Raw Paragraph(text) bypasses ArabicShaper AND uses default Helvetica — Arabic
+        // letters would render as disconnected squares. Mixed Latin/Arabic would also
+        // fail because Arabic font lacks Latin letters.
+        document.add(styledParagraph(
             t("هذا التقرير لأغراض مرجعية فقط - يجب مراجعته بواسطة مهندس مؤهل قبل التنفيذ",
-                "This report is for reference only - must be reviewed by a qualified engineer before execution.")
-        ).setFontSize(7f).setFontColor(ColorConstants.LIGHT_GRAY).setTextAlignment(TextAlignment.CENTER))
+                "This report is for reference only - must be reviewed by a qualified engineer before execution."),
+            7f, color = ColorConstants.LIGHT_GRAY as DeviceRgb, alignment = TextAlignment.CENTER
+        ))
     }
 
     // ==================== Method 1: Beam Report ====================

@@ -164,7 +164,7 @@ class RetainingWallFragment : Fragment() {
             try {
                 val file = PdfGenerator.generateDesignReport(requireContext(), "Retaining Wall Report", "WALL", inputs, results, true)
                 ExportUtils.openPdf(requireContext(), file)
-            } catch (e: Exception) { showError("Export failed") }
+            } catch (e: Exception) { android.util.Log.e("RetWallExport", "PDF export failed", e); showError("Export failed: ${e.message ?: "unknown error"}") }
         }
     }
     

@@ -16,6 +16,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.db.Project as DbProject
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ContinuousBeamAnalysis
+import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import com.civileg.app.views.BeamSectionView
@@ -336,7 +337,7 @@ class BeamDesignFragment : Fragment() {
                 codeNotes = listOf("Exported from Civil EG App", "Design Code: ${result.code.displayName}")
             )
 
-            exporter.exportBeamReport(
+            val exportedFile = exporter.exportBeamReport(
                 projectName = projectName,
                 designCode = DesignCode.ECP,
                 beamType = beamType,
@@ -346,8 +347,14 @@ class BeamDesignFragment : Fragment() {
                 momentShearDiagrams = MomentShearDiagrams(emptyList(), emptyList()),
                 outputPath = filePath
             )
-            Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+            if (exportedFile != null && exportedFile.exists()) {
+                Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
+                ExportUtils.openPdf(requireContext(), exportedFile)
+            } else {
+                showError("PDF Export failed: exporter returned null. Check logcat for details.")
+            }
         } catch (e: Exception) {
+            android.util.Log.e("BeamExport", "PDF export failed", e)
             showError("Export Error: ${e.message}")
         }
     }

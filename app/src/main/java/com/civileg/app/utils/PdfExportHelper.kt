@@ -41,35 +41,39 @@ object PdfExportHelper {
             document.add(LineSeparator(com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1f)))
             document.add(Paragraph("\n"))
 
-            // Title — proper Arabic shaping
+            // CRITICAL FIX (2026-07-26): Use PdfTextSegmenter for the title so mixed
+            // Arabic/Latin text renders correctly (Arabic font lacks Latin letters).
             val arabicFont = ArabicFontProvider.getArabicPdfFont(context)
-            val titleP = Paragraph().setFontSize(16f).setBold().setUnderline()
-            if (ArabicFontProvider.containsArabic(title)) {
-                // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-                val shapedTitle = ArabicShaper.shapeIfArabic(title)
-                titleP.add(Text(shapedTitle).setFont(arabicFont))
-                titleP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                titleP.setTextAlignment(TextAlignment.RIGHT)
-            } else {
-                titleP.add(Text(title))
+            val latinFont = try {
+                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica-Bold")
+            } catch (_: Exception) {
+                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
             }
+            val titleP = PdfTextSegmenter.buildMixedParagraph(
+                text = title,
+                arabicFont = arabicFont,
+                latinFont = latinFont,
+                fontSize = 16f,
+                alignment = TextAlignment.CENTER
+            ).setBold().setUnderline()
             document.add(titleP)
 
             document.add(Paragraph("\n"))
 
-            // Details — proper Arabic shaping per line
+            // Details — proper Arabic shaping per line via segmenter
+            val latinFontDetails = try {
+                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
+            } catch (_: Exception) {
+                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
+            }
             for ((key, value) in details) {
                 val lineText = "$key: $value"
-                val p = Paragraph().setFontSize(12f)
-                if (ArabicFontProvider.containsArabic(lineText)) {
-                    // CRITICAL FIX: Shape Arabic to Presentation Forms before rendering.
-                    val shapedLine = ArabicShaper.shapeIfArabic(lineText)
-                    p.add(Text(shapedLine).setFont(arabicFont))
-                    p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                    p.setTextAlignment(TextAlignment.RIGHT)
-                } else {
-                    p.add(Text(lineText))
-                }
+                val p = PdfTextSegmenter.buildMixedParagraph(
+                    text = lineText,
+                    arabicFont = arabicFont,
+                    latinFont = latinFontDetails,
+                    fontSize = 12f
+                )
                 document.add(p)
             }
 

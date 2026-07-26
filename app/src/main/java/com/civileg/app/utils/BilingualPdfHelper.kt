@@ -105,6 +105,12 @@ object BilingualPdfHelper {
     /**
      * Create a styled paragraph using an EXISTING font (avoid creating multiple
      * fonts for the same PdfDocument). The font MUST be fresh for this PdfDocument.
+     *
+     * CRITICAL FIX (2026-07-26): Use PdfTextSegmenter to split mixed Arabic/Latin text
+     * into segments. Arabic segments use the provided font; Latin segments use a fresh
+     * Helvetica (created here). This prevents the "encrypted-looking" output that
+     * occurred when Latin chars in mixed text were rendered with the Arabic font
+     * (which only has 15 Latin chars).
      */
     fun styledParagraphWithFont(
         text: String,
@@ -114,40 +120,15 @@ object BilingualPdfHelper {
         color: DeviceRgb? = null,
         alignment: TextAlignment? = null
     ): Paragraph {
-        val p = Paragraph().setFontSize(fontSize)
-        color?.let { p.setFontColor(it) }
-        alignment?.let { p.setTextAlignment(it) }
-
-        val hasArabic = ArabicFontProvider.containsArabic(text)
-
-        if (hasArabic) {
-            // CRITICAL: Shape Arabic letters to Presentation Forms (0xFE80-0xFEFF)
-            // BEFORE passing to iText. iText 8 AGPL does NOT apply Arabic shaping
-            // automatically (requires paid pdfCalligraph module).
-            // ArabicShaper converts base letters (0x0621-0x064A) based on contextual
-            // position (isolated/initial/medial/final) and handles Lam-Alef ligatures.
-            val shapedText = ArabicShaper.shapeIfArabic(text)
-            // Use the Arabic font (which also has Latin glyphs) for the entire text
-            // This lets iText's bidi algorithm properly order mixed text
-            val run = Text(shapedText).setFont(font)
-            p.add(run)
-            // Set paragraph base direction to RTL so bidi algorithm processes correctly
-            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            // Default to right alignment for Arabic unless specified
-            if (alignment == null) {
-                p.setTextAlignment(TextAlignment.RIGHT)
-            }
-        } else {
-            // Pure Latin/numeric text — use the provided font (could be Arabic font
-            // which has Latin glyphs, or a separate Helvetica font)
-            val run = Text(text).setFont(font)
-            p.add(run)
-            if (alignment == null) {
-                p.setTextAlignment(TextAlignment.LEFT)
-            }
-        }
-
-        return p
+        val latinFont = if (bold) getLatinFont(true) else getLatinFont(false)
+        return PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = font,
+            latinFont = latinFont,
+            fontSize = fontSize,
+            color = color,
+            alignment = alignment
+        )
     }
 
     /**
