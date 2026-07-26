@@ -104,6 +104,7 @@ fun SeismicScreen(
     val seismicDefaultName = stringResource(R.string.seismic_default_name)
     var designName by remember { mutableStateOf(seismicDefaultName) }
     var showSuccessMsg by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -119,61 +120,70 @@ fun SeismicScreen(
 
     fun calculate() {
         isCalculating = true
-        val designer = getDesigner()
-        val nFloors = numFloors.toIntOrNull()?.coerceIn(1, 50) ?: 5
-        val floorH = avgFloorHeight.toDoubleOrNull()?.coerceIn(2.0, 6.0) ?: 3.0
-        val w = totalWeight.toDoubleOrNull()?.coerceAtLeast(1.0) ?: 5000.0
-        val I = importanceFactor.toDoubleOrNull()?.coerceIn(0.5, 2.0) ?: 1.0
-        val R = reductionFactor.toDoubleOrNull()?.coerceAtLeast(1.0) ?: 5.0
+        try {
+            val designer = getDesigner()
+            val nFloors = numFloors.toIntOrNull()?.coerceIn(1, 50) ?: 5
+            val floorH = avgFloorHeight.toDoubleOrNull()?.coerceIn(2.0, 6.0) ?: 3.0
+            val w = totalWeight.toDoubleOrNull()?.coerceAtLeast(1.0) ?: 5000.0
+            val I = importanceFactor.toDoubleOrNull()?.coerceIn(0.5, 2.0) ?: 1.0
+            val R = reductionFactor.toDoubleOrNull()?.coerceAtLeast(1.0) ?: 5.0
 
-        // Floor weights distributed equally
-        val floorWeights = List(nFloors) { w / nFloors }
-        val floorHeights = List(nFloors) { (it + 1) * floorH }
+            // Floor weights distributed equally
+            val floorWeights = List(nFloors) { w / nFloors }
+            val floorHeights = List(nFloors) { (it + 1) * floorH }
 
-        val baseShearResult = designer.calculateBaseShear(
-            totalWeight = w,
-            seismicZone = selectedZone,
-            soilType = selectedSoil,
-            importanceFactor = I,
-            responseModificationFactor = R,
-            buildingHeight = totalHeight
-        )
-
-        // Fundamental period (approximate)
-        val T = 0.075 * totalHeight.pow(0.75)
-
-        // Spectrum values (generate curve)
-        val spectrumValues = (1..50).map { i ->
-            val period = i * 0.06          // 0.06s → 3.0s
-            designer.getResponseSpectrum(
-                period = period,
-                dampingRatio = 0.05,
+            val baseShearResult = designer.calculateBaseShear(
+                totalWeight = w,
+                seismicZone = selectedZone,
                 soilType = selectedSoil,
-                importanceFactor = I
+                importanceFactor = I,
+                responseModificationFactor = R,
+                buildingHeight = totalHeight
             )
+
+            // Fundamental period (approximate) — guard against NaN/Infinity
+            val safeHeight = if (totalHeight > 0) totalHeight else 15.0
+            val T = (0.075 * safeHeight.pow(0.75)).coerceAtLeast(0.01)
+
+            // Spectrum values (generate curve)
+            val spectrumValues = (1..50).map { i ->
+                val period = i * 0.06          // 0.06s → 3.0s
+                designer.getResponseSpectrum(
+                    period = period,
+                    dampingRatio = 0.05,
+                    soilType = selectedSoil,
+                    importanceFactor = I
+                )
+            }
+
+            val floorForces = designer.distributeSeismicForces(
+                baseShear = baseShearResult.baseShear,
+                floorWeights = floorWeights,
+                floorHeights = floorHeights
+            )
+
+            // Sa at T
+            val saAtT = designer.getResponseSpectrum(
+                period = T, dampingRatio = 0.05,
+                soilType = selectedSoil, importanceFactor = I
+            )
+
+            result = SeismicUiResult(
+                baseShearResult = baseShearResult,
+                spectrumValues = spectrumValues,
+                floorForces = floorForces,
+                fundamentalPeriod = T,
+                spectralAccel = saAtT.spectralAcceleration,
+                code = selectedCode.designCode
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("SeismicScreen", "Calculate failed", e)
+            // Defensive: ensure isCalculating is reset and show error via snackbar
+            showSuccessMsg = false
+            errorMessage = e.message ?: "Calculation failed"
+        } finally {
+            isCalculating = false
         }
-
-        val floorForces = designer.distributeSeismicForces(
-            baseShear = baseShearResult.baseShear,
-            floorWeights = floorWeights,
-            floorHeights = floorHeights
-        )
-
-        // Sa at T
-        val saAtT = designer.getResponseSpectrum(
-            period = T, dampingRatio = 0.05,
-            soilType = selectedSoil, importanceFactor = I
-        )
-
-        result = SeismicUiResult(
-            baseShearResult = baseShearResult,
-            spectrumValues = spectrumValues,
-            floorForces = floorForces,
-            fundamentalPeriod = T,
-            spectralAccel = saAtT.spectralAcceleration,
-            code = selectedCode.designCode
-        )
-        isCalculating = false
     }
 
     // ── Snackbar ────────────────────────────────────────────────────────────
@@ -183,6 +193,12 @@ fun SeismicScreen(
         if (showSuccessMsg) {
             snackbarHostState.showSnackbar(savedSuccessMsg)
             showSuccessMsg = false
+        }
+    }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { msg ->
+            snackbarHostState.showSnackbar("Error: $msg")
+            errorMessage = null
         }
     }
 

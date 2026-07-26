@@ -152,9 +152,13 @@ class SteelViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
+                // CRITICAL FIX (2026-07-27 v2): Use NativePdfExporter with StaticLayout
+                // for proper Arabic BIDI + HarfBuzz shaping.
                 val fileName = "Steel_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
 
                 // Generate steel drawing bitmap using actual section properties
                 val drawingBitmap = try {
@@ -170,33 +174,60 @@ class SteelViewModel @Inject constructor(
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 
-                // Map to domain DesignCode
-                val domainCode = when (stored.code) {
-                    CalculatorEngine.DesignCode.ACI -> DesignCode.ACI
-                    CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
-                    else -> DesignCode.ECP
+                val isAr = com.civileg.app.utils.LocaleHelper.isArabic()
+                fun t(ar: String, en: String) = if (isAr) ar else en
+
+                val codeName = when (stored.code) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
                 }
 
-                val exportedFile = exporter.run {
-                    setLanguage(settingsManager.language)
-                    exportSteelReport(
-                        projectName = "تقرير تصميم قطاع معدني - ${stored.section.displayName}",
-                        designCode = domainCode,
-                        sectionType = stored.section,
-                        memberType = stored.memberType,
-                        inputs = stored.inputs,
-                        result = res,
-                        connectionDesign = res.connectionDesign,
-                        outputPath = file.absolutePath,
-                        drawingBitmap = drawingBitmap
+                val inputsMap = mapOf(
+                    t("نوع القطاع", "Section Type") to stored.section.displayName,
+                    t("نوع العنصر", "Member Type") to stored.memberType.displayName,
+                    t("كود التصميم", "Design Code") to codeName,
+                    t("الطول", "Length") to "${stored.inputs.length} m",
+                    t("الحمل المحوري", "Axial Load") to "${stored.inputs.axialLoad} kN",
+                    t("العزم", "Moment") to "${stored.inputs.moment} kN.m",
+                    t("قوة القص", "Shear Force") to "${stored.inputs.shear} kN"
+                )
+                val resultsMap = mapOf(
+                    t("السعة المحورية", "Axial Capacity") to "${String.format("%.2f", res.axialCapacity)} kN",
+                    t("سعة العزم", "Moment Capacity") to "${String.format("%.2f", res.momentCapacity)} kN",
+                    t("سعة القص", "Shear Capacity") to "${String.format("%.2f", res.shearCapacity)} kN",
+                    t("نسبة الاستغلال", "Utilization") to "${(res.utilizationRatio * 100).toInt()}%",
+                    t("الحالة", "Status") to if (res.isSafe) t("آمن", "SAFE") else t("غير آمن", "UNSAFE")
+                )
+                val safetyChecks = res.safetyChecks.map { chk ->
+                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = chk.name,
+                        calculated = chk.value,
+                        limit = chk.limit,
+                        unit = chk.unit,
+                        passed = chk.isSafe
                     )
                 }
 
+                val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                val generated = exporter.generateReport(
+                    title = if (isAr) "تقرير تصميم قطاع معدني - ${stored.section.displayName}"
+                            else "Steel Member Design Report — ${stored.section.displayName}",
+                    subtitle = "${t("الكود", "Code")}: $codeName  •  ${stored.memberType.displayName}",
+                    designType = "Steel — ${stored.section.displayName}",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
+                )
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    if (exportedFile != null) {
-                        com.civileg.app.utils.ExportUtils.openPdf(context, exportedFile)
+                    if (generated != null) {
+                        com.civileg.app.utils.ExportUtils.openPdf(context, generated)
                     }
-                    onComplete(exportedFile)
+                    onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Exception) {

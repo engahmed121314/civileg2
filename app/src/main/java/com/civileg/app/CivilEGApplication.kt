@@ -9,6 +9,7 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
 import dagger.hilt.android.HiltAndroidApp
 import com.civileg.app.security.PlaySafetyChecker
+import com.civileg.app.utils.LocaleHelper
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.initialization.InitializationStatus
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,10 @@ class CivilEGApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize LocaleHelper with app context so enum displayName properties
+        // can query the current language without needing a Context parameter.
+        LocaleHelper.initApplicationContext(this)
 
         // Initialize AdMob safely (checks GMS availability first)
         initializeAds()

@@ -41,6 +41,37 @@ object LocaleHelper {
     }
 
     /**
+     * Quick check: is the current app locale Arabic?
+     * Useful in enum displayName properties where context isn't easily accessible.
+     */
+    fun isArabic(): Boolean {
+        // Use the app-wide SharedPreferences directly to avoid needing a Context
+        // This is consistent with SettingsManager and getLocale
+        return try {
+            val ctx = currentAppContext ?: return false
+            getLocale(ctx) == "ar"
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Set the application context for use in isArabic() — called from CivilEGApplication.onCreate().
+     */
+    @Volatile
+    private var currentAppContext: Context? = null
+
+    fun initApplicationContext(context: Context) {
+        currentAppContext = context.applicationContext
+    }
+
+    /**
+     * Public access to the app context (for utilities like PdfDrawingGenerator
+     * that need to load font assets but don't receive a Context parameter).
+     */
+    fun getAppContext(): Context? = currentAppContext
+
+    /**
      * Wrap a base Context with the correct locale configuration.
      * Use in Activity.attachBaseContext() for proper per-activity locale.
      */

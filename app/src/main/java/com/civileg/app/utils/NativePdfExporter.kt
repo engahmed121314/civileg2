@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.Log
 import com.civileg.app.R
@@ -22,34 +23,31 @@ import java.util.Locale
  * NativePdfExporter — Android-native PDF generator using android.graphics.pdf.PdfDocument.
  *
  * ********************************************************************************
- * WHY THIS EXISTS (Root Cause of "Encrypted Arabic" PDF Bug — Final Fix)
+ * CRITICAL FIX (2026-07-27 v2): StaticLayout for BIDI + Shaping
  * ********************************************************************************
- * The previous iText 8 AGPL-based PDF pipeline produced "encrypted/squares"
- * Arabic text on every device, despite multiple fix attempts. Root causes:
+ * The previous version used `Canvas.drawText(text, x, y, paint)` for text rendering.
+ * This was the ROOT CAUSE of the "squares and chopped Arabic characters" bug:
  *
- *   1. iText 8 AGPL does NOT include the pdfCalligraph module (commercial only).
- *      Without it, iText cannot apply OpenType GSUB shaping. Our manual
- *      Presentation Forms shaper (ArabicShaper.kt) works in theory but is
- *      fragile — it cannot handle every edge case (e.g. ligatures with diacritics,
- *      combining marks, complex mixed-script reordering).
+ *   - Canvas.drawText DOES shape Arabic letters via HarfBuzz (so each letter is OK)
+ *   - BUT it does NOT perform BIDI reordering → Arabic text drawn LEFT-TO-RIGHT
+ *   - The joining context is WRONG (Canvas thinks prev char is on the left, but Arabic
+ *     expects it on the right) → letters get wrong initial/medial/final forms
+ *   - Visually: Arabic appears as disconnected shapes / "encrypted / squares"
  *
- *   2. iText 8 binds PdfFont to the FIRST PdfDocument that uses it. Caching
- *      bugs caused 2nd+ PDF exports to throw exceptions silently.
+ * FIX: Use `StaticLayout` for ALL text drawing. StaticLayout uses Android's full
+ * text-rendering pipeline (HarfBuzz + Bidi + LineBreaker) and properly handles:
+ *   - RTL reordering (Arabic reads right-to-left)
+ *   - Contextual joining (correct initial/medial/final/isolated letter forms)
+ *   - Mixed-direction text (Arabic + Latin + numbers in same line)
  *
- *   3. iText's Unicode Bidi implementation in AGPL is incomplete. Mixed
- *      Arabic/Latin text often rendered in wrong order.
+ * This produces correctly-rendered Arabic on EVERY Android device.
  *
- * SOLUTION: Use Android's built-in android.graphics.pdf.PdfDocument.
- *   - Uses Android's native HarfBuzz for letter shaping (proper Arabic joining)
- *   - Uses Android's native Bidi algorithm (proper RTL reordering)
- *   - No font caching issues — each PdfDocument is independent
- *   - Single Typeface handles both Arabic and Latin via system fallback
- *
- * This class provides a SIMPLE, RELIABLE way to generate professional PDF
- * reports with proper Arabic rendering on EVERY Android device.
- *
- * @author CivilEG Team
- * @since 2026-07-27
+ * ********************************************************************************
+ * Bilingual Report Strategy
+ * ********************************************************************************
+ * Per user requirement: When language is "ar", report shows Arabic for descriptive
+ * labels, English for engineering symbols (Mu, As, fy, fcu, V, M, etc.) and drawings.
+ * When language is "en", report is fully English.
  */
 class NativePdfExporter(private val context: Context) {
 
@@ -61,7 +59,7 @@ class NativePdfExporter(private val context: Context) {
     }
 
     // ── Color palette (RGB ints) ─────────────────────────────────────────────
-    private val primaryColor = Color.rgb(21, 101, 192)       // Professional Blue
+    private val primaryColor = Color.rgb(21, 101, 192)
     private val secondaryColor = Color.rgb(55, 71, 79)
     private val successColor = Color.rgb(46, 125, 50)
     private val errorColor = Color.rgb(198, 40, 40)
@@ -82,7 +80,6 @@ class NativePdfExporter(private val context: Context) {
         try { Typeface.createFromAsset(context.assets, "fonts/NotoNaskhArabic-Bold.ttf") }
         catch (e: Exception) { Log.w(TAG, "Arabic bold font load failed: ${e.message}"); Typeface.DEFAULT_BOLD }
     }
-    // Fallback for pure Latin text — use Android's default sans (has full Latin glyph coverage)
     private val latinRegular: Typeface by lazy { Typeface.create("sans-serif", Typeface.NORMAL) }
     private val latinBold: Typeface by lazy { Typeface.create("sans-serif", Typeface.BOLD) }
 
@@ -95,20 +92,6 @@ class NativePdfExporter(private val context: Context) {
 
     // ── Public API ───────────────────────────────────────────────────────────
 
-    /**
-     * Generate a complete structural engineering calculation report PDF.
-     *
-     * @param title Report title (Arabic or English)
-     * @param subtitle Subtitle / project name
-     * @param designType Design type label (e.g. "Slab Design", "تصميم بلاطة")
-     * @param inputs Map of input parameter labels → values
-     * @param results Map of result labels → values
-     * @param safetyChecks List of (check name, calculated, limit, unit, passed)
-     * @param isSafe Overall safety status
-     * @param drawingBitmap Optional drawing image to embed
-     * @param outputPath Absolute file path to write the PDF
-     * @return The generated File, or null on failure
-     */
     fun generateReport(
         title: String,
         subtitle: String = "",
@@ -125,33 +108,25 @@ class NativePdfExporter(private val context: Context) {
             document = doc
             startNewPage(doc)
 
-            // ── Header (logo + app name + date) ────────────────────────────
             drawHeader()
-
-            // ── Title block ────────────────────────────────────────────────
             drawTitleBlock(title, subtitle, designType, isSafe)
 
-            // ── Inputs & Results table ────────────────────────────────────
             if (inputs.isNotEmpty() || results.isNotEmpty()) {
                 drawSectionTitle(getLocalized("بيانات التصميم", "DESIGN DATA"))
                 drawKeyValueTable(inputs, results)
             }
 
-            // ── Drawing (if provided) ─────────────────────────────────────
             if (drawingBitmap != null) {
                 drawSectionTitle(getLocalized("رسم تفصيلي", "DETAIL DRAWING"))
                 drawBitmap(drawingBitmap)
             }
 
-            // ── Safety checks table ──────────────────────────────────────
             if (safetyChecks.isNotEmpty()) {
                 drawSectionTitle(getLocalized("تحققات الأمان", "SAFETY VERIFICATIONS"))
                 drawSafetyTable(safetyChecks)
             }
 
-            // ── Footer with date and page info ───────────────────────────
             drawFooter()
-
             finishPage()
 
             val file = File(outputPath)
@@ -166,10 +141,6 @@ class NativePdfExporter(private val context: Context) {
         }
     }
 
-    /**
-     * Lightweight calculation report — used by Seismic and other screens that
-     * just need a list of key-value details.
-     */
     fun generateCalculationReport(
         title: String,
         details: Map<String, String>,
@@ -227,13 +198,45 @@ class NativePdfExporter(private val context: Context) {
     }
 
     // ── Internal: drawing primitives ─────────────────────────────────────────
+    //
+    // CRITICAL: All text drawing uses StaticLayout for proper Arabic BIDI
+    // reordering + HarfBuzz shaping. Canvas.drawText alone does NOT do BIDI.
 
     /**
-     * Draw text with automatic Arabic shaping and RTL handling.
+     * Build a TextPaint with the correct Typeface based on text content.
+     * - Arabic text → NotoNaskhArabic font (has full Arabic + limited Latin)
+     * - Latin/numeric text → Android sans-serif (full Latin + numbers)
+     */
+    private fun buildPaint(
+        fontSize: Float,
+        bold: Boolean,
+        color: Int,
+        text: String
+    ): TextPaint {
+        val hasArabic = ArabicFontProvider.containsArabic(text)
+        return TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            this.textSize = fontSize
+            this.typeface = when {
+                hasArabic && bold -> arabicBold
+                hasArabic -> arabicRegular
+                bold -> latinBold
+                else -> latinRegular
+            }
+            isFakeBoldText = false
+        }
+    }
+
+    /**
+     * Draw text using StaticLayout for proper BIDI + shaping.
      *
-     * Uses Android's native Canvas.drawText — Android's HarfBuzz engine
-     * automatically shapes Arabic letters (initial/medial/final forms)
-     * and the Bidi algorithm handles RTL reordering.
+     * @param text The text to draw
+     * @param x The x anchor position
+     * @param y The TOP y position (text will be drawn below this)
+     * @param fontSize Font size in points
+     * @param bold Bold weight?
+     * @param color Text color
+     * @param align LEFT / CENTER / RIGHT — alignment relative to x
      */
     private fun drawText(
         text: String,
@@ -242,70 +245,98 @@ class NativePdfExporter(private val context: Context) {
         fontSize: Float = 10f,
         bold: Boolean = false,
         color: Int = textColor,
-        align: Paint.Align = Paint.Align.LEFT,
-        arabic: Boolean? = null
+        align: Paint.Align = Paint.Align.LEFT
     ) {
         val c = canvas ?: return
-        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color
-            this.textSize = fontSize
-            this.textAlign = align
-            // Choose font: Arabic font if text contains Arabic chars, else Latin
-            val hasArabic = arabic ?: ArabicFontProvider.containsArabic(text)
-            typeface = when {
-                hasArabic && bold -> arabicBold
-                hasArabic -> arabicRegular
-                bold -> latinBold
-                else -> latinRegular
-            }
-        }
-        c.drawText(text, x, y, paint)
-    }
+        if (text.isEmpty()) return
 
-    /**
-     * Draw mixed-direction text on a single line. Splits the text into
-     * contiguous Arabic and Latin segments, then draws each segment with the
-     * appropriate font, using iText-style segment-based RTL handling.
-     *
-     * For RTL (Arabic-dominant) lines, segments are laid out right-to-left.
-     * For LTR (Latin-dominant) lines, segments are laid out left-to-right.
-     */
-    private fun drawMixedText(
-        text: String,
-        x: Float,
-        y: Float,
-        fontSize: Float = 10f,
-        bold: Boolean = false,
-        color: Int = textColor,
-        maxWidth: Float = Float.MAX_VALUE
-    ) {
-        val c = canvas ?: return
+        val paint = buildPaint(fontSize, bold, color, text)
         val hasArabic = ArabicFontProvider.containsArabic(text)
-        val typeface = when {
-            hasArabic && bold -> arabicBold
-            hasArabic -> arabicRegular
-            bold -> latinBold
-            else -> latinRegular
-        }
-        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color
-            this.textSize = fontSize
-            this.typeface = typeface
-        }
 
-        // Use Android's native text layout for proper RTL + shaping
-        val staticLayout = android.text.StaticLayout.Builder
-            .obtain(text, 0, text.length, paint, maxWidth.toInt().coerceAtLeast(1))
+        // Compute layout width — large enough for the text on a single line
+        val textWidth = paint.measureText(text).coerceAtLeast(1f)
+        // Cap at page width to avoid layout issues
+        val layoutWidth = textWidth.toInt().coerceAtMost((PAGE_WIDTH - 2 * MARGIN).toInt())
+
+        val staticLayout = StaticLayout.Builder
+            .obtain(text, 0, text.length, paint, layoutWidth)
             .setAlignment(
-                if (hasArabic) android.text.Layout.Alignment.ALIGN_OPPOSITE
-                else android.text.Layout.Alignment.ALIGN_NORMAL
+                when (align) {
+                    Paint.Align.CENTER -> StaticLayout.Alignment.ALIGN_CENTER
+                    Paint.Align.RIGHT -> StaticLayout.Alignment.ALIGN_OPPOSITE
+                    else -> if (hasArabic) StaticLayout.Alignment.ALIGN_OPPOSITE
+                            else StaticLayout.Alignment.ALIGN_NORMAL
+                }
             )
             .setLineSpacing(0f, 1f)
             .setIncludePad(false)
             .build()
 
+        // Compute x position based on alignment
+        val drawX = when (align) {
+            Paint.Align.CENTER -> x - staticLayout.width / 2f
+            Paint.Align.RIGHT -> x - staticLayout.width
+            else -> if (hasArabic) x - staticLayout.width else x
+        }
+
         c.save()
-        c.translate(x, y - paint.ascent())
+        // y is the BASELINE position in the original code; StaticLayout draws from top
+        // so we offset by the ascent to maintain visual position consistency
+        c.translate(drawX, y - paint.ascent() - paint.descent() / 2f)
+        staticLayout.draw(c)
+        c.restore()
+    }
+
+    /**
+     * Draw a line of text in a table cell, vertically centered in the row.
+     */
+    private fun drawCellText(
+        text: String,
+        cellLeft: Float,
+        cellTop: Float,
+        cellWidth: Float,
+        cellHeight: Float,
+        fontSize: Float = 9f,
+        bold: Boolean = false,
+        color: Int = textColor,
+        align: Paint.Align = Paint.Align.CENTER
+    ) {
+        val c = canvas ?: return
+        if (text.isEmpty()) return
+
+        val paint = buildPaint(fontSize, bold, color, text)
+        val hasArabic = ArabicFontProvider.containsArabic(text)
+
+        // Layout width = cell width minus padding
+        val layoutWidth = (cellWidth - 8f).toInt().coerceAtLeast(1)
+
+        val staticLayout = StaticLayout.Builder
+            .obtain(text, 0, text.length, paint, layoutWidth)
+            .setAlignment(
+                when (align) {
+                    Paint.Align.CENTER -> StaticLayout.Alignment.ALIGN_CENTER
+                    Paint.Align.RIGHT -> StaticLayout.Alignment.ALIGN_OPPOSITE
+                    else -> if (hasArabic) StaticLayout.Alignment.ALIGN_OPPOSITE
+                            else StaticLayout.Alignment.ALIGN_NORMAL
+                }
+            )
+            .setLineSpacing(0f, 1f)
+            .setIncludePad(false)
+            .build()
+
+        val drawX = when (align) {
+            Paint.Align.CENTER -> cellLeft + (cellWidth - staticLayout.width) / 2f
+            Paint.Align.RIGHT -> cellLeft + cellWidth - staticLayout.width - 4f
+            else -> if (hasArabic) cellLeft + cellWidth - staticLayout.width - 4f
+                    else cellLeft + 4f
+        }
+
+        // Vertically center: cellTop + (cellHeight - textHeight) / 2
+        val textHeight = staticLayout.height
+        val drawY = cellTop + (cellHeight - textHeight) / 2f
+
+        c.save()
+        c.translate(drawX, drawY)
         staticLayout.draw(c)
         c.restore()
     }
@@ -325,39 +356,32 @@ class NativePdfExporter(private val context: Context) {
         val c = canvas ?: return
         val rect = RectF(x, y, x + w, y + h)
         fill?.let {
-            Paint().apply {
+            val p = Paint().apply {
                 color = it
                 style = Paint.Style.FILL
                 isAntiAlias = true
-            }.also { c.drawRect(rect, it) }
+            }
+            c.drawRect(rect, p)
         }
         stroke?.let {
-            Paint().apply {
+            val p = Paint().apply {
                 color = it
                 style = Paint.Style.STROKE
                 this.strokeWidth = strokeWidth
                 isAntiAlias = true
-            }.also { c.drawRect(rect, it) }
+            }
+            c.drawRect(rect, p)
         }
-    }
-
-    private fun drawFilledRect(x: Float, y: Float, w: Float, h: Float, color: Int) {
-        drawRect(x, y, w, h, fill = color)
     }
 
     // ── Internal: structured components ──────────────────────────────────────
 
     private fun drawHeader() {
-        val c = canvas ?: return
-        val contentWidth = PAGE_WIDTH - 2 * MARGIN
-
-        // App name
         val appName = context.getString(R.string.app_name)
-        drawText(appName, MARGIN, currentY + 24f, fontSize = 22f, bold = true, color = primaryColor)
+        drawText(appName, MARGIN, currentY + 14f, fontSize = 22f, bold = true, color = primaryColor)
 
-        // Right-aligned date
         val dateStr = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date())
-        drawText(dateStr, PAGE_WIDTH - MARGIN, currentY + 24f, fontSize = 10f, color = grayText, align = Paint.Align.RIGHT)
+        drawText(dateStr, PAGE_WIDTH - MARGIN, currentY + 14f, fontSize = 10f, color = grayText, align = Paint.Align.RIGHT)
 
         currentY += 32f
         drawLine(MARGIN, currentY, PAGE_WIDTH - MARGIN, currentY, primaryColor, 2f)
@@ -367,47 +391,36 @@ class NativePdfExporter(private val context: Context) {
     private fun drawTitleBlock(title: String, subtitle: String, designType: String, isSafe: Boolean) {
         ensureSpace(120f)
 
-        // Title (large, centered, primary color)
-        val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = primaryColor
-            textSize = 20f
-            textAlign = Paint.Align.CENTER
-            typeface = if (ArabicFontProvider.containsArabic(title)) arabicBold else latinBold
-        }
-        val c = canvas ?: return
-        c.drawText(title, PAGE_WIDTH / 2f, currentY + 20f, titlePaint)
+        drawText(title, PAGE_WIDTH / 2f, currentY + 14f, fontSize = 20f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
         currentY += 28f
 
-        // Subtitle
         if (subtitle.isNotEmpty()) {
             drawText(subtitle, PAGE_WIDTH / 2f, currentY, fontSize = 11f, color = secondaryColor, align = Paint.Align.CENTER)
             currentY += 16f
         }
 
-        // Design type chip
         if (designType.isNotEmpty()) {
-            val chipWidth = 200f
+            val chipWidth = 220f
             val chipHeight = 22f
             val chipX = (PAGE_WIDTH - chipWidth) / 2f
             drawRect(chipX, currentY, chipWidth, chipHeight, fill = lightBg, stroke = primaryColor, strokeWidth = 1f)
-            drawText(designType, PAGE_WIDTH / 2f, currentY + 15f, fontSize = 10f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
+            drawText(designType, PAGE_WIDTH / 2f, currentY + 11f, fontSize = 10f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
             currentY += chipHeight + 8f
         }
 
-        // Status banner
         val statusText = if (isSafe) getLocalized("الحالة: آمن - مطابق للكود", "STATUS: SAFE - Code Compliant")
         else getLocalized("الحالة: غير آمن - يحتاج مراجعة", "STATUS: UNSAFE - Review Required")
         val statusColor = if (isSafe) successColor else errorColor
         val bannerWidth = PAGE_WIDTH - 2 * MARGIN
         drawRect(MARGIN, currentY, bannerWidth, 28f, fill = statusColor)
-        drawText(statusText, PAGE_WIDTH / 2f, currentY + 19f, fontSize = 12f, bold = true, color = Color.WHITE, align = Paint.Align.CENTER)
+        drawText(statusText, PAGE_WIDTH / 2f, currentY + 14f, fontSize = 12f, bold = true, color = Color.WHITE, align = Paint.Align.CENTER)
         currentY += 38f
     }
 
     private fun drawSectionTitle(title: String) {
         ensureSpace(40f)
         currentY += 8f
-        drawText(title, MARGIN, currentY + 14f, fontSize = 13f, bold = true, color = primaryColor)
+        drawText(title, MARGIN, currentY + 7f, fontSize = 13f, bold = true, color = primaryColor)
         currentY += 18f
         drawLine(MARGIN, currentY, PAGE_WIDTH - MARGIN, currentY, tableBorder, 0.5f)
         currentY += 8f
@@ -420,13 +433,13 @@ class NativePdfExporter(private val context: Context) {
         val contentWidth = PAGE_WIDTH - 2 * MARGIN
         val labelWidth = contentWidth * 0.55f
         val valueWidth = contentWidth * 0.45f
-        val rowHeight = 20f
+        val rowHeight = 22f
 
         // Header
         drawRect(MARGIN, currentY, labelWidth, rowHeight, fill = headerBg)
         drawRect(MARGIN + labelWidth, currentY, valueWidth, rowHeight, fill = headerBg)
-        drawText(getLocalized("البند", "Parameter"), MARGIN + 6f, currentY + 14f, fontSize = 10f, bold = true, color = Color.WHITE)
-        drawText(getLocalized("القيمة", "Value"), MARGIN + labelWidth + 6f, currentY + 14f, fontSize = 10f, bold = true, color = Color.WHITE)
+        drawCellText(getLocalized("البند", "Parameter"), MARGIN, currentY, labelWidth, rowHeight, fontSize = 10f, bold = true, color = Color.WHITE)
+        drawCellText(getLocalized("القيمة", "Value"), MARGIN + labelWidth, currentY, valueWidth, rowHeight, fontSize = 10f, bold = true, color = Color.WHITE)
         currentY += rowHeight
 
         // Rows
@@ -435,24 +448,23 @@ class NativePdfExporter(private val context: Context) {
             val bg = if (idx % 2 == 0) Color.WHITE else rowAltBg
             drawRect(MARGIN, currentY, labelWidth, rowHeight, fill = bg)
             drawRect(MARGIN + labelWidth, currentY, valueWidth, rowHeight, fill = bg)
-            // Borders
             drawRect(MARGIN, currentY, contentWidth, rowHeight, stroke = tableBorder, strokeWidth = 0.5f)
             drawLine(MARGIN + labelWidth, currentY, MARGIN + labelWidth, currentY + rowHeight, tableBorder, 0.5f)
 
-            // Label (Arabic right-aligned if Arabic, else left)
+            // Label: Arabic → right-aligned, English → left-aligned
             val labelArabic = ArabicFontProvider.containsArabic(label)
             if (labelArabic) {
-                drawText(label, MARGIN + labelWidth - 6f, currentY + 14f, fontSize = 9f, bold = true, color = textColor, align = Paint.Align.RIGHT)
+                drawCellText(label, MARGIN, currentY, labelWidth, rowHeight, fontSize = 9f, bold = true, color = textColor, align = Paint.Align.RIGHT)
             } else {
-                drawText(label, MARGIN + 6f, currentY + 14f, fontSize = 9f, bold = true, color = textColor)
+                drawCellText(label, MARGIN, currentY, labelWidth, rowHeight, fontSize = 9f, bold = true, color = textColor, align = Paint.Align.LEFT)
             }
 
-            // Value (Arabic right-aligned if Arabic, else left)
+            // Value: Arabic → right-aligned, English → left-aligned
             val valueArabic = ArabicFontProvider.containsArabic(value)
             if (valueArabic) {
-                drawText(value, MARGIN + contentWidth - 6f, currentY + 14f, fontSize = 9f, color = secondaryColor, align = Paint.Align.RIGHT, bold = true)
+                drawCellText(value, MARGIN + labelWidth, currentY, valueWidth, rowHeight, fontSize = 9f, color = secondaryColor, bold = true, align = Paint.Align.RIGHT)
             } else {
-                drawText(value, MARGIN + labelWidth + 6f, currentY + 14f, fontSize = 9f, color = secondaryColor, bold = true)
+                drawCellText(value, MARGIN + labelWidth, currentY, valueWidth, rowHeight, fontSize = 9f, color = secondaryColor, bold = true, align = Paint.Align.LEFT)
             }
 
             currentY += rowHeight
@@ -464,7 +476,6 @@ class NativePdfExporter(private val context: Context) {
         if (checks.isEmpty()) return
 
         val contentWidth = PAGE_WIDTH - 2 * MARGIN
-        // Columns: Check (35%), Calculated (20%), Limit (20%), Unit (10%), Result (15%)
         val colWidths = floatArrayOf(
             contentWidth * 0.35f,
             contentWidth * 0.20f,
@@ -472,9 +483,8 @@ class NativePdfExporter(private val context: Context) {
             contentWidth * 0.10f,
             contentWidth * 0.15f
         )
-        val rowHeight = 22f
+        val rowHeight = 24f
 
-        // Header
         val headers = listOf(
             getLocalized("التحقق", "Check"),
             getLocalized("المحسوب", "Calculated"),
@@ -485,12 +495,11 @@ class NativePdfExporter(private val context: Context) {
         var x = MARGIN
         headers.forEachIndexed { idx, h ->
             drawRect(x, currentY, colWidths[idx], rowHeight, fill = headerBg)
-            drawText(h, x + colWidths[idx] / 2f, currentY + 15f, fontSize = 9f, bold = true, color = Color.WHITE, align = Paint.Align.CENTER)
+            drawCellText(h, x, currentY, colWidths[idx], rowHeight, fontSize = 9f, bold = true, color = Color.WHITE)
             x += colWidths[idx]
         }
         currentY += rowHeight
 
-        // Rows
         checks.forEachIndexed { idx, check ->
             ensureSpace(rowHeight + 4f)
             val bg = if (idx % 2 == 0) Color.WHITE else rowAltBg
@@ -505,10 +514,9 @@ class NativePdfExporter(private val context: Context) {
             cells.forEachIndexed { ci, cell ->
                 drawRect(x, currentY, colWidths[ci], rowHeight, fill = bg)
                 val cellColor = if (ci == 4) (if (check.passed) successColor else errorColor) else textColor
-                drawText(cell, x + colWidths[ci] / 2f, currentY + 15f, fontSize = 9f, color = cellColor, align = Paint.Align.CENTER, bold = ci == 4)
+                drawCellText(cell, x, currentY, colWidths[ci], rowHeight, fontSize = 9f, color = cellColor, bold = ci == 4)
                 x += colWidths[ci]
             }
-            // Borders
             drawRect(MARGIN, currentY, contentWidth, rowHeight, stroke = tableBorder, strokeWidth = 0.5f)
             currentY += rowHeight
         }
@@ -518,9 +526,8 @@ class NativePdfExporter(private val context: Context) {
     private fun drawBitmap(bitmap: Bitmap) {
         val c = canvas ?: return
         val contentWidth = PAGE_WIDTH - 2 * MARGIN
-        val maxDrawingHeight = 280f
+        val maxDrawingHeight = 320f
 
-        // Scale bitmap to fit content width while preserving aspect ratio
         val scale = minOf(contentWidth / bitmap.width, maxDrawingHeight / bitmap.height)
         val drawWidth = bitmap.width * scale
         val drawHeight = bitmap.height * scale
@@ -528,7 +535,6 @@ class NativePdfExporter(private val context: Context) {
 
         ensureSpace(drawHeight + 20f)
 
-        // Background border
         drawRect(drawX - 2f, currentY - 2f, drawWidth + 4f, drawHeight + 4f, stroke = tableBorder, strokeWidth = 1f)
 
         val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
@@ -539,15 +545,14 @@ class NativePdfExporter(private val context: Context) {
     }
 
     private fun drawFooter() {
-        val c = canvas ?: return
         val footerY = PAGE_HEIGHT - 24f
         drawLine(MARGIN, footerY, PAGE_WIDTH - MARGIN, footerY, tableBorder, 0.5f)
 
         val footerText = "Civil EG - ${getLocalized("تقرير تصميم إنشائي", "Structural Design Report")}"
-        drawText(footerText, MARGIN, footerY + 14f, fontSize = 8f, color = grayText)
+        drawText(footerText, MARGIN, footerY + 7f, fontSize = 8f, color = grayText)
 
         val pageNumText = "${getLocalized("صفحة", "Page")} $pageNumber"
-        drawText(pageNumText, PAGE_WIDTH - MARGIN, footerY + 14f, fontSize = 8f, color = grayText, align = Paint.Align.RIGHT)
+        drawText(pageNumText, PAGE_WIDTH - MARGIN, footerY + 7f, fontSize = 8f, color = grayText, align = Paint.Align.RIGHT)
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

@@ -9,6 +9,16 @@ import kotlin.math.*
  * Generates engineering drawing Bitmaps for PDF report embedding.
  * Uses Android Canvas API (not Compose) for direct bitmap generation.
  * Drawing style matches the Professional*Drawing Compose components.
+ *
+ * ********************************************************************************
+ * BILINGUAL SUPPORT (2026-07-27 v2)
+ * ********************************************************************************
+ * All text on drawings is rendered via [drawBilingualText] which uses StaticLayout
+ * for proper Arabic BIDI reordering + HarfBuzz shaping. This ensures Arabic
+ * descriptions render correctly (connected letters, right-to-left order) while
+ * engineering symbols (fy, fcu, Mu, As) remain in Latin script.
+ *
+ * Use [t] to pick the right label based on the current app locale.
  */
 object PdfDrawingGenerator {
 
@@ -29,6 +39,24 @@ object PdfDrawingGenerator {
     private val TABLE_ALT = Color.parseColor("#1AFFFFFF")
     private val SOIL_BROWN = Color.parseColor("#8B6914")
     private val WATER_BLUE = Color.parseColor("#1A5276")
+
+    /** Arabic typeface (cached, lazy-loaded) for bilingual drawing text */
+    @Volatile private var arabicTypeface: Typeface? = null
+
+    private fun getArabicTypeface(): Typeface? {
+        if (arabicTypeface != null) return arabicTypeface
+        // We need an app context to load assets. Use LocaleHelper's stored context.
+        return try {
+            val ctx = com.civileg.app.utils.LocaleHelper.getAppContext() ?: return null
+            val tf = Typeface.createFromAsset(ctx.assets, "fonts/NotoNaskhArabic-Regular.ttf")
+            arabicTypeface = tf
+            tf
+        } catch (_: Exception) { null }
+    }
+
+    /** Pick Arabic or English label based on current locale */
+    fun t(ar: String, en: String): String =
+        if (LocaleHelper.isArabic()) ar else en
 
     private fun createCanvas(width: Int, height: Int): Pair<Bitmap, Canvas> {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -62,15 +90,83 @@ object PdfDrawingGenerator {
             this.textSize = size
             this.isAntiAlias = true
             this.style = Paint.Style.FILL
-            if (bold) this.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            // Use Arabic typeface if text contains Arabic characters
+            val defaultTf = if (bold) Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                            else Typeface.SANS_SERIF
+            this.typeface = defaultTf
         }
+    }
+
+    /**
+     * Build a TextPaint that uses the Arabic-capable font when text contains Arabic.
+     * This is critical for proper letter joining + BIDI reordering via StaticLayout.
+     */
+    private fun bilingualTextPaint(text: String, color: Int = DIM_TEXT, size: Float = 20f, bold: Boolean = false): TextPaint {
+        return TextPaint().apply {
+            this.color = color
+            this.textSize = size
+            this.isAntiAlias = true
+            this.style = Paint.Style.FILL
+            val hasArabic = LocaleHelper.containsArabic(text)
+            this.typeface = when {
+                hasArabic && getArabicTypeface() != null -> {
+                    if (bold) Typeface.create(getArabicTypeface(), Typeface.BOLD)
+                    else getArabicTypeface()
+                }
+                bold -> Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                else -> Typeface.SANS_SERIF
+            }
+        }
+    }
+
+    /**
+     * Draw bilingual text using StaticLayout for proper Arabic BIDI + shaping.
+     * CRITICAL: Do NOT use Canvas.drawText for Arabic — it produces wrong joining
+     * context (treats text as LTR) resulting in "encrypted-looking" squares.
+     */
+    private fun Canvas.drawBilingualText(
+        text: String,
+        x: Float,
+        y: Float,
+        color: Int = DIM_TEXT,
+        size: Float = 20f,
+        bold: Boolean = false,
+        align: Paint.Align = Paint.Align.LEFT
+    ) {
+        if (text.isEmpty()) return
+        val paint = bilingualTextPaint(text, color, size, bold)
+        // Layout width = max available width to the right edge
+        val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
+        val sl = StaticLayout.Builder
+            .obtain(text, 0, text.length, paint, layoutWidth)
+            .setAlignment(
+                when (align) {
+                    Paint.Align.CENTER -> StaticLayout.Alignment.ALIGN_CENTER
+                    Paint.Align.RIGHT -> StaticLayout.Alignment.ALIGN_OPPOSITE
+                    else -> if (LocaleHelper.containsArabic(text)) StaticLayout.Alignment.ALIGN_OPPOSITE
+                            else StaticLayout.Alignment.ALIGN_NORMAL
+                }
+            )
+            .setLineSpacing(0f, 1f)
+            .setIncludePad(false)
+            .build()
+        // Compute drawX for alignment
+        val drawX = when (align) {
+            Paint.Align.CENTER -> x - sl.width / 2f
+            Paint.Align.RIGHT -> x - sl.width
+            else -> if (LocaleHelper.containsArabic(text)) x - sl.width else x
+        }
+        this.save()
+        // y is the baseline; StaticLayout draws from top, so offset by ascent
+        this.translate(drawX, y - paint.ascent() - paint.descent() / 2f)
+        sl.draw(this)
+        this.restore()
     }
 
     // ========== TEXT HELPER ==========
     private fun Canvas.drawTextCentered(text: String, x: Float, y: Float, paint: Paint) {
-        paint.textAlign = Paint.Align.CENTER
-        drawText(text, x, y, paint)
-        paint.textAlign = Paint.Align.LEFT // reset
+        // Use bilingual rendering for proper Arabic shaping
+        drawBilingualText(text, x, y, paint.color, paint.textSize, bold = paint.typeface?.style == Typeface.BOLD, align = Paint.Align.CENTER)
     }
 
     // ========== DIMENSION LINES ==========
@@ -479,20 +575,25 @@ object PdfDrawingGenerator {
         }
         canvas.drawLine(planL, planT - 12f, planL + planW, planT - 12f, supportP)
 
-        // Plan dimensions
+        // Plan dimensions (bilingual labels)
         canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
         canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
 
-        // Plan title
-        val titleP = textPaint(Color.WHITE, 22f, true)
-        canvas.drawTextCentered("SLAB REINFORCEMENT PLAN", planL + planW / 2f, planT - 35f, titleP)
-        
-        // Legend in plan area
+        // Plan title (bilingual)
+        canvas.drawTextCentered(t("مسقط تسليح البلاطة", "SLAB REINFORCEMENT PLAN"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+
+        // Legend in plan area (bilingual)
         val legX = planL + 10f; val legY = planT + planH - 55f
         canvas.drawLine(legX, legY, legX + 25f, legY, mainP)
-        canvas.drawText("Main ${mainDia.toInt()}mm @ ${mainSpacing.toInt()}mm", legX + 30f, legY + 5f, textPaint(DIM_TEXT, 14f))
+        canvas.drawBilingualText(
+            t("رئيسي $mainDia mm @ $mainSpacing mm", "Main ${mainDia.toInt()}mm @ ${mainSpacing.toInt()}mm"),
+            legX + 30f, legY + 8f, DIM_TEXT, 14f
+        )
         canvas.drawLine(legX, legY + 18f, legX + 25f, legY + 18f, distP)
-        canvas.drawText("Dist ${distDia.toInt()}mm @ ${distSpacing.toInt()}mm", legX + 30f, legY + 23f, textPaint(DIM_TEXT, 14f))
+        canvas.drawBilingualText(
+            t("توزيع $distDia mm @ $distSpacing mm", "Dist ${distDia.toInt()}mm @ ${distSpacing.toInt()}mm"),
+            legX + 30f, legY + 26f, DIM_TEXT, 14f
+        )
 
         // ===== CROSS SECTION B-B (right side) =====
         val secL = W * 0.52f; val secT = 100f
@@ -509,7 +610,7 @@ object PdfDrawingGenerator {
         // Cover zone
         val covPx = cover.toFloat() / 1000f * secScale * 4f
         val visCover = maxOf(covPx, 8f)
-        
+
         // Bottom main bars in section (circles)
         val barR = maxOf(mainDia.toFloat() * 0.4f, 4f)
         val numBarsInSection = minOf((spanX * 1000 / mainSpacing).toInt(), 12)
@@ -540,27 +641,27 @@ object PdfDrawingGenerator {
         canvas.drawLine(coverDimX - 5f, secT, coverDimX + 5f, secT, dimP)
         canvas.drawLine(coverDimX, secT, coverDimX, secT + visCover, dimP)
         canvas.drawLine(coverDimX - 5f, secT + visCover, coverDimX + 5f, secT + visCover, dimP)
-        canvas.drawText("cover=${cover.toInt()}", coverDimX + 8f, secT + visCover / 2f + 5f, textPaint(DIM_TEXT, 14f))
+        canvas.drawBilingualText("cover=${cover.toInt()}", coverDimX + 8f, secT + visCover / 2f + 5f, DIM_TEXT, 14f)
 
-        // Section title
-        canvas.drawTextCentered("SECTION B-B", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+        // Section title (bilingual)
+        canvas.drawTextCentered(t("قطاع B-B", "SECTION B-B"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== REINFORCEMENT SCHEDULE TABLE (bottom) =====
         drawRebarTable(canvas,
             x = 80f, y = H * 0.6f,
             data = listOf(
-                listOf("Mark", "Dia (mm)", "Direction", "Spacing (mm)", "Layer", "Length (mm)"),
-                listOf("M1", "${mainDia.toInt()}", "Short span (Lx)", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${(spanX * 1000).toInt()}"),
-                listOf("D1", "${distDia.toInt()}", "Long span (Ly)", "@ ${distSpacing.toInt()} c/c", "Top", "${(spanY * 1000).toInt()}")
+                listOf(t("الرمز", "Mark"), t("القطر", "Dia (mm)"), t("الاتجاه", "Direction"), t("التباعد", "Spacing (mm)"), t("الطبقة", "Layer"), t("الطول", "Length (mm)")),
+                listOf("M1", "${mainDia.toInt()}", t("البحر القصير (Lx)", "Short span (Lx)"), "@ ${mainSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanX * 1000).toInt()}"),
+                listOf("D1", "${distDia.toInt()}", t("البحر الطويل (Ly)", "Long span (Ly)"), "@ ${distSpacing.toInt()} c/c", t("علوي", "Top"), "${(spanY * 1000).toInt()}")
             )
         )
 
         // ===== TITLE BLOCK =====
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Slab Reinforcement Detail")
-        
-        // Scale note
-        canvas.drawText("Scale: Not to scale - For reference only", 80f, H - 20f, textPaint(DIM_TEXT, 12f))
-        
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل تسليح البلاطة", "Slab Reinforcement Detail"))
+
+        // Scale note (bilingual)
+        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس - للمرجعية فقط", "Scale: Not to scale - For reference only"), 80f, H - 20f, DIM_TEXT, 12f)
+
         return bitmap
     }
 

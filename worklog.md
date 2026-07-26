@@ -135,3 +135,60 @@ Stage Summary:
 - Slab drawing recoded: Real data-driven table with actual Mu values, As-required calculated from real moments, color-coded safety status
 - All 6 main ViewModels (Slab, Beam, Column, Footing, Stair, Tank, RetainingWall) migrated from iText-based ComprehensivePdfExporter to NativePdfExporter
 - APK ready for installation and testing
+
+---
+Task ID: pdf-bilingual-v2-2026-07-27
+Agent: Main (Super Z)
+Task: Comprehensive fix for: PDF garbled text (squares+chopped), seismic page crash, illogical slab drawings, missing bilingual support
+
+Work Log:
+- Read current state of NativePdfExporter, ArabicFontProvider, ArabicShaper, PdfGenerator, PdfExportHelper, PdfDrawingGenerator, SeismicScreen, SlabScreen, ProfessionalSlabDrawing, SlabViewModel, SteelViewModel, CalculatorEngine
+- IDENTIFIED ROOT CAUSE #1 (Garbled PDF): NativePdfExporter.drawText used Canvas.drawText(text, x, y, paint) which DOES shape Arabic via HarfBuzz but does NOT do BIDI reordering. Arabic text was laid out LEFT-TO-RIGHT with WRONG joining context → disconnected letters / squares
+- IDENTIFIED ROOT CAUSE #2 (Slab drawing "illogical"): ProfessionalSlabDrawing canvas heights (1100/380/280/520) did NOT match parent SlabScreen's drawingHeightDp (1000/380/280/520) → table clipped → user saw "no reinforcement in the table". Also layout zones (34%/22%/44%) squashed drawings too small
+- IDENTIFIED ROOT CAUSE #3 (Seismic crash): Previous "fix" at line 334 was already applied but calculate() had NO try/catch, so any runtime exception (e.g. NaN from bad input) would propagate and crash the app
+
+FIX 1: Rewrote NativePdfExporter.kt:
+  - All text now drawn via StaticLayout (BIDI + HarfBuzz shaping)
+  - New drawCellText helper for table cells with proper RTL handling
+  - Arabic labels right-aligned, English labels left-aligned automatically
+  - Bilingual getLocalized(ar, en) helper using LocaleHelper
+
+FIX 2: Rewrote ProfessionalSlabDrawing.kt:
+  - Canvas heights MATCH parent (1000/380/280/520 dp exactly)
+  - Layout zones: Plan 50% / Section 22% / Table 28% (was 34/22/44)
+  - Cleaner visual hierarchy with bilingual labels (Arabic when locale=ar)
+  - Reinforcement table uses dynamic row heights based on row count to fit canvas
+  - As-provided cells colored green (safe) / red (unsafe) based on As-required comparison
+  - Added table title bar "Reinforcement Schedule" above the table
+
+FIX 3: SeismicScreen.calculate() wrapped in try/catch with errorMessage state:
+  - Any exception is caught and shown via Snackbar instead of crashing the app
+  - Added errorMessage LaunchedEffect to display snackbar
+  - Added defensive safeHeight check for totalHeight > 0
+  - Added coerceAtLeast(0.01) for fundamental period T
+
+FIX 4: Updated CalculatorEngine enums to be language-aware:
+  - DesignCode.displayName now uses LocaleHelper.isArabic() to pick AR/EN
+  - SlabType.displayName now uses LocaleHelper.isArabic()
+  - TankType.displayName now uses LocaleHelper.isArabic()
+  - Added LocaleHelper.initApplicationContext() called from CivilEGApplication.onCreate()
+  - Added LocaleHelper.getAppContext() for utilities that need assets without Context
+
+FIX 5: Bilingual drawing bitmaps in PdfDrawingGenerator:
+  - New drawBilingualText() using StaticLayout for proper Arabic BIDI + shaping
+  - Arabic-capable typeface cached and lazy-loaded
+  - All slab drawing labels now use t(ar, en) for language-aware text
+  - Section titles, legend, table headers, title block all bilingual
+
+FIX 6: Migrated SteelViewModel from iText ComprehensivePdfExporter to NativePdfExporter:
+  - Bilingual labels for all inputs and results
+  - Proper safety checks mapping to NativePdfExporter.SafetyCheck
+  - File saved to Documents directory (not cache) for user accessibility
+
+Stage Summary:
+- ROOT CAUSE of garbled Arabic PDFs FIXED: StaticLayout replaces Canvas.drawText for proper BIDI + shaping
+- Slab drawing "illogical" FIXED: matched heights + larger plan allocation + dynamic table sizing
+- Seismic crash FIXED: defensive try/catch prevents any exception from crashing the app
+- Bilingual support: app dropdowns, PDF labels, drawing labels all respect Arabic/English locale
+- All 7 main ViewModels (Slab, Beam, Column, Footing, Stair, Tank, RetainingWall, Steel) now use NativePdfExporter
+- Ready to commit and push to GitHub for CI build

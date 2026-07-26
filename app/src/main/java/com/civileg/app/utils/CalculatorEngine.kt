@@ -17,7 +17,13 @@ class CalculatorEngine @Inject constructor(
         ACI("الكود الأمريكي - ACI 318", "American Code - ACI 318"),
         SAUDI("الكود السعودي - SBC 304", "Saudi Code - SBC 304");
 
-        val displayName: String get() = displayNameEn
+        /**
+         * Language-aware display name.
+         * Shows Arabic name when app locale is "ar", English name otherwise.
+         * Engineering code abbreviations (ECP/ACI/SBC) are kept in both.
+         */
+        val displayName: String
+            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
 
         companion object {
             fun fromDomain(code: com.civileg.app.domain.entities.DesignCode): DesignCode {
@@ -34,11 +40,13 @@ class CalculatorEngine @Inject constructor(
     enum class SlabType(val displayNameAr: String, val displayNameEn: String) {
         SOLID("بلاطة صلبة", "Solid Slab"),
         FLAT("بلاطة مسطحة", "Flat Slab"),
-        HOLLOW_BLOCK("هردي", "Hollow Block"),
-        POST_TENSION("بوست تنشن", "Post-Tensioned"),
+        HOLLOW_BLOCK("بلاطة هردي", "Hollow Block"),
+        POST_TENSION("بلاطة بست تنشن", "Post-Tensioned"),
         WAFFLE("بلاطة وافل", "Waffle Slab");
 
-        val displayName: String get() = displayNameEn
+        /** Language-aware display name */
+        val displayName: String
+            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
     
     enum class SupportType(val displayName: String) {
@@ -54,7 +62,9 @@ class CalculatorEngine @Inject constructor(
         RECTANGULAR_ELEVATED("علوي مستطيل", "Rectangular Elevated"), CIRCULAR_ELEVATED("علوي دائري", "Circular Elevated"),
         UNDERGROUND("تحت الأرض مستطيل", "Underground Rectangular"), CIRCULAR_UNDERGROUND("تحت الأرض دائري", "Underground Circular");
 
-        val displayName: String get() = displayNameEn
+        /** Language-aware display name */
+        val displayName: String
+            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
 
     @Parcelize
