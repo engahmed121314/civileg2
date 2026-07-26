@@ -15,6 +15,7 @@
     <dimen name="text_size_xxl">32sp</dimen>
 
     <dimen name="card_radius">12dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
     <dimen name="button_radius">12dp</dimen>
     <dimen name="input_radius">8dp</dimen>
 </resources>
