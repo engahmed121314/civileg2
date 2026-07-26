@@ -49,12 +49,11 @@ object AdvancedPdfExporter {
         val p = Paragraph().setFontSize(fontSize)
         if (isBold) p.setBold()
         if (font != null && containsArabic(text)) {
-            // CRITICAL FIX: Use a single Text run with the Arabic font.
-            // The Arabic font (NotoNaskhArabic) has Latin glyphs too,
-            // so mixed text works correctly without splitting segments.
-            // Setting BaseDirection on Paragraph (not on Text run) triggers
-            // iText's Unicode Bidi Algorithm which shapes Arabic correctly.
-            p.add(com.itextpdf.layout.element.Text(text).setFont(font))
+            // CRITICAL FIX: Shape Arabic to Presentation Forms BEFORE iText rendering.
+            // iText 8 AGPL does NOT shape Arabic automatically — without shaping,
+            // letters render DISCONNECTED or as SQUARES.
+            val shapedText = ArabicShaper.shapeIfArabic(text)
+            p.add(com.itextpdf.layout.element.Text(shapedText).setFont(font))
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             p.setTextAlignment(TextAlignment.RIGHT)
         } else {

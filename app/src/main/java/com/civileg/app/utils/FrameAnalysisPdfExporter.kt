@@ -44,12 +44,16 @@ object FrameAnalysisPdfExporter {
     /**
      * Create a Paragraph with proper Arabic shaping.
      * Use this instead of Paragraph(text).arabicStyle(...) for any text containing Arabic.
+     *
+     * CRITICAL FIX: Shapes Arabic letters to Presentation Forms (0xFE80-0xFEFF)
+     * BEFORE passing to iText. iText 8 AGPL does NOT shape Arabic automatically.
      */
     private fun styledArabicParagraph(text: String, font: PdfFont, fontSize: Float, bold: Boolean = false): Paragraph {
         val p = Paragraph().setFontSize(fontSize)
         if (bold) p.setBold()
-        // Single Text run with Arabic font (also has Latin glyphs) — proper bidi shaping
-        p.add(Text(text).setFont(font))
+        // Shape Arabic letters to Presentation Forms before iText rendering
+        val shapedText = ArabicShaper.shapeIfArabic(text)
+        p.add(Text(shapedText).setFont(font))
         if (ArabicFontProvider.containsArabic(text)) {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             p.setTextAlignment(TextAlignment.RIGHT)

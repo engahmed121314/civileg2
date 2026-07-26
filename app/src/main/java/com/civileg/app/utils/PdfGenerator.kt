@@ -80,16 +80,17 @@ object PdfGenerator {
 
         val hasArabic = containsArabic(text)
         if (hasArabic && font != null) {
-            // CRITICAL FIX: Use a SINGLE Text run (NOT split into segments).
-            // Previously text was split into Arabic/Latin segments which BREAKS
-            // iText's Unicode Bidi Algorithm and caused disconnected letters.
-            // The Arabic font (NotoNaskhArabic) includes Latin glyphs so this
-            // works correctly for mixed-language text.
-            val run = Text(text).setFont(font)
+            // CRITICAL FIX: Shape Arabic letters to Presentation Forms (0xFE80-0xFEFF)
+            // BEFORE passing to iText. iText 8 AGPL does NOT apply Arabic shaping
+            // automatically — without this, letters render DISCONNECTED or as SQUARES.
+            // ArabicShaper converts base letters (0x0621-0x064A) based on contextual
+            // position (isolated/initial/medial/final) and handles Lam-Alef ligatures.
+            val shapedText = ArabicShaper.shapeIfArabic(text)
+            // Use a SINGLE Text run with the shaped text + Arabic font (which also has Latin glyphs)
+            val run = Text(shapedText).setFont(font)
             p.add(run)
             // Set BaseDirection on the Paragraph (not on individual Text runs)
-            // This triggers iText's Unicode Bidi Algorithm which shapes Arabic
-            // using the font's GSUB/GPOS OpenType tables.
+            // This triggers iText's Unicode Bidi Algorithm for proper RTL ordering
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             p.setTextAlignment(TextAlignment.RIGHT)
         } else {

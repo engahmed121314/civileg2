@@ -234,6 +234,35 @@ object ArabicFontProvider {
     }
 
     /**
+     * CRITICAL FIX: Shape Arabic text by converting base letters (0x0621-0x064A)
+     * to their Presentation Forms (0xFE80-0xFEFF) based on contextual position
+     * (isolated / initial / medial / final).
+     *
+     * This is the SOLUTION to the long-standing Arabic PDF bug where letters
+     * appeared DISCONNECTED or as SQUARES. iText 8 open-source AGPL does NOT
+     * apply Arabic shaping automatically (it requires the paid typography module).
+     *
+     * Manual shaping via Presentation Forms works because the bundled
+     * NotoNaskhArabic font contains all 140+ Presentation Forms glyphs.
+     *
+     * Lam-Alef ligatures are also handled (LAM + ALEF variant → single ligature).
+     *
+     * @param text Input text (may be Arabic, Latin, or mixed)
+     * @return Text with Arabic letters converted to Presentation Forms; Latin preserved
+     */
+    fun shape(text: String): String {
+        return ArabicShaper.shapeIfArabic(text)
+    }
+
+    /**
+     * Convenience: shape text only if it contains base Arabic letters.
+     * Already-shaped text (Presentation Forms) passes through unchanged.
+     */
+    fun shapeIfArabic(text: String): String {
+        return ArabicShaper.shapeIfArabic(text)
+    }
+
+    /**
      * Clear cached fonts (useful for testing or theme changes).
      */
     fun clearCache() {

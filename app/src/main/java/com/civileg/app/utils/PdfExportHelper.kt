@@ -45,8 +45,9 @@ object PdfExportHelper {
             val arabicFont = ArabicFontProvider.getArabicPdfFont(context)
             val titleP = Paragraph().setFontSize(16f).setBold().setUnderline()
             if (ArabicFontProvider.containsArabic(title)) {
-                // Single Text run + Paragraph BaseDirection triggers iText's bidi algorithm
-                titleP.add(Text(title).setFont(arabicFont))
+                // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
+                val shapedTitle = ArabicShaper.shapeIfArabic(title)
+                titleP.add(Text(shapedTitle).setFont(arabicFont))
                 titleP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
                 titleP.setTextAlignment(TextAlignment.RIGHT)
             } else {
@@ -61,8 +62,9 @@ object PdfExportHelper {
                 val lineText = "$key: $value"
                 val p = Paragraph().setFontSize(12f)
                 if (ArabicFontProvider.containsArabic(lineText)) {
-                    // Use Arabic font for the entire line (it has Latin glyphs too)
-                    p.add(Text(lineText).setFont(arabicFont))
+                    // CRITICAL FIX: Shape Arabic to Presentation Forms before rendering.
+                    val shapedLine = ArabicShaper.shapeIfArabic(lineText)
+                    p.add(Text(shapedLine).setFont(arabicFont))
                     p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
                     p.setTextAlignment(TextAlignment.RIGHT)
                 } else {

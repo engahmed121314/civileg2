@@ -97,10 +97,16 @@ object BilingualPdfHelper {
         val hasArabic = ArabicFontProvider.containsArabic(text)
 
         if (hasArabic) {
+            // CRITICAL FIX: Shape Arabic letters to Presentation Forms BEFORE
+            // passing to iText. iText 8 AGPL does NOT shape Arabic automatically.
+            // Without shaping, letters appear DISCONNECTED or as SQUARES.
+            // ArabicShaper converts base letters (0x0621-0x064A) to their
+            // contextual Presentation Forms (0xFE80-0xFEFF).
+            val shapedText = ArabicShaper.shapeIfArabic(text)
             // Use Arabic font (which also has Latin glyphs) for the entire text
-            // This lets iText's bidi algorithm properly shape and order mixed text
+            // This lets iText's bidi algorithm properly order mixed text
             val font = getFont(context, bold)
-            val run = Text(text).setFont(font)
+            val run = Text(shapedText).setFont(font)
             p.add(run)
             // Set paragraph base direction to RTL so bidi algorithm processes correctly
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
