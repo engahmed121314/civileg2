@@ -238,7 +238,7 @@ class ECPColumn : ColumnDesign {
         return ColumnShearDesignResult(
             Vu = Vu,
             Vc = Vc,
-            phiVc = phiVc,
+            phiVc = Vc,  // ECP 203: no φ factor — phiVc equals Vc (kept for data class compat)
             asvPerS = requiredAsvPerS,
             minAsvPerS = minAsvPerS,
             designAsvPerS = designAsvPerS,

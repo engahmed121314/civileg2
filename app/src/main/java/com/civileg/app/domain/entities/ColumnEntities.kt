@@ -115,7 +115,7 @@ data class AdvancedColumnResult(
 data class ColumnShearDesignResult(
     val Vu: Double,                   // factored shear force (kN)
     val Vc: Double,                   // concrete shear capacity (kN)
-    val phiVc: Double,                // φ×Vc (kN)
+    val phiVc: Double,                // ECP 203: equals Vc (no φ factor; kept for compat)
     val asvPerS: Double,              // required Asv/s (mm²/mm)
     val minAsvPerS: Double,           // minimum Asv/s (mm²/mm)
     val designAsvPerS: Double,        // design Asv/s = max(required, min) (mm²/mm)
