@@ -37,15 +37,19 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         set(value) = prefs.edit().putString(KEY_DESIGN_CODE, value.name).apply()
 
     var steelPrice: Double
-        get() = prefs.getString(KEY_STEEL_PRICE, "45000")?.toDoubleOrNull() ?: 45000.0
+        // Default: EGP 28,000/ton — matches Egyptian market rate for rebar (2024-2025)
+        // Previously was 45,000 which was inconsistent with PriceManager.kt
+        get() = prefs.getString(KEY_STEEL_PRICE, "28000")?.toDoubleOrNull() ?: 28000.0
         set(value) = prefs.edit().putString(KEY_STEEL_PRICE, value.toString()).apply()
 
     var concretePrice: Double
-        get() = prefs.getString(KEY_CONCRETE_PRICE, "1500")?.toDoubleOrNull() ?: 1500.0
+        // Default: EGP 1,200/m³ for C25 concrete (matches PriceManager.kt realistic market rates)
+        get() = prefs.getString(KEY_CONCRETE_PRICE, "1200")?.toDoubleOrNull() ?: 1200.0
         set(value) = prefs.edit().putString(KEY_CONCRETE_PRICE, value.toString()).apply()
 
     var formworkPrice: Double
-        get() = prefs.getString(KEY_FORMWORK_PRICE, "300")?.toDoubleOrNull() ?: 300.0
+        // Default: EGP 280/m² for wood formwork (matches PriceManager.kt)
+        get() = prefs.getString(KEY_FORMWORK_PRICE, "280")?.toDoubleOrNull() ?: 280.0
         set(value) = prefs.edit().putString(KEY_FORMWORK_PRICE, value.toString()).apply()
 
     var isDisclaimerAccepted: Boolean

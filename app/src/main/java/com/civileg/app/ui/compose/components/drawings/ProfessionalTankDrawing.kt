@@ -82,15 +82,15 @@ fun ProfessionalTankDrawing(
         val margin = 30f
         val mainTop = 50f
         val mainBottom = ch * 0.58f
-        val mainLeft = 100f
-        val mainRight = cw - 180f
+        val mainLeft = 60f
+        val mainRight = cw - 60f
 
         // ── Scaling ──
         val effectiveHeight = height + baseThickness + foundationDepth
         val effectiveLength = if (isCircular) length else length
         val scaleX = (mainRight - mainLeft) / effectiveLength.toFloat()
         val scaleY = (mainBottom - mainTop) / effectiveHeight.toFloat()
-        val scale = min(scaleX, scaleY) * 0.72f
+        val scale = min(scaleX, scaleY) * 0.85f
 
         val drawL = length.toFloat() * scale
         val drawH = height.toFloat() * scale

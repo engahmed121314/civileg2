@@ -9,11 +9,12 @@ import com.civileg.app.utils.CalculatorEngine
 object ComprehensiveCostManager {
 
     data class MaterialPrices(
-        var steelPricePerTon: Double = 45000.0,
-        var concretePricePerM3: Double = 1500.0,
+        // Updated 2024-2025 Egyptian market rates — consistent with PriceManager.kt and SettingsManager.kt
+        var steelPricePerTon: Double = 28000.0,
+        var concretePricePerM3: Double = 1200.0,  // C25 ready-mix
         var sandPricePerM3: Double = 250.0,
         var gravelPricePerM3: Double = 350.0,
-        var cementPricePerBag: Double = 100.0, // 50kg bag
+        var cementPricePerBag: Double = 110.0,    // 50kg bag — was 100, updated to market rate
         var laborCostPerM3: Double = 300.0
     )
 

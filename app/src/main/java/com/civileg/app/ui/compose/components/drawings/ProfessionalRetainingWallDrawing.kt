@@ -97,7 +97,7 @@ fun ProfessionalRetainingWallDrawing(
         val totalH = wallHeight + baseThickness + (if (hasKey) keyDepth else 0.0)
         val scaleX = (mainRight - mainLeft) / baseWidth.toFloat()
         val scaleY = (mainBottom - mainTop) / totalH.toFloat()
-        val scale = min(scaleX, scaleY) * 0.70f
+        val scale = min(scaleX, scaleY) * 0.85f
 
         val drawH = wallHeight.toFloat() * scale
         val drawTopT = wallTopThickness.toFloat() * scale

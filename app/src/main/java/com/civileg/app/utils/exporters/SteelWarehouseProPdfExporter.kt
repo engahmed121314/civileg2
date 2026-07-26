@@ -167,9 +167,14 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         fun addInfoRow(label: String, value: String, rowIdx: Int) {
             val bg = if (rowIdx % 2 == 0) LIGHT_BLUE else null
             val labelCell = Cell().setPadding(6f)
-            val lp = Paragraph(label).setFontSize(9f).setBold()
-            if (arabicFont != null && isArabic(label)) {
-                lp.setFont(arabicBoldFont ?: arabicFont)
+            // Single Text run with embedded font — proper Arabic shaping
+            val lp = Paragraph()
+            val lRun = com.itextpdf.layout.element.Text(label)
+                .setFont(arabicBoldFont ?: arabicFont ?: helveticaFont)
+                .setFontSize(9f)
+                .setBold()
+            lp.add(lRun)
+            if (isArabic(label)) {
                 lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             }
             labelCell.add(lp)
@@ -178,9 +183,12 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             infoTable.addCell(labelCell)
 
             val valueCell = Cell().setPadding(6f)
-            val vp = Paragraph(value).setFontSize(9f)
-            if (arabicFont != null && isArabic(value)) {
-                vp.setFont(arabicFont)
+            val vp = Paragraph()
+            val vRun = com.itextpdf.layout.element.Text(value)
+                .setFont(arabicFont ?: helveticaFont)
+                .setFontSize(9f)
+            vp.add(vRun)
+            if (isArabic(value)) {
                 vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             }
             valueCell.add(vp)
@@ -209,11 +217,16 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         } else {
             "REVIEW REQUIRED | يحتاج مراجعة إنشائية"
         }
-        val statusP = Paragraph(statusText).setFontSize(11f).setBold()
-            .setFontColor(if (result.safetyStatus) SUCCESS else ERROR)
-            .setTextAlignment(TextAlignment.CENTER)
-            .setPadding(8f)
+        // Single Text run for proper Arabic shaping in status banner
+        val statusP = Paragraph().setTextAlignment(TextAlignment.CENTER).setPadding(8f)
             .setBorder(com.itextpdf.layout.borders.SolidBorder(if (result.safetyStatus) SUCCESS else ERROR, 2f))
+        val statusRun = com.itextpdf.layout.element.Text(statusText)
+            .setFont(arabicBoldFont ?: arabicFont ?: helveticaFont)
+            .setFontSize(11f)
+            .setBold()
+            .setFontColor(if (result.safetyStatus) SUCCESS else ERROR)
+        statusP.add(statusRun)
+        if (isArabic(statusText)) statusP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         document.add(statusP)
     }
 
@@ -240,10 +253,15 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             val bg = if (i % 2 == 0) null else ROW_ALT
             notesTable.addCell(dataCell("${i + 1}", bg = bg))
             val noteCell = Cell().setPadding(3f).setTextAlignment(TextAlignment.LEFT)
-            val np = Paragraph(note).setFontSize(7f)
-            if (arabicFont != null && isArabic(note)) {
-                np.setFont(arabicFont)
+            // Single Text run with proper Arabic font for connected letters
+            val np = Paragraph()
+            val nRun = com.itextpdf.layout.element.Text(note)
+                .setFont(arabicFont ?: helveticaFont)
+                .setFontSize(7f)
+            np.add(nRun)
+            if (isArabic(note)) {
                 np.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                noteCell.setTextAlignment(TextAlignment.RIGHT)
             }
             noteCell.add(np)
             bg?.let { noteCell.setBackgroundColor(it) }
@@ -263,20 +281,31 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         fun addSummaryCell(label: String, value: String, rowIdx: Int) {
             val bg = if (rowIdx % 2 == 0) LIGHT_BLUE else null
             val lc = Cell().setPadding(5f)
-            val lp = Paragraph(label).setFontSize(8f).setBold()
-            if (arabicFont != null && isArabic(label)) {
-                lp.setFont(arabicBoldFont ?: arabicFont)
+            // Single Text run for proper Arabic shaping
+            val lp = Paragraph()
+            val lRun = com.itextpdf.layout.element.Text(label)
+                .setFont(arabicBoldFont ?: arabicFont ?: helveticaFont)
+                .setFontSize(8f)
+                .setBold()
+            lp.add(lRun)
+            if (isArabic(label)) {
                 lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                lc.setTextAlignment(TextAlignment.RIGHT)
             }
             lc.add(lp)
             bg?.let { lc.setBackgroundColor(it) }
             summary.addCell(lc)
 
             val vc = Cell().setPadding(5f)
-            val vp = Paragraph(value).setFontSize(9f).setBold()
-            if (arabicFont != null && isArabic(value)) {
-                vp.setFont(arabicFont)
+            val vp = Paragraph()
+            val vRun = com.itextpdf.layout.element.Text(value)
+                .setFont(arabicFont ?: helveticaFont)
+                .setFontSize(9f)
+                .setBold()
+            vp.add(vRun)
+            if (isArabic(value)) {
                 vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                vc.setTextAlignment(TextAlignment.RIGHT)
             }
             vc.add(vp)
             bg?.let { vc.setBackgroundColor(it) }
@@ -337,7 +366,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
             val len = when (mark) {
                 "C1" -> "${inputs.eaveHeight.fmt(1)} m"
-                "R1" -> "${inputs.span.fmt(1)} m"
+                "R1" -> "${kotlin.math.sqrt((inputs.span / 2.0).let { it * it } + (inputs.ridgeHeight - inputs.eaveHeight).let { it * it }).fmt(2)} m"
                 "P1" -> "${inputs.baySpacing.fmt(1)} m"
                 "G1" -> "${inputs.baySpacing.fmt(1)} m"
                 else -> "-"
@@ -402,10 +431,15 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         result.recommendations.forEachIndexed { i, rec ->
-            val p = Paragraph("${i + 1}. $rec").setFontSize(8f)
-            if (arabicFont != null && isArabic(rec)) {
-                p.setFont(arabicFont)
+            // Single Text run with embedded Arabic font for proper shaping
+            val p = Paragraph()
+            val pRun = com.itextpdf.layout.element.Text("${i + 1}. $rec")
+                .setFont(arabicFont ?: helveticaFont)
+                .setFontSize(8f)
+            p.add(pRun)
+            if (isArabic(rec)) {
                 p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                p.setTextAlignment(TextAlignment.RIGHT)
             }
             document.add(p)
         }
@@ -451,62 +485,60 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val titleBlock = Table(UnitValue.createPercentArray(floatArrayOf(30f, 20f, 25f, 25f))).useAllAvailableWidth()
         titleBlock.setBorder(com.itextpdf.layout.borders.SolidBorder(2f))
 
-        // Project cell
+        // Project cell - all paragraphs use single Text run with proper font
         val projCell = Cell(1, 1).setPadding(5f)
-        val projLabelP = Paragraph("PROJECT / المشروع").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY)
-        if (arabicFont != null) {
-            projLabelP.setFont(arabicFont)
-            projLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        val projLabelP = Paragraph()
+        projLabelP.add(com.itextpdf.layout.element.Text("PROJECT / المشروع").setFont(arabicFont ?: helveticaFont).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
+        projLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         projCell.add(projLabelP)
-        val projText = Paragraph("$projEn").setFontSize(8f).setBold()
+        val projText = Paragraph().add(com.itextpdf.layout.element.Text("$projEn").setFont(helveticaFont).setFontSize(8f).setBold())
         projCell.add(projText)
-        val projArP = Paragraph(projAr).setFontSize(7f)
-        if (arabicFont != null) {
-            projArP.setFont(arabicFont)
-            projArP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        val projArP = Paragraph().add(com.itextpdf.layout.element.Text(projAr).setFont(arabicFont ?: helveticaFont).setFontSize(7f))
+        projArP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         projCell.add(projArP)
         titleBlock.addCell(projCell)
 
         // Client cell
         val clientCell = Cell(1, 1).setPadding(5f)
-        val clientLabelP = Paragraph("CLIENT / العميل").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY)
-        if (arabicFont != null) {
-            clientLabelP.setFont(arabicFont)
-            clientLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        val clientLabelP = Paragraph()
+        clientLabelP.add(com.itextpdf.layout.element.Text("CLIENT / العميل").setFont(arabicFont ?: helveticaFont).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
+        clientLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         clientCell.add(clientLabelP)
-        val clientText = Paragraph(clientEn).setFontSize(8f).setBold()
+        val clientText = Paragraph().add(com.itextpdf.layout.element.Text(clientEn).setFont(helveticaFont).setFontSize(8f).setBold())
         clientCell.add(clientText)
-        val clientArP = Paragraph(clientAr).setFontSize(7f)
-        if (arabicFont != null) {
-            clientArP.setFont(arabicFont)
-            clientArP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        val clientArP = Paragraph().add(com.itextpdf.layout.element.Text(clientAr).setFont(arabicFont ?: helveticaFont).setFontSize(7f))
+        clientArP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         clientCell.add(clientArP)
         titleBlock.addCell(clientCell)
 
         // Designer cell
         val designCell = Cell(1, 1).setPadding(5f)
-        designCell.add(Paragraph("DESIGNED BY").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
-        designCell.add(Paragraph("Civil EG Pro Engine").setFontSize(8f).setBold())
+        val dlP = Paragraph().add(com.itextpdf.layout.element.Text("DESIGNED BY").setFont(helveticaFont).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
+        designCell.add(dlP)
+        val dtP = Paragraph().add(com.itextpdf.layout.element.Text("Civil EG Pro Engine").setFont(helveticaFont).setFontSize(8f).setBold())
+        designCell.add(dtP)
         titleBlock.addCell(designCell)
 
         // Date & Code cell
         val dateCell = Cell(1, 1).setPadding(5f)
-        dateCell.add(Paragraph("DATE / CODE").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
-        dateCell.add(Paragraph("${SimpleDateFormat("MMM yyyy", Locale.US).format(Date())} | ${inputs.code.version}").setFontSize(8f).setBold())
-        dateCell.add(Paragraph("SHEET: S-01 Rev.0").setFontSize(7f))
+        val dlcP = Paragraph().add(com.itextpdf.layout.element.Text("DATE / CODE").setFont(helveticaFont).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
+        dateCell.add(dlcP)
+        val dcP = Paragraph().add(com.itextpdf.layout.element.Text("${SimpleDateFormat("MMM yyyy", Locale.US).format(Date())} | ${inputs.code.version}").setFont(helveticaFont).setFontSize(8f).setBold())
+        dateCell.add(dcP)
+        val shP = Paragraph().add(com.itextpdf.layout.element.Text("SHEET: S-01 Rev.0").setFont(helveticaFont).setFontSize(7f))
+        dateCell.add(shP)
         titleBlock.addCell(dateCell)
 
         document.add(titleBlock)
 
-        // Footer disclaimer
+        // Footer disclaimer — single Text run with proper Arabic font
         document.add(Paragraph(" "))
-        val footer = Paragraph(
+        val footer = Paragraph().setTextAlignment(TextAlignment.CENTER)
+        val footerRun = com.itextpdf.layout.element.Text(
             "Generated by Civil EG Pro | ${ar("هذا التقرير لأغراض مرجعية فقط - يجب مراجعته بواسطة مهندس مؤهل")}"
-        ).setFontSize(7f).setFontColor(ColorConstants.LIGHT_GRAY).setTextAlignment(TextAlignment.CENTER)
+        ).setFont(arabicFont ?: helveticaFont).setFontSize(7f).setFontColor(ColorConstants.LIGHT_GRAY)
+        footer.add(footerRun)
+        footer.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         document.add(footer)
     }
 }

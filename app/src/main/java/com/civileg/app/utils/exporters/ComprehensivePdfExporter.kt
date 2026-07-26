@@ -147,13 +147,13 @@ class ComprehensivePdfExporter(private val context: Context) {
 
     private fun rtlCell(text: String, fontSize: Float = 9f, bold: Boolean = false, bg: DeviceRgb? = null): Cell {
         val cell = Cell().setPadding(4f).setTextAlignment(TextAlignment.RIGHT)
-        val p = Paragraph(text).setFontSize(fontSize)
-        if (bold) {
-            p.setBold()
-            p.setFont(arabicBoldFont)
-        } else {
-            p.setFont(arabicFont)
-        }
+        // Use single Text run with the proper font so iText's Unicode Bidi algorithm shapes
+        // Arabic letters correctly (avoids the disconnected-letters / squares issue).
+        val p = Paragraph().setFontSize(fontSize)
+        val font = if (bold) arabicBoldFont else arabicFont
+        val textRun = com.itextpdf.layout.element.Text(text).setFont(font).setFontSize(fontSize)
+        if (bold) textRun.setBold()
+        p.add(textRun)
         if (isArabic(text)) {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
@@ -167,9 +167,15 @@ class ComprehensivePdfExporter(private val context: Context) {
             .setPadding(6f)
             .setBackgroundColor(HEADER_BG)
             .setTextAlignment(TextAlignment.CENTER)
-        val p = Paragraph(text).setFontSize(9f).setBold().setFontColor(WHITE)
+        // Single Text run with embedded font for proper Arabic shaping
+        val p = Paragraph().setFontSize(9f)
+        val textRun = com.itextpdf.layout.element.Text(text)
+            .setFont(arabicBoldFont)
+            .setFontSize(9f)
+            .setBold()
+            .setFontColor(WHITE)
+        p.add(textRun)
         if (isArabic(text)) {
-            p.setFont(arabicBoldFont)
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
         cell.add(p)
@@ -186,26 +192,29 @@ class ComprehensivePdfExporter(private val context: Context) {
     }
 
     private fun addReportHeader(document: Document, titleAr: String, titleEn: String, subtitle: String, font: PdfFont) {
-        // App name
-        val appName = Paragraph(context.getString(R.string.app_name))
+        // App name - use single Text run with proper font
+        val appNameText = context.getString(R.string.app_name)
+        val appName = Paragraph()
+            .setTextAlignment(TextAlignment.CENTER)
+        val appNameRun = com.itextpdf.layout.element.Text(appNameText)
+            .setFont(if (isEnglish) helveticaFont else arabicBoldFont)
             .setFontSize(22f)
             .setBold()
             .setFontColor(PRIMARY)
-            .setTextAlignment(TextAlignment.CENTER)
-        if (isEnglish) {
-            appName.setFont(helveticaFont)
-        } else {
-            appName.setFont(arabicBoldFont)
-            appName.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-        }
+        appName.add(appNameRun)
+        if (!isEnglish) appName.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         document.add(appName)
 
         // Subtitle line
         val subLine = if (isEnglish) "Civil EG - Advanced Structural Design" else "Civil EG - التصميم الإنشائي المتقدم"
-        document.add(Paragraph(subLine)
+        val subPara = Paragraph().setTextAlignment(TextAlignment.CENTER)
+        val subRun = com.itextpdf.layout.element.Text(subLine)
+            .setFont(if (isEnglish) helveticaFont else arabicFont)
             .setFontSize(10f)
-            .setTextAlignment(TextAlignment.CENTER)
-            .setFontColor(ColorConstants.GRAY))
+            .setFontColor(ColorConstants.GRAY)
+        subPara.add(subRun)
+        if (!isEnglish) subPara.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        document.add(subPara)
 
         document.add(LineSeparator(SolidLine(2f)).setMarginTop(5f).setMarginBottom(10f))
 
@@ -214,20 +223,26 @@ class ComprehensivePdfExporter(private val context: Context) {
         val titlePara = styledParagraph(titleText, 16f, true, PRIMARY, TextAlignment.CENTER)
         document.add(titlePara)
 
-        // Subtitle
-        document.add(Paragraph(subtitle)
+        // Subtitle (passed-in)
+        val subtitlePara = Paragraph().setTextAlignment(TextAlignment.CENTER)
+        val subtitleRun = com.itextpdf.layout.element.Text(subtitle)
+            .setFont(if (isEnglish) helveticaFont else arabicFont)
             .setFontSize(10f)
             .setFontColor(SECONDARY)
-            .setTextAlignment(TextAlignment.CENTER))
+        subtitlePara.add(subtitleRun)
+        if (!isEnglish) subtitlePara.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        document.add(subtitlePara)
 
         // Date
         val dateLocale = if (isEnglish) Locale.US else Locale("ar")
         val dateStr = SimpleDateFormat("yyyy/MM/dd  HH:mm", dateLocale).format(Date())
-        val datePara = Paragraph(dateStr)
+        val datePara = Paragraph().setTextAlignment(TextAlignment.CENTER)
+        val dateRun = com.itextpdf.layout.element.Text(dateStr)
+            .setFont(if (isEnglish) helveticaFont else arabicFont)
             .setFontSize(9f)
             .setFontColor(ColorConstants.GRAY)
-            .setTextAlignment(TextAlignment.CENTER)
-        if (isEnglish) datePara.setFont(helveticaFont) else datePara.setFont(arabicFont)
+        datePara.add(dateRun)
+        if (!isEnglish) datePara.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         document.add(datePara)
 
         document.add(LineSeparator(SolidLine(0.5f)).setMarginTop(5f).setMarginBottom(10f))
@@ -268,22 +283,20 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             val labelCell = Cell().setPadding(4f)
             if (labelAr) labelCell.setTextAlignment(TextAlignment.RIGHT)
-            val lp = Paragraph(label).setFontSize(9f).setBold()
-            if (labelAr) {
-                lp.setFont(arabicBoldFont)
-                lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            }
+            val lp = Paragraph().setFontSize(9f)
+            val lRun = com.itextpdf.layout.element.Text(label).setFont(arabicBoldFont).setFontSize(9f).setBold()
+            lp.add(lRun)
+            if (labelAr) lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             labelCell.add(lp)
             bg?.let { labelCell.setBackgroundColor(it) }
             table.addCell(labelCell)
 
             val valueCell = Cell().setPadding(4f)
             if (valueAr) valueCell.setTextAlignment(TextAlignment.RIGHT)
-            val vp = Paragraph(value).setFontSize(9f)
-            if (valueAr) {
-                vp.setFont(arabicFont)
-                vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            }
+            val vp = Paragraph().setFontSize(9f)
+            val vRun = com.itextpdf.layout.element.Text(value).setFont(arabicFont).setFontSize(9f)
+            vp.add(vRun)
+            if (valueAr) vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             valueCell.add(vp)
             bg?.let { valueCell.setBackgroundColor(it) }
             table.addCell(valueCell)

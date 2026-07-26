@@ -142,6 +142,17 @@ class SlabViewModel @Inject constructor(
                     CalculatorEngine.SlabType.HOLLOW_BLOCK -> com.civileg.app.domain.entities.SlabType.Hordi(
                         res.thickness, 100.0, 500.0, 400.0, 200.0, inputs.lx, supportCond
                     )
+                    CalculatorEngine.SlabType.WAFFLE -> com.civileg.app.domain.entities.SlabType.Waffle(
+                        res.thickness, 150.0, res.thickness - 50.0, 600.0,
+                        inputs.lx, inputs.ly, supportCond
+                    )
+                    CalculatorEngine.SlabType.POST_TENSION -> com.civileg.app.domain.entities.SlabType.PostTensioned(
+                        res.thickness, inputs.lx, inputs.ly,
+                        com.civileg.app.domain.entities.TendonType.UNBONDED,
+                        1500.0, // kN typical prestress force
+                        res.thickness / 2.0 - 50.0,
+                        supportCond
+                    )
                     else -> com.civileg.app.domain.entities.SlabType.Solid(
                         res.thickness, inputs.lx, inputs.ly, supportCond
                     )

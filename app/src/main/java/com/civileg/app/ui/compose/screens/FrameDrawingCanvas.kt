@@ -488,68 +488,93 @@ private fun DrawScope.drawCrossSection(
     drawBeamSection(beamCenterX, beamCenterY, bmMs.firstOrNull(), result, textMeasurer)
 }
 
-// Draw column cross section with reinforcement
+// Draw column cross section with reinforcement — uses ACTUAL member section & design result
 private fun DrawScope.drawColumnSection(
     cx: Float, cy: Float,
     member: FrameMember?,
     result: FrameAnalysisResult?,
     textMeasurer: TextMeasurer
 ) {
-    val sectionSize = 200f
-    val left = cx - sectionSize / 2
-    val top = cy - sectionSize / 2
+    // Pull actual section dimensions from member.concreteSection (fallback to 300x300 if missing)
+    val cs = member?.concreteSection
+    val colW = cs?.width?.toInt() ?: 300
+    val colD = cs?.depth?.toInt() ?: 300
+    val cover = cs?.cover?.toInt() ?: 40
 
-    // Default dimensions (can be overridden by member data)
-    val colW = 300  // mm
-    val colD = 300  // mm
-    val numBars = 6
-    val barDia = 16 // mm
-    val tieDia = 8  // mm
-    val cover = 40  // mm
+    // Find the design result for this member — provides actual bars/diameters/stirrups
+    val designRes = result?.concreteDesignResults?.firstOrNull { it.memberId == member?.id }
+    val numBarsBot = designRes?.numBarsBot?.takeIf { it > 0 } ?: 4
+    val numBarsTop = designRes?.numBarsTop?.takeIf { it > 0 } ?: 2
+    val numBars = numBarsBot + numBarsTop
+    val barDia = designRes?.barDia?.takeIf { it > 0 }?.toInt() ?: 16
+    val tieDia = designRes?.stirrupDia?.takeIf { it > 0 }?.toInt() ?: 8
+    val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
+
+    // Section drawing — scale based on largest dimension so wide/tall columns fit
+    val maxMm = maxOf(colW, colD)
+    val sectionSize = 220f
+    val drawW = if (colW >= colD) sectionSize else (colW.toFloat() / colD.toFloat() * sectionSize)
+    val drawH = if (colD >= colW) sectionSize else (colD.toFloat() / colW.toFloat() * sectionSize)
+    val left = cx - drawW / 2
+    val top = cy - drawH / 2
 
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "COLUMN SECTION",
-        topLeft = Offset(cx - 60f, top - 30f),
+        text = "COLUMN SECTION — ${member?.name?.ifEmpty { "Column" } ?: "Column"}",
+        topLeft = Offset(cx - 100f, top - 30f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     )
 
     // Concrete outline
-    drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(sectionSize, sectionSize))
-    drawRect(Color(0xFF555555), Offset(left, top), Size(sectionSize, sectionSize), style = Stroke(width = 2.5f))
+    drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(drawW, drawH))
+    drawRect(Color(0xFF555555), Offset(left, top), Size(drawW, drawH), style = Stroke(width = 2.5f))
 
-    // Cover boundary (dashed)
-    val coverInset = 15f
+    // Cover boundary (dashed) — proportional to actual cover
+    val coverInset = (cover.toFloat() / maxMm.toFloat()) * sectionSize * 0.6f
     drawRect(
         Color(0xFF888888),
         Offset(left + coverInset, top + coverInset),
-        Size(sectionSize - 2 * coverInset, sectionSize - 2 * coverInset),
+        Size(drawW - 2 * coverInset, drawH - 2 * coverInset),
         style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
     )
 
-    // Stirrup (tie) - rounded rectangle inside cover
+    // Stirrup (tie) - inside cover
     val tieInset = coverInset + 4f
     drawRect(
         Color(0xFF4CAF50),
         Offset(left + tieInset, top + tieInset),
-        Size(sectionSize - 2 * tieInset, sectionSize - 2 * tieInset),
+        Size(drawW - 2 * tieInset, drawH - 2 * tieInset),
         style = Stroke(width = 2f)
     )
 
-    // Longitudinal bars (corners + middle)
-    val barR = 5f
-    val barPositions = listOf(
-        Offset(left + coverInset + 8f, top + coverInset + 8f),
-        Offset(left + sectionSize - coverInset - 8f, top + coverInset + 8f),
-        Offset(left + coverInset + 8f, top + sectionSize - coverInset - 8f),
-        Offset(left + sectionSize - coverInset - 8f, top + sectionSize - coverInset - 8f),
-        Offset(left + sectionSize / 2, top + coverInset + 8f),
-        Offset(left + sectionSize / 2, top + sectionSize - coverInset - 8f)
-    )
-    barPositions.forEach { p ->
-        drawCircle(Color(0xFF1565C0), barR + 2f, p) // outer
-        drawCircle(Color(0xFF42A5F5), barR, p)       // main
+    // Longitudinal bars: distribute actual count around perimeter (corners + evenly along faces)
+    val barR = (barDia.toFloat() / maxMm.toFloat() * sectionSize * 0.5f).coerceIn(3.5f, 8f)
+    val barPositions = mutableListOf<Offset>()
+    // 4 corner bars first
+    barPositions.add(Offset(left + coverInset + 8f, top + coverInset + 8f))
+    barPositions.add(Offset(left + drawW - coverInset - 8f, top + coverInset + 8f))
+    barPositions.add(Offset(left + coverInset + 8f, top + drawH - coverInset - 8f))
+    barPositions.add(Offset(left + drawW - coverInset - 8f, top + drawH - coverInset - 8f))
+    // Distribute remaining bars (if any) on the longer faces
+    val remaining = (numBars - 4).coerceAtLeast(0)
+    if (remaining > 0) {
+        val alongW = maxOf(1, remaining / 2)
+        val alongH = remaining - alongW
+        for (i in 1..alongW) {
+            val x = left + drawW * (i.toFloat() / (alongW + 1))
+            barPositions.add(Offset(x, top + coverInset + 8f))
+            barPositions.add(Offset(x, top + drawH - coverInset - 8f))
+        }
+        for (i in 1..alongH) {
+            val y = top + drawH * (i.toFloat() / (alongH + 1))
+            barPositions.add(Offset(left + coverInset + 8f, y))
+            barPositions.add(Offset(left + drawW - coverInset - 8f, y))
+        }
+    }
+    barPositions.take(numBars).forEach { p ->
+        drawCircle(Color(0xFF1565C0), barR + 2f, p)
+        drawCircle(Color(0xFF42A5F5), barR, p)
     }
 
     // Dimensions
@@ -557,82 +582,89 @@ private fun DrawScope.drawColumnSection(
     val dimPaint = android.graphics.Paint().apply {
         color = dimColor.toArgb(); textSize = 18f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
-    // Width dimension (top)
     val dimYTop = top - 20f
     drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
-    drawLine(dimColor, Offset(left + sectionSize, top - 5f), Offset(left + sectionSize, dimYTop - 3f), strokeWidth = 1f)
-    drawLine(dimColor, Offset(left, dimYTop), Offset(left + sectionSize, dimYTop), strokeWidth = 1.2f)
-    drawContext.canvas.nativeCanvas.drawText("b = $colW mm", left + sectionSize / 2, dimYTop - 4f, dimPaint)
+    drawLine(dimColor, Offset(left + drawW, top - 5f), Offset(left + drawW, dimYTop - 3f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left, dimYTop), Offset(left + drawW, dimYTop), strokeWidth = 1.2f)
+    drawContext.canvas.nativeCanvas.drawText("b = $colW mm", left + drawW / 2, dimYTop - 4f, dimPaint)
 
-    // Depth dimension (right)
-    val dimXRight = left + sectionSize + 20f
-    drawLine(dimColor, Offset(left + sectionSize + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
-    drawLine(dimColor, Offset(left + sectionSize + 5f, top + sectionSize), Offset(dimXRight + 3f, top + sectionSize), strokeWidth = 1f)
-    drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + sectionSize), strokeWidth = 1.2f)
+    val dimXRight = left + drawW + 20f
+    drawLine(dimColor, Offset(left + drawW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left + drawW + 5f, top + drawH), Offset(dimXRight + 3f, top + drawH), strokeWidth = 1f)
+    drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + drawH), strokeWidth = 1.2f)
     drawContext.canvas.nativeCanvas.save()
-    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + sectionSize / 2)
-    drawContext.canvas.nativeCanvas.drawText("h = $colD mm", dimXRight + 14f, top + sectionSize / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + drawH / 2)
+    drawContext.canvas.nativeCanvas.drawText("h = $colD mm", dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
-    // Label
+    // Label — show ACTUAL reinforcement schedule
     val labelPaint = android.graphics.Paint().apply {
         color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
     drawContext.canvas.nativeCanvas.drawText(
-        "$numBars Ø$barDia mm + Ø$tieDia/@100mm",
-        cx, top + sectionSize + 35f, labelPaint
+        "$numBars Ø$barDia mm + Ø$tieDia/@${stirrupSpacing}mm",
+        cx, top + drawH + 35f, labelPaint
     )
 
-    // Member info if available
-    member?.let {
+    // As provided info if available
+    designRes?.let { dr ->
+        val asProvText = "As provided: ${String.format("%.0f", dr.asProvided)} mm² | As req: ${String.format("%.0f", dr.asRequired)} mm²"
         drawContext.canvas.nativeCanvas.drawText(
-            "Member #${it.id}: ${it.name.ifEmpty { "Column" }}",
-            cx, top + sectionSize + 55f, android.graphics.Paint().apply {
-                color = Color.Gray.toArgb(); textSize = 14f; textAlign = android.graphics.Paint.Align.CENTER
+            asProvText,
+            cx, top + drawH + 55f, android.graphics.Paint().apply {
+                color = Color(0xFF666666).toArgb(); textSize = 13f; textAlign = android.graphics.Paint.Align.CENTER
             }
         )
     }
 }
 
-// Draw beam cross section with reinforcement
+// Draw beam cross section with reinforcement — uses ACTUAL member section & design result
 private fun DrawScope.drawBeamSection(
     cx: Float, cy: Float,
     member: FrameMember?,
     result: FrameAnalysisResult?,
     textMeasurer: TextMeasurer
 ) {
-    val sectionW = 280f
-    val sectionH = 160f
-    val left = cx - sectionW / 2
-    val top = cy - sectionH / 2
+    // Pull actual section dimensions from member.concreteSection (fallback to 250x500 if missing)
+    val cs = member?.concreteSection
+    val beamW = cs?.width?.toInt() ?: 250
+    val beamD = cs?.depth?.toInt() ?: 500
+    val cover = cs?.cover?.toInt() ?: 25
 
-    val beamW = 250  // mm
-    val beamD = 500  // mm
-    val numBarsBottom = 3
-    val numBarsTop = 2
-    val barDia = 16  // mm
-    val stirrupDia = 8 // mm
-    val stirrupSpacing = 150 // mm
-    val cover = 25 // mm
+    // Find the design result for this member — provides actual bars/diameters/stirrups
+    val designRes = result?.concreteDesignResults?.firstOrNull { it.memberId == member?.id }
+    val numBarsBottom = designRes?.numBarsBot?.takeIf { it > 0 } ?: 3
+    val numBarsTop = designRes?.numBarsTop?.takeIf { it > 0 } ?: 2
+    val barDia = designRes?.barDia?.takeIf { it > 0 }?.toInt() ?: 16
+    val stirrupDia = designRes?.stirrupDia?.takeIf { it > 0 }?.toInt() ?: 8
+    val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
+
+    // Drawing area — proportional to actual b:h ratio (default ~250:500 = 1:2)
+    val maxMm = maxOf(beamW, beamD)
+    val drawSize = 220f
+    val drawW = (beamW.toFloat() / maxMm.toFloat()) * drawSize
+    val drawH = (beamD.toFloat() / maxMm.toFloat()) * drawSize
+    val left = cx - drawW / 2
+    val top = cy - drawH / 2
 
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "BEAM SECTION",
-        topLeft = Offset(cx - 60f, top - 30f),
+        text = "BEAM SECTION — ${member?.name?.ifEmpty { "Beam" } ?: "Beam"}",
+        topLeft = Offset(cx - 100f, top - 30f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     )
 
     // Concrete outline
-    drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(sectionW, sectionH))
-    drawRect(Color(0xFF555555), Offset(left, top), Size(sectionW, sectionH), style = Stroke(width = 2.5f))
+    drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(drawW, drawH))
+    drawRect(Color(0xFF555555), Offset(left, top), Size(drawW, drawH), style = Stroke(width = 2.5f))
 
-    // Cover boundary (dashed)
-    val coverInset = 12f
+    // Cover boundary (dashed) — proportional to actual cover
+    val coverInset = (cover.toFloat() / maxMm.toFloat()) * drawSize * 0.6f
     drawRect(
         Color(0xFF888888),
         Offset(left + coverInset, top + coverInset),
-        Size(sectionW - 2 * coverInset, sectionH - 2 * coverInset),
+        Size(drawW - 2 * coverInset, drawH - 2 * coverInset),
         style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
     )
 
@@ -641,28 +673,36 @@ private fun DrawScope.drawBeamSection(
     drawRect(
         Color(0xFF4CAF50),
         Offset(left + tieInset, top + tieInset),
-        Size(sectionW - 2 * tieInset, sectionH - 2 * tieInset),
+        Size(drawW - 2 * tieInset, drawH - 2 * tieInset),
         style = Stroke(width = 2f)
     )
 
-    val barR = 5f
+    val barR = (barDia.toFloat() / maxMm.toFloat() * drawSize * 0.5f).coerceIn(3.5f, 8f)
 
-    // Bottom bars (3 bars)
-    val bottomY = top + sectionH - coverInset - 8f
-    val bottomSpacing = (sectionW - 2 * (coverInset + 8f)) / (numBarsBottom - 1)
-    for (i in 0 until numBarsBottom) {
-        val bx = left + coverInset + 8f + i * bottomSpacing
-        drawCircle(Color(0xFF1565C0), barR + 2f, Offset(bx, bottomY))
-        drawCircle(Color(0xFF42A5F5), barR, Offset(bx, bottomY))
+    // Bottom bars (tension steel for simply-supported beam)
+    val bottomY = top + drawH - coverInset - 8f
+    if (numBarsBottom > 0) {
+        val bottomSpacing = if (numBarsBottom > 1)
+            (drawW - 2 * (coverInset + 8f)) / (numBarsBottom - 1)
+        else 0f
+        for (i in 0 until numBarsBottom) {
+            val bx = left + coverInset + 8f + i * bottomSpacing
+            drawCircle(Color(0xFF1565C0), barR + 2f, Offset(bx, bottomY))
+            drawCircle(Color(0xFF42A5F5), barR, Offset(bx, bottomY))
+        }
     }
 
-    // Top bars (2 bars)
+    // Top bars (compression steel)
     val topY = top + coverInset + 8f
-    val topSpacing = (sectionW - 2 * (coverInset + 8f)) / (numBarsTop + 1)
-    for (i in 1..numBarsTop) {
-        val bx = left + coverInset + 8f + i * topSpacing
-        drawCircle(Color(0xFFE74C3C), barR + 2f, Offset(bx, topY))
-        drawCircle(Color(0xFFFF7043), barR, Offset(bx, topY))
+    if (numBarsTop > 0) {
+        val topSpacing = if (numBarsTop > 1)
+            (drawW - 2 * (coverInset + 8f)) / (numBarsTop - 1)
+        else 0f
+        for (i in 0 until numBarsTop) {
+            val bx = left + coverInset + 8f + i * topSpacing
+            drawCircle(Color(0xFFE74C3C), barR + 2f, Offset(bx, topY))
+            drawCircle(Color(0xFFFF7043), barR, Offset(bx, topY))
+        }
     }
 
     // Dimensions
@@ -670,42 +710,41 @@ private fun DrawScope.drawBeamSection(
     val dimPaint = android.graphics.Paint().apply {
         color = dimColor.toArgb(); textSize = 18f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
-    // Width dimension (top)
     val dimYTop = top - 20f
     drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
-    drawLine(dimColor, Offset(left + sectionW, top - 5f), Offset(left + sectionW, dimYTop - 3f), strokeWidth = 1f)
-    drawLine(dimColor, Offset(left, dimYTop), Offset(left + sectionW, dimYTop), strokeWidth = 1.2f)
-    drawContext.canvas.nativeCanvas.drawText("b = $beamW mm", left + sectionW / 2, dimYTop - 4f, dimPaint)
+    drawLine(dimColor, Offset(left + drawW, top - 5f), Offset(left + drawW, dimYTop - 3f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left, dimYTop), Offset(left + drawW, dimYTop), strokeWidth = 1.2f)
+    drawContext.canvas.nativeCanvas.drawText("b = $beamW mm", left + drawW / 2, dimYTop - 4f, dimPaint)
 
-    // Depth dimension (right)
-    val dimXRight = left + sectionW + 20f
-    drawLine(dimColor, Offset(left + sectionW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
-    drawLine(dimColor, Offset(left + sectionW + 5f, top + sectionH), Offset(dimXRight + 3f, top + sectionH), strokeWidth = 1f)
-    drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + sectionH), strokeWidth = 1.2f)
+    val dimXRight = left + drawW + 20f
+    drawLine(dimColor, Offset(left + drawW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left + drawW + 5f, top + drawH), Offset(dimXRight + 3f, top + drawH), strokeWidth = 1f)
+    drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + drawH), strokeWidth = 1.2f)
     drawContext.canvas.nativeCanvas.save()
-    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + sectionH / 2)
-    drawContext.canvas.nativeCanvas.drawText("h = $beamD mm", dimXRight + 14f, top + sectionH / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + drawH / 2)
+    drawContext.canvas.nativeCanvas.drawText("h = $beamD mm", dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
-    // Label
+    // Label — show ACTUAL reinforcement schedule
     val labelPaint = android.graphics.Paint().apply {
         color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
     drawContext.canvas.nativeCanvas.drawText(
         "$numBarsBottom Ø$barDia (bot) + $numBarsTop Ø$barDia (top)",
-        cx, top + sectionH + 35f, labelPaint
+        cx, top + drawH + 35f, labelPaint
     )
     drawContext.canvas.nativeCanvas.drawText(
         "+ Ø$stirrupDia/@$stirrupSpacing mm",
-        cx, top + sectionH + 55f, labelPaint
+        cx, top + drawH + 55f, labelPaint
     )
 
-    // Member info if available
-    member?.let {
+    // As provided info if available
+    designRes?.let { dr ->
+        val asProvText = "As provided: ${String.format("%.0f", dr.asProvided)} mm² | As req: ${String.format("%.0f", dr.asRequired)} mm² | Mu: ${String.format("%.1f", dr.maxMoment)} kN.m"
         drawContext.canvas.nativeCanvas.drawText(
-            "Member #${it.id}: ${it.name.ifEmpty { "Beam" }}",
-            cx, top + sectionH + 75f, android.graphics.Paint().apply {
-                color = Color.Gray.toArgb(); textSize = 14f; textAlign = android.graphics.Paint.Align.CENTER
+            asProvText,
+            cx, top + drawH + 75f, android.graphics.Paint().apply {
+                color = Color(0xFF666666).toArgb(); textSize = 13f; textAlign = android.graphics.Paint.Align.CENTER
             }
         )
     }

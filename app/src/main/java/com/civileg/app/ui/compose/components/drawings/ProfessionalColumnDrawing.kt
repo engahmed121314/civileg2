@@ -130,9 +130,9 @@ private fun DrawScope.draw3DElevation(
 ) {
     val cosA = cos(Math.toRadians(30.0)).toFloat()
     val sinA = sin(Math.toRadians(30.0)).toFloat()
-    val dScale = 0.45f
+    val dScale = 0.55f
     val maxDim = maxOf(colW, colH)
-    val scale = (min(width, height) * 0.45f) / maxDim.toFloat()
+    val scale = (min(width, height) * 0.62f) / maxDim.toFloat()
 
     val w = colW.toFloat() * scale
     val h = colH.toFloat() * scale

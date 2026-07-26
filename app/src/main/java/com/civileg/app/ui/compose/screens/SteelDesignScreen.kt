@@ -598,10 +598,26 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                 drawLine(gridColor, Offset(padding, y), Offset(size.width - padding, y), strokeWidth = 0.5f)
             }
 
-            val scale = minOf(
-                (w * 0.75f) / max(inputs.span, inputs.length).toFloat(),
-                (h * 0.75f) / max(inputs.ridgeHeight, inputs.span).toFloat()
-            )
+            // Use view-specific scale so the front elevation (which only shows span × ridgeHeight)
+            // is not made tiny by the much larger length dimension.
+            val scale = when (viewMode) {
+                0 -> minOf(                                       // Front: span × ridgeHeight
+                    (w * 0.80f) / inputs.span.toFloat(),
+                    (h * 0.80f) / max(inputs.ridgeHeight, inputs.eaveHeight).toFloat()
+                )
+                1 -> minOf(                                       // Plan: length × span
+                    (w * 0.85f) / inputs.length.toFloat(),
+                    (h * 0.80f) / inputs.span.toFloat()
+                )
+                2 -> minOf(                                       // Side: length × eaveHeight
+                    (w * 0.85f) / inputs.length.toFloat(),
+                    (h * 0.80f) / max(inputs.ridgeHeight, inputs.eaveHeight).toFloat()
+                )
+                else -> minOf(                                    // 3D / connections
+                    (w * 0.75f) / max(inputs.span, inputs.length).toFloat(),
+                    (h * 0.75f) / max(inputs.ridgeHeight, inputs.span).toFloat()
+                )
+            }
             val startX = (padding + (w - inputs.span * scale) / 2).toFloat()
             val baseY = size.height - padding - 20f
 
@@ -1093,8 +1109,8 @@ private fun DrawScope.drawSteelSideElevation(
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 6f)))
     }
 
-    // Purlin markers (vertical ticks on eave)
-    val numPurlins = (inputs.span / 1.5).toInt().coerceIn(2, 8)
+    // Purlin markers along the eave — count derived from LENGTH / typical purlin spacing (1.5m)
+    val numPurlins = (inputs.length / 1.5).toInt().coerceIn(2, 12)
     for (i in 1 until numPurlins) {
         val x = sideLeft + (i * planL / numPurlins)
         drawLine(Color(0xFF4FC3F7), Offset(x, eaveY - 8f), Offset(x, eaveY + 8f), strokeWidth = 2f)

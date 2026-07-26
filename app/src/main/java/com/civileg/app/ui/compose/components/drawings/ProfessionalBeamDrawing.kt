@@ -126,25 +126,27 @@ fun ProfessionalBeamDrawing(
         val angleX = 0.30f          // horizontal skew factor
         val angleY = 0.20f          // vertical skew factor
 
-        // Main beam drawing area
-        val mainLeft = 80f
-        val mainRight = cw - 80f
+        // Main beam drawing area — symmetric margins for proper centering
+        val sideMargin = 60f
+        val mainLeft = sideMargin
+        val mainRight = cw - sideMargin
         val mainTop = 50f
-        val mainBottom = ch * 0.50f
+        val mainBottom = ch * 0.55f
 
-        // Scaling: fit span into horizontal space
-        val availableW = mainRight - mainLeft - 60f   // leave room for La
-        val availableH = mainBottom - mainTop - 40f
+        // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
+        val availableW = mainRight - mainLeft
+        val availableH = mainBottom - mainTop - 60f
         val scaleW = availableW / span.toFloat()
         val scaleH = availableH / beamDepth.toFloat()
-        val scale = min(scaleW, scaleH) * 0.75f
+        val scale = min(scaleW, scaleH) * 0.90f
 
         val beamDrawW = span.toFloat() * scale
         val beamDrawH = beamDepth.toFloat() * scale
         val beamDrawD = beamWidth.toFloat() * scale * 0.35f   // depth for 3D effect
 
-        val beamLeft = mainLeft + 40f
-        val beamTop = mainTop + 40f + beamDrawD * angleY
+        // CENTER the beam horizontally within mainLeft..mainRight
+        val beamLeft = mainLeft + (availableW - beamDrawW) / 2f
+        val beamTop = mainTop + 60f + beamDrawD * angleY
         val beamRight = beamLeft + beamDrawW
         val beamBottom = beamTop + beamDrawH
 
