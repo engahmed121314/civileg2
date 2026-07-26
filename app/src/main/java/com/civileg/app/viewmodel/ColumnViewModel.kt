@@ -10,7 +10,6 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -177,10 +176,13 @@ class ColumnViewModel @Inject constructor(
         _uiState.update { it.copy(isExporting = true) }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val exporter = ComprehensivePdfExporter(context).setLanguage(settingsManager.language)
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
                 val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
-                val file = File(context.cacheDir, fileName)
-                
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
+
                 val h = state.height.toDoubleOrNull() ?: 3.0
                 val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
                 val fyVal = state.fy.toDoubleOrNull() ?: 400.0
@@ -197,87 +199,59 @@ class ColumnViewModel @Inject constructor(
                         tieSpacing = res.stirrups.spacing,
                         cover = 40.0
                     )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
+                } catch (e: Exception) { e.printStackTrace(); null }
+
+                val codeName = when(state.designCode) {
+                    com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"
+                    com.civileg.app.domain.entities.DesignCode.SBC -> "SBC 304"
+                    else -> "ECP 203"
                 }
 
-                val colType = if (res.columnType == "CIRCULAR") ColumnType.Circular(res.width) else ColumnType.Rectangular(res.width, res.depth)
-                // Compute moment capacities from the column result
-                // res.momentCapacity is the uniaxial moment capacity; approximate Y based on aspect ratio
-                val mcX = res.momentCapacity
-                val mcY = if (res.depth > 0 && res.width > 0) {
-                    res.momentCapacity * (res.width / res.depth).coerceIn(0.5, 2.0)
-                } else res.momentCapacity
-                // Compute punching shear capacity estimate (ECP 203 approximation)
-                val cover = 40.0
-                val barDia = res.reinforcement.diameter.toDouble()
-                val effectiveDepth = (res.depth - cover - barDia / 2.0).coerceAtLeast(50.0)
-                val criticalPerimeter = if (res.columnType == "CIRCULAR") {
-                    // Circular column: perimeter at d/2 from column face
-                    Math.PI * (res.width + effectiveDepth)
-                } else {
-                    // Rectangular column: 2*(b + h) + 4*d at d/2 from faces
-                    2.0 * (res.width + res.depth) + 4.0 * effectiveDepth
+                val inputsMap = mapOf(
+                    "Column Type" to res.columnType,
+                    "Width" to "${res.width} mm",
+                    "Depth" to "${res.depth} mm",
+                    "Height" to "${h} m",
+                    "Axial Load Pu" to "${String.format("%.1f", res.pu)} kN",
+                    "f'cu" to "${fcuVal} MPa",
+                    "fy" to "${fyVal} MPa",
+                    "Design Code" to codeName,
+                    "Load Combination" to state.loadCombination
+                )
+                val resultsMap = mapOf(
+                    "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",
+                    "Reinforcement" to res.reinforcement.barString,
+                    "Stirrups" to res.stirrups.description,
+                    "Slenderness Ratio" to String.format("%.1f", res.slenderness),
+                    "Is Slender" to if (res.isSlender) "Yes" else "No",
+                    "Punching Safe" to if (res.punchingSafe) "Yes" else "No",
+                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                )
+                val safetyChecks = res.safetyChecks.map { chk ->
+                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = chk.name, calculated = chk.value,
+                        limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                    )
                 }
-                val punchingShearStress = 0.8 * 1.0 * kotlin.math.sqrt(fcuVal) // MPa, simplified ECP 203
-                val punchingCapacity = punchingShearStress * criticalPerimeter * effectiveDepth / 1000.0 // kN
-                val advResult = AdvancedColumnResult(
-                    columnType = colType,
-                    axialCapacity = res.axialCapacity,
-                    momentCapacityX = mcX,
-                    momentCapacityY = mcY,
-                    slendernessRatio = res.slenderness,
-                    isSlender = res.isSlender,
-                    effectiveLength = h * 1000.0,
-                    reinforcementResult = ReinforcementResult(
-                        astRequired = res.reinforcementArea,
-                        astProvided = res.reinforcementArea,
-                        barDiameter = res.reinforcement.diameter.toDouble(),
-                        numberOfBars = res.reinforcement.numBars,
-                        tiesDiameter = res.stirrups.diameter.toDouble(),
-                        tiesSpacing = res.stirrups.spacing,
-                        isSafe = res.isSafe,
-                        utilizationRatio = (res.pu / (if(res.axialCapacity > 0) res.axialCapacity else 1.0)).coerceIn(0.0, 1.2)
-                    ),
-                    inventoryAnalysis = null,
-                    biaxialCheck = null,
-                    punchingCheck = PunchingCheckResult(res.pu, punchingCapacity, res.punchingSafe, false, criticalPerimeter),
-                    warnings = emptyList(),
-                    codeNotes = listOf("تم التصدير من تطبيق Civil EG Pro"),
-                    steelWeightPerMeter = res.steelWeight / if(h > 0) h else 1.0,
-                    concreteVolumePerMeter = res.concreteVolume / if(h > 0) h else 1.0
+
+                val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                val generated = exporter.generateReport(
+                    title = "Column Design Report — ${res.columnType}",
+                    subtitle = "Code: $codeName  •  ${res.width}×${res.depth}mm, H=${h}m",
+                    designType = "Column (${res.columnType})",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
                 )
 
-                val inputs = ColumnInputs(
-                    fcu = fcuVal,
-                    fy = fyVal,
-                    axialLoad = res.pu,
-                    momentX = 0.0,
-                    momentY = 0.0,
-                    loadCombination = state.loadCombination,
-                    unsupportedLength = h,
-                    columnType = colType
-                )
-
-                val exportedFile = exporter.exportColumnReport(
-                    projectName = "تقرير تصميم أعمدة",
-                    designCode = state.designCode,
-                    columnType = colType,
-                    inputs = inputs,
-                    result = advResult,
-                    inventoryAnalysis = null,
-                    alternatives = emptyList(),
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
-                )
-                
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }
-                    exportedFile?.let {
-                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
-                    }
-                    onComplete(exportedFile)
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    onComplete(generated)
                 }
             } catch (e: Exception) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

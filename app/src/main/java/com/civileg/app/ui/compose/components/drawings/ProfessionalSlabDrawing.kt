@@ -117,6 +117,20 @@ fun ProfessionalSlabDrawing(
         val planW = planRight - planLeft
         val planDrawH = planBottom - planTop
 
+        // ── Slab type detection (shared across views) ──────────────
+        val isHordi = slabType.contains("Hordi", ignoreCase = true) ||
+                      slabType.contains("هردي", ignoreCase = true) ||
+                      slabType.contains("Hollow", ignoreCase = true) ||
+                      slabType.contains("هولو", ignoreCase = true)
+        val isWaffle = slabType.contains("Waffle", ignoreCase = true) ||
+                       slabType.contains("وافل", ignoreCase = true)
+        val isCantilever = slabType.contains("Cantilever", ignoreCase = true) ||
+                           slabType.contains("ناتئ", ignoreCase = true)
+        val isFlat = slabType.contains("Flat", ignoreCase = true) ||
+                     slabType.contains("مسطحة", ignoreCase = true)
+        val spanRatio = if (spanY > 0) spanX / spanY else 1.0
+        val isOneWay = spanRatio < 0.5
+
         // ── Scaling ────────────────────────────────────────────────
         val maxSpan = maxOf(spanX, spanY)
         val scaleX = planW / spanX.toFloat()
@@ -175,12 +189,6 @@ fun ProfessionalSlabDrawing(
             drawContext.canvas.nativeCanvas.restore()
 
             // ── Hordi / Waffle ribs & blocks ───────────────────────
-            val isHordi = slabType.contains("Hordi", ignoreCase = true) ||
-                          slabType.contains("هردي", ignoreCase = true) ||
-                          slabType.contains("Hollow", ignoreCase = true) ||
-                          slabType.contains("هولو", ignoreCase = true)
-            val isWaffle = slabType.contains("Waffle", ignoreCase = true) ||
-                           slabType.contains("وافل", ignoreCase = true)
             if (isHordi || isWaffle) {
                 val rs = if (ribSpacing > 0) ribSpacing else 500.0
                 val rw = if (ribWidth > 0) ribWidth else 100.0
@@ -222,8 +230,6 @@ fun ProfessionalSlabDrawing(
             }
 
             // ── Flat Plate: column strip / drop panel ──────────────
-            val isFlat = slabType.contains("Flat", ignoreCase = true) ||
-                         slabType.contains("مسطحة", ignoreCase = true)
             if (isFlat) {
                 val stripW = drawSpanY / 6f
                 drawRect(
@@ -288,10 +294,6 @@ fun ProfessionalSlabDrawing(
 
             // ── Supports ───────────────────────────────────────────
             val colSize = 28f
-            val spanRatio = if (spanY > 0) spanX / spanY else 1.0
-            val isOneWay = spanRatio < 0.5
-            val isCantilever = slabType.contains("Cantilever", ignoreCase = true) ||
-                               slabType.contains("ناتئ", ignoreCase = true)
             when {
                 isCantilever -> {
                     drawRect(
@@ -373,11 +375,6 @@ fun ProfessionalSlabDrawing(
             val sSlabLeft = secLeft + (maxSectionW - sectionSpanPx) / 2f
             val sSlabTop = secTop + (sectionH - thickPx) / 2f + 10f
             val sSlabBottom = sSlabTop + thickPx
-
-            val isHordi = slabType.contains("Hordi", ignoreCase = true) ||
-                          slabType.contains("Hollow", ignoreCase = true)
-            val isWaffle = slabType.contains("Waffle", ignoreCase = true)
-            val isCantilever = slabType.contains("Cantilever", ignoreCase = true)
 
             if (isHordi || isWaffle) {
                 val toppingH = (slabThickness * 0.3 * sectionScale).toFloat().coerceAtLeast(10f)

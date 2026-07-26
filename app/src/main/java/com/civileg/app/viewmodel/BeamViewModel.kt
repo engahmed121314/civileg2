@@ -101,11 +101,16 @@ class BeamViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                // instead of iText-based ComprehensivePdfExporter.
+                // iText 8 AGPL lacks pdfCalligraph → garbled Arabic text.
                 val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
-                
-                // Generate drawing for PDF
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
+
+                // Generate drawing bitmap
                 val drawingBitmap = try {
                     PdfDrawingGenerator.generateBeamDrawing(
                         beamWidth = res.width.toDouble(),
@@ -120,90 +125,60 @@ class BeamViewModel @Inject constructor(
                         topRebarDia = res.reinforcementTop.diameter.toDouble(),
                         topRebarCount = res.reinforcementTop.numBars
                     )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
+                } catch (e: Exception) { e.printStackTrace(); null }
+
+                val codeName = when(res.code) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
                 }
 
-                val domainCode = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
-                    else -> com.civileg.app.domain.entities.DesignCode.ECP
+                val inputsMap = mapOf(
+                    "Span" to "${lastSpan} m",
+                    "Width" to "${res.width} mm",
+                    "Depth" to "${res.depth} mm",
+                    "Support" to lastSupportType.displayName,
+                    "f'cu" to "${lastFcu} MPa",
+                    "fy" to "${lastFy} MPa",
+                    "Dead Load" to "${lastDeadLoad} kN/m",
+                    "Live Load" to "${lastLiveLoad} kN/m",
+                    "Design Code" to codeName
+                )
+                val resultsMap = mapOf(
+                    "Max Moment Mu" to "${String.format("%.2f", res.mu)} kN.m",
+                    "Max Shear Vu" to "${String.format("%.2f", res.vu)} kN",
+                    "Bottom Reinforcement" to res.reinforcementBottom.barString,
+                    "Top Reinforcement" to res.reinforcementTop.barString,
+                    "Stirrups" to res.stirrups.description,
+                    "Deflection" to "${String.format("%.2f", res.deflection)} mm",
+                    "Allowable Deflection" to "${String.format("%.2f", res.allowableDeflection)} mm",
+                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                )
+                val safetyChecks = res.safetyChecks.map { chk ->
+                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = chk.name, calculated = chk.value,
+                        limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                    )
                 }
 
-                // Map actual support type to domain BeamType
-                val beamType = when (lastSupportType) {
-                    CalculatorEngine.SupportType.FIXED_FIXED -> com.civileg.app.domain.entities.BeamType.Fixed(lastSpan)
-                    CalculatorEngine.SupportType.FIXED_HINGED -> com.civileg.app.domain.entities.BeamType.Fixed(lastSpan)
-                    CalculatorEngine.SupportType.CANTILEVER -> com.civileg.app.domain.entities.BeamType.Cantilever(lastSpan)
-                    else -> com.civileg.app.domain.entities.BeamType.SimplySupported(lastSpan)
-                }
-                
-                val cover = 50.0
-                val advResult = com.civileg.app.domain.entities.AdvancedBeamResult(
-                    beamType = beamType,
-                    sectionType = com.civileg.app.domain.entities.BeamSectionType.RECTANGULAR,
-                    flexureResult = com.civileg.app.domain.entities.ReinforcementResult(
-                        astRequired = res.reinforcementBottom.area * 0.9, // approximate required
-                        astProvided = res.reinforcementBottom.area,
-                        barDiameter = res.reinforcementBottom.diameter.toDouble(),
-                        numberOfBars = res.reinforcementBottom.numBars,
-                        tiesDiameter = res.stirrups.diameter.toDouble(),
-                        tiesSpacing = res.stirrups.spacing,
-                        isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio
-                    ),
-                    shearResult = com.civileg.app.domain.entities.ShearReinforcementResult(
-                        isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio,
-                        stirrupDiameter = res.stirrups.diameter.toDouble(),
-                        stirrupSpacing = res.stirrups.spacing
-                    ),
-                    deflectionCheck = com.civileg.app.domain.entities.DeflectionCheckResult(
-                        isSafe = res.deflection <= res.allowableDeflection,
-                        calculatedDeflection = res.deflection,
-                        allowableDeflection = res.allowableDeflection
-                    ),
-                    momentDiagram = emptyList(),
-                    shearDiagram = emptyList(),
-                    inventoryAnalysis = null,
-                    crackWidthCheck = null,
-                    developmentLengthCheck = null,
-                    warnings = emptyList(),
-                    codeNotes = listOf("Design per ${domainCode.version}")
+                val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                val generated = exporter.generateReport(
+                    title = "Beam Design Report — ${lastSupportType.displayName}",
+                    subtitle = "Code: $codeName  •  Span=${lastSpan}m, ${res.width}×${res.depth}mm",
+                    designType = "Beam (${lastSupportType.displayName})",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
                 )
 
-                // Use ACTUAL input values instead of hardcoded
-                val beamInputs = com.civileg.app.domain.entities.BeamInputs(
-                    fcu = lastFcu,
-                    fy = lastFy,
-                    width = lastWidth,
-                    totalDepth = lastHeight,
-                    effectiveDepth = lastHeight - cover,
-                    designMoment = res.mu,
-                    designShear = res.vu,
-                    span = lastSpan,
-                    deadLoad = lastDeadLoad,
-                    liveLoad = lastLiveLoad
-                )
-
-                val exportedFile = exporter.exportBeamReport(
-                    projectName = "تقرير تصميم كمرات - ${lastSupportType.displayName}",
-                    designCode = domainCode,
-                    beamType = beamType,
-                    inputs = beamInputs,
-                    result = advResult,
-                    inventoryAnalysis = null,
-                    momentShearDiagrams = com.civileg.app.domain.entities.MomentShearDiagrams(emptyList(), emptyList(), emptyList()),
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
-                )
-                
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let {
-                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
-                    }
-                    onComplete(exportedFile)
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Exception) {
