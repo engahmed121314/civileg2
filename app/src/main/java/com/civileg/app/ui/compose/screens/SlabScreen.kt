@@ -286,11 +286,20 @@ fun SlabScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> 380  // Plan only
+                        2 -> 280  // Section only
+                        3 -> 460  // Table only
+                        else -> 900  // All
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.slab_drawing_title),
                         subtitle = "Slab Reinforcement Detail",
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
-                        drawingHeightDp = 900,
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeight,
                         drawingContent = {
                             ProfessionalSlabDrawing(
                                 slabType = selectedType.displayName,
@@ -305,6 +314,7 @@ fun SlabScreen(
                                 dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
                                 ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
                                 ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

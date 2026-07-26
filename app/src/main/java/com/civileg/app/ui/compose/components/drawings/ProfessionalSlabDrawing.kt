@@ -39,12 +39,20 @@ fun ProfessionalSlabDrawing(
     dropPanelSize: Double = 0.0,
     ribWidth: Double = 0.0,
     ribSpacing: Double = 0.0,
+    viewMode: Int = 0,  // 0=All, 1=Plan, 2=Section, 3=Reinforcement Table
     modifier: Modifier = Modifier
 ) {
+    // Dynamic height based on view mode — single views need less space
+    val canvasHeight = when (viewMode) {
+        1 -> 380.dp  // Plan only
+        2 -> 280.dp  // Section only
+        3 -> 460.dp  // Table only
+        else -> 900.dp  // All (default)
+    }
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(900.dp)
+            .height(canvasHeight)
     ) {
         val w = size.width
         val h = size.height
@@ -97,9 +105,14 @@ fun ProfessionalSlabDrawing(
         }
 
         // ── Layout zones ───────────────────────────────────────────
-        val planH = h * 0.36f
-        val sectionH = h * 0.24f
-        val tableH = h * 0.40f
+        // Adjust zone proportions based on view mode:
+        // - viewMode 0 (All): plan 36%, section 24%, table 40%
+        // - viewMode 1 (Plan only): plan 90%
+        // - viewMode 2 (Section only): section 90%
+        // - viewMode 3 (Table only): table 90%
+        val planH = when (viewMode) { 1 -> h * 0.88f; 0 -> h * 0.36f; else -> h * 0.10f }
+        val sectionH = when (viewMode) { 2 -> h * 0.88f; 0 -> h * 0.24f; else -> h * 0.10f }
+        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.40f; else -> h * 0.10f }
         val margin = 35f
         val planLeft = margin + 40f
         val planRight = w - margin
@@ -165,7 +178,17 @@ fun ProfessionalSlabDrawing(
         drawContext.canvas.nativeCanvas.restore()
 
         // ── Hordi / Waffle ribs & blocks ───────────────────────────
-        if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
+        // FIX: SlabType.HOLLOW_BLOCK has displayName "Hollow Block" (not "Hordi"),
+        // so the original check (slabType.contains("Hordi")) never triggered.
+        // Now we check for both English display names AND legacy Arabic keywords.
+        val isHordi = slabType.contains("Hordi", ignoreCase = true) ||
+                      slabType.contains("هردي", ignoreCase = true) ||
+                      slabType.contains("Hollow", ignoreCase = true) ||
+                      slabType.contains("هولو", ignoreCase = true)
+        val isWaffle = slabType.contains("Waffle", ignoreCase = true) ||
+                       slabType.contains("وافل", ignoreCase = true) ||
+                       slabType.contains("مجازين", ignoreCase = true)
+        if (isHordi || isWaffle) {
             val rs = if (ribSpacing > 0) ribSpacing else 500.0
             val rw = if (ribWidth > 0) ribWidth else 100.0
             val ribStepPx = (rs * scale).toFloat()
@@ -180,7 +203,7 @@ fun ProfessionalSlabDrawing(
                 )
                 rx += ribStepPx
             }
-            if (slabType.contains("Waffle") || slabType.contains("وافل")) {
+            if (isWaffle) {
                 var ry = slabTop + ribStepPx
                 while (ry < slabBottom) {
                     drawRect(
@@ -208,7 +231,9 @@ fun ProfessionalSlabDrawing(
         }
 
         // ── Flat Plate: column strip / middle strip / drop panel ──
-        if (slabType.contains("Flat") || slabType.contains("مسطحة")) {
+        val isFlat = slabType.contains("Flat", ignoreCase = true) ||
+                     slabType.contains("مسطحة", ignoreCase = true)
+        if (isFlat) {
             val stripW = drawSpanY / 6f
             // Column strips (top/bottom)
             drawRect(
@@ -281,12 +306,17 @@ fun ProfessionalSlabDrawing(
 
         // ── Column / Wall supports ─────────────────────────────────
         val colSize = 28f
-        val isCantilever = slabType == "Cantilever"
-        val isOneWay = slabType == "OneWay"
+        // FIX: SlabType enum doesn't have Cantilever or OneWay values.
+        // Detect OneWay vs TwoWay based on span ratio (Lx/Ly < 0.5 = OneWay per ECP 203).
+        val spanRatio = if (spanY > 0) spanX / spanY else 1.0
+        val isOneWay = spanRatio < 0.5
+        val isCantilever = slabType.contains("Cantilever", ignoreCase = true) ||
+                           slabType.contains("كنتيل", ignoreCase = true) ||
+                           slabType.contains("ناتئ", ignoreCase = true)
         val supports = mutableListOf<Offset>()
 
         when {
-            slabType == "Cantilever" -> {
+            isCantilever -> {
                 // Fixed support at left, free at right
                 val wallLeft = slabLeft - 10f
                 drawRect(
@@ -305,8 +335,8 @@ fun ProfessionalSlabDrawing(
                 }
                 supports.add(Offset(wallLeft + 7f, slabTop + drawSpanY / 2f))
             }
-            slabType == "OneWay" -> {
-                // Walls on left & right
+            isOneWay -> {
+                // Walls on left & right (one-way slab spans between them)
                 for (side in listOf(slabLeft, slabRight - 14f)) {
                     drawRect(
                         color = columnFill,
@@ -317,7 +347,7 @@ fun ProfessionalSlabDrawing(
                 }
             }
             else -> {
-                // Columns at corners
+                // Columns at corners (TwoWay / FlatPlate / Waffle / Hollow Block)
                 val corners = listOf(
                     Offset(slabLeft, slabTop), Offset(slabRight - colSize, slabTop),
                     Offset(slabLeft, slabBottom - colSize), Offset(slabRight - colSize, slabBottom - colSize)
@@ -325,13 +355,13 @@ fun ProfessionalSlabDrawing(
                 corners.forEach {
                     drawRect(color = columnFill, topLeft = it, size = Size(colSize, colSize))
                 }
-                // Centre columns for TwoWay/FlatPlate
-                if (slabType == "TwoWay" || slabType.contains("Flat") || slabType.contains("مسطحة")) {
+                // Centre columns for TwoWay/FlatPlate (skip if OneWay)
+                if (!isOneWay && (isFlat || spanRatio >= 0.5)) {
                     val cx = slabLeft + drawSpanX / 2f - colSize / 2f
                     val cy = slabTop + drawSpanY / 2f - colSize / 2f
                     drawRect(color = columnFill, topLeft = Offset(cx, cy), size = Size(colSize, colSize))
                     // Punching shear perimeter for FlatPlate
-                    if (slabType.contains("Flat") || slabType.contains("مسطحة")) {
+                    if (isFlat) {
                         val d = slabThickness - cover
                         val dPx = (d * scale).toFloat().coerceAtLeast(colSize * 0.6f)
                         val psSize = colSize + dPx
@@ -390,7 +420,7 @@ fun ProfessionalSlabDrawing(
         val sSlabBottom = sSlabTop + thickPx
 
         // Hordi/Waffle: show rib profile
-        if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
+        if (isHordi || isWaffle) {
             val toppingH = (slabThickness * 0.3 * sectionScale).toFloat().coerceAtLeast(10f)
             val ribH = thickPx - toppingH
             val ribWPx = (ribWidth * sectionScale).toFloat().coerceAtLeast(6f)
@@ -445,7 +475,7 @@ fun ProfessionalSlabDrawing(
             }
 
             // Top steel at supports (red circles) - for continuous slabs
-            if (slabType != "Cantilever") {
+            if (!isCantilever) {
                 val topBarR = barR * 0.9f
                 val topCount = min(barCount, 6)
                 val topBarStep = (sectionSpanPx * 0.3f) / (topCount - 1).coerceAtLeast(1)
@@ -482,7 +512,7 @@ fun ProfessionalSlabDrawing(
 
         // Supports in section
         when {
-            slabType == "Cantilever" -> {
+            isCantilever -> {
                 // Wall at left
                 drawRect(
                     color = columnFill,
@@ -498,7 +528,7 @@ fun ProfessionalSlabDrawing(
                     )
                 }
             }
-            slabType == "OneWay" -> {
+            isOneWay -> {
                 // Walls at ends
                 for (wx in listOf(sSlabLeft - 12f, sSlabLeft + sectionSpanPx - 2f)) {
                     drawRect(
@@ -545,7 +575,7 @@ fun ProfessionalSlabDrawing(
 
         // Bar labels in section
         drawText("\u2460", sSlabLeft + sectionSpanPx / 2f, sSlabBottom + 14f, mainBarColor, 9f, true)
-        if (slabType != "OneWay") {
+        if (!isOneWay) {
             drawText("\u2462", sSlabLeft + 14f, sSlabTop - 5f, topBarColor, 9f, true)
         }
 
@@ -588,9 +618,9 @@ fun ProfessionalSlabDrawing(
         rowY += headerRowH
 
         // Calculate lengths — CRITICAL: convert meters to mm for table display
-        val mainLength = if (slabType == "Cantilever") spanX * 1.2 else spanX
+        val mainLength = if (isCantilever) spanX * 1.2 else spanX
         val distLength = spanY
-        val topBarLength = if (slabType == "OneWay") 0.0 else spanX * 0.3
+        val topBarLength = if (isOneWay) 0.0 else spanX * 0.3
         val tableRowColor = Color(0xFF263238)
         val tableRowAltColor = Color(0xFF1E2A33)
 
@@ -670,7 +700,7 @@ fun ProfessionalSlabDrawing(
             String.format("%.1f", shrinkageAsProvided * distLength * 0.00785)
         ))
         // Hordi/Waffle: rib bars
-        if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
+        if (isHordi || isWaffle) {
             val ribBarLen = if (slabThickness > 0) (slabThickness * 0.7 * 1000).toInt().toString() else "0"
             val safeRibSpacing = if (ribSpacing > 0) ribSpacing else 500.0
             val ribAs = (Math.PI * safeMainDia * safeMainDia / 4.0) * (1000.0 / safeRibSpacing)
