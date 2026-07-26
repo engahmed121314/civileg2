@@ -53,10 +53,24 @@ class ComprehensivePdfExporter(private val context: Context) {
     private val WHITE = DeviceRgb(255, 255, 255)
 
     // ==================== Font Management ====================
-    // ArabicFontProvider.getArabicPdfFont() now NEVER returns null
-    private val arabicFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = false) }
-    private val arabicBoldFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = true) }
-    private val helveticaFont: PdfFont by lazy { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
+    // CRITICAL: NEVER cache PdfFont objects across PDFs. iText 8 binds each PdfFont
+    // to the FIRST PdfDocument that uses it; after that document is closed, the
+    // cached font becomes invalid and any subsequent use throws:
+    //   "Pdf indirect object belongs to other PDF document. Copy object to current pdf document."
+    //
+    // This is especially critical for this class because it is bound as @Singleton in Hilt DI
+    // (AppModule.kt) — a single instance is shared across the entire app. With cached fonts,
+    // the first PDF export would succeed but EVERY subsequent export would fail.
+    //
+    // Each call below returns a FRESH PdfFont. ArabicFontProvider caches the underlying
+    // FontProgram (parsed TTF — the expensive part) so creating fresh PdfFont wrappers is cheap.
+    private fun arabicFont(): PdfFont = ArabicFontProvider.getArabicPdfFont(context, bold = false)
+    private fun arabicBoldFont(): PdfFont = ArabicFontProvider.getArabicPdfFont(context, bold = true)
+    private fun helveticaFont(bold: Boolean = false): PdfFont = try {
+        PdfFontFactory.createFont(if (bold) StandardFonts.HELVETICA_BOLD else StandardFonts.HELVETICA)
+    } catch (_: Exception) {
+        PdfFontFactory.createFont(StandardFonts.HELVETICA)
+    }
 
     private var currentLanguage: String = LocaleHelper.getLocale(context)
 
@@ -102,7 +116,7 @@ class ComprehensivePdfExporter(private val context: Context) {
             // contextual Presentation Forms (0xFE80-0xFEFF) based on letter
             // position (isolated/initial/medial/final). Also handles Lam-Alef ligatures.
             val shapedText = ArabicShaper.shapeIfArabic(text)
-            val font = if (bold) arabicBoldFont else arabicFont
+            val font = if (bold) arabicBoldFont() else arabicFont()
             val run = Text(shapedText).setFont(font)
             p.add(run)
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
@@ -110,12 +124,8 @@ class ComprehensivePdfExporter(private val context: Context) {
                 p.setTextAlignment(TextAlignment.RIGHT)
             }
         } else {
-            // Pure Latin/numeric text — use Helvetica (smaller file size)
-            val font = if (bold) {
-                try { PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD) } catch (_: Exception) { helveticaFont }
-            } else {
-                helveticaFont
-            }
+            // Pure Latin/numeric text — use a FRESH Helvetica for this PdfDocument
+            val font = helveticaFont(bold)
             p.add(Text(text).setFont(font))
             if (alignment == null) {
                 p.setTextAlignment(TextAlignment.LEFT)
@@ -147,7 +157,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val cell = Cell().setPadding(4f).setTextAlignment(TextAlignment.RIGHT)
         // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
         val p = Paragraph().setFontSize(fontSize)
-        val font = if (bold) arabicBoldFont else arabicFont
+        val font = if (bold) arabicBoldFont() else arabicFont()
         val shapedText = ArabicShaper.shapeIfArabic(text)
         val textRun = com.itextpdf.layout.element.Text(shapedText).setFont(font).setFontSize(fontSize)
         if (bold) textRun.setBold()
@@ -169,7 +179,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val shapedText = ArabicShaper.shapeIfArabic(text)
         val p = Paragraph().setFontSize(9f)
         val textRun = com.itextpdf.layout.element.Text(shapedText)
-            .setFont(arabicBoldFont)
+            .setFont(arabicBoldFont())
             .setFontSize(9f)
             .setBold()
             .setFontColor(WHITE)
@@ -187,7 +197,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val pdf = PdfDocument(writer)
         val document = Document(pdf)
         document.setMargins(40f, 40f, 40f, 40f)
-        return Triple(pdf, document, arabicFont)
+        return Triple(pdf, document, arabicFont())
     }
 
     private fun addReportHeader(document: Document, titleAr: String, titleEn: String, subtitle: String, font: PdfFont) {
@@ -196,7 +206,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val appName = Paragraph()
             .setTextAlignment(TextAlignment.CENTER)
         val appNameRun = com.itextpdf.layout.element.Text(appNameText)
-            .setFont(if (isEnglish) helveticaFont else arabicBoldFont)
+            .setFont(if (isEnglish) helveticaFont() else arabicBoldFont())
             .setFontSize(22f)
             .setBold()
             .setFontColor(PRIMARY)
@@ -209,7 +219,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val subLine = ArabicShaper.shapeIfArabic(subLineRaw)
         val subPara = Paragraph().setTextAlignment(TextAlignment.CENTER)
         val subRun = com.itextpdf.layout.element.Text(subLine)
-            .setFont(if (isEnglish) helveticaFont else arabicFont)
+            .setFont(if (isEnglish) helveticaFont() else arabicFont())
             .setFontSize(10f)
             .setFontColor(ColorConstants.GRAY)
         subPara.add(subRun)
@@ -227,7 +237,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val subtitlePara = Paragraph().setTextAlignment(TextAlignment.CENTER)
         val shapedSubtitle = ArabicShaper.shapeIfArabic(subtitle)
         val subtitleRun = com.itextpdf.layout.element.Text(shapedSubtitle)
-            .setFont(if (isEnglish) helveticaFont else arabicFont)
+            .setFont(if (isEnglish) helveticaFont() else arabicFont())
             .setFontSize(10f)
             .setFontColor(SECONDARY)
         subtitlePara.add(subtitleRun)
@@ -239,7 +249,7 @@ class ComprehensivePdfExporter(private val context: Context) {
         val dateStr = SimpleDateFormat("yyyy/MM/dd  HH:mm", dateLocale).format(Date())
         val datePara = Paragraph().setTextAlignment(TextAlignment.CENTER)
         val dateRun = com.itextpdf.layout.element.Text(dateStr)
-            .setFont(if (isEnglish) helveticaFont else arabicFont)
+            .setFont(if (isEnglish) helveticaFont() else arabicFont())
             .setFontSize(9f)
             .setFontColor(ColorConstants.GRAY)
         datePara.add(dateRun)
@@ -287,7 +297,7 @@ class ComprehensivePdfExporter(private val context: Context) {
             val lp = Paragraph().setFontSize(9f)
             // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
             val shapedLabel = ArabicShaper.shapeIfArabic(label)
-            val lRun = com.itextpdf.layout.element.Text(shapedLabel).setFont(arabicBoldFont).setFontSize(9f).setBold()
+            val lRun = com.itextpdf.layout.element.Text(shapedLabel).setFont(arabicBoldFont()).setFontSize(9f).setBold()
             lp.add(lRun)
             if (labelAr) lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             labelCell.add(lp)
@@ -299,7 +309,7 @@ class ComprehensivePdfExporter(private val context: Context) {
             val vp = Paragraph().setFontSize(9f)
             // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
             val shapedValue = ArabicShaper.shapeIfArabic(value)
-            val vRun = com.itextpdf.layout.element.Text(shapedValue).setFont(arabicFont).setFontSize(9f)
+            val vRun = com.itextpdf.layout.element.Text(shapedValue).setFont(arabicFont()).setFontSize(9f)
             vp.add(vRun)
             if (valueAr) vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             valueCell.add(vp)

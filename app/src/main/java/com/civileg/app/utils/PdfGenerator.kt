@@ -34,10 +34,25 @@ object PdfGenerator {
     private val SUCCESS_COLOR = DeviceRgb(46, 125, 50)
     private val ERROR_COLOR = DeviceRgb(198, 40, 40)
     
-    private val helveticaFont: PdfFont by lazy { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
+    // CRITICAL: NEVER cache PdfFont objects. iText 8 binds a PdfFont to the FIRST
+    // PdfDocument that uses it; after that document is closed, the cached font
+    // becomes invalid and any subsequent use throws:
+    //   "Pdf indirect object belongs to other PDF document. Copy object to current pdf document."
+    // This applies to BOTH embedded fonts (Arabic) AND Standard-14 fonts (Helvetica).
+    // Always create a fresh font per PDF — FontProgram caching in ArabicFontProvider
+    // ensures this stays cheap.
 
     private fun getArabicFont(context: Context): PdfFont {
         return ArabicFontProvider.getArabicPdfFont(context)
+    }
+
+    /** Create a FRESH Helvetica font for use in a single PdfDocument. */
+    private fun freshHelvetica(bold: Boolean = false): PdfFont {
+        return try {
+            PdfFontFactory.createFont(if (bold) StandardFonts.HELVETICA_BOLD else StandardFonts.HELVETICA)
+        } catch (_: Exception) {
+            PdfFontFactory.createFont(StandardFonts.HELVETICA)
+        }
     }
 
     private fun containsArabic(text: String): Boolean {
@@ -94,12 +109,9 @@ object PdfGenerator {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
             p.setTextAlignment(TextAlignment.RIGHT)
         } else {
-            // Pure Latin/numeric text — use Helvetica (smaller file size)
-            val latinFont = if (isBold) {
-                try { PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD) } catch (_: Exception) { helveticaFont }
-            } else {
-                helveticaFont
-            }
+            // Pure Latin/numeric text — create a FRESH Helvetica for this PdfDocument.
+            // Never reuse across PDFs (iText 8 font caching bug).
+            val latinFont = freshHelvetica(isBold)
             p.add(Text(text).setFont(latinFont))
         }
         return p
