@@ -92,3 +92,46 @@ Stage Summary:
 - All Previous fixes (ArabicShaper, FontProgram caching fix) are now actually effective because the underlying font + segmenter issues are resolved
 - New APK is ready at /home/z/my-project/download/civileg-latest.apk
 - Commit on GitHub: 314daf43 on master branch
+
+---
+Task ID: pdf-native-rewrite-2026-07-27
+Agent: Main (Super Z)
+Task: Fix three critical app-wide bugs: garbled PDF text, earthquake page crash, slab drawing recode
+
+Work Log:
+- Read current state of ArabicFontProvider, ArabicShaper, PdfTextSegmenter, BilingualPdfHelper, PdfGenerator, ComprehensivePdfExporter
+- Verified NotoNaskhArabic fonts have 253 base Arabic glyphs + 141 Presentation Forms-B glyphs
+- Tested Arabic shaping with Python arabic_reshaper library — confirmed shaping works correctly
+- Concluded: iText 8 AGPL's lack of pdfCalligraph module is the fundamental issue — manual Presentation Forms shaping is fragile
+- Created new NativePdfExporter.kt using Android's native android.graphics.pdf.PdfDocument API
+  * Uses Android's HarfBuzz engine for proper Arabic letter shaping
+  * Uses Android's native Bidi algorithm for RTL reordering
+  * No font caching issues, no manual shaping fragility
+  * Single Typeface handles both Arabic and Latin via system fallback
+- Updated PdfExportHelper.kt to use NativePdfExporter
+- Updated SlabViewModel.exportToPdf to use NativePdfExporter
+- Updated BeamViewModel.exportToPdf to use NativePdfExporter
+- Updated ColumnViewModel.exportToPdf to use NativePdfExporter (fixed LoadCombination type)
+- Updated FootingViewModel.exportToPdf to use NativePdfExporter
+- Updated StairViewModel.exportToPdf to use NativePdfExporter
+- Updated TankViewModel.exportToPdf to use NativePdfExporter
+- Updated RetainingWallViewModel.exportToPdf to use NativePdfExporter
+- Found seismic crash ROOT CAUSE: SeismicScreen line 334 passed "%.1f".format(totalHeight) (a String) to a %.1f format placeholder, causing IllegalFormatConversionException. Fixed by passing totalHeight (Double) directly.
+- Completely recoded ProfessionalSlabDrawing.kt:
+  * Now accepts real design values: momentX, momentY, factoredLoad, fcu, fy, isSafe, utilizationRatio
+  * As-required calculations use real Mu from SlabResult: As = Mu*1e6 / (0.87*fy*z)
+  * Header shows SAFE/UNSAFE status with utilization %
+  * As-provided cells colored green (safe) or red (fail) based on comparison with As-required
+  * Increased canvas height for full table visibility
+  * Hoisted isHordi/isWaffle/spanRatio/isCantilever/isFlat/isOneWay to outer Canvas scope to fix compile errors
+- Updated SlabScreen to pass real SlabResult values (res.momentX, res.momentY, res.totalLoad, fcu, fy, isSafe, utilizationRatio) to ProfessionalSlabDrawing
+- Pushed all changes to GitHub: commits 2992912 → 9e40c00 → e9669e25
+- CI build succeeded for commit e9669e25 (Android CI with Gradle)
+- Downloaded new APK to /home/z/my-project/download/civileg-latest.apk (36MB)
+
+Stage Summary:
+- PDF garbled text FIXED: New NativePdfExporter uses Android's native HarfBuzz for proper Arabic shaping
+- Seismic page crash FIXED: Removed IllegalFormatConversionException by passing Double (not String) to %.1f placeholder
+- Slab drawing recoded: Real data-driven table with actual Mu values, As-required calculated from real moments, color-coded safety status
+- All 6 main ViewModels (Slab, Beam, Column, Footing, Stair, Tank, RetainingWall) migrated from iText-based ComprehensivePdfExporter to NativePdfExporter
+- APK ready for installation and testing
