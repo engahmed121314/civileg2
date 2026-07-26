@@ -47,20 +47,31 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private fun ar(text: String): String = text
 
     private fun arParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null, alignment: TextAlignment? = null): Paragraph {
-        val p = Paragraph(text).setFontSize(fontSize)
+        // CRITICAL FIX: Create Paragraph empty, then add Text run with Arabic font.
+        // Previously used Paragraph(text) which adds Text with default Helvetica font,
+        // then setFont() afterwards didn't replace the existing Text run's font.
+        val p = Paragraph().setFontSize(fontSize)
         if (bold) p.setBold()
         color?.let { p.setFontColor(it) }
         alignment?.let { p.setTextAlignment(it) }
-        p.setFont(if (bold) arabicBoldFont else arabicFont)
-        p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        // Single Text run with Arabic font (also has Latin glyphs) — proper bidi shaping
+        val font = if (bold) arabicBoldFont else arabicFont
+        p.add(Text(text).setFont(font))
+        if (isArabic(text)) {
+            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            if (alignment == null) p.setTextAlignment(TextAlignment.RIGHT)
+        }
         return p
     }
 
     private fun headerCell(text: String, colSpan: Int = 1): Cell {
         val cell = Cell(colSpan, 1).setPadding(5f).setBackgroundColor(HEADER_BG).setTextAlignment(TextAlignment.CENTER)
-        val p = Paragraph(text).setFontSize(8f).setBold().setFontColor(WHITE)
+        val p = Paragraph().setFontSize(8f).setBold().setFontColor(WHITE)
+        // Single Text run with proper Arabic font (also has Latin glyphs)
+        val font = if (isArabic(text)) arabicBoldFont else
+            try { com.itextpdf.kernel.font.PdfFontFactory.createFont(com.itextpdf.io.font.constants.StandardFonts.HELVETICA_BOLD) } catch (_: Exception) { arabicBoldFont }
+        p.add(Text(text).setFont(font))
         if (isArabic(text)) {
-            p.setFont(arabicBoldFont)
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
         cell.add(p)
@@ -69,12 +80,16 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     private fun dataCell(text: String, fontSize: Float = 8f, bold: Boolean = false, bg: DeviceRgb? = null, color: DeviceRgb? = null): Cell {
         val cell = Cell().setPadding(3f).setTextAlignment(TextAlignment.CENTER)
-        val p = Paragraph(text).setFontSize(fontSize)
+        val p = Paragraph().setFontSize(fontSize)
         if (bold) p.setBold()
         color?.let { p.setFontColor(it) }
+        // Single Text run with proper font
+        val font = if (isArabic(text)) arabicFont else
+            try { com.itextpdf.kernel.font.PdfFontFactory.createFont(com.itextpdf.io.font.constants.StandardFonts.HELVETICA) } catch (_: Exception) { arabicFont }
+        p.add(Text(text).setFont(font))
         if (isArabic(text)) {
-            p.setFont(arabicFont)
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            cell.setTextAlignment(TextAlignment.RIGHT)
         }
         cell.add(p)
         bg?.let { cell.setBackgroundColor(it) }

@@ -28,6 +28,8 @@ fun InteractiveDrawingScreen(
     viewModes: List<String> = emptyList(),
     selectedViewMode: Int = 0,
     onViewModeChanged: (Int) -> Unit = {},
+    drawingHeightDp: Int = 620,
+    onExportPdf: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
 ) {
@@ -54,7 +56,8 @@ fun InteractiveDrawingScreen(
                 title = title,
                 subtitle = subtitle,
                 onToggleInfo = { showInfo = !showInfo },
-                showInfo = showInfo
+                showInfo = showInfo,
+                onExportPdf = onExportPdf
             )
 
             // View mode tabs
@@ -89,11 +92,11 @@ fun InteractiveDrawingScreen(
                 }
             }
 
-            // Drawing area
+            // Drawing area — uses dynamic height (caller can pass larger value)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(620.dp)
+                    .height(drawingHeightDp.dp)
                     .background(Color(0xFF1A1A2E))
             ) {
                 drawingContent()
@@ -123,7 +126,8 @@ private fun DrawingToolbar(
     title: String,
     subtitle: String,
     onToggleInfo: () -> Unit,
-    showInfo: Boolean
+    showInfo: Boolean,
+    onExportPdf: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -156,6 +160,17 @@ private fun DrawingToolbar(
         }
 
         Row {
+            // PDF Export button (only shown if callback provided)
+            if (onExportPdf != null) {
+                IconButton(onClick = onExportPdf, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.PictureAsPdf,
+                        contentDescription = "Export PDF",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
             // Info toggle
             IconButton(onClick = onToggleInfo, modifier = Modifier.size(32.dp)) {
                 Icon(

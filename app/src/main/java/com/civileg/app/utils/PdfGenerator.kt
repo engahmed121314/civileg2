@@ -55,50 +55,63 @@ object PdfGenerator {
         return if (isEnglish(context)) en else ar
     }
 
-    private fun splitBilingualText(text: String): List<Pair<String, Boolean>> {
-        val segments = mutableListOf<Pair<String, Boolean>>()
-        var currentSeg = StringBuilder()
-        var currentIsArabic = containsArabic(text.firstOrNull()?.toString() ?: "")
-
-        for (char in text) {
-            val charIsArabic = containsArabic(char.toString())
-            if (charIsArabic != currentIsArabic && currentSeg.isNotEmpty()) {
-                segments.add(Pair(currentSeg.toString(), currentIsArabic))
-                currentSeg = StringBuilder()
-                currentIsArabic = charIsArabic
-            }
-            currentSeg.append(char)
-        }
-        if (currentSeg.isNotEmpty()) {
-            segments.add(Pair(currentSeg.toString(), currentIsArabic))
-        }
-        return segments
+    /**
+     * CRITICAL FIX: Use BilingualPdfHelper to render text with proper Arabic shaping.
+     * Previously text was split into Arabic/Latin segments which BREAKS iText's bidi
+     * algorithm and caused disconnected letters and squares in PDFs.
+     *
+     * Now we use a SINGLE Text run with the Arabic font (which also has Latin glyphs)
+     * and let iText's Unicode Bidi Algorithm handle ordering automatically.
+     */
+    private fun createStyledParagraph(text: String, font: PdfFont?, fontSize: Float = 12f, isBold: Boolean = false): Paragraph {
+        // Determine color from caller context — default to no override
+        return createStyledParagraphColored(text, font, fontSize, isBold, null)
     }
 
-    private fun createStyledParagraph(text: String, font: PdfFont?, fontSize: Float = 12f, isBold: Boolean = false): Paragraph {
+    private fun createStyledParagraphColored(
+        text: String,
+        font: PdfFont?,
+        fontSize: Float = 12f,
+        isBold: Boolean = false,
+        color: DeviceRgb?
+    ): Paragraph {
         val p = Paragraph().setFontSize(fontSize)
+        color?.let { p.setFontColor(it) }
 
-        if (containsArabic(text)) {
-            // Split text into Arabic and English segments for bilingual support
-            val segments = splitBilingualText(text)
-            val arabicBold = font != null // use the passed font as bold font (it's already bold from caller)
-            for ((segText, isArabicSeg) in segments) {
-                val segFont = if (isArabicSeg) font else helveticaFont
-                val run = Text(segText)
-                if (segFont != null) run.setFont(segFont) else run.setFont(helveticaFont)
-                if (isArabicSeg) run.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                p.add(run)
-            }
+        val hasArabic = containsArabic(text)
+        if (hasArabic && font != null) {
+            // CRITICAL FIX: Use a SINGLE Text run (NOT split into segments).
+            // Previously text was split into Arabic/Latin segments which BREAKS
+            // iText's Unicode Bidi Algorithm and caused disconnected letters.
+            // The Arabic font (NotoNaskhArabic) includes Latin glyphs so this
+            // works correctly for mixed-language text.
+            val run = Text(text).setFont(font)
+            p.add(run)
+            // Set BaseDirection on the Paragraph (not on individual Text runs)
+            // This triggers iText's Unicode Bidi Algorithm which shapes Arabic
+            // using the font's GSUB/GPOS OpenType tables.
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            p.setTextAlignment(TextAlignment.RIGHT)
         } else {
-            p.add(Text(text).setFont(helveticaFont))
+            // Pure Latin/numeric text — use Helvetica (smaller file size)
+            val latinFont = if (isBold) {
+                try { PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD) } catch (_: Exception) { helveticaFont }
+            } else {
+                helveticaFont
+            }
+            p.add(Text(text).setFont(latinFont))
         }
         return p
     }
 
     private fun addArabicCell(table: Table, text: String, font: PdfFont?, isBold: Boolean = false, fontSize: Float = 9f) {
         val p = createStyledParagraph(text, font, fontSize, isBold)
-        table.addCell(Cell().add(p))
+        val cell = Cell().add(p)
+        // Ensure cell base direction matches text
+        if (containsArabic(text)) {
+            cell.setTextAlignment(TextAlignment.RIGHT)
+        }
+        table.addCell(cell)
     }
 
     private fun createDataCell(label: String, value: String, font: PdfFont?): Cell {

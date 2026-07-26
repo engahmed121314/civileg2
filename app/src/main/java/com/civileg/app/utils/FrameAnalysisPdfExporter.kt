@@ -30,8 +30,31 @@ import kotlin.math.*
 object FrameAnalysisPdfExporter {
 
     private fun Paragraph.arabicStyle(font: PdfFont, fontSize: Float): Paragraph {
+        // CRITICAL FIX: When Paragraph was created with text directly (e.g., Paragraph("text")),
+        // the text is added as a Text run using the DEFAULT font (Helvetica).
+        // Setting .setFont() afterwards changes paragraph-level font but the existing
+        // Text run still uses Helvetica, causing Arabic to render as boxes.
+        //
+        // To fix this, callers should use the styledArabicParagraph() helper below
+        // which creates the Paragraph empty and adds the text with the correct font.
         return this.setFont(font).setFontSize(fontSize)
             .setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+    }
+
+    /**
+     * Create a Paragraph with proper Arabic shaping.
+     * Use this instead of Paragraph(text).arabicStyle(...) for any text containing Arabic.
+     */
+    private fun styledArabicParagraph(text: String, font: PdfFont, fontSize: Float, bold: Boolean = false): Paragraph {
+        val p = Paragraph().setFontSize(fontSize)
+        if (bold) p.setBold()
+        // Single Text run with Arabic font (also has Latin glyphs) — proper bidi shaping
+        p.add(Text(text).setFont(font))
+        if (ArabicFontProvider.containsArabic(text)) {
+            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            p.setTextAlignment(TextAlignment.RIGHT)
+        }
+        return p
     }
 
     fun generateFrameAnalysisPdf(
@@ -59,8 +82,8 @@ object FrameAnalysisPdfExporter {
         document.add(Paragraph("Frame Structural Analysis Report")
             .setFontSize(20f).setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(5f))
-        document.add(Paragraph("تقرير تحليل وتصميم الإطار")
-            .arabicStyle(arabicFont, 16f).setTextAlignment(TextAlignment.CENTER)
+        document.add(styledArabicParagraph("تقرير تحليل وتصميم الإطار", arabicFont, 16f)
+            .setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(5f))
         document.add(Paragraph("Design Code: ${settings.designCode.version}")
             .setFontSize(11f).setTextAlignment(TextAlignment.CENTER)
@@ -77,7 +100,7 @@ object FrameAnalysisPdfExporter {
         }
 
         // === Nodes Table ===
-        document.add(Paragraph("Nodes / العقد").arabicStyle(arabicBold, 14f).setMarginTop(15f))
+        document.add(styledArabicParagraph("Nodes / العقد", arabicBold, 14f, bold = true).setMarginTop(15f))
         val nodeTable = Table(UnitValue.createPercentArray(floatArrayOf(15f, 25f, 25f, 35f))).useAllAvailableWidth()
         nodeTable.addHeaderCell(Cell().add(Paragraph("ID").setFontSize(9f).setBold()))
         nodeTable.addHeaderCell(Cell().add(Paragraph("X (m)").setFontSize(9f).setBold()))
@@ -92,7 +115,7 @@ object FrameAnalysisPdfExporter {
         document.add(nodeTable)
 
         // === Members Table ===
-        document.add(Paragraph("Members / الأعضاء").arabicStyle(arabicBold, 14f).setMarginTop(15f))
+        document.add(styledArabicParagraph("Members / الأعضاء", arabicBold, 14f, bold = true).setMarginTop(15f))
         val memTable = Table(UnitValue.createPercentArray(floatArrayOf(8f, 20f, 12f, 12f, 15f, 33f))).useAllAvailableWidth()
         memTable.addHeaderCell(Cell().add(Paragraph("#").setFontSize(9f).setBold()))
         memTable.addHeaderCell(Cell().add(Paragraph("Name").setFontSize(9f).setBold()))
@@ -143,7 +166,7 @@ object FrameAnalysisPdfExporter {
             }
 
             // Member End Forces Table
-            document.add(Paragraph("Member End Forces / القوى الداخلية").arabicStyle(arabicBold, 14f).setMarginTop(15f))
+            document.add(styledArabicParagraph("Member End Forces / القوى الداخلية", arabicBold, 14f, bold = true).setMarginTop(15f))
             val forcesTable = Table(UnitValue.createPercentArray(floatArrayOf(15f, 17f, 17f, 17f, 17f, 17f))).useAllAvailableWidth()
             forcesTable.addHeaderCell(Cell().add(Paragraph("Member").setFontSize(8f).setBold()))
             forcesTable.addHeaderCell(Cell().add(Paragraph("NI (kN)").setFontSize(8f).setBold()))
@@ -165,7 +188,7 @@ object FrameAnalysisPdfExporter {
             // Concrete Design Results
             if (result.concreteDesignResults.isNotEmpty()) {
                 document.add(AreaBreak())
-                document.add(Paragraph("Concrete Design Results / نتائج التصميم الخرساني").arabicStyle(arabicBold, 14f))
+                document.add(styledArabicParagraph("Concrete Design Results / نتائج التصميم الخرساني", arabicBold, 14f, bold = true))
                 for (cr in result.concreteDesignResults) {
                     document.add(Paragraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}").setFontSize(11f).setBold().setMarginTop(8f))
                     document.add(Paragraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa").setFontSize(9f))
@@ -180,7 +203,7 @@ object FrameAnalysisPdfExporter {
             // Steel Design Results
             if (result.steelDesignResults.isNotEmpty()) {
                 document.add(AreaBreak())
-                document.add(Paragraph("Steel Design Results / نتائج التصميم المعدني").arabicStyle(arabicBold, 14f))
+                document.add(styledArabicParagraph("Steel Design Results / نتائج التصميم المعدني", arabicBold, 14f, bold = true))
                 for (sr in result.steelDesignResults) {
                     document.add(Paragraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}").setFontSize(11f).setBold().setMarginTop(8f))
                     document.add(Paragraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm⁴").setFontSize(9f))

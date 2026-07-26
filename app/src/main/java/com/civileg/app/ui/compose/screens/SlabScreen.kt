@@ -290,6 +290,7 @@ fun SlabScreen(
                         title = stringResource(R.string.slab_drawing_title),
                         subtitle = "Slab Reinforcement Detail",
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        drawingHeightDp = 780,
                         drawingContent = {
                             ProfessionalSlabDrawing(
                                 slabType = selectedType.displayName,

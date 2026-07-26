@@ -6,6 +6,7 @@ import android.util.Log
 import com.itextpdf.io.font.PdfEncodings
 import com.itextpdf.kernel.font.PdfFont
 import com.itextpdf.kernel.font.PdfFontFactory
+import com.itextpdf.kernel.font.PdfFontFactory.EmbeddingStrategy
 import java.io.File
 
 /**
@@ -14,15 +15,17 @@ import java.io.File
  * Solves the problem of disconnected Arabic letters and square boxes in PDF reports by:
  * 1. Loading a bundled NotoNaskhArabic font from assets (guaranteed to exist)
  * 2. Using IDENTITY_H encoding for proper Unicode Arabic shaping
- * 3. Providing both iText PdfFont and Android Typeface variants
- * 4. Caching fonts to avoid repeated loading
- * 5. NEVER returns null - falls back to system Arabic-capable fonts
+ * 3. Forcing font embedding so the font travels with the PDF
+ * 4. Providing both iText PdfFont and Android Typeface variants
+ * 5. Caching fonts to avoid repeated loading
+ * 6. NEVER returns null - falls back to system Arabic-capable fonts
  *
  * Root causes of Arabic rendering issues in PDF:
  * - System font paths (/system/fonts/NotoNaskhArabic-Regular.ttf) don't exist on all devices
  * - Fallback to HELVETICA (Latin-only) causes Arabic to render as disconnected glyphs/squares
  * - Even when system fonts exist, some lack proper OpenType GSUB/GPOS tables for shaping
  * - iText 8 requires file path (not stream) for IDENTITY_H encoding
+ * - Font embedding MUST be explicitly enabled or some viewers will substitute
  */
 object ArabicFontProvider {
 
@@ -40,6 +43,9 @@ object ArabicFontProvider {
      * Get Arabic PdfFont for iText PDF generation.
      * Uses IDENTITY_H encoding which supports full Unicode Arabic shaping
      * including letter connections (initial, medial, final, isolated forms).
+     *
+     * IMPORTANT: Font embedding is FORCE-ENABLED via EmbeddingStrategy.PREFER_EMBEDDED
+     * so that the font travels with the PDF and renders correctly on any viewer.
      *
      * This method NEVER returns null. If bundled font fails, it tries system fonts,
      * and as a last resort uses a built-in Unicode font.
@@ -69,23 +75,31 @@ object ArabicFontProvider {
                 }
             }
 
-            if (!cacheFile.exists() || cacheFile.length() == 0L) {
-                copyFromAssets()
-            }
+            // Always re-copy to avoid stale/corrupted cache
+            cacheFile.delete()
+            copyFromAssets()
 
             if (cacheFile.exists() && cacheFile.length() > 0) {
                 try {
-                    val font = PdfFontFactory.createFont(cacheFile.absolutePath, PdfEncodings.IDENTITY_H)
+                    // CRITICAL: Use EmbeddingStrategy.PREFER_EMBEDDED so the font travels with the PDF
+                    val font = PdfFontFactory.createFont(
+                        cacheFile.absolutePath,
+                        PdfEncodings.IDENTITY_H,
+                        EmbeddingStrategy.PREFER_EMBEDDED
+                    )
                     targetCache.set(font)
                     Log.d(TAG, "Arabic font loaded successfully from assets: ${cacheFile.absolutePath} (${cacheFile.length()} bytes)")
                     return font
                 } catch (fontLoadError: Exception) {
-                    // Cache file may be corrupted - delete and retry once
                     Log.w(TAG, "Cached font file appears corrupted, re-copying from assets: ${fontLoadError.message}")
                     cacheFile.delete()
                     copyFromAssets()
                     if (cacheFile.exists() && cacheFile.length() > 0) {
-                        val font = PdfFontFactory.createFont(cacheFile.absolutePath, PdfEncodings.IDENTITY_H)
+                        val font = PdfFontFactory.createFont(
+                            cacheFile.absolutePath,
+                            PdfEncodings.IDENTITY_H,
+                            EmbeddingStrategy.PREFER_EMBEDDED
+                        )
                         targetCache.set(font)
                         Log.d(TAG, "Arabic font loaded on retry from assets: ${cacheFile.absolutePath}")
                         return font
@@ -115,7 +129,11 @@ object ArabicFontProvider {
         for (path in systemPaths) {
             try {
                 if (File(path).exists()) {
-                    val font = PdfFontFactory.createFont(path, PdfEncodings.IDENTITY_H)
+                    val font = PdfFontFactory.createFont(
+                        path,
+                        PdfEncodings.IDENTITY_H,
+                        EmbeddingStrategy.PREFER_EMBEDDED
+                    )
                     targetCache.set(font)
                     Log.d(TAG, "Arabic font loaded from system: $path")
                     return font
@@ -132,7 +150,11 @@ object ArabicFontProvider {
             ttfFiles?.forEach { file ->
                 try {
                     if (file.length() > 0) {
-                        val font = PdfFontFactory.createFont(file.absolutePath, PdfEncodings.IDENTITY_H)
+                        val font = PdfFontFactory.createFont(
+                            file.absolutePath,
+                            PdfEncodings.IDENTITY_H,
+                            EmbeddingStrategy.PREFER_EMBEDDED
+                        )
                         targetCache.set(font)
                         Log.d(TAG, "Arabic font loaded from cache fallback: ${file.name}")
                         return font
@@ -143,15 +165,13 @@ object ArabicFontProvider {
             Log.e(TAG, "Cache fallback failed: ${e.message}")
         }
 
-        // Strategy 4: Last resort - use Helvetica
-        // WARNING: This will NOT properly render Arabic (shows as boxes/tofu), but prevents crash
+        // Strategy 4: Last resort - use Helvetica (Arabic will not render properly)
         Log.e(TAG, "CRITICAL: No Arabic font found! Arabic text will NOT render correctly in PDF. " +
             "Verify assets/fonts/NotoNaskhArabic-Regular.ttf exists and is not corrupted.")
         return try {
             PdfFontFactory.createFont("Helvetica")
         } catch (e: Exception) {
             Log.e(TAG, "FATAL: Even Helvetica fallback failed: ${e.message}")
-            // This should never happen - Helvetica is a built-in iText font
             throw RuntimeException("All PDF font loading strategies failed", e)
         }
     }
@@ -200,6 +220,7 @@ object ArabicFontProvider {
      * Check if text contains Arabic characters.
      */
     fun containsArabic(text: String): Boolean {
+        if (text.isEmpty()) return false
         return text.any { ch ->
             val code = ch.code
             code in 0x0600..0x06FF ||      // Arabic

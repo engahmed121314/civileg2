@@ -44,7 +44,7 @@ fun ProfessionalSlabDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(620.dp)
+            .height(780.dp)
     ) {
         val w = size.width
         val h = size.height
@@ -356,13 +356,14 @@ fun ProfessionalSlabDrawing(
         )
 
         // ── Dimension lines ───────────────────────────────────────
+        // CRITICAL FIX: spanX/spanY are in METERS, multiply by 1000 to display in mm
         drawDimensionLine(
             slabLeft, slabTop - 14f, slabRight, slabTop - 14f,
-            "${spanX.toInt()} mm", dimColor
+            "${(spanX * 1000).toInt()} mm", dimColor
         )
         drawDimensionLineV(
             slabLeft - 14f, slabTop, slabLeft - 14f, slabBottom,
-            "${spanY.toInt()} mm", dimColor
+            "${(spanY * 1000).toInt()} mm", dimColor
         )
 
         // Plan label
@@ -553,7 +554,7 @@ fun ProfessionalSlabDrawing(
         drawText("A", slabRight + 24f, slabTop + drawSpanY / 2f + 4f, Color(0xFFE74C3C), 10f, true)
 
         // ══════════════════════════════════════════════════════════
-        //  REINFORCEMENT TABLE
+        //  REINFORCEMENT TABLE (7 columns: Mark, Direction, Dia, Spacing, Length, As, Weight)
         // ══════════════════════════════════════════════════════════
         val tblTop = secBottom + 16f
         val tblLeft = margin
@@ -561,7 +562,11 @@ fun ProfessionalSlabDrawing(
         val tblWidth = tblRight - tblLeft
         val rowH = 22f
         val headerRowH = 26f
-        val colWidths = floatArrayOf(tblWidth * 0.10f, tblWidth * 0.22f, tblWidth * 0.18f, tblWidth * 0.22f, tblWidth * 0.28f)
+        // 7 columns: Mark(8%), Direction(20%), Dia(12%), Spacing(15%), Length(15%), As(15%), Weight(15%)
+        val colWidths = floatArrayOf(
+            tblWidth * 0.08f, tblWidth * 0.20f, tblWidth * 0.12f,
+            tblWidth * 0.15f, tblWidth * 0.15f, tblWidth * 0.15f, tblWidth * 0.15f
+        )
         var rowY = tblTop
 
         // Table header bg
@@ -569,7 +574,7 @@ fun ProfessionalSlabDrawing(
             color = headerBg, topLeft = Offset(tblLeft, rowY),
             size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f)
         )
-        val headers = listOf("Mark", "Direction", "Dia (mm)", "Spacing (mm)", "Length (mm)")
+        val headers = listOf("Mark", "Direction", "Dia (mm)", "Spacing (mm)", "Length (mm)", "As (mm²/m)", "Weight (kg)")
         var colX = tblLeft
         headers.forEachIndexed { idx, h ->
             drawText(h, colX + colWidths[idx] / 2f, rowY + headerRowH / 2f + 4f, textColor, 9f, true)
@@ -577,23 +582,64 @@ fun ProfessionalSlabDrawing(
         }
         rowY += headerRowH
 
-        // Calculate lengths
+        // Calculate lengths — CRITICAL: convert meters to mm for table display
         val mainLength = if (slabType == "Cantilever") spanX * 1.2 else spanX
         val distLength = spanY
         val topBarLength = if (slabType == "OneWay") 0.0 else spanX * 0.3
         val tableRowColor = Color(0xFF263238)
         val tableRowAltColor = Color(0xFF1E2A33)
 
+        // Calculate As provided and weight for additional table columns
+        val mainAsProvided = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / mainRebarSpacing) // mm²/m
+        val distAsProvided = (Math.PI * distRebarDia * distRebarDia / 4.0) * (1000.0 / distRebarSpacing) // mm²/m
+        val mainWeightPerM2 = (mainAsProvided / 1000.0) * 0.00785 * 1000.0 * mainRebarDia / 12.5 // approx kg/m²
+        val slabArea = spanX * spanY // m²
+
+        // Expanded table: Mark, Direction, Dia (mm), Spacing (mm), Length (mm), As (mm²/m), Weight (kg)
         val rows = mutableListOf<List<String>>()
-        rows.add(listOf("\u2460", "Main (bottom)", mainRebarDia.toInt().toString(), mainRebarSpacing.toInt().toString(), mainLength.toInt().toString()))
-        rows.add(listOf("\u2461", "Dist. (bottom)", distRebarDia.toInt().toString(), distRebarSpacing.toInt().toString(), distLength.toInt().toString()))
+        rows.add(listOf(
+            "①",
+            "Main Bottom",
+            mainRebarDia.toInt().toString(),
+            mainRebarSpacing.toInt().toString(),
+            (mainLength * 1000).toInt().toString(),
+            String.format("%.0f", mainAsProvided),
+            String.format("%.1f", mainAsProvided * mainLength * 0.00785)
+        ))
+        rows.add(listOf(
+            "②",
+            "Dist. Bottom",
+            distRebarDia.toInt().toString(),
+            distRebarSpacing.toInt().toString(),
+            (distLength * 1000).toInt().toString(),
+            String.format("%.0f", distAsProvided),
+            String.format("%.1f", distAsProvided * distLength * 0.00785)
+        ))
         if (topBarLength > 0) {
-            rows.add(listOf("\u2462", "Top (support)", mainRebarDia.toInt().toString(), mainRebarSpacing.toInt().toString(), topBarLength.toInt().toString()))
+            val topAsProvided = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / mainRebarSpacing)
+            rows.add(listOf(
+                "③",
+                "Top Support",
+                mainRebarDia.toInt().toString(),
+                mainRebarSpacing.toInt().toString(),
+                (topBarLength * 1000).toInt().toString(),
+                String.format("%.0f", topAsProvided),
+                String.format("%.1f", topAsProvided * topBarLength * 0.00785)
+            ))
         }
         // Hordi/Waffle: rib bars
         if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
-            val ribBarLen = if (slabThickness > 0) (slabThickness * 0.7).toInt().toString() else "0"
-            rows.add(listOf("\u2463", "Rib bars", mainRebarDia.toInt().toString(), (ribSpacing).toInt().toString(), ribBarLen))
+            val ribBarLen = if (slabThickness > 0) (slabThickness * 0.7 * 1000).toInt().toString() else "0"
+            val ribAs = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / ribSpacing)
+            rows.add(listOf(
+                "④",
+                "Rib Bars",
+                mainRebarDia.toInt().toString(),
+                ribSpacing.toInt().toString(),
+                ribBarLen,
+                String.format("%.0f", ribAs),
+                String.format("%.1f", ribAs * slabThickness * 0.7 * 0.00785)
+            ))
         }
 
         rows.forEachIndexed { idx, row ->

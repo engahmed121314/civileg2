@@ -29,6 +29,12 @@ import kotlin.math.*
 
 /**
  * لوحة الرسم التفاعلية للإطار والمخططات
+ *
+ * Supports multiple view modes:
+ * 0: Frame (default 2D structural view with BMD/SFD/AFD overlays)
+ * 1: Longitudinal Section (قطاع طولي) — elevation showing all frame members along span
+ * 2: Cross Section (قطاع عرضي) — typical column/beam section with reinforcement
+ * 3: Plan View (مسقط أفقي) — top-down view showing column grid and beam layout
  */
 @Composable
 fun FrameDrawingCanvas(
@@ -40,9 +46,10 @@ fun FrameDrawingCanvas(
     diagramType: DiagramType,
     selectedMemberId: Int?,
     onMemberTap: ((Int) -> Unit)? = null,
+    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    val showDiagrams = result?.hasResults == true
+    val showDiagrams = result?.hasResults == true && viewMode == 0
     val colorScheme = MaterialTheme.colorScheme
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -52,7 +59,8 @@ fun FrameDrawingCanvas(
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
         // Calculate scale to fit frame in canvas with padding (all in pixels)
-        val paddingPx = with(density) { 16.dp.toPx() }
+        // CRITICAL FIX: Reduce padding to use more screen space (was 16.dp, now 8.dp)
+        val paddingPx = with(density) { 8.dp.toPx() }
         val drawW = canvasW - paddingPx * 2
         val drawH = canvasH - paddingPx * 2
 
@@ -61,10 +69,8 @@ fun FrameDrawingCanvas(
         val xSpan = max(xRange.endInclusive - xRange.start, 1.0)
         val ySpan = max(yRange.endInclusive - yRange.start, 1.0)
 
-        val scale = min(
-            drawW / xSpan,
-            drawH / ySpan
-        ).toFloat()
+        // CRITICAL FIX: Use 0.85 multiplier to use more of the canvas (was 1.0)
+        val scale = (min(drawW / xSpan, drawH / ySpan) * 0.92f).toFloat()
 
         val offsetX = (paddingPx + (drawW - xSpan * scale) / 2 - xRange.start * scale).toFloat()
         val offsetY = (paddingPx + (drawH - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
@@ -82,9 +88,8 @@ fun FrameDrawingCanvas(
                 .pointerInput(selectedMemberId) {
                     detectTapGestures { tapOffset ->
                         if (onMemberTap != null) {
-                            // Find closest member to tap
                             var closestMember: Int? = null
-                            var minDist = 30f // pixels threshold
+                            var minDist = 30f
                             for (member in members) {
                                 val ni = nodes.find { it.id == member.nodeI } ?: continue
                                 val nj = nodes.find { it.id == member.nodeJ } ?: continue
@@ -101,137 +106,772 @@ fun FrameDrawingCanvas(
                     }
                 }
         ) {
-            if (nodes.isEmpty()) {
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = "أضف عقد وأعضاء لبدء التحليل",
-                    topLeft = Offset(size.width / 2 - 120f, size.height / 2),
-                    style = TextStyle(color = Color.Gray, fontSize = 16.sp)
+            when (viewMode) {
+                0 -> drawFrameView(
+                    nodes, members, memberLoads, nodalLoads, result, diagramType,
+                    selectedMemberId, showDiagrams, toScreen, scale, offsetX, offsetY,
+                    xRange, yRange, textMeasurer, colorScheme
                 )
-                return@Canvas
-            }
-
-            // === Draw Grid (light) ===
-            drawGrid(toScreen, xRange, yRange, scale, offsetX, offsetY)
-
-            // === Draw BMD/SFD/AFD Diagrams (behind members if active) ===
-            if (showDiagrams) {
-                drawDiagrams(
-                    members, result?.memberDiagrams ?: emptyList(),
-                    nodes, toScreen, scale, diagramType, textMeasurer
+                1 -> drawLongitudinalSection(
+                    nodes, members, result, scale, canvasW, canvasH, textMeasurer
+                )
+                2 -> drawCrossSection(
+                    members, result, selectedMemberId, scale, canvasW, canvasH, textMeasurer
+                )
+                3 -> drawPlanView(
+                    nodes, members, scale, canvasW, canvasH, textMeasurer
                 )
             }
-
-            // === Draw Members ===
-            for (member in members) {
-                val ni = nodes.find { it.id == member.nodeI } ?: continue
-                val nj = nodes.find { it.id == member.nodeJ } ?: continue
-                val p1 = toScreen(ni.x, ni.y)
-                val p2 = toScreen(nj.x, nj.y)
-
-                val isSelected = member.id == selectedMemberId
-                val memberColor = when (member.materialType) {
-                    FrameMaterialType.Concrete -> if (isSelected) Color(0xFF1565C0) else Color(0xFF42A5F5)
-                    FrameMaterialType.Steel -> if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800)
-                }
-
-                drawLine(
-                    color = memberColor,
-                    start = p1,
-                    end = p2,
-                    strokeWidth = if (isSelected) 7.dp.toPx() else 5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-
-                // Member label
-                val midX = (p1.x + p2.x) / 2
-                val midY = (p1.y + p2.y) / 2
-                val angle = atan2(p2.y - p1.y, p2.x - p1.x)
-                val labelOffset = 15.dp.toPx()
-                val labelX = midX + cos(angle + PI / 2) * labelOffset
-                val labelY = midY + sin(angle + PI / 2) * labelOffset
-
-                if (member.name.isNotEmpty()) {
-                    drawText(
-                        textMeasurer = textMeasurer,
-                        text = member.name,
-                        topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
-                        style = TextStyle(
-                            color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    )
-                }
-
-                // Member ID
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = "#${member.id}",
-                    topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
-                    style = TextStyle(color = Color.Gray, fontSize = 9.sp)
-                )
-            }
-
-            // === Draw Member Loads (UDL arrows) ===
-            for (mLoad in memberLoads) {
-                val member = members.find { it.id == mLoad.memberId } ?: continue
-                val ni = nodes.find { it.id == member.nodeI } ?: continue
-                val nj = nodes.find { it.id == member.nodeJ } ?: continue
-                drawMemberLoadArrows(ni, nj, mLoad, toScreen, scale, textMeasurer)
-            }
-
-            // === Draw Nodal Loads ===
-            for (nLoad in nodalLoads) {
-                val node = nodes.find { it.id == nLoad.nodeId } ?: continue
-                val p = toScreen(node.x, node.y)
-                drawNodalLoadArrow(p, nLoad, textMeasurer)
-            }
-
-            // === Draw Supports ===
-            for (node in nodes) {
-                if (node.support != SupportType.Free) {
-                    val p = toScreen(node.x, node.y)
-                    drawSupport(p, node.support)
-                }
-            }
-
-            // === Draw Nodes ===
-            for (node in nodes) {
-                val p = toScreen(node.x, node.y)
-                drawCircle(
-                    color = Color.White,
-                    radius = 10f,
-                    center = p
-                )
-                drawCircle(
-                    color = Color(0xFF333333),
-                    radius = 10f,
-                    center = p,
-                    style = Stroke(width = 2.5f)
-                )
-
-                // Node ID label
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = "${node.id}",
-                    topLeft = Offset(p.x - 4, p.y - 22),
-                    style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                )
-            }
-
-            // === Draw Deformed Shape (if solved) ===
-            if (showDiagrams) {
-                drawDeformedShape(
-                    members, nodes, result?.nodeResults ?: emptyList(),
-                    toScreen, scale
-                )
-            }
-
-            // === Scale Bar ===
-            drawScaleBar(size, scale, textMeasurer)
         }
     }
+}
+
+// ============================================================================
+// View 0: Frame (Default 2D structural view with diagrams)
+// ============================================================================
+private fun DrawScope.drawFrameView(
+    nodes: List<FrameNode>,
+    members: List<FrameMember>,
+    memberLoads: List<MemberLoad>,
+    nodalLoads: List<NodalLoad>,
+    result: FrameAnalysisResult?,
+    diagramType: DiagramType,
+    selectedMemberId: Int?,
+    showDiagrams: Boolean,
+    toScreen: (Double, Double) -> Offset,
+    scale: Float,
+    offsetX: Float,
+    offsetY: Float,
+    xRange: ClosedFloatingPointRange<Double>,
+    yRange: ClosedFloatingPointRange<Double>,
+    textMeasurer: TextMeasurer,
+    colorScheme: androidx.compose.material3.ColorScheme
+) {
+    if (nodes.isEmpty()) {
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "أضف عقد وأعضاء لبدء التحليل",
+            topLeft = Offset(size.width / 2 - 120f, size.height / 2),
+            style = TextStyle(color = Color.Gray, fontSize = 16.sp)
+        )
+        return
+    }
+
+    // === Draw Grid (light) ===
+    drawGrid(toScreen, xRange, yRange, scale, offsetX, offsetY)
+
+    // === Draw BMD/SFD/AFD Diagrams (behind members if active) ===
+    if (showDiagrams) {
+        drawDiagrams(
+            members, result?.memberDiagrams ?: emptyList(),
+            nodes, toScreen, scale, diagramType, textMeasurer
+        )
+    }
+
+    // === Draw Members ===
+    for (member in members) {
+        val ni = nodes.find { it.id == member.nodeI } ?: continue
+        val nj = nodes.find { it.id == member.nodeJ } ?: continue
+        val p1 = toScreen(ni.x, ni.y)
+        val p2 = toScreen(nj.x, nj.y)
+
+        val isSelected = member.id == selectedMemberId
+        val memberColor = when (member.materialType) {
+            FrameMaterialType.Concrete -> if (isSelected) Color(0xFF1565C0) else Color(0xFF42A5F5)
+            FrameMaterialType.Steel -> if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800)
+        }
+
+        drawLine(
+            color = memberColor,
+            start = p1,
+            end = p2,
+            strokeWidth = if (isSelected) 7.dp.toPx() else 5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Member label
+        val midX = (p1.x + p2.x) / 2
+        val midY = (p1.y + p2.y) / 2
+        val angle = atan2(p2.y - p1.y, p2.x - p1.x)
+        val labelOffset = 15.dp.toPx()
+        val labelX = midX + cos(angle + PI / 2) * labelOffset
+        val labelY = midY + sin(angle + PI / 2) * labelOffset
+
+        if (member.name.isNotEmpty()) {
+            drawText(
+                textMeasurer = textMeasurer,
+                text = member.name,
+                topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
+                style = TextStyle(
+                    color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+            )
+        }
+
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "#${member.id}",
+            topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
+            style = TextStyle(color = Color.Gray, fontSize = 9.sp)
+        )
+    }
+
+    // === Draw Member Loads (UDL arrows) ===
+    for (mLoad in memberLoads) {
+        val member = members.find { it.id == mLoad.memberId } ?: continue
+        val ni = nodes.find { it.id == member.nodeI } ?: continue
+        val nj = nodes.find { it.id == member.nodeJ } ?: continue
+        drawMemberLoadArrows(ni, nj, mLoad, toScreen, scale, textMeasurer)
+    }
+
+    // === Draw Nodal Loads ===
+    for (nLoad in nodalLoads) {
+        val node = nodes.find { it.id == nLoad.nodeId } ?: continue
+        val p = toScreen(node.x, node.y)
+        drawNodalLoadArrow(p, nLoad, textMeasurer)
+    }
+
+    // === Draw Supports ===
+    for (node in nodes) {
+        if (node.support != SupportType.Free) {
+            val p = toScreen(node.x, node.y)
+            drawSupport(p, node.support)
+        }
+    }
+
+    // === Draw Nodes ===
+    for (node in nodes) {
+        val p = toScreen(node.x, node.y)
+        drawCircle(color = Color.White, radius = 10f, center = p)
+        drawCircle(color = Color(0xFF333333), radius = 10f, center = p, style = Stroke(width = 2.5f))
+
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "${node.id}",
+            topLeft = Offset(p.x - 4, p.y - 22),
+            style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        )
+    }
+
+    // === Draw Deformed Shape (if solved) ===
+    if (showDiagrams) {
+        drawDeformedShape(
+            members, nodes, result?.nodeResults ?: emptyList(),
+            toScreen, scale
+        )
+    }
+
+    // === Scale Bar ===
+    drawScaleBar(size, scale, textMeasurer)
+}
+
+// ============================================================================
+// View 1: Longitudinal Section (قطاع طولي)
+// Shows the elevation view of the frame along its main span
+// ============================================================================
+private fun DrawScope.drawLongitudinalSection(
+    nodes: List<FrameNode>,
+    members: List<FrameMember>,
+    result: FrameAnalysisResult?,
+    scale: Float,
+    canvasW: Float,
+    canvasH: Float,
+    textMeasurer: TextMeasurer
+) {
+    if (nodes.isEmpty()) {
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "Longitudinal Section — No data",
+            topLeft = Offset(canvasW / 2 - 100f, canvasH / 2),
+            style = TextStyle(color = Color.Gray, fontSize = 14.sp)
+        )
+        return
+    }
+
+    // Title
+    drawText(
+        textMeasurer = textMeasurer,
+        text = "LONGITUDINAL SECTION (قطاع طولي)",
+        topLeft = Offset(canvasW / 2 - 130f, 20f),
+        style = TextStyle(color = Color(0xFF1565C0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    )
+
+    // Get X range (span)
+    val xMin = nodes.minOf { it.x }
+    val xMax = nodes.maxOf { it.x }
+    val xSpan = max(xMax - xMin, 1.0)
+
+    // Get Y range (height)
+    val yMin = nodes.minOf { it.y }
+    val yMax = nodes.maxOf { it.y }
+    val ySpan = max(yMax - yMin, 1.0)
+
+    // Drawing area
+    val padLeft = 80f
+    val padRight = 60f
+    val padTop = 80f
+    val padBottom = 80f
+    val drawW = canvasW - padLeft - padRight
+    val drawH = canvasH - padTop - padBottom
+
+    val sx = drawW / xSpan.toFloat()
+    val sy = drawH / ySpan.toFloat()
+    val s = min(sx, sy) * 0.9f
+
+    val originX = padLeft + (drawW - xSpan.toFloat() * s) / 2f
+    val originY = padTop + ySpan.toFloat() * s + (drawH - ySpan.toFloat() * s) / 2f
+
+    val toScreen: (Double, Double) -> Offset = { x, y ->
+        Offset(
+            ((x - xMin).toFloat() * s + originX),
+            (-(y - yMin).toFloat() * s + originY)
+        )
+    }
+
+    // Ground line with hatching
+    val groundY = originY
+    drawLine(Color(0xFF555555), Offset(originX - 20f, groundY), Offset(originX + xSpan.toFloat() * s + 20f, groundY), strokeWidth = 3f)
+    for (i in 0..30) {
+        val x = originX - 20f + i * (xSpan.toFloat() * s + 40f) / 30
+        drawLine(Color(0xFF555555), Offset(x, groundY), Offset(x - 8f, groundY + 10f), strokeWidth = 1f)
+    }
+
+    // Draw members with thick lines (sections)
+    for (member in members) {
+        val ni = nodes.find { it.id == member.nodeI } ?: continue
+        val nj = nodes.find { it.id == member.nodeJ } ?: continue
+        val p1 = toScreen(ni.x, ni.y)
+        val p2 = toScreen(nj.x, nj.y)
+
+        val memberColor = when (member.materialType) {
+            FrameMaterialType.Concrete -> Color(0xFF42A5F5)
+            FrameMaterialType.Steel -> Color(0xFFFF9800)
+        }
+
+        // Outer thick line (member outline)
+        drawLine(memberColor.copy(alpha = 0.3f), p1, p2, strokeWidth = 14f)
+        // Inner main line
+        drawLine(memberColor, p1, p2, strokeWidth = 6f, cap = StrokeCap.Round)
+    }
+
+    // Draw supports (with proper foundation symbols)
+    for (node in nodes) {
+        if (node.support != SupportType.Free) {
+            val p = toScreen(node.x, node.y)
+            drawSupportLarge(p, node.support, textMeasurer, node.id)
+        }
+    }
+
+    // Draw nodes as larger circles for section view
+    for (node in nodes) {
+        val p = toScreen(node.x, node.y)
+        drawCircle(Color.White, 8f, p)
+        drawCircle(Color(0xFF333333), 8f, p, style = Stroke(width = 2f))
+    }
+
+    // === Dimensions ===
+    val dimColor = Color(0xFF8E24AA)
+    val dimTextPaint = android.graphics.Paint().apply {
+        color = dimColor.toArgb()
+        textSize = 24f
+        isFakeBoldText = true
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    // Horizontal dimension (span)
+    val dimY = originY + 40f
+    val leftX = toScreen(xMin, 0.0).x
+    val rightX = toScreen(xMax, 0.0).x
+    drawLine(dimColor, Offset(leftX, groundY + 8f), Offset(leftX, dimY + 5f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(rightX, groundY + 8f), Offset(rightX, dimY + 5f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(leftX, dimY), Offset(rightX, dimY), strokeWidth = 1.5f)
+    drawContext.canvas.nativeCanvas.drawText(
+        "Span = ${String.format("%.2f", xSpan)} m",
+        (leftX + rightX) / 2, dimY - 8f, dimTextPaint
+    )
+
+    // Vertical dimension (height)
+    val dimX = originX - 50f
+    val bottomY = toScreen(xMin, yMin).y
+    val topY = toScreen(xMin, yMax).y
+    drawLine(dimColor, Offset(originX - 8f, bottomY), Offset(dimX - 5f, bottomY), strokeWidth = 1f)
+    drawLine(dimColor, Offset(originX - 8f, topY), Offset(dimX - 5f, topY), strokeWidth = 1f)
+    drawLine(dimColor, Offset(dimX, bottomY), Offset(dimX, topY), strokeWidth = 1.5f)
+    drawContext.canvas.nativeCanvas.save()
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimX - 12f, (bottomY + topY) / 2)
+    drawContext.canvas.nativeCanvas.drawText(
+        "Height = ${String.format("%.2f", ySpan)} m",
+        dimX - 12f, (bottomY + topY) / 2 + 8f, dimTextPaint
+    )
+    drawContext.canvas.nativeCanvas.restore()
+
+    // Result info (if available)
+    result?.let { res ->
+        val infoX = canvasW - 280f
+        val infoY = 60f
+        drawRect(Color(0x22000000), Offset(infoX, infoY), Size(260f, 80f))
+        drawRect(Color(0xFF4A90D9), Offset(infoX, infoY), Size(260f, 80f), style = Stroke(1.5f))
+        val infoPaint = android.graphics.Paint().apply {
+            color = Color.White.toArgb(); textSize = 18f; isFakeBoldText = true
+        }
+        val infoPaintSmall = android.graphics.Paint().apply {
+            color = Color.White.toArgb(); textSize = 16f
+        }
+        drawContext.canvas.nativeCanvas.drawText("Analysis Results", infoX + 10f, infoY + 22f, infoPaint)
+        val maxM = res.memberDiagrams.maxOfOrNull { md -> md.momentDiagram.maxOfOrNull { it.value } ?: 0.0 } ?: 0.0
+        val maxV = res.memberDiagrams.maxOfOrNull { md -> md.shearDiagram.maxOfOrNull { it.value } ?: 0.0 } ?: 0.0
+        drawContext.canvas.nativeCanvas.drawText("Max Moment: ${String.format("%.1f", maxM)} kN.m", infoX + 10f, infoY + 45f, infoPaintSmall)
+        drawContext.canvas.nativeCanvas.drawText("Max Shear: ${String.format("%.1f", maxV)} kN", infoX + 10f, infoY + 65f, infoPaintSmall)
+    }
+}
+
+// ============================================================================
+// View 2: Cross Section (قطاع عرضي)
+// Shows typical column and beam sections with reinforcement
+// ============================================================================
+private fun DrawScope.drawCrossSection(
+    members: List<FrameMember>,
+    result: FrameAnalysisResult?,
+    selectedMemberId: Int?,
+    scale: Float,
+    canvasW: Float,
+    canvasH: Float,
+    textMeasurer: TextMeasurer
+) {
+    // Title
+    drawText(
+        textMeasurer = textMeasurer,
+        text = "CROSS SECTION (قطاع عرضي)",
+        topLeft = Offset(canvasW / 2 - 110f, 20f),
+        style = TextStyle(color = Color(0xFF1565C0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    )
+
+    if (members.isEmpty()) {
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "No members to display",
+            topLeft = Offset(canvasW / 2 - 80f, canvasH / 2),
+            style = TextStyle(color = Color.Gray, fontSize = 14.sp)
+        )
+        return
+    }
+
+    // Group members by type (column or beam)
+    val columns = members.filter { m ->
+        val ni = result?.let { _ -> m }?.nodeI ?: return@filter false
+        true
+    }
+
+    // Simpler approach: assume vertical members are columns, horizontal are beams
+    // We need the nodes for this. Since we don't have them here, use member name heuristic
+    val columnMembers = members.filter { it.name.contains("column", ignoreCase = true) || it.name.contains("عمود", ignoreCase = true) || it.name.contains("C", ignoreCase = true) }
+    val beamMembers = members.filter { it.name.contains("beam", ignoreCase = true) || it.name.contains("كمرة", ignoreCase = true) || it.name.contains("B", ignoreCase = true) }
+
+    // If heuristic didn't work, just split first half / second half
+    val (colMs, bmMs) = if (columnMembers.isEmpty() && beamMembers.isEmpty()) {
+        // Default: show first member as column, second as beam
+        members.take(2).partition { it.id == members.firstOrNull()?.id }
+    } else {
+        Pair(columnMembers.ifEmpty { members.take(1) }, beamMembers.ifEmpty { members.drop(1).take(1) })
+    }
+
+    // Draw column section on left
+    val colCenterX = canvasW * 0.25f
+    val colCenterY = canvasH * 0.5f
+    drawColumnSection(colCenterX, colCenterY, colMs.firstOrNull(), result, textMeasurer)
+
+    // Draw beam section on right
+    val beamCenterX = canvasW * 0.75f
+    val beamCenterY = canvasH * 0.5f
+    drawBeamSection(beamCenterX, beamCenterY, bmMs.firstOrNull(), result, textMeasurer)
+}
+
+// Draw column cross section with reinforcement
+private fun DrawScope.drawColumnSection(
+    cx: Float, cy: Float,
+    member: FrameMember?,
+    result: FrameAnalysisResult?,
+    textMeasurer: TextMeasurer
+) {
+    val sectionSize = 200f
+    val left = cx - sectionSize / 2
+    val top = cy - sectionSize / 2
+
+    // Default dimensions (can be overridden by member data)
+    val colW = 300  // mm
+    val colD = 300  // mm
+    val numBars = 6
+    val barDia = 16 // mm
+    val tieDia = 8  // mm
+    val cover = 40  // mm
+
+    // Title
+    drawText(
+        textMeasurer = textMeasurer,
+        text = "COLUMN SECTION",
+        topLeft = Offset(cx - 60f, top - 30f),
+        style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    )
+
+    // Concrete outline
+    drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(sectionSize, sectionSize))
+    drawRect(Color(0xFF555555), Offset(left, top), Size(sectionSize, sectionSize), style = Stroke(width = 2.5f))
+
+    // Cover boundary (dashed)
+    val coverInset = 15f
+    drawRect(
+        Color(0xFF888888),
+        Offset(left + coverInset, top + coverInset),
+        Size(sectionSize - 2 * coverInset, sectionSize - 2 * coverInset),
+        style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+    )
+
+    // Stirrup (tie) - rounded rectangle inside cover
+    val tieInset = coverInset + 4f
+    drawRect(
+        Color(0xFF4CAF50),
+        Offset(left + tieInset, top + tieInset),
+        Size(sectionSize - 2 * tieInset, sectionSize - 2 * tieInset),
+        style = Stroke(width = 2f)
+    )
+
+    // Longitudinal bars (corners + middle)
+    val barR = 5f
+    val barPositions = listOf(
+        Offset(left + coverInset + 8f, top + coverInset + 8f),
+        Offset(left + sectionSize - coverInset - 8f, top + coverInset + 8f),
+        Offset(left + coverInset + 8f, top + sectionSize - coverInset - 8f),
+        Offset(left + sectionSize - coverInset - 8f, top + sectionSize - coverInset - 8f),
+        Offset(left + sectionSize / 2, top + coverInset + 8f),
+        Offset(left + sectionSize / 2, top + sectionSize - coverInset - 8f)
+    )
+    barPositions.forEach { p ->
+        drawCircle(Color(0xFF1565C0), barR + 2f, p) // outer
+        drawCircle(Color(0xFF42A5F5), barR, p)       // main
+    }
+
+    // Dimensions
+    val dimColor = Color(0xFF8E24AA)
+    val dimPaint = android.graphics.Paint().apply {
+        color = dimColor.toArgb(); textSize = 18f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+    }
+    // Width dimension (top)
+    val dimYTop = top - 20f
+    drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left + sectionSize, top - 5f), Offset(left + sectionSize, dimYTop - 3f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left, dimYTop), Offset(left + sectionSize, dimYTop), strokeWidth = 1.2f)
+    drawContext.canvas.nativeCanvas.drawText("b = $colW mm", left + sectionSize / 2, dimYTop - 4f, dimPaint)
+
+    // Depth dimension (right)
+    val dimXRight = left + sectionSize + 20f
+    drawLine(dimColor, Offset(left + sectionSize + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left + sectionSize + 5f, top + sectionSize), Offset(dimXRight + 3f, top + sectionSize), strokeWidth = 1f)
+    drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + sectionSize), strokeWidth = 1.2f)
+    drawContext.canvas.nativeCanvas.save()
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + sectionSize / 2)
+    drawContext.canvas.nativeCanvas.drawText("h = $colD mm", dimXRight + 14f, top + sectionSize / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.restore()
+
+    // Label
+    val labelPaint = android.graphics.Paint().apply {
+        color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+    }
+    drawContext.canvas.nativeCanvas.drawText(
+        "$numBars Ø$barDia mm + Ø$tieDia/@100mm",
+        cx, top + sectionSize + 35f, labelPaint
+    )
+
+    // Member info if available
+    member?.let {
+        drawContext.canvas.nativeCanvas.drawText(
+            "Member #${it.id}: ${it.name.ifEmpty { "Column" }}",
+            cx, top + sectionSize + 55f, android.graphics.Paint().apply {
+                color = Color.Gray.toArgb(); textSize = 14f; textAlign = android.graphics.Paint.Align.CENTER
+            }
+        )
+    }
+}
+
+// Draw beam cross section with reinforcement
+private fun DrawScope.drawBeamSection(
+    cx: Float, cy: Float,
+    member: FrameMember?,
+    result: FrameAnalysisResult?,
+    textMeasurer: TextMeasurer
+) {
+    val sectionW = 280f
+    val sectionH = 160f
+    val left = cx - sectionW / 2
+    val top = cy - sectionH / 2
+
+    val beamW = 250  // mm
+    val beamD = 500  // mm
+    val numBarsBottom = 3
+    val numBarsTop = 2
+    val barDia = 16  // mm
+    val stirrupDia = 8 // mm
+    val stirrupSpacing = 150 // mm
+    val cover = 25 // mm
+
+    // Title
+    drawText(
+        textMeasurer = textMeasurer,
+        text = "BEAM SECTION",
+        topLeft = Offset(cx - 60f, top - 30f),
+        style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    )
+
+    // Concrete outline
+    drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(sectionW, sectionH))
+    drawRect(Color(0xFF555555), Offset(left, top), Size(sectionW, sectionH), style = Stroke(width = 2.5f))
+
+    // Cover boundary (dashed)
+    val coverInset = 12f
+    drawRect(
+        Color(0xFF888888),
+        Offset(left + coverInset, top + coverInset),
+        Size(sectionW - 2 * coverInset, sectionH - 2 * coverInset),
+        style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+    )
+
+    // Stirrup
+    val tieInset = coverInset + 4f
+    drawRect(
+        Color(0xFF4CAF50),
+        Offset(left + tieInset, top + tieInset),
+        Size(sectionW - 2 * tieInset, sectionH - 2 * tieInset),
+        style = Stroke(width = 2f)
+    )
+
+    val barR = 5f
+
+    // Bottom bars (3 bars)
+    val bottomY = top + sectionH - coverInset - 8f
+    val bottomSpacing = (sectionW - 2 * (coverInset + 8f)) / (numBarsBottom - 1)
+    for (i in 0 until numBarsBottom) {
+        val bx = left + coverInset + 8f + i * bottomSpacing
+        drawCircle(Color(0xFF1565C0), barR + 2f, Offset(bx, bottomY))
+        drawCircle(Color(0xFF42A5F5), barR, Offset(bx, bottomY))
+    }
+
+    // Top bars (2 bars)
+    val topY = top + coverInset + 8f
+    val topSpacing = (sectionW - 2 * (coverInset + 8f)) / (numBarsTop + 1)
+    for (i in 1..numBarsTop) {
+        val bx = left + coverInset + 8f + i * topSpacing
+        drawCircle(Color(0xFFE74C3C), barR + 2f, Offset(bx, topY))
+        drawCircle(Color(0xFFFF7043), barR, Offset(bx, topY))
+    }
+
+    // Dimensions
+    val dimColor = Color(0xFF8E24AA)
+    val dimPaint = android.graphics.Paint().apply {
+        color = dimColor.toArgb(); textSize = 18f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+    }
+    // Width dimension (top)
+    val dimYTop = top - 20f
+    drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left + sectionW, top - 5f), Offset(left + sectionW, dimYTop - 3f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left, dimYTop), Offset(left + sectionW, dimYTop), strokeWidth = 1.2f)
+    drawContext.canvas.nativeCanvas.drawText("b = $beamW mm", left + sectionW / 2, dimYTop - 4f, dimPaint)
+
+    // Depth dimension (right)
+    val dimXRight = left + sectionW + 20f
+    drawLine(dimColor, Offset(left + sectionW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
+    drawLine(dimColor, Offset(left + sectionW + 5f, top + sectionH), Offset(dimXRight + 3f, top + sectionH), strokeWidth = 1f)
+    drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + sectionH), strokeWidth = 1.2f)
+    drawContext.canvas.nativeCanvas.save()
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + sectionH / 2)
+    drawContext.canvas.nativeCanvas.drawText("h = $beamD mm", dimXRight + 14f, top + sectionH / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.restore()
+
+    // Label
+    val labelPaint = android.graphics.Paint().apply {
+        color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+    }
+    drawContext.canvas.nativeCanvas.drawText(
+        "$numBarsBottom Ø$barDia (bot) + $numBarsTop Ø$barDia (top)",
+        cx, top + sectionH + 35f, labelPaint
+    )
+    drawContext.canvas.nativeCanvas.drawText(
+        "+ Ø$stirrupDia/@$stirrupSpacing mm",
+        cx, top + sectionH + 55f, labelPaint
+    )
+
+    // Member info if available
+    member?.let {
+        drawContext.canvas.nativeCanvas.drawText(
+            "Member #${it.id}: ${it.name.ifEmpty { "Beam" }}",
+            cx, top + sectionH + 75f, android.graphics.Paint().apply {
+                color = Color.Gray.toArgb(); textSize = 14f; textAlign = android.graphics.Paint.Align.CENTER
+            }
+        )
+    }
+}
+
+// ============================================================================
+// View 3: Plan View (مسقط أفقي)
+// Shows the top-down view of the frame layout
+// ============================================================================
+private fun DrawScope.drawPlanView(
+    nodes: List<FrameNode>,
+    members: List<FrameMember>,
+    scale: Float,
+    canvasW: Float,
+    canvasH: Float,
+    textMeasurer: TextMeasurer
+) {
+    // Title
+    drawText(
+        textMeasurer = textMeasurer,
+        text = "PLAN VIEW (مسقط أفقي)",
+        topLeft = Offset(canvasW / 2 - 100f, 20f),
+        style = TextStyle(color = Color(0xFF1565C0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    )
+
+    if (nodes.isEmpty()) {
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "No nodes to display",
+            topLeft = Offset(canvasW / 2 - 80f, canvasH / 2),
+            style = TextStyle(color = Color.Gray, fontSize = 14.sp)
+        )
+        return
+    }
+
+    // Get X range
+    val xMin = nodes.minOf { it.x }
+    val xMax = nodes.maxOf { it.x }
+    val xSpan = max(xMax - xMin, 1.0)
+
+    // For plan view, we use X (real X) as horizontal and a "depth" axis (typically perpendicular to X)
+    // Since 2D frame is in X-Y plane, plan view shows only the X coordinate
+    // We'll create a synthetic plan view showing the frame as a 2D grid
+
+    // Drawing area
+    val padLeft = 80f
+    val padRight = 80f
+    val padTop = 80f
+    val padBottom = 80f
+    val drawW = canvasW - padLeft - padRight
+    val drawH = canvasH - padTop - padBottom
+
+    // For plan view, assume a default depth (perpendicular to span) of 4m
+    val planDepth = 4.0
+    val sx = drawW / xSpan.toFloat()
+    val sy = drawH / planDepth.toFloat()
+    val s = min(sx, sy) * 0.85f
+
+    val originX = padLeft + (drawW - xSpan.toFloat() * s) / 2f
+    val originY = padTop + planDepth.toFloat() * s + (drawH - planDepth.toFloat() * s) / 2f
+
+    // Plan view: map (x, depth_z) to screen
+    // For 2D frames, depth is constant (just a visual representation)
+    val toScreen: (Double, Double) -> Offset = { x, z ->
+        Offset(
+            ((x - xMin).toFloat() * s + originX),
+            (-(z).toFloat() * s + originY)
+        )
+    }
+
+    // Draw slab area (filled rectangle representing the floor)
+    val slabColor = Color(0xFFBBDEFB).copy(alpha = 0.4f)
+    val sl1 = toScreen(xMin, 0.0)
+    val sl2 = toScreen(xMax, planDepth)
+    drawRect(slabColor, Offset(sl1.x, sl2.y), Size(sl2.x - sl1.x, sl1.y - sl2.y))
+    drawRect(Color(0xFF1565C0).copy(alpha = 0.5f), Offset(sl1.x, sl2.y), Size(sl2.x - sl1.x, sl1.y - sl2.y), style = Stroke(width = 1.5f))
+
+    // Draw beams (top-down view as thick lines along X)
+    val beamColor = Color(0xFF42A5F5)
+    val beamTop = toScreen(xMin, 0.0)
+    val beamBot = toScreen(xMax, 0.0)
+    drawLine(beamColor, beamTop, beamBot, strokeWidth = 10f, cap = StrokeCap.Round)
+    val beamTop2 = toScreen(xMin, planDepth)
+    val beamBot2 = toScreen(xMax, planDepth)
+    drawLine(beamColor, beamTop2, beamBot2, strokeWidth = 10f, cap = StrokeCap.Round)
+
+    // Draw columns (top-down view as squares)
+    val colSize = 18f
+    val columnColor = Color(0xFFFF9800)
+    val columnBorder = Color(0xFFE65100)
+    // Find nodes at y=0 (bottom) and y=max (top)
+    val bottomNodes = nodes.filter { abs(it.y) < 0.01 }
+    val topNodes = nodes.filter { abs(it.y - nodes.maxOf { n -> n.y }) < 0.01 }
+
+    // Place columns at corners of plan view
+    val cornerPositions = listOf(
+        toScreen(xMin, 0.0),
+        toScreen(xMax, 0.0),
+        toScreen(xMin, planDepth),
+        toScreen(xMax, planDepth)
+    )
+    cornerPositions.forEach { p ->
+        drawRect(columnColor, Offset(p.x - colSize / 2, p.y - colSize / 2), Size(colSize, colSize))
+        drawRect(columnBorder, Offset(p.x - colSize / 2, p.y - colSize / 2), Size(colSize, colSize), style = Stroke(width = 2f))
+    }
+
+    // Node labels
+    cornerPositions.forEachIndexed { idx, p ->
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "C${idx + 1}",
+            topLeft = Offset(p.x - 10f, p.y - 25f),
+            style = TextStyle(color = Color(0xFF1565C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        )
+    }
+
+    // Dimensions
+    val dimColor = Color(0xFF8E24AA)
+    val dimPaint = android.graphics.Paint().apply {
+        color = dimColor.toArgb(); textSize = 22f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    // Span dimension (bottom)
+    val dimY = originY + 40f
+    val leftX = toScreen(xMin, 0.0).x
+    val rightX = toScreen(xMax, 0.0).x
+    drawLine(dimColor, Offset(leftX, originY + 5f), Offset(leftX, dimY + 5f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(rightX, originY + 5f), Offset(rightX, dimY + 5f), strokeWidth = 1f)
+    drawLine(dimColor, Offset(leftX, dimY), Offset(rightX, dimY), strokeWidth = 1.5f)
+    drawContext.canvas.nativeCanvas.drawText(
+        "L = ${String.format("%.2f", xSpan)} m",
+        (leftX + rightX) / 2, dimY - 8f, dimPaint
+    )
+
+    // Depth dimension (right)
+    val dimX = rightX + 40f
+    val topY = toScreen(xMin, planDepth).y
+    val botY = toScreen(xMin, 0.0).y
+    drawLine(dimColor, Offset(rightX + 5f, botY), Offset(dimX + 5f, botY), strokeWidth = 1f)
+    drawLine(dimColor, Offset(rightX + 5f, topY), Offset(dimX + 5f, topY), strokeWidth = 1f)
+    drawLine(dimColor, Offset(dimX, botY), Offset(dimX, topY), strokeWidth = 1.5f)
+    drawContext.canvas.nativeCanvas.save()
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimX + 14f, (botY + topY) / 2)
+    drawContext.canvas.nativeCanvas.drawText(
+        "B = ${String.format("%.2f", planDepth)} m",
+        dimX + 14f, (botY + topY) / 2 + 8f, dimPaint
+    )
+    drawContext.canvas.nativeCanvas.restore()
+
+    // Legend
+    val legX = canvasW - 200f
+    val legY = canvasH - 120f
+    drawRect(Color(0x22000000), Offset(legX, legY), Size(180f, 100f))
+    drawRect(Color(0xFF4A90D9), Offset(legX, legY), Size(180f, 100f), style = Stroke(1f))
+    val legTitle = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 16f; isFakeBoldText = true }
+    val legItem = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 14f }
+    drawContext.canvas.nativeCanvas.drawText("LEGEND", legX + 8f, legY + 20f, legTitle)
+    // Slab
+    drawRect(Color(0xFFBBDEFB), Offset(legX + 8f, legY + 30f), Size(16f, 12f))
+    drawContext.canvas.nativeCanvas.drawText("Slab", legX + 32f, legY + 40f, legItem)
+    // Beam
+    drawLine(Color(0xFF42A5F5), Offset(legX + 8f, legY + 56f), Offset(legX + 24f, legY + 56f), strokeWidth = 6f)
+    drawContext.canvas.nativeCanvas.drawText("Beam", legX + 32f, legY + 60f, legItem)
+    // Column
+    drawRect(Color(0xFFFF9800), Offset(legX + 12f, legY + 72f), Size(8f, 8f))
+    drawContext.canvas.nativeCanvas.drawText("Column", legX + 32f, legY + 80f, legItem)
 }
 
 // ============================================================================
@@ -255,7 +895,6 @@ private fun DrawScope.drawGrid(
     val gridColor = Color(0xFFEEEEEE)
     val axisColor = Color(0xFFD0D0D0)
 
-    // Vertical grid lines
     var x = floor(xMin / gridSpacing) * gridSpacing
     while (x <= xMax) {
         val p1 = toScreen(x, yMin)
@@ -268,7 +907,6 @@ private fun DrawScope.drawGrid(
         x += gridSpacing
     }
 
-    // Horizontal grid lines
     var y = floor(yMin / gridSpacing) * gridSpacing
     while (y <= yMax) {
         val p1 = toScreen(xMin, y)
@@ -297,7 +935,6 @@ private fun DrawScope.drawSupport(p: Offset, supportType: SupportType) {
     val size = 18f
     when (supportType) {
         SupportType.Pin -> {
-            // Triangle
             val path = Path().apply {
                 moveTo(p.x, p.y)
                 lineTo(p.x - size, p.y + size * 1.2f)
@@ -305,26 +942,13 @@ private fun DrawScope.drawSupport(p: Offset, supportType: SupportType) {
                 close()
             }
             drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
-            // Ground line
-            drawLine(
-                color = Color(0xFF1565C0),
-                start = Offset(p.x - size - 5, p.y + size * 1.2f),
-                end = Offset(p.x + size + 5, p.y + size * 1.2f),
-                strokeWidth = 2f
-            )
-            // Hatching
+            drawLine(Color(0xFF1565C0), Offset(p.x - size - 5, p.y + size * 1.2f), Offset(p.x + size + 5, p.y + size * 1.2f), strokeWidth = 2f)
             for (i in -2..2) {
                 val hx = p.x + i * 8f
-                drawLine(
-                    color = Color(0xFF1565C0),
-                    start = Offset(hx, p.y + size * 1.2f),
-                    end = Offset(hx - 5, p.y + size * 1.2f + 6),
-                    strokeWidth = 1f
-                )
+                drawLine(Color(0xFF1565C0), Offset(hx, p.y + size * 1.2f), Offset(hx - 5, p.y + size * 1.2f + 6), strokeWidth = 1f)
             }
         }
         SupportType.Roller -> {
-            // Triangle (smaller)
             val path = Path().apply {
                 moveTo(p.x, p.y)
                 lineTo(p.x - size * 0.7f, p.y + size * 0.8f)
@@ -332,36 +956,17 @@ private fun DrawScope.drawSupport(p: Offset, supportType: SupportType) {
                 close()
             }
             drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
-            // Circle (roller)
-            drawCircle(color = Color(0xFF1565C0), radius = 4f, center = Offset(p.x, p.y + size * 0.8f + 5f), style = Stroke(2f))
-            // Ground line
-            drawLine(
-                color = Color(0xFF1565C0),
-                start = Offset(p.x - size, p.y + size * 0.8f + 12f),
-                end = Offset(p.x + size, p.y + size * 0.8f + 12f),
-                strokeWidth = 2f
-            )
+            drawCircle(Color(0xFF1565C0), radius = 4f, center = Offset(p.x, p.y + size * 0.8f + 5f), style = Stroke(2f))
+            drawLine(Color(0xFF1565C0), Offset(p.x - size, p.y + size * 0.8f + 12f), Offset(p.x + size, p.y + size * 0.8f + 12f), strokeWidth = 2f)
         }
         SupportType.Fixed -> {
-            // Hatched wall at the support
-            drawLine(
-                color = Color(0xFF1565C0),
-                start = Offset(p.x - 14, p.y + 14),
-                end = Offset(p.x + 14, p.y - 14),
-                strokeWidth = 3f
-            )
+            drawLine(Color(0xFF1565C0), Offset(p.x - 14, p.y + 14), Offset(p.x + 14, p.y - 14), strokeWidth = 3f)
             for (i in -2..2) {
                 val hx = p.x - 14 + i * 7f
-                drawLine(
-                    color = Color(0xFF1565C0),
-                    start = Offset(hx, p.y + 14 + (i - 2) * 3f),
-                    end = Offset(hx - 8, p.y + 6 + (i - 2) * 3f),
-                    strokeWidth = 1.5f
-                )
+                drawLine(Color(0xFF1565C0), Offset(hx, p.y + 14 + (i - 2) * 3f), Offset(hx - 8, p.y + 6 + (i - 2) * 3f), strokeWidth = 1.5f)
             }
         }
         SupportType.VerticalRoller -> {
-            // Similar to pin but rotated
             val path = Path().apply {
                 moveTo(p.x, p.y)
                 lineTo(p.x + size * 1.2f, p.y - size * 0.7f)
@@ -369,7 +974,58 @@ private fun DrawScope.drawSupport(p: Offset, supportType: SupportType) {
                 close()
             }
             drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
-            drawCircle(color = Color(0xFF1565C0), radius = 4f, center = Offset(p.x + size * 1.2f + 5f, p.y), style = Stroke(2f))
+            drawCircle(Color(0xFF1565C0), radius = 4f, center = Offset(p.x + size * 1.2f + 5f, p.y), style = Stroke(2f))
+        }
+        SupportType.Free -> { /* nothing */ }
+    }
+}
+
+private fun DrawScope.drawSupportLarge(p: Offset, supportType: SupportType, textMeasurer: TextMeasurer, nodeId: Int) {
+    val size = 22f
+    when (supportType) {
+        SupportType.Pin -> {
+            val path = Path().apply {
+                moveTo(p.x, p.y)
+                lineTo(p.x - size, p.y + size * 1.2f)
+                lineTo(p.x + size, p.y + size * 1.2f)
+                close()
+            }
+            drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2.5f))
+            // Foundation
+            drawRect(Color(0xFF888888), Offset(p.x - size - 5, p.y + size * 1.2f), Size(2 * size + 10, 6f))
+            // Hatching
+            for (i in -3..3) {
+                val hx = p.x + i * 8f
+                drawLine(Color(0xFF1565C0), Offset(hx, p.y + size * 1.2f + 6f), Offset(hx - 5, p.y + size * 1.2f + 12f), strokeWidth = 1f)
+            }
+        }
+        SupportType.Roller -> {
+            val path = Path().apply {
+                moveTo(p.x, p.y)
+                lineTo(p.x - size * 0.7f, p.y + size * 0.8f)
+                lineTo(p.x + size * 0.7f, p.y + size * 0.8f)
+                close()
+            }
+            drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
+            drawCircle(Color(0xFF1565C0), radius = 5f, center = Offset(p.x, p.y + size * 0.8f + 6f), style = Stroke(2f))
+            drawRect(Color(0xFF888888), Offset(p.x - size - 5, p.y + size * 0.8f + 14f), Size(2 * size + 10, 6f))
+        }
+        SupportType.Fixed -> {
+            drawRect(Color(0xFF888888), Offset(p.x - 18, p.y), Size(36f, 8f))
+            for (i in -3..3) {
+                val hx = p.x - 18 + i * 9f
+                drawLine(Color(0xFF1565C0), Offset(hx, p.y + 8f), Offset(hx - 6, p.y + 14f), strokeWidth = 1.5f)
+            }
+        }
+        SupportType.VerticalRoller -> {
+            val path = Path().apply {
+                moveTo(p.x, p.y)
+                lineTo(p.x + size * 1.2f, p.y - size * 0.7f)
+                lineTo(p.x + size * 1.2f, p.y + size * 0.7f)
+                close()
+            }
+            drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2f))
+            drawCircle(Color(0xFF1565C0), radius = 5f, center = Offset(p.x + size * 1.2f + 6f, p.y), style = Stroke(2f))
         }
         SupportType.Free -> { /* nothing */ }
     }
@@ -390,7 +1046,7 @@ private fun DrawScope.drawMemberLoadArrows(
         val dy = p2.y - p1.y
         val L = sqrt(dx * dx + dy * dy)
         if (L < 1f) return
-        val nx = -dy / L  // normal to member (perpendicular, pointing "down" in screen)
+        val nx = -dy / L
         val ny = dx / L
 
         val arrowLen = 25f
@@ -403,15 +1059,13 @@ private fun DrawScope.drawMemberLoadArrows(
             val tipX = baseX + nx * arrowLen
             val tipY = baseY + ny * arrowLen
 
-            drawLine(color = arrowColor, start = Offset(baseX, baseY), end = Offset(tipX, tipY), strokeWidth = 1.5f)
-            // Arrow head
+            drawLine(arrowColor, Offset(baseX, baseY), Offset(tipX, tipY), strokeWidth = 1.5f)
             val headSize = 4f
             val angle = atan2(ny, nx)
-            drawLine(color = arrowColor, start = Offset(tipX, tipY), end = Offset(tipX - headSize * cos(angle - 0.5f), tipY - headSize * sin(angle - 0.5f)), strokeWidth = 1.5f)
-            drawLine(color = arrowColor, start = Offset(tipX, tipY), end = Offset(tipX - headSize * cos(angle + 0.5f), tipY - headSize * sin(angle + 0.5f)), strokeWidth = 1.5f)
+            drawLine(arrowColor, Offset(tipX, tipY), Offset(tipX - headSize * cos(angle - 0.5f), tipY - headSize * sin(angle - 0.5f)), strokeWidth = 1.5f)
+            drawLine(arrowColor, Offset(tipX, tipY), Offset(tipX - headSize * cos(angle + 0.5f), tipY - headSize * sin(angle + 0.5f)), strokeWidth = 1.5f)
         }
 
-        // Load value label
         val midX = (p1.x + p2.x) / 2 + nx * (arrowLen + 8f)
         val midY = (p1.y + p2.y) / 2 + ny * (arrowLen + 8f)
         drawText(
@@ -438,10 +1092,10 @@ private fun DrawScope.drawMemberLoadArrows(
         val tipX = baseX + nx * arrowLen
         val tipY = baseY + ny * arrowLen
 
-        drawLine(color = Color(0xFFD32F2F), start = Offset(baseX, baseY), end = Offset(tipX, tipY), strokeWidth = 2f)
+        drawLine(Color(0xFFD32F2F), Offset(baseX, baseY), Offset(tipX, tipY), strokeWidth = 2f)
         val angle = atan2(ny, nx)
-        drawLine(color = Color(0xFFD32F2F), start = Offset(tipX, tipY), end = Offset(tipX - 6f * cos(angle - 0.5f), tipY - 6f * sin(angle - 0.5f)), strokeWidth = 2f)
-        drawLine(color = Color(0xFFD32F2F), start = Offset(tipX, tipY), end = Offset(tipX - 6f * cos(angle + 0.5f), tipY - 6f * sin(angle + 0.5f)), strokeWidth = 2f)
+        drawLine(Color(0xFFD32F2F), Offset(tipX, tipY), Offset(tipX - 6f * cos(angle - 0.5f), tipY - 6f * sin(angle - 0.5f)), strokeWidth = 2f)
+        drawLine(Color(0xFFD32F2F), Offset(tipX, tipY), Offset(tipX - 6f * cos(angle + 0.5f), tipY - 6f * sin(angle + 0.5f)), strokeWidth = 2f)
 
         drawText(
             textMeasurer = textMeasurer,
@@ -458,14 +1112,13 @@ private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasure
     val arrowColor = Color(0xFF4CAF50)
     val arrowLen = 35f
 
-    // Draw force arrow (fy is positive upward, screen y is inverted)
     if (abs(load.fy) > 0.01) {
-        val dir = if (load.fy < 0) 1f else -1f // positive fy = upward force, but loads are usually downward
+        val dir = if (load.fy < 0) 1f else -1f
         val tipY = p.y + dir * arrowLen
-        drawLine(color = arrowColor, start = p, end = Offset(p.x, tipY), strokeWidth = 2f)
+        drawLine(arrowColor, start = p, end = Offset(p.x, tipY), strokeWidth = 2f)
         val headDir = if (load.fy < 0) -1f else 1f
-        drawLine(color = arrowColor, start = Offset(p.x, tipY), end = Offset(p.x - 5f, tipY + headDir * 6f), strokeWidth = 2f)
-        drawLine(color = arrowColor, start = Offset(p.x, tipY), end = Offset(p.x + 5f, tipY + headDir * 6f), strokeWidth = 2f)
+        drawLine(arrowColor, start = Offset(p.x, tipY), end = Offset(p.x - 5f, tipY + headDir * 6f), strokeWidth = 2f)
+        drawLine(arrowColor, start = Offset(p.x, tipY), end = Offset(p.x + 5f, tipY + headDir * 6f), strokeWidth = 2f)
         drawText(
             textMeasurer = textMeasurer,
             text = "${abs(load.fy)} kN",
@@ -476,10 +1129,10 @@ private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasure
     if (abs(load.fx) > 0.01) {
         val dir = if (load.fx > 0) 1f else -1f
         val tipX = p.x + dir * arrowLen
-        drawLine(color = arrowColor, start = p, end = Offset(tipX, p.y), strokeWidth = 2f)
+        drawLine(arrowColor, start = p, end = Offset(tipX, p.y), strokeWidth = 2f)
         val headDir = if (load.fx > 0) -1f else 1f
-        drawLine(color = arrowColor, start = Offset(tipX, p.y), end = Offset(tipX + headDir * 6f, p.y - 5f), strokeWidth = 2f)
-        drawLine(color = arrowColor, start = Offset(tipX, p.y), end = Offset(tipX + headDir * 6f, p.y + 5f), strokeWidth = 2f)
+        drawLine(arrowColor, start = Offset(tipX, p.y), end = Offset(tipX + headDir * 6f, p.y - 5f), strokeWidth = 2f)
+        drawLine(arrowColor, start = Offset(tipX, p.y), end = Offset(tipX + headDir * 6f, p.y + 5f), strokeWidth = 2f)
     }
     if (abs(load.mz) > 0.01) {
         drawText(
@@ -509,10 +1162,8 @@ private fun DrawScope.drawDiagrams(
         val L = sqrt((p2.x - p1.x).pow(2) + (p2.y - p1.y).pow(2))
         if (L < 1f) continue
 
-        // Direction along member
         val dx = (p2.x - p1.x) / L
         val dy = (p2.y - p1.y) / L
-        // Normal to member (perpendicular)
         val nx = -dy
         val ny = dx
 
@@ -524,20 +1175,18 @@ private fun DrawScope.drawDiagrams(
 
         if (points.size < 2) continue
 
-        // Scale factor for diagram (adjust based on max value)
         val maxVal = points.maxOfOrNull { abs(it.value) } ?: 1.0
         if (maxVal < 0.001) continue
-        val diagramScale = 40f / maxVal.toFloat() // Max diagram height = 40px
+        val diagramScale = 40f / maxVal.toFloat()
 
         val diagramColor = when (diagramType) {
-            DiagramType.BMD -> Color(0xFF2196F3)  // Blue
-            DiagramType.SFD -> Color(0xFF4CAF50)  // Green
-            DiagramType.AFD -> Color(0xFFFF9800)  // Orange
+            DiagramType.BMD -> Color(0xFF2196F3)
+            DiagramType.SFD -> Color(0xFF4CAF50)
+            DiagramType.AFD -> Color(0xFFFF9800)
         }
 
-        // Draw filled diagram area
         val path = Path()
-        val memberLength = member.getLength(nodes)
+        val memberLength = member.GetLength(nodes)
         val firstPt = points[0]
         val t0 = if (memberLength > 0) (firstPt.x / memberLength).toFloat() else 0f
         val offset0 = firstPt.value * diagramScale
@@ -550,18 +1199,12 @@ private fun DrawScope.drawDiagrams(
             path.lineTo(p1.x + dx * L * t + nx * offset.toFloat(), p1.y + dy * L * t + ny * offset.toFloat())
         }
 
-        // Close the path back along the member line
         path.lineTo(p2.x, p2.y)
         path.lineTo(p1.x, p1.y)
         path.close()
 
-        // Fill with semi-transparent color
-        drawPath(
-            path = path,
-            color = diagramColor.copy(alpha = 0.2f)
-        )
+        drawPath(path = path, color = diagramColor.copy(alpha = 0.2f))
 
-        // Draw the diagram outline
         val outlinePath = Path()
         val firstPt2 = points[0]
         val t0_2 = if (memberLength > 0) (firstPt2.x / memberLength).toFloat() else 0f
@@ -576,7 +1219,6 @@ private fun DrawScope.drawDiagrams(
         }
         drawPath(outlinePath, color = diagramColor, style = Stroke(width = 2f))
 
-        // Draw max value annotation
         val maxPt = points.maxByOrNull { abs(it.value) }
         if (maxPt != null && abs(maxPt.value) > 0.01) {
             val tMax = if (memberLength > 0) (maxPt.x / memberLength).toFloat() else 0.5f
@@ -605,10 +1247,9 @@ private fun DrawScope.drawDeformedShape(
     toScreen: (Double, Double) -> Offset,
     scale: Float
 ) {
-    // Scale deformations for visibility
     val maxDisp = nodeResults.maxOfOrNull { (max(abs(it.dx), abs(it.dy)) * scale).toFloat() } ?: 0f
-    if (maxDisp < 0.5f) return // Too small to show
-    val deformScale = 50f / maxDisp.coerceAtLeast(1f) // amplify to ~50px max
+    if (maxDisp < 0.5f) return
+    val deformScale = 50f / maxDisp.coerceAtLeast(1f)
 
     for (member in members) {
         val ni = nodes.find { it.id == member.nodeI } ?: continue
@@ -631,14 +1272,14 @@ private fun DrawScope.drawDeformedShape(
 }
 
 private fun DrawScope.drawScaleBar(size: Size, scale: Float, textMeasurer: TextMeasurer) {
-    val barLength_m = 1.0 // 1 meter
+    val barLength_m = 1.0
     val barLength_px = (barLength_m * scale).toFloat()
     val x = 20f
     val y = size.height - 25f
 
-    drawLine(color = Color.DarkGray, start = Offset(x, y), end = Offset(x + barLength_px, y), strokeWidth = 2f)
-    drawLine(color = Color.DarkGray, start = Offset(x, y - 5), end = Offset(x, y + 5), strokeWidth = 2f)
-    drawLine(color = Color.DarkGray, start = Offset(x + barLength_px, y - 5), end = Offset(x + barLength_px, y + 5), strokeWidth = 2f)
+    drawLine(Color.DarkGray, Offset(x, y), Offset(x + barLength_px, y), strokeWidth = 2f)
+    drawLine(Color.DarkGray, Offset(x, y - 5), Offset(x, y + 5), strokeWidth = 2f)
+    drawLine(Color.DarkGray, Offset(x + barLength_px, y - 5), Offset(x + barLength_px, y + 5), strokeWidth = 2f)
     drawText(
         textMeasurer = textMeasurer,
         text = "${barLength_m.toInt()} m",

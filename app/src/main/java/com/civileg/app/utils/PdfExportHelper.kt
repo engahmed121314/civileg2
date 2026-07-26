@@ -10,6 +10,7 @@ import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
+import com.itextpdf.layout.element.Text
 import com.itextpdf.layout.properties.BaseDirection
 import com.itextpdf.layout.properties.TextAlignment
 import java.io.File
@@ -30,33 +31,42 @@ object PdfExportHelper {
             val pdf = PdfDocument(writer)
             val document = Document(pdf)
 
-            // Header
-            val arabicFont = ArabicFontProvider.getArabicPdfFont(context)
+            // Header — always use Latin font for English title
             val titlePara = Paragraph("Civil EG - Calculation Report")
                 .setTextAlignment(TextAlignment.CENTER)
                 .setFontSize(20f)
                 .setBold()
             document.add(titlePara)
-            
+
             document.add(LineSeparator(com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1f)))
             document.add(Paragraph("\n"))
-            
-            // Title
-            val titleP = Paragraph(title).setFontSize(16f).setBold().setUnderline()
+
+            // Title — proper Arabic shaping
+            val arabicFont = ArabicFontProvider.getArabicPdfFont(context)
+            val titleP = Paragraph().setFontSize(16f).setBold().setUnderline()
             if (ArabicFontProvider.containsArabic(title)) {
-                titleP.setFont(arabicFont)
+                // Single Text run + Paragraph BaseDirection triggers iText's bidi algorithm
+                titleP.add(Text(title).setFont(arabicFont))
                 titleP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                titleP.setTextAlignment(TextAlignment.RIGHT)
+            } else {
+                titleP.add(Text(title))
             }
             document.add(titleP)
-            
+
             document.add(Paragraph("\n"))
 
-            // Details
+            // Details — proper Arabic shaping per line
             for ((key, value) in details) {
-                val p = Paragraph("$key: $value").setFontSize(12f)
-                if (ArabicFontProvider.containsArabic(key) || ArabicFontProvider.containsArabic(value)) {
-                    p.setFont(arabicFont)
+                val lineText = "$key: $value"
+                val p = Paragraph().setFontSize(12f)
+                if (ArabicFontProvider.containsArabic(lineText)) {
+                    // Use Arabic font for the entire line (it has Latin glyphs too)
+                    p.add(Text(lineText).setFont(arabicFont))
                     p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+                    p.setTextAlignment(TextAlignment.RIGHT)
+                } else {
+                    p.add(Text(lineText))
                 }
                 document.add(p)
             }
@@ -66,7 +76,7 @@ object PdfExportHelper {
                 .setItalic())
 
             document.close()
-            
+
             openPdf(context, file)
             file.absolutePath
         } catch (e: Exception) {

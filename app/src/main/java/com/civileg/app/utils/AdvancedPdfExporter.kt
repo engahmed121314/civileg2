@@ -46,11 +46,19 @@ object AdvancedPdfExporter {
     }
 
     private fun createStyledParagraph(text: String, font: PdfFont?, fontSize: Float = 12f, isBold: Boolean = false): Paragraph {
-        val p = Paragraph(text).setFontSize(fontSize)
+        val p = Paragraph().setFontSize(fontSize)
         if (isBold) p.setBold()
         if (font != null && containsArabic(text)) {
-            p.setFont(font)
+            // CRITICAL FIX: Use a single Text run with the Arabic font.
+            // The Arabic font (NotoNaskhArabic) has Latin glyphs too,
+            // so mixed text works correctly without splitting segments.
+            // Setting BaseDirection on Paragraph (not on Text run) triggers
+            // iText's Unicode Bidi Algorithm which shapes Arabic correctly.
+            p.add(com.itextpdf.layout.element.Text(text).setFont(font))
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            p.setTextAlignment(TextAlignment.RIGHT)
+        } else {
+            p.add(com.itextpdf.layout.element.Text(text))
         }
         return p
     }

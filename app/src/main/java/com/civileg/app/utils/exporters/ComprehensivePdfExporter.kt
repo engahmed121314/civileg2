@@ -95,40 +95,35 @@ class ComprehensivePdfExporter(private val context: Context) {
         alignment?.let { p.setTextAlignment(it) }
 
         if (isArabic(text)) {
-            // Split text into Arabic and English segments for bilingual support
-            val segments = splitBilingualText(text)
-            for ((segText, isArabicSeg) in segments) {
-                val font = if (isArabicSeg) (if (bold) arabicBoldFont else arabicFont) else helveticaFont
-                val run = Text(segText).setFont(font)
-                if (isArabicSeg) run.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                p.add(run)
+            // CRITICAL FIX: Use a SINGLE Text run with the Arabic font.
+            // Previously text was split into Arabic/Latin segments which BREAKS
+            // iText's Unicode Bidi Algorithm and caused disconnected letters.
+            // The Arabic font (NotoNaskhArabic) includes Latin glyphs so a single
+            // run handles mixed-language text correctly.
+            val font = if (bold) arabicBoldFont else arabicFont
+            val run = Text(text).setFont(font)
+            p.add(run)
+            // Set BaseDirection on the Paragraph (not on individual Text runs).
+            // This triggers iText's Unicode Bidi Algorithm which shapes Arabic
+            // using the font's GSUB/GPOS OpenType tables.
+            p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            // Default to right alignment for Arabic unless specified
+            if (alignment == null) {
+                p.setTextAlignment(TextAlignment.RIGHT)
             }
-            val useRtl = rtl ?: !isEnglish
-            if (useRtl) p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         } else {
-            p.add(Text(text).setFont(if (bold) helveticaFont else helveticaFont))
+            // Pure Latin/numeric text — use Helvetica (smaller file size)
+            val font = if (bold) {
+                try { PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD) } catch (_: Exception) { helveticaFont }
+            } else {
+                helveticaFont
+            }
+            p.add(Text(text).setFont(font))
+            if (alignment == null) {
+                p.setTextAlignment(TextAlignment.LEFT)
+            }
         }
         return p
-    }
-
-    private fun splitBilingualText(text: String): List<Pair<String, Boolean>> {
-        val segments = mutableListOf<Pair<String, Boolean>>()
-        var currentSeg = StringBuilder()
-        var currentIsArabic = isArabic(text.firstOrNull()?.toString() ?: "")
-
-        for (char in text) {
-            val charIsArabic = isArabic(char.toString())
-            if (charIsArabic != currentIsArabic && currentSeg.isNotEmpty()) {
-                segments.add(Pair(currentSeg.toString(), currentIsArabic))
-                currentSeg = StringBuilder()
-                currentIsArabic = charIsArabic
-            }
-            currentSeg.append(char)
-        }
-        if (currentSeg.isNotEmpty()) {
-            segments.add(Pair(currentSeg.toString(), currentIsArabic))
-        }
-        return segments
     }
 
     private fun rtlParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null): Paragraph {

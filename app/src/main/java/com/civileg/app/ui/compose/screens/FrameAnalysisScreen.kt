@@ -209,50 +209,88 @@ private fun DrawingTab(
     selectedMemberId: Int?,
     viewModel: FrameAnalysisViewModel
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        FrameDrawingCanvas(
-            nodes = nodes,
-            members = members,
-            memberLoads = memberLoads,
-            nodalLoads = nodalLoads,
-            result = result,
-            diagramType = diagramType,
-            selectedMemberId = selectedMemberId,
-            onMemberTap = { viewModel.setSelectedMember(it) }
-        )
+    var viewMode by remember { mutableIntStateOf(0) }
+    val viewModes = listOf(
+        "Frame" to "الإطار",
+        "Long. Section" to "قطاع طولي",
+        "Cross Section" to "قطاع عرضي",
+        "Plan" to "مسقط أفقي"
+    )
 
-        // Solve button (FAB)
-        if (nodes.size >= 2 && members.isNotEmpty()) {
-            FloatingActionButton(
-                onClick = { viewModel.solveFrame() },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                containerColor = Color(0xFF1565C0),
-                contentColor = Color.White
+    Column(modifier = modifier.fillMaxSize()) {
+        // View mode selector
+        Surface(
+            color = Color(0xFF1565C0).copy(alpha = 0.1f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ScrollableTabRow(
+                selectedTabIndex = viewMode,
+                containerColor = Color.Transparent,
+                contentColor = Color(0xFF1565C0),
+                edgePadding = 8.dp,
+                divider = {}
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.PlayArrow, stringResource(R.string.frame_solve))
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(stringResource(R.string.frame_solve), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                viewModes.forEachIndexed { index, (en, ar) ->
+                    Tab(
+                        selected = viewMode == index,
+                        onClick = { viewMode = index },
+                        text = {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(en, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                Text(ar, fontSize = 9.sp, color = Color.Gray)
+                            }
+                        }
+                    )
                 }
             }
         }
 
-        // Info card
-        Card(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text("${stringResource(R.string.frame_tab_nodes)}: ${nodes.size}  |  ${stringResource(R.string.frame_tab_members)}: ${members.size}", fontSize = 11.sp, color = Color.Gray)
-                if (result?.hasResults == true) {
-                    Text(
-                        "${stringResource(R.string.safe)} ✓  |  ${stringResource(R.string.frame_tab_loads)}: ${memberLoads.size + nodalLoads.size}",
-                        fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold
-                    )
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            FrameDrawingCanvas(
+                nodes = nodes,
+                members = members,
+                memberLoads = memberLoads,
+                nodalLoads = nodalLoads,
+                result = result,
+                diagramType = diagramType,
+                selectedMemberId = selectedMemberId,
+                onMemberTap = { viewModel.setSelectedMember(it) },
+                viewMode = viewMode
+            )
+
+            // Solve button (FAB)
+            if (nodes.size >= 2 && members.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = { viewModel.solveFrame() },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    containerColor = Color(0xFF1565C0),
+                    contentColor = Color.White
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.PlayArrow, stringResource(R.string.frame_solve))
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(stringResource(R.string.frame_solve), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Info card
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Text("${stringResource(R.string.frame_tab_nodes)}: ${nodes.size}  |  ${stringResource(R.string.frame_tab_members)}: ${members.size}", fontSize = 11.sp, color = Color.Gray)
+                    if (result?.hasResults == true) {
+                        Text(
+                            "${stringResource(R.string.safe)} ✓  |  ${stringResource(R.string.frame_tab_loads)}: ${memberLoads.size + nodalLoads.size}",
+                            fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
