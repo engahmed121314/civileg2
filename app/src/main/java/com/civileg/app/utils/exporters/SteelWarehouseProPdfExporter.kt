@@ -41,6 +41,14 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     private val arabicFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context) }
     private val arabicBoldFont: PdfFont by lazy { ArabicFontProvider.getArabicPdfFont(context, bold = true) }
+    private val helveticaFont: PdfFont by lazy {
+        try { com.itextpdf.kernel.font.PdfFontFactory.createFont(com.itextpdf.io.font.constants.StandardFonts.HELVETICA) }
+        catch (_: Exception) { arabicFont }
+    }
+    private val helveticaBoldFont: PdfFont by lazy {
+        try { com.itextpdf.kernel.font.PdfFontFactory.createFont(com.itextpdf.io.font.constants.StandardFonts.HELVETICA_BOLD) }
+        catch (_: Exception) { arabicBoldFont }
+    }
 
     private fun isArabic(text: String) = ArabicFontProvider.containsArabic(text)
 

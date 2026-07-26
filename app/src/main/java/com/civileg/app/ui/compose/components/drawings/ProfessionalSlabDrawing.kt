@@ -589,10 +589,14 @@ fun ProfessionalSlabDrawing(
         val tableRowColor = Color(0xFF263238)
         val tableRowAltColor = Color(0xFF1E2A33)
 
-        // Calculate As provided and weight for additional table columns
-        val mainAsProvided = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / mainRebarSpacing) // mm²/m
-        val distAsProvided = (Math.PI * distRebarDia * distRebarDia / 4.0) * (1000.0 / distRebarSpacing) // mm²/m
-        val mainWeightPerM2 = (mainAsProvided / 1000.0) * 0.00785 * 1000.0 * mainRebarDia / 12.5 // approx kg/m²
+        // Calculate As provided and weight — guard against zero spacing/diameter
+        val safeMainSpacing = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
+        val safeDistSpacing = if (distRebarSpacing > 0) distRebarSpacing else 200.0
+        val safeMainDia = if (mainRebarDia > 0) mainRebarDia else 12.0
+        val safeDistDia = if (distRebarDia > 0) distRebarDia else 10.0
+        val mainAsProvided = (Math.PI * safeMainDia * safeMainDia / 4.0) * (1000.0 / safeMainSpacing) // mm²/m
+        val distAsProvided = (Math.PI * safeDistDia * safeDistDia / 4.0) * (1000.0 / safeDistSpacing) // mm²/m
+        val mainWeightPerM2 = (mainAsProvided / 1000.0) * 0.00785 * 1000.0 * safeMainDia / 12.5 // approx kg/m²
         val slabArea = spanX * spanY // m²
 
         // Expanded table: Mark, Direction, Dia (mm), Spacing (mm), Length (mm), As (mm²/m), Weight (kg)
@@ -600,8 +604,8 @@ fun ProfessionalSlabDrawing(
         rows.add(listOf(
             "①",
             "Main Bottom",
-            mainRebarDia.toInt().toString(),
-            mainRebarSpacing.toInt().toString(),
+            safeMainDia.toInt().toString(),
+            safeMainSpacing.toInt().toString(),
             (mainLength * 1000).toInt().toString(),
             String.format("%.0f", mainAsProvided),
             String.format("%.1f", mainAsProvided * mainLength * 0.00785)
@@ -609,19 +613,19 @@ fun ProfessionalSlabDrawing(
         rows.add(listOf(
             "②",
             "Dist. Bottom",
-            distRebarDia.toInt().toString(),
-            distRebarSpacing.toInt().toString(),
+            safeDistDia.toInt().toString(),
+            safeDistSpacing.toInt().toString(),
             (distLength * 1000).toInt().toString(),
             String.format("%.0f", distAsProvided),
             String.format("%.1f", distAsProvided * distLength * 0.00785)
         ))
         if (topBarLength > 0) {
-            val topAsProvided = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / mainRebarSpacing)
+            val topAsProvided = (Math.PI * safeMainDia * safeMainDia / 4.0) * (1000.0 / safeMainSpacing)
             rows.add(listOf(
                 "③",
                 "Top Support",
-                mainRebarDia.toInt().toString(),
-                mainRebarSpacing.toInt().toString(),
+                safeMainDia.toInt().toString(),
+                safeMainSpacing.toInt().toString(),
                 (topBarLength * 1000).toInt().toString(),
                 String.format("%.0f", topAsProvided),
                 String.format("%.1f", topAsProvided * topBarLength * 0.00785)
@@ -630,12 +634,13 @@ fun ProfessionalSlabDrawing(
         // Hordi/Waffle: rib bars
         if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
             val ribBarLen = if (slabThickness > 0) (slabThickness * 0.7 * 1000).toInt().toString() else "0"
-            val ribAs = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / ribSpacing)
+            val safeRibSpacing = if (ribSpacing > 0) ribSpacing else 500.0
+            val ribAs = (Math.PI * safeMainDia * safeMainDia / 4.0) * (1000.0 / safeRibSpacing)
             rows.add(listOf(
                 "④",
                 "Rib Bars",
-                mainRebarDia.toInt().toString(),
-                ribSpacing.toInt().toString(),
+                safeMainDia.toInt().toString(),
+                safeRibSpacing.toInt().toString(),
                 ribBarLen,
                 String.format("%.0f", ribAs),
                 String.format("%.1f", ribAs * slabThickness * 0.7 * 0.00785)
