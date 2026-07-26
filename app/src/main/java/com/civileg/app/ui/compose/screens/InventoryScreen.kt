@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -21,7 +24,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.db.InventoryItem
 import com.civileg.app.db.InventoryType
+import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.InventoryViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 import com.civileg.app.R
@@ -36,6 +43,9 @@ fun InventoryScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isExporting by remember { mutableStateOf(false) }
 
     val filteredItems = uiState.items.filter { 
         it.name.contains(searchQuery, ignoreCase = true) 
@@ -51,6 +61,50 @@ fun InventoryScreen(
                     }
                 },
                 actions = {
+                    // FIX: Added PDF export button for inventory (was missing — only beam had PDF)
+                    IconButton(
+                        onClick = {
+                            if (filteredItems.isEmpty()) {
+                                Toast.makeText(context, "No items to export", Toast.LENGTH_SHORT).show()
+                            } else {
+                                isExporting = true
+                                scope.launch {
+                                    val pdfFile = withContext(Dispatchers.IO) {
+                                        try {
+                                            PdfGenerator.generateInventoryReport(
+                                                context,
+                                                filteredItems,
+                                                "Inventory Report - ${SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())}"
+                                            )
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            null
+                                        }
+                                    }
+                                    isExporting = false
+                                    if (pdfFile != null) {
+                                        Toast.makeText(context, "PDF saved: ${pdfFile.name}", Toast.LENGTH_LONG).show()
+                                        // Open share intent
+                                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "application/pdf"
+                                            putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.fromFile(pdfFile))
+                                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share PDF"))
+                                    } else {
+                                        Toast.makeText(context, "Failed to generate PDF", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isExporting
+                    ) {
+                        if (isExporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF")
+                        }
+                    }
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add")
                     }

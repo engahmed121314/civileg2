@@ -19,7 +19,7 @@ object Constants {
     const val COVER_BEAM = 25
     const val COVER_COLUMN = 30
     const val COVER_FOOTING = 50
-    const val COVER_WATER_RETAINING = 35
+    const val COVER_WATER_RETAINING = 50  // ECP 203: 50mm minimum for water-retaining structures
     
     // Deflection Limits (span/depth ratios)
     const val BASIC_SPAN_DEPTH_RATIO = 20.0 // For cantilever
@@ -28,5 +28,5 @@ object Constants {
     // Maximum crack widths (mm)
     const val CRACK_WIDTH_NORMAL = 0.3
     const val CRACK_WIDTH_AGGRESSIVE = 0.2
-    const val CRACK_WIDTH_WATER_RETAINING = 0.1
+    const val CRACK_WIDTH_WATER_RETAINING = 0.2  // ECP 203: 0.2mm max for water-retaining structures
 }

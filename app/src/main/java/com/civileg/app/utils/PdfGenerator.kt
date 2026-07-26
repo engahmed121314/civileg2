@@ -761,4 +761,189 @@ object PdfGenerator {
     ): File {
         return generateProfessionalReport(context, title, designType, inputs, results, emptyList(), isSafe, null)
     }
+
+    /**
+     * Generate a PDF report for inventory items.
+     * Lists all materials/equipment with quantities, units, alert thresholds, and notes.
+     */
+    fun generateInventoryReport(
+        context: Context,
+        items: List<com.civileg.app.db.InventoryItem>,
+        title: String
+    ): File {
+        val fileName = "CivilEG_Inventory_${System.currentTimeMillis()}.pdf"
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
+
+        val pdf = android.graphics.pdf.PdfDocument()
+        val helper = PdfLayoutHelper(context)
+        helper.startNewDocument(pdf)
+        helper.startNewPage()
+
+        val canvas = helper.currentPage!!.canvas
+        var y = helper.currentY + 20f
+
+        val titlePaint = android.graphics.Paint().apply {
+            color = helper.colorPrimary
+            textSize = 24f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        helper.drawText(canvas, t(context, "تقرير جرد المواد والمعدات", "INVENTORY REPORT"), PdfLayoutHelper.PAGE_WIDTH / 2f, y, titlePaint)
+        y += 30f
+
+        val subTitlePaint = android.graphics.Paint().apply {
+            color = helper.colorSecondary
+            textSize = 13f
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        helper.drawText(canvas, "Generated: ${dateFormat.format(Date())}", PdfLayoutHelper.PAGE_WIDTH / 2f, y, subTitlePaint)
+        y += 20f
+        helper.drawText(canvas, "Total Items: ${items.size}", PdfLayoutHelper.PAGE_WIDTH / 2f, y, subTitlePaint)
+        y += 30f
+
+        // Table header
+        val headerPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 11f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.LEFT
+        }
+        val headerBg = android.graphics.Paint().apply {
+            color = helper.colorPrimary
+            style = android.graphics.Paint.Style.FILL
+        }
+        val rowPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            textSize = 11f
+            textAlign = android.graphics.Paint.Align.LEFT
+        }
+        val altRowPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.DKGRAY
+            textSize = 11f
+            textAlign = android.graphics.Paint.Align.LEFT
+        }
+        val altBgPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.rgb(245, 245, 245)
+            style = android.graphics.Paint.Style.FILL
+        }
+        val alertPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.RED
+            textSize = 11f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.LEFT
+        }
+
+        // Column widths (total ~540 points on A4)
+        val colX = floatArrayOf(
+            PdfLayoutHelper.MARGIN,                    // # (id)
+            PdfLayoutHelper.MARGIN + 30f,              // Name
+            PdfLayoutHelper.MARGIN + 230f,             // Type
+            PdfLayoutHelper.MARGIN + 320f,             // Quantity
+            PdfLayoutHelper.MARGIN + 390f,             // Unit
+            PdfLayoutHelper.MARGIN + 440f,             // Alert
+            PdfLayoutHelper.MARGIN + 500f              // Notes
+        )
+        val rowH = 22f
+
+        // Header row
+        canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + rowH, headerBg)
+        val headers = arrayOf("#", "Item Name", "Type", "Quantity", "Unit", "Alert", "Notes")
+        headers.forEachIndexed { idx, h ->
+            helper.drawText(canvas, h, colX[idx], y + 15f, headerPaint)
+        }
+        y += rowH
+
+        // Data rows
+        items.forEachIndexed { idx, item ->
+            if (y > PdfLayoutHelper.PAGE_HEIGHT - 60f) {
+                helper.finishCurrentPage()
+                helper.startNewPage()
+                y = helper.currentY + 20f
+                // Re-draw header on new page
+                canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + rowH, headerBg)
+                headers.forEachIndexed { hIdx, h ->
+                    helper.drawText(canvas, h, colX[hIdx], y + 15f, headerPaint)
+                }
+                y += rowH
+            }
+
+            val isAltRow = idx % 2 == 1
+            if (isAltRow) {
+                canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + rowH, altBgPaint)
+            }
+
+            val isLowStock = item.alertQuantity > 0 && item.quantity <= item.alertQuantity
+            val paint = if (isLowStock) alertPaint else if (isAltRow) altRowPaint else rowPaint
+
+            helper.drawText(canvas, "${idx + 1}", colX[0], y + 15f, paint)
+            // Truncate name to 30 chars to fit column
+            val truncatedName = if (item.name.length > 28) item.name.take(25) + "..." else item.name
+            helper.drawText(canvas, truncatedName, colX[1], y + 15f, paint)
+            helper.drawText(canvas, item.type.name, colX[2], y + 15f, paint)
+            helper.drawText(canvas, String.format("%.2f", item.quantity), colX[3], y + 15f, paint)
+            helper.drawText(canvas, item.unit, colX[4], y + 15f, paint)
+            val alertText = if (item.alertQuantity > 0) String.format("%.0f", item.alertQuantity) else "-"
+            helper.drawText(canvas, alertText, colX[5], y + 15f, paint)
+            val notes = if (item.notes.length > 25) item.notes.take(22) + "..." else if (item.notes.isEmpty()) "-" else item.notes
+            helper.drawText(canvas, notes, colX[6], y + 15f, paint)
+
+            // Low stock indicator
+            if (isLowStock) {
+                val warnPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.RED
+                    textSize = 9f
+                    isFakeBoldText = true
+                    textAlign = android.graphics.Paint.Align.LEFT
+                }
+                helper.drawText(canvas, "⚠ LOW", colX[3] + 50f, y + 15f, warnPaint)
+            }
+
+            y += rowH
+        }
+
+        // Summary
+        y += 20f
+        val totalByType = items.groupBy { it.type }
+        val summaryPaint = android.graphics.Paint().apply {
+            color = helper.colorPrimary
+            textSize = 13f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.LEFT
+        }
+        helper.drawText(canvas, "SUMMARY BY TYPE", PdfLayoutHelper.MARGIN, y, summaryPaint)
+        y += 20f
+        val detailPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            textSize = 11f
+            textAlign = android.graphics.Paint.Align.LEFT
+        }
+        totalByType.forEach { (type, itemsOfType) ->
+            helper.drawText(canvas, "• ${type.name}: ${itemsOfType.size} items", PdfLayoutHelper.MARGIN + 15f, y, detailPaint)
+            y += 16f
+        }
+
+        // Low stock alerts summary
+        val lowStockItems = items.filter { it.alertQuantity > 0 && it.quantity <= it.alertQuantity }
+        if (lowStockItems.isNotEmpty()) {
+            y += 15f
+            val alertTitlePaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.RED
+                textSize = 13f
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.LEFT
+            }
+            helper.drawText(canvas, "LOW STOCK ALERTS (${lowStockItems.size})", PdfLayoutHelper.MARGIN, y, alertTitlePaint)
+            y += 20f
+            lowStockItems.forEach { item ->
+                helper.drawText(canvas, "• ${item.name}: ${String.format("%.2f", item.quantity)} ${item.unit} (alert: ${String.format("%.0f", item.alertQuantity)})", PdfLayoutHelper.MARGIN + 15f, y, alertPaint)
+                y += 16f
+            }
+        }
+
+        helper.finishCurrentPage()
+        pdf.writeTo(FileOutputStream(file))
+        pdf.close()
+        return file
+    }
 }

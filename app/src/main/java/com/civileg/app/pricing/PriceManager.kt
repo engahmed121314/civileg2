@@ -38,28 +38,28 @@ object PriceManager {
     
     // أسعار افتراضية (EGP)
     private val defaultPrices = mapOf(
-        // الخرسانة
-        "conc_c15" to MaterialPrice("conc_c15", "Concrete C15", "خرسانة C15", "m³", "م³", 750.0, MaterialCategory.CONCRETE),
-        "conc_c20" to MaterialPrice("conc_c20", "Concrete C20", "خرسانة C20", "m³", "م³", 850.0, MaterialCategory.CONCRETE),
-        "conc_c25" to MaterialPrice("conc_c25", "Concrete C25", "خرسانة C25", "m³", "م³", 950.0, MaterialCategory.CONCRETE),
-        "conc_c30" to MaterialPrice("conc_c30", "Concrete C30", "خرسانة C30", "m³", "م³", 1050.0, MaterialCategory.CONCRETE),
-        "conc_c35" to MaterialPrice("conc_c35", "Concrete C35", "خرسانة C35", "m³", "م³", 1150.0, MaterialCategory.CONCRETE),
-        "conc_c40" to MaterialPrice("conc_c40", "Concrete C40", "خرسانة C40", "m³", "م³", 1250.0, MaterialCategory.CONCRETE),
-        "conc_c45" to MaterialPrice("conc_c45", "Concrete C45", "خرسانة C45", "m³", "م³", 1350.0, MaterialCategory.CONCRETE),
-        "conc_c50" to MaterialPrice("conc_c50", "Concrete C50", "خرسانة C50", "m³", "م³", 1450.0, MaterialCategory.CONCRETE),
+        // الخرسانة - Updated 2026 (Egypt market)
+        "conc_c15" to MaterialPrice("conc_c15", "Concrete C15", "خرسانة C15", "m³", "م³", 1100.0, MaterialCategory.CONCRETE),
+        "conc_c20" to MaterialPrice("conc_c20", "Concrete C20", "خرسانة C20", "m³", "م³", 1250.0, MaterialCategory.CONCRETE),
+        "conc_c25" to MaterialPrice("conc_c25", "Concrete C25", "خرسانة C25", "m³", "م³", 1400.0, MaterialCategory.CONCRETE),
+        "conc_c30" to MaterialPrice("conc_c30", "Concrete C30", "خرسانة C30", "m³", "م³", 1550.0, MaterialCategory.CONCRETE),
+        "conc_c35" to MaterialPrice("conc_c35", "Concrete C35", "خرسانة C35", "m³", "م³", 1700.0, MaterialCategory.CONCRETE),
+        "conc_c40" to MaterialPrice("conc_c40", "Concrete C40", "خرسانة C40", "m³", "م³", 1850.0, MaterialCategory.CONCRETE),
+        "conc_c45" to MaterialPrice("conc_c45", "Concrete C45", "خرسانة C45", "m³", "م³", 2000.0, MaterialCategory.CONCRETE),
+        "conc_c50" to MaterialPrice("conc_c50", "Concrete C50", "خرسانة C50", "m³", "م³", 2150.0, MaterialCategory.CONCRETE),
         
-        // الحديد
-        "steel_8" to MaterialPrice("steel_8", "Steel Ø8mm", "حديد Ø8مم", "ton", "طن", 28500.0, MaterialCategory.STEEL),
-        "steel_10" to MaterialPrice("steel_10", "Steel Ø10mm", "حديد Ø10مم", "ton", "طن", 28000.0, MaterialCategory.STEEL),
-        "steel_12" to MaterialPrice("steel_12", "Steel Ø12mm", "حديد Ø12مم", "ton", "طن", 27500.0, MaterialCategory.STEEL),
-        "steel_14" to MaterialPrice("steel_14", "Steel Ø14mm", "حديد Ø14مم", "ton", "طن", 27500.0, MaterialCategory.STEEL),
-        "steel_16" to MaterialPrice("steel_16", "Steel Ø16mm", "حديد Ø16مم", "ton", "طن", 27000.0, MaterialCategory.STEEL),
-        "steel_18" to MaterialPrice("steel_18", "Steel Ø18mm", "حديد Ø18مم", "ton", "طن", 27000.0, MaterialCategory.STEEL),
-        "steel_20" to MaterialPrice("steel_20", "Steel Ø20mm", "حديد Ø20مم", "ton", "طن", 26500.0, MaterialCategory.STEEL),
-        "steel_22" to MaterialPrice("steel_22", "Steel Ø22mm", "حديد Ø22مم", "ton", "طن", 26500.0, MaterialCategory.STEEL),
-        "steel_25" to MaterialPrice("steel_25", "Steel Ø25mm", "حديد Ø25مم", "ton", "طن", 26000.0, MaterialCategory.STEEL),
-        "steel_28" to MaterialPrice("steel_28", "Steel Ø28mm", "حديد Ø28مم", "ton", "طن", 26000.0, MaterialCategory.STEEL),
-        "steel_32" to MaterialPrice("steel_32", "Steel Ø32mm", "حديد Ø32مم", "ton", "طن", 25500.0, MaterialCategory.STEEL),
+        // الحديد - Updated 2026 (Egypt market)
+        "steel_8" to MaterialPrice("steel_8", "Steel Ø8mm", "حديد Ø8مم", "ton", "طن", 32000.0, MaterialCategory.STEEL),
+        "steel_10" to MaterialPrice("steel_10", "Steel Ø10mm", "حديد Ø10مم", "ton", "طن", 31500.0, MaterialCategory.STEEL),
+        "steel_12" to MaterialPrice("steel_12", "Steel Ø12mm", "حديد Ø12مم", "ton", "طن", 31000.0, MaterialCategory.STEEL),
+        "steel_14" to MaterialPrice("steel_14", "Steel Ø14mm", "حديد Ø14مم", "ton", "طن", 31000.0, MaterialCategory.STEEL),
+        "steel_16" to MaterialPrice("steel_16", "Steel Ø16mm", "حديد Ø16مم", "ton", "طن", 30500.0, MaterialCategory.STEEL),
+        "steel_18" to MaterialPrice("steel_18", "Steel Ø18mm", "حديد Ø18مم", "ton", "طن", 30500.0, MaterialCategory.STEEL),
+        "steel_20" to MaterialPrice("steel_20", "Steel Ø20mm", "حديد Ø20مم", "ton", "طن", 30000.0, MaterialCategory.STEEL),
+        "steel_22" to MaterialPrice("steel_22", "Steel Ø22mm", "حديد Ø22مم", "ton", "طن", 30000.0, MaterialCategory.STEEL),
+        "steel_25" to MaterialPrice("steel_25", "Steel Ø25mm", "حديد Ø25مم", "ton", "طن", 29500.0, MaterialCategory.STEEL),
+        "steel_28" to MaterialPrice("steel_28", "Steel Ø28mm", "حديد Ø28مم", "ton", "طن", 29500.0, MaterialCategory.STEEL),
+        "steel_32" to MaterialPrice("steel_32", "Steel Ø32mm", "حديد Ø32مم", "ton", "طن", 29000.0, MaterialCategory.STEEL),
         "steel_mesh" to MaterialPrice("steel_mesh", "Steel Mesh", "شبكة حديد", "m²", "م²", 45.0, MaterialCategory.STEEL),
         
         // الأسمنت
@@ -120,9 +120,9 @@ object PriceManager {
         "equipment_mixer" to MaterialPrice("equipment_mixer", "Concrete Mixer", "خلاطة خرسانة", "day", "يوم", 450.0, MaterialCategory.EQUIPMENT)
     )
     
-    // أسعار الصرف (مقابل USD)
+    // أسعار الصرف (مقابل USD) - Updated 2026
     private val exchangeRates = mapOf(
-        Currency.EGP to 30.90,
+        Currency.EGP to 50.0,
         Currency.USD to 1.0,
         Currency.SAR to 3.75,
         Currency.AED to 3.67,
@@ -273,11 +273,11 @@ object PriceManager {
         // في التطبيق الفعلي، هنا سيكون استدعاء API حقيقي
         // مثال: https://api.example.com/prices/egypt
         
-        // محاكاة للتحديث (زيادة 5% مثلاً)
+        // محاكاة للتحديث (أسعار 2026)
         return mapOf(
-            "conc_c25" to 997.5,  // 950 * 1.05
-            "steel_16" to 28350.0, // 27000 * 1.05
-            "cement_ordinary" to 2310.0 // 2200 * 1.05
+            "conc_c25" to 1400.0,
+            "steel_16" to 30500.0,
+            "cement_ordinary" to 2500.0
         )
     }
     

@@ -47,6 +47,15 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _selectedMemberId = MutableLiveData<Int?>(null)
     val selectedMemberId: LiveData<Int?> get() = _selectedMemberId
 
+    // FIX: Persist drawing view mode across tab switches (was previously local to DrawingTab,
+    // causing it to reset to Frame view every time user navigated away and back).
+    private val _drawingViewMode = MutableLiveData(0)  // 0=Frame, 1=Long.Section, 2=Cross Section, 3=Plan
+    val drawingViewMode: LiveData<Int> get() = _drawingViewMode
+
+    fun setDrawingViewMode(mode: Int) {
+        _drawingViewMode.value = mode.coerceIn(0, 3)
+    }
+
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> get() = _errorMessage
 

@@ -116,7 +116,7 @@ fun FrameDrawingCanvas(
                     nodes, members, result, scale, canvasW, canvasH, textMeasurer
                 )
                 2 -> drawCrossSection(
-                    members, result, selectedMemberId, scale, canvasW, canvasH, textMeasurer
+                    nodes, members, result, selectedMemberId, scale, canvasW, canvasH, textMeasurer
                 )
                 3 -> drawPlanView(
                     nodes, members, scale, canvasW, canvasH, textMeasurer
@@ -432,6 +432,7 @@ private fun DrawScope.drawLongitudinalSection(
 // Shows typical column and beam sections with reinforcement
 // ============================================================================
 private fun DrawScope.drawCrossSection(
+    nodes: List<FrameNode>,
     members: List<FrameMember>,
     result: FrameAnalysisResult?,
     selectedMemberId: Int?,
@@ -458,23 +459,24 @@ private fun DrawScope.drawCrossSection(
         return
     }
 
-    // Group members by type (column or beam)
-    val columns = members.filter { m ->
-        val ni = result?.let { _ -> m }?.nodeI ?: return@filter false
-        true
-    }
+    // FIX: Use memberType enum instead of name heuristic — robust for all templates
+    // (previously the name contains("كمرة") failed for template beam name "كمر سقف")
+    val columnMembers = members.filter { it.memberType == FrameMemberType.Column }
+    val beamMembers = members.filter { it.memberType == FrameMemberType.Beam }
 
-    // Simpler approach: assume vertical members are columns, horizontal are beams
-    // We need the nodes for this. Since we don't have them here, use member name heuristic
-    val columnMembers = members.filter { it.name.contains("column", ignoreCase = true) || it.name.contains("عمود", ignoreCase = true) || it.name.contains("C", ignoreCase = true) }
-    val beamMembers = members.filter { it.name.contains("beam", ignoreCase = true) || it.name.contains("كمرة", ignoreCase = true) || it.name.contains("B", ignoreCase = true) }
-
-    // If heuristic didn't work, just split first half / second half
+    // Fallback: if memberType not set, classify by orientation (vertical = column, horizontal = beam)
     val (colMs, bmMs) = if (columnMembers.isEmpty() && beamMembers.isEmpty()) {
-        // Default: show first member as column, second as beam
-        members.take(2).partition { it.id == members.firstOrNull()?.id }
+        val byOrientation = members.partition { m ->
+            val ni = nodes.find { it.id == m.nodeI }
+            val nj = nodes.find { it.id == m.nodeJ }
+            if (ni != null && nj != null) {
+                // vertical if Y difference is much larger than X difference
+                abs(nj.y - ni.y) > abs(nj.x - ni.x) * 1.5
+            } else false
+        }
+        byOrientation
     } else {
-        Pair(columnMembers.ifEmpty { members.take(1) }, beamMembers.ifEmpty { members.drop(1).take(1) })
+        Pair(columnMembers, beamMembers)
     }
 
     // Draw column section on left
@@ -780,14 +782,20 @@ private fun DrawScope.drawPlanView(
         return
     }
 
-    // Get X range
+    // FIX: Plan view now uses ACTUAL node geometry instead of synthetic 4m depth.
+    // For each unique Y (floor level), project onto plan showing:
+    //   - All columns at their X positions (sized by actual column section)
+    //   - All beams at that level as horizontal lines
+    //   - Dimension lines between extreme X coordinates
     val xMin = nodes.minOf { it.x }
     val xMax = nodes.maxOf { it.x }
     val xSpan = max(xMax - xMin, 1.0)
 
-    // For plan view, we use X (real X) as horizontal and a "depth" axis (typically perpendicular to X)
-    // Since 2D frame is in X-Y plane, plan view shows only the X coordinate
-    // We'll create a synthetic plan view showing the frame as a 2D grid
+    // Get unique Y levels (floor elevations) — each represents a different plan level
+    val yLevels = nodes.map { it.y }.distinct().sorted()
+    val nLevels = yLevels.size
+    // Depth axis: project each floor level as a separate horizontal band
+    val planDepth = max(nLevels * 3.0, 4.0)  // each floor gets ~3m of plan space
 
     // Drawing area
     val padLeft = 80f
@@ -797,8 +805,6 @@ private fun DrawScope.drawPlanView(
     val drawW = canvasW - padLeft - padRight
     val drawH = canvasH - padTop - padBottom
 
-    // For plan view, assume a default depth (perpendicular to span) of 4m
-    val planDepth = 4.0
     val sx = drawW / xSpan.toFloat()
     val sy = drawH / planDepth.toFloat()
     val s = min(sx, sy) * 0.85f
@@ -806,8 +812,7 @@ private fun DrawScope.drawPlanView(
     val originX = padLeft + (drawW - xSpan.toFloat() * s) / 2f
     val originY = padTop + planDepth.toFloat() * s + (drawH - planDepth.toFloat() * s) / 2f
 
-    // Plan view: map (x, depth_z) to screen
-    // For 2D frames, depth is constant (just a visual representation)
+    // Map (x_meters, depth_index) to screen — depth_index is the floor's plan band
     val toScreen: (Double, Double) -> Offset = { x, z ->
         Offset(
             ((x - xMin).toFloat() * s + originX),
@@ -815,59 +820,84 @@ private fun DrawScope.drawPlanView(
         )
     }
 
-    // Draw slab area (filled rectangle representing the floor)
-    val slabColor = Color(0xFFBBDEFB).copy(alpha = 0.4f)
-    val sl1 = toScreen(xMin, 0.0)
-    val sl2 = toScreen(xMax, planDepth)
-    drawRect(slabColor, Offset(sl1.x, sl2.y), Size(sl2.x - sl1.x, sl1.y - sl2.y))
-    drawRect(Color(0xFF1565C0).copy(alpha = 0.5f), Offset(sl1.x, sl2.y), Size(sl2.x - sl1.x, sl1.y - sl2.y), style = Stroke(width = 1.5f))
+    // For each floor level, draw a band showing the plan at that elevation
+    yLevels.forEachIndexed { levelIdx, yLevel ->
+        val bandZ = levelIdx * 3.0 + 1.5  // center of this floor's plan band
+        val bandTop = levelIdx * 3.0 + 0.2
+        val bandBot = (levelIdx + 1) * 3.0 - 0.2
 
-    // Draw beams (top-down view as thick lines along X)
-    val beamColor = Color(0xFF42A5F5)
-    val beamTop = toScreen(xMin, 0.0)
-    val beamBot = toScreen(xMax, 0.0)
-    drawLine(beamColor, beamTop, beamBot, strokeWidth = 10f, cap = StrokeCap.Round)
-    val beamTop2 = toScreen(xMin, planDepth)
-    val beamBot2 = toScreen(xMax, planDepth)
-    drawLine(beamColor, beamTop2, beamBot2, strokeWidth = 10f, cap = StrokeCap.Round)
+        // Slab rectangle for this floor
+        val slabColor = Color(0xFFBBDEFB).copy(alpha = 0.3f)
+        val sl1 = toScreen(xMin, bandTop)
+        val sl2 = toScreen(xMax, bandBot)
+        drawRect(slabColor, Offset(sl1.x, sl2.y), Size(sl2.x - sl1.x, sl1.y - sl2.y))
+        drawRect(
+            Color(0xFF1565C0).copy(alpha = 0.4f),
+            Offset(sl1.x, sl2.y), Size(sl2.x - sl1.x, sl1.y - sl2.y),
+            style = Stroke(width = 1f)
+        )
 
-    // Draw columns (top-down view as squares)
-    val colSize = 18f
-    val columnColor = Color(0xFFFF9800)
-    val columnBorder = Color(0xFFE65100)
-    // Find nodes at y=0 (bottom) and y=max (top)
-    val bottomNodes = nodes.filter { abs(it.y) < 0.01 }
-    val topNodes = nodes.filter { abs(it.y - nodes.maxOf { n -> n.y }) < 0.01 }
-
-    // Place columns at corners of plan view
-    val cornerPositions = listOf(
-        toScreen(xMin, 0.0),
-        toScreen(xMax, 0.0),
-        toScreen(xMin, planDepth),
-        toScreen(xMax, planDepth)
-    )
-    cornerPositions.forEach { p ->
-        drawRect(columnColor, Offset(p.x - colSize / 2, p.y - colSize / 2), Size(colSize, colSize))
-        drawRect(columnBorder, Offset(p.x - colSize / 2, p.y - colSize / 2), Size(colSize, colSize), style = Stroke(width = 2f))
-    }
-
-    // Node labels
-    cornerPositions.forEachIndexed { idx, p ->
+        // Floor label
         drawText(
             textMeasurer = textMeasurer,
-            text = "C${idx + 1}",
-            topLeft = Offset(p.x - 10f, p.y - 25f),
-            style = TextStyle(color = Color(0xFF1565C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            text = "L${levelIdx + 1} (y=${String.format("%.2f", yLevel)}m)",
+            topLeft = Offset(sl1.x + 4f, sl2.y + 4f),
+            style = TextStyle(color = Color(0xFF1565C0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         )
+
+        // Beams at this floor level — use memberType for robust detection
+        val beamsAtLevel = members.filter {
+            it.memberType == FrameMemberType.Beam &&
+                run {
+                    val ni = nodes.find { n -> n.id == it.nodeI }
+                    val nj = nodes.find { n -> n.id == it.nodeJ }
+                    ni != null && nj != null &&
+                        abs(ni.y - yLevel) < 0.01 && abs(nj.y - yLevel) < 0.01
+                }
+        }
+        beamsAtLevel.forEach { beam ->
+            val ni = nodes.find { it.id == beam.nodeI }!!
+            val nj = nodes.find { it.id == beam.nodeJ }!!
+            val p1 = toScreen(ni.x, bandZ)
+            val p2 = toScreen(nj.x, bandZ)
+            drawLine(Color(0xFF42A5F5), p1, p2, strokeWidth = 8f, cap = StrokeCap.Round)
+        }
+
+        // Columns at this floor level — draw as squares at each node X position
+        // Use actual column section size if available
+        val columnsAtLevel = members.filter { it.memberType == FrameMemberType.Column }
+        // Get all nodes at this Y level that have a column member connected
+        val nodesWithColumns = nodes.filter { n ->
+            abs(n.y - yLevel) < 0.01 &&
+                columnsAtLevel.any { it.nodeI == n.id || it.nodeJ == n.id }
+        }
+        nodesWithColumns.forEach { node ->
+            val p = toScreen(node.x, bandZ)
+            // Column size from section (fallback 300mm)
+            val colMember = columnsAtLevel.firstOrNull { it.nodeI == node.id || it.nodeJ == node.id }
+            val colW = colMember?.concreteSection?.width?.toInt() ?: 300
+            // Scale column square: 300mm = 14f, 600mm = 24f
+            val colSize = (14f + (colW - 300) / 30f).coerceIn(12f, 28f)
+            drawRect(
+                Color(0xFFFF9800),
+                Offset(p.x - colSize / 2, p.y - colSize / 2),
+                Size(colSize, colSize)
+            )
+            drawRect(
+                Color(0xFFE65100),
+                Offset(p.x - colSize / 2, p.y - colSize / 2),
+                Size(colSize, colSize),
+                style = Stroke(width = 2f)
+            )
+        }
     }
 
-    // Dimensions
+    // Dimensions — overall span at bottom
     val dimColor = Color(0xFF8E24AA)
     val dimPaint = android.graphics.Paint().apply {
         color = dimColor.toArgb(); textSize = 22f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
 
-    // Span dimension (bottom)
     val dimY = originY + 40f
     val leftX = toScreen(xMin, 0.0).x
     val rightX = toScreen(xMax, 0.0).x
@@ -875,24 +905,9 @@ private fun DrawScope.drawPlanView(
     drawLine(dimColor, Offset(rightX, originY + 5f), Offset(rightX, dimY + 5f), strokeWidth = 1f)
     drawLine(dimColor, Offset(leftX, dimY), Offset(rightX, dimY), strokeWidth = 1.5f)
     drawContext.canvas.nativeCanvas.drawText(
-        "L = ${String.format("%.2f", xSpan)} m",
+        "L = ${String.format("%.2f", xSpan)} m  (${nLevels} floor${if (nLevels > 1) "s" else ""})",
         (leftX + rightX) / 2, dimY - 8f, dimPaint
     )
-
-    // Depth dimension (right)
-    val dimX = rightX + 40f
-    val topY = toScreen(xMin, planDepth).y
-    val botY = toScreen(xMin, 0.0).y
-    drawLine(dimColor, Offset(rightX + 5f, botY), Offset(dimX + 5f, botY), strokeWidth = 1f)
-    drawLine(dimColor, Offset(rightX + 5f, topY), Offset(dimX + 5f, topY), strokeWidth = 1f)
-    drawLine(dimColor, Offset(dimX, botY), Offset(dimX, topY), strokeWidth = 1.5f)
-    drawContext.canvas.nativeCanvas.save()
-    drawContext.canvas.nativeCanvas.rotate(-90f, dimX + 14f, (botY + topY) / 2)
-    drawContext.canvas.nativeCanvas.drawText(
-        "B = ${String.format("%.2f", planDepth)} m",
-        dimX + 14f, (botY + topY) / 2 + 8f, dimPaint
-    )
-    drawContext.canvas.nativeCanvas.restore()
 
     // Legend
     val legX = canvasW - 200f
@@ -902,13 +917,10 @@ private fun DrawScope.drawPlanView(
     val legTitle = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 16f; isFakeBoldText = true }
     val legItem = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 14f }
     drawContext.canvas.nativeCanvas.drawText("LEGEND", legX + 8f, legY + 20f, legTitle)
-    // Slab
     drawRect(Color(0xFFBBDEFB), Offset(legX + 8f, legY + 30f), Size(16f, 12f))
     drawContext.canvas.nativeCanvas.drawText("Slab", legX + 32f, legY + 40f, legItem)
-    // Beam
     drawLine(Color(0xFF42A5F5), Offset(legX + 8f, legY + 56f), Offset(legX + 24f, legY + 56f), strokeWidth = 6f)
     drawContext.canvas.nativeCanvas.drawText("Beam", legX + 32f, legY + 60f, legItem)
-    // Column
     drawRect(Color(0xFFFF9800), Offset(legX + 12f, legY + 72f), Size(8f, 8f))
     drawContext.canvas.nativeCanvas.drawText("Column", legX + 32f, legY + 80f, legItem)
 }

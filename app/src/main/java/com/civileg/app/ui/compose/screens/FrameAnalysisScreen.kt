@@ -210,6 +210,9 @@ private fun DrawingTab(
     viewModel: FrameAnalysisViewModel
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
+    // FIX: Sync local viewMode with ViewModel so it survives tab switches
+    val vmViewMode by viewModel.drawingViewMode.observeAsState(0)
+    LaunchedEffect(vmViewMode) { viewMode = vmViewMode }
     val viewModes = listOf(
         "Frame" to "الإطار",
         "Long. Section" to "قطاع طولي",
@@ -233,7 +236,10 @@ private fun DrawingTab(
                 viewModes.forEachIndexed { index, (en, ar) ->
                     Tab(
                         selected = viewMode == index,
-                        onClick = { viewMode = index },
+                        onClick = {
+                            viewMode = index
+                            viewModel.setDrawingViewMode(index)
+                        },
                         text = {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(en, fontSize = 11.sp, fontWeight = FontWeight.Medium)

@@ -438,8 +438,9 @@ class ECPBeam : BeamDesign {
         val compressionBarArea = if (AsPrime > 0) parseBarArea(compressionBars) else 0.0
         
         // حساب قدرة العزم الفعلية للمقطع المضاعف
-        // φMn = As1_prov × fs × z1 + As'_prov × fs × (d - d')
-        val capacityNmm = tensionBarArea * fs * z1 * 0.85 + compressionBarArea * fs * leverArmExcess
+        // ECP 203 §4-2-2-2: Mu = As1×(fy/γs)×z + As'×(fy/γs)×(d-d')
+        // (تم حذف × 0.85 الذي كان ACI-style — fs = fy/γs كافي للأمان)
+        val capacityNmm = tensionBarArea * fs * z1 + compressionBarArea * fs * leverArmExcess
         val capacity = capacityNmm / 1e6
         val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
         

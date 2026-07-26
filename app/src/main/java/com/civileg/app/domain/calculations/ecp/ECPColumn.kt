@@ -10,9 +10,10 @@ class ECPColumn : ColumnDesign {
     
     companion object {
         private const val ALPHA = 0.8          // عامل اختزال الخرسانة
-        private const val GAMMA_C = 1.5        // معامل أمان الخرسانة
-        private const val GAMMA_S = 1.15       // معامل أمان الحديد
-        private const val PHI_SHEAR = 0.75
+        private const val GAMMA_C = 1.5        // معامل أمان الخرسانة (ECP 203 §2-3-1)
+        private const val GAMMA_S = 1.15       // معامل أمان الحديد (ECP 203 §2-3-1)
+        // ECP 203 لا يستخدم معامل φ منفصل للقص - γc و γs كافيان
+        // (تم حذف PHI_SHEAR = 0.75 الذي كان ACI-style ويسبب double-counting للأمان)
     }
 
     override fun calculateAxialCapacity(
@@ -175,16 +176,15 @@ class ECPColumn : ColumnDesign {
         val d = depth - cover  // effective depth (mm)
         val codeNotes = mutableListOf<String>()
 
-        // Vc = 0.24 × √(fcu) × b × d / γc   (γc = 1.5)
+        // Vc = 0.24 × √(fcu) × b × d / γc   (γc = 1.5 — ECP 203 §4-2-5)
         val Vc = 0.24 * sqrt(fcu) * b * d / GAMMA_C / 1000.0  // kN
-        val phiVc = PHI_SHEAR * Vc
 
-        val needsStirrups = Vu > phiVc
+        val needsStirrups = Vu > Vc
 
-        // Asv/s = (Vu - φVc) / (φ × (fy/γs) × d)
+        // Asv/s = (Vu - Vc) / ((fy/γs) × d)  — بدون φ إضافي
         val fyDesign = fy / GAMMA_S  // MPa
         val requiredAsvPerS = if (needsStirrups) {
-            (Vu - phiVc) * 1000.0 / (PHI_SHEAR * fyDesign * d)  // mm²/mm
+            (Vu - Vc) * 1000.0 / (fyDesign * d)  // mm²/mm
         } else 0.0
 
         // Maximum spacing = min(15×db_tie, b, 300mm)
@@ -222,18 +222,17 @@ class ECPColumn : ColumnDesign {
             2.0 * PI * selectedDia * selectedDia / 4.0 / selectedSpacing
         } else 0.0
 
-        val totalCapacity = phiVc + if (needsStirrups) PHI_SHEAR * fyDesign * providedAsvPerS * d / 1000.0 else 0.0
+        val totalCapacity = Vc + if (needsStirrups) fyDesign * providedAsvPerS * d / 1000.0 else 0.0
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add("ECP 203 §4-2-5: Column Shear Design")
-        codeNotes.add("Vc = 0.24√fcu·b·d / γc = ${"%.1f".format(Vc)} kN")
-        codeNotes.add("φVc = ${"%.1f".format(phiVc)} kN  (φ=${PHI_SHEAR})")
+        codeNotes.add("Vc = 0.24√fcu·b·d / γc = ${"%.1f".format(Vc)} kN  (design capacity, γc=${GAMMA_C})")
         if (needsStirrups) {
-            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) > φVc → Stirrups required")
+            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) > Vc → Stirrups required")
             codeNotes.add("Asv/s = ${"%.3f".format(designAsvPerS)} mm²/mm")
             codeNotes.add("${selectedDia.toInt()}mm ties @ ${selectedSpacing.toInt()}mm c/c")
         } else {
-            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) ≤ φVc → Concrete alone sufficient")
+            codeNotes.add("Vu (${"%.1f".format(Vu)} kN) ≤ Vc → Concrete alone sufficient")
         }
 
         return ColumnShearDesignResult(

@@ -580,7 +580,24 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
         ),
         selectedViewMode = viewMode,
         onViewModeChanged = { viewMode = it },
-        drawingHeightDp = 720
+        // FIX: Dynamic canvas height based on view aspect ratio (was hardcoded 720dp causing tiny drawings).
+        // Compute appropriate height so drawing fills the canvas properly.
+        drawingHeightDp = when (viewMode) {
+            0 -> {  // Front: span × ridgeHeight (typically wide & short)
+                val aspect = inputs.span / max(inputs.ridgeHeight, inputs.eaveHeight).coerceAtLeast(0.5)
+                (360 / aspect).toInt().coerceIn(360, 900)
+            }
+            1 -> {  // Plan: length × span (typically wide)
+                val aspect = inputs.length / inputs.span.coerceAtLeast(1.0)
+                (360 / aspect).toInt().coerceIn(360, 900)
+            }
+            2 -> {  // Side: length × ridgeHeight (typically wide & short)
+                val aspect = inputs.length / max(inputs.ridgeHeight, inputs.eaveHeight).coerceAtLeast(0.5)
+                (360 / aspect).toInt().coerceIn(360, 900)
+            }
+            4 -> 900  // Connections — needs more vertical space for multiple detail boxes
+            else -> 720  // 3D view
+        }
     ) {
         ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFF0D1117))) {
             val padding = 60f
@@ -598,24 +615,24 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                 drawLine(gridColor, Offset(padding, y), Offset(size.width - padding, y), strokeWidth = 0.5f)
             }
 
-            // Use view-specific scale so the front elevation (which only shows span × ridgeHeight)
-            // is not made tiny by the much larger length dimension.
+            // FIX: Increased scale factors from 0.80/0.85 to 0.92 so the drawing fills more of the canvas.
+            // Combined with dynamic drawingHeightDp above, the warehouse now fills 80-90% of canvas instead of 15-25%.
             val scale = when (viewMode) {
                 0 -> minOf(                                       // Front: span × ridgeHeight
-                    (w * 0.80f) / inputs.span.toFloat(),
-                    (h * 0.80f) / max(inputs.ridgeHeight, inputs.eaveHeight).toFloat()
+                    (w * 0.92f) / inputs.span.toFloat(),
+                    (h * 0.92f) / max(inputs.ridgeHeight, inputs.eaveHeight).toFloat()
                 )
                 1 -> minOf(                                       // Plan: length × span
-                    (w * 0.85f) / inputs.length.toFloat(),
-                    (h * 0.80f) / inputs.span.toFloat()
+                    (w * 0.92f) / inputs.length.toFloat(),
+                    (h * 0.92f) / inputs.span.toFloat()
                 )
                 2 -> minOf(                                       // Side: length × eaveHeight
-                    (w * 0.85f) / inputs.length.toFloat(),
-                    (h * 0.80f) / max(inputs.ridgeHeight, inputs.eaveHeight).toFloat()
+                    (w * 0.92f) / inputs.length.toFloat(),
+                    (h * 0.92f) / max(inputs.ridgeHeight, inputs.eaveHeight).toFloat()
                 )
                 else -> minOf(                                    // 3D / connections
-                    (w * 0.75f) / max(inputs.span, inputs.length).toFloat(),
-                    (h * 0.75f) / max(inputs.ridgeHeight, inputs.span).toFloat()
+                    (w * 0.88f) / max(inputs.span, inputs.length).toFloat(),
+                    (h * 0.88f) / max(inputs.ridgeHeight, inputs.span).toFloat()
                 )
             }
             val startX = (padding + (w - inputs.span * scale) / 2).toFloat()
@@ -1151,7 +1168,7 @@ private fun DrawScope.drawSteel3DView(
     textPaint: android.graphics.Paint,
     dimPaint: android.graphics.Paint
 ) {
-    val s = scale * 0.7f
+    val s = scale * 0.92f
     val depthOff = 35f
     val numFrames = min(ceil(inputs.length / inputs.baySpacing).toInt(), 6)
 
@@ -1338,7 +1355,7 @@ private fun DrawScope.drawConnectionDetailEave(
     result: SteelWarehouseAnalysisResult,
     dimPaint: android.graphics.Paint
 ) {
-    val scale = 1.5f
+    val scale = 2.5f  // FIX: increased from 1.5 to make connection details visible
     val titlePaint = android.graphics.Paint().apply {
         color = Color(0xFF4FC3F7).toArgbInt(); textSize = 20f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
@@ -1464,7 +1481,7 @@ private fun DrawScope.drawConnectionDetailBasePlate(
     result: SteelWarehouseAnalysisResult,
     dimPaint: android.graphics.Paint
 ) {
-    val scale = 1.5f
+    val scale = 2.5f  // FIX: increased from 1.5 to make connection details visible
     val titlePaint = android.graphics.Paint().apply {
         color = Color(0xFF4FC3F7).toArgbInt(); textSize = 20f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
@@ -1656,7 +1673,7 @@ private fun drawCanvasElevation(canvas: Canvas, inputs: SteelWarehouseInputs, x:
         textAlign = Paint.Align.CENTER
     }
     
-    val s = scale * 0.7f
+    val s = scale * 0.92f
     val w = inputs.span.toFloat() * s
     val eh = inputs.eaveHeight.toFloat() * s
     val rh = inputs.ridgeHeight.toFloat() * s
@@ -1743,7 +1760,7 @@ private fun drawCanvasPlan(canvas: Canvas, inputs: SteelWarehouseInputs, x: Floa
     val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 4f; style = Paint.Style.STROKE; isAntiAlias = true }
     val dimPaint = Paint().apply { color = android.graphics.Color.DKGRAY; strokeWidth = 1.5f; textSize = 20f; isAntiAlias = true }
     
-    val s = scale * 0.6f
+    val s = scale * 0.92f
     val w = inputs.span.toFloat() * s
     val l = inputs.length.toFloat() * s
     val planTop = y - l
@@ -1778,7 +1795,7 @@ private fun drawCanvasSide(canvas: Canvas, inputs: SteelWarehouseInputs, x: Floa
     val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 5f; isAntiAlias = true }
     val textP = Paint().apply { color = android.graphics.Color.DKGRAY; textSize = 22f; textAlign = Paint.Align.CENTER }
     
-    val s = scale * 0.6f
+    val s = scale * 0.92f
     val l = inputs.length.toFloat() * s
     val eh = inputs.eaveHeight.toFloat() * s
     

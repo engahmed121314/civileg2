@@ -44,7 +44,7 @@ fun ProfessionalSlabDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(780.dp)
+            .height(900.dp)
     ) {
         val w = size.width
         val h = size.height
@@ -97,9 +97,9 @@ fun ProfessionalSlabDrawing(
         }
 
         // ── Layout zones ───────────────────────────────────────────
-        val planH = h * 0.42f
-        val sectionH = h * 0.28f
-        val tableH = h * 0.30f
+        val planH = h * 0.36f
+        val sectionH = h * 0.24f
+        val tableH = h * 0.40f
         val margin = 35f
         val planLeft = margin + 40f
         val planRight = w - margin
@@ -554,18 +554,23 @@ fun ProfessionalSlabDrawing(
         drawText("A", slabRight + 24f, slabTop + drawSpanY / 2f + 4f, Color(0xFFE74C3C), 10f, true)
 
         // ══════════════════════════════════════════════════════════
-        //  REINFORCEMENT TABLE (7 columns: Mark, Direction, Dia, Spacing, Length, As, Weight)
+        //  REINFORCEMENT TABLE (8 columns, density-aware row heights)
+        //  FIX: rowH/headerRowH were in raw px (22f/26f), but text uses
+        //  density scaling (size * density). On xxhdpi (3x), text=27px
+        //  but row=22px → text overlapped rows → table looked empty.
+        //  Now using .dp.toPx() so row heights scale with density.
         // ══════════════════════════════════════════════════════════
-        val tblTop = secBottom + 16f
+        val tblTop = secBottom + 16f * density
         val tblLeft = margin
         val tblRight = w - margin
         val tblWidth = tblRight - tblLeft
-        val rowH = 22f
-        val headerRowH = 26f
-        // 7 columns: Mark(8%), Direction(20%), Dia(12%), Spacing(15%), Length(15%), As(15%), Weight(15%)
+        val rowH = 26f * density       // ~9dp at 3x density
+        val headerRowH = 32f * density  // ~10.7dp at 3x density
+        // 8 columns: Mark(7%), Direction(15%), Dia(10%), Spacing(11%), Length(13%), As Req(13%), As Prov(13%), Weight(18%)
         val colWidths = floatArrayOf(
-            tblWidth * 0.08f, tblWidth * 0.20f, tblWidth * 0.12f,
-            tblWidth * 0.15f, tblWidth * 0.15f, tblWidth * 0.15f, tblWidth * 0.15f
+            tblWidth * 0.07f, tblWidth * 0.15f, tblWidth * 0.10f,
+            tblWidth * 0.11f, tblWidth * 0.13f, tblWidth * 0.13f,
+            tblWidth * 0.13f, tblWidth * 0.18f
         )
         var rowY = tblTop
 
@@ -574,10 +579,10 @@ fun ProfessionalSlabDrawing(
             color = headerBg, topLeft = Offset(tblLeft, rowY),
             size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f)
         )
-        val headers = listOf("Mark", "Direction", "Dia (mm)", "Spacing (mm)", "Length (mm)", "As (mm²/m)", "Weight (kg)")
+        val headers = listOf("Mark", "Direction", "Dia (mm)", "Spacing (mm)", "Length (mm)", "As Req (mm²/m)", "As Prov (mm²/m)", "Weight (kg)")
         var colX = tblLeft
         headers.forEachIndexed { idx, h ->
-            drawText(h, colX + colWidths[idx] / 2f, rowY + headerRowH / 2f + 4f, textColor, 9f, true)
+            drawText(h, colX + colWidths[idx] / 2f, rowY + headerRowH / 2f + 4f * density, textColor, 9f, true)
             colX += colWidths[idx]
         }
         rowY += headerRowH
@@ -599,23 +604,40 @@ fun ProfessionalSlabDrawing(
         val mainWeightPerM2 = (mainAsProvided / 1000.0) * 0.00785 * 1000.0 * safeMainDia / 12.5 // approx kg/m²
         val slabArea = spanX * spanY // m²
 
-        // Expanded table: Mark, Direction, Dia (mm), Spacing (mm), Length (mm), As (mm²/m), Weight (kg)
+        // As required estimates based on ECP 203 §4-2-2-1 (simplified for table display)
+        // As_req = Mu / (0.87 * fy * z), where z ≈ 0.9 * d, d ≈ t - 25mm cover
+        val fyDesign = 360.0 // MPa (default high-grade steel)
+        val effDepth = (slabThickness - 25.0).coerceAtLeast(50.0) // mm
+        val z = 0.9 * effDepth // mm lever arm
+        // Approximate moments per meter width: wu * L² / 8 (simply supported)
+        // Assume wu ≈ 10 kN/m² for residential (DL+LL factored)
+        val wu = 10.0 // kN/m² (rough estimate for table display)
+        val mainAsReq = (wu * spanX * spanX * 1e6 / 8.0) / (0.87 * fyDesign * z) // mm²/m
+        val distAsReq = (wu * spanY * spanY * 1e6 / 8.0) / (0.87 * fyDesign * z) // mm²/m
+        // Top steel required over supports ≈ 50% of bottom main
+        val topAsReq = mainAsReq * 0.5
+        // Shrinkage & temperature steel per ECP §4-2-5: 0.0018 * b * t for fy=360
+        val shrinkageAsReq = 0.0018 * 1000.0 * slabThickness // mm²/m
+
+        // Expanded table: Mark, Direction, Dia, Spacing, Length, As Req, As Prov, Weight
         val rows = mutableListOf<List<String>>()
         rows.add(listOf(
             "①",
-            "Main Bottom",
+            "Main Bottom (X)",
             safeMainDia.toInt().toString(),
             safeMainSpacing.toInt().toString(),
             (mainLength * 1000).toInt().toString(),
+            String.format("%.0f", mainAsReq),
             String.format("%.0f", mainAsProvided),
             String.format("%.1f", mainAsProvided * mainLength * 0.00785)
         ))
         rows.add(listOf(
             "②",
-            "Dist. Bottom",
+            "Dist. Bottom (Y)",
             safeDistDia.toInt().toString(),
             safeDistSpacing.toInt().toString(),
             (distLength * 1000).toInt().toString(),
+            String.format("%.0f", distAsReq),
             String.format("%.0f", distAsProvided),
             String.format("%.1f", distAsProvided * distLength * 0.00785)
         ))
@@ -627,21 +649,38 @@ fun ProfessionalSlabDrawing(
                 safeMainDia.toInt().toString(),
                 safeMainSpacing.toInt().toString(),
                 (topBarLength * 1000).toInt().toString(),
+                String.format("%.0f", topAsReq),
                 String.format("%.0f", topAsProvided),
                 String.format("%.1f", topAsProvided * topBarLength * 0.00785)
             ))
         }
+        // Shrinkage & temperature steel row
+        val shrinkageDia = 10.0
+        val shrinkageSpacing = (Math.PI * shrinkageDia * shrinkageDia / 4.0 * 1000.0 / shrinkageAsReq)
+            .coerceIn(150.0, 300.0)
+        val shrinkageAsProvided = (Math.PI * shrinkageDia * shrinkageDia / 4.0) * (1000.0 / shrinkageSpacing)
+        rows.add(listOf(
+            "④",
+            "Shrinkage (ECP §4-2-5)",
+            shrinkageDia.toInt().toString(),
+            shrinkageSpacing.toInt().toString(),
+            (distLength * 1000).toInt().toString(),
+            String.format("%.0f", shrinkageAsReq),
+            String.format("%.0f", shrinkageAsProvided),
+            String.format("%.1f", shrinkageAsProvided * distLength * 0.00785)
+        ))
         // Hordi/Waffle: rib bars
         if (slabType.contains("Hordi") || slabType.contains("هردي") || slabType.contains("Waffle") || slabType.contains("وافل")) {
             val ribBarLen = if (slabThickness > 0) (slabThickness * 0.7 * 1000).toInt().toString() else "0"
             val safeRibSpacing = if (ribSpacing > 0) ribSpacing else 500.0
             val ribAs = (Math.PI * safeMainDia * safeMainDia / 4.0) * (1000.0 / safeRibSpacing)
             rows.add(listOf(
-                "④",
+                "⑤",
                 "Rib Bars",
                 safeMainDia.toInt().toString(),
                 safeRibSpacing.toInt().toString(),
                 ribBarLen,
+                String.format("%.0f", mainAsReq * 0.6),
                 String.format("%.0f", ribAs),
                 String.format("%.1f", ribAs * slabThickness * 0.7 * 0.00785)
             ))
@@ -656,11 +695,24 @@ fun ProfessionalSlabDrawing(
                     0 -> mainBarColor
                     else -> Color(0xFFDDDDDD)
                 }
-                drawText(cell, colX + colWidths[cIdx] / 2f, rowY + rowH / 2f + 3f, cellColor, 9f)
+                drawText(cell, colX + colWidths[cIdx] / 2f, rowY + rowH / 2f + 3f * density, cellColor, 9f)
                 colX += colWidths[cIdx]
             }
             rowY += rowH
         }
+        // Totals row
+        val totalSteelWeight = rows.sumOf { it.last().replace(",", ".").toDoubleOrNull() ?: 0.0 }
+        drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, rowH))
+        drawText("TOTAL", tblLeft + colWidths[0] / 2f, rowY + rowH / 2f + 3f * density, Color(0xFFFFD700), 9f, true)
+        drawText("Steel weight per slab", tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + rowH / 2f + 3f * density, Color(0xFFFFD700), 9f, true)
+        // Span total across remaining columns
+        var totX = tblLeft + colWidths[0] + colWidths[1]
+        for (i in 2 until colWidths.size - 1) {
+            drawText("", totX + colWidths[i] / 2f, rowY + rowH / 2f, Color(0xFFFFD700), 9f)
+            totX += colWidths[i]
+        }
+        drawText(String.format("%.2f kg (%.1f m² slab)", totalSteelWeight, slabArea), totX + colWidths.last() / 2f, rowY + rowH / 2f + 3f * density, Color(0xFFFFD700), 9f, true)
+        rowY += rowH
         // Table border
         drawRect(
             color = Color(0xFF455A64), topLeft = Offset(tblLeft, tblTop),
