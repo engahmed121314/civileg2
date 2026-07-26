@@ -1186,7 +1186,7 @@ private fun DrawScope.drawDiagrams(
         }
 
         val path = Path()
-        val memberLength = member.GetLength(nodes)
+        val memberLength = member.getLength(nodes)
         val firstPt = points[0]
         val t0 = if (memberLength > 0) (firstPt.x / memberLength).toFloat() else 0f
         val offset0 = firstPt.value * diagramScale
