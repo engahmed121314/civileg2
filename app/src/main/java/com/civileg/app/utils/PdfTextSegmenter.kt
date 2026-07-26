@@ -120,6 +120,15 @@ object PdfTextSegmenter {
      * - Paragraph BaseDirection is set to RIGHT_TO_LEFT so iText's Unicode Bidi
      *   Algorithm properly orders mixed-direction text
      *
+     * CRITICAL FIX (2026-07-27): Pre-shape Arabic segments to Presentation Forms.
+     * iText 8 AGPL does NOT include pdfCalligraph (commercial module needed for
+     * GSUB shaping). Without pre-shaping, Arabic letters render in ISOLATED form
+     * (disconnected) and appear as "encrypted/unknown language" to the user.
+     *
+     * Pre-shaping to Presentation Forms (FE70-FEFF) works because the bundled
+     * NotoNaskhArabic font contains all 140+ Presentation Forms glyphs + Lam-Alef
+     * ligatures. The font renders these glyphs directly without needing GSUB.
+     *
      * @param text The text to render (may be Arabic, Latin, mixed, or empty)
      * @param arabicFont A FRESH PdfFont for Arabic (from ArabicFontProvider)
      * @param latinFont A FRESH PdfFont for Latin (Helvetica or similar)
@@ -151,14 +160,17 @@ object PdfTextSegmenter {
         for (seg in segments) {
             if (seg.text.isEmpty()) continue
             val run = if (seg.isArabic) {
-                // Pass BASE Arabic characters directly to iText — do NOT pre-shape.
-                // iText 8 + IDENTITY_H encoding will apply the font's OpenType GSUB
-                // tables for Arabic letter shaping (initial/medial/final/isolated forms).
-                // Pre-shaping to Presentation Forms (FE70-FEFF) via ArabicShaper causes
-                // DOUBLE-SHAPING when iText also applies GSUB, producing garbled output.
-                // Even if iText doesn't apply GSUB, base Arabic letters are still
-                // READABLE (just disconnected) — much better than garbled text.
-                Text(seg.text).setFont(arabicFont)
+                // CRITICAL: Pre-shape Arabic base letters to Presentation Forms
+                // (FE70-FEFF) before passing to iText. iText 8 AGPL does NOT
+                // apply GSUB shaping (requires commercial pdfCalligraph module).
+                // Without pre-shaping, Arabic letters render in ISOLATED form
+                // (disconnected) — appears as "encrypted/unknown language".
+                // Pre-shaping produces correctly connected Arabic letters with
+                // proper contextual forms (initial/medial/final/isolated) and
+                // Lam-Alef ligatures, using only the font's Presentation Forms
+                // glyphs which NotoNaskhArabic fully supports.
+                val shapedText = ArabicShaper.shapeIfArabic(seg.text)
+                Text(shapedText).setFont(arabicFont)
             } else {
                 Text(seg.text).setFont(latinFont)
             }

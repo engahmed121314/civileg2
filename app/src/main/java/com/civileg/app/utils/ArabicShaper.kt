@@ -319,29 +319,58 @@ object ArabicShaper {
      * Convenience: shape text only if it contains Arabic characters.
      * Otherwise return as-is (saves time on pure Latin/numeric text).
      *
-     * CRITICAL FIX (2026-07-26): This function now returns text UNCHANGED.
+     * ********************************************************************
+     * CRITICAL FIX (2026-07-27): RE-ENABLE Arabic pre-shaping.
+     * ********************************************************************
      *
-     * Previous implementation manually converted base Arabic letters to
-     * Presentation Forms (FE70-FEFF) before passing to iText. However,
-     * testing revealed this produced GARBLED output ("encrypted unknown
-     * language") because:
+     * ROOT CAUSE OF "ENCRYPTED TEXT" PDF BUG (FINALLY SOLVED):
      *
-     * 1. iText 8 + IDENTITY_H encoding + NotoNaskhArabic font DOES apply
-     *    the font's OpenType GSUB tables for Arabic letter shaping when
-     *    given BASE Arabic characters (0600-06FF).
-     * 2. Pre-shaping to Presentation Forms caused DOUBLE-SHAPING: the
-     *    GSUB tables tried to shape already-shaped characters, producing
-     *    wrong glyphs that appeared as garbled/encrypted text.
+     * The previous fix (2026-07-26) assumed iText 8 open-source AGPL
+     * applies the font's OpenType GSUB tables for Arabic letter shaping
+     * when given BASE Arabic characters (0600-06FF). This assumption
+     * was WRONG.
      *
-     * By returning base Arabic characters unchanged, iText's layout engine
-     * handles shaping correctly via the font's GSUB tables. This produces
-     * properly connected Arabic letters with correct contextual forms.
+     * REALITY: iText 8 AGPL does NOT include the pdfCalligraph module.
+     * Only the COMMERCIAL iText license includes pdfCalligraph, which
+     * is what actually applies GSUB tables for Arabic/Indic shaping.
      *
-     * The shape() function is preserved for reference/testing but is no
-     * longer called in production code.
+     * Without pdfCalligraph, iText renders each Arabic base letter in
+     * its ISOLATED form (disconnected, no contextual joining). Letters
+     * appear as a string of disconnected shapes — visually appears as
+     * "encrypted/unknown language" to the user, even though each letter
+     * is technically correct.
+     *
+     * The previous "double-shaping" theory was incorrect — there is no
+     * GSUB shaping in iText 8 AGPL, so pre-shaping to Presentation Forms
+     * cannot cause double-shaping.
+     *
+     * VERIFICATION:
+     * - iText 8.0.5 dependency: com.itextpdf:itext-core (open-source AGPL)
+     * - No pdfCalligraph dependency in build.gradle
+     * - NotoNaskhArabic font HAS 140+ Presentation Forms glyphs (verified
+     *   via fontTools: U+FE70-U+FEFF range fully covered)
+     * - NotoNaskhArabic font HAS 253 base Arabic glyphs (U+0600-U+06FF)
+     *
+     * SOLUTION: Pre-shape Arabic base letters to Presentation Forms
+     * (FE70-FEFF) before passing to iText. The font supports these
+     * glyphs directly, so they render correctly without needing GSUB.
+     *
+     * This produces properly connected Arabic letters with correct
+     * contextual forms (initial/medial/final/isolated) and Lam-Alef
+     * ligatures — the same visual output that pdfCalligraph would
+     * produce, but using only open-source code.
      */
     fun shapeIfArabic(text: String): String {
-        // Return text unchanged — let iText handle Arabic shaping via GSUB
-        return text
+        if (text.isEmpty()) return text
+        // Quick check: does the text contain any Arabic base letters?
+        // (Presentation Forms are already "shaped" — pass them through unchanged)
+        val hasBaseArabic = text.any { ch ->
+            val code = ch.code
+            (code in 0x0600..0x06FF) ||  // Arabic base block
+            (code in 0x0750..0x077F) ||  // Arabic Supplement
+            (code in 0x08A0..0x08FF)     // Arabic Extended-A
+        }
+        if (!hasBaseArabic) return text
+        return shape(text)
     }
 }

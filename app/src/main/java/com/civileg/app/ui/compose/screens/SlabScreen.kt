@@ -287,11 +287,13 @@ fun SlabScreen(
 
                 item {
                     var selectedViewMode by remember { mutableStateOf(0) }
+                    // CRITICAL FIX (2026-07-27): Increased heights to match ProfessionalSlabDrawing
+                    // canvas heights. Previous 900/380/280/460 caused clipping of the table's last rows.
                     val drawingHeight = when (selectedViewMode) {
                         1 -> 380  // Plan only
                         2 -> 280  // Section only
-                        3 -> 460  // Table only
-                        else -> 900  // All
+                        3 -> 520  // Table only
+                        else -> 1000  // All
                     }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.slab_drawing_title),

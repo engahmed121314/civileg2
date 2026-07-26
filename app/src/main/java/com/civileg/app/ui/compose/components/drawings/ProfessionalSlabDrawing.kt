@@ -43,11 +43,16 @@ fun ProfessionalSlabDrawing(
     modifier: Modifier = Modifier
 ) {
     // Dynamic height based on view mode — single views need less space
+    // CRITICAL FIX (2026-07-27): Increased "All" view height from 900dp to 1000dp
+    // to prevent the reinforcement table from being clipped. The "All" view
+    // contains: 40px header + plan(36%) + 32px gap + section(24%) + 16dp gap
+    // + table(40%) = 100% + 72px + 16dp. With 900dp canvas, the table's last
+    // 2-3 rows were getting clipped, making it appear "empty" to the user.
     val canvasHeight = when (viewMode) {
         1 -> 380.dp  // Plan only
         2 -> 280.dp  // Section only
-        3 -> 460.dp  // Table only
-        else -> 900.dp  // All (default)
+        3 -> 520.dp  // Table only — increased from 460 to fit all 5 rows + totals
+        else -> 1000.dp  // All — increased from 900 to fit table fully
     }
     Canvas(
         modifier = modifier

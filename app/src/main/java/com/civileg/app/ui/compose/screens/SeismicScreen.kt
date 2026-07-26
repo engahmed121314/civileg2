@@ -47,6 +47,7 @@ import com.civileg.app.utils.ExportUtils
 import com.civileg.app.ui.compose.components.charts.SeismicResponseChart
 import com.civileg.app.utils.PdfExportHelper
 import com.civileg.app.viewmodel.ProjectViewModel
+import kotlinx.coroutines.launch
 import kotlin.math.pow
 
 // ─── Soil Type Display Names per Code ───────────────────────────────────────
@@ -97,11 +98,13 @@ fun SeismicScreen(
     // ── UI state ────────────────────────────────────────────────────────────
     var result by remember { mutableStateOf<SeismicUiResult?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
+    var isExporting by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val seismicDefaultName = stringResource(R.string.seismic_default_name)
     var designName by remember { mutableStateOf(seismicDefaultName) }
     var showSuccessMsg by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     // ── Helpers ─────────────────────────────────────────────────────────────
     val getDesigner: () -> SeismicDesign = {
@@ -584,9 +587,13 @@ fun SeismicScreen(
                     val labelEquation = stringResource(R.string.seismic_pdf_equation)
                     val labelCodeRef = stringResource(R.string.seismic_pdf_code_ref)
                     val labelTitle = stringResource(R.string.seismic_pdf_title, selectedCode.displayName)
+                    val labelExporting = stringResource(R.string.exporting_pdf)
+                    val labelError = stringResource(R.string.beam_pdf_error)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = {
+                                if (isExporting) return@Button
+                                isExporting = true
                                 val details = mapOf(
                                     labelPdfCode to selectedCode.displayName,
                                     labelZone to selectedZone.displayName,
@@ -602,23 +609,43 @@ fun SeismicScreen(
                                     labelEquation to res.baseShearResult.calculationFormula,
                                     labelCodeRef to res.baseShearResult.codeReference
                                 )
-                                val filePath = PdfExportHelper.exportCalculationReport(
-                                    context = context,
-                                    title = labelTitle,
-                                    details = details,
-                                    fileName = "Seismic_Report_${System.currentTimeMillis()}"
-                                )
-                                if (filePath != null) {
-                                    ExportUtils.openPdf(context, java.io.File(filePath))
+                                scope.launch {
+                                    try {
+                                        val filePath = PdfExportHelper.exportCalculationReportAsync(
+                                            context = context,
+                                            title = labelTitle,
+                                            details = details,
+                                            fileName = "Seismic_Report_${System.currentTimeMillis()}"
+                                        )
+                                        if (filePath == null) {
+                                            android.widget.Toast.makeText(context, labelError, android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SeismicScreen", "PDF export failed", e)
+                                        android.widget.Toast.makeText(context, "$labelError: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                                    } finally {
+                                        isExporting = false
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isExporting
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report))
+                            if (isExporting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(labelExporting)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
                         }
 
                         Button(

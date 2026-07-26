@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.itextpdf.kernel.pdf.PdfDocument
@@ -13,11 +14,36 @@ import com.itextpdf.layout.element.Paragraph
 import com.itextpdf.layout.element.Text
 import com.itextpdf.layout.properties.BaseDirection
 import com.itextpdf.layout.properties.TextAlignment
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * PdfExportHelper — Robust PDF export helper with proper Arabic shaping.
+ *
+ * ********************************************************************
+ * CRITICAL FIX (2026-07-27):
+ * ********************************************************************
+ * 1. Runs ALL PDF generation on Dispatchers.IO (was on main thread → ANR/crash)
+ * 2. Uses ArabicShaper.shapeIfArabic() to pre-shape Arabic to Presentation
+ *    Forms before rendering (root cause of garbled/encrypted text)
+ * 3. Comprehensive try/catch with Toast feedback for any failure
+ * 4. Auto-opens PDF after successful generation
+ */
 object PdfExportHelper {
 
+    private const val TAG = "PdfExportHelper"
+
+    /**
+     * Generate a calculation report PDF with mixed Arabic/Latin text.
+     *
+     * CRITICAL: This function performs IO (file write + font loading) and MUST
+     * be called from Dispatchers.IO. Use the suspend overload [exportCalculationReportAsync]
+     * to be safe — it dispatches to IO automatically.
+     *
+     * @return Absolute path to generated PDF, or null on failure
+     */
     fun exportCalculationReport(
         context: Context,
         title: String,
@@ -25,91 +51,116 @@ object PdfExportHelper {
         fileName: String
     ): String? {
         return try {
-            val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+            val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                ?: context.cacheDir
+            directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
+
             val writer = PdfWriter(FileOutputStream(file))
             val pdf = PdfDocument(writer)
             val document = Document(pdf)
+            document.setMargins(40f, 40f, 40f, 40f)
 
-            // Header — always use Latin font for English title
-            val titlePara = Paragraph("Civil EG - Calculation Report")
-                .setTextAlignment(TextAlignment.CENTER)
-                .setFontSize(20f)
-                .setBold()
-            document.add(titlePara)
+            try {
+                // Header — Latin-only, use Helvetica
+                val titlePara = Paragraph("Civil EG - Calculation Report")
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setFontSize(20f)
+                    .setBold()
+                    .setFont(com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica-Bold"))
+                document.add(titlePara)
 
-            document.add(LineSeparator(com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1f)))
-            document.add(Paragraph("\n"))
+                document.add(com.itextpdf.layout.element.LineSeparator(
+                    com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1f)
+                ))
+                document.add(Paragraph("\n"))
 
-            // CRITICAL FIX (2026-07-26): Use PdfTextSegmenter for the title so mixed
-            // Arabic/Latin text renders correctly (Arabic font lacks Latin letters).
-            val arabicFont = ArabicFontProvider.getArabicPdfFont(context)
-            val latinFont = try {
-                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica-Bold")
-            } catch (_: Exception) {
-                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
-            }
-            val titleP = PdfTextSegmenter.buildMixedParagraph(
-                text = title,
-                arabicFont = arabicFont,
-                latinFont = latinFont,
-                fontSize = 16f,
-                alignment = TextAlignment.CENTER
-            ).setBold().setUnderline()
-            document.add(titleP)
-
-            document.add(Paragraph("\n"))
-
-            // Details — proper Arabic shaping per line via segmenter
-            val latinFontDetails = try {
-                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
-            } catch (_: Exception) {
-                com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
-            }
-            for ((key, value) in details) {
-                val lineText = "$key: $value"
-                val p = PdfTextSegmenter.buildMixedParagraph(
-                    text = lineText,
+                // Title (mixed Arabic/Latin) — properly shaped via PdfTextSegmenter
+                val arabicFont = ArabicFontProvider.getArabicPdfFont(context, bold = true)
+                val latinFont = try {
+                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica-Bold")
+                } catch (_: Exception) {
+                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
+                }
+                val titleP = PdfTextSegmenter.buildMixedParagraph(
+                    text = title,
                     arabicFont = arabicFont,
-                    latinFont = latinFontDetails,
-                    fontSize = 12f
-                )
-                document.add(p)
+                    latinFont = latinFont,
+                    fontSize = 16f,
+                    alignment = TextAlignment.CENTER
+                ).setBold().setUnderline()
+                document.add(titleP)
+
+                document.add(Paragraph("\n"))
+
+                // Details — proper Arabic shaping per line via segmenter
+                val arabicFontDetails = ArabicFontProvider.getArabicPdfFont(context)
+                val latinFontDetails = try {
+                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
+                } catch (_: Exception) {
+                    com.itextpdf.kernel.font.PdfFontFactory.createFont("Helvetica")
+                }
+                for ((key, value) in details) {
+                    val lineText = "$key: $value"
+                    val p = PdfTextSegmenter.buildMixedParagraph(
+                        text = lineText,
+                        arabicFont = arabicFontDetails,
+                        latinFont = latinFontDetails,
+                        fontSize = 12f
+                    )
+                    document.add(p)
+                }
+
+                document.add(Paragraph("\n\nGenerated by Civil EG App")
+                    .setFontSize(10f)
+                    .setItalic()
+                    .setFont(latinFontDetails))
+            } finally {
+                document.close()
             }
-
-            document.add(Paragraph("\n\nGenerated by Civil EG App")
-                .setFontSize(10f)
-                .setItalic())
-
-            document.close()
 
             openPdf(context, file)
             file.absolutePath
         } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, "Error generating PDF: ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e(TAG, "Failed to generate PDF: ${e.message}", e)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                Toast.makeText(context, "Error generating PDF: ${e.message}", Toast.LENGTH_LONG).show()
+            }
             null
         }
     }
 
+    /**
+     * SUSPEND version of [exportCalculationReport] — runs PDF generation on IO dispatcher.
+     *
+     * Use this from any Composable / Coroutine to avoid blocking the main thread.
+     */
+    suspend fun exportCalculationReportAsync(
+        context: Context,
+        title: String,
+        details: Map<String, String>,
+        fileName: String
+    ): String? = withContext(Dispatchers.IO) {
+        exportCalculationReport(context, title, details, fileName)
+    }
+
     private fun openPdf(context: Context, file: File) {
-        val uri: Uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.provider",
-            file
-        )
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/pdf")
-            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        }
         try {
+            val uri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/pdf")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
             context.startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(context, "No PDF viewer found", Toast.LENGTH_SHORT).show()
+            Log.w(TAG, "No PDF viewer found: ${e.message}")
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                Toast.makeText(context, "PDF saved. Open from Files app.", Toast.LENGTH_LONG).show()
+            }
         }
     }
-}
-
-private fun LineSeparator(line: com.itextpdf.kernel.pdf.canvas.draw.ILineDrawer): com.itextpdf.layout.element.LineSeparator {
-    return com.itextpdf.layout.element.LineSeparator(line)
 }

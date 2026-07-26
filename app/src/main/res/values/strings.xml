@@ -821,6 +821,7 @@
     <string name="beam_section_ideal">Ideal economical design ✅</string>
     <string name="beam_section_large">Oversized section (uneconomical) 🔵</string>
     <string name="beam_pdf_error">Error creating PDF report</string>
+    <string name="exporting_pdf">Generating PDF…</string>
     <string name="beam_view_perspective">Perspective</string>
     <string name="beam_view_rebar_table">Rebar Table</string>
     <string name="beam_equations_title">📝 Engineering Equations (No Results)</string>

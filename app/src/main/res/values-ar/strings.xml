@@ -813,6 +813,7 @@
     <string name="beam_section_ideal">تصميم مثالي واقتصادي ✅</string>
     <string name="beam_section_large">القطاع كبير (غير اقتصادي) 🔵</string>
     <string name="beam_pdf_error">حدث خطأ أثناء إنشاء تقرير PDF</string>
+    <string name="exporting_pdf">جاري إنشاء PDF…</string>
     <string name="beam_view_perspective">المنظور</string>
     <string name="beam_view_rebar_table">جدول التسليح</string>
     <string name="beam_equations_title">📝 المعادلات الهندسية (بدون نتائج)</string>
