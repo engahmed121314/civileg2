@@ -151,9 +151,14 @@ object PdfTextSegmenter {
         for (seg in segments) {
             if (seg.text.isEmpty()) continue
             val run = if (seg.isArabic) {
-                // Shape Arabic letters to Presentation Forms before rendering
-                val shaped = ArabicShaper.shapeIfArabic(seg.text)
-                Text(shaped).setFont(arabicFont)
+                // Pass BASE Arabic characters directly to iText — do NOT pre-shape.
+                // iText 8 + IDENTITY_H encoding will apply the font's OpenType GSUB
+                // tables for Arabic letter shaping (initial/medial/final/isolated forms).
+                // Pre-shaping to Presentation Forms (FE70-FEFF) via ArabicShaper causes
+                // DOUBLE-SHAPING when iText also applies GSUB, producing garbled output.
+                // Even if iText doesn't apply GSUB, base Arabic letters are still
+                // READABLE (just disconnected) — much better than garbled text.
+                Text(seg.text).setFont(arabicFont)
             } else {
                 Text(seg.text).setFont(latinFont)
             }

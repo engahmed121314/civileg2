@@ -313,9 +313,19 @@ class ComprehensivePdfExporter(private val context: Context) {
     }
 
     private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
-        if (bitmap == null) return
+        // Always show the drawing section title so users can see a drawing was intended
         document.add(Paragraph(" "))
         addSectionTitle(document, t("الرسم الهندسي", "Engineering Drawing"), title)
+        if (bitmap == null) {
+            // Show placeholder instead of silently skipping
+            document.add(styledParagraph(
+                t("[الرسم غير متاح - تأكد من اكتمال بيانات التصميم]", "[Drawing not available - ensure design data is complete]"),
+                9f, color = ColorConstants.GRAY as DeviceRgb,
+                alignment = TextAlignment.CENTER
+            ))
+            document.add(Paragraph(" "))
+            return
+        }
         try {
             val stream = java.io.ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
@@ -324,7 +334,11 @@ class ComprehensivePdfExporter(private val context: Context) {
             img.setHorizontalAlignment(HorizontalAlignment.CENTER)
             document.add(img)
         } catch (e: Exception) {
-            document.add(styledParagraph(t("[الرسم غير متاح]", "[Drawing not available]"), 9f, color = ColorConstants.GRAY as DeviceRgb))
+            document.add(styledParagraph(
+                t("[خطأ في عرض الرسم: ${e.message}]", "[Drawing render error: ${e.message}]"),
+                9f, color = ColorConstants.GRAY as DeviceRgb,
+                alignment = TextAlignment.CENTER
+            ))
         }
         document.add(Paragraph(" "))
     }

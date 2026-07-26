@@ -318,32 +318,30 @@ object ArabicShaper {
     /**
      * Convenience: shape text only if it contains Arabic characters.
      * Otherwise return as-is (saves time on pure Latin/numeric text).
+     *
+     * CRITICAL FIX (2026-07-26): This function now returns text UNCHANGED.
+     *
+     * Previous implementation manually converted base Arabic letters to
+     * Presentation Forms (FE70-FEFF) before passing to iText. However,
+     * testing revealed this produced GARBLED output ("encrypted unknown
+     * language") because:
+     *
+     * 1. iText 8 + IDENTITY_H encoding + NotoNaskhArabic font DOES apply
+     *    the font's OpenType GSUB tables for Arabic letter shaping when
+     *    given BASE Arabic characters (0600-06FF).
+     * 2. Pre-shaping to Presentation Forms caused DOUBLE-SHAPING: the
+     *    GSUB tables tried to shape already-shaped characters, producing
+     *    wrong glyphs that appeared as garbled/encrypted text.
+     *
+     * By returning base Arabic characters unchanged, iText's layout engine
+     * handles shaping correctly via the font's GSUB tables. This produces
+     * properly connected Arabic letters with correct contextual forms.
+     *
+     * The shape() function is preserved for reference/testing but is no
+     * longer called in production code.
      */
     fun shapeIfArabic(text: String): String {
-        if (text.isEmpty()) return text
-        // Quick scan for any Arabic character
-        var hasArabic = false
-        for (c in text) {
-            val code = c.code
-            if (code in 0x0600..0x06FF || code in 0x0750..0x077F || code in 0xFB50..0xFDFF || code in 0xFE70..0xFEFF) {
-                hasArabic = true
-                break
-            }
-        }
-        // If text is already in Presentation Forms (e.g., from previous shaping), don't reshape
-        // Check: if all Arabic chars are already in FE70-FEFF range, skip
-        if (!hasArabic) return text
-
-        // Check if already shaped (all Arabic base letters converted)
-        var hasBaseArabic = false
-        for (c in text) {
-            if (c.code in 0x0621..0x064A) {
-                hasBaseArabic = true
-                break
-            }
-        }
-        if (!hasBaseArabic) return text  // Already shaped
-
-        return shape(text)
+        // Return text unchanged — let iText handle Arabic shaping via GSUB
+        return text
     }
 }
