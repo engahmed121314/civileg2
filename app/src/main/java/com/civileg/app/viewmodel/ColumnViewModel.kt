@@ -216,7 +216,7 @@ class ColumnViewModel @Inject constructor(
                     "f'cu" to "${fcuVal} MPa",
                     "fy" to "${fyVal} MPa",
                     "Design Code" to codeName,
-                    "Load Combination" to state.loadCombination
+                    "Load Combination" to state.loadCombination.name
                 )
                 val resultsMap = mapOf(
                     "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",

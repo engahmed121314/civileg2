@@ -83,9 +83,12 @@ class StairViewModel @Inject constructor(
             _isExporting.value = true
             try {
                 val exportedFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                    // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
                     val fileName = "Stair_Report_${System.currentTimeMillis()}.pdf"
-                    val file = java.io.File(context.cacheDir, fileName)
+                    val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                        ?: context.cacheDir
+                    directory.mkdirs()
+                    val file = java.io.File(directory, fileName)
 
                     // Generate drawing for PDF
                     val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
@@ -102,22 +105,53 @@ class StairViewModel @Inject constructor(
                             distDia = currentResult.distributionReinforcement.diameter.toDouble(),
                             distSpacing = currentResult.distributionReinforcement.spacing
                         )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        null
+                    } catch (e: Exception) { e.printStackTrace(); null }
+
+                    val codeName = when(currentResult.code) {
+                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        else -> "ECP 203"
+                    }
+                    val inputsMap = mapOf(
+                        "Stair Type" to currentResult.type.displayName,
+                        "Span" to "${currentResult.span} m",
+                        "Riser" to "${currentResult.riser} mm",
+                        "Tread" to "${currentResult.tread} mm",
+                        "Thickness" to "${currentResult.thickness} mm",
+                        "f'cu" to "${currentResult.fcu} MPa",
+                        "fy" to "${currentResult.fy} MPa",
+                        "Factored Load wu" to "${String.format("%.2f", currentResult.wu)} kN/m²",
+                        "Design Code" to codeName
+                    )
+                    val resultsMap = mapOf(
+                        "Moment Mu" to "${String.format("%.2f", currentResult.mu)} kN.m",
+                        "Main Reinforcement" to currentResult.reinforcement.barString,
+                        "Distribution" to currentResult.distributionReinforcement.barString,
+                        "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
+                        "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg",
+                        "Utilization" to "${(currentResult.utilizationRatio * 100).toInt()}%"
+                    )
+                    val safetyChecks = currentResult.safetyChecks.map { chk ->
+                        com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                            name = chk.name, calculated = chk.value,
+                            limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                        )
                     }
 
-                    exporter.exportStairReport(
-                        projectName = "تقرير تصميم سلم",
-                        designCode = currentResult.code,
-                        result = currentResult,
-                        outputPath = file.absolutePath,
-                        drawingBitmap = drawingBitmap
+                    val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                    exporter.generateReport(
+                        title = "Stair Design Report — ${currentResult.type.displayName}",
+                        subtitle = "Code: $codeName  •  Span=${currentResult.span}m",
+                        designType = "Stair (${currentResult.type.displayName})",
+                        inputs = inputsMap,
+                        results = resultsMap,
+                        safetyChecks = safetyChecks,
+                        isSafe = currentResult.isSafe,
+                        drawingBitmap = drawingBitmap,
+                        outputPath = file.absolutePath
                     )
                 }
-                exportedFile?.let {
-                    com.civileg.app.utils.ExportUtils.openPdf(context, it)
-                }
+                exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 onComplete(exportedFile)
             } catch (e: Exception) {
                 e.printStackTrace()

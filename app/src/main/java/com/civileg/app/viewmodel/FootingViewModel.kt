@@ -9,7 +9,6 @@ import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -91,10 +90,12 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
                 val fileName = "Footing_Report_${System.currentTimeMillis()}.pdf"
-                val file = File(context.cacheDir, fileName)
-                
-                val exporter = ComprehensivePdfExporter(context)
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
 
                 // Generate drawing for PDF
                 val drawingBitmap = try {
@@ -111,24 +112,48 @@ class FootingViewModel @Inject constructor(
                         rebarYDia = res.barDiameter.toDouble(),
                         rebarYSpatial = res.reinforcementBottom.spacing
                     )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
+                } catch (e: Exception) { e.printStackTrace(); null }
 
-                val exportedFile = exporter.exportFootingReport(
-                    projectName = "تقرير تصميم أساسات - ${res.type.displayName}",
-                    designCode = res.code,
-                    result = res,
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
+                val codeName = when(res.code) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
+                }
+                val inputsMap = mapOf(
+                    "Footing Type" to res.type.displayName,
+                    "Width" to "${res.width} mm",
+                    "Length" to "${res.length} mm",
+                    "Thickness" to "${res.thickness} mm",
+                    "Column Size" to "${res.column1Size.first}×${res.column1Size.second} mm",
+                    "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
+                    "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
+                    "Design Code" to codeName
                 )
-                
+                val resultsMap = mapOf(
+                    "Reinforcement" to res.reinforcementBottom.barString,
+                    "Bars X" to "${res.barsX} Ø${res.barDiameter}",
+                    "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
+                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg",
+                    "Efficiency" to "${String.format("%.0f", res.efficiencyScore)}%",
+                    "Optimal" to if (res.isOptimal) "Yes" else "No"
+                )
+                val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                val generated = exporter.generateReport(
+                    title = "Footing Design Report — ${res.type.displayName}",
+                    subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
+                    designType = "Footing (${res.type.displayName})",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = emptyList(),
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
+                )
+
                 withContext(Dispatchers.Main) {
-                    exportedFile?.let {
-                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
-                    }
-                    onComplete(exportedFile)
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Exception) {

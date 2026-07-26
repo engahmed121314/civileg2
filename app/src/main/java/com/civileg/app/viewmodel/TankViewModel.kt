@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -71,10 +70,12 @@ class TankViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
                 val fileName = "Tank_Report_${System.currentTimeMillis()}.pdf"
-                val file = File(context.cacheDir, fileName)
-                
-                val exporter = ComprehensivePdfExporter(context)
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
 
                 val drawingBitmap = try {
                     PdfDrawingGenerator.generateTankDrawing(
@@ -92,19 +93,51 @@ class TankViewModel @Inject constructor(
                     )
                 } catch (e: Exception) { null }
 
-                val exportedFile = exporter.exportTankReport(
-                    projectName = "تقرير تصميم خزان",
-                    designCode = res.code,
-                    result = res,
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
+                val codeName = when(res.code) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
+                }
+                val inputsMap = mapOf(
+                    "Tank Type" to res.type.displayName,
+                    "Length" to "${res.length} m",
+                    "Width" to "${res.width} m",
+                    "Height" to "${res.height} m",
+                    "Wall Thickness" to "${res.wallThickness} mm",
+                    "Base Thickness" to "${res.baseThickness} mm",
+                    "Design Code" to codeName
                 )
-                
+                val resultsMap = mapOf(
+                    "Capacity" to "${String.format("%.2f", res.capacity)} m³",
+                    "Water Pressure" to "${String.format("%.2f", res.waterPressure)} kN/m²",
+                    "Wall Reinforcement" to res.wallReinforcement.barString,
+                    "Base Reinforcement" to res.baseReinforcement.barString,
+                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                )
+                val safetyChecks = res.safetyChecks.map { chk ->
+                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = chk.name, calculated = chk.value,
+                        limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                    )
+                }
+
+                val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                val generated = exporter.generateReport(
+                    title = "Tank Design Report — ${res.type.displayName}",
+                    subtitle = "Code: $codeName  •  ${res.length}×${res.width}×${res.height}m",
+                    designType = "Tank (${res.type.displayName})",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
+                )
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let {
-                        com.civileg.app.utils.ExportUtils.openPdf(context, it)
-                    }
-                    onComplete(exportedFile)
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Exception) {

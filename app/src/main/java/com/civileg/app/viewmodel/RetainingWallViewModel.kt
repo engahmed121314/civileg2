@@ -79,9 +79,12 @@ class RetainingWallViewModel @Inject constructor(
             _isExporting.value = true
             try {
                 val exportedFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                    // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
                     val fileName = "RetainingWall_Report_${System.currentTimeMillis()}.pdf"
-                    val file = java.io.File(context.cacheDir, fileName)
+                    val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                        ?: context.cacheDir
+                    directory.mkdirs()
+                    val file = java.io.File(directory, fileName)
 
                     val drawingBitmap = try {
                         PdfDrawingGenerator.generateRetainingWallDrawing(
@@ -105,17 +108,49 @@ class RetainingWallViewModel @Inject constructor(
                         )
                     } catch (e: Exception) { null }
 
-                    exporter.exportRetainingWallReport(
-                        projectName = "تقرير تصميم حائط ساند",
-                        designCode = currentResult.code,
-                        result = currentResult,
-                        outputPath = file.absolutePath,
-                        drawingBitmap = drawingBitmap
+                    val codeName = when(currentResult.code) {
+                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        else -> "ECP 203"
+                    }
+                    val inputsMap = mapOf(
+                        "Wall Height" to "${currentResult.height} m",
+                        "Stem Thickness" to "${currentResult.stemThickness} mm",
+                        "Base Width" to "${currentResult.baseWidth} mm",
+                        "Backfill Angle" to "${String.format("%.1f", currentResult.backfillAngle)}°",
+                        "Design Code" to codeName
+                    )
+                    val resultsMap = mapOf(
+                        "Active Pressure Pa" to "${String.format("%.2f", currentResult.pa)} kN/m",
+                        "Stem Moment" to "${String.format("%.2f", currentResult.muStem)} kN.m/m",
+                        "Stem Reinforcement" to currentResult.stemReinforcement.barString,
+                        "Base Reinforcement" to currentResult.baseReinforcement.barString,
+                        "FS Overturning" to String.format("%.2f", currentResult.factorOfSafetyOverturning),
+                        "FS Sliding" to String.format("%.2f", currentResult.factorOfSafetySliding),
+                        "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
+                        "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg"
+                    )
+                    val safetyChecks = currentResult.safetyChecks.map { chk ->
+                        com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                            name = chk.name, calculated = chk.value,
+                            limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                        )
+                    }
+
+                    val exporter = com.civileg.app.utils.NativePdfExporter(context)
+                    exporter.generateReport(
+                        title = "Retaining Wall Design Report",
+                        subtitle = "Code: $codeName  •  H=${currentResult.height}m",
+                        designType = "Retaining Wall",
+                        inputs = inputsMap,
+                        results = resultsMap,
+                        safetyChecks = safetyChecks,
+                        isSafe = currentResult.isSafe,
+                        drawingBitmap = drawingBitmap,
+                        outputPath = file.absolutePath
                     )
                 }
-                exportedFile?.let {
-                    com.civileg.app.utils.ExportUtils.openPdf(context, it)
-                }
+                exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 onComplete(exportedFile)
             } catch (e: Exception) {
                 e.printStackTrace()
