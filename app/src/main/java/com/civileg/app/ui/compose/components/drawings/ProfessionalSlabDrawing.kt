@@ -108,6 +108,14 @@ fun ProfessionalSlabDrawing(
         val tableRowAltColor = Color(0xFFF5F5F5)
 
         // ── Text helpers ───────────────────────────────────────────────
+        // Use cached Arabic typeface via ArabicFontProvider (loads from app context once,
+        // then cached for subsequent calls — much faster than loading per-drawText call).
+        val arabicTf: android.graphics.Typeface? = try {
+            com.civileg.app.utils.LocaleHelper.getAppContext()?.let {
+                com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(it, false)
+            }
+        } catch (_: Exception) { null }
+
         fun drawText(
             text: String, x: Float, y: Float,
             color: Color = textColor, size: Float = 11f, bold: Boolean = false,
@@ -119,13 +127,10 @@ fun ProfessionalSlabDrawing(
                     this.textSize = size * density
                     this.isFakeBoldText = bold
                     this.textAlign = align
-                    // Use Arabic-capable font for proper shaping
-                    try {
-                        val tf = if (com.civileg.app.utils.ArabicFontProvider.containsArabic(text))
-                            android.graphics.Typeface.createFromAsset(this@Canvas.drawContext.canvas.nativeCanvas.resources.assets, "fonts/NotoNaskhArabic-Regular.ttf")
-                        else android.graphics.Typeface.DEFAULT
-                        this.typeface = tf
-                    } catch (_: Exception) { /* use default */ }
+                    // Use cached Arabic-capable font for proper shaping when text contains Arabic
+                    if (com.civileg.app.utils.ArabicFontProvider.containsArabic(text) && arabicTf != null) {
+                        this.typeface = arabicTf
+                    }
                 }
                 this.drawText(text, x, y, paint)
             }

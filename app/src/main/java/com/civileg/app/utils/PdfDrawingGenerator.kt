@@ -2,6 +2,9 @@ package com.civileg.app.utils
 
 import android.content.Context
 import android.graphics.*
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import androidx.compose.ui.geometry.Offset
 import kotlin.math.*
 
@@ -107,7 +110,7 @@ object PdfDrawingGenerator {
             this.textSize = size
             this.isAntiAlias = true
             this.style = Paint.Style.FILL
-            val hasArabic = LocaleHelper.containsArabic(text)
+            val hasArabic = ArabicFontProvider.containsArabic(text)
             this.typeface = when {
                 hasArabic && getArabicTypeface() != null -> {
                     if (bold) Typeface.create(getArabicTypeface(), Typeface.BOLD)
@@ -141,10 +144,10 @@ object PdfDrawingGenerator {
             .obtain(text, 0, text.length, paint, layoutWidth)
             .setAlignment(
                 when (align) {
-                    Paint.Align.CENTER -> StaticLayout.Alignment.ALIGN_CENTER
-                    Paint.Align.RIGHT -> StaticLayout.Alignment.ALIGN_OPPOSITE
-                    else -> if (LocaleHelper.containsArabic(text)) StaticLayout.Alignment.ALIGN_OPPOSITE
-                            else StaticLayout.Alignment.ALIGN_NORMAL
+                    Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
+                    Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
+                    else -> if (ArabicFontProvider.containsArabic(text)) Layout.Alignment.ALIGN_OPPOSITE
+                            else Layout.Alignment.ALIGN_NORMAL
                 }
             )
             .setLineSpacing(0f, 1f)
@@ -154,7 +157,7 @@ object PdfDrawingGenerator {
         val drawX = when (align) {
             Paint.Align.CENTER -> x - sl.width / 2f
             Paint.Align.RIGHT -> x - sl.width
-            else -> if (LocaleHelper.containsArabic(text)) x - sl.width else x
+            else -> if (ArabicFontProvider.containsArabic(text)) x - sl.width else x
         }
         this.save()
         // y is the baseline; StaticLayout draws from top, so offset by ascent

@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.Log
@@ -262,10 +263,10 @@ class NativePdfExporter(private val context: Context) {
             .obtain(text, 0, text.length, paint, layoutWidth)
             .setAlignment(
                 when (align) {
-                    Paint.Align.CENTER -> StaticLayout.Alignment.ALIGN_CENTER
-                    Paint.Align.RIGHT -> StaticLayout.Alignment.ALIGN_OPPOSITE
-                    else -> if (hasArabic) StaticLayout.Alignment.ALIGN_OPPOSITE
-                            else StaticLayout.Alignment.ALIGN_NORMAL
+                    Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
+                    Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
+                    else -> if (hasArabic) Layout.Alignment.ALIGN_OPPOSITE
+                            else Layout.Alignment.ALIGN_NORMAL
                 }
             )
             .setLineSpacing(0f, 1f)
@@ -314,10 +315,10 @@ class NativePdfExporter(private val context: Context) {
             .obtain(text, 0, text.length, paint, layoutWidth)
             .setAlignment(
                 when (align) {
-                    Paint.Align.CENTER -> StaticLayout.Alignment.ALIGN_CENTER
-                    Paint.Align.RIGHT -> StaticLayout.Alignment.ALIGN_OPPOSITE
-                    else -> if (hasArabic) StaticLayout.Alignment.ALIGN_OPPOSITE
-                            else StaticLayout.Alignment.ALIGN_NORMAL
+                    Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
+                    Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
+                    else -> if (hasArabic) Layout.Alignment.ALIGN_OPPOSITE
+                            else Layout.Alignment.ALIGN_NORMAL
                 }
             )
             .setLineSpacing(0f, 1f)
