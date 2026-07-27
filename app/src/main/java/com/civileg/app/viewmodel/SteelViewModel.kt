@@ -185,7 +185,13 @@ class SteelViewModel @Inject constructor(
 
                 val inputsMap = mapOf(
                     t("نوع القطاع", "Section Type") to stored.section.displayName,
-                    t("نوع العنصر", "Member Type") to stored.memberType.displayName,
+                    t("نوع العنصر", "Member Type") to when (stored.memberType) {
+                        com.civileg.app.domain.entities.SteelMemberType.COLUMN -> t("عمود", "Column")
+                        com.civileg.app.domain.entities.SteelMemberType.BEAM -> t("كمر", "Beam")
+                        com.civileg.app.domain.entities.SteelMemberType.BRACING -> t("ربط", "Bracing")
+                        com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> t("عنصر كمرة", "Truss")
+                        com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> t("كمر رئيسي", "Girder")
+                    },
                     t("كود التصميم", "Design Code") to codeName,
                     t("الطول", "Length") to "${stored.inputs.length} m",
                     t("الحمل المحوري", "Axial Load") to "${stored.inputs.axialLoad} kN",
@@ -194,26 +200,72 @@ class SteelViewModel @Inject constructor(
                 )
                 val resultsMap = mapOf(
                     t("السعة المحورية", "Axial Capacity") to "${String.format("%.2f", res.axialCapacity)} kN",
-                    t("سعة العزم", "Moment Capacity") to "${String.format("%.2f", res.momentCapacity)} kN",
+                    t("سعة العزم", "Moment Capacity") to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
                     t("سعة القص", "Shear Capacity") to "${String.format("%.2f", res.shearCapacity)} kN",
                     t("نسبة الاستغلال", "Utilization") to "${(res.utilizationRatio * 100).toInt()}%",
                     t("الحالة", "Status") to if (res.isSafe) t("آمن", "SAFE") else t("غير آمن", "UNSAFE")
                 )
-                val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
-                        name = chk.name,
-                        calculated = chk.value,
-                        limit = chk.limit,
-                        unit = chk.unit,
-                        passed = chk.isSafe
-                    )
+                // Build safety checks from available result data (SteelMemberResult doesn't have a
+                // dedicated safetyChecks list — derive from axial/bending/shear utilization)
+                val memberTypeLabel = when (stored.memberType) {
+                    com.civileg.app.domain.entities.SteelMemberType.COLUMN -> t("عمود", "Column")
+                    com.civileg.app.domain.entities.SteelMemberType.BEAM -> t("كمر", "Beam")
+                    com.civileg.app.domain.entities.SteelMemberType.BRACING -> t("ربط", "Bracing")
+                    com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> t("عنصر كمرة", "Truss")
+                    com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> t("كمر رئيسي", "Girder")
+                }
+                val safetyChecks = mutableListOf<com.civileg.app.utils.NativePdfExporter.SafetyCheck>()
+                if (stored.inputs.axialLoad > 0) {
+                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = t("السعة المحورية", "Axial Capacity"),
+                        calculated = stored.inputs.axialLoad,
+                        limit = res.axialCapacity,
+                        unit = "kN",
+                        passed = stored.inputs.axialLoad <= res.axialCapacity
+                    ))
+                }
+                if (stored.inputs.moment > 0) {
+                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = t("سعة العزم", "Flexural Capacity"),
+                        calculated = stored.inputs.moment,
+                        limit = res.flexuralCapacity,
+                        unit = "kN.m",
+                        passed = stored.inputs.moment <= res.flexuralCapacity
+                    ))
+                }
+                if (stored.inputs.shear > 0) {
+                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = t("سعة القص", "Shear Capacity"),
+                        calculated = stored.inputs.shear,
+                        limit = res.shearCapacity,
+                        unit = "kN",
+                        passed = stored.inputs.shear <= res.shearCapacity
+                    ))
+                }
+                res.bucklingCheck?.let { buckling ->
+                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = t("الانبعاج", "Buckling Check"),
+                        calculated = buckling.slendernessRatio,
+                        limit = 200.0,
+                        unit = "-",
+                        passed = buckling.isSafe
+                    ))
+                }
+                res.deflectionCheck?.let { defl ->
+                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        name = t("الترخيم", "Deflection Check"),
+                        calculated = defl.calculatedDeflection,
+                        limit = defl.allowableDeflection,
+                        unit = "mm",
+                        passed = defl.isSafe
+                    ))
                 }
 
                 val exporter = com.civileg.app.utils.NativePdfExporter(context)
                 val generated = exporter.generateReport(
                     title = if (isAr) "تقرير تصميم قطاع معدني - ${stored.section.displayName}"
                             else "Steel Member Design Report — ${stored.section.displayName}",
-                    subtitle = "${t("الكود", "Code")}: $codeName  •  ${stored.memberType.displayName}",
+                    subtitle = "${t("الكود", "Code")}: $codeName  •  $memberTypeLabel",
                     designType = "Steel — ${stored.section.displayName}",
                     inputs = inputsMap,
                     results = resultsMap,
