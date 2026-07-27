@@ -25,19 +25,21 @@ class ACIColumn : ColumnDesign {
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
         
-        // ACI 318: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
+        // ACI 318-22.4.2: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
         // fc' = 0.8 × fcu (cube to cylinder conversion)
         val fc_prime = 0.8 * fcu
         val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         
+        // ACI 22.4.2: Apply alpha factor for accidental eccentricity
+        // alpha = 0.80 for tied columns, 0.85 for spiral columns
+        val alpha = 0.80  // Default: tied column
+        
         // معامل الاختزال حسب نوع التسليح (ACI 318-21.2.1)
         // φ = 0.65 للأعمدة المربوطة (Tied Columns)
-        // φ = 0.75 للأعمدة الحلزونية (Spiral Columns) - زيادة 15% بسبب أداء أفضل
-        // يُفترض φ = 0.65 كافتراضي (يُحدد نوع العمود من التسليح الخارجي)
         val phi = PHI_TIED
-        return phi * nominalCapacity / 1000.0 // kN
+        return phi * alpha * nominalCapacity / 1000.0 // kN
     }
     
     /**
@@ -55,7 +57,9 @@ class ACIColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
-        return phi * nominalCapacity / 1000.0
+        // ACI 22.4.2: alpha = 0.80 (tied) or 0.85 (spiral)
+        val alpha = if (isSpiral) 0.85 else 0.80
+        return phi * alpha * nominalCapacity / 1000.0
     }
     
     /**
@@ -79,11 +83,17 @@ class ACIColumn : ColumnDesign {
         val isShort = slendernessRatio <= 22.0
         
         // حساب إجهاد الانبعاج الحرج Fcr
+        // ACI 22.4.2.1: EI = 0.4 × Ec × Ig + Es × As × (h/2 - d')^2
+        // Ig = b × h^3 / 12 (moment of inertia of gross concrete section)
         val fc_prime = 0.8 * fcu
-        val EI = 0.4 * 4700.0 * sqrt(fc_prime) * (Ag / 2.0) +  // تقريبي
-                200000.0 * reinforcementRatio * Ag * (minDimension * 0.4).pow(2)
-        val PI2_EI = PI * PI * EI / 1000000.0  // kN.m²
-        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)
+        val Ig = width * depth.pow(3) / 12.0  // mm^4
+        val Ec = 4700.0 * sqrt(fc_prime)      // MPa
+        val Es = 200000.0                       // MPa
+        val As = reinforcementRatio * Ag
+        val d_prime = 40.0  // cover + tie dia (approximate, mm)
+        val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)  // N.mm^2
+        val PI2_EI = PI * PI * EI / 1e6  // kN.m^2 (unit conversion)
+        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)  // kN
         
         return Triple(slendernessRatio, !isShort, Pc)
     }

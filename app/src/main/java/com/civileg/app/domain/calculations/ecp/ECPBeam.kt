@@ -42,9 +42,9 @@ class ECPBeam : BeamDesign {
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
         }
         
-        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/1.25)) حسب ECP 203
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / 1.25))
+        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/0.9)) حسب ECP 203
+        val leverArm = if (0.25 - K / 0.9 > 0) {
+            effectiveDepth * (0.5 + sqrt(0.25 - K / 0.9))
         } else {
             effectiveDepth * 0.7 // Fallback for over-reinforced
         }

@@ -212,8 +212,8 @@ class SBCBeam : BeamDesign {
         // تحويل العزم إلى نيوتن.مم
         val Mu = designMoment * 1e6
         
-        // SBC 304: f'c = 0.67 × fcu / 1.5 (مقاومة الأسطوانة حسب SBC)
-        val fc = 0.67 * fcu / 1.5
+        // SBC 304 follows ACI 318: f'c = 0.8 × fcu (cylinder conversion)
+        val fc = 0.8 * fcu
         val phi = 0.9
         
         // β₁ حسب مقاومة الخرسانة
@@ -241,7 +241,7 @@ class SBCBeam : BeamDesign {
         val cOverD = epsilonCu / (epsilonCu + epsilonY)
         val neutralAxisDepth = cOverD * d
         
-        notes.add("SBC 304: f'c = 0.67 × fcu / 1.5 = ${String.format("%.1f", fc)} MPa")
+        notes.add("SBC 304 follows ACI 318: f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa")
         notes.add("Rn = ${String.format("%.2f", Rn)} MPa")
         notes.add("Rn_bal = ${String.format("%.2f", RnBal)} MPa")
         notes.add("ρ_bal = ${String.format("%.4f", rhoBal)}")
