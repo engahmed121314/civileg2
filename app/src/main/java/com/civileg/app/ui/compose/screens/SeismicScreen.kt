@@ -782,8 +782,11 @@ private fun SeismicSpectrumCanvas(
             val h = size.height
             val pad = 50f
 
-            val maxT = spectrumValues.maxOf { it.period }
-            val maxSa = spectrumValues.maxOf { it.spectralAcceleration }
+            // CRITICAL FIX (2026-07-27): Use maxOfOrNull instead of maxOf to prevent
+            // NoSuchElementException if spectrumValues is empty (defensive against
+            // any upstream calculation that might produce an empty list).
+            val maxT = spectrumValues.maxOfOrNull { it.period }?.takeIf { it > 0 } ?: 3.0
+            val maxSa = spectrumValues.maxOfOrNull { it.spectralAcceleration }?.takeIf { it > 0 } ?: 1.0
 
             fun toX(t: Double) = pad + (t / maxT * (w - 2 * pad)).toFloat()
             fun toY(sa: Double) = h - pad - (sa / maxSa * (h - 2 * pad)).toFloat()

@@ -115,24 +115,71 @@ fun ProfessionalSlabDrawing(
                 com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(it, false)
             }
         } catch (_: Exception) { null }
+        val arabicTfBold: android.graphics.Typeface? = try {
+            com.civileg.app.utils.LocaleHelper.getAppContext()?.let {
+                com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(it, true)
+            }
+        } catch (_: Exception) { null }
 
+        /**
+         * CRITICAL FIX (2026-07-27): Use StaticLayout for ALL text containing Arabic
+         * characters. Canvas.drawText alone DOES shape Arabic letters via HarfBuzz,
+         * BUT it does NOT perform BIDI reordering — Arabic text would appear in
+         * logical (LTR) order with letters connected but in WRONG sequence (visually
+         * reversed). StaticLayout uses Android's full text pipeline (HarfBuzz + Bidi
+         * + LineBreaker) and produces correctly-rendered Arabic.
+         *
+         * Latin-only text uses Canvas.drawText directly (faster, no layout overhead).
+         */
         fun drawText(
             text: String, x: Float, y: Float,
             color: Color = textColor, size: Float = 11f, bold: Boolean = false,
             align: android.graphics.Paint.Align = android.graphics.Paint.Align.CENTER
         ) {
             drawContext.canvas.nativeCanvas.apply {
-                val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                val hasArabic = com.civileg.app.utils.ArabicFontProvider.containsArabic(text)
+
+                // For pure Latin/numeric text, use Canvas.drawText directly (faster)
+                if (!hasArabic) {
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        this.color = color.hashCode()
+                        this.textSize = size * density
+                        this.isFakeBoldText = bold
+                        this.textAlign = align
+                    }
+                    this.drawText(text, x, y, paint)
+                    return@apply
+                }
+
+                // For Arabic text, use StaticLayout for proper BIDI + shaping
+                val tf = if (bold) arabicTfBold ?: arabicTf else arabicTf
+                val tp = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = color.hashCode()
                     this.textSize = size * density
                     this.isFakeBoldText = bold
-                    this.textAlign = align
-                    // Use cached Arabic-capable font for proper shaping when text contains Arabic
-                    if (com.civileg.app.utils.ArabicFontProvider.containsArabic(text) && arabicTf != null) {
-                        this.typeface = arabicTf
-                    }
+                    this.typeface = tf ?: android.graphics.Typeface.DEFAULT
                 }
-                this.drawText(text, x, y, paint)
+                val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
+                val layoutAlign = when (align) {
+                    android.graphics.Paint.Align.CENTER -> android.text.Layout.Alignment.ALIGN_CENTER
+                    android.graphics.Paint.Align.RIGHT -> android.text.Layout.Alignment.ALIGN_OPPOSITE
+                    else -> android.text.Layout.Alignment.ALIGN_NORMAL
+                }
+                val sl = android.text.StaticLayout.Builder
+                    .obtain(text, 0, text.length, tp, layoutWidth)
+                    .setAlignment(layoutAlign)
+                    .setLineSpacing(0f, 1f)
+                    .setIncludePad(false)
+                    .build()
+                val drawX = when (align) {
+                    android.graphics.Paint.Align.CENTER -> x - sl.width / 2f
+                    android.graphics.Paint.Align.RIGHT -> x - sl.width
+                    else -> x
+                }
+                this.save()
+                this.translate(drawX, y - tp.ascent() - tp.descent() / 2f)
+                sl.draw(this)
+                this.restore()
             }
         }
 
