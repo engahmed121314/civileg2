@@ -632,7 +632,7 @@ fun SeismicScreen(
                                         // and pass it to exportDesignReportAsync so the PDF includes visuals.
                                         val drawingBitmap = try {
                                             com.civileg.app.utils.PdfDrawingGenerator.generateSeismicDrawing(
-                                                totalHeight = totalHeight.toDoubleOrNull() ?: 15.0,
+                                                totalHeight = totalHeight,
                                                 numFloors = numFloors.toIntOrNull() ?: 5,
                                                 floorForces = res.floorForces,
                                                 spectrumValues = res.spectrumValues,

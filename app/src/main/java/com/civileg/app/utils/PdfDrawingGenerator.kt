@@ -1145,7 +1145,8 @@ object PdfDrawingGenerator {
         var tCount = 0
         while (ty < planT + planH - tendonSpacingPx / 2f && tCount < 8) {
             // Banded tendon group (3 lines close together)
-            for (offset in -4f..4f step 4f) {
+            // Float ranges don't support `step` in Kotlin — use explicit list
+            for (offset in listOf(-4f, 0f, 4f)) {
                 // Parabolic curve approximation (draped tendons)
                 val path = Path()
                 path.moveTo(planL + planW * 0.05f, ty + offset)
