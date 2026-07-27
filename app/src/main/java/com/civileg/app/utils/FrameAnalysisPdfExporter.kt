@@ -129,14 +129,14 @@ object FrameAnalysisPdfExporter {
         val memTable = Table(UnitValue.createPercentArray(floatArrayOf(8f, 20f, 12f, 12f, 15f, 33f))).useAllAvailableWidth()
         memTable.addHeaderCell(Cell().add(Paragraph("#").setFontSize(9f).setBold()))
         memTable.addHeaderCell(Cell().add(Paragraph("Name").setFontSize(9f).setBold()))
-        memTable.addHeaderCell(Cell().add(Paragraph("I → J").setFontSize(9f).setBold()))
+        memTable.addHeaderCell(Cell().add(Paragraph("I -> J").setFontSize(9f).setBold()))
         memTable.addHeaderCell(Cell().add(Paragraph("Type").setFontSize(9f).setBold()))
         memTable.addHeaderCell(Cell().add(Paragraph("Material").setFontSize(9f).setBold()))
         memTable.addHeaderCell(Cell().add(Paragraph("Section").setFontSize(9f).setBold()))
         for (m in members) {
             memTable.addCell(Cell().add(Paragraph("${m.id}").setFontSize(8f)))
             memTable.addCell(Cell().add(Paragraph(m.name.ifEmpty { "M${m.id}" }).setFontSize(8f)))
-            memTable.addCell(Cell().add(Paragraph("${m.nodeI}→${m.nodeJ}").setFontSize(8f)))
+            memTable.addCell(Cell().add(Paragraph("${m.nodeI}->${m.nodeJ}").setFontSize(8f)))
             memTable.addCell(Cell().add(Paragraph(m.memberType.displayNameEn).setFontSize(8f)))
             memTable.addCell(Cell().add(Paragraph(m.materialType.displayNameEn).setFontSize(8f)))
             val secDesc = if (m.materialType == FrameMaterialType.Concrete && m.concreteSection != null)
@@ -203,10 +203,10 @@ object FrameAnalysisPdfExporter {
                     document.add(styledArabicParagraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
                     document.add(styledArabicParagraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa", arabicFont, 9f))
                     document.add(styledArabicParagraph("Max M = ${fmt(cr.maxMoment)} kN.m | Max V = ${fmt(cr.maxShear)} kN | N = ${fmt(cr.axialForce)} kN", arabicFont, 9f))
-                    document.add(styledArabicParagraph("As req = ${String.format("%.0f", cr.asRequired)} mm² | Bottom: ${cr.numBarsBot}Ø${cr.barDia.toInt()} = ${String.format("%.0f", cr.asBot)} mm²", arabicFont, 9f))
+                    document.add(styledArabicParagraph("As req = ${String.format("%.0f", cr.asRequired)} mm^2 | Bottom: ${cr.numBarsBot}T${cr.barDia.toInt()} = ${String.format("%.0f", cr.asBot)} mm^2", arabicFont, 9f))
                     if (cr.stirrupDia > 0)
-                        document.add(styledArabicParagraph("Stirrups: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm", arabicFont, 9f))
-                    document.add(styledArabicParagraph("Utilization - Moment: ${String.format("%.0f", cr.momentUtilization * 100)}% | Shear: ${String.format("%.0f", cr.shearUtilization * 100)}% | ${if (cr.isSafe) "SAFE ✓" else "UNSAFE ✗"}", arabicFont, 9f))
+                        document.add(styledArabicParagraph("Stirrups: T${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Utilization - Moment: ${String.format("%.0f", cr.momentUtilization * 100)}% | Shear: ${String.format("%.0f", cr.shearUtilization * 100)}% | ${if (cr.isSafe) "SAFE" else "UNSAFE"}", arabicFont, 9f))
                 }
             }
 
@@ -216,9 +216,9 @@ object FrameAnalysisPdfExporter {
                 document.add(styledArabicParagraph("Steel Design Results / نتائج التصميم المعدني", arabicBold, 14f, bold = true))
                 for (sr in result.steelDesignResults) {
                     document.add(styledArabicParagraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
-                    document.add(styledArabicParagraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm⁴", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm^4", arabicFont, 9f))
                     document.add(styledArabicParagraph("Max M = ${fmt(sr.maxMoment)} kN.m | Max V = ${fmt(sr.maxShear)} kN | N = ${fmt(sr.axialForce)} kN", arabicFont, 9f))
-                    document.add(styledArabicParagraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE ✓" else "UNSAFE ✗"}", arabicFont, 9f))
+                    document.add(styledArabicParagraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE" else "UNSAFE"}", arabicFont, 9f))
                 }
             }
         }

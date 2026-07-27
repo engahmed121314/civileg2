@@ -98,28 +98,51 @@ fun FrameAnalysisScreen(
                     if (result?.hasResults == true) {
                         val frameShareReport = stringResource(R.string.frame_share_report)
                         val framePdfErrorMsg = stringResource(R.string.frame_pdf_error)
-                        IconButton(onClick = {
+                        val scope = rememberCoroutineScope()
+                        var isFrameExporting by remember { mutableStateOf(false) }
+                        IconButton(enabled = !isFrameExporting, onClick = {
                             val inputs = viewModel.getStoredInputs()
-                            try {
-                                val file = FrameAnalysisPdfExporter.generateFrameAnalysisPdf(
-                                    context, inputs.nodes, inputs.members, inputs.nodalLoads,
-                                    inputs.memberLoads, inputs.settings, inputs.result
-                                )
-                                val uri = androidx.core.content.FileProvider.getUriForFile(
-                                    context, "${context.packageName}.provider", file
-                                )
-                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = "application/pdf"
-                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
-                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            isFrameExporting = true
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                try {
+                                    val file = FrameAnalysisPdfExporter.generateFrameAnalysisPdf(
+                                        context, inputs.nodes, inputs.members, inputs.nodalLoads,
+                                        inputs.memberLoads, inputs.settings, inputs.result
+                                    )
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        try {
+                                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                context, "${context.packageName}.provider", file
+                                            )
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "application/pdf"
+                                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
+                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, frameShareReport))
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
+                                        }
+                                        isFrameExporting = false
+                                    }
+                                } catch (e: Throwable) {
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
+                                        isFrameExporting = false
+                                    }
                                 }
-                                context.startActivity(Intent.createChooser(intent, frameShareReport))
-                            } catch (e: Exception) {
-                                Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
                             }
                         }) {
-                            Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
+                            if (isFrameExporting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
+                            }
                         }
                     }
                 }

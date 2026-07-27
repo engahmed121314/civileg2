@@ -326,3 +326,37 @@ Stage Summary:
 - Seismic PDF now includes drawing: building elevation + force distribution chart + response spectrum
 - Files modified: NativePdfExporter.kt, PdfDrawingGenerator.kt, SlabViewModel.kt, BeamViewModel.kt, ColumnViewModel.kt, TankViewModel.kt, RetainingWallViewModel.kt, SteelViewModel.kt, SteelWarehouseProPdfExporter.kt, SeismicScreen.kt
 - Ready to commit and push to GitHub for CI build
+
+---
+Task ID: pdf-frame-analysis-fix-2026-07-27
+Agent: Main (Super Z)
+Task: Fix Frame Analysis PDF garbled symbols + prevent ANR during export
+
+Work Log:
+- Read latest CI build status — confirmed commit b923d24 built successfully (APK delivered)
+- Discovered user was testing STALE APK from Jul 26 19:49 (commit 181042d) which predates:
+  * NativePdfExporter v3 defensive code (try/catch Throwable, bitmap validation, y-offset fix)
+  * Type-aware slab drawings (Solid/Flat/Hordi/Waffle/Post-Tension)
+  * Seismic drawing attachment
+  * Steel export migrated to NativePdfExporter
+- Downloaded LATEST APK from CI artifacts (commit b923d24, built Jul 27 06:56)
+- Replaced stale APK at /home/z/my-project/download/civileg-latest.apk with latest version
+- Fixed Frame Analysis PDF garbled symbols:
+  * Replaced Unicode arrow → with ASCII -> (Helvetica lacks U+2192)
+  * Replaced Unicode superscript ² with ^2 (Helvetica lacks U+00B2)
+  * Replaced Unicode superscript ⁴ with ^4 (Helvetica lacks U+2074)
+  * Replaced Unicode Ø with T (Helvetica lacks U+00D8)
+  * Removed Unicode ✓ and ✗ (Helvetica lacks these)
+- Moved FrameAnalysisPdfExporter.generateFrameAnalysisPdf call from MAIN thread to IO coroutine:
+  * Previously ran synchronously on UI thread → could cause ANR
+  * Now runs on Dispatchers.IO with proper coroutine scope
+  * Added CircularProgressIndicator during export
+  * Catches Throwable (not just Exception) for extra defense
+  * Button disabled during export to prevent duplicate clicks
+
+Stage Summary:
+- Stale APK replaced with latest (commit b923d24) — contains all v3 defensive fixes
+- Frame Analysis PDF garbled symbols FIXED: replaced 6 Unicode chars with ASCII alternatives
+- Frame Analysis export ANR FIXED: moved to background thread with loading indicator
+- Files modified: FrameAnalysisPdfExporter.kt, FrameAnalysisScreen.kt
+- Ready to commit and push for CI build
