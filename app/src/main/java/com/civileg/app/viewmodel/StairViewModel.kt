@@ -139,7 +139,7 @@ class StairViewModel @Inject constructor(
                     }
 
                     // Professional English PDF Report — English only, no Arabic encoding issues
-                    val exportedFile = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                         titleAr = "تقرير تصميم سلم - ${currentResult.type.displayName}",
                         titleEn = "Stair Design Report — ${currentResult.type.displayName}",
                         subtitle = "Code: $codeName  •  Span=${currentResult.span}m",

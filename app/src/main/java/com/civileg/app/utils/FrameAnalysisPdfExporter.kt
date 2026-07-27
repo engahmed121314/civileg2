@@ -53,13 +53,13 @@ object FrameAnalysisPdfExporter {
      * the "encrypted-looking" output that occurred when Latin chars in mixed text
      * were rendered with the Arabic font (which only has 15 Latin chars).
      */
-    private fun styledEnglishParagraph(text: String, fontSize: Float, bold: Boolean = false): Paragraph {
-        val font = try {
+    private fun styledEnglishParagraph(text: String, font: PdfFont, fontSize: Float, bold: Boolean = false): Paragraph {
+        val helFont = try {
             PdfFontFactory.createFont(if (bold) "Helvetica-Bold" else "Helvetica")
         } catch (_: Exception) {
             PdfFontFactory.createFont("Helvetica")
         }
-        return Paragraph().add(Text(text).setFont(font).setFontSize(fontSize))
+        return Paragraph().add(Text(text).setFont(helFont).setFontSize(fontSize))
     }
 
     fun generateFrameAnalysisPdf(
