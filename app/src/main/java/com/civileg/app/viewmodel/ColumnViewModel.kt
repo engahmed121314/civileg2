@@ -235,11 +235,8 @@ class ColumnViewModel @Inject constructor(
                     )
                 }
 
-                // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
-                // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
-                // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
-                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
-                val generated = exporter.exportGenericReport(
+                // Professional English PDF Report — English only, no Arabic encoding issues
+                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                     titleAr = "تقرير تصميم أعمدة - ${res.columnType}",
                     titleEn = "Column Design Report — ${res.columnType}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.depth}mm, H=${h}m",

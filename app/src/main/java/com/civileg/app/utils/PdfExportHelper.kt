@@ -56,8 +56,7 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
-            val generated = exporter.exportGenericReport(
+            val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                 titleAr = title,
                 titleEn = title,
                 subtitle = "",
@@ -74,7 +73,7 @@ object PdfExportHelper {
                 openPdf(context, generated)
                 generated.absolutePath
             } else {
-                Log.e(TAG, "ComprehensivePdfExporter returned null")
+                Log.e(TAG, "ProfessionalEnglishPdfReporter returned null")
                 null
             }
         } catch (e: Exception) {
@@ -122,8 +121,7 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
-            val generated = exporter.exportGenericReport(
+            val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                 titleAr = title,
                 titleEn = title,
                 subtitle = subtitle,
