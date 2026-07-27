@@ -131,15 +131,19 @@ class RetainingWallViewModel @Inject constructor(
                         "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg"
                     )
                     val safetyChecks = currentResult.safetyChecks.map { chk ->
-                        com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                             name = chk.name, calculated = chk.value,
                             limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                         )
                     }
 
-                    val exporter = com.civileg.app.utils.NativePdfExporter(context)
-                    exporter.generateReport(
-                        title = "Retaining Wall Design Report",
+                    // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
+                    // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
+                    // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
+                    val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                    exporter.exportGenericReport(
+                        titleAr = "تقرير تصميم حائط ساند",
+                        titleEn = "Retaining Wall Design Report",
                         subtitle = "Code: $codeName  •  H=${currentResult.height}m",
                         designType = "Retaining Wall",
                         inputs = inputsMap,

@@ -12,36 +12,35 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * PdfExportHelper — Robust PDF export helper using NativePdfExporter.
+ * PdfExportHelper — Robust PDF export helper using ComprehensivePdfExporter (iText 8).
  *
  * ********************************************************************************
- * CRITICAL FIX (2026-07-27): Switched from iText to Android Native PDF
+ * CRITICAL FIX (2026-07-27 v4): Switched back from NativePdfExporter to iText 8
  * ********************************************************************************
- * The previous iText 8 AGPL-based pipeline produced garbled Arabic text
- * ("encrypted/squares") on every device. Root cause: iText 8 AGPL lacks
- * pdfCalligraph (commercial-only module needed for Arabic GSUB shaping).
+ * NativePdfExporter (Android-native android.graphics.pdf.PdfDocument + Canvas)
+ * was triggering NATIVE crashes (SIGSEGV in Skia) that could NOT be caught by
+ * Java try/catch — killing the app process on every PDF export.
  *
- * The new NativePdfExporter uses Android's built-in android.graphics.pdf.PdfDocument
- * API, which leverages Android's native HarfBuzz engine for proper Arabic
- * letter shaping and Bidi algorithm for RTL reordering.
+ * ComprehensivePdfExporter uses iText 8 (PdfWriter/PdfDocument/Document) — the
+ * same safe path used by FrameAnalysisPdfExporter which never crashes.
  *
- * This produces correctly-rendered Arabic on EVERY Android device, with NO
- * dependency on commercial modules or fragile manual shaping logic.
+ * Arabic shaping is handled by PdfTextSegmenter inside ComprehensivePdfExporter:
+ * Arabic base letters (0600-06FF) are converted to Presentation Forms (FE70-FEFF)
+ * before being passed to iText, producing correctly connected Arabic letters
+ * WITHOUT needing the commercial pdfCalligraph module.
  *
  * ********************************************************************************
  * Thread Safety
  * ********************************************************************************
  * All PDF generation runs on Dispatchers.IO to avoid blocking the UI thread.
- * Use [exportCalculationReportAsync] from coroutines / Composables.
+ * Use [exportCalculationReportAsync] / [exportDesignReportAsync] from coroutines.
  */
 object PdfExportHelper {
 
     private const val TAG = "PdfExportHelper"
 
     /**
-     * Generate a calculation report PDF with mixed Arabic/Latin text.
-     *
-     * Uses NativePdfExporter for proper Arabic shaping via Android's HarfBuzz.
+     * Generate a calculation report PDF (title + details only, no drawings).
      *
      * @return Absolute path to generated PDF, or null on failure
      */
@@ -57,10 +56,17 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val exporter = NativePdfExporter(context)
-            val generated = exporter.generateCalculationReport(
-                title = title,
-                details = details,
+            val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+            val generated = exporter.exportGenericReport(
+                titleAr = title,
+                titleEn = title,
+                subtitle = "",
+                designType = "",
+                inputs = details,
+                results = emptyMap(),
+                safetyChecks = emptyList(),
+                isSafe = true,
+                drawingBitmap = null,
                 outputPath = file.absolutePath
             )
 
@@ -68,7 +74,7 @@ object PdfExportHelper {
                 openPdf(context, generated)
                 generated.absolutePath
             } else {
-                Log.e(TAG, "NativePdfExporter returned null")
+                Log.e(TAG, "ComprehensivePdfExporter returned null")
                 null
             }
         } catch (e: Exception) {
@@ -94,6 +100,9 @@ object PdfExportHelper {
 
     /**
      * Generate a complete structural design report PDF with drawing and safety checks.
+     *
+     * Uses ComprehensivePdfExporter (iText 8) for safe, crash-free PDF generation
+     * with proper Arabic shaping via PdfTextSegmenter.
      */
     fun exportDesignReport(
         context: Context,
@@ -102,7 +111,7 @@ object PdfExportHelper {
         designType: String = "",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
-        safetyChecks: List<NativePdfExporter.SafetyCheck> = emptyList(),
+        safetyChecks: List<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: android.graphics.Bitmap? = null,
         fileName: String
@@ -113,9 +122,10 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val exporter = NativePdfExporter(context)
-            val generated = exporter.generateReport(
-                title = title,
+            val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+            val generated = exporter.exportGenericReport(
+                titleAr = title,
+                titleEn = title,
                 subtitle = subtitle,
                 designType = designType,
                 inputs = inputs,
@@ -146,7 +156,7 @@ object PdfExportHelper {
         designType: String = "",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
-        safetyChecks: List<NativePdfExporter.SafetyCheck> = emptyList(),
+        safetyChecks: List<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: android.graphics.Bitmap? = null,
         fileName: String

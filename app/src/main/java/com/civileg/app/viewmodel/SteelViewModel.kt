@@ -214,9 +214,9 @@ class SteelViewModel @Inject constructor(
                     com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> t("عنصر كمرة", "Truss")
                     com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> t("كمر رئيسي", "Girder")
                 }
-                val safetyChecks = mutableListOf<com.civileg.app.utils.NativePdfExporter.SafetyCheck>()
+                val safetyChecks = mutableListOf<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck>()
                 if (stored.inputs.axialLoad > 0) {
-                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = t("السعة المحورية", "Axial Capacity"),
                         calculated = stored.inputs.axialLoad,
                         limit = res.axialCapacity,
@@ -225,7 +225,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
                 if (stored.inputs.moment > 0) {
-                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = t("سعة العزم", "Flexural Capacity"),
                         calculated = stored.inputs.moment,
                         limit = res.flexuralCapacity,
@@ -234,7 +234,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
                 if (stored.inputs.shear > 0) {
-                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = t("سعة القص", "Shear Capacity"),
                         calculated = stored.inputs.shear,
                         limit = res.shearCapacity,
@@ -243,7 +243,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
                 res.bucklingCheck?.let { buckling ->
-                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = t("الانبعاج", "Buckling Check"),
                         calculated = buckling.slendernessRatio,
                         limit = 200.0,
@@ -252,7 +252,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
                 res.deflectionCheck?.let { defl ->
-                    safetyChecks.add(com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = t("الترخيم", "Deflection Check"),
                         calculated = defl.calculatedDeflection,
                         limit = defl.allowableDeflection,
@@ -261,10 +261,13 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
 
-                val exporter = com.civileg.app.utils.NativePdfExporter(context)
-                val generated = exporter.generateReport(
-                    title = if (isAr) "تقرير تصميم قطاع معدني - ${stored.section.displayName}"
-                            else "Steel Member Design Report — ${stored.section.displayName}",
+                // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
+                // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
+                // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val generated = exporter.exportGenericReport(
+                    titleAr = "تقرير تصميم قطاع معدني - ${stored.section.displayName}",
+                    titleEn = "Steel Member Design Report — ${stored.section.displayName}",
                     subtitle = "${t("الكود", "Code")}: $codeName  •  $memberTypeLabel",
                     designType = "Steel — ${stored.section.displayName}",
                     inputs = inputsMap,

@@ -229,15 +229,19 @@ class ColumnViewModel @Inject constructor(
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
                         limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                     )
                 }
 
-                val exporter = com.civileg.app.utils.NativePdfExporter(context)
-                val generated = exporter.generateReport(
-                    title = "Column Design Report — ${res.columnType}",
+                // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
+                // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
+                // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val generated = exporter.exportGenericReport(
+                    titleAr = "تقرير تصميم أعمدة - ${res.columnType}",
+                    titleEn = "Column Design Report — ${res.columnType}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.depth}mm, H=${h}m",
                     designType = "Column (${res.columnType})",
                     inputs = inputsMap,

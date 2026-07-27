@@ -2,6 +2,7 @@ package com.civileg.app.utils.exporters
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.civileg.app.R
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
@@ -1157,6 +1158,156 @@ class ComprehensivePdfExporter(private val context: Context) {
             e.printStackTrace()
             null
         }
+    }
+
+    // ==================== Generic Report (Map-based) ====================
+    //
+    // ********************************************************************************
+    // CRITICAL FIX (2026-07-27 v4): Migration away from NativePdfExporter
+    // ********************************************************************************
+    // ROOT CAUSE of "ALL pages crash on PDF export except Frame Analysis":
+    // NativePdfExporter uses Android's native android.graphics.pdf.PdfDocument +
+    // Canvas API. Despite extensive defensive code (try/catch Throwable, dimension
+    // validation, NaN guards), it still triggers NATIVE crashes (SIGSEGV in Skia)
+    // on certain devices/Android versions when:
+    //   - Drawing bitmap via Canvas.drawBitmap with scaled RectF
+    //   - StaticLayout.draw() on a PdfDocument canvas
+    //   - Typeface creation from assets on a background thread
+    //
+    // Native crashes CANNOT be caught by Java try/catch — they kill the process.
+    //
+    // FrameAnalysisPdfExporter uses iText 8 (PdfWriter/PdfDocument/Document) and
+    // does NOT crash. ComprehensivePdfExporter also uses iText 8 — same safe path.
+    //
+    // SOLUTION: Add this generic Map-based export method that all 8 ViewModels
+    // (Beam/Column/Slab/Footing/Tank/RetainingWall/Stair/Steel) can call instead
+    // of NativePdfExporter. This method uses iText 8 exclusively — no native
+    // Canvas/PdfDocument API — so it cannot trigger native crashes.
+    //
+    // The method accepts the SAME parameter shape as NativePdfExporter.generateReport
+    // so ViewModels need minimal changes (just swap the exporter class).
+    // ********************************************************************************
+
+    data class GenericSafetyCheck(
+        val name: String,
+        val calculated: Double,
+        val limit: Double,
+        val unit: String,
+        val passed: Boolean
+    )
+
+    /**
+     * Generic PDF report generator that accepts Map-based inputs (instead of
+     * domain-specific types). This is the SAFE replacement for NativePdfExporter.
+     *
+     * Uses iText 8 exclusively — no Android-native PdfDocument/Canvas — so it
+     * cannot trigger native Skia crashes.
+     *
+     * Arabic text is properly shaped via PdfTextSegmenter.buildMixedParagraph()
+     * which converts Arabic base letters to Presentation Forms (FE70-FEFF) before
+     * passing to iText. This produces correctly connected Arabic letters without
+     * needing the commercial pdfCalligraph module.
+     *
+     * @param titleAr Arabic title (shown when locale=ar)
+     * @param titleEn English title (shown when locale=en, also used as fallback)
+     * @param subtitle Subtitle line under the title
+     * @param designType Design type chip text (e.g., "Beam (Simply Supported)")
+     * @param inputs Map of parameter name → value (design inputs)
+     * @param results Map of parameter name → value (design results)
+     * @param safetyChecks List of safety verification rows
+     * @param isSafe Overall safety status (drives the status banner color)
+     * @param drawingBitmap Optional drawing bitmap to embed
+     * @param outputPath Absolute path where the PDF should be written
+     * @return The generated File, or null on failure
+     */
+    fun exportGenericReport(
+        titleAr: String,
+        titleEn: String,
+        subtitle: String,
+        designType: String,
+        inputs: Map<String, String>,
+        results: Map<String, String>,
+        safetyChecks: List<GenericSafetyCheck>,
+        isSafe: Boolean,
+        drawingBitmap: Bitmap?,
+        outputPath: String
+    ): File? {
+        return try {
+            // Ensure parent directory exists
+            val outputFile = File(outputPath)
+            outputFile.parentFile?.mkdirs()
+
+            val (_, document, font) = createDocument(outputPath)
+
+            addReportHeader(document, titleAr, titleEn, subtitle, font)
+
+            // Design type chip
+            if (designType.isNotEmpty()) {
+                val chipPara = styledParagraph(designType, 10f, true, PRIMARY, TextAlignment.CENTER)
+                chipPara.setBackgroundColor(LIGHT_BG)
+                chipPara.setBorder(com.itextpdf.layout.borders.SolidBorder(PRIMARY, 0.5f))
+                chipPara.setPadding(4f)
+                document.add(chipPara)
+                document.add(Paragraph(" "))
+            }
+
+            addStatusBanner(document, isSafe)
+
+            // Design Data section (inputs)
+            if (inputs.isNotEmpty()) {
+                addSectionTitle(document, t("بيانات التصميم", "Design Data"), "Design Data")
+                addInfoTable(document, inputs.entries.map { it.key to it.value }, font)
+            }
+
+            // Results section
+            if (results.isNotEmpty()) {
+                addSectionTitle(document, t("النتائج", "Results"), "Results")
+                addInfoTable(document, results.entries.map { it.key to it.value }, font)
+            }
+
+            // Safety Checks section
+            if (safetyChecks.isNotEmpty()) {
+                addSectionTitle(document, t("تحققات الأمان", "Safety Checks"), "Safety Checks")
+                val table = Table(UnitValue.createPercentArray(floatArrayOf(35f, 20f, 20f, 10f, 15f))).useAllAvailableWidth()
+                table.addHeaderCell(headerCell(t("التحقق", "Check")))
+                table.addHeaderCell(headerCell(t("المحسوب", "Calculated")))
+                table.addHeaderCell(headerCell(t("الحد", "Limit")))
+                table.addHeaderCell(headerCell(t("الوحدة", "Unit")))
+                table.addHeaderCell(headerCell(t("النتيجة", "Result")))
+                safetyChecks.forEachIndexed { i, check ->
+                    val bg = if (i % 2 == 0) null else ROW_ALT
+                    table.addCell(tableCell(check.name, bg = bg, align = TextAlignment.LEFT))
+                    table.addCell(tableCell(formatDouble(check.calculated), bg = bg))
+                    table.addCell(tableCell(formatDouble(check.limit), bg = bg))
+                    table.addCell(tableCell(check.unit, bg = bg))
+                    table.addCell(tableCell(
+                        if (check.passed) t("آمن", "SAFE") else t("غير آمن", "FAIL"),
+                        color = if (check.passed) SUCCESS else ERROR, bg = bg, bold = true
+                    ))
+                }
+                document.add(table)
+            }
+
+            // Drawing section
+            addDrawingSection(document, drawingBitmap, designType)
+
+            addFooter(document)
+            document.close()
+            outputFile
+        } catch (e: Exception) {
+            Log.e("ComprehensivePdfExporter", "exportGenericReport failed: ${e.message}", e)
+            null
+        } catch (t: Throwable) {
+            Log.e("ComprehensivePdfExporter", "exportGenericReport crashed: ${t.message}", t)
+            null
+        }
+    }
+
+    /** Format a Double for display: NaN/Infinity → "—", integers without decimals, else 2 decimals. */
+    private fun formatDouble(v: Double): String {
+        return if (v.isNaN() || v.isInfinite()) "—"
+        else if (v == v.toLong().toDouble()) v.toLong().toString()
+        else String.format(Locale.US, "%.2f", v)
     }
 
     // ==================== Helpers ====================

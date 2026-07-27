@@ -116,15 +116,19 @@ class TankViewModel @Inject constructor(
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
                         limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                     )
                 }
 
-                val exporter = com.civileg.app.utils.NativePdfExporter(context)
-                val generated = exporter.generateReport(
-                    title = "Tank Design Report — ${res.type.displayName}",
+                // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
+                // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
+                // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val generated = exporter.exportGenericReport(
+                    titleAr = "تقرير تصميم خزان - ${res.type.displayName}",
+                    titleEn = "Tank Design Report — ${res.type.displayName}",
                     subtitle = "Code: $codeName  •  ${res.length}×${res.width}×${res.height}m",
                     designType = "Tank (${res.type.displayName})",
                     inputs = inputsMap,

@@ -138,9 +138,13 @@ class FootingViewModel @Inject constructor(
                     "Efficiency" to "${String.format("%.0f", res.efficiencyScore)}%",
                     "Optimal" to if (res.isOptimal) "Yes" else "No"
                 )
-                val exporter = com.civileg.app.utils.NativePdfExporter(context)
-                val generated = exporter.generateReport(
-                    title = "Footing Design Report — ${res.type.displayName}",
+                // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
+                // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
+                // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val generated = exporter.exportGenericReport(
+                    titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
+                    titleEn = "Footing Design Report — ${res.type.displayName}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
                     designType = "Footing (${res.type.displayName})",
                     inputs = inputsMap,

@@ -157,15 +157,20 @@ class BeamViewModel @Inject constructor(
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.NativePdfExporter.SafetyCheck(
+                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
                         limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                     )
                 }
 
-                val exporter = com.civileg.app.utils.NativePdfExporter(context)
-                val generated = exporter.generateReport(
-                    title = "Beam Design Report — ${lastSupportType.displayName}",
+                // CRITICAL FIX (2026-07-27 v4): Switched from NativePdfExporter (Android-native
+                // PdfDocument + Canvas — caused native Skia crashes) to ComprehensivePdfExporter
+                // (iText 8 — same safe path as FrameAnalysisPdfExporter which never crashes).
+                // Arabic shaping handled by PdfTextSegmenter inside ComprehensivePdfExporter.
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context)
+                val generated = exporter.exportGenericReport(
+                    titleAr = "تقرير تصميم كمرات - ${lastSupportType.displayName}",
+                    titleEn = "Beam Design Report — ${lastSupportType.displayName}",
                     subtitle = "Code: $codeName  •  Span=${lastSpan}m, ${res.width}×${res.depth}mm",
                     designType = "Beam (${lastSupportType.displayName})",
                     inputs = inputsMap,
