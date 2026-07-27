@@ -249,19 +249,19 @@ object ProfessionalEnglishPdfReporter {
         if (steps.isNotEmpty()) {
             // Use provided custom steps
             for (step in steps) {
-                document.add(addCalculationStep(step))
+                addCalculationStep(document, step)
             }
         } else {
             // Generate default calculation steps based on report type
             val defaultSteps = getDefaultCalculationSteps(reportType, designCode)
             for (step in defaultSteps) {
-                document.add(addCalculationStep(step))
+                addCalculationStep(document, step)
             }
         }
         document.add(emptyLine())
     }
 
-    private fun addCalculationStep(step: CalculationStep): Paragraph {
+    private fun addCalculationStep(document: Document, step: CalculationStep) {
         val font = createPdfFont()
         val boldFont = createBoldFont()
         val stepTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
@@ -300,7 +300,6 @@ object ProfessionalEnglishPdfReporter {
 
         document.add(stepTable)
         document.add(Paragraph(" "))  // spacing
-        return Paragraph()
     }
 
     private fun getDefaultCalculationSteps(reportType: ReportType, designCode: String): List<CalculationStep> {
