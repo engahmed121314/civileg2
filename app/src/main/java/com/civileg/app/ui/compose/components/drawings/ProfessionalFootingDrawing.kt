@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import kotlin.math.*
 
@@ -74,7 +75,7 @@ fun ProfessionalFootingDrawing(
         ) {
             nc.apply {
                 val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    this.color = color.hashCode()
+                    this.color = color.toArgb()
                     this.textSize = size * drawDensity
                     this.isFakeBoldText = bold
                     this.textAlign = align
@@ -138,7 +139,7 @@ fun ProfessionalFootingDrawing(
             nc.drawLine(
                 hx, fTop, hx + drawLY, fBottom,
                 android.graphics.Paint().apply {
-                    color = Color(0xFFBBBBBB).hashCode()
+                    color = Color(0xFFBBBBBB).toArgb()
                     strokeWidth = 0.8f * density
                 }
             )
@@ -204,7 +205,7 @@ fun ProfessionalFootingDrawing(
                     nc.drawLine(
                         chx, cT, chx - colDrawD, cT + colDrawD,
                         android.graphics.Paint().apply {
-                            color = Color(0xFF444444).hashCode()
+                            color = Color(0xFF444444).toArgb()
                             strokeWidth = 0.6f * density
                         }
                     )
@@ -371,7 +372,7 @@ fun ProfessionalFootingDrawing(
             nc.drawLine(
                 shx, sBottom, shx - soilDepth, sBottom + soilDepth,
                 android.graphics.Paint().apply {
-                    color = soilHatchColor.hashCode()
+                    color = soilHatchColor.toArgb()
                     strokeWidth = 1f * density
                 }
             )
@@ -619,7 +620,7 @@ private fun DrawScope.drawDimensionLineH(
     drawLine(color, Offset(x2, y2 - tick), Offset(x2, y2 + tick), strokeWidth = 1f)
     drawContext.canvas.nativeCanvas.apply {
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color.hashCode()
+            this.color = color.toArgb()
             textSize = 9f * density
             textAlign = android.graphics.Paint.Align.CENTER
         }

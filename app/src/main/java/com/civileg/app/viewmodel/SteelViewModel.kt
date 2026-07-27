@@ -306,4 +306,32 @@ class SteelViewModel @Inject constructor(
     fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode): Double {
         return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
+
+    fun exportWeldToPdf(context: android.content.Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode, capacity: Double) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context).setLanguage(settingsManager.language)
+                val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
+                val file = java.io.File(context.cacheDir, fileName)
+                val exportedFile = exporter.exportWeldReport("Weld Design", code, size, length, electrode, capacity, file.absolutePath)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    fun exportBoltToPdf(context: android.content.Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context).setLanguage(settingsManager.language)
+                val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
+                val file = java.io.File(context.cacheDir, fileName)
+                val exportedFile = exporter.exportBoltReport("Bolt Design", code, dia, grade, count, capacity, file.absolutePath)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
 }

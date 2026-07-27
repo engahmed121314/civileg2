@@ -322,7 +322,7 @@ private fun DrawScope.drawSoilBelowBase(
         nc.drawLine(
             hx, baseBottom, hx - 30f, soilBottom,
             android.graphics.Paint().apply {
-                color = SoilBrown.hashCode()
+                color = SoilBrown.toArgb()
                 strokeWidth = 1.2f
             }
         )
@@ -734,7 +734,7 @@ private fun DrawScope.drawConcreteHatchingOnRect(
         nc.drawLine(
             i, top, i + h, top + h,
             android.graphics.Paint().apply {
-                color = Color(0x55AAAAAA).hashCode()
+                color = Color(0x55AAAAAA).toArgb()
                 strokeWidth = 0.6f
             }
         )
@@ -783,18 +783,3 @@ private fun DrawScope.drawArrowHead(
     drawPath(path = path, color = color)
 }
 
-private fun DrawScope.drawTextAnnotated(
-    text: String, x: Float, y: Float, color: Color, size: Float
-) {
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint().apply {
-            textSize = size
-            this.color = color.toArgb()
-            isFakeBoldText = true
-            typeface = android.graphics.Typeface.MONOSPACE
-            textAlign = android.graphics.Paint.Align.LEFT
-            setShadowLayer(2f, 1f, 1f, 0x44000000)
-        }
-        drawText(text, x, y, paint)
-    }
-}

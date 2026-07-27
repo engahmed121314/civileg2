@@ -1898,6 +1898,7 @@ fun RecommendationsCard(recs: List<String>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoading: Boolean) {
+    val context = LocalContext.current
     var selectedCategory by remember { mutableStateOf("IPE (European I-Beams)") }
     var selectedSection by remember { mutableStateOf<SteelSectionType?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -2168,28 +2169,45 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         }
 
         item {
-            Button(
-                onClick = { 
-                    selectedSection?.let { sec ->
-                        viewModel.calculateSteelMember(
-                            section = sec,
-                            memberType = selectedMemberType,
-                            inputs = SteelInputs(
-                                axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
-                                moment = moment.toDoubleOrNull() ?: 0.0,
-                                shear = shear.toDoubleOrNull() ?: 0.0,
-                                unbracedLength = length.toDoubleOrNull() ?: 1.0,
-                                length = length.toDoubleOrNull() ?: 1.0
-                            ),
-                            code = selectedCode
-                        )
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { 
+                        selectedSection?.let { sec ->
+                            viewModel.calculateSteelMember(
+                                section = sec,
+                                memberType = selectedMemberType,
+                                inputs = SteelInputs(
+                                    axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
+                                    moment = moment.toDoubleOrNull() ?: 0.0,
+                                    shear = shear.toDoubleOrNull() ?: 0.0,
+                                    unbracedLength = length.toDoubleOrNull() ?: 1.0,
+                                    length = length.toDoubleOrNull() ?: 1.0
+                                ),
+                                code = selectedCode
+                            )
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isLoading && selectedSection != null
+                ) {
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Text(stringResource(R.string.steel_analyze_section))
+                }
+
+                if (result != null) {
+                    Button(
+                        onClick = { 
+                            viewModel.exportToPdf(context) { /* Handle completion */ }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.pdf_report))
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading && selectedSection != null
-            ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text(stringResource(R.string.steel_analyze_section))
+                }
             }
         }
 
@@ -2401,12 +2419,27 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
         }
 
         item {
-            Button(onClick = {
-                val s = size.toDoubleOrNull() ?: 6.0
-                val l = length.toDoubleOrNull() ?: 200.0
-                capacity = viewModel.calculateWeldCapacity(s, l, selectedElectrode, selectedCode)
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.steel_calc_shear_rn))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    val s = size.toDoubleOrNull() ?: 6.0
+                    val l = length.toDoubleOrNull() ?: 200.0
+                    capacity = viewModel.calculateWeldCapacity(s, l, selectedElectrode, selectedCode)
+                }, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.steel_calc_shear_rn))
+                }
+                
+                if (capacity > 0) {
+                    val ctx = LocalContext.current
+                    Button(onClick = {
+                        val s = size.toDoubleOrNull() ?: 6.0
+                        val l = length.toDoubleOrNull() ?: 200.0
+                        viewModel.exportWeldToPdf(ctx, s, l, selectedElectrode, selectedCode, capacity)
+                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)) {
+                        Icon(Icons.Default.PictureAsPdf, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.pdf_report))
+                    }
+                }
             }
         }
 
@@ -2472,12 +2505,27 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
         }
 
         item {
-            Button(onClick = {
-                val d = diameter.toDoubleOrNull() ?: 16.0
-                val n = numBolts.toIntOrNull() ?: 1
-                capacity = viewModel.calculateBoltCapacity(d, selectedGrade, n, selectedCode)
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.steel_calc_bolt_shear))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    val d = diameter.toDoubleOrNull() ?: 16.0
+                    val n = numBolts.toIntOrNull() ?: 1
+                    capacity = viewModel.calculateBoltCapacity(d, selectedGrade, n, selectedCode)
+                }, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.steel_calc_bolt_shear))
+                }
+                
+                if (capacity > 0) {
+                    val ctx = LocalContext.current
+                    Button(onClick = {
+                        val d = diameter.toDoubleOrNull() ?: 16.0
+                        val n = numBolts.toIntOrNull() ?: 1
+                        viewModel.exportBoltToPdf(ctx, d, selectedGrade, n, selectedCode, capacity)
+                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)) {
+                        Icon(Icons.Default.PictureAsPdf, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.pdf_report))
+                    }
+                }
             }
         }
 

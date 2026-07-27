@@ -1,6 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -82,7 +83,7 @@ fun ProfessionalRetainingWallDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(720.dp)
+            .fillMaxHeight()
     ) {
         val cw = size.width
         val ch = size.height
@@ -211,7 +212,7 @@ private fun DrawScope.drawBackfillSoil(
         nc.drawLine(
             hx, soilTop - 50f, hx + 50f, soilBottom + 50f,
             android.graphics.Paint().apply {
-                color = SoilBrown.hashCode()
+                color = SoilBrown.toArgb()
                 strokeWidth = 1.2f
             }
         )
@@ -668,7 +669,7 @@ private fun DrawScope.drawConcreteHatch(
         nc.drawLine(
             i, top, i + h, top + h,
             android.graphics.Paint().apply {
-                color = Color(0x55AAAAAA).hashCode()
+                color = Color(0x55AAAAAA).toArgb()
                 strokeWidth = 0.6f
             }
         )
@@ -689,7 +690,7 @@ private fun DrawScope.drawConcreteHatchPath(path: Path) {
         nc.drawLine(
             i, bounds.top, i + bounds.height, bounds.bottom,
             android.graphics.Paint().apply {
-                color = Color(0x55AAAAAA).hashCode()
+                color = Color(0x55AAAAAA).toArgb()
                 strokeWidth = 0.6f
             }
         )
@@ -736,18 +737,3 @@ private fun DrawScope.drawArrowHead(
     drawPath(path = path, color = color)
 }
 
-private fun DrawScope.drawTextAnnotated(
-    text: String, x: Float, y: Float, color: Color, size: Float
-) {
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint().apply {
-            textSize = size
-            this.color = color.toArgb()
-            isFakeBoldText = true
-            typeface = android.graphics.Typeface.MONOSPACE
-            textAlign = android.graphics.Paint.Align.LEFT
-            setShadowLayer(2f, 1f, 1f, 0x44000000)
-        }
-        drawText(text, x, y, paint)
-    }
-}

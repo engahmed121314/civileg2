@@ -277,5 +277,18 @@ object ResponsiveDesignManager {
             DeviceType.TABLET_10, DeviceType.TABLET_XLARGE -> 8f
         }
     }
+
+    /**
+     * Get responsive drawing height based on device type.
+     */
+    fun getDrawingHeight(context: Context): Int {
+        return when (getDeviceType(context)) {
+            DeviceType.PHONE_SMALL -> 400
+            DeviceType.PHONE_MEDIUM -> 500
+            DeviceType.PHONE_LARGE, DeviceType.PHONE_XLARGE -> 600
+            DeviceType.TABLET_7 -> 700
+            DeviceType.TABLET_10, DeviceType.TABLET_XLARGE -> 800
+        }
+    }
 }
 

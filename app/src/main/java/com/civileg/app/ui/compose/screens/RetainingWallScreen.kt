@@ -222,6 +222,48 @@ fun RetainingWallScreen(
                     }
                 }
 
+                if (res.safetyChecks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                stringResource(R.string.safety_checks),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            res.safetyChecks.forEach { check ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        if (check.isSafe) Icons.Default.Verified else Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = if (check.isSafe) Color(0xFF2E7D32) else Color.Red,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                    Text(
+                                        "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
                 InteractiveDrawingScreen(
                     title = stringResource(R.string.rw_drawing_title),

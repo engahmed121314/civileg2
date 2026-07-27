@@ -187,7 +187,9 @@
     <string name="home_boq">كميات الأعمال</string>
     <string name="home_boq_sub">Quantity Surveying</string>
     <string name="home_inventory">مخزن الموقع</string>
-    <string name="home_inventory_sub">Site Inventory</string>
+    <string name="home_inventory_sub">تقارير PDF وملخصات</string>
+    <string name="home_water_level">ميزان القامة</string>
+    <string name="home_water_level_sub">حسابات المناسيب RL &amp; HI</string>
 
     <!-- Home Screen – Header & Sections -->
     <string name="home_welcome">مهندس المدني</string>

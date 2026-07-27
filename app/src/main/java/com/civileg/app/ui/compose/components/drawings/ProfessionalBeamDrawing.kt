@@ -1329,29 +1329,7 @@ private fun DrawScope.drawArrowHead(
     drawPath(path = path, color = color)
 }
 
-/**
- * Draws text using nativeCanvas for full control over alignment and typeface.
- */
-private fun DrawScope.drawTextAnnotated(
-    text: String,
-    x: Float,
-    y: Float,
-    color: Color,
-    size: Float
-) {
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint().apply {
-            textSize = size
-            this.color = color.toArgb()
-            isFakeBoldText = true
-            typeface = android.graphics.Typeface.MONOSPACE
-            textAlign = android.graphics.Paint.Align.LEFT
-            // Add subtle shadow for readability
-            setShadowLayer(2f, 1f, 1f, 0x44000000)
-        }
-        drawText(text, x, y, paint)
-    }
-}
+
 
 /**
  * Draws text with a semi-transparent background pill for labels.

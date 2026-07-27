@@ -525,9 +525,10 @@ fun DrawScope.drawTextAnnotated(
             // Try to use Arabic-supporting font for Arabic text
             if (text.any { it.code in 0x0600..0x06FF || it.code in 0xFB50..0xFEFF }) {
                 this.typeface = try {
-                    android.graphics.Typeface.create(
-                        "Noto Sans Arabic",
-                        android.graphics.Typeface.NORMAL
+                    // Try to get from project's own Arabic font provider
+                    com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(
+                        com.civileg.app.CivilEGApplication.instance.applicationContext,
+                        bold = bold
                     )
                 } catch (e: Exception) {
                     android.graphics.Typeface.SANS_SERIF

@@ -193,12 +193,12 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     // Play Integrity API
-    implementation("com.google.android.play:integrity:1.4.0")
+    implementation(libs.play.integrity)
 
     // Google AdMob — Non-intrusive ads (banner + interstitial + native)
-    implementation("com.google.android.gms:play-services-ads:23.4.0")
+    implementation(libs.play.services.ads)
     // User Messaging Platform (consent for EU/EEA users — required by Google Play)
-    implementation("com.google.android.ump:user-messaging-platform:3.1.0")
+    implementation(libs.user.messaging.platform)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
