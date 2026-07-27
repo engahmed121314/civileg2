@@ -33,6 +33,9 @@ import com.civileg.app.viewmodel.FrameAnalysisViewModel
 import com.civileg.app.utils.FrameAnalysisPdfExporter
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,13 +106,13 @@ fun FrameAnalysisScreen(
                         IconButton(enabled = !isFrameExporting, onClick = {
                             val inputs = viewModel.getStoredInputs()
                             isFrameExporting = true
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            scope.launch(Dispatchers.IO) {
                                 try {
                                     val file = FrameAnalysisPdfExporter.generateFrameAnalysisPdf(
                                         context, inputs.nodes, inputs.members, inputs.nodalLoads,
                                         inputs.memberLoads, inputs.settings, inputs.result
                                     )
-                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    withContext(Dispatchers.Main) {
                                         try {
                                             val uri = androidx.core.content.FileProvider.getUriForFile(
                                                 context, "${context.packageName}.provider", file
@@ -127,7 +130,7 @@ fun FrameAnalysisScreen(
                                         isFrameExporting = false
                                     }
                                 } catch (e: Throwable) {
-                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    withContext(Dispatchers.Main) {
                                         Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
                                         isFrameExporting = false
                                     }
