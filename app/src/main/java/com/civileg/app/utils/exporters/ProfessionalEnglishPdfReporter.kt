@@ -279,7 +279,7 @@ object ProfessionalEnglishPdfReporter {
                 .add(text("  ", font, 9f))
                 .add(text(step.equation, font, 10f, EQUATION_COLOR))
                 .add(text("  ", font, 9f))
-            stepTable.addCell(Cell().setPadding(4f, 2f, 6f, 6f).add(eqPara))
+            stepTable.addCell(Cell().setPadding(4f).add(eqPara))
         }
 
         // Reference
@@ -287,7 +287,7 @@ object ProfessionalEnglishPdfReporter {
             val refPara = Paragraph()
                 .add(text("  Ref: ", boldFont, 8f, DeviceRgb(150, 150, 150)))
                 .add(text(step.reference, font, 8f, DeviceRgb(150, 150, 150)))
-            stepTable.addCell(Cell().setPadding(2f, 2f, 6f, 6f).add(refPara))
+            stepTable.addCell(Cell().setPadding(4f).add(refPara))
         }
 
         // Result
@@ -295,7 +295,7 @@ object ProfessionalEnglishPdfReporter {
             val resPara = Paragraph()
                 .add(text("  Result: ", boldFont, 9f, SUCCESS))
                 .add(text(step.result, font, 9f, SUCCESS))
-            stepTable.addCell(Cell().setPadding(2f, 2f, 6f, 6f).add(resPara))
+            stepTable.addCell(Cell().setPadding(4f).add(resPara))
         }
 
         document.add(stepTable)
