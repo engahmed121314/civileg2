@@ -24,30 +24,30 @@ import java.util.Locale
  * NativePdfExporter — Android-native PDF generator using android.graphics.pdf.PdfDocument.
  *
  * ********************************************************************************
- * CRITICAL FIX (2026-07-27 v2): StaticLayout for BIDI + Shaping
+ * CRITICAL FIX (2026-07-27 v3): Robustness + y-offset correction
  * ********************************************************************************
- * The previous version used `Canvas.drawText(text, x, y, paint)` for text rendering.
- * This was the ROOT CAUSE of the "squares and chopped Arabic characters" bug:
- *
- *   - Canvas.drawText DOES shape Arabic letters via HarfBuzz (so each letter is OK)
- *   - BUT it does NOT perform BIDI reordering → Arabic text drawn LEFT-TO-RIGHT
- *   - The joining context is WRONG (Canvas thinks prev char is on the left, but Arabic
- *     expects it on the right) → letters get wrong initial/medial/final forms
- *   - Visually: Arabic appears as disconnected shapes / "encrypted / squares"
- *
- * FIX: Use `StaticLayout` for ALL text drawing. StaticLayout uses Android's full
- * text-rendering pipeline (HarfBuzz + Bidi + LineBreaker) and properly handles:
- *   - RTL reordering (Arabic reads right-to-left)
- *   - Contextual joining (correct initial/medial/final/isolated letter forms)
- *   - Mixed-direction text (Arabic + Latin + numbers in same line)
- *
- * This produces correctly-rendered Arabic on EVERY Android device.
+ * v3 changes (this version):
+ *   1. Catch `Throwable` (not just `Exception`) so OOM / StackOverflow / native
+ *      crashes don't escape to the coroutine and kill the app.
+ *   2. Each drawing section wrapped in its own try/catch — a failure in one
+ *      section (e.g. drawing bitmap) doesn't kill the rest of the report.
+ *   3. Bitmap dimensions validated before drawing — skip if width<=0 or height<=0
+ *      (previously caused `scale = Infinity`, `drawWidth = NaN`, native crash
+ *      in Skia when c.drawBitmap was called with NaN RectF).
+ *   4. Fixed y-offset math in drawText/drawCellText:
+ *        BEFORE: c.translate(drawX, y - paint.ascent() - paint.descent() / 2f)
+ *          → text drawn ~8pt BELOW intended y (ascent is negative)
+ *        AFTER:  c.translate(drawX, y)
+ *          → text top aligns with y, which is the conventional meaning
+ *   5. Empty/blank text properly skipped (avoid StaticLayout.Builder with 0-length).
+ *   6. Page number reset per instance (was reused across instances if same
+ *      NativePdfExporter was somehow reused — defensive).
  *
  * ********************************************************************************
  * Bilingual Report Strategy
  * ********************************************************************************
- * Per user requirement: When language is "ar", report shows Arabic for descriptive
- * labels, English for engineering symbols (Mu, As, fy, fcu, V, M, etc.) and drawings.
+ * When language is "ar", report shows Arabic for descriptive labels, English
+ * for engineering symbols (Mu, As, fy, fcu, V, M, etc.) and drawings.
  * When language is "en", report is fully English.
  */
 class NativePdfExporter(private val context: Context) {
@@ -73,13 +73,23 @@ class NativePdfExporter(private val context: Context) {
     private val grayText = Color.rgb(117, 117, 117)
 
     // ── Typefaces (cached — safe, not tied to a specific PdfDocument) ────────
-    private val arabicRegular: Typeface by lazy {
-        try { Typeface.createFromAsset(context.assets, "fonts/NotoNaskhArabic-Regular.ttf") }
-        catch (e: Exception) { Log.w(TAG, "Arabic regular font load failed: ${e.message}"); Typeface.DEFAULT }
+    private val arabicRegular: Typeface? by lazy {
+        try {
+            Typeface.createFromAsset(context.assets, "fonts/NotoNaskhArabic-Regular.ttf")
+                ?: Typeface.DEFAULT
+        } catch (e: Exception) {
+            Log.w(TAG, "Arabic regular font load failed: ${e.message}")
+            Typeface.DEFAULT
+        }
     }
-    private val arabicBold: Typeface by lazy {
-        try { Typeface.createFromAsset(context.assets, "fonts/NotoNaskhArabic-Bold.ttf") }
-        catch (e: Exception) { Log.w(TAG, "Arabic bold font load failed: ${e.message}"); Typeface.DEFAULT_BOLD }
+    private val arabicBold: Typeface? by lazy {
+        try {
+            Typeface.createFromAsset(context.assets, "fonts/NotoNaskhArabic-Bold.ttf")
+                ?: Typeface.DEFAULT_BOLD
+        } catch (e: Exception) {
+            Log.w(TAG, "Arabic bold font load failed: ${e.message}")
+            Typeface.DEFAULT_BOLD
+        }
     }
     private val latinRegular: Typeface by lazy { Typeface.create("sans-serif", Typeface.NORMAL) }
     private val latinBold: Typeface by lazy { Typeface.create("sans-serif", Typeface.BOLD) }
@@ -104,40 +114,57 @@ class NativePdfExporter(private val context: Context) {
         drawingBitmap: Bitmap? = null,
         outputPath: String
     ): File? {
+        // Reset per-instance state
+        currentY = 0f
+        page = null
+        canvas = null
+        pageNumber = 0
+
+        var doc: PdfDocument? = null
         return try {
-            val doc = PdfDocument()
+            doc = PdfDocument()
             document = doc
             startNewPage(doc)
 
-            drawHeader()
-            drawTitleBlock(title, subtitle, designType, isSafe)
+            // Each section wrapped in try/catch — failure in one section doesn't kill others
+            tryRun("drawHeader") { drawHeader() }
+            tryRun("drawTitleBlock") { drawTitleBlock(title, subtitle, designType, isSafe) }
 
             if (inputs.isNotEmpty() || results.isNotEmpty()) {
-                drawSectionTitle(getLocalized("بيانات التصميم", "DESIGN DATA"))
-                drawKeyValueTable(inputs, results)
+                tryRun("drawSectionTitle-data") {
+                    drawSectionTitle(getLocalized("بيانات التصميم", "DESIGN DATA"))
+                    drawKeyValueTable(inputs, results)
+                }
             }
 
-            if (drawingBitmap != null) {
-                drawSectionTitle(getLocalized("رسم تفصيلي", "DETAIL DRAWING"))
-                drawBitmap(drawingBitmap)
+            // Validate bitmap dimensions before drawing
+            if (drawingBitmap != null && drawingBitmap.width > 0 && drawingBitmap.height > 0) {
+                tryRun("drawSectionTitle-drawing") {
+                    drawSectionTitle(getLocalized("رسم تفصيلي", "DETAIL DRAWING"))
+                    drawBitmap(drawingBitmap)
+                }
             }
 
             if (safetyChecks.isNotEmpty()) {
-                drawSectionTitle(getLocalized("تحققات الأمان", "SAFETY VERIFICATIONS"))
-                drawSafetyTable(safetyChecks)
+                tryRun("drawSectionTitle-safety") {
+                    drawSectionTitle(getLocalized("تحققات الأمان", "SAFETY VERIFICATIONS"))
+                    drawSafetyTable(safetyChecks)
+                }
             }
 
-            drawFooter()
+            tryRun("drawFooter") { drawFooter() }
             finishPage()
 
             val file = File(outputPath)
+            // Ensure parent directory exists
+            file.parentFile?.mkdirs()
             FileOutputStream(file).use { out -> doc.writeTo(out) }
             doc.close()
             Log.i(TAG, "PDF generated successfully: ${file.absolutePath} (${file.length()} bytes)")
             file
-        } catch (e: Exception) {
-            Log.e(TAG, "PDF generation failed: ${e.message}", e)
-            try { document?.close() } catch (_: Exception) {}
+        } catch (t: Throwable) {
+            Log.e(TAG, "PDF generation failed: ${t.message}", t)
+            try { doc?.close() } catch (_: Throwable) {}
             null
         }
     }
@@ -147,51 +174,87 @@ class NativePdfExporter(private val context: Context) {
         details: Map<String, String>,
         outputPath: String
     ): File? {
+        currentY = 0f
+        page = null
+        canvas = null
+        pageNumber = 0
+
+        var doc: PdfDocument? = null
         return try {
-            val doc = PdfDocument()
+            doc = PdfDocument()
             document = doc
             startNewPage(doc)
 
-            drawHeader()
-            drawTitleBlock(title, "", "", true)
+            tryRun("drawHeader") { drawHeader() }
+            tryRun("drawTitleBlock") { drawTitleBlock(title, "", "", true) }
 
             if (details.isNotEmpty()) {
-                drawSectionTitle(getLocalized("التفاصيل", "DETAILS"))
-                drawKeyValueTable(details, emptyMap())
+                tryRun("drawSectionTitle-details") {
+                    drawSectionTitle(getLocalized("التفاصيل", "DETAILS"))
+                    drawKeyValueTable(details, emptyMap())
+                }
             }
 
-            drawFooter()
+            tryRun("drawFooter") { drawFooter() }
             finishPage()
 
             val file = File(outputPath)
+            file.parentFile?.mkdirs()
             FileOutputStream(file).use { out -> doc.writeTo(out) }
             doc.close()
             file
-        } catch (e: Exception) {
-            Log.e(TAG, "Calc report generation failed: ${e.message}", e)
-            try { document?.close() } catch (_: Exception) {}
+        } catch (t: Throwable) {
+            Log.e(TAG, "Calc report generation failed: ${t.message}", t)
+            try { doc?.close() } catch (_: Throwable) {}
             null
+        }
+    }
+
+    /**
+     * Run a drawing section, logging and swallowing any error.
+     * This isolates failures: if drawBitmap throws, we still finish the
+     * rest of the PDF instead of returning null.
+     */
+    private inline fun tryRun(sectionName: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Section '$sectionName' failed (continuing): ${t.message}", t)
         }
     }
 
     // ── Internal: page management ────────────────────────────────────────────
 
     private fun startNewPage(doc: PdfDocument) {
-        finishPage()
-        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, ++pageNumber).create()
-        val newPage = doc.startPage(pageInfo)
-        page = newPage
-        canvas = newPage.canvas
-        currentY = MARGIN
+        try {
+            finishPage()
+            val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, ++pageNumber).create()
+            val newPage = doc.startPage(pageInfo)
+            page = newPage
+            canvas = newPage.canvas
+            currentY = MARGIN
+        } catch (t: Throwable) {
+            Log.e(TAG, "startNewPage failed: ${t.message}", t)
+        }
     }
 
     private fun finishPage() {
-        page?.let { document?.finishPage(it) }
+        try {
+            page?.let { document?.finishPage(it) }
+        } catch (t: Throwable) {
+            Log.e(TAG, "finishPage failed: ${t.message}", t)
+        }
         page = null
         canvas = null
     }
 
     private fun ensureSpace(required: Float) {
+        // Defensive: if currentY is NaN/Infinity, force a new page
+        if (currentY.isNaN() || currentY.isInfinite()) {
+            drawFooter()
+            startNewPage(document!!)
+            return
+        }
         if (currentY + required > PAGE_HEIGHT - MARGIN - 20f) {
             drawFooter()
             startNewPage(document!!)
@@ -219,8 +282,8 @@ class NativePdfExporter(private val context: Context) {
             this.color = color
             this.textSize = fontSize
             this.typeface = when {
-                hasArabic && bold -> arabicBold
-                hasArabic -> arabicRegular
+                hasArabic && bold -> arabicBold ?: Typeface.DEFAULT_BOLD
+                hasArabic -> arabicRegular ?: Typeface.DEFAULT
                 bold -> latinBold
                 else -> latinRegular
             }
@@ -251,41 +314,45 @@ class NativePdfExporter(private val context: Context) {
         val c = canvas ?: return
         if (text.isEmpty()) return
 
-        val paint = buildPaint(fontSize, bold, color, text)
-        val hasArabic = ArabicFontProvider.containsArabic(text)
+        try {
+            val paint = buildPaint(fontSize, bold, color, text)
+            val hasArabic = ArabicFontProvider.containsArabic(text)
 
-        // Compute layout width — large enough for the text on a single line
-        val textWidth = paint.measureText(text).coerceAtLeast(1f)
-        // Cap at page width to avoid layout issues
-        val layoutWidth = textWidth.toInt().coerceAtMost((PAGE_WIDTH - 2 * MARGIN).toInt())
+            // Compute layout width — large enough for the text on a single line
+            val textWidth = paint.measureText(text).coerceAtLeast(1f)
+            // Cap at page width to avoid layout issues
+            val layoutWidth = textWidth.toInt().coerceAtLeast(1).coerceAtMost((PAGE_WIDTH - 2 * MARGIN).toInt())
 
-        val staticLayout = StaticLayout.Builder
-            .obtain(text, 0, text.length, paint, layoutWidth)
-            .setAlignment(
-                when (align) {
-                    Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
-                    Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
-                    else -> if (hasArabic) Layout.Alignment.ALIGN_OPPOSITE
-                            else Layout.Alignment.ALIGN_NORMAL
-                }
-            )
-            .setLineSpacing(0f, 1f)
-            .setIncludePad(false)
-            .build()
+            val staticLayout = StaticLayout.Builder
+                .obtain(text, 0, text.length, paint, layoutWidth)
+                .setAlignment(
+                    when (align) {
+                        Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
+                        Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
+                        else -> if (hasArabic) Layout.Alignment.ALIGN_OPPOSITE
+                                else Layout.Alignment.ALIGN_NORMAL
+                    }
+                )
+                .setLineSpacing(0f, 1f)
+                .setIncludePad(false)
+                .build()
 
-        // Compute x position based on alignment
-        val drawX = when (align) {
-            Paint.Align.CENTER -> x - staticLayout.width / 2f
-            Paint.Align.RIGHT -> x - staticLayout.width
-            else -> if (hasArabic) x - staticLayout.width else x
+            // Compute x position based on alignment
+            val drawX = when (align) {
+                Paint.Align.CENTER -> x - staticLayout.width / 2f
+                Paint.Align.RIGHT -> x - staticLayout.width
+                else -> if (hasArabic) x - staticLayout.width else x
+            }
+
+            c.save()
+            // FIXED v3: y is the TOP of the text. StaticLayout draws from top, so
+            // translate directly to (drawX, y). No ascent/descent math needed.
+            c.translate(drawX, y)
+            staticLayout.draw(c)
+            c.restore()
+        } catch (t: Throwable) {
+            Log.e(TAG, "drawText failed for '${text.take(40)}': ${t.message}")
         }
-
-        c.save()
-        // y is the BASELINE position in the original code; StaticLayout draws from top
-        // so we offset by the ascent to maintain visual position consistency
-        c.translate(drawX, y - paint.ascent() - paint.descent() / 2f)
-        staticLayout.draw(c)
-        c.restore()
     }
 
     /**
@@ -304,46 +371,54 @@ class NativePdfExporter(private val context: Context) {
     ) {
         val c = canvas ?: return
         if (text.isEmpty()) return
+        // Defensive: skip if cell dimensions are invalid
+        if (cellWidth <= 0f || cellHeight <= 0f || cellWidth.isNaN() || cellHeight.isNaN()) return
 
-        val paint = buildPaint(fontSize, bold, color, text)
-        val hasArabic = ArabicFontProvider.containsArabic(text)
+        try {
+            val paint = buildPaint(fontSize, bold, color, text)
+            val hasArabic = ArabicFontProvider.containsArabic(text)
 
-        // Layout width = cell width minus padding
-        val layoutWidth = (cellWidth - 8f).toInt().coerceAtLeast(1)
+            // Layout width = cell width minus padding
+            val layoutWidth = (cellWidth - 8f).toInt().coerceAtLeast(1)
 
-        val staticLayout = StaticLayout.Builder
-            .obtain(text, 0, text.length, paint, layoutWidth)
-            .setAlignment(
-                when (align) {
-                    Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
-                    Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
-                    else -> if (hasArabic) Layout.Alignment.ALIGN_OPPOSITE
-                            else Layout.Alignment.ALIGN_NORMAL
-                }
-            )
-            .setLineSpacing(0f, 1f)
-            .setIncludePad(false)
-            .build()
+            val staticLayout = StaticLayout.Builder
+                .obtain(text, 0, text.length, paint, layoutWidth)
+                .setAlignment(
+                    when (align) {
+                        Paint.Align.CENTER -> Layout.Alignment.ALIGN_CENTER
+                        Paint.Align.RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
+                        else -> if (hasArabic) Layout.Alignment.ALIGN_OPPOSITE
+                                else Layout.Alignment.ALIGN_NORMAL
+                    }
+                )
+                .setLineSpacing(0f, 1f)
+                .setIncludePad(false)
+                .build()
 
-        val drawX = when (align) {
-            Paint.Align.CENTER -> cellLeft + (cellWidth - staticLayout.width) / 2f
-            Paint.Align.RIGHT -> cellLeft + cellWidth - staticLayout.width - 4f
-            else -> if (hasArabic) cellLeft + cellWidth - staticLayout.width - 4f
-                    else cellLeft + 4f
+            val drawX = when (align) {
+                Paint.Align.CENTER -> cellLeft + (cellWidth - staticLayout.width) / 2f
+                Paint.Align.RIGHT -> cellLeft + cellWidth - staticLayout.width - 4f
+                else -> if (hasArabic) cellLeft + cellWidth - staticLayout.width - 4f
+                        else cellLeft + 4f
+            }
+
+            // Vertically center: cellTop + (cellHeight - textHeight) / 2
+            val textHeight = staticLayout.height
+            val drawY = cellTop + (cellHeight - textHeight) / 2f
+
+            c.save()
+            c.translate(drawX, drawY)
+            staticLayout.draw(c)
+            c.restore()
+        } catch (t: Throwable) {
+            Log.e(TAG, "drawCellText failed for '${text.take(40)}': ${t.message}")
         }
-
-        // Vertically center: cellTop + (cellHeight - textHeight) / 2
-        val textHeight = staticLayout.height
-        val drawY = cellTop + (cellHeight - textHeight) / 2f
-
-        c.save()
-        c.translate(drawX, drawY)
-        staticLayout.draw(c)
-        c.restore()
     }
 
     private fun drawLine(x1: Float, y1: Float, x2: Float, y2: Float, color: Int = textColor, width: Float = 1f) {
         val c = canvas ?: return
+        // Skip if any coordinate is NaN/Infinity
+        if (x1.isNaN() || y1.isNaN() || x2.isNaN() || y2.isNaN()) return
         val paint = Paint().apply {
             this.color = color
             this.style = Paint.Style.STROKE
@@ -355,6 +430,8 @@ class NativePdfExporter(private val context: Context) {
 
     private fun drawRect(x: Float, y: Float, w: Float, h: Float, fill: Int? = null, stroke: Int? = null, strokeWidth: Float = 1f) {
         val c = canvas ?: return
+        // Skip invalid rectangles
+        if (x.isNaN() || y.isNaN() || w.isNaN() || h.isNaN()) return
         val rect = RectF(x, y, x + w, y + h)
         fill?.let {
             val p = Paint().apply {
@@ -379,12 +456,12 @@ class NativePdfExporter(private val context: Context) {
 
     private fun drawHeader() {
         val appName = context.getString(R.string.app_name)
-        drawText(appName, MARGIN, currentY + 14f, fontSize = 22f, bold = true, color = primaryColor)
+        drawText(appName, MARGIN, currentY, fontSize = 22f, bold = true, color = primaryColor)
 
         val dateStr = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date())
-        drawText(dateStr, PAGE_WIDTH - MARGIN, currentY + 14f, fontSize = 10f, color = grayText, align = Paint.Align.RIGHT)
+        drawText(dateStr, PAGE_WIDTH - MARGIN, currentY, fontSize = 10f, color = grayText, align = Paint.Align.RIGHT)
 
-        currentY += 32f
+        currentY += 30f
         drawLine(MARGIN, currentY, PAGE_WIDTH - MARGIN, currentY, primaryColor, 2f)
         currentY += 12f
     }
@@ -392,8 +469,8 @@ class NativePdfExporter(private val context: Context) {
     private fun drawTitleBlock(title: String, subtitle: String, designType: String, isSafe: Boolean) {
         ensureSpace(120f)
 
-        drawText(title, PAGE_WIDTH / 2f, currentY + 14f, fontSize = 20f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
-        currentY += 28f
+        drawText(title, PAGE_WIDTH / 2f, currentY, fontSize = 20f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
+        currentY += 26f
 
         if (subtitle.isNotEmpty()) {
             drawText(subtitle, PAGE_WIDTH / 2f, currentY, fontSize = 11f, color = secondaryColor, align = Paint.Align.CENTER)
@@ -405,7 +482,7 @@ class NativePdfExporter(private val context: Context) {
             val chipHeight = 22f
             val chipX = (PAGE_WIDTH - chipWidth) / 2f
             drawRect(chipX, currentY, chipWidth, chipHeight, fill = lightBg, stroke = primaryColor, strokeWidth = 1f)
-            drawText(designType, PAGE_WIDTH / 2f, currentY + 11f, fontSize = 10f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
+            drawText(designType, PAGE_WIDTH / 2f, currentY + 6f, fontSize = 10f, bold = true, color = primaryColor, align = Paint.Align.CENTER)
             currentY += chipHeight + 8f
         }
 
@@ -414,14 +491,14 @@ class NativePdfExporter(private val context: Context) {
         val statusColor = if (isSafe) successColor else errorColor
         val bannerWidth = PAGE_WIDTH - 2 * MARGIN
         drawRect(MARGIN, currentY, bannerWidth, 28f, fill = statusColor)
-        drawText(statusText, PAGE_WIDTH / 2f, currentY + 14f, fontSize = 12f, bold = true, color = Color.WHITE, align = Paint.Align.CENTER)
+        drawText(statusText, PAGE_WIDTH / 2f, currentY + 8f, fontSize = 12f, bold = true, color = Color.WHITE, align = Paint.Align.CENTER)
         currentY += 38f
     }
 
     private fun drawSectionTitle(title: String) {
         ensureSpace(40f)
         currentY += 8f
-        drawText(title, MARGIN, currentY + 7f, fontSize = 13f, bold = true, color = primaryColor)
+        drawText(title, MARGIN, currentY, fontSize = 13f, bold = true, color = primaryColor)
         currentY += 18f
         drawLine(MARGIN, currentY, PAGE_WIDTH - MARGIN, currentY, tableBorder, 0.5f)
         currentY += 8f
@@ -525,11 +602,24 @@ class NativePdfExporter(private val context: Context) {
     }
 
     private fun drawBitmap(bitmap: Bitmap) {
+        // CRITICAL v3: Validate bitmap dimensions BEFORE any math.
+        // Previously: bitmap.width=0 → scale=Infinity → drawWidth=NaN → native crash.
+        if (bitmap.width <= 0 || bitmap.height <= 0) {
+            Log.w(TAG, "drawBitmap: skipping bitmap with invalid dimensions ${bitmap.width}x${bitmap.height}")
+            return
+        }
+
         val c = canvas ?: return
         val contentWidth = PAGE_WIDTH - 2 * MARGIN
         val maxDrawingHeight = 320f
 
-        val scale = minOf(contentWidth / bitmap.width, maxDrawingHeight / bitmap.height)
+        val scale = minOf(contentWidth / bitmap.width.toFloat(), maxDrawingHeight / bitmap.height.toFloat())
+        // Defensive: scale must be finite and positive
+        if (scale.isNaN() || scale.isInfinite() || scale <= 0f) {
+            Log.w(TAG, "drawBitmap: invalid scale=$scale, skipping")
+            return
+        }
+
         val drawWidth = bitmap.width * scale
         val drawHeight = bitmap.height * scale
         val drawX = MARGIN + (contentWidth - drawWidth) / 2f
@@ -538,9 +628,13 @@ class NativePdfExporter(private val context: Context) {
 
         drawRect(drawX - 2f, currentY - 2f, drawWidth + 4f, drawHeight + 4f, stroke = tableBorder, strokeWidth = 1f)
 
-        val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
-        val dstRect = RectF(drawX, currentY, drawX + drawWidth, currentY + drawHeight)
-        c.drawBitmap(bitmap, srcRect, dstRect, null)
+        try {
+            val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
+            val dstRect = RectF(drawX, currentY, drawX + drawWidth, currentY + drawHeight)
+            c.drawBitmap(bitmap, srcRect, dstRect, null)
+        } catch (t: Throwable) {
+            Log.e(TAG, "drawBitmap: c.drawBitmap failed: ${t.message}", t)
+        }
 
         currentY += drawHeight + 16f
     }
@@ -550,10 +644,10 @@ class NativePdfExporter(private val context: Context) {
         drawLine(MARGIN, footerY, PAGE_WIDTH - MARGIN, footerY, tableBorder, 0.5f)
 
         val footerText = "Civil EG - ${getLocalized("تقرير تصميم إنشائي", "Structural Design Report")}"
-        drawText(footerText, MARGIN, footerY + 7f, fontSize = 8f, color = grayText)
+        drawText(footerText, MARGIN, footerY + 4f, fontSize = 8f, color = grayText)
 
         val pageNumText = "${getLocalized("صفحة", "Page")} $pageNumber"
-        drawText(pageNumText, PAGE_WIDTH - MARGIN, footerY + 7f, fontSize = 8f, color = grayText, align = Paint.Align.RIGHT)
+        drawText(pageNumText, PAGE_WIDTH - MARGIN, footerY + 4f, fontSize = 8f, color = grayText, align = Paint.Align.RIGHT)
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -563,7 +657,8 @@ class NativePdfExporter(private val context: Context) {
     }
 
     private fun formatNumber(v: Double): String {
-        return if (v == v.toLong().toDouble()) v.toLong().toString()
+        return if (v.isNaN() || v.isInfinite()) "—"
+        else if (v == v.toLong().toDouble()) v.toLong().toString()
         else String.format(Locale.US, "%.2f", v)
     }
 

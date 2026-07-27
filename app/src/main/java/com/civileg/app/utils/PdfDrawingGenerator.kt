@@ -514,6 +514,9 @@ object PdfDrawingGenerator {
     }
 
     // ========== GENERATE SLAB DRAWING ==========
+    // Legacy function — kept for backward compatibility. Renders a generic
+    // solid-slab-style drawing. For type-specific drawings, use
+    // [generateSlabDrawingByType] instead.
     fun generateSlabDrawing(
         spanX: Double, spanY: Double, thickness: Double,
         mainDia: Double, mainSpacing: Double,
@@ -665,6 +668,565 @@ object PdfDrawingGenerator {
         // Scale note (bilingual)
         canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس - للمرجعية فقط", "Scale: Not to scale - For reference only"), 80f, H - 20f, DIM_TEXT, 12f)
 
+        return bitmap
+    }
+
+// ========== GENERATE SLAB DRAWING BY TYPE ==========
+    // Type-aware slab drawing generator. Dispatches to specialized drawing
+    // functions based on the SlabType enum value.
+    //
+    // SOLID       → standard two-way solid slab (main + distribution bars)
+    // FLAT        → flat slab with drop panels at column locations
+    // HOLLOW_BLOCK → Hordi slab with ribs + voids (one-way ribbed)
+    // WAFFLE      → two-way ribbed slab with voids in both directions
+    // POST_TENSION → flat slab with parabolic tendon profile
+    fun generateSlabDrawingByType(
+        slabType: com.civileg.app.utils.CalculatorEngine.SlabType,
+        spanX: Double, spanY: Double, thickness: Double,
+        mainDia: Double, mainSpacing: Double,
+        distDia: Double, distSpacing: Double,
+        cover: Double = 25.0,
+        dropPanelSize: Double = 0.0,
+        ribWidth: Double = 100.0,
+        ribSpacing: Double = 500.0,
+        columnSize: Double = 400.0
+    ): Bitmap {
+        return when (slabType) {
+            com.civileg.app.utils.CalculatorEngine.SlabType.SOLID ->
+                generateSolidSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
+            com.civileg.app.utils.CalculatorEngine.SlabType.FLAT ->
+                generateFlatSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, columnSize)
+            com.civileg.app.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK ->
+                generateHordiSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
+            com.civileg.app.utils.CalculatorEngine.SlabType.WAFFLE ->
+                generateWaffleSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
+            com.civileg.app.utils.CalculatorEngine.SlabType.POST_TENSION ->
+                generatePostTensionSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
+        }
+    }
+
+    // ---- SOLID SLAB ----
+    private fun generateSolidSlabDrawing(
+        spanX: Double, spanY: Double, thickness: Double,
+        mainDia: Double, mainSpacing: Double,
+        distDia: Double, distSpacing: Double,
+        cover: Double
+    ): Bitmap {
+        // Delegate to legacy implementation (it draws a proper solid slab)
+        return generateSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
+    }
+
+    // ---- FLAT SLAB (with drop panels) ----
+    private fun generateFlatSlabDrawing(
+        spanX: Double, spanY: Double, thickness: Double,
+        mainDia: Double, mainSpacing: Double,
+        distDia: Double, distSpacing: Double,
+        cover: Double, dropPanelSize: Double, columnSize: Double
+    ): Bitmap {
+        val W = 1400; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+
+        // ===== PLAN VIEW (left, larger) =====
+        val planL = 80f; val planT = 80f
+        val maxPlanW = 550f; val maxPlanH = 420f
+        val scale = min(maxPlanW / spanX.toFloat(), maxPlanH / spanY.toFloat()) * 0.85f
+        val planW = spanX.toFloat() * scale
+        val planH = spanY.toFloat() * scale
+
+        // Slab body
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
+        canvas.drawHatch(planL, planT, planW, planH, 22f)
+
+        // Drop panels at column locations (4 corners + center if span > 1 bay)
+        val dpSize = (dropPanelSize.toFloat() * scale).coerceAtLeast(40f)
+        val colSize = (columnSize.toFloat() * scale).coerceAtLeast(15f)
+        val dpColor = Color.parseColor("#8A8A8A")
+        val colColor = Color.parseColor("#505050")
+
+        // Place drop panels at 4 corners + center
+        val dropPositions = listOf(
+            planL to planT,
+            planL + planW to planT,
+            planL to planT + planH,
+            planL + planW to planT + planH,
+            planL + planW / 2f to planT + planH / 2f
+        )
+        dropPositions.forEach { (cx, cy) ->
+            // Drop panel (lighter shade)
+            canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, fillPaint(dpColor))
+            canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, outlineP)
+            // Column (darker shade, smaller)
+            canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, fillPaint(colColor))
+            canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, outlineP)
+        }
+
+        // Main bars (X-direction, vertical lines)
+        val mainP = createPaint(REBAR_BLUE, 2f)
+        val scaledMainSpacing = mainSpacing.toFloat() * scale
+        val visMainSp = maxOf(scaledMainSpacing, 15f)
+        var mx = planL + visMainSp / 2f
+        var mainBarCount = 0
+        while (mx < planL + planW - visMainSp / 2f && mainBarCount < 40) {
+            canvas.drawLine(mx, planT + 8f, mx, planT + planH - 8f, mainP)
+            mx += visMainSp; mainBarCount++
+        }
+
+        // Distribution bars (Y-direction, horizontal lines)
+        val distP = createPaint(STIRRUP, 2f)
+        val scaledDistSp = distSpacing.toFloat() * scale
+        val visDistSp = maxOf(scaledDistSp, 15f)
+        var dy = planT + visDistSp / 2f
+        var distBarCount = 0
+        while (dy < planT + planH - visDistSp / 2f && distBarCount < 40) {
+            canvas.drawLine(planL + 8f, dy, planL + planW - 8f, dy, distP)
+            dy += visDistSp; distBarCount++
+        }
+
+        // Dimensions
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawTextCentered(t("مسقط بلاطة مسطحة مع أبلات التسليح", "FLAT SLAB PLAN — DROP PANELS"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+
+        // Legend
+        val legX = planL + 10f; val legY = planT + planH - 75f
+        canvas.drawRect(legX, legY, legX + 20f, legY + 14f, fillPaint(dpColor))
+        canvas.drawBilingualText(t("أبلة تسليح", "Drop Panel"), legX + 26f, legY + 12f, DIM_TEXT, 14f)
+        canvas.drawRect(legX, legY + 20f, legX + 20f, legY + 34f, fillPaint(colColor))
+        canvas.drawBilingualText(t("عمود", "Column"), legX + 26f, legY + 32f, DIM_TEXT, 14f)
+        canvas.drawLine(legX, legY + 44f, legX + 25f, legY + 44f, mainP)
+        canvas.drawBilingualText(t("رئيسي ${mainDia.toInt()}@${mainSpacing.toInt()}", "Main ${mainDia.toInt()}@${mainSpacing.toInt()}"), legX + 30f, legY + 50f, DIM_TEXT, 13f)
+        canvas.drawLine(legX, legY + 60f, legX + 25f, legY + 60f, distP)
+        canvas.drawBilingualText(t("توزيع ${distDia.toInt()}@${distSpacing.toInt()}", "Dist ${distDia.toInt()}@${distSpacing.toInt()}"), legX + 30f, legY + 66f, DIM_TEXT, 13f)
+
+        // ===== CROSS SECTION (right) =====
+        val secL = W * 0.55f; val secT = 100f
+        val secViewW = planW * 0.75f
+        val secScale = secViewW / spanX.toFloat()
+        val secH = maxOf(thickness.toFloat() / 1000f * secScale * 4f, 40f)
+        val dpH = maxOf((dropPanelSize.toFloat() / 1000f * secScale * 4f), 20f)
+
+        // Drop panel zone (left + right — represents column strip)
+        canvas.drawRect(secL, secT, secL + 60f, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+        canvas.drawRect(secL + secViewW - 60f, secT, secL + secViewW, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+
+        // Slab body
+        canvas.drawRect(secL, secT + dpH, secL + secViewW, secT + secH + dpH, fillPaint(CONCRETE))
+        canvas.drawRect(secL, secT + dpH, secL + secViewW, secT + secH + dpH, outlineP)
+
+        // Column below
+        val colW = (columnSize.toFloat() * secScale).coerceAtLeast(20f)
+        canvas.drawRect(secL + 30f - colW / 2f, secT + secH + dpH, secL + 30f + colW / 2f, secT + secH + dpH + 30f, fillPaint(Color.parseColor("#505050")))
+        canvas.drawRect(secL + secViewW - 30f - colW / 2f, secT + secH + dpH, secL + secViewW - 30f + colW / 2f, secT + secH + dpH + 30f, fillPaint(Color.parseColor("#505050")))
+
+        // Bottom bars in section
+        val barR = maxOf(mainDia.toFloat() * 0.4f, 4f)
+        val numBars = minOf((spanX * 1000 / mainSpacing).toInt(), 12)
+        val barStartX = secL + 10f + barR
+        val barEndX = secL + secViewW - 10f - barR
+        for (i in 0 until numBars) {
+            val bx = if (numBars <= 1) secL + secViewW / 2f
+                     else barStartX + i * (barEndX - barStartX) / (numBars - 1)
+            canvas.drawRebar(bx, secT + secH + dpH - 8f - barR, barR, REBAR_BLUE)
+        }
+
+        // Dimensions
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, "t=${thickness.toInt()}mm + DP=${dropPanelSize.toInt()}mm", offset = 25f)
+        canvas.drawTextCentered(t("قطاع A-A مع أبلة التسليح", "SECTION A-A (WITH DROP PANEL)"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+
+        // ===== TABLE =====
+        drawRebarTable(canvas,
+            x = 80f, y = H * 0.6f,
+            data = listOf(
+                listOf(t("الرمز", "Mark"), t("القطر", "Dia"), t("الاتجاه", "Direction"), t("التباعد", "Spacing"), t("الطبقة", "Layer"), t("الطول", "Length")),
+                listOf("M1", "${mainDia.toInt()}", t("بحر قصير Lx", "Short span Lx"), "@ ${mainSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanX * 1000).toInt()}"),
+                listOf("D1", "${distDia.toInt()}", t("بحر طويل Ly", "Long span Ly"), "@ ${distSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanY * 1000).toInt()}")
+            )
+        )
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة مسطحة", "Flat Slab Detail"))
+        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        return bitmap
+    }
+
+    // ---- HORDI (HOLLOW BLOCK) SLAB — one-way ribbed ----
+    private fun generateHordiSlabDrawing(
+        spanX: Double, spanY: Double, thickness: Double,
+        mainDia: Double, mainSpacing: Double,
+        distDia: Double, distSpacing: Double,
+        cover: Double, ribWidth: Double, ribSpacing: Double
+    ): Bitmap {
+        val W = 1400; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+
+        // ===== PLAN VIEW =====
+        val planL = 80f; val planT = 80f
+        val maxPlanW = 550f; val maxPlanH = 420f
+        val scale = min(maxPlanW / spanX.toFloat(), maxPlanH / spanY.toFloat()) * 0.85f
+        val planW = spanX.toFloat() * scale
+        val planH = spanY.toFloat() * scale
+
+        // Outer slab outline
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, fillPaint(Color.parseColor("#3A3A4E")))
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
+
+        // Ribs (horizontal lines = ribs running along spanX direction)
+        // Each rib is ribWidth mm wide, spaced ribSpacing mm apart
+        val ribW = maxOf(ribWidth.toFloat() * scale, 8f)
+        val ribSp = maxOf(ribSpacing.toFloat() * scale, 30f)
+        val ribP = createPaint(CONCRETE, 0f)
+        ribP.style = Paint.Style.FILL
+
+        var ry = planT + 5f
+        var ribIdx = 0
+        while (ry < planT + planH - 5f && ribIdx < 25) {
+            // Rib (concrete strip)
+            canvas.drawRect(planL + 5f, ry, planL + planW - 5f, ry + ribW, ribP)
+            canvas.drawRect(planL + 5f, ry, planL + planW - 5f, ry + ribW, outlineP)
+
+            // Hollow blocks (voids) between ribs — shown as lighter rectangles
+            if (ry + ribW + 5f < planT + planH - 5f) {
+                val voidTop = ry + ribW
+                val voidBot = minOf(ry + ribSp, planT + planH - 5f)
+                if (voidBot > voidTop + 5f) {
+                    val voidPaint = fillPaint(Color.parseColor("#1F1F2E"))
+                    // Draw multiple void blocks along the rib
+                    val blockW = 80f
+                    var vx = planL + 15f
+                    while (vx + blockW < planL + planW - 15f) {
+                        canvas.drawRect(vx, voidTop + 3f, vx + blockW, voidBot - 3f, voidPaint)
+                        // Hollow block outline (dashed look — small marks)
+                        val dashP = createPaint(Color.parseColor("#666666"), 0.6f)
+                        canvas.drawRect(vx, voidTop + 3f, vx + blockW, voidBot - 3f, dashP)
+                        vx += blockW + 10f
+                    }
+                }
+            }
+            ry += ribSp
+            ribIdx++
+        }
+
+        // Solid strip at perimeter (perimeter beam)
+        val perimW = 20f
+        canvas.drawRect(planL, planT, planL + planW, planT + perimW, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT, planL + planW, planT + perimW, outlineP)
+        canvas.drawRect(planL, planT + planH - perimW, planL + planW, planT + planH, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT + planH - perimW, planL + planW, planT + planH, outlineP)
+        canvas.drawRect(planL, planT, planL + perimW, planT + planH, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT, planL + perimW, planT + planH, outlineP)
+        canvas.drawRect(planL + planW - perimW, planT, planL + planW, planT + planH, fillPaint(CONCRETE))
+        canvas.drawRect(planL + planW - perimW, planT, planL + planW, planT + planH, outlineP)
+
+        // Main reinforcement in ribs (top — visible as red dots along each rib)
+        val ribMainP = createPaint(REBAR_BLUE, 2f)
+        ry = planT + 5f
+        ribIdx = 0
+        while (ry < planT + planH - 5f && ribIdx < 25) {
+            // Bottom main bar in rib (dot in middle)
+            canvas.drawCircle(planL + planW / 2f, ry + ribW / 2f, 3f, fillPaint(REBAR_BLUE))
+            ry += ribSp
+            ribIdx++
+        }
+
+        // Dimensions
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawTextCentered(t("مسقط بلاطة هردي — كمرات وأبلات", "HORDI SLAB PLAN — RIBS & VOID BLOCKS"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+
+        // Legend
+        val legX = planL + 10f; val legY = planT + 10f
+        canvas.drawRect(legX, legY, legX + 18f, legY + 12f, fillPaint(CONCRETE))
+        canvas.drawBilingualText(t("كمرة (ريبة)", "Rib"), legX + 24f, legY + 10f, DIM_TEXT, 13f)
+        canvas.drawRect(legX, legY + 18f, legX + 18f, legY + 30f, fillPaint(Color.parseColor("#1F1F2E")))
+        canvas.drawBilingualText(t("بلوك مفرغ", "Hollow Block"), legX + 24f, legY + 28f, DIM_TEXT, 13f)
+        canvas.drawCircle(legX + 9f, legY + 40f, 3f, fillPaint(REBAR_BLUE))
+        canvas.drawBilingualText(t("سيخ رئيسي ${mainDia.toInt()}mm", "Main bar ${mainDia.toInt()}mm"), legX + 24f, legY + 44f, DIM_TEXT, 13f)
+
+        // ===== CROSS SECTION (showing ribs + voids + blocks) =====
+        val secL = W * 0.55f; val secT = 100f
+        val secViewW = planW * 0.75f
+        val secH = maxOf(thickness.toFloat() * 0.3f, 60f)
+        val blockH = secH * 0.55f
+
+        // Top concrete flange
+        canvas.drawRect(secL, secT, secL + secViewW, secT + (secH - blockH), fillPaint(CONCRETE))
+        canvas.drawRect(secL, secT, secL + secViewW, secT + (secH - blockH), outlineP)
+
+        // Ribs + hollow blocks (alternating)
+        val numRibs = 5
+        val ribSecW = secViewW / (numRibs * 2 - 1) * 0.7f
+        val blockSecW = secViewW / (numRibs * 2 - 1) * 1.3f
+        var sx = secL
+        for (i in 0 until numRibs) {
+            // Rib (concrete column down to bottom)
+            canvas.drawRect(sx, secT, sx + ribSecW, secT + secH, fillPaint(CONCRETE))
+            canvas.drawRect(sx, secT, sx + ribSecW, secT + secH, outlineP)
+
+            // Bottom main bar in rib
+            canvas.drawRebar(sx + ribSecW / 2f, secT + secH - 8f, 4f, REBAR_BLUE)
+
+            // Stirrup in rib
+            val stirP = createPaint(STIRRUP, 1f)
+            canvas.drawRect(sx + 4f, secT + (secH - blockH) + 4f, sx + ribSecW - 4f, secT + secH - 4f, stirP)
+
+            sx += ribSecW
+            // Hollow block (void)
+            if (i < numRibs - 1) {
+                canvas.drawRect(sx, secT + (secH - blockH), sx + blockSecW, secT + secH, fillPaint(Color.parseColor("#1F1F2E")))
+                val dashP = createPaint(Color.parseColor("#888888"), 0.8f)
+                canvas.drawRect(sx, secT + (secH - blockH), sx + blockSecW, secT + secH, dashP)
+                sx += blockSecW
+            }
+        }
+
+        // Dimensions
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
+        canvas.drawTextCentered(t("قطاع A-A — كمرات وبلوكات", "SECTION A-A — RIBS & BLOCKS"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+
+        // ===== TABLE =====
+        drawRebarTable(canvas,
+            x = 80f, y = H * 0.6f,
+            data = listOf(
+                listOf(t("الرمز", "Mark"), t("القطر", "Dia"), t("الموقع", "Location"), t("التباعد", "Spacing"), t("الطول", "Length")),
+                listOf("R1", "${mainDia.toInt()}", t("باطن الريبة", "Rib bottom"), "@ ${ribSpacing.toInt()} mm", "${(spanX * 1000).toInt()}"),
+                listOf("T1", "${distDia.toInt()}", t("سقف البلاطة", "Slab top"), "@ ${distSpacing.toInt()} mm", "${(spanY * 1000).toInt()}"),
+                listOf("S1", "8", t("روابط الريبة", "Rib stirrups"), "@ 200 mm", "${(spanX * 1000).toInt()}")
+            )
+        )
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة هردي", "Hordi Slab Detail"))
+        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        return bitmap
+    }
+
+    // ---- WAFFLE SLAB — two-way ribbed ----
+    private fun generateWaffleSlabDrawing(
+        spanX: Double, spanY: Double, thickness: Double,
+        mainDia: Double, mainSpacing: Double,
+        distDia: Double, distSpacing: Double,
+        cover: Double, ribWidth: Double, ribSpacing: Double
+    ): Bitmap {
+        val W = 1400; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+
+        // ===== PLAN VIEW =====
+        val planL = 80f; val planT = 80f
+        val maxPlanW = 550f; val maxPlanH = 420f
+        val scale = min(maxPlanW / spanX.toFloat(), maxPlanH / spanY.toFloat()) * 0.85f
+        val planW = spanX.toFloat() * scale
+        val planH = spanY.toFloat() * scale
+
+        // Background (darker = voids)
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, fillPaint(Color.parseColor("#1F1F2E")))
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
+
+        // Ribs in BOTH directions (forming a grid)
+        val ribSp = maxOf(ribSpacing.toFloat() * scale, 30f)
+        val ribW = maxOf(ribWidth.toFloat() * scale, 8f)
+
+        // Vertical ribs (X-direction)
+        var vx = planL + ribSp / 2f
+        var vCount = 0
+        while (vx < planL + planW - ribSp / 2f && vCount < 25) {
+            canvas.drawRect(vx - ribW / 2f, planT + 5f, vx + ribW / 2f, planT + planH - 5f, fillPaint(CONCRETE))
+            vx += ribSp; vCount++
+        }
+
+        // Horizontal ribs (Y-direction)
+        var hy = planT + ribSp / 2f
+        var hCount = 0
+        while (hy < planT + planH - ribSp / 2f && hCount < 25) {
+            canvas.drawRect(planL + 5f, hy - ribW / 2f, planL + planW - 5f, hy + ribW / 2f, fillPaint(CONCRETE))
+            hy += ribSp; hCount++
+        }
+
+        // Solid head zone at column locations (perimeter ~1/4 of span)
+        val headW = minOf(planW * 0.2f, 100f)
+        // 4 corners
+        canvas.drawRect(planL, planT, planL + headW, planT + headW, fillPaint(CONCRETE))
+        canvas.drawRect(planL + planW - headW, planT, planL + planW, planT + headW, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT + planH - headW, planL + headW, planT + planH, fillPaint(CONCRETE))
+        canvas.drawRect(planL + planW - headW, planT + planH - headW, planL + planW, planT + planH, fillPaint(CONCRETE))
+
+        // Re-draw outline on top
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
+
+        // Dimensions
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawTextCentered(t("مسقط بلاطة وافل — كمرات متقاطعة", "WAFFLE SLAB PLAN — TWO-WAY RIBS"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+
+        // Legend
+        val legX = planL + 10f; val legY = planT + 10f
+        canvas.drawRect(legX, legY, legX + 18f, legY + 12f, fillPaint(CONCRETE))
+        canvas.drawBilingualText(t("كمرة", "Rib"), legX + 24f, legY + 10f, DIM_TEXT, 13f)
+        canvas.drawRect(legX, legY + 18f, legX + 18f, legY + 30f, fillPaint(Color.parseColor("#1F1F2E")))
+        canvas.drawBilingualText(t("فراغ", "Void"), legX + 24f, legY + 28f, DIM_TEXT, 13f)
+
+        // ===== CROSS SECTION =====
+        val secL = W * 0.55f; val secT = 100f
+        val secViewW = planW * 0.75f
+        val secH = maxOf(thickness.toFloat() * 0.3f, 60f)
+        val blockH = secH * 0.55f
+
+        // Top flange
+        canvas.drawRect(secL, secT, secL + secViewW, secT + (secH - blockH), fillPaint(CONCRETE))
+        canvas.drawRect(secL, secT, secL + secViewW, secT + (secH - blockH), outlineP)
+
+        // Ribs + voids (alternating)
+        val numRibs = 6
+        val ribSecW = secViewW / (numRibs * 2 - 1) * 0.6f
+        val blockSecW = secViewW / (numRibs * 2 - 1) * 1.4f
+        var sx = secL
+        for (i in 0 until numRibs) {
+            canvas.drawRect(sx, secT, sx + ribSecW, secT + secH, fillPaint(CONCRETE))
+            canvas.drawRect(sx, secT, sx + ribSecW, secT + secH, outlineP)
+            canvas.drawRebar(sx + ribSecW / 2f, secT + secH - 8f, 4f, REBAR_BLUE)
+            sx += ribSecW
+            if (i < numRibs - 1) {
+                canvas.drawRect(sx, secT + (secH - blockH), sx + blockSecW, secT + secH, fillPaint(Color.parseColor("#1F1F2E")))
+                canvas.drawRect(sx, secT + (secH - blockH), sx + blockSecW, secT + secH, createPaint(Color.parseColor("#888888"), 0.8f))
+                sx += blockSecW
+            }
+        }
+
+        // Dimensions
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
+        canvas.drawTextCentered(t("قطاع A-A — وافل", "SECTION A-A — WAFFLE"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+
+        // ===== TABLE =====
+        drawRebarTable(canvas,
+            x = 80f, y = H * 0.6f,
+            data = listOf(
+                listOf(t("الرمز", "Mark"), t("القطر", "Dia"), t("الاتجاه", "Direction"), t("التباعد", "Spacing"), t("الطبقة", "Layer")),
+                listOf("RX", "${mainDia.toInt()}", t("بحر X", "X-direction"), "@ ${ribSpacing.toInt()} mm", t("باطن", "Bottom")),
+                listOf("RY", "${mainDia.toInt()}", t("بحر Y", "Y-direction"), "@ ${ribSpacing.toInt()} mm", t("باطن", "Bottom")),
+                listOf("T", "${distDia.toInt()}", t("سقف", "Top flange"), "@ ${distSpacing.toInt()} mm", t("علوي", "Top"))
+            )
+        )
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة وافل", "Waffle Slab Detail"))
+        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        return bitmap
+    }
+
+    // ---- POST-TENSIONED SLAB ----
+    private fun generatePostTensionSlabDrawing(
+        spanX: Double, spanY: Double, thickness: Double,
+        mainDia: Double, mainSpacing: Double,
+        distDia: Double, distSpacing: Double,
+        cover: Double
+    ): Bitmap {
+        val W = 1400; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+
+        // ===== PLAN VIEW =====
+        val planL = 80f; val planT = 80f
+        val maxPlanW = 550f; val maxPlanH = 420f
+        val scale = min(maxPlanW / spanX.toFloat(), maxPlanH / spanY.toFloat()) * 0.85f
+        val planW = spanX.toFloat() * scale
+        val planH = spanY.toFloat() * scale
+
+        // Slab body
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
+        canvas.drawHatch(planL, planT, planW, planH, 22f)
+
+        // Post-tensioning tendons (parabolic profile in plan view shown as banded groups)
+        val tendonP = createPaint(SECONDARY_RED, 2.5f)
+        val tendonSpacingPx = maxOf(80f, planH / 6f)
+        val tendonHalfWidth = planW * 0.45f
+
+        var ty = planT + tendonSpacingPx / 2f
+        var tCount = 0
+        while (ty < planT + planH - tendonSpacingPx / 2f && tCount < 8) {
+            // Banded tendon group (3 lines close together)
+            for (offset in -4f..4f step 4f) {
+                // Parabolic curve approximation (draped tendons)
+                val path = Path()
+                path.moveTo(planL + planW * 0.05f, ty + offset)
+                path.cubicTo(
+                    planL + planW * 0.3f, ty + offset - 15f,
+                    planL + planW * 0.7f, ty + offset - 15f,
+                    planL + planW * 0.95f, ty + offset
+                )
+                canvas.drawPath(path, tendonP)
+            }
+            ty += tendonSpacingPx
+            tCount++
+        }
+
+        // Anchorages at left and right edges (small rectangles)
+        val anchorP = fillPaint(Color.parseColor("#FFD700"))
+        ty = planT + tendonSpacingPx / 2f
+        tCount = 0
+        while (ty < planT + planH - tendonSpacingPx / 2f && tCount < 8) {
+            canvas.drawRect(planL - 8f, ty - 6f, planL + 4f, ty + 6f, anchorP)
+            canvas.drawRect(planL + planW - 4f, ty - 6f, planL + planW + 8f, ty + 6f, anchorP)
+            ty += tendonSpacingPx
+            tCount++
+        }
+
+        // Dimensions
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawTextCentered(t("مسقط بلاطة بست تنشن — ترتيب ال tendons", "POST-TENSION SLAB PLAN — TENDON LAYOUT"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+
+        // Legend
+        val legX = planL + 10f; val legY = planT + planH - 55f
+        canvas.drawLine(legX, legY, legX + 25f, legY, tendonP)
+        canvas.drawBilingualText(t("Tendons (parabolic profile)", "Tendons (parabolic profile)"), legX + 30f, legY + 5f, DIM_TEXT, 13f)
+        canvas.drawRect(legX, legY + 16f, legX + 18f, legY + 28f, anchorP)
+        canvas.drawBilingualText(t("أنكور", "Anchorage"), legX + 24f, legY + 26f, DIM_TEXT, 13f)
+
+        // ===== CROSS SECTION (showing parabolic tendon profile) =====
+        val secL = W * 0.55f; val secT = 100f
+        val secViewW = planW * 0.75f
+        val secH = maxOf(thickness.toFloat() * 0.3f, 60f)
+
+        // Slab body
+        canvas.drawRect(secL, secT, secL + secViewW, secT + secH, fillPaint(CONCRETE))
+        canvas.drawRect(secL, secT, secL + secViewW, secT + secH, outlineP)
+
+        // Parabolic tendons (draped profile)
+        val tendonColor = SECONDARY_RED
+        val numTendons = 4
+        for (i in 0 until numTendons) {
+            val tx = secL + secViewW * (i + 0.5f) / numTendons
+            // Parabolic curve: high at supports, low at midspan
+            val path = Path()
+            path.moveTo(secL, secT + 10f)
+            path.cubicTo(
+                secL + secViewW * 0.3f, secT + secH - 12f,
+                secL + secViewW * 0.7f, secT + secH - 12f,
+                secL + secViewW, secT + 10f
+            )
+            canvas.drawPath(path, createPaint(tendonColor, 1.5f))
+
+            // Tendon dots at midspan
+            canvas.drawCircle(tx, secT + secH - 8f, 3f, fillPaint(tendonColor))
+        }
+
+        // Dimensions
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
+        canvas.drawTextCentered(t("قطاع A-A — مظهر ال tendons", "SECTION A-A — TENDON PROFILE"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+
+        // ===== TABLE =====
+        drawRebarTable(canvas,
+            x = 80f, y = H * 0.6f,
+            data = listOf(
+                listOf(t("الرمز", "Mark"), t("النوع", "Type"), t("الاتجاه", "Direction"), t("التباعد", "Spacing"), t("القطر", "Dia")),
+                listOf("PT1", t("ست تنشن", "Tendon"), t("بحر X", "X-direction"), "@ ${mainSpacing.toInt()} mm", "Ø${mainDia.toInt()}mm (15.2mm strand)"),
+                listOf("R1", t("تسليح عادي", "Mild steel"), t("بحر Y", "Y-direction"), "@ ${distSpacing.toInt()} mm", "Ø${distDia.toInt()}mm")
+            )
+        )
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة بست تنشن", "Post-Tension Slab Detail"))
+        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
         return bitmap
     }
 
@@ -1657,4 +2219,310 @@ object PdfDrawingGenerator {
         return bitmap
     }
 
+    // ========== GENERATE SEISMIC DRAWING ==========
+    // Renders a seismic design summary drawing with:
+    //   - Building elevation with floor forces (arrows)
+    //   - Force distribution chart (force per floor)
+    //   - Response spectrum (Sa vs T)
+    fun generateSeismicDrawing(
+        totalHeight: Double,
+        numFloors: Int,
+        floorForces: List<com.civileg.app.domain.calculations.base.SeismicForceDistribution>,
+        spectrumValues: List<com.civileg.app.domain.calculations.base.SpectrumValue>,
+        baseShear: Double,
+        fundamentalPeriod: Double,
+        spectralAccel: Double,
+        isSafe: Boolean
+    ): Bitmap {
+        val W = 1400; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 1.5f)
+
+        // ===== PART 1: BUILDING ELEVATION WITH FLOOR FORCES (left) =====
+        val elevL = 80f; val elevT = 100f
+        val elevW = 280f; val elevH = 540f
+        val baseY = elevT + elevH
+
+        // Ground line
+        val groundP = createPaint(SOIL_BROWN, 2f)
+        canvas.drawLine(elevL - 30f, baseY, elevL + elevW + 30f, baseY, groundP)
+        // Soil hatch
+        for (i in 0..15) {
+            val sx = elevL - 30f + i * 24f
+            canvas.drawLine(sx, baseY, sx + 10f, baseY + 14f, createPaint(SOIL_BROWN, 1f))
+        }
+
+        // Building outline
+        val bldgP = createPaint(CONCRETE_TOP, 2f)
+        canvas.drawRect(elevL, elevT, elevL + elevW, baseY, fillPaint(Color.parseColor("#3A3A4E")))
+        canvas.drawRect(elevL, elevT, elevL + elevW, baseY, bldgP)
+
+        // Floor lines + force arrows
+        if (floorForces.isNotEmpty()) {
+            val maxH = floorForces.maxOfOrNull { it.floorHeight } ?: totalHeight
+            val totalDrawH = elevH - 20f
+            val forceColor = SECONDARY_RED
+            val maxForce = floorForces.maxOfOrNull { kotlin.math.abs(it.lateralForce) } ?: 1.0
+
+            // Floor levels + force arrows
+            floorForces.forEachIndexed { idx, ff ->
+                val yRatio = (ff.floorHeight / maxH.coerceAtLeast(0.1)).toFloat().coerceIn(0f, 1f)
+                val floorY = baseY - yRatio * totalDrawH
+
+                // Floor slab line
+                canvas.drawLine(elevL - 5f, floorY, elevL + elevW + 5f, floorY, createPaint(DIM_LINE, 1.5f))
+
+                // Force arrow (pointing right, magnitude proportional)
+                val arrowLen = (ff.lateralForce / maxForce).toFloat() * 80f
+                val arrowY = floorY - 12f
+                val arrowStartX = elevL + elevW + 10f
+                val arrowEndX = arrowStartX + arrowLen
+                canvas.drawLine(arrowStartX, arrowY, arrowEndX, arrowY, createPaint(forceColor, 2.5f))
+                // Arrowhead
+                canvas.drawPath(android.graphics.Path().apply {
+                    moveTo(arrowEndX, arrowY)
+                    lineTo(arrowEndX - 8f, arrowY - 4f)
+                    lineTo(arrowEndX - 8f, arrowY + 4f)
+                    close()
+                }, fillPaint(forceColor))
+
+                // Floor label
+                canvas.drawBilingualText(
+                    "F${ff.floorIndex}: ${"%.1f".format(ff.lateralForce)} kN",
+                    arrowEndX + 8f, arrowY + 5f,
+                    DIM_TEXT, 13f
+                )
+            }
+        } else {
+            // No floor forces — draw floor lines based on numFloors
+            val floorH = elevH / numFloors.coerceAtLeast(1)
+            for (i in 1 until numFloors) {
+                val fy = baseY - i * floorH
+                canvas.drawLine(elevL, fy, elevL + elevW, fy, createPaint(DIM_LINE, 1f))
+            }
+        }
+
+        // Base shear arrow (at ground level, pointing into building)
+        val bsArrowLen = 100f
+        val bsStartX = elevL - bsArrowLen - 10f
+        val bsEndX = elevL - 10f
+        canvas.drawLine(bsStartX, baseY - 20f, bsEndX, baseY - 20f, createPaint(SECONDARY_RED, 3f))
+        canvas.drawPath(android.graphics.Path().apply {
+            moveTo(bsEndX, baseY - 20f)
+            lineTo(bsEndX - 12f, baseY - 26f)
+            lineTo(bsEndX - 12f, baseY - 14f)
+            close()
+        }, fillPaint(SECONDARY_RED))
+        canvas.drawBilingualText(
+            t("V = ${"%.1f".format(baseShear)} kN", "V = ${"%.1f".format(baseShear)} kN"),
+            bsStartX - 5f, baseY - 30f,
+            SECONDARY_RED, 16f, true
+        )
+
+        // Elevation dimensions
+        canvas.drawVDim(elevT, baseY, elevL + elevW + 25f, "H = ${"%.1f".format(totalHeight)} m", offset = 25f)
+
+        // Title
+        canvas.drawTextCentered(
+            t("مسقط المبنى وتوزيع القوى الأفقية", "BUILDING ELEVATION & FORCE DISTRIBUTION"),
+            elevL + elevW / 2f, elevT - 30f,
+            textPaint(DIM_TEXT, 18f, true)
+        )
+
+        // ===== PART 2: FORCE DISTRIBUTION CHART (right top) =====
+        val chartL = 460f; val chartT = 100f
+        val chartW = 880f; val chartH = 360f
+
+        // Chart background
+        canvas.drawRect(chartL, chartT, chartL + chartW, chartT + chartH, fillPaint(Color.parseColor("#0D1117")))
+        canvas.drawRect(chartL, chartT, chartL + chartW, chartT + chartH, createPaint(Color.parseColor("#444444"), 0.5f))
+
+        // Axes
+        val axisP = createPaint(DIM_LINE, 1f)
+        val axisOriginX = chartL + 60f
+        val axisOriginY = chartT + chartH - 40f
+        val axisMaxX = chartL + chartW - 20f
+        val axisMaxY = chartT + 30f
+
+        // Y axis (force)
+        canvas.drawLine(axisOriginX, axisOriginY, axisOriginX, axisMaxY, axisP)
+        // X axis (floor)
+        canvas.drawLine(axisOriginX, axisOriginY, axisMaxX, axisOriginY, axisP)
+
+        // Axis labels
+        canvas.drawTextCentered(
+            t("القوة الأفقية (kN)", "Lateral Force (kN)"),
+            chartL + 30f, chartT + chartH / 2f,
+            textPaint(DIM_TEXT, 13f, true)
+        )
+        // Rotate Y label by drawing it vertically
+        canvas.drawTextCentered(
+            t("الطابق", "Floor"),
+            chartL + chartW / 2f, chartT + chartH - 10f,
+            textPaint(DIM_TEXT, 13f, true)
+        )
+
+        if (floorForces.isNotEmpty()) {
+            val maxF = floorForces.maxOfOrNull { kotlin.math.abs(it.lateralForce) } ?: 1.0
+            val chartDrawW = axisMaxX - axisOriginX
+            val chartDrawH = axisOriginY - axisMaxY
+
+            // Bar chart: one bar per floor
+            val barCount = floorForces.size
+            val barW = chartDrawW / (barCount * 1.5f)
+            val barGap = barW * 0.5f
+
+            floorForces.forEachIndexed { idx, ff ->
+                val barX = axisOriginX + idx * (barW + barGap) + barGap / 2f
+                val barH = (ff.lateralForce / maxF).toFloat() * chartDrawH
+                val barTop = axisOriginY - barH
+
+                // Bar
+                val barColor = if (ff.lateralForce > 0) REBAR_BLUE else SECONDARY_RED
+                canvas.drawRect(barX, barTop, barX + barW, axisOriginY, fillPaint(barColor))
+                canvas.drawRect(barX, barTop, barX + barW, axisOriginY, outlineP)
+
+                // Value label above bar
+                canvas.drawBilingualText(
+                    "${"%.0f".format(ff.lateralForce)}",
+                    barX + barW / 2f, barTop - 8f,
+                    DIM_TEXT, 12f, true,
+                    align = android.graphics.Paint.Align.CENTER
+                )
+
+                // Floor label below bar
+                canvas.drawBilingualText(
+                    "F${ff.floorIndex}",
+                    barX + barW / 2f, axisOriginY + 18f,
+                    DIM_TEXT, 12f,
+                    align = android.graphics.Paint.Align.CENTER
+                )
+            }
+
+            // Y-axis max value
+            canvas.drawText("${"%.0f".format(maxF)}", axisOriginX - 30f, axisMaxY + 8f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("0", axisOriginX - 20f, axisOriginY + 5f, textPaint(DIM_TEXT, 12f))
+        } else {
+            // Empty state
+            canvas.drawBilingualText(
+                t("لا توجد بيانات قوى", "No force data"),
+                chartL + chartW / 2f, chartT + chartH / 2f,
+                DIM_TEXT, 16f
+            )
+        }
+
+        // Chart title
+        canvas.drawTextCentered(
+            t("توزيع القوى على الطوابق", "FLOOR FORCE DISTRIBUTION"),
+            chartL + chartW / 2f, chartT - 12f,
+            textPaint(REBAR_BLUE, 16f, true)
+        )
+
+        // ===== PART 3: RESPONSE SPECTRUM (right bottom) =====
+        val specL = 460f; val specT = 500f
+        val specW = 880f; val specH = 360f
+
+        // Background
+        canvas.drawRect(specL, specT, specL + specW, specT + specH, fillPaint(Color.parseColor("#0D1117")))
+        canvas.drawRect(specL, specT, specL + specW, specT + specH, createPaint(Color.parseColor("#444444"), 0.5f))
+
+        // Axes
+        val spOriginX = specL + 60f
+        val spOriginY = specT + specH - 40f
+        val spMaxX = specL + specW - 20f
+        val spMaxY = specT + 30f
+
+        canvas.drawLine(spOriginX, spOriginY, spOriginX, spMaxY, axisP)
+        canvas.drawLine(spOriginX, spOriginY, spMaxX, spOriginY, axisP)
+
+        canvas.drawTextCentered(
+            t("تسارع طيفي Sa (g)", "Spectral Accel Sa (g)"),
+            specL + 30f, specT + specH / 2f,
+            textPaint(DIM_TEXT, 13f, true)
+        )
+        canvas.drawTextCentered(
+            t("زمن T (sec)", "Period T (sec)"),
+            specL + specW / 2f, specT + specH - 10f,
+            textPaint(DIM_TEXT, 13f, true)
+        )
+
+        if (spectrumValues.isNotEmpty()) {
+            val maxT = spectrumValues.maxOfOrNull { it.period } ?: 1.0
+            val maxSa = spectrumValues.maxOfOrNull { it.spectralAcceleration } ?: 1.0
+
+            val spDrawW = spMaxX - spOriginX
+            val spDrawH = spOriginY - spMaxY
+
+            // Draw spectrum curve
+            val curveP = createPaint(SECONDARY_RED, 2.5f)
+            val fillP = fillPaint(Color.parseColor("#1A3A5C"))
+            val path = android.graphics.Path()
+            val fillPath = android.graphics.Path()
+            fillPath.moveTo(spOriginX, spOriginY)
+
+            spectrumValues.forEachIndexed { idx, sv ->
+                val px = spOriginX + (sv.period / maxT).toFloat() * spDrawW
+                val py = spOriginY - (sv.spectralAcceleration / maxSa).toFloat() * spDrawH
+                if (idx == 0) {
+                    path.moveTo(px, py)
+                    fillPath.lineTo(px, py)
+                } else {
+                    path.lineTo(px, py)
+                    fillPath.lineTo(px, py)
+                }
+            }
+            fillPath.lineTo(spMaxX, spOriginY)
+            fillPath.close()
+            canvas.drawPath(fillPath, fillP)
+            canvas.drawPath(path, curveP)
+
+            // Mark fundamental period
+            val tPx = spOriginX + (fundamentalPeriod / maxT).toFloat() * spDrawW
+            val dashP = createPaint(DIM_LINE, 1f).apply {
+                pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f, 4f), 0f)
+            }
+            canvas.drawLine(tPx, spOriginY, tPx, spMaxY, dashP)
+            canvas.drawBilingualText(
+                "T₁ = ${"%.3f".format(fundamentalPeriod)} s",
+                tPx + 5f, spMaxY + 15f,
+                DIM_LINE, 12f
+            )
+
+            // Mark spectral accel at fundamental period
+            val saY = spOriginY - (spectralAccel / maxSa).toFloat() * spDrawH
+            canvas.drawCircle(tPx, saY, 5f, fillPaint(SECONDARY_RED))
+            canvas.drawBilingualText(
+                "Sa = ${"%.3f".format(spectralAccel)} g",
+                tPx + 8f, saY - 8f,
+                SECONDARY_RED, 12f, true
+            )
+
+            // Axis labels
+            canvas.drawText("0", spOriginX - 15f, spOriginY + 5f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.2f".format(maxT)}", spMaxX - 25f, spOriginY + 18f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.2f".format(maxSa)}", spOriginX - 35f, spMaxY + 8f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("0", spOriginX - 15f, spOriginY + 5f, textPaint(DIM_TEXT, 12f))
+        }
+
+        // Spectrum chart title
+        canvas.drawTextCentered(
+            t("طيف الاستجابة", "RESPONSE SPECTRUM"),
+            specL + specW / 2f, specT - 12f,
+            textPaint(SECONDARY_RED, 16f, true)
+        )
+
+        // ===== STATUS BADGE =====
+        val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
+        val statusText = if (isSafe) "SAFE" else "REVIEW"
+        canvas.drawText(statusText, W - 130f, 50f, textPaint(statusColor, 28f, true))
+
+        // ===== TITLE BLOCK =====
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تحليل زلزالي", "Seismic Analysis"))
+        canvas.drawBilingualText(
+            t("المقياس: غير مطابق للمقياس - للمرجعية فقط", "Scale: Not to scale - For reference only"),
+            80f, H - 20f, DIM_TEXT, 12f
+        )
+        return bitmap
     }
+
+}

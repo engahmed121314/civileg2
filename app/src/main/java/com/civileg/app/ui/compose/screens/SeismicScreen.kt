@@ -627,10 +627,35 @@ fun SeismicScreen(
                                 )
                                 scope.launch {
                                     try {
-                                        val filePath = PdfExportHelper.exportCalculationReportAsync(
+                                        // CRITICAL FIX (2026-07-27 v3): Generate seismic drawing bitmap
+                                        // (building elevation + force distribution chart + response spectrum)
+                                        // and pass it to exportDesignReportAsync so the PDF includes visuals.
+                                        val drawingBitmap = try {
+                                            com.civileg.app.utils.PdfDrawingGenerator.generateSeismicDrawing(
+                                                totalHeight = totalHeight.toDoubleOrNull() ?: 15.0,
+                                                numFloors = numFloors.toIntOrNull() ?: 5,
+                                                floorForces = res.floorForces,
+                                                spectrumValues = res.spectrumValues,
+                                                baseShear = res.baseShearResult.baseShear,
+                                                fundamentalPeriod = res.fundamentalPeriod,
+                                                spectralAccel = res.spectralAccel,
+                                                isSafe = res.baseShearResult.baseShear > 0
+                                            )
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("SeismicScreen", "Drawing gen failed", e)
+                                            null
+                                        }
+
+                                        val filePath = PdfExportHelper.exportDesignReportAsync(
                                             context = context,
                                             title = labelTitle,
-                                            details = details,
+                                            subtitle = "${labelPdfCode}: ${selectedCode.displayName}  •  ${labelZone}: ${selectedZone.displayName}",
+                                            designType = "Seismic Analysis — ${selectedCode.displayName}",
+                                            inputs = details,
+                                            results = emptyMap(),
+                                            safetyChecks = emptyList(),
+                                            isSafe = res.baseShearResult.baseShear > 0,
+                                            drawingBitmap = drawingBitmap,
                                             fileName = "Seismic_Report_${System.currentTimeMillis()}"
                                         )
                                         if (filePath == null) {

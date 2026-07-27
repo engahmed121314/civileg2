@@ -127,7 +127,7 @@ class SteelViewModel @Inject constructor(
                     onComplete(file)
                     _isExporting.value = false
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _errorMessage.value = "Warehouse PDF export failed: ${e.message ?: "Unknown error"}"
@@ -282,7 +282,7 @@ class SteelViewModel @Inject constructor(
                     onComplete(generated)
                     _isExporting.value = false
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _errorMessage.value = "Steel PDF export failed: ${e.message ?: "Unknown error"}"

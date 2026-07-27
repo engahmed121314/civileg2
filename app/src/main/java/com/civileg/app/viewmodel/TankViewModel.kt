@@ -140,7 +140,7 @@ class TankViewModel @Inject constructor(
                     onComplete(generated)
                     _isExporting.value = false
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _error.value = "PDF Export Error: ${e.message}"
                     _isExporting.value = false

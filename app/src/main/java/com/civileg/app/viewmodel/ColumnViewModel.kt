@@ -253,7 +253,7 @@ class ColumnViewModel @Inject constructor(
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false, errors = listOf("PDF Error: ${e.message}")) }
                     onComplete(null)

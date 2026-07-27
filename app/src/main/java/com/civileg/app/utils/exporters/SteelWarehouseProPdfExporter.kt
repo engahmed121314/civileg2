@@ -190,30 +190,19 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         fun addInfoRow(label: String, value: String, rowIdx: Int) {
             val bg = if (rowIdx % 2 == 0) LIGHT_BLUE else null
             val labelCell = Cell().setPadding(6f)
-            // Single Text run with embedded font — proper Arabic shaping
-            val lp = Paragraph()
-            val lRun = com.itextpdf.layout.element.Text(label)
-                .setFont(arabicBoldFont())
-                .setFontSize(9f)
-                .setBold()
-            lp.add(lRun)
-            if (isArabic(label)) {
-                lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            }
+            // Use PdfTextSegmenter for proper mixed Arabic/Latin rendering
+            val lp = PdfTextSegmenter.buildMixedParagraph(
+                label, arabicBoldFont(), helveticaFont(bold = true), 9f, null, null
+            )
             labelCell.add(lp)
             labelCell.setTextAlignment(TextAlignment.RIGHT)
             bg?.let { labelCell.setBackgroundColor(it) }
             infoTable.addCell(labelCell)
 
             val valueCell = Cell().setPadding(6f)
-            val vp = Paragraph()
-            val vRun = com.itextpdf.layout.element.Text(value)
-                .setFont(arabicFont())
-                .setFontSize(9f)
-            vp.add(vRun)
-            if (isArabic(value)) {
-                vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            }
+            val vp = PdfTextSegmenter.buildMixedParagraph(
+                value, arabicFont(), helveticaFont(bold = false), 9f, null, null
+            )
             valueCell.add(vp)
             bg?.let { valueCell.setBackgroundColor(it) }
             infoTable.addCell(valueCell)
@@ -240,16 +229,12 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         } else {
             "REVIEW REQUIRED | يحتاج مراجعة إنشائية"
         }
-        // Single Text run for proper Arabic shaping in status banner
-        val statusP = Paragraph().setTextAlignment(TextAlignment.CENTER).setPadding(8f)
-            .setBorder(com.itextpdf.layout.borders.SolidBorder(if (result.safetyStatus) SUCCESS else ERROR, 2f))
-        val statusRun = com.itextpdf.layout.element.Text(statusText)
-            .setFont(arabicBoldFont())
-            .setFontSize(11f)
-            .setBold()
-            .setFontColor(if (result.safetyStatus) SUCCESS else ERROR)
-        statusP.add(statusRun)
-        if (isArabic(statusText)) statusP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        // Use PdfTextSegmenter for proper mixed Arabic/Latin in status banner
+        val statusColor = if (result.safetyStatus) SUCCESS else ERROR
+        val statusP = PdfTextSegmenter.buildMixedParagraph(
+            statusText, arabicBoldFont(), helveticaFont(bold = true), 11f, statusColor, TextAlignment.CENTER
+        ).setPadding(8f)
+            .setBorder(com.itextpdf.layout.borders.SolidBorder(statusColor, 2f))
         document.add(statusP)
     }
 
@@ -275,17 +260,10 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         notes.forEachIndexed { i, note ->
             val bg = if (i % 2 == 0) null else ROW_ALT
             notesTable.addCell(dataCell("${i + 1}", bg = bg))
-            val noteCell = Cell().setPadding(3f).setTextAlignment(TextAlignment.LEFT)
-            // Single Text run with proper Arabic font for connected letters
-            val np = Paragraph()
-            val nRun = com.itextpdf.layout.element.Text(note)
-                .setFont(arabicFont())
-                .setFontSize(7f)
-            np.add(nRun)
-            if (isArabic(note)) {
-                np.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                noteCell.setTextAlignment(TextAlignment.RIGHT)
-            }
+            val noteCell = Cell().setPadding(3f)
+            val np = PdfTextSegmenter.buildMixedParagraph(
+                note, arabicFont(), helveticaFont(bold = false), 7f, null, null
+            )
             noteCell.add(np)
             bg?.let { noteCell.setBackgroundColor(it) }
             notesTable.addCell(noteCell)
@@ -304,32 +282,17 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         fun addSummaryCell(label: String, value: String, rowIdx: Int) {
             val bg = if (rowIdx % 2 == 0) LIGHT_BLUE else null
             val lc = Cell().setPadding(5f)
-            // Single Text run for proper Arabic shaping
-            val lp = Paragraph()
-            val lRun = com.itextpdf.layout.element.Text(label)
-                .setFont(arabicBoldFont())
-                .setFontSize(8f)
-                .setBold()
-            lp.add(lRun)
-            if (isArabic(label)) {
-                lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                lc.setTextAlignment(TextAlignment.RIGHT)
-            }
+            val lp = PdfTextSegmenter.buildMixedParagraph(
+                label, arabicBoldFont(), helveticaFont(bold = true), 8f, null, null
+            )
             lc.add(lp)
             bg?.let { lc.setBackgroundColor(it) }
             summary.addCell(lc)
 
             val vc = Cell().setPadding(5f)
-            val vp = Paragraph()
-            val vRun = com.itextpdf.layout.element.Text(value)
-                .setFont(arabicFont())
-                .setFontSize(9f)
-                .setBold()
-            vp.add(vRun)
-            if (isArabic(value)) {
-                vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                vc.setTextAlignment(TextAlignment.RIGHT)
-            }
+            val vp = PdfTextSegmenter.buildMixedParagraph(
+                value, arabicFont(), helveticaFont(bold = false), 9f, null, null
+            )
             vc.add(vp)
             bg?.let { vc.setBackgroundColor(it) }
             summary.addCell(vc)
@@ -454,16 +417,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         result.recommendations.forEachIndexed { i, rec ->
-            // Single Text run with embedded Arabic font for proper shaping
-            val p = Paragraph()
-            val pRun = com.itextpdf.layout.element.Text("${i + 1}. $rec")
-                .setFont(arabicFont())
-                .setFontSize(8f)
-            p.add(pRun)
-            if (isArabic(rec)) {
-                p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-                p.setTextAlignment(TextAlignment.RIGHT)
-            }
+            val p = PdfTextSegmenter.buildMixedParagraph(
+                "${i + 1}. $rec", arabicFont(), helveticaFont(bold = false), 8f, null, null
+            )
             document.add(p)
         }
         document.add(Paragraph(" "))
@@ -508,29 +464,35 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val titleBlock = Table(UnitValue.createPercentArray(floatArrayOf(30f, 20f, 25f, 25f))).useAllAvailableWidth()
         titleBlock.setBorder(com.itextpdf.layout.borders.SolidBorder(2f))
 
-        // Project cell - all paragraphs use single Text run with proper font
+        // Project cell — use PdfTextSegmenter for mixed Arabic/Latin
         val projCell = Cell(1, 1).setPadding(5f)
-        val projLabelP = Paragraph()
-        projLabelP.add(com.itextpdf.layout.element.Text(ArabicShaper.shapeIfArabic("PROJECT / المشروع")).setFont(arabicFont()).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
-        projLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        val projLabelP = PdfTextSegmenter.buildMixedParagraph(
+            "PROJECT / المشروع", arabicBoldFont(), helveticaFont(bold = true), 6f, ColorConstants.GRAY, null
+        )
         projCell.add(projLabelP)
-        val projText = Paragraph().add(com.itextpdf.layout.element.Text("$projEn").setFont(helveticaFont()).setFontSize(8f).setBold())
+        val projText = PdfTextSegmenter.buildMixedParagraph(
+            projEn, arabicFont(), helveticaFont(bold = true), 8f, null, null
+        )
         projCell.add(projText)
-        val projArP = Paragraph().add(com.itextpdf.layout.element.Text(ArabicShaper.shapeIfArabic(projAr)).setFont(arabicFont()).setFontSize(7f))
-        projArP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        val projArP = PdfTextSegmenter.buildMixedParagraph(
+            projAr, arabicFont(), helveticaFont(bold = false), 7f, null, null
+        )
         projCell.add(projArP)
         titleBlock.addCell(projCell)
 
         // Client cell
         val clientCell = Cell(1, 1).setPadding(5f)
-        val clientLabelP = Paragraph()
-        clientLabelP.add(com.itextpdf.layout.element.Text(ArabicShaper.shapeIfArabic("CLIENT / العميل")).setFont(arabicFont()).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
-        clientLabelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        val clientLabelP = PdfTextSegmenter.buildMixedParagraph(
+            "CLIENT / العميل", arabicBoldFont(), helveticaFont(bold = true), 6f, ColorConstants.GRAY, null
+        )
         clientCell.add(clientLabelP)
-        val clientText = Paragraph().add(com.itextpdf.layout.element.Text(clientEn).setFont(helveticaFont()).setFontSize(8f).setBold())
+        val clientText = PdfTextSegmenter.buildMixedParagraph(
+            clientEn, arabicFont(), helveticaFont(bold = true), 8f, null, null
+        )
         clientCell.add(clientText)
-        val clientArP = Paragraph().add(com.itextpdf.layout.element.Text(ArabicShaper.shapeIfArabic(clientAr)).setFont(arabicFont()).setFontSize(7f))
-        clientArP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        val clientArP = PdfTextSegmenter.buildMixedParagraph(
+            clientAr, arabicFont(), helveticaFont(bold = false), 7f, null, null
+        )
         clientCell.add(clientArP)
         titleBlock.addCell(clientCell)
 
@@ -554,15 +516,12 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         document.add(titleBlock)
 
-        // Footer disclaimer — single Text run with proper Arabic font
+        // Footer disclaimer — use PdfTextSegmenter for proper mixed rendering
         document.add(Paragraph(" "))
-        val footer = Paragraph().setTextAlignment(TextAlignment.CENTER)
         val footerRaw = "Generated by Civil EG Pro | ${ar("هذا التقرير لأغراض مرجعية فقط - يجب مراجعته بواسطة مهندس مؤهل")}"
-        val footerRun = com.itextpdf.layout.element.Text(
-            ArabicShaper.shapeIfArabic(footerRaw)
-        ).setFont(arabicFont()).setFontSize(7f).setFontColor(ColorConstants.LIGHT_GRAY)
-        footer.add(footerRun)
-        footer.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        val footer = PdfTextSegmenter.buildMixedParagraph(
+            footerRaw, arabicFont(), helveticaFont(bold = false), 7f, ColorConstants.LIGHT_GRAY, TextAlignment.CENTER
+        )
         document.add(footer)
     }
 }

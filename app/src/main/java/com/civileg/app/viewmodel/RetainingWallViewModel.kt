@@ -152,7 +152,7 @@ class RetainingWallViewModel @Inject constructor(
                 }
                 exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 onComplete(exportedFile)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 e.printStackTrace()
                 _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
                 onComplete(null)

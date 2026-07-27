@@ -115,14 +115,19 @@ class SlabViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate drawing bitmap (bilingual)
+                // Generate drawing bitmap (bilingual, type-aware)
                 val drawingBitmap = try {
-                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawing(
+                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = inputs.type,
                         spanX = inputs.lx, spanY = inputs.ly, thickness = res.thickness,
                         mainDia = res.reinforcementMain.diameter.toDouble(),
                         mainSpacing = res.reinforcementMain.spacing,
                         distDia = res.reinforcementSecondary.diameter.toDouble(),
-                        distSpacing = res.reinforcementSecondary.spacing
+                        distSpacing = res.reinforcementSecondary.spacing,
+                        dropPanelSize = inputs.dropPanelThickness,
+                        ribWidth = 100.0,
+                        ribSpacing = 500.0,
+                        columnSize = inputs.columnSize
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 
@@ -185,7 +190,7 @@ class SlabViewModel @Inject constructor(
                     onComplete(generated)
                     _isExporting.value = false
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
