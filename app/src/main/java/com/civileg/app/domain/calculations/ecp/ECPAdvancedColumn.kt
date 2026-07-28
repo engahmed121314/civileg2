@@ -246,12 +246,12 @@ class ECPAdvancedColumn : ColumnDesign {
         val GAMMA_C = 1.5
         val GAMMA_S = 1.15
         val ALPHA = 0.8
-        val PHI = 0.65
+        // ECP 203 does NOT use a separate phi factor - gamma_c and gamma_s are sufficient
         val ast = if (Ast > 0) Ast.coerceAtMost(Ag * 0.08) else 0.008 * Ag
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
-        val nominalCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
-        return PHI * nominalCapacity / 1000.0 // kN
+        val designCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
+        return designCapacity / 1000.0 // kN
     }
     
     private fun analyzeInventory(result: ReinforcementResult, height: Double, inventory: RebarInventory): InventoryAnalysisResult {

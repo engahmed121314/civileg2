@@ -413,7 +413,7 @@ object FrameAnalysisEngine {
                 // E_c = 4700 * sqrt(fcu) MPa = 4700 * sqrt(fcu) * 1e3 kN/m²
                 4700.0 * sqrt(fcu) * 1e3
             }
-            FrameMaterialType.Steel -> settings.eSteel
+            FrameMaterialType.Steel -> settings.eSteel * 1e3  // MPa -> kN/m²
         }
     }
 
@@ -435,7 +435,7 @@ object FrameAnalysisEngine {
                 val sec = com.civileg.app.utils.SteelTables.getSectionByName(member.steelSectionName ?: "IPE 300")
                     ?: com.civileg.app.utils.SteelTables.ipeSections[13] // IPE 300
                 val A = sec.area * 1e-4      // cm² -> m²
-                val I = sec.iy * 1e-8         // cm⁴ -> m⁴
+                val I = sec.ix * 1e-8         // cm⁴ -> m⁴ (strong axis for 2D bending)
                 Pair(A, I)
             }
         }

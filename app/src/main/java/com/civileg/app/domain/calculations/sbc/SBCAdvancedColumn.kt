@@ -551,7 +551,7 @@ class SBCAdvancedColumn : ColumnDesign {
             // εs = εcu × (d_bar - c) / c
             fun steelForce(dBar: Double, As: Double): Double {
                 val cSafe = c.coerceAtLeast(1.0)
-                val epsilonS = EPSILON_CU * (dBar - cSafe) / cSafe
+                val epsilonS = EPSILON_CU * (cSafe - dBar) / cSafe  // positive = compression
                 val fs = (ES * epsilonS).coerceIn(-fy, fy) // MPa (إجهاد موجب = ضغط)
                 return As * fs // N
             }
@@ -572,11 +572,12 @@ class SBCAdvancedColumn : ColumnDesign {
 
             // تحديد φ حسب حالة التحكم (ACI 21.2.2)
             val epsilonT = EPSILON_CU * (dBot - c) / c.coerceAtLeast(1.0)
+            val phiComp = phi  // 0.65 (tied) or 0.75 (spiral)
             val phiPoint = when {
-                epsilonT >= 0.005 -> phi // تحكم شد — φ كامل
-                epsilonT >= 0.002 -> phi - 0.25 * (0.005 - epsilonT) / 0.003 // منطقة الانتقال
-                else -> max(0.65, phi - 0.25 * (0.005 - epsilonT) / 0.003)
-            }.coerceIn(0.65, phi)
+                epsilonT >= 0.005 -> 0.90  // tension-controlled per ACI 21.2.2
+                epsilonT >= 0.002 -> phiComp + (0.90 - phiComp) * (epsilonT - 0.002) / 0.003
+                else -> phiComp
+            }.coerceIn(phiComp, 0.90)
 
             return InteractionDiagramPoint(
                 pn = Pn,

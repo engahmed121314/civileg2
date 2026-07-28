@@ -309,7 +309,7 @@ class ECPStaircase : StaircaseDesign {
     private fun calculateKBal(fcu: Double, fy: Double): Double {
         val epsilonCu = 0.003
         val epsilonY = fy / (E_S * GAMMA_S)
-        val aOverD = 0.9 * epsilonCu / (epsilonCu + epsilonY)
+        val aOverD = 0.8 * epsilonCu / (epsilonCu + epsilonY)
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
 

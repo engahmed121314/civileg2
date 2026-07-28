@@ -62,7 +62,7 @@ class SBCColumn : ColumnDesign {
         val h = max(width, depth)
         if (eccentricity > 0.05 * h) {
             val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
-            var requiredSteelArea = requiredSteelArea * momentFactor
+            requiredSteelArea *= momentFactor
             codeNotes.add("SBC 304: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
         }
         
@@ -141,8 +141,8 @@ class SBCColumn : ColumnDesign {
     ): ColumnShearDesignResult {
         val b = width
         val d = depth - cover
-        // SBC f'c = 0.67 × fcu / 1.5  (SBC local conversion)
-        val fc = 0.67 * fcu / 1.5
+        // SBC 304: f'c = 0.8 × fcu (cube to cylinder, same as ACI 318)
+        val fc = 0.8 * fcu
         val phi = 0.75
         val codeNotes = mutableListOf<String>()
 

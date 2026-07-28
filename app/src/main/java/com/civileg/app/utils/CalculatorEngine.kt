@@ -736,7 +736,7 @@ class CalculatorEngine @Inject constructor(
             DesignCode.EGYPTIAN -> {
                 // ECP 203 (First Principles / Curve): R = Mu / (fcu/gc * b * d^2)
                 val R = (mu * 1e6) / ((fcu / 1.5) * width * d.pow(2))
-                val omega = 1.25 * (1 - sqrt(1 - 2.25 * R))
+                val omega = 1.0 * (1 - sqrt(max(0.0, 1.0 - 2.0 * R)))
                 asReq = (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
                 if (asReq.isNaN()) asReq = (mu * 1e6) / (0.8 * fy * d) 
                 }
@@ -750,8 +750,11 @@ class CalculatorEngine @Inject constructor(
                 }
             }
         
-        // Minimum Reinforcement (ACI: 0.25*sqrt(fc')/fy * b*d | ECP: 0.225*sqrt(fcu)/fy * b*d)
-        val asMin = max(0.225 * sqrt(fcu * 0.8) / fy, 1.1 / fy) * width * d
+        // Minimum Reinforcement (ACI: 0.25*sqrt(fc')/fy * b*d | ECP: 0.26*sqrt(fcu)/fy * b*d)
+        val asMin = when(code) {
+            DesignCode.EGYPTIAN -> max(0.26 * sqrt(fcu) / fy, 0.0013) * width * d
+            else -> max(0.25 * sqrt(fcu * 0.8) / fy, 1.4 / fy) * width * d
+        }
         asReq = max(asReq, asMin)
         
         val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
@@ -760,7 +763,7 @@ class CalculatorEngine @Inject constructor(
         
         // Recalculate Capacity
         momentCapacity = when(code) {
-            DesignCode.EGYPTIAN -> (actualAs * (fy/1.15) * (d - 0.4 * (actualAs * (fy/1.15) / (0.45 * fcu * width)))) / 1e6
+            DesignCode.EGYPTIAN -> (actualAs * (fy/1.15) * (d - 0.5 * (actualAs * (fy/1.15) / (0.45 * fcu * width)))) / 1e6
             else -> (0.9 * actualAs * fy * (d - (actualAs * fy / (2 * 0.85 * fcu * 0.8 * width)))) / 1e6
             }
 

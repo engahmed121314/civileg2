@@ -165,11 +165,15 @@ class SBCFooting : FootingDesign {
         // SBC 304-2018 / ACI 318: فحص قص الاختراق
         // محيط الاختراق عند بعد d/2 من وجه العمود
         val b0 = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
-        // ACI 318-22: vc = min(0.17√f'c, 0.33√f'c, ...) - نستخدم الحد الأعلى
-        // SBC 304 يستخدم f'c = 0.67×fcu/γc كإجهاد مكافئ
-        val fc_prime = 0.67 * fcu / GAMMA_C
-        // قدرة قص الاختراق: vc = 0.33 × √f'c (ACI 318 Eq. 22.6.5.2)
-        val vc = 0.33 * sqrt(fc_prime)  // MPa
+        // ACI 318-22: vc = min(0.33√f'c, 0.17(1+2/β)√f'c, 0.083(2+αs·d/bo)√f'c)
+        // SBC 304: f'c = 0.8 × fcu (cube to cylinder)
+        val fc_prime = 0.8 * fcu
+        val beta = max(columnDepth, columnWidth) / min(columnDepth, columnWidth).coerceAtLeast(1.0)
+        val vc = minOf(
+            0.33 * sqrt(fc_prime),
+            0.17 * (1.0 + 2.0 / beta) * sqrt(fc_prime),
+            0.083 * (2.0 + 4.0 * effectiveDepth / b0) * sqrt(fc_prime)
+        )  // MPa
         // معامل المقاومة للقص φ = 0.75 (ACI 318)
         val phi = 0.75
         // القوة القاطعة المطبقة (خصم رد فعل التربة داخل المحيط)

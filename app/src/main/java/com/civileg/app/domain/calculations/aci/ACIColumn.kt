@@ -32,14 +32,10 @@ class ACIColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         
-        // ACI 22.4.2: Apply alpha factor for accidental eccentricity
-        // alpha = 0.80 for tied columns, 0.85 for spiral columns
-        val alpha = 0.80  // Default: tied column
-        
-        // معامل الاختزال حسب نوع التسليح (ACI 318-21.2.1)
-        // φ = 0.65 للأعمدة المربوطة (Tied Columns)
+        // ACI 318-19: No separate alpha factor (removed since ACI 2002)
+        // φ = 0.65 for tied columns per ACI 21.2.1
         val phi = PHI_TIED
-        return phi * alpha * nominalCapacity / 1000.0 // kN
+        return phi * nominalCapacity / 1000.0 // kN
     }
     
     /**
@@ -57,9 +53,8 @@ class ACIColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
-        // ACI 22.4.2: alpha = 0.80 (tied) or 0.85 (spiral)
-        val alpha = if (isSpiral) 0.85 else 0.80
-        return phi * alpha * nominalCapacity / 1000.0
+        // ACI 318-19: No separate alpha factor
+        return phi * nominalCapacity / 1000.0
     }
     
     /**

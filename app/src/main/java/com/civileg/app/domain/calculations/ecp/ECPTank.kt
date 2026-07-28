@@ -173,7 +173,7 @@ class ECPTank : TankDesign {
         // تصميم الانحناء بطريقة K حسب ECP 203 البند 4-2-2-1
         val fs = fy / GAMMA_S
 
-        val Mu = maxMoment * 1.15 // معامل تحميل للماء = 1.15 (بعض المراجع تستخدم 1.2)
+        val Mu = maxMoment * 1.6 // ECP 203 Clause 2-3-1: gamma_Q = 1.6 for variable water loads
         val Mu_Nmm = Mu * 1e6
 
         // معامل K
@@ -318,7 +318,7 @@ class ECPTank : TankDesign {
 
         // فحص الشق
         val hoopStress = maxHoopTension / (wallThickness / 1000.0)
-        val fct = 0.6 * sqrt(fcu) / 1.7
+        val fct = 0.6 * sqrt(fcu / 1.5)  // ECP 203: fct = 0.6 * sqrt(fcu / gamma_c)
         val isCrackSafe = hoopStress <= fct
 
         codeNotes.add("ECP 203-2020: Section 8-1 (Circular Tank - Hoop Tension)")

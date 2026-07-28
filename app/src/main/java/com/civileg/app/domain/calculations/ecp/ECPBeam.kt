@@ -263,9 +263,9 @@ class ECPBeam : BeamDesign {
         return ceil(Ld / 50) * 50
     }
 
-    // ECP 203 §4-2-2-3: ρ_min = max(0.26 × fcu / fy, 0.0013)
+    // ECP 203 §4-2-2-3: ρ_min = max(0.26 × √(fcu) / fy, 0.0013)
     private fun getMinReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
-        return max(0.26 * (fcu / fy), 0.0013)
+        return max(0.26 * sqrt(fcu) / fy, 0.0013)
     }
     // ECP 203 §4-2-2-1: عندما K يقترب من K_bal، نحد ρ إلى ~75% من النسبة المتوازنة
     private fun getMaxReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
@@ -370,12 +370,12 @@ class ECPBeam : BeamDesign {
         
         // إذا كان K ≤ K_bal: المقطع لا يحتاج حديد ضغط
         if (K <= kBal) {
-            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 1.25)))
+            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.9)))
             val fs = fy / GAMMA_S
             val asReq = Mu / (fs * leverArm)
             
             // تطبيق الحد الأدنى
-            val minSteel = max(0.26 * (fcu / fy), 0.0013) * b * d
+            val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
             val asFinal = max(asReq, minSteel)
             
             notes.add("K ≤ K_bal → Singly reinforced section is sufficient")
