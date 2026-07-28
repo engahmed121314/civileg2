@@ -310,12 +310,25 @@ class SteelViewModel @Inject constructor(
     fun exportWeldToPdf(context: android.content.Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode, capacity: Double) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context).setLanguage(settingsManager.language)
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val exportedFile = exporter.exportWeldReport("Weld Design", code, size, length, electrode, capacity, file.absolutePath)
+                val inputs = mapOf(
+                    "Design Type" to "Weld Design",
+                    "Code" to code.name,
+                    "Weld Size" to "${size} mm",
+                    "Weld Length" to "${length} mm",
+                    "Electrode Type" to electrode.name,
+                    "Weld Capacity" to "${"%.1f".format(capacity)} kN"
+                )
+                val results = mapOf(
+                    "Capacity" to "${"%.1f".format(capacity)} kN",
+                    "Status" to if (capacity > 0) "PASS" else "CHECK REQUIRED"
+                )
+                val file = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    context, com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.ReportType.STEEL,
+                    "Weld Design Report", inputs, results, emptyList(), null
+                )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    file?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -324,12 +337,25 @@ class SteelViewModel @Inject constructor(
     fun exportBoltToPdf(context: android.content.Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val exporter = com.civileg.app.utils.exporters.ComprehensivePdfExporter(context).setLanguage(settingsManager.language)
-                val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val exportedFile = exporter.exportBoltReport("Bolt Design", code, dia, grade, count, capacity, file.absolutePath)
+                val inputs = mapOf(
+                    "Design Type" to "Bolt Design",
+                    "Code" to code.name,
+                    "Bolt Diameter" to "${dia} mm",
+                    "Bolt Grade" to grade.name,
+                    "Bolt Count" to "$count",
+                    "Total Capacity" to "${"%.1f".format(capacity)} kN"
+                )
+                val results = mapOf(
+                    "Total Capacity" to "${"%.1f".format(capacity)} kN",
+                    "Per Bolt Capacity" to "${"%.1f".format(capacity / max(1, count))} kN",
+                    "Status" to if (capacity > 0) "PASS" else "CHECK REQUIRED"
+                )
+                val file = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    context, com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.ReportType.STEEL,
+                    "Bolt Design Report", inputs, results, emptyList(), null
+                )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    file?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
