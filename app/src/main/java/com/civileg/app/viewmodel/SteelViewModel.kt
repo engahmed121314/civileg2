@@ -311,6 +311,7 @@ class SteelViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
+                val file = java.io.File(context.cacheDir, fileName)
                 val inputs = mapOf(
                     "Design Type" to "Weld Design",
                     "Code" to code.name,
@@ -323,12 +324,20 @@ class SteelViewModel @Inject constructor(
                     "Capacity" to "${"%.1f".format(capacity)} kN",
                     "Status" to if (capacity > 0) "PASS" else "CHECK REQUIRED"
                 )
-                val file = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    context, com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.ReportType.STEEL,
-                    "Weld Design Report", inputs, results, emptyList(), null
+                val exportedFile = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "Weld Design Report",
+                    titleEn = "Weld Design Report",
+                    subtitle = code.name,
+                    designType = "STEEL",
+                    inputs = inputs,
+                    results = results,
+                    safetyChecks = emptyList(),
+                    isSafe = capacity > 0,
+                    drawingBitmap = null,
+                    outputPath = file.absolutePath
                 )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    file?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -337,6 +346,8 @@ class SteelViewModel @Inject constructor(
     fun exportBoltToPdf(context: android.content.Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
+                val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
+                val file = java.io.File(context.cacheDir, fileName)
                 val inputs = mapOf(
                     "Design Type" to "Bolt Design",
                     "Code" to code.name,
@@ -347,15 +358,23 @@ class SteelViewModel @Inject constructor(
                 )
                 val results = mapOf(
                     "Total Capacity" to "${"%.1f".format(capacity)} kN",
-                    "Per Bolt Capacity" to "${"%.1f".format(capacity / max(1, count))} kN",
+                    "Per Bolt Capacity" to "${"%.1f".format(capacity / maxOf(1, count))} kN",
                     "Status" to if (capacity > 0) "PASS" else "CHECK REQUIRED"
                 )
-                val file = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    context, com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.ReportType.STEEL,
-                    "Bolt Design Report", inputs, results, emptyList(), null
+                val exportedFile = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "Bolt Design Report",
+                    titleEn = "Bolt Design Report",
+                    subtitle = code.name,
+                    designType = "STEEL",
+                    inputs = inputs,
+                    results = results,
+                    safetyChecks = emptyList(),
+                    isSafe = capacity > 0,
+                    drawingBitmap = null,
+                    outputPath = file.absolutePath
                 )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    file?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
