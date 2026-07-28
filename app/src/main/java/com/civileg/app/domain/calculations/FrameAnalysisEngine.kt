@@ -435,7 +435,7 @@ object FrameAnalysisEngine {
                 val sec = com.civileg.app.utils.SteelTables.getSectionByName(member.steelSectionName ?: "IPE 300")
                     ?: com.civileg.app.utils.SteelTables.ipeSections[13] // IPE 300
                 val A = sec.area * 1e-4      // cm² -> m²
-                val I = sec.ix * 1e-8         // cm⁴ -> m⁴ (strong axis for 2D bending)
+                val I = sec.iy * 1e-8         // cm⁴ -> m⁴ (European IPE: Iy = strong axis)
                 Pair(A, I)
             }
         }
