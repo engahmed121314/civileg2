@@ -137,28 +137,28 @@ fun RetainingWallScreen(
                     val fcuVal = fcu.toDoubleOrNull()
                     val fyVal = fy.toDoubleOrNull()
                     
-                    inputError = when {
-                        h == null || h <= 0 -> stringResource(R.string.rw_validate_inputs)
-                        sd == null || sd <= 0 -> stringResource(R.string.rw_validate_inputs)
-                        fa == null || fa <= 0 || fa >= 90 -> stringResource(R.string.rw_validate_inputs)
-                        sc == null || sc < 0 -> stringResource(R.string.rw_validate_inputs)
-                        fcuVal == null || fcuVal <= 0 -> stringResource(R.string.rw_validate_inputs)
-                        fyVal == null || fyVal <= 0 -> stringResource(R.string.rw_validate_inputs)
+                    val errorMsg = when {
+                        h == null || h <= 0 -> "Invalid: all fields must be positive"
+                        sd == null || sd <= 0 -> "Invalid: all fields must be positive"
+                        fa == null || fa <= 0 || fa >= 90 -> "Invalid: friction angle 0-90"
+                        sc == null || sc < 0 -> "Invalid: surcharge must be >= 0"
+                        fcuVal == null || fcuVal <= 0 -> "Invalid: fcu must be positive"
+                        fyVal == null || fyVal <= 0 -> "Invalid: fy must be positive"
                         else -> null
                     }
                     
-                    if (inputError != null) {
-                        scope.launch { snackbarHostState.showSnackbar(inputError!!) }
+                    if (errorMsg != null) {
+                        scope.launch { snackbarHostState.showSnackbar(errorMsg) }
                         return@Button
                     }
                     
                     viewModel.calculateRetainingWallPro(
-                        height = h,
-                        soilDensity = sd,
-                        frictionAngle = fa,
-                        surcharge = sc,
-                        fcu = fcuVal,
-                        fy = fyVal,
+                        height = h!!,
+                        soilDensity = sd!!,
+                        frictionAngle = fa!!,
+                        surcharge = sc!!,
+                        fcu = fcuVal!!,
+                        fy = fyVal!!,
                         preferredDiameter = 16,
                         code = selectedCode
                     )

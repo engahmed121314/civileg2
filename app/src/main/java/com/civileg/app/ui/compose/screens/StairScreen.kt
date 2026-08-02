@@ -193,9 +193,9 @@ fun StairScreen(
 
                         viewModel.calculateStairPro(
                             type = selectedType,
-                            span = s,
-                            riser = r,
-                            tread = t,
+                            span = s!!,
+                            riser = r!!,
+                            tread = t!!,
                             deadLoad = deadLoad.toDoubleOrNull() ?: 5.0,
                             liveLoad = liveLoad.toDoubleOrNull() ?: 4.0,
                             fcu = fcu.toDoubleOrNull() ?: 25.0,

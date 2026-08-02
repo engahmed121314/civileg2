@@ -263,13 +263,13 @@ fun SlabScreen(
 
                         if (lxVal == null || lyVal == null || dlVal == null || llVal == null ||
                             fcuVal == null || fyVal == null || tVal == null) {
-                            inputError = stringResource(R.string.slab_validate_inputs)
+                            inputError = "Please enter valid values for all fields"
                             return@Button
                         }
                         if (lxVal <= 0 || lyVal <= 0 || dlVal < 0 || llVal < 0 ||
                             fcuVal < 15 || fcuVal > 60 || fyVal < 200 || fyVal > 700 ||
                             tVal < 50 || tVal > 500) {
-                            inputError = stringResource(R.string.slab_validate_inputs)
+                            inputError = "Check value ranges: fcu 15-60, fy 200-700, thickness 50-500"
                             return@Button
                         }
                         inputError = null
