@@ -64,8 +64,15 @@ fun StairScreen(
     var tread by remember { mutableStateOf("300") }
     var liveLoad by remember { mutableStateOf("4.0") }
     var deadLoad by remember { mutableStateOf("5.0") }
+    var fcu by remember { mutableStateOf("25") }
+    var fy by remember { mutableStateOf("360") }
     var expandedType by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+
+    // Input validation
+    var spanError by remember { mutableStateOf("") }
+    var riserError by remember { mutableStateOf("") }
+    var treadError by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -140,16 +147,27 @@ fun StairScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(span, stringResource(R.string.stair_horizontal_length), { span = it }, Modifier.weight(1f))
-                    StairInputField(riser, stringResource(R.string.stair_riser), { riser = it }, Modifier.weight(1f))
+                    StairInputField(span, stringResource(R.string.stair_horizontal_length), { span = it }, Modifier.weight(1f), spanError)
+                    StairInputField(riser, stringResource(R.string.stair_riser), { riser = it }, Modifier.weight(1f), riserError)
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StairInputField(tread, "Tread (mm)", { tread = it }, Modifier.weight(1f), treadError)
                     StairInputField(deadLoad, "D.L (kN/m²)", { deadLoad = it }, Modifier.weight(1f))
-                    StairInputField(liveLoad, "L.L (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
                 }
+            }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StairInputField(liveLoad, "L.L (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
+                    StairInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
+                }
+            }
+
+            item {
+                StairInputField(fy, "fy (MPa)", { fy = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -162,15 +180,26 @@ fun StairScreen(
             item {
                 Button(
                     onClick = {
+                        // Validate inputs
+                        spanError = ""; riserError = ""; treadError = ""
+                        val s = span.toDoubleOrNull()
+                        val r = riser.toDoubleOrNull()
+                        val t = tread.toDoubleOrNull()
+                        var valid = true
+                        if (s == null || s < 1.0 || s > 15.0) { spanError = "1-15 m"; valid = false }
+                        if (r == null || r < 100.0 || r > 200.0) { riserError = "100-200 mm"; valid = false }
+                        if (t == null || t < 200.0 || t > 400.0) { treadError = "200-400 mm"; valid = false }
+                        if (!valid) return@Button
+
                         viewModel.calculateStairPro(
                             type = selectedType,
-                            span = span.toDoubleOrNull() ?: 4.0,
-                            riser = riser.toDoubleOrNull() ?: 150.0,
-                            tread = tread.toDoubleOrNull() ?: 300.0,
+                            span = s,
+                            riser = r,
+                            tread = t,
                             deadLoad = deadLoad.toDoubleOrNull() ?: 5.0,
                             liveLoad = liveLoad.toDoubleOrNull() ?: 4.0,
-                            fcu = 25.0,
-                            fy = 360.0,
+                            fcu = fcu.toDoubleOrNull() ?: 25.0,
+                            fy = fy.toDoubleOrNull() ?: 360.0,
                             preferredDiameter = 12,
                             code = selectedCode
                         )
@@ -300,7 +329,7 @@ fun StairScreen(
 
                 item {
                     Text(stringResource(R.string.stair_reinforcement_drawing), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().height(400.dp))
+                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().aspectRatio(1.5f))
                 }
 
                 item {
@@ -394,7 +423,7 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(12.dp)
         ) {
             // ===== DATA EXTRACTION FROM RESULT =====
@@ -780,14 +809,16 @@ private fun StairFormulasCard() {
 }
 
 @Composable
-private fun StairInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
+private fun StairInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier, errorText: String = "") {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        isError = errorText.isNotEmpty(),
+        supportingText = if (errorText.isNotEmpty()) {{ Text(errorText, color = MaterialTheme.colorScheme.error) }} else null
     )
 }
 

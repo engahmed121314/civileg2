@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
@@ -60,10 +61,14 @@ fun RetainingWallScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("400") }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var inputError by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     
     val scrollState = rememberScrollState()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_retaining_wall_title), fontWeight = FontWeight.Bold) },
@@ -109,9 +114,9 @@ fun RetainingWallScreen(
             OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text(stringResource(R.string.rw_surcharge)) }, modifier = Modifier.fillMaxWidth())
             
             Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text("fcu") }, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text(stringResource(R.string.fcu_label)) }, modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.width(8.dp))
-                OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text("fy") }, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text(stringResource(R.string.fy_label)) }, modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -125,13 +130,35 @@ fun RetainingWallScreen(
 
             Button(
                 onClick = {
+                    val h = height.toDoubleOrNull()
+                    val sd = soilDensity.toDoubleOrNull()
+                    val fa = frictionAngle.toDoubleOrNull()
+                    val sc = surcharge.toDoubleOrNull()
+                    val fcuVal = fcu.toDoubleOrNull()
+                    val fyVal = fy.toDoubleOrNull()
+                    
+                    inputError = when {
+                        h == null || h <= 0 -> stringResource(R.string.rw_validate_inputs)
+                        sd == null || sd <= 0 -> stringResource(R.string.rw_validate_inputs)
+                        fa == null || fa <= 0 || fa >= 90 -> stringResource(R.string.rw_validate_inputs)
+                        sc == null || sc < 0 -> stringResource(R.string.rw_validate_inputs)
+                        fcuVal == null || fcuVal <= 0 -> stringResource(R.string.rw_validate_inputs)
+                        fyVal == null || fyVal <= 0 -> stringResource(R.string.rw_validate_inputs)
+                        else -> null
+                    }
+                    
+                    if (inputError != null) {
+                        scope.launch { snackbarHostState.showSnackbar(inputError!!) }
+                        return@Button
+                    }
+                    
                     viewModel.calculateRetainingWallPro(
-                        height = height.toDoubleOrNull() ?: 4.0,
-                        soilDensity = soilDensity.toDoubleOrNull() ?: 18.0,
-                        frictionAngle = frictionAngle.toDoubleOrNull() ?: 30.0,
-                        surcharge = surcharge.toDoubleOrNull() ?: 10.0,
-                        fcu = fcu.toDoubleOrNull() ?: 25.0,
-                        fy = fy.toDoubleOrNull() ?: 400.0,
+                        height = h,
+                        soilDensity = sd,
+                        frictionAngle = fa,
+                        surcharge = sc,
+                        fcu = fcuVal,
+                        fy = fyVal,
                         preferredDiameter = 16,
                         code = selectedCode
                     )
@@ -141,7 +168,7 @@ fun RetainingWallScreen(
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Icon(Icons.Default.Calculate, null)
                     Spacer(Modifier.width(8.dp))
@@ -267,7 +294,7 @@ fun RetainingWallScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 InteractiveDrawingScreen(
                     title = stringResource(R.string.rw_drawing_title),
-                    subtitle = "Retaining Wall Detail",
+                    subtitle = stringResource(R.string.rw_drawing_subtitle),
                     viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
                     drawingContent = {
                         ProfessionalRetainingWallDrawing(
@@ -284,10 +311,10 @@ fun RetainingWallScreen(
                             distRebarSpacing = res.stemReinforcement.spacing.toDouble() * 1.5,
                             baseRebarDia = res.baseReinforcement.diameter.toDouble(),
                             baseRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                            cover = 50.0,
+                            cover = 0.05,
                             backfillAngle = res.backfillAngle,
                             hasKey = true,
-                            keyDepth = 150.0,
+                            keyDepth = 0.15,
                             fsOverturning = res.factorOfSafetyOverturning,
                             fsSliding = res.factorOfSafetySliding,
                             maxBearingPressure = res.maxBearingPressure,
@@ -315,7 +342,7 @@ fun RetainingWallScreen(
                     
                     Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.rw_no_projects), color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.rw_no_projects), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         Column(modifier = Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState())) {
                             projects.forEach { project ->

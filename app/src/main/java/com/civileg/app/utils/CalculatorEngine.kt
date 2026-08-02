@@ -1413,7 +1413,7 @@ class CalculatorEngine @Inject constructor(
         
         // --- 5. Reinforcement ---
         val asReq = calculateAs(mu, fcu, fy, d, 1000.0, code)
-        val asMin = minSteelRatio * 1000.0 * ts
+        val asMin = minSteelRatio * 1000.0 * d  // Use effective depth d, not total thickness ts
         val finalAs = max(asReq, asMin)
         
         val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
@@ -1431,7 +1431,11 @@ class CalculatorEngine @Inject constructor(
         val vc = 0.5 * sqrt(fcu) * 1000.0 * d / 1000.0 // kN (convert b=1000mm, d in mm)
         val shearSafe = vu <= vc
         if (!shearSafe) {
-            suggestions.add("تحذير: قصّة الخرسانة غير كافية (Vu=${"%.1f".format(vu)}kN > Vc=${"%.1f".format(vc)}kN) - يحتاج كانات")
+            val msg = if (settingsManager.language == "en")
+                "Warning: Concrete shear capacity insufficient (Vu=${"%.1f".format(vu)}kN > Vc=${"%.1f".format(vc)}kN) - stirrups needed"
+            else
+                "تحذير: قصّة الخرسانة غير كافية (Vu=${"%.1f".format(vu)}kN > Vc=${"%.1f".format(vc)}kN) - يحتاج كانات"
+            suggestions.add(msg)
         }
         
         // --- 6. Quantities ---
@@ -1505,25 +1509,38 @@ class CalculatorEngine @Inject constructor(
             width = sqrt(area)
         }
 
-        // Wall and base thickness
-        val wallThickness = (H * 100.0).coerceIn(250.0, 500.0)
-        val baseThickness = (wallThickness + 100.0).coerceIn(400.0, 800.0)
+        // Wall thickness: H/12 * 1000, rounded to 25mm, min 200mm (ECP 203 Sec. 8)
+        val wallThickness = ceil(H / 12.0 * 1000.0 / 25.0) * 25.0
+            .coerceIn(200.0, 750.0)
+        // Base thickness: min(B/10*1000, wallThickness+100), rounded to 25mm
+        val baseThickness = ceil(max(H / 10.0 * 1000.0, wallThickness + 50.0) / 25.0) * 25.0
+            .coerceIn(250.0, 1000.0)
 
         // Pressures
         val gammaW = 9.81
         val waterPressure = gammaW * H
         val soilPressure = if (isUnderground) soilDensity * H else 0.0
 
-        // Code-specific parameters
-        val allowableStress = when(code) {
-            DesignCode.EGYPTIAN -> 170.0
-            DesignCode.ACI -> 140.0
-            DesignCode.SAUDI -> 130.0
+        // Code-specific partial safety factors (Limit State Design)
+        val gammaC = when(code) {
+            DesignCode.EGYPTIAN -> 1.5
+            DesignCode.ACI -> 1.65
+            DesignCode.SAUDI -> 1.5
+        }
+        val gammaS = when(code) {
+            DesignCode.EGYPTIAN -> 1.15
+            DesignCode.ACI -> 1.20
+            DesignCode.SAUDI -> 1.15
+        }
+        val gammaW_factor = when(code) {
+            DesignCode.EGYPTIAN -> 1.6  // ECP 203 variable load factor for water
+            DesignCode.ACI -> 1.4   // ACI 318-19
+            DesignCode.SAUDI -> 1.4   // SBC 304
         }
         val minWallRatio = when(code) {
-            DesignCode.EGYPTIAN -> 0.0025
-            DesignCode.ACI -> 0.0030
-            DesignCode.SAUDI -> 0.0035
+            DesignCode.EGYPTIAN -> 0.0025  // ECP 203 water-retaining structures
+            DesignCode.ACI -> 0.0018     // ACI 350
+            DesignCode.SAUDI -> 0.0020   // SBC 304
         }
 
         val cover = 50.0
@@ -1533,19 +1550,41 @@ class CalculatorEngine @Inject constructor(
         val mu = (gammaW * H.pow(3)) / 6.0
 
         // --- Type-specific design ---
-        // Vertical reinforcement varies in 3 zones: 0-H/3 (bottom), H/3-2H/3, 2H/3-H (top)
-        // For cantilever wall, moment at depth z from free surface: M(z) = γw * z³ / 6
-        // Zone 1 (bottom third, z = H to 2H/3): max moment at base M_base = γw*H³/6
-        // Zone 2 (middle third, z = 2H/3 to H/3): M at z=2H/3 = γw*(2H/3)³/6
-        // Zone 3 (top third, z = H/3 to 0): minimum steel
+        // Limit State Design (K-method) per ECP 203 / ACI 318 / SBC 304
+        // Zone 1 (bottom): M_base = γw × H³ / 6 × γw_factor (factored)
+        // Zone 2 (middle): M at z=2H/3
+        // Zone 3 (top): minimum steel
 
-        val muZone1 = gammaW * H.pow(3) / 6.0
+        val fs = fy / gammaS
+        val b = 1000.0  // 1m strip width
+
+        val muZone1 = gammaW * H.pow(3) / 6.0  // unfactored kN.m/m
+        val MuZone1 = muZone1 * gammaW_factor  // factored moment
+        val MuZone1_Nmm = MuZone1 * 1e6
+
         val muZone2 = gammaW * (2.0 * H / 3.0).pow(3) / 6.0
-        val asMinZone = minWallRatio * 1000.0 * wallThickness
+        val MuZone2 = muZone2 * gammaW_factor
+        val MuZone2_Nmm = MuZone2 * 1e6
 
-        val asReqZone1 = max((muZone1 / 1.5 * 1e6) / (allowableStress * 0.85 * d_wall), asMinZone)
-        val asReqZone2 = max((muZone2 / 1.5 * 1e6) / (allowableStress * 0.85 * d_wall), asMinZone)
-        val asReqZone3 = asMinZone
+        // K-method: K = Mu / (fcu/γc × b × d²)
+        val fcuEff = fcu / gammaC
+        val K1 = MuZone1_Nmm / (fcuEff * b * d_wall * d_wall)
+        val K_bal = 0.186  // ECP 203 balanced K
+        val leverArm1 = if (0.25 - K1 / 1.25 > 0) {
+            d_wall * (0.5 + sqrt(0.25 - K1 / 1.25))
+        } else {
+            d_wall * 0.7
+        }
+        var asReqZone1 = max(MuZone1_Nmm / (fs * leverArm1), minWallRatio * b * d_wall)
+
+        val K2 = MuZone2_Nmm / (fcuEff * b * d_wall * d_wall)
+        val leverArm2 = if (0.25 - K2 / 1.25 > 0) {
+            d_wall * (0.5 + sqrt(0.25 - K2 / 1.25))
+        } else {
+            d_wall * 0.7
+        }
+        var asReqZone2 = max(MuZone2_Nmm / (fs * leverArm2), minWallRatio * b * d_wall)
+        val asReqZone3 = minWallRatio * b * d_wall
 
         // Horizontal reinforcement at 35% of max vertical
         val asHorizontal = 0.35 * asReqZone1
@@ -1637,11 +1676,14 @@ class CalculatorEngine @Inject constructor(
         val cost = totalVol * settingsManager.concretePrice + (totalSteelWeight / 1000.0 * settingsManager.steelPrice)
 
         val safetyChecks = mutableListOf<DesignSafetyCheck>()
-        safetyChecks.add(DesignSafetyCheck("Crack Control (Steel Area)", providedArea, asReqZone1, "mm²", utilization <= 1.0))
-        safetyChecks.add(DesignSafetyCheck("Wall Thickness", wallThickness, 250.0, "mm", wallThickness >= 250.0))
+        safetyChecks.add(DesignSafetyCheck("Crack Control (Steel Area)", providedArea, asReqZone1, "mm²", providedArea >= asReqZone1))
+        safetyChecks.add(DesignSafetyCheck("Wall Thickness", wallThickness, 200.0, "mm", wallThickness >= 200.0))
+        safetyChecks.add(DesignSafetyCheck("Base Thickness", baseThickness, 250.0, "mm", baseThickness >= 250.0))
         if (isCircular) {
             safetyChecks.add(DesignSafetyCheck("Hoop Tension Capacity", providedArea, asHoop, "mm²/m", providedArea >= asHoop * 0.5))
         }
+        // K-balanced check (no compression reinforcement needed)
+        safetyChecks.add(DesignSafetyCheck("K-factor (balanced)", K1, K_bal, "-", K1 <= K_bal))
 
         val wallDesc = if (isCircular) {
             "Vert: ${finalSpacingV.toInt()}mm c/c | Hoop: ${hoopSpacing.toInt()}mm c/c | Horiz: ${finalSpacingH.toInt()}mm c/c"
@@ -1654,7 +1696,7 @@ class CalculatorEngine @Inject constructor(
             wallThickness = wallThickness, baseThickness = baseThickness,
             wallReinforcement = ReinforcementBar(spacing = finalSpacingV, diameter = preferredDiameter, description = wallDesc),
             baseReinforcement = ReinforcementBar(spacing = 200.0, diameter = preferredDiameter, description = "Base Mat"),
-            isSafe = utilization <= 1.0, concreteVolume = totalVol, steelWeight = totalSteelWeight,
+            isSafe = safetyChecks.all { it.isSafe }, concreteVolume = totalVol, steelWeight = totalSteelWeight,
             cost = cost, code = code,
             waterPressure = waterPressure, soilPressure = soilPressure, mu = mu, capacity = capacity,
             safetyChecks = safetyChecks, utilizationRatio = utilization,

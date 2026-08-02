@@ -58,6 +58,49 @@ fun TankScreen(
     var fy by remember { mutableStateOf("400") }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
+    // Input validation states
+    var capacityError by remember { mutableStateOf("") }
+    var heightError by remember { mutableStateOf("") }
+    var fcuError by remember { mutableStateOf("") }
+    var fyError by remember { mutableStateOf("") }
+
+    val validateInputs: () -> Boolean = {
+        var valid = true
+        val cap = capacity.toDoubleOrNull()
+        val h = height.toDoubleOrNull()
+        val f = fcu.toDoubleOrNull()
+        val y = fy.toDoubleOrNull()
+        capacityError = when {
+            cap == null -> "Invalid number"
+            cap <= 0 -> "Must be > 0"
+            cap > 10000 -> "Max 10000 m³"
+            else -> { valid = valid && true; "" }
+        }
+        if (capacityError.isNotEmpty()) valid = false
+        heightError = when {
+            h == null -> "Invalid number"
+            h < 1.0 -> "Min 1.0 m"
+            h > 10.0 -> "Max 10.0 m"
+            else -> ""
+        }
+        if (heightError.isNotEmpty()) valid = false
+        fcuError = when {
+            f == null -> "Invalid"
+            f < 20.0 -> "Min 20 MPa"
+            f > 60.0 -> "Max 60 MPa"
+            else -> ""
+        }
+        if (fcuError.isNotEmpty()) valid = false
+        fyError = when {
+            y == null -> "Invalid"
+            y < 240.0 -> "Min 240 MPa"
+            y > 500.0 -> "Max 500 MPa"
+            else -> ""
+        }
+        if (fyError.isNotEmpty()) valid = false
+        valid
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -134,8 +177,15 @@ fun TankScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TankInputField(capacity, stringResource(R.string.tank_capacity_m3), { capacity = it }, Modifier.weight(1f))
-                    TankInputField(height, stringResource(R.string.tank_height_m), { height = it }, Modifier.weight(1f))
+                    TankInputField(capacity, stringResource(R.string.tank_capacity_m3), { capacity = it }, Modifier.weight(1f), capacityError)
+                    TankInputField(height, stringResource(R.string.tank_height_m), { height = it }, Modifier.weight(1f), heightError)
+                }
+            }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TankInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f), fcuError)
+                    TankInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f), fyError)
                 }
             }
 
@@ -149,6 +199,7 @@ fun TankScreen(
             item {
                 Button(
                     onClick = {
+                        if (!validateInputs()) return@Button
                         viewModel.calculateTankPro(
                             type = selectedType,
                             capacity = capacity.toDoubleOrNull() ?: 50.0,
@@ -381,15 +432,19 @@ private fun SectionHeader(title: String, iconRes: Int) {
 }
 
 @Composable
-private fun TankInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    )
+private fun TankInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier, errorText: String = "") {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            isError = errorText.isNotEmpty(),
+            supportingText = if (errorText.isNotEmpty()) {{ Text(errorText, color = MaterialTheme.colorScheme.error) }} else null
+        )
+    }
 }
 
 @Composable

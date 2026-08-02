@@ -1,48 +1,32 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.tan
 
 // ============================================================================
-// COLOR PALETTE
+// DRAWING-SPECIFIC COLORS
+// (Shared colors from DrawingColors are used directly; only unique colors here)
 // ============================================================================
 
-private val ConcreteGray = Color(0xFF888888)
-private val ConcreteTopGray = Color(0xFF9A9A9A)
-private val ConcreteSideGray = Color(0xFF666666)
-private val SoilBrown = Color(0xFF8B4513)
 private val SoilFill = Color(0x668D6E63)
-private val RebarBlue = Color(0xFF4A90D9)
-private val RebarLightBlue = Color(0xFF7EC8E3)
-private val RebarRed = Color(0xFFE74C3C)
-private val DimensionWhite = Color(0xFFFFFFFF)
-private val ExtensionGray = Color(0xFFAAAAAA)
-private val TableHeaderBg = Color(0x33FFFFFF)
-private val TableRowAlt = Color(0x1AFFFFFF)
 private val PressureOrange = Color(0xFFFF5722)
-private val SafeGreen = Color(0xFF4CAF50)
-private val WarningYellow = Color(0xFFFFA000)
 private val GroundBrown = Color(0xFFA0522D)
 private val BearingBlue = Color(0xFF2196F3)
 
@@ -83,7 +67,7 @@ fun ProfessionalRetainingWallDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight()
+            .aspectRatio(4f / 3f)
     ) {
         val cw = size.width
         val ch = size.height
@@ -146,7 +130,7 @@ fun ProfessionalRetainingWallDrawing(
             stemTopLeftX, stemTop, drawH, drawTopT, drawBotT, backfillAngle
         )
 
-        // 5. Dimension lines
+        // 5. Dimension lines (using shared DrawingUtils)
         drawDimensions(
             stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
             baseLeft, baseTop, baseBottom, drawBaseW, drawBaseT,
@@ -162,7 +146,7 @@ fun ProfessionalRetainingWallDrawing(
             fsOverturning, fsSliding, maxBearingPressure, allowableBearingPressure
         )
 
-        // 7. Reinforcement table
+        // 7. Reinforcement table (using shared DrawingUtils)
         drawReinforcementTable(
             cw, ch, mainRebarDia, mainRebarSpacing,
             distRebarDia, distRebarSpacing,
@@ -197,7 +181,7 @@ private fun DrawScope.drawBackfillSoil(
     }
     drawPath(path = soilPath, color = SoilFill)
 
-    // Soil hatching
+    // Soil hatching using shared drawHatchPattern approach
     val nc = drawContext.canvas.nativeCanvas
     nc.save()
     nc.clipPath(android.graphics.Path().apply {
@@ -212,7 +196,7 @@ private fun DrawScope.drawBackfillSoil(
         nc.drawLine(
             hx, soilTop - 50f, hx + 50f, soilBottom + 50f,
             android.graphics.Paint().apply {
-                color = SoilBrown.toArgb()
+                color = DrawingColors.SoilBrown.toArgb()
                 strokeWidth = 1.2f
             }
         )
@@ -227,7 +211,7 @@ private fun DrawScope.drawBackfillSoil(
         end = Offset(soilRight + 10f, soilTop + surfaceDrop),
         strokeWidth = 2f, pathEffect = dashEffect
     )
-    drawTextAnnotated("سطح التربة", soilRight - 60f, soilTop + surfaceDrop - 8f, GroundBrown, 14f)
+    drawTextAnnotated("Ground Level / سطح التربة", soilRight - 100f, soilTop + surfaceDrop - 8f, GroundBrown, 14f)
 }
 
 // ============================================================================
@@ -242,20 +226,24 @@ private fun DrawScope.drawWallCrossSection(
     drawToe: Float, drawHeel: Float,
     hasKey: Boolean, drawKeyD: Float, drawKeyW: Float
 ) {
+    val dimWhite = DrawingColors.DimensionWhite
+
     // ── Base slab ──
-    drawRect(color = ConcreteGray,
+    drawRect(color = DrawingColors.ConcreteGray,
         topLeft = Offset(baseLeft, baseTop),
         size = Size(drawBaseW, drawBaseT))
-    drawRect(color = DimensionWhite.copy(alpha = 0.5f),
+    drawRect(color = dimWhite.copy(alpha = 0.5f),
         topLeft = Offset(baseLeft, baseTop),
         size = Size(drawBaseW, drawBaseT),
         style = Stroke(width = 1.5f))
-    drawConcreteHatch(baseLeft, baseTop, drawBaseW, drawBaseT)
+    // Use shared drawHatchPattern for rectangular base
+    drawHatchPattern(baseLeft, baseTop, drawBaseW, drawBaseT,
+        spacing = 18f, angleDeg = 45f, color = DrawingColors.HatchColor)
 
     // 3D top shading on base
     drawRect(
         brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-            colors = listOf(ConcreteTopGray, ConcreteGray)
+            colors = listOf(DrawingColors.ConcreteTopGray, DrawingColors.ConcreteGray)
         ),
         topLeft = Offset(baseLeft, baseTop),
         size = Size(drawBaseW, drawBaseT * 0.3f)
@@ -269,20 +257,21 @@ private fun DrawScope.drawWallCrossSection(
         lineTo(stemLeft, stemTop + drawH)
         close()
     }
-    drawPath(path = stemPath, color = ConcreteGray)
-    drawPath(path = stemPath, color = DimensionWhite.copy(alpha = 0.5f),
+    drawPath(path = stemPath, color = DrawingColors.ConcreteGray)
+    drawPath(path = stemPath, color = dimWhite.copy(alpha = 0.5f),
         style = Stroke(width = 1.5f))
+    // Hatch for trapezoidal shape (uses clipPath - cannot use rect-based drawHatchPattern)
     drawConcreteHatchPath(stemPath)
 
     // 3D shading on stem
     drawPath(
         path = stemPath,
         brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-            colors = listOf(ConcreteSideGray, ConcreteTopGray, ConcreteSideGray)
+            colors = listOf(DrawingColors.ConcreteSideGray, DrawingColors.ConcreteTopGray, DrawingColors.ConcreteSideGray)
         )
     )
     // Re-draw outline
-    drawPath(path = stemPath, color = DimensionWhite.copy(alpha = 0.5f),
+    drawPath(path = stemPath, color = dimWhite.copy(alpha = 0.5f),
         style = Stroke(width = 1.5f))
 
     // ── Key (if present) ──
@@ -295,8 +284,8 @@ private fun DrawScope.drawWallCrossSection(
             lineTo(keyLeft, baseTop + drawBaseT + drawKeyD)
             close()
         }
-        drawPath(path = keyPath, color = ConcreteSideGray)
-        drawPath(path = keyPath, color = DimensionWhite.copy(alpha = 0.5f),
+        drawPath(path = keyPath, color = DrawingColors.ConcreteSideGray)
+        drawPath(path = keyPath, color = dimWhite.copy(alpha = 0.5f),
             style = Stroke(width = 1.5f))
     }
 
@@ -335,7 +324,7 @@ private fun DrawScope.drawReinforcementDetail(
         val barX = stemLeft + localT - coverPx
 
         drawLine(
-            color = RebarBlue,
+            color = DrawingColors.RebarBlue,
             start = Offset(barX, vy),
             end = Offset(barX, min(vy + vSpacingPx * 0.7f, stemBottom - coverPx)),
             strokeWidth = 2.5f
@@ -350,7 +339,7 @@ private fun DrawScope.drawReinforcementDetail(
         val frac = (hx - stemTop) / drawH
         val localT = drawTopT + (drawBotT - drawTopT) * frac
         drawLine(
-            color = RebarLightBlue,
+            color = DrawingColors.TopRebarBlue,
             start = Offset(stemLeft + coverPx, hx),
             end = Offset(stemLeft + localT - coverPx, hx),
             strokeWidth = 1.5f
@@ -363,7 +352,7 @@ private fun DrawScope.drawReinforcementDetail(
     var bx = baseLeft + coverPx
     while (bx < baseLeft + drawBaseW - coverPx) {
         drawLine(
-            color = RebarBlue,
+            color = DrawingColors.RebarBlue,
             start = Offset(bx, baseBottom - coverPx),
             end = Offset(min(bx + bSpacingPx * 0.7f, baseLeft + drawBaseW - coverPx), baseBottom - coverPx),
             strokeWidth = 2.5f
@@ -376,7 +365,7 @@ private fun DrawScope.drawReinforcementDetail(
     var tx = stemBaseRight - coverPx - 30f
     while (tx > baseLeft + coverPx) {
         drawLine(
-            color = RebarRed,
+            color = DrawingColors.SecondaryRed,
             start = Offset(tx, baseTop + coverPx),
             end = Offset(min(tx + 15f, stemBaseRight - coverPx), baseTop + coverPx),
             strokeWidth = 2f
@@ -385,13 +374,12 @@ private fun DrawScope.drawReinforcementDetail(
     }
 
     // ── Cover dimension indicators ──
-    val cTick = 5f
     // Stem back cover
-    drawLine(color = ExtensionGray.copy(alpha = 0.6f),
+    drawLine(color = DrawingColors.ExtensionGray.copy(alpha = 0.6f),
         start = Offset(stemLeft + drawBotT - coverPx, stemTop + drawH - 10f),
         end = Offset(stemLeft + drawBotT, stemTop + drawH - 10f), strokeWidth = 0.8f)
-    drawTextAnnotated("${coverC.toInt()}", stemLeft + drawBotT - coverPx - 10f,
-        stemTop + drawH - 6f, ExtensionGray, 11f)
+    drawTextAnnotated("${(coverC * 1000).toInt()}mm", stemLeft + drawBotT - coverPx - 20f,
+        stemTop + drawH - 6f, DrawingColors.ExtensionGray, 11f)
 }
 
 // ============================================================================
@@ -406,6 +394,7 @@ private fun DrawScope.drawEarthPressureDiagram(
     val diagramW = 50f
 
     // Ka coefficient (Rankine) using actual backfill friction angle
+    // Ka = (1 - sin φ) / (1 + sin φ) = tan²(45° - φ/2)
     val ka = max(0.25, (1.0 - sin(Math.toRadians(backfillAngle))) / (1.0 + sin(Math.toRadians(backfillAngle))))
 
     // Triangular active earth pressure
@@ -418,7 +407,7 @@ private fun DrawScope.drawEarthPressureDiagram(
     drawPath(path = pressurePath, color = PressureOrange.copy(alpha = 0.25f))
     drawPath(path = pressurePath, color = PressureOrange, style = Stroke(width = 1.5f))
 
-    // Resultant force arrow (at 1/3 from base)
+    // Resultant force arrow (at H/3 from base = 2H/3 from top)
     val resultY = stemTop + drawH * 2f / 3f
     val arrowLen = diagramW * 0.6f
     drawLine(
@@ -432,7 +421,7 @@ private fun DrawScope.drawEarthPressureDiagram(
 
     // Labels
     drawTextAnnotated("Pa", stemBackX + 10f + arrowLen, resultY - 6f, PressureOrange, 16f)
-    drawTextAnnotated("فعال", stemBackX + diagramW + 14f, stemTop + drawH / 2f, PressureOrange, 14f)
+    drawTextAnnotated("Active / فعال", stemBackX + diagramW + 14f, stemTop + drawH / 2f, PressureOrange, 14f)
     drawTextAnnotated("Ka = ${"%.2f".format(ka)}", stemBackX + 10f, stemTop + drawH + 40f,
         PressureOrange, 13f)
 
@@ -441,7 +430,7 @@ private fun DrawScope.drawEarthPressureDiagram(
 }
 
 // ============================================================================
-// 5. DIMENSION LINES
+// 5. DIMENSION LINES (using shared DrawingUtils)
 // ============================================================================
 
 private fun DrawScope.drawDimensions(
@@ -453,36 +442,57 @@ private fun DrawScope.drawDimensions(
     wallHeight: Double, wallTopThickness: Double, wallBottomThickness: Double,
     baseWidth: Double, baseThickness: Double, toeLength: Double, heelLength: Double, cover: Double
 ) {
-    val dimOff = 30f
+    val dimColor = DrawingColors.DimensionWhite
+    val dimTextSize = 13f
 
-    // Wall height (left side)
-    drawDimLine(stemLeft - dimOff, stemTop, stemLeft - dimOff, stemTop + drawH,
-        "H=${wallHeight.toInt()}", true)
+    // Wall height (left side, vertical)
+    drawVerticalDimension(
+        y1 = stemTop, y2 = stemTop + drawH,
+        x = stemLeft, text = "H=${wallHeight.toInt()}m",
+        color = dimColor, textSize = dimTextSize, offset = 30f
+    )
 
-    // Top thickness (above stem)
-    drawDimLine(stemLeft, stemTop - dimOff * 0.7f, stemLeft + drawTopT, stemTop - dimOff * 0.7f,
-        "t₁=${wallTopThickness.toInt()}", false)
+    // Top thickness (above stem, horizontal)
+    drawHorizontalDimension(
+        x1 = stemLeft, x2 = stemLeft + drawTopT,
+        y = stemTop, text = "t\u2081=${"%.0f".format(wallTopThickness * 100)}cm",
+        color = dimColor, textSize = dimTextSize, offset = 18f
+    )
 
-    // Bottom thickness (at base level)
-    drawDimLine(stemLeft, baseTop + 8f, stemLeft + drawBotT, baseTop + 8f,
-        "t₂=${wallBottomThickness.toInt()}", false)
+    // Bottom thickness (at base level, horizontal)
+    drawHorizontalDimension(
+        x1 = stemLeft, x2 = stemLeft + drawBotT,
+        y = baseTop, text = "t\u2082=${"%.0f".format(wallBottomThickness * 100)}cm",
+        color = dimColor, textSize = dimTextSize, offset = 8f
+    )
 
-    // Base width (below base)
-    drawDimLine(baseLeft, baseBottom + dimOff * 0.7f, baseLeft + drawBaseW, baseBottom + dimOff * 0.7f,
-        "B=${baseWidth.toInt()}", false)
+    // Base width (below base, horizontal)
+    drawHorizontalDimension(
+        x1 = baseLeft, x2 = baseLeft + drawBaseW,
+        y = baseBottom, text = "B=${"%.1f".format(baseWidth)}m",
+        color = dimColor, textSize = dimTextSize, offset = 18f
+    )
 
-    // Toe length
-    drawDimLine(baseLeft, baseBottom + dimOff * 1.5f, baseLeft + drawToe, baseBottom + dimOff * 1.5f,
-        "Toe=${toeLength.toInt()}", false)
+    // Toe length (below base, second row)
+    drawHorizontalDimension(
+        x1 = baseLeft, x2 = baseLeft + drawToe,
+        y = baseBottom, text = "Toe=${"%.1f".format(toeLength)}m",
+        color = dimColor, textSize = dimTextSize * 0.9f, offset = 38f
+    )
 
-    // Heel length
-    drawDimLine(baseLeft + drawBaseW - drawHeel, baseBottom + dimOff * 1.5f,
-        baseLeft + drawBaseW, baseBottom + dimOff * 1.5f,
-        "Heel=${heelLength.toInt()}", false)
+    // Heel length (below base, second row)
+    drawHorizontalDimension(
+        x1 = baseLeft + drawBaseW - drawHeel, x2 = baseLeft + drawBaseW,
+        y = baseBottom, text = "Heel=${"%.1f".format(heelLength)}m",
+        color = dimColor, textSize = dimTextSize * 0.9f, offset = 38f
+    )
 
-    // Base thickness (right side)
-    drawDimLine(baseLeft + drawBaseW + dimOff, baseTop, baseLeft + drawBaseW + dimOff, baseBottom,
-        "tb=${baseThickness.toInt()}", true)
+    // Base thickness (right side, vertical)
+    drawVerticalDimension(
+        y1 = baseTop, y2 = baseBottom,
+        x = baseLeft + drawBaseW, text = "tb=${"%.0f".format(baseThickness * 100)}cm",
+        color = dimColor, textSize = dimTextSize, offset = 25f
+    )
 }
 
 // ============================================================================
@@ -498,25 +508,26 @@ private fun DrawScope.drawStabilityChecks(
     val checkX = 20f
     val checkY = baseBottom + 60f
     val lineH = 22f
+    val dimWhite = DrawingColors.DimensionWhite
 
     val otPass = fsOverturning >= 1.5
     val slidePass = fsSliding >= 1.5
     val bearingPass = maxBearingPressure <= allowableBearingPressure && maxBearingPressure > 0
 
-    // Overturning check
-    drawTextAnnotated("STABILITY CHECKS", checkX, checkY, DimensionWhite, 17f)
+    // Title (bilingual)
+    drawTextAnnotated("STABILITY CHECKS / فحوصات الاستقرار", checkX, checkY, dimWhite, 17f)
     // F.S. Overturning
-    val otColor = if (otPass) SafeGreen else Color(0xFFE74C3C)
+    val otColor = if (otPass) DrawingColors.SafeGreen else DrawingColors.UnsafeRed
     drawTextAnnotated("F.S.(O.T.) = ${"%.2f".format(fsOverturning)}", checkX, checkY + lineH, otColor, 15f)
     drawTextAnnotated(if (otPass) "✓ OK" else "✗ FAIL", checkX + 160f, checkY + lineH, otColor, 14f)
 
     // Sliding check
-    val slideColor = if (slidePass) SafeGreen else Color(0xFFE74C3C)
+    val slideColor = if (slidePass) DrawingColors.SafeGreen else DrawingColors.UnsafeRed
     drawTextAnnotated("F.S.(Slide) = ${"%.2f".format(fsSliding)}", checkX, checkY + lineH * 2, slideColor, 15f)
     drawTextAnnotated(if (slidePass) "✓ OK" else "✗ FAIL", checkX + 160f, checkY + lineH * 2, slideColor, 14f)
 
     // Bearing check
-    val bpColor = if (bearingPass) SafeGreen else Color(0xFFE74C3C)
+    val bpColor = if (bearingPass) DrawingColors.SafeGreen else DrawingColors.UnsafeRed
     drawTextAnnotated("σ_max = ${"%.1f".format(maxBearingPressure)} kPa", checkX, checkY + lineH * 3, bpColor, 15f)
     drawTextAnnotated(if (bearingPass) "✓ OK" else "✗ FAIL", checkX + 160f, checkY + lineH * 3, bpColor, 14f)
 
@@ -541,11 +552,10 @@ private fun DrawScope.drawStabilityChecks(
     // Labels
     drawTextAnnotated("σ_min", bpLeft - 8f, bpBaseY + bpMinH + 14f, BearingBlue.copy(alpha = 0.7f), 10f)
     drawTextAnnotated("σ_max", bpRight - 12f, bpBaseY + bpMaxH + 14f, BearingBlue.copy(alpha = 0.7f), 10f)
-
 }
 
 // ============================================================================
-// 7. REINFORCEMENT TABLE
+// 7. REINFORCEMENT TABLE (using shared DrawingUtils)
 // ============================================================================
 
 private fun DrawScope.drawReinforcementTable(
@@ -568,73 +578,73 @@ private fun DrawScope.drawReinforcementTable(
         tableW * 0.22f   // Length
     )
 
-    // Title
-    drawTextAnnotated("جدول التسليح", tableLeft, tableTop - 6f, DimensionWhite, 20f)
+    // Title (bilingual)
+    drawTextAnnotated("REINFORCEMENT TABLE / جدول التسليح", tableLeft, tableTop - 6f, DrawingColors.DimensionWhite, 20f)
 
-    // Header
-    drawRect(color = TableHeaderBg, topLeft = Offset(tableLeft, tableTop),
+    // Header (bilingual)
+    drawRect(color = DrawingColors.TableHeaderBg, topLeft = Offset(tableLeft, tableTop),
         size = Size(tableW, headerH))
-    val headers = arrayOf("الاتجاه", "الموقع", "القطر", "المسافة", "الطول")
+    val headers = arrayOf("Direction / الاتجاه", "Location / الموقع", "Dia / القطر", "Spacing / المسافة", "Length / الطول")
     var cx = tableLeft
     for (i in headers.indices) {
         drawTextAnnotated(headers[i], cx + 6f, tableTop + headerH / 2f + 6f,
-            DimensionWhite, 15f)
+            DrawingColors.DimensionWhite, 15f)
         cx += colWidths[i]
     }
 
     // Separator
-    drawLine(color = ExtensionGray.copy(alpha = 0.3f),
+    drawLine(color = DrawingColors.ExtensionGray.copy(alpha = 0.3f),
         start = Offset(tableLeft, tableTop + headerH),
         end = Offset(tableLeft + tableW, tableTop + headerH), strokeWidth = 0.5f)
 
-    // Row 1: Main vertical stem bars
+    // Row 1: Main vertical stem bars (bilingual)
     val r1Y = tableTop + headerH
-    drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, r1Y), size = Size(tableW, rowH))
-    val row1 = arrayOf("عمودي (رئيسي)", "جهة التربة", "Ø${mainRebarDia.toInt()}",
+    drawRect(color = DrawingColors.TableRowAlt, topLeft = Offset(tableLeft, r1Y), size = Size(tableW, rowH))
+    val row1 = arrayOf("Vertical (Main) / عمودي", "Soil side / جهة التربة", "Ø${mainRebarDia.toInt()}",
         "@${mainRebarSpacing.toInt()}mm", "H+Ld")
     cx = tableLeft
     for (i in row1.indices) {
-        drawTextAnnotated(row1[i], cx + 6f, r1Y + rowH / 2f + 5f, RebarBlue, 13f)
+        drawTextAnnotated(row1[i], cx + 6f, r1Y + rowH / 2f + 5f, DrawingColors.RebarBlue, 13f)
         cx += colWidths[i]
     }
-    drawLine(color = ExtensionGray.copy(alpha = 0.2f),
+    drawLine(color = DrawingColors.ExtensionGray.copy(alpha = 0.2f),
         start = Offset(tableLeft, r1Y + rowH),
         end = Offset(tableLeft + tableW, r1Y + rowH), strokeWidth = 0.5f)
 
-    // Row 2: Horizontal distribution bars
+    // Row 2: Horizontal distribution bars (bilingual)
     val r2Y = r1Y + rowH
-    val row2 = arrayOf("أفقي (توزيعي)", "جهة التربة", "Ø${distRebarDia.toInt()}",
+    val row2 = arrayOf("Horizontal (Dist.) / أفقي", "Soil side / جهة التربة", "Ø${distRebarDia.toInt()}",
         "@${distRebarSpacing.toInt()}mm", "L")
     cx = tableLeft
     for (i in row2.indices) {
-        drawTextAnnotated(row2[i], cx + 6f, r2Y + rowH / 2f + 5f, RebarLightBlue, 13f)
+        drawTextAnnotated(row2[i], cx + 6f, r2Y + rowH / 2f + 5f, DrawingColors.TopRebarBlue, 13f)
         cx += colWidths[i]
     }
-    drawLine(color = ExtensionGray.copy(alpha = 0.2f),
+    drawLine(color = DrawingColors.ExtensionGray.copy(alpha = 0.2f),
         start = Offset(tableLeft, r2Y + rowH),
         end = Offset(tableLeft + tableW, r2Y + rowH), strokeWidth = 0.5f)
 
-    // Row 3: Base bottom bars
+    // Row 3: Base bottom bars (bilingual)
     val r3Y = r2Y + rowH
-    drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, r3Y), size = Size(tableW, rowH))
-    val row3 = arrayOf("أفقي (قاعدة)", "أسفل القاعدة", "Ø${baseRebarDia.toInt()}",
+    drawRect(color = DrawingColors.TableRowAlt, topLeft = Offset(tableLeft, r3Y), size = Size(tableW, rowH))
+    val row3 = arrayOf("Horizontal (Base) / أفقي", "Bottom / أسفل القاعدة", "Ø${baseRebarDia.toInt()}",
         "@${baseRebarSpacing.toInt()}mm", "B")
     cx = tableLeft
     for (i in row3.indices) {
-        drawTextAnnotated(row3[i], cx + 6f, r3Y + rowH / 2f + 5f, RebarBlue.copy(alpha = 0.8f), 13f)
+        drawTextAnnotated(row3[i], cx + 6f, r3Y + rowH / 2f + 5f, DrawingColors.RebarBlue.copy(alpha = 0.8f), 13f)
         cx += colWidths[i]
     }
-    drawLine(color = ExtensionGray.copy(alpha = 0.2f),
+    drawLine(color = DrawingColors.ExtensionGray.copy(alpha = 0.2f),
         start = Offset(tableLeft, r3Y + rowH),
         end = Offset(tableLeft + tableW, r3Y + rowH), strokeWidth = 0.5f)
 
-    // Row 4: Base top bars (near stem)
+    // Row 4: Base top bars near stem (bilingual)
     val r4Y = r3Y + rowH
-    val row4 = arrayOf("أفقي (قاعدة)", "أعلى القاعدة", "Ø${distRebarDia.toInt()}",
+    val row4 = arrayOf("Horizontal (Base) / أفقي", "Top / أعلى القاعدة", "Ø${distRebarDia.toInt()}",
         "@${distRebarSpacing.toInt()}mm", "Heel")
     cx = tableLeft
     for (i in row4.indices) {
-        drawTextAnnotated(row4[i], cx + 6f, r4Y + rowH / 2f + 5f, RebarRed, 13f)
+        drawTextAnnotated(row4[i], cx + 6f, r4Y + rowH / 2f + 5f, DrawingColors.SecondaryRed, 13f)
         cx += colWidths[i]
     }
 
@@ -642,42 +652,27 @@ private fun DrawScope.drawReinforcementTable(
     var sepX = tableLeft
     for (i in 0 until colWidths.size - 1) {
         sepX += colWidths[i]
-        drawLine(color = ExtensionGray.copy(alpha = 0.15f),
+        drawLine(color = DrawingColors.ExtensionGray.copy(alpha = 0.15f),
             start = Offset(sepX, tableTop),
             end = Offset(sepX, r4Y + rowH), strokeWidth = 0.5f)
     }
 
     // Table border
-    drawRect(color = ExtensionGray.copy(alpha = 0.4f),
+    drawRect(color = DrawingColors.ExtensionGray.copy(alpha = 0.4f),
         topLeft = Offset(tableLeft, tableTop),
         size = Size(tableW, headerH + rowH * 4),
         style = Stroke(width = 1f))
 }
 
 // ============================================================================
-// SHARED HELPERS
+// SHARED HELPERS (drawing-specific, not available in DrawingUtils)
 // ============================================================================
 
-private fun DrawScope.drawConcreteHatch(
-    left: Float, top: Float, w: Float, h: Float
-) {
-    val nc = drawContext.canvas.nativeCanvas
-    nc.save()
-    nc.clipRect(left, top, left + w, top + h)
-    var i = left - h
-    while (i < left + w + h) {
-        nc.drawLine(
-            i, top, i + h, top + h,
-            android.graphics.Paint().apply {
-                color = Color(0x55AAAAAA).toArgb()
-                strokeWidth = 0.6f
-            }
-        )
-        i += 18f
-    }
-    nc.restore()
-}
-
+/**
+ * Hatching for non-rectangular paths (e.g., trapezoidal stem).
+ * Uses native canvas clipPath — needed because [DrawScope.drawHatchPattern]
+ * only supports rectangular areas.
+ */
 private fun DrawScope.drawConcreteHatchPath(path: Path) {
     val bounds = path.getBounds()
     val nc = drawContext.canvas.nativeCanvas
@@ -690,31 +685,13 @@ private fun DrawScope.drawConcreteHatchPath(path: Path) {
         nc.drawLine(
             i, bounds.top, i + bounds.height, bounds.bottom,
             android.graphics.Paint().apply {
-                color = Color(0x55AAAAAA).toArgb()
+                color = DrawingColors.HatchColor.toArgb()
                 strokeWidth = 0.6f
             }
         )
         i += 18f
     }
     nc.restore()
-}
-
-private fun DrawScope.drawDimLine(
-    x1: Float, y1: Float, x2: Float, y2: Float,
-    text: String, vertical: Boolean
-) {
-    val tick = 8f
-    if (vertical) {
-        drawLine(color = ExtensionGray, start = Offset(x1, y1), end = Offset(x1, y2), strokeWidth = 1f)
-        drawLine(color = ExtensionGray, start = Offset(x1 - tick, y1), end = Offset(x1 + tick, y1), strokeWidth = 1f)
-        drawLine(color = ExtensionGray, start = Offset(x1 - tick, y2), end = Offset(x1 + tick, y2), strokeWidth = 1f)
-        drawTextAnnotated(text, x1 - 60f, (y1 + y2) / 2f + 4f, DimensionWhite, 13f)
-    } else {
-        drawLine(color = ExtensionGray, start = Offset(x1, y1), end = Offset(x2, y1), strokeWidth = 1f)
-        drawLine(color = ExtensionGray, start = Offset(x1, y1 - tick), end = Offset(x1, y1 + tick), strokeWidth = 1f)
-        drawLine(color = ExtensionGray, start = Offset(x2, y1 - tick), end = Offset(x2, y1 + tick), strokeWidth = 1f)
-        drawTextAnnotated(text, (x1 + x2) / 2f - 30f, y1 - 8f, DimensionWhite, 13f)
-    }
 }
 
 private fun DrawScope.drawArrowHead(
@@ -736,4 +713,3 @@ private fun DrawScope.drawArrowHead(
     }
     drawPath(path = path, color = color)
 }
-

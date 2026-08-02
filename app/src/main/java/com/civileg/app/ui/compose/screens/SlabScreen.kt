@@ -1,6 +1,5 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,13 +11,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
-import androidx.compose.material3.rememberModalBottomSheetState
-import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -27,13 +22,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.PdfExportHelper
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
@@ -79,6 +74,9 @@ fun SlabScreen(
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val defaultSlabName = stringResource(R.string.slab_default_name)
     var designName by remember { mutableStateOf(defaultSlabName) }
+    var inputError by remember { mutableStateOf<String?>(null) }
+    val configuration = LocalConfiguration.current
+    val screenW = configuration.screenWidthDp.dp
 
     Scaffold(
         topBar = {
@@ -86,13 +84,13 @@ fun SlabScreen(
                 title = { Text(stringResource(R.string.screen_slab_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (result != null) {
                         IconButton(onClick = { showSaveDialog = true }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save to Project", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save_to_project), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -169,16 +167,16 @@ fun SlabScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SlabInputField(shortSpan, "Lx (m)", { shortSpan = it }, Modifier.weight(1f))
-                    SlabInputField(longSpan, "Ly (m)", { longSpan = it }, Modifier.weight(1f))
+                    SlabInputField(shortSpan, stringResource(R.string.span_x_label), { shortSpan = it }, Modifier.weight(1f))
+                    SlabInputField(longSpan, stringResource(R.string.span_y_label), { longSpan = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    SlabInputField(deadLoad, "DL (kN/m²)", { deadLoad = it }, Modifier.weight(1f))
+                    SlabInputField(deadLoad, stringResource(R.string.slab_dl_label), { deadLoad = it }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    SlabInputField(liveLoad, "LL (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
+                    SlabInputField(liveLoad, stringResource(R.string.slab_ll_label), { liveLoad = it }, Modifier.weight(1f))
                 }
             }
 
@@ -186,9 +184,9 @@ fun SlabScreen(
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    SlabInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
+                    SlabInputField(fcu, stringResource(R.string.fcu_label), { fcu = it }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    SlabInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
+                    SlabInputField(fy, stringResource(R.string.fy_label), { fy = it }, Modifier.weight(1f))
                 }
             }
             
@@ -243,16 +241,46 @@ fun SlabScreen(
             }
 
             item {
+                // Input validation error display
+                inputError?.let { err ->
+                    Text(
+                        err,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
                 Button(
                     onClick = {
+                        // Validate inputs
+                        val lxVal = shortSpan.toDoubleOrNull()
+                        val lyVal = longSpan.toDoubleOrNull()
+                        val dlVal = deadLoad.toDoubleOrNull()
+                        val llVal = liveLoad.toDoubleOrNull()
+                        val fcuVal = fcu.toDoubleOrNull()
+                        val fyVal = fy.toDoubleOrNull()
+                        val tVal = thickness.toDoubleOrNull()
+
+                        if (lxVal == null || lyVal == null || dlVal == null || llVal == null ||
+                            fcuVal == null || fyVal == null || tVal == null) {
+                            inputError = stringResource(R.string.slab_validate_inputs)
+                            return@Button
+                        }
+                        if (lxVal <= 0 || lyVal <= 0 || dlVal < 0 || llVal < 0 ||
+                            fcuVal < 15 || fcuVal > 60 || fyVal < 200 || fyVal > 700 ||
+                            tVal < 50 || tVal > 500) {
+                            inputError = stringResource(R.string.slab_validate_inputs)
+                            return@Button
+                        }
+                        inputError = null
                         viewModel.calculateSlab(
-                            spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                            spanY = longSpan.toDoubleOrNull() ?: 5.0,
-                            deadLoad = deadLoad.toDoubleOrNull() ?: 2.5,
-                            liveLoad = liveLoad.toDoubleOrNull() ?: 3.0,
-                            fcu = fcu.toDoubleOrNull() ?: 25.0,
-                            fy = fy.toDoubleOrNull() ?: 360.0,
-                            thickness = thickness.toDoubleOrNull() ?: 150.0,
+                            spanX = lxVal,
+                            spanY = lyVal,
+                            deadLoad = dlVal,
+                            liveLoad = llVal,
+                            fcu = fcuVal,
+                            fy = fyVal,
+                            thickness = tVal,
                             preferredDiameter = preferredDiameter.toIntOrNull() ?: 12,
                             type = selectedType,
                             code = selectedCode,
@@ -330,17 +358,17 @@ fun SlabScreen(
 
                 item {
                     var selectedViewMode by remember { mutableStateOf(0) }
-                    // CRITICAL FIX (2026-07-27): Increased heights to match ProfessionalSlabDrawing
-                    // canvas heights. Previous 900/380/280/460 caused clipping of the table's last rows.
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
                     val drawingHeight = when (selectedViewMode) {
-                        1 -> 380  // Plan only
-                        2 -> 280  // Section only
-                        3 -> 520  // Table only
-                        else -> 1000  // All
+                        1 -> (380 * wRatio).toInt().coerceIn(250, 500)
+                        2 -> (280 * wRatio).toInt().coerceIn(200, 400)
+                        3 -> (520 * wRatio).toInt().coerceIn(350, 700)
+                        else -> (1000 * wRatio).toInt().coerceIn(600, 1400)
                     }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.slab_drawing_title),
-                        subtitle = "Slab Reinforcement Detail",
+                        subtitle = stringResource(R.string.slab_reinforcement_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
@@ -432,7 +460,7 @@ fun SlabScreen(
                     
                     Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -549,7 +577,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
 @Composable
 private fun ResultItem(label: String, value: String) {
     Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, fontWeight = FontWeight.Bold)
     }
 }

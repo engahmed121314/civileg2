@@ -498,6 +498,7 @@ fun DrawScope.drawForceDiagram(
 /**
  * Draw text on native canvas with optional centering and rotation.
  * Uses Noto Sans Arabic font for Arabic text support.
+ * For Arabic text, uses StaticLayout for proper BIDI reordering + HarfBuzz shaping.
  */
 fun DrawScope.drawTextAnnotated(
     text: String,
@@ -511,39 +512,78 @@ fun DrawScope.drawTextAnnotated(
 ) {
     if (text.isBlank()) return
     drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint().apply {
-            this.color = color.toArgb()
-            this.textSize = size
-            this.isAntiAlias = true
-            this.textAlign = if (center) android.graphics.Paint.Align.CENTER
-                             else android.graphics.Paint.Align.LEFT
-            this.typeface = if (bold) {
-                android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            } else {
-                android.graphics.Typeface.SANS_SERIF
-            }
-            // Try to use Arabic-supporting font for Arabic text
-            if (text.any { it.code in 0x0600..0x06FF || it.code in 0xFB50..0xFEFF }) {
-                this.typeface = try {
-                    // Try to get from project's own Arabic font provider
-                    com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(
-                        com.civileg.app.CivilEGApplication.instance.applicationContext,
-                        bold = bold
-                    )
-                } catch (e: Exception) {
+        val hasArabic = text.any { it.code in 0x0600..0x06FF || it.code in 0xFB50..0xFEFF }
+
+        if (!hasArabic || rotation != 0f) {
+            // Latin-only or rotated text: use Canvas.drawText directly (faster)
+            val paint = android.graphics.Paint().apply {
+                this.color = color.toArgb()
+                this.textSize = size
+                this.isAntiAlias = true
+                this.textAlign = if (center) android.graphics.Paint.Align.CENTER
+                                 else android.graphics.Paint.Align.LEFT
+                this.typeface = if (bold) {
+                    android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                } else {
                     android.graphics.Typeface.SANS_SERIF
                 }
+                // Try to use Arabic-supporting font for Arabic text
+                if (hasArabic) {
+                    this.typeface = try {
+                        com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(
+                            com.civileg.app.CivilEGApplication.instance.applicationContext,
+                            bold = bold
+                        )
+                    } catch (e: Exception) {
+                        android.graphics.Typeface.SANS_SERIF
+                    }
+                }
             }
-        }
 
-        if (rotation != 0f) {
-            save()
-            translate(x, y)
-            rotate(rotation)
-            drawText(text, 0f, 0f, paint)
-            restore()
+            if (rotation != 0f) {
+                save()
+                translate(x, y)
+                rotate(rotation)
+                drawText(text, 0f, 0f, paint)
+                restore()
+            } else {
+                drawText(text, x, y, paint)
+            }
         } else {
-            drawText(text, x, y, paint)
+            // Arabic text: use StaticLayout for proper BIDI + shaping
+            val tf = try {
+                com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(
+                    com.civileg.app.CivilEGApplication.instance.applicationContext,
+                    bold = bold
+                )
+            } catch (_: Exception) { null }
+            val tp = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                this.color = color.toArgb()
+                this.textSize = size
+                this.isAntiAlias = true
+                this.textAlign = if (center) android.graphics.Paint.Align.CENTER
+                                 else android.graphics.Paint.Align.LEFT
+                this.typeface = tf ?: android.graphics.Typeface.SANS_SERIF
+            }
+            val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
+            val layoutAlign = when {
+                center -> android.text.Layout.Alignment.ALIGN_CENTER
+                else -> android.text.Layout.Alignment.ALIGN_NORMAL
+            }
+            val sl = android.text.StaticLayout.Builder
+                .obtain(text, 0, text.length, tp, layoutWidth)
+                .setAlignment(layoutAlign)
+                .setLineSpacing(0f, 1f)
+                .setIncludePad(false)
+                .build()
+            val drawX = when {
+                center -> x - sl.width / 2f
+                else -> x
+            }
+            save()
+            translate(drawX, y - tp.ascent() - tp.descent() / 2f)
+            sl.draw(this)
+            restore()
         }
     }
 }

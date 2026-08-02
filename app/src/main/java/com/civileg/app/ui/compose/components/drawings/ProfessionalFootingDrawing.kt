@@ -1,20 +1,17 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.dp
 import kotlin.math.*
 
 /**
@@ -22,6 +19,8 @@ import kotlin.math.*
  * Renders plan view, section view, punching shear perimeter,
  * soil pressure diagram, and reinforcement table.
  * Supports: Isolated, Combined, Raft
+ *
+ * Uses shared [DrawingColors] and DrawingUtils extensions.
  */
 @Composable
 fun ProfessionalFootingDrawing(
@@ -38,58 +37,49 @@ fun ProfessionalFootingDrawing(
     cover: Double,
     col1X: Double = 0.0,
     col2X: Double = 0.0,
+    soilPressureMax: Double = 0.0,
+    soilPressureMin: Double = 0.0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(680.dp)
+            .aspectRatio(4f / 3f)
     ) {
         val w = size.width
         val h = size.height
 
-        // ── Color Palette ──────────────────────────────────────────
-        val concreteFill = Color(0xFFD6D6D6)
-        val concreteStroke = Color(0xFF555555)
-        val footingBorder = Color(0xFF777777)
-        val barXColor = Color(0xFF4A90D9)       // Blue – X bars
-        val barYColor = Color(0xFF7AB3E8)       // Lighter blue – Y bars
-        val dimColor = Color(0xFF9B59B6)        // Purple – dimensions
-        val textColor = Color(0xFFFFFFFF)
-        val headerBg = Color(0xFF2C3E50)
+        // ── Safety checks ─────────────────────────────────────────
+        val safeLX = footingLengthX.coerceAtLeast(100.0)
+        val safeLY = footingLengthY.coerceAtLeast(100.0)
+        val safeThick = footingThickness.coerceAtLeast(50.0)
+        val safeColW = columnWidth.coerceAtLeast(50.0)
+        val safeColD = columnDepth.coerceAtLeast(50.0)
+
+        // ── Color Palette (delegates to shared DrawingColors) ─────
+        val C = DrawingColors
+        val concreteFill = Color(0xFF3D3D3D)
+        val concreteStroke = Color(0xFF6B6B6B)
+        val footingBorder = Color(0xFF8A8A8A)
+        val barXColor = C.RebarBlue
+        val barYColor = C.TopRebarBlue
+        val dimColor = C.ExtensionGray
+        val textColor = C.DimensionWhite
+        val headerBg = Color(0x55333333)
         val columnFill = Color(0xFF555555)
         val columnStroke = Color(0xFF333333)
-        val soilColor = Color(0xFF8D6E63)
-        val soilHatchColor = Color(0xFF6D4C41)
-        val shearPerimColor = Color(0xFFE67E22)
-        val pressureColor = Color(0xFFE74C3C)
-        val critSectionColor = Color(0xFF2ECC71)
-
-        // ── Text helper ────────────────────────────────────────────
-        val nc = drawContext.canvas.nativeCanvas
-        val drawDensity = density
-        fun drawText(
-            text: String, x: Float, y: Float,
-            color: Color = textColor, size: Float = 11f, bold: Boolean = false,
-            align: android.graphics.Paint.Align = android.graphics.Paint.Align.CENTER
-        ) {
-            nc.apply {
-                val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    this.color = color.toArgb()
-                    this.textSize = size * drawDensity
-                    this.isFakeBoldText = bold
-                    this.textAlign = align
-                }
-                this.drawText(text, x, y, paint)
-            }
-        }
+        val soilColor = C.SoilBrown
+        val soilHatchColor = C.SoilBrown.copy(alpha = 0.7f)
+        val shearPerimColor = C.WarningOrange
+        val pressureColor = C.UnsafeRed
+        val critSectionColor = C.SafeGreen
+        val tableHeaderBg = Color(0x55333333)
 
         // ── Layout zones ───────────────────────────────────────────
         val margin = 30f
         val planH = h * 0.38f
         val sectionH = h * 0.30f
         val pressureH = if (footingType == "Combined" || footingType == "Raft") h * 0.10f else 0f
-        val tableH = h * 0.22f
         val planLeft = margin + 50f
         val planRight = w - margin
         val planTop = 50f
@@ -100,23 +90,20 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRoundRect(
-            color = headerBg, topLeft = Offset(0f, 0f),
-            size = Size(w, 40f), cornerRadius = CornerRadius(0f)
-        )
-        drawText(
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawTextAnnotated(
             "FOOTING DETAIL — ${footingType.uppercase()}",
-            w / 2f, 27f, textColor, size = 13f, bold = true
+            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
         )
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW
         // ══════════════════════════════════════════════════════════
-        val scaleX = planW / footingLengthX.toFloat()
-        val scaleY = planDrawH / footingLengthY.toFloat()
+        val scaleX = planW / safeLX.toFloat()
+        val scaleY = planDrawH / safeLY.toFloat()
         val scale = min(scaleX, scaleY) * 0.85f
-        val drawLX = footingLengthX.toFloat() * scale
-        val drawLY = footingLengthY.toFloat() * scale
+        val drawLX = safeLX.toFloat() * scale
+        val drawLY = safeLY.toFloat() * scale
         val fLeft = planLeft + (planW - drawLX) / 2f
         val fTop = planTop + (planDrawH - drawLY) / 2f
         val fRight = fLeft + drawLX
@@ -131,21 +118,12 @@ fun ProfessionalFootingDrawing(
             size = Size(drawLX, drawLY)
         )
 
-        // Concrete hatching
-        nc.save()
-        nc.clipRect(fLeft, fTop, fRight, fBottom)
-        var hx = fLeft - drawLY
-        while (hx < fRight) {
-            nc.drawLine(
-                hx, fTop, hx + drawLY, fBottom,
-                android.graphics.Paint().apply {
-                    color = Color(0xFFBBBBBB).toArgb()
-                    strokeWidth = 0.8f * density
-                }
-            )
-            hx += 16f
-        }
-        nc.restore()
+        // Concrete hatching via DrawingUtils
+        drawHatchPattern(
+            fLeft, fTop, drawLX, drawLY,
+            spacing = 16f, angleDeg = 45f,
+            color = Color(0x55AAAAAA)
+        )
 
         // ── Bottom reinforcement X-direction (blue lines, vertical) ──
         if (rebarXCount > 1) {
@@ -163,7 +141,7 @@ fun ProfessionalFootingDrawing(
             }
         }
         // Bar mark for X
-        drawText("\u2460", fRight + 16f, fCenterY + 3f, barXColor, 11f, true)
+        drawTextAnnotated("\u2460", fRight + 16f, fCenterY + 3f, barXColor, 11f * density, bold = true)
 
         // ── Bottom reinforcement Y-direction (lighter, horizontal) ─
         if (rebarYCount > 1) {
@@ -181,11 +159,11 @@ fun ProfessionalFootingDrawing(
             }
         }
         // Bar mark for Y
-        drawText("\u2461", fLeft - 16f, fBottom + 14f, barYColor, 11f, true)
+        drawTextAnnotated("\u2461", fLeft - 16f, fBottom + 14f, barYColor, 11f * density, bold = true)
 
         // ── Column(s) ─────────────────────────────────────────────
-        val colDrawW = (columnWidth * scale).toFloat()
-        val colDrawD = (columnDepth * scale).toFloat()
+        val colDrawW = (safeColW * scale).toFloat()
+        val colDrawD = (safeColD * scale).toFloat()
 
         when (footingType) {
             "Isolated" -> {
@@ -198,24 +176,11 @@ fun ProfessionalFootingDrawing(
                     style = Stroke(width = 1.5f)
                 )
                 // Column cross hatching
-                nc.save()
-                nc.clipRect(cL, cT, cL + colDrawW, cT + colDrawD)
-                var chx = cL
-                while (chx < cL + colDrawW + colDrawD) {
-                    nc.drawLine(
-                        chx, cT, chx - colDrawD, cT + colDrawD,
-                        android.graphics.Paint().apply {
-                            color = Color(0xFF444444).toArgb()
-                            strokeWidth = 0.6f * density
-                        }
-                    )
-                    chx += 5f
-                }
-                nc.restore()
+                drawHatchPattern(cL, cT, colDrawW, colDrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
 
                 // ── Punching shear perimeter ───────────────────────
-                val d = footingThickness - cover
-                val dPx = (d * scale).toFloat()
+                val d = safeThick - cover
+                val dPx = (d * scale).toFloat().coerceAtLeast(1f)
                 val boOffset = dPx / 2f
                 val psLeft = cL - boOffset
                 val psTop = cT - boOffset
@@ -228,7 +193,7 @@ fun ProfessionalFootingDrawing(
                     style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f)))
                 )
                 // Bo label
-                drawText("Bo", cL + colDrawW / 2f, psTop - 4f, shearPerimColor, 8f)
+                drawTextAnnotated("Bo", cL + colDrawW / 2f, psTop - 4f, shearPerimColor, 8f * density)
                 // Vc arrows
                 val arrowLen = 10f
                 val arrowPositions = listOf(
@@ -247,24 +212,14 @@ fun ProfessionalFootingDrawing(
                     )
                     // Arrow head
                     val headY = pos.y + dirY * arrowLen
-                    drawLine(
-                        shearPerimColor,
-                        Offset(pos.x, headY),
-                        Offset(pos.x - 2f, headY - dirY * 3f),
-                        strokeWidth = 1f
-                    )
-                    drawLine(
-                        shearPerimColor,
-                        Offset(pos.x, headY),
-                        Offset(pos.x + 2f, headY - dirY * 3f),
-                        strokeWidth = 1f
-                    )
+                    drawLine(shearPerimColor, Offset(pos.x, headY), Offset(pos.x - 2f, headY - dirY * 3f), strokeWidth = 1f)
+                    drawLine(shearPerimColor, Offset(pos.x, headY), Offset(pos.x + 2f, headY - dirY * 3f), strokeWidth = 1f)
                 }
             }
             "Combined" -> {
                 // Two columns
-                val c1xNorm = if (footingLengthX > 0) (col1X / footingLengthX).toFloat() else 0.3f
-                val c2xNorm = if (footingLengthX > 0) (col2X / footingLengthX).toFloat() else 0.7f
+                val c1xNorm = if (safeLX > 0) (col1X / safeLX).toFloat() else 0.3f
+                val c2xNorm = if (safeLX > 0) (col2X / safeLX).toFloat() else 0.7f
                 val c1L = fLeft + c1xNorm * drawLX - colDrawW / 2f
                 val c2L = fLeft + c2xNorm * drawLX - colDrawW / 2f
                 for (cL in listOf(c1L, c2L)) {
@@ -275,6 +230,7 @@ fun ProfessionalFootingDrawing(
                         topLeft = Offset(cL, cT), size = Size(colDrawW, colDrawD),
                         style = Stroke(width = 1.5f)
                     )
+                    drawHatchPattern(cL, cT, colDrawW, colDrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
                 }
             }
             "Raft" -> {
@@ -304,39 +260,37 @@ fun ProfessionalFootingDrawing(
             style = Stroke(width = 3f)
         )
 
-        // ── Dimension lines ───────────────────────────────────────
-        // Footing B × L
-        drawDimensionLineH(fLeft, fTop - 14f, fRight, fTop - 14f, "L=${footingLengthX.toInt()}", dimColor)
-        drawDimensionLineV(fLeft - 14f, fTop, fLeft - 14f, fBottom, "B=${footingLengthY.toInt()}", dimColor)
+        // ── Dimension lines using DrawingUtils ────────────────────
+        // Footing L × B
+        drawHorizontalDimension(fLeft, fRight, fTop, "L=${safeLX.toInt()}", dimColor, 9f * density, offset = -14f)
+        drawVerticalDimension(fTop, fBottom, fLeft, "B=${safeLY.toInt()}", dimColor, 9f * density, offset = -14f)
 
         // Column b × h (for isolated)
         if (footingType == "Isolated") {
             val cL = fCenterX - colDrawW / 2f
             val cT = fCenterY - colDrawD / 2f
-            drawDimensionLineH(cL, fBottom + 10f, cL + colDrawW, fBottom + 10f, "b=${columnWidth.toInt()}", Color(0xFFAAAAAA))
-            drawDimensionLineV(cL + colDrawW + 10f, cT, cL + colDrawW + 10f, cT + colDrawD, "h=${columnDepth.toInt()}", Color(0xFFAAAAAA))
+            drawHorizontalDimension(cL, cL + colDrawW, fBottom, "b=${safeColW.toInt()}", C.ExtensionGray, 8f * density, offset = 10f)
+            drawVerticalDimension(cT, cT + colDrawD, cL + colDrawW, "h=${safeColD.toInt()}", C.ExtensionGray, 8f * density, offset = 10f)
         }
 
         // Edge distances (isolated)
         if (footingType == "Isolated") {
             val cL = fCenterX - colDrawW / 2f
-            val edgeLeft = ((cL - fLeft) / scale)
-            val edgeRight = ((fRight - (cL + colDrawW)) / scale)
-            drawText("e₁=${edgeLeft.toInt()}", fLeft + (cL - fLeft) / 2f, fBottom + 10f, Color(0xFF888888), 7f)
-            drawText("e₂=${edgeRight.toInt()}", cL + colDrawW + (fRight - cL - colDrawW) / 2f, fBottom + 10f, Color(0xFF888888), 7f)
+            val edgeLeft = ((cL - fLeft) / scale).coerceAtLeast(0f)
+            val edgeRight = ((fRight - (cL + colDrawW)) / scale).coerceAtLeast(0f)
+            drawTextAnnotated("e\u2081=${edgeLeft.toInt()}", fLeft + (cL - fLeft) / 2f, fBottom + 10f, C.ExtensionGray, 7f * density, center = true)
+            drawTextAnnotated("e\u2082=${edgeRight.toInt()}", cL + colDrawW + (fRight - cL - colDrawW) / 2f, fBottom + 10f, C.ExtensionGray, 7f * density, center = true)
         }
 
         // Plan label
-        drawText("PLAN", fLeft + 20f, fBottom + 22f, Color(0xFFAAAAAA), 9f, true)
+        drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
 
-        // Section cut line
-        drawLine(
-            Color(0xFFE74C3C), Offset(fCenterX, fTop - 20f),
-            Offset(fCenterX, fBottom + 6f), strokeWidth = 1.2f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 4f))
+        // Section cut line using DrawingUtils
+        drawSectionCutLine(
+            x1 = fCenterX, y1 = fTop - 20f,
+            x2 = fCenterX, y2 = fBottom + 6f,
+            label = "A", color = C.SectionLine
         )
-        drawText("A", fCenterX - 12f, fBottom + 18f, Color(0xFFE74C3C), 9f, true)
-        drawText("A", fCenterX + 12f, fBottom + 18f, Color(0xFFE74C3C), 9f, true)
 
         // ══════════════════════════════════════════════════════════
         //  SECTION VIEW
@@ -346,39 +300,28 @@ fun ProfessionalFootingDrawing(
         val secLeft = margin + 90f
         val secRight = w - margin
 
-        drawText("SECTION A-A", secLeft - 50f, secTop + 4f, Color(0xFFAAAAAA), 9f, true)
+        drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, 9f * density, bold = true)
 
         val maxSecW = secRight - secLeft - 120f
         val secSpanPx = min(drawLX, maxSecW)
-        val secScale = secSpanPx / footingLengthX.toFloat()
-        val thickPx = (footingThickness * secScale).toFloat().coerceIn(20f, 70f)
+        val secScale = secSpanPx / safeLX.toFloat()
+        val thickPx = (safeThick * secScale).toFloat().coerceIn(20f, 70f)
         val sLeft = secLeft + (maxSecW - secSpanPx) / 2f
         val sTop = secTop + (sectionH - thickPx) / 2f + 8f
         val sBottom = sTop + thickPx
         val sCenterX = sLeft + secSpanPx / 2f
 
-        // Soil below footing (hatched area)
+        // Soil below footing (hatched area) using DrawingUtils
         val soilDepth = 30f
         drawRect(
-            color = soilColor,
+            color = soilColor.copy(alpha = 0.4f),
             topLeft = Offset(sLeft - 20f, sBottom),
             size = Size(secSpanPx + 40f, soilDepth)
         )
-        // Soil hatching
-        nc.save()
-        nc.clipRect(sLeft - 20f, sBottom, sLeft + secSpanPx + 20f, sBottom + soilDepth)
-        var shx = sLeft - 20f
-        while (shx < sLeft + secSpanPx + 20f + soilDepth) {
-            nc.drawLine(
-                shx, sBottom, shx - soilDepth, sBottom + soilDepth,
-                android.graphics.Paint().apply {
-                    color = soilHatchColor.toArgb()
-                    strokeWidth = 1f * density
-                }
-            )
-            shx += 8f
-        }
-        nc.restore()
+        drawHatchPattern(
+            sLeft - 20f, sBottom, secSpanPx + 40f, soilDepth,
+            spacing = 8f, angleDeg = -45f, color = soilHatchColor
+        )
 
         // Footing concrete
         drawRect(
@@ -388,7 +331,7 @@ fun ProfessionalFootingDrawing(
         )
 
         // Column above
-        val colWpx = (columnWidth * secScale).toFloat()
+        val colWpx = (safeColW * secScale).toFloat()
         val colHpx = 40f
         val colLeft = sCenterX - colWpx / 2f
         drawRect(
@@ -403,23 +346,10 @@ fun ProfessionalFootingDrawing(
             style = Stroke(width = 1.5f)
         )
         // Column hatching
-        nc.save()
-        nc.clipRect(colLeft, sTop - colHpx, colLeft + colWpx, sTop)
-        var chx2 = colLeft
-        while (chx2 < colLeft + colWpx + colHpx) {
-            nc.drawLine(
-                chx2, sTop - colHpx, chx2 - colHpx, sTop,
-                android.graphics.Paint().apply {
-                    color = Color(0xFF444444).hashCode()
-                    strokeWidth = 0.6f * density
-                }
-            )
-            chx2 += 5f
-        }
-        nc.restore()
+        drawHatchPattern(colLeft, sTop - colHpx, colWpx, colHpx, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
 
         // Pedestal (if footing is much wider than column)
-        if (footingLengthX > columnWidth * 2.5) {
+        if (safeLX > safeColW * 2.5) {
             val pedW = colWpx * 1.8f
             val pedH = 20f
             drawRect(
@@ -433,19 +363,17 @@ fun ProfessionalFootingDrawing(
                 size = Size(pedW, pedH),
                 style = Stroke(width = 1f)
             )
-            drawText("pedestal", sCenterX + pedW / 2f + 4f, sTop - pedH / 2f + 3f, Color(0xFF999999), 7f)
         }
 
-        // Main reinforcement (blue circles at bottom)
-        val barR = (rebarXDia * secScale / 2f).toFloat().coerceIn(2.5f, 5f)
+        // Main reinforcement (blue circles at bottom) using DrawingUtils
         val barCountSec = if (rebarXCount > 1) rebarXCount.coerceIn(3, 18) else 6
         val barStepSec = (secSpanPx - 16f) / (barCountSec - 1)
         for (i in 0 until barCountSec) {
             val bx = sLeft + 8f + i * barStepSec
             val by = sBottom - 5f
-            drawCircle(color = barXColor, radius = barR, center = Offset(bx, by))
+            drawRebarCircle(bx, by, rebarXDia.toFloat(), secScale / 2f, barXColor)
         }
-        drawText("\u2460", sCenterX, sBottom + 12f, barXColor, 9f, true)
+        drawTextAnnotated("\u2460", sCenterX, sBottom + 12f, barXColor, 9f * density, center = true, bold = true)
 
         // Footing border
         drawRect(
@@ -458,16 +386,16 @@ fun ProfessionalFootingDrawing(
         // Cover dimension
         val coverPx = (cover * secScale).toFloat().coerceIn(3f, 12f)
         drawLine(
-            Color(0xFF27AE60),
+            C.SafeGreen,
             Offset(sLeft + 20f, sBottom),
             Offset(sLeft + 20f, sBottom - coverPx),
             strokeWidth = 1f
         )
-        drawText("c=${cover.toInt()}", sLeft + 38f, sBottom - coverPx / 2f + 3f, Color(0xFF27AE60), 8f)
+        drawTextAnnotated("c=${cover.toInt()}", sLeft + 38f, sBottom - coverPx / 2f + 3f, C.SafeGreen, 8f * density)
 
         // Critical section at d/2 from column face
-        val d = footingThickness - cover
-        val dPxSec = (d * secScale).toFloat()
+        val d = safeThick - cover
+        val dPxSec = (d * secScale).toFloat().coerceAtLeast(1f)
         val critOffset = dPxSec / 2f
         drawLine(
             critSectionColor,
@@ -476,14 +404,10 @@ fun ProfessionalFootingDrawing(
             strokeWidth = 1.2f,
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f))
         )
-        drawText("d/2", colLeft + colWpx + critOffset + 10f, sTop + thickPx / 2f + 3f, critSectionColor, 7f)
+        drawTextAnnotated("d/2", colLeft + colWpx + critOffset + 10f, sTop + thickPx / 2f + 3f, critSectionColor, 7f * density)
 
-        // Thickness dimension
-        val dimX = sLeft + secSpanPx + 16f
-        drawLine(dimColor, Offset(dimX, sTop), Offset(dimX, sBottom), strokeWidth = 1.2f)
-        drawLine(dimColor, Offset(dimX - 4f, sTop), Offset(dimX + 4f, sTop), strokeWidth = 1.2f)
-        drawLine(dimColor, Offset(dimX - 4f, sBottom), Offset(dimX + 4f, sBottom), strokeWidth = 1.2f)
-        drawText("t=${footingThickness.toInt()}", dimX + 28f, sTop + thickPx / 2f + 3f, dimColor, 8f)
+        // Thickness dimension using DrawingUtils
+        drawVerticalDimension(sTop, sBottom, sLeft + secSpanPx, "t=${safeThick.toInt()}", dimColor, 8f * density, offset = 16f)
 
         // ══════════════════════════════════════════════════════════
         //  SOIL PRESSURE DIAGRAM (Combined / Raft)
@@ -494,17 +418,17 @@ fun ProfessionalFootingDrawing(
             val prLeft = secLeft
             val prRight = prLeft + secSpanPx
 
-            drawText("SOIL PRESSURE", prLeft, prTop - 4f, Color(0xFFAAAAAA), 9f, true)
+            drawTextAnnotated("SOIL PRESSURE", prLeft, prTop - 4f, C.ExtensionGray, 9f * density, bold = true)
 
-            // Trapezoidal pressure: max at one end, min at the other
-            val maxP = 250f   // kN/m² placeholder
-            val minP = 120f
-            val pressureScale = (pressureH - 20f) / maxP
-            val maxBarH = maxP * pressureScale
-            val minBarH = minP * pressureScale
+            // Use provided pressure values or compute from loads if available
+            val maxP = if (soilPressureMax > 0) soilPressureMax.toFloat() else 250f
+            val minP = if (soilPressureMin > 0) soilPressureMin.toFloat() else 120f
+            val pressureScaleVal = if (maxP > 0) (pressureH - 20f) / maxP else 0f
+            val maxBarH = maxP * pressureScaleVal
+            val minBarH = minP * pressureScaleVal
 
             // Trapezoid fill
-            val path = androidx.compose.ui.graphics.Path().apply {
+            val path = Path().apply {
                 moveTo(prLeft, prBottom)
                 lineTo(prLeft, prBottom - maxBarH)
                 lineTo(prRight, prBottom - minBarH)
@@ -515,136 +439,67 @@ fun ProfessionalFootingDrawing(
             drawPath(path, color = pressureColor, style = Stroke(width = 1.5f))
 
             // Max / min labels
-            drawText("q_max=${maxP.toInt()}", prLeft, prBottom - maxBarH - 4f, pressureColor, 8f)
-            drawText("q_min=${minP.toInt()}", prRight, prBottom - minBarH - 4f, pressureColor, 8f)
+            drawTextAnnotated("q_max=${maxP.toInt()}", prLeft, prBottom - maxBarH - 4f, pressureColor, 8f * density)
+            drawTextAnnotated("q_min=${minP.toInt()}", prRight, prBottom - minBarH - 4f, pressureColor, 8f * density, center = true)
 
             // Resultant arrow
             val resultantX = prLeft + secSpanPx * 0.55f
-            val resultantH = (maxP + minP) / 2f * pressureScale
+            val resultantH = (maxP + minP) / 2f * pressureScaleVal
             drawLine(
-                Color(0xFFF39C12),
+                C.WarningOrange,
                 Offset(resultantX, prBottom),
                 Offset(resultantX, prBottom - resultantH),
                 strokeWidth = 2f
             )
             // Arrow head
             drawLine(
-                Color(0xFFF39C12),
+                C.WarningOrange,
                 Offset(resultantX, prBottom - resultantH),
                 Offset(resultantX - 3f, prBottom - resultantH + 5f),
                 strokeWidth = 2f
             )
             drawLine(
-                Color(0xFFF39C12),
+                C.WarningOrange,
                 Offset(resultantX, prBottom - resultantH),
                 Offset(resultantX + 3f, prBottom - resultantH + 5f),
                 strokeWidth = 2f
             )
-            drawText("R", resultantX, prBottom - resultantH - 6f, Color(0xFFF39C12), 9f, true)
+            drawTextAnnotated("R", resultantX, prBottom - resultantH - 6f, C.WarningOrange, 9f * density, center = true, bold = true)
         }
 
         // ══════════════════════════════════════════════════════════
-        //  REINFORCEMENT TABLE
+        //  REINFORCEMENT TABLE using DrawingUtils
         // ══════════════════════════════════════════════════════════
         val tblTop = if (pressureH > 0) secBottom + pressureH + 18f else secBottom + 14f
         val tblLeft = margin
-        val tblRight = w - margin
-        val tblWidth = tblRight - tblLeft
-        val rowH = 22f
-        val headerRowH = 26f
-        val colWidths = floatArrayOf(tblWidth * 0.10f, tblWidth * 0.22f, tblWidth * 0.16f, tblWidth * 0.16f, tblWidth * 0.18f, tblWidth * 0.18f)
-        var rowY = tblTop
+        val tblWidth = w - 2 * margin
 
-        // Table header
-        drawRoundRect(
-            color = headerBg, topLeft = Offset(tblLeft, rowY),
-            size = Size(tblWidth, headerRowH), cornerRadius = CornerRadius(4f)
-        )
+        val xSpacing = if (rebarXCount > 1) (safeLY / (rebarXCount - 1)).toInt() else safeLY.toInt()
+        val ySpacing = if (rebarYCount > 1) (safeLX / (rebarYCount - 1)).toInt() else safeLX.toInt()
+        val barLengthX = safeLY.toInt()
+        val barLengthY = safeLX.toInt()
+
         val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Length (mm)")
-        var colX = tblLeft
-        headers.forEachIndexed { idx, h ->
-            drawText(h, colX + colWidths[idx] / 2f, rowY + headerRowH / 2f + 4f, textColor, 9f, true)
-            colX += colWidths[idx]
-        }
-        rowY += headerRowH
-
-        val xSpacing = if (rebarXCount > 1) (footingLengthY / (rebarXCount - 1)).toInt() else footingLengthY.toInt()
-        val ySpacing = if (rebarYCount > 1) (footingLengthX / (rebarYCount - 1)).toInt() else footingLengthX.toInt()
-        val barLengthX = footingLengthY.toInt()
-        val barLengthY = footingLengthX.toInt()
-
-        val tableRowColor = Color(0xFF263238)
-        val tableRowAltColor = Color(0xFF1E2A33)
-
+        val colWidths = listOf(
+            tblWidth * 0.10f, tblWidth * 0.22f, tblWidth * 0.16f,
+            tblWidth * 0.16f, tblWidth * 0.18f, tblWidth * 0.18f
+        )
         val rows = listOf(
             listOf("\u2460", "X-bottom", rebarXDia.toInt().toString(), rebarXCount.toString(), xSpacing.toString(), barLengthX.toString()),
             listOf("\u2461", "Y-bottom", rebarYDia.toInt().toString(), rebarYCount.toString(), ySpacing.toString(), barLengthY.toString())
         )
 
-        rows.forEachIndexed { idx, row ->
-            val bg = if (idx % 2 == 0) tableRowColor else tableRowAltColor
-            drawRect(color = bg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, rowH))
-            colX = tblLeft
-            row.forEachIndexed { cIdx, cell ->
-                val cellColor = when (cIdx) {
-                    0 -> barXColor
-                    else -> Color(0xFFDDDDDD)
-                }
-                drawText(cell, colX + colWidths[cIdx] / 2f, rowY + rowH / 2f + 3f, cellColor, 9f)
-                colX += colWidths[cIdx]
-            }
-            rowY += rowH
-        }
-
-        // Table border
-        drawRect(
-            color = Color(0xFF455A64), topLeft = Offset(tblLeft, tblTop),
-            size = Size(tblWidth, rowY - tblTop), style = Stroke(width = 1f)
+        drawReinforcementTable(
+            x = tblLeft, y = tblTop,
+            colWidths = colWidths,
+            headers = headers,
+            rows = rows,
+            rowHeight = 22f,
+            headerHeight = 26f,
+            headerBg = tableHeaderBg,
+            altRowBg = Color(0x1AFFFFFF),
+            textColor = textColor,
+            textSize = 9f * density
         )
-        // Column lines
-        var cx = tblLeft
-        for (i in 0 until colWidths.size - 1) {
-            cx += colWidths[i]
-            drawLine(Color(0xFF37474F), Offset(cx, tblTop), Offset(cx, rowY), strokeWidth = 0.5f)
-        }
-    }
-}
-
-// ── Horizontal dimension line ───────────────────────────────────
-private fun DrawScope.drawDimensionLineH(
-    x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color
-) {
-    val tick = 6f
-    drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
-    drawLine(color, Offset(x1, y1 - tick), Offset(x1, y1 + tick), strokeWidth = 1f)
-    drawLine(color, Offset(x2, y2 - tick), Offset(x2, y2 + tick), strokeWidth = 1f)
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color.toArgb()
-            textSize = 9f * density
-            textAlign = android.graphics.Paint.Align.CENTER
-        }
-        this.drawText(text, (x1 + x2) / 2f, y1 - 4f, paint)
-    }
-}
-
-// ── Vertical dimension line ─────────────────────────────────────
-private fun DrawScope.drawDimensionLineV(
-    x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color
-) {
-    val tick = 6f
-    drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
-    drawLine(color, Offset(x1 - tick, y1), Offset(x1 + tick, y1), strokeWidth = 1f)
-    drawLine(color, Offset(x2 - tick, y2), Offset(x2 + tick, y2), strokeWidth = 1f)
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color.hashCode()
-            textSize = 9f * density
-            textAlign = android.graphics.Paint.Align.CENTER
-        }
-        save()
-        rotate(-90f, x1 - 4f, (y1 + y2) / 2f)
-        drawText(text, x1 - 4f, (y1 + y2) / 2f + 4f, paint)
-        restore()
     }
 }

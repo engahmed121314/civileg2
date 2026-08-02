@@ -795,6 +795,28 @@
     <string name="column_estimated_cost">التكلفة التقديرية</string>
     <string name="column_select_code">اختر كود التصميم</string>
     <string name="column_load_combo">تركيبة الأحمال</string>
+    <string name="column_fcu_label">f\'cu (MPa)</string>
+    <string name="column_fy_label">fy (MPa)</string>
+    <string name="column_height_label">الارتفاع (م)</string>
+    <string name="column_drawing_subtitle">تفاصيل تسليح العمود</string>
+    <string name="column_formula_ecp_pu">Pu = 0.35·f\'cu·Ac + 0.67·fy·As</string>
+    <string name="column_formula_aci_pu">φPn = 0.85·f\'c·Ag + fy·As</string>
+    <string name="column_formula_sbc_pu">Pu = 0.35·f\'cu·Ac + 0.67·fy·As</string>
+    <string name="column_formula_shear">القص: q_u = Pu / (b·d) ≤ q_cu</string>
+    <string name="column_formula_punching">الثقب: q_p = Pu / (perimeter·d) ≤ q_p_limit</string>
+    <string name="column_formula_as_min_ecp">As_min = 0.008·Ac  (ECP 203)</string>
+    <string name="column_formula_as_min_aci">As_min = 0.01·Ag  (ACI 318)</string>
+    <string name="column_formula_as_min_sbc">As_min = 0.008·Ac  (SBC 304)</string>
+    <string name="column_code_ecp">كود ECP</string>
+    <string name="column_code_aci">كود ACI</string>
+    <string name="column_code_sbc">الكود السعودي</string>
+    <string name="column_validation_positive">القيمة يجب أن تكون موجبة</string>
+    <string name="column_validation_required">حقل مطلوب</string>
+    <string name="column_validation_fcu_range">f\'cu يجب أن تكون 20–60 MPa</string>
+    <string name="column_validation_fy_range">fy يجب أن تكون 200–600 MPa</string>
+    <string name="column_validation_dim_range">البعد يجب أن يكون 100–1500 مم</string>
+    <string name="column_validation_load_range">الحمل يجب أن يكون موجباً</string>
+    <string name="column_cover_label">الغطاء (مم)</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Beam Screen -->
@@ -949,6 +971,10 @@
     <string name="slab_moment_mx">عزم Mx</string>
     <string name="slab_main_steel_lx">الحديد الرئيسي (Lx):</string>
     <string name="slab_secondary_steel_ly">الحديد الثانوي (Ly):</string>
+    <string name="slab_dl_label">DL (kN/m²)</string>
+    <string name="slab_ll_label">LL (kN/m²)</string>
+    <string name="slab_reinforcement_subtitle">تفاصيل تسليح البلاطة</string>
+    <string name="slab_validate_inputs">يرجى إدخال قيم صحيحة وموجبة لجميع الحقول</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Footing Screen -->
@@ -1164,4 +1190,19 @@
     <string name="steel_weld_result_fail">نتيجة اللحام — فاشل</string>
     <string name="steel_tons">طن</string>
     <string name="steel_currency_suffix">جنيه</string>
+
+    <!-- Footing Screen (additional bilingual strings) -->
+    <string name="footing_fcu_label">f\'cu (MPa)</string>
+    <string name="footing_fy_label">fy (MPa)</string>
+    <string name="footing_pu1_label">Pu1 (kN)</string>
+    <string name="footing_soil_label">سعة التربة (kPa)</string>
+    <string name="footing_pu2_label">Pu2 (kN)</string>
+    <string name="footing_distance_label">المسافة بين الأعمدة (m)</string>
+    <string name="footing_boundary_label">قيود الحدود (اختياري)</string>
+    <string name="footing_max_left_label">الحد الأيسر الأقصى (m)</string>
+    <string name="footing_max_right_label">الحد الأيمن الأقصى (m)</string>
+    <string name="footing_reinforcement_detail">تفاصيل تسليح القاعدة</string>
+    <string name="footing_validate_inputs">يرجى إدخال قيم صحيحة وموجبة لجميع الحقول المطلوبة</string>
+    <string name="rw_drawing_subtitle">تفاصيل مقطع حائط السند</string>
+    <string name="rw_validate_inputs">يرجى إدخال قيم أرقام صحيحة وموجبة لجميع الحقول</string>
 </resources>

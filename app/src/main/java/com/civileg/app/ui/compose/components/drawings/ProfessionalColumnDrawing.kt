@@ -1,8 +1,8 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -16,12 +16,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 // ─── Data classes ───────────────────────────────────────────────────────────
 
@@ -32,28 +31,28 @@ data class BarInfo(
     val isCorner: Boolean = false
 )
 
-// ─── Color palette (matches beam drawing style) ─────────────────────────────
+// ─── Color palette — delegates to shared DrawingColors ───────────────────
 
 private object C {
-    val Concrete = Color(0xFF888888)
+    val Concrete = DrawingColors.ConcreteTopGray
     val ConcreteLight = Color(0xFFA0A0A0)
-    val ConcreteDark = Color(0xFF606060)
-    val Bar = Color(0xFF4A90D9)
-    val CornerBar = Color(0xFF5BA0E9)
-    val Tie = Color(0xFF9B59B6)
+    val ConcreteDark = DrawingColors.ConcreteSideGray
+    val Bar = DrawingColors.RebarBlue
+    val CornerBar = DrawingColors.TopRebarBlue
+    val Tie = DrawingColors.StirrupPurple
     val TieLight = Color(0xFFB07CC8)
-    val White = Color(0xFFFFFFFF)
-    val DimLine = Color(0xFFCCCCCC)
-    val Safe = Color(0xFF27AE60)
-    val Unsafe = Color(0xFFE74C3C)
-    val Center = Color(0xFF666666)
-    val Hatch = Color(0xFFAAAAAA)
-    val TblBorder = Color(0xFF555555)
+    val White = DrawingColors.DimensionWhite
+    val DimLine = DrawingColors.ExtensionGray
+    val Safe = DrawingColors.SafeGreen
+    val Unsafe = DrawingColors.UnsafeRed
+    val Center = DrawingColors.CenterLine
+    val Hatch = DrawingColors.HatchColor
+    val TblBorder = DrawingColors.ExtensionGray
     val TblHeader = Color(0xFF3A3A3A)
-    val TblBg = Color(0xFF2A2A2A)
-    val Slab = Color(0xFF505050)
-    val Grid = Color(0xFF444444)
-    val BgDark = Color(0xFF2A2A2A)
+    val TblBg = DrawingColors.ConcreteFill
+    val Slab = DrawingColors.ConcreteSideGray
+    val Grid = DrawingColors.GridLine
+    val BgDark = DrawingColors.ConcreteFill
     val BgDarker = Color(0xFF333333)
 }
 
@@ -82,7 +81,7 @@ fun ProfessionalColumnDrawing(
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier.fillMaxWidth().height(680.dp)) {
+    Canvas(modifier = modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
         val W = size.width
         val H = size.height
         val divX = W * 0.40f
@@ -223,7 +222,7 @@ private fun DrawScope.draw3DElevation(
 
     // Column dimensions label on elevation
     val dimLabelPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE; textSize = 16f; isFakeBoldText = false
+        color = C.White.toArgb(); textSize = 16f; isFakeBoldText = false
         textAlign = android.graphics.Paint.Align.LEFT
     }
     drawContext.canvas.nativeCanvas.apply {
@@ -239,7 +238,7 @@ private fun DrawScope.draw3DElevation(
     drawTriV(elevDimX, oy + h, 4f, false)
     drawContext.canvas.nativeCanvas.apply {
         val dp = android.graphics.Paint().apply {
-            color = android.graphics.Color.WHITE; textSize = 14f
+            color = C.White.toArgb(); textSize = 14f
         }
         save(); rotate(-90f, elevDimX + 12f, oy + h / 2f)
         drawText("${colH.toInt()}", elevDimX + 12f, oy + h / 2f + 5f, dp)
@@ -334,7 +333,7 @@ private fun DrawScope.drawCrossSection(
             val leaderEnd = Offset(bx + br + 14f, by - br - 14f)
             drawLine(C.White, Offset(bx + br, by - br), leaderEnd, 1f)
             drawContext.canvas.nativeCanvas.apply {
-                val p = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 18f; isFakeBoldText = true }
+                val p = android.graphics.Paint().apply { color = C.White.toArgb(); textSize = 18f; isFakeBoldText = true }
                 drawText(circledNums[mi], leaderEnd.x + 2f, leaderEnd.y - 2f, p)
                 p.textSize = 14f; p.isFakeBoldText = false
                 drawText("\u00D8${bar.diameter.toInt()}", leaderEnd.x + 2f, leaderEnd.y + 14f, p)
@@ -358,7 +357,7 @@ private fun DrawScope.drawCrossSection(
                 val spY = cy + (sorted[i].y.toFloat() / colD.toFloat()) * dh + br1 + 12f
                 val barNative = drawContext.canvas.nativeCanvas
                 val spPaint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#BBBBBB"); textSize = 11f
+                    color = C.DimLine.toArgb(); textSize = 11f
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
                 barNative.drawText("${spacingMm.toInt()}", (b1x + b2x) / 2f, spY, spPaint)
@@ -376,12 +375,12 @@ private fun DrawScope.drawCrossSection(
     val rCovX = cx + dw + 14f
     drawLine(C.DimLine.copy(alpha = 0.7f), Offset(rCovX, centerY), Offset(rCovX + covPx, centerY), 0.8f)
     native.drawText("c", rCovX + covPx / 2f - 4f, centerY - 6f,
-        android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#AAAAAA"); textSize = 12f })
+        android.graphics.Paint().apply { color = C.DimLine.toArgb(); textSize = 12f })
     // Bottom cover
     val bCovY = cy + dh + 14f
     drawLine(C.DimLine.copy(alpha = 0.7f), Offset(centerX, bCovY), Offset(centerX, bCovY + covPx), 0.8f)
     native.drawText("c", centerX + 4f, bCovY + covPx / 2f + 4f,
-        android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#AAAAAA"); textSize = 12f })
+        android.graphics.Paint().apply { color = C.DimLine.toArgb(); textSize = 12f })
 
     drawLabel("SECTION A-A", left + width / 2f, top + height - 8f, 26f, true)
 }
@@ -501,7 +500,7 @@ private fun DrawScope.drawSectionDimensions(
     drawLine(C.DimLine, Offset(cx + dw, dimY - 6f), Offset(cx + dw, cy - 4f), 0.8f)
     drawTriH(cx, dimY, 5f, true); drawTriH(cx + dw, dimY, 5f, false)
     native.drawText("${colW.toInt()}", cx + dw / 2f - 20f, dimY - 5f,
-        android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 18f })
+        android.graphics.Paint().apply { color = C.White.toArgb(); textSize = 18f })
 
     // Depth (right)
     val dimX = cx + dw + 24f
@@ -512,7 +511,7 @@ private fun DrawScope.drawSectionDimensions(
     native.apply {
         save(); rotate(-90f, dimX + 14f, cy + dh / 2f)
         drawText("${colD.toInt()}", dimX + 14f, cy + dh / 2f + 5f,
-            android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 18f })
+            android.graphics.Paint().apply { color = C.White.toArgb(); textSize = 18f })
         restore()
     }
 
@@ -520,7 +519,7 @@ private fun DrawScope.drawSectionDimensions(
     val covDimX = cx - 20f
     drawLine(C.DimLine.copy(alpha = 0.7f), Offset(covDimX, cy), Offset(covDimX, cy + covPx), 0.8f)
     native.drawText("c=${cover.toInt()}", covDimX - 40f, cy + covPx / 2f + 4f,
-        android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#AAAAAA"); textSize = 14f })
+        android.graphics.Paint().apply { color = C.DimLine.toArgb(); textSize = 14f })
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -555,7 +554,7 @@ private fun DrawScope.drawInteractionDiagram(
 
     // Axis labels
     val lp = android.graphics.Paint().apply {
-        color = android.graphics.Color.parseColor("#CCCCCC"); textSize = 14f
+        color = C.DimLine.toArgb(); textSize = 14f
         textAlign = android.graphics.Paint.Align.CENTER
     }
     native.drawText("M (kN.m)", left + width / 2f, top + height - 4f, lp)
@@ -564,7 +563,7 @@ private fun DrawScope.drawInteractionDiagram(
 
     // Axis tick marks and values
     val tickPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.parseColor("#999999"); textSize = 11f
+        color = C.DimLine.copy(alpha = 0.6f).toArgb(); textSize = 11f
         textAlign = android.graphics.Paint.Align.CENTER
     }
     val tickLen = 4f
@@ -612,14 +611,14 @@ private fun DrawScope.drawInteractionDiagram(
         drawCircle(color = if (inside) C.Safe else C.Unsafe, radius = 7f, center = Offset(dpx, dpy))
         drawCircle(color = Color.White, radius = 3f, center = Offset(dpx, dpy))
         native.drawText("(${designPt.first.toInt()}, ${designPt.second.toInt()})", dpx + 12f, dpy - 8f,
-            android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 12f; isFakeBoldText = true })
+            android.graphics.Paint().apply { color = C.White.toArgb(); textSize = 12f; isFakeBoldText = true })
     }
 
     // Legend indicators
     val legY = top + height - 18f
     val legX = left + pad + 4f
     val legPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.parseColor("#CCCCCC"); textSize = 11f
+        color = C.DimLine.toArgb(); textSize = 11f
     }
     // Safe indicator
     drawCircle(color = C.Safe, radius = 4f, center = Offset(legX + 4f, legY - 4f))
@@ -648,8 +647,8 @@ private fun DrawScope.drawReinforcementTable(
     drawRect(color = C.TblBorder, topLeft = Offset(left, top), size = Size(width, height), style = Stroke(1.5f))
 
     val native = drawContext.canvas.nativeCanvas
-    val hp = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 15f; isFakeBoldText = true }
-    val tp = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 15f }
+    val hp = android.graphics.Paint().apply { color = C.White.toArgb(); textSize = 15f; isFakeBoldText = true }
+    val tp = android.graphics.Paint().apply { color = C.White.toArgb(); textSize = 15f }
 
     // Color legend strip (top of table)
     val legendH = 14f
@@ -657,19 +656,19 @@ private fun DrawScope.drawReinforcementTable(
     drawRect(color = C.Bar, topLeft = Offset(legOff, top + 2f), size = Size(10f, 10f))
     legOff += 14f
     native.drawText("Bars", legOff, top + 12f, android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE; textSize = 11f
+        color = C.White.toArgb(); textSize = 11f
     })
     legOff += 34f
     drawRect(color = C.Tie, topLeft = Offset(legOff, top + 2f), size = Size(10f, 10f))
     legOff += 14f
     native.drawText("Ties/Spiral", legOff, top + 12f, android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE; textSize = 11f
+        color = C.White.toArgb(); textSize = 11f
     })
     legOff += 66f
     drawRect(color = C.Concrete, topLeft = Offset(legOff, top + 2f), size = Size(10f, 10f))
     legOff += 14f
     native.drawText("Concrete", legOff, top + 12f, android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE; textSize = 11f
+        color = C.White.toArgb(); textSize = 11f
     })
 
     // Header
@@ -718,7 +717,7 @@ private fun DrawScope.drawReinforcementTable(
     if (grouped.isNotEmpty()) {
         val totalAs = bars.sumOf { kotlin.math.PI * (it.diameter / 2.0) * (it.diameter / 2.0) }
         val sumPaint = android.graphics.Paint().apply {
-            color = android.graphics.Color.parseColor("#88CC88"); textSize = 13f
+            color = C.Safe.toArgb(); textSize = 13f
             textAlign = android.graphics.Paint.Align.RIGHT; isFakeBoldText = true
         }
         native.drawText("As = ${"%.1f".format(totalAs)} mm²", left + width - 8f, top + height - 6f, sumPaint)
@@ -732,22 +731,11 @@ private fun DrawScope.drawReinforcementTable(
 // ═══════════════════════════════════════════════════════════════════════════
 
 private fun DrawScope.drawLabel(text: String, x: Float, y: Float, size: Float, center: Boolean) {
-    drawContext.canvas.nativeCanvas.drawText(text, x, y,
-        android.graphics.Paint().apply {
-            color = android.graphics.Color.WHITE; textSize = size; isFakeBoldText = true
-            if (center) textAlign = android.graphics.Paint.Align.CENTER
-        })
+    drawTextAnnotated(text, x, y, C.White, size, center = center, bold = true)
 }
 
 private fun DrawScope.drawHatch(origin: Offset, w: Float, h: Float) {
-    val diag = sqrt(w * w + h * h)
-    val steps = (diag / 6f).toInt()
-    for (i in 0..steps) {
-        val t = i.toFloat() / steps
-        drawLine(C.Hatch.copy(alpha = 0.4f),
-            Offset(origin.x + t * w, origin.y),
-            Offset(origin.x, origin.y + t * h), 0.8f)
-    }
+    drawHatchPattern(origin.x, origin.y, w, h, spacing = 6f, angleDeg = 45f, color = C.Hatch.copy(alpha = 0.4f))
 }
 
 private fun DrawScope.drawDimArrow(x1: Float, y1: Float, x2: Float, y2: Float) {

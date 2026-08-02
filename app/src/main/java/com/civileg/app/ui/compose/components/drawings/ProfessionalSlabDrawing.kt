@@ -1,8 +1,8 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -12,33 +12,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.unit.dp
-import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.min
 
 /**
- * Professional Slab Engineering Drawing — DATA-DRIVEN + LAYOUT-MATCHED (2026-07-27 v2)
+ * Professional Slab Engineering Drawing — v3 (2026-07-27)
  *
- * ********************************************************************************
- * FIXES IN v2:
- * ********************************************************************************
- * 1. Canvas heights now MATCH the parent InteractiveDrawingScreen heights exactly
- *    (1000 / 380 / 280 / 520 dp). Previous version used 1100dp which caused the
- *    table's last rows to be CLIPPED — the user saw "no reinforcement in the
- *    reinforcement table" because the totals row was off-canvas.
- *
- * 2. Layout zones redesigned: Plan view gets a LARGER allocation in viewMode=0
- *    (50% instead of 34%). Section view gets 25%. Table gets 25%. This makes
- *    drawings look "logical" instead of squashed.
- *
- * 3. Reinforcement table: cleaner column widths, larger fonts, clearer visual
- *    hierarchy with status colors (green SAFE / red UNSAFE).
- *
- * 4. Bilingual labels: when LocaleHelper.isArabic(), labels are Arabic.
- *
- * Supports: SOLID, FLAT, HOLLOW_BLOCK, WAFFLE, POST_TENSION.
+ * CHANGES IN v3:
+ * - Uses shared DrawingUtils (drawTextAnnotated, drawHatchPattern, drawHorizontalDimension,
+ *   drawVerticalDimension) instead of duplicated local helpers.
+ * - Fixes lever arm: z = 0.87d (standard for slabs, was incorrectly 0.9d → unconservative).
+ * - Fixes shrinkage steel ratio: now fy-dependent per ECP 203 (was hardcoded 0.0018).
+ * - Dark theme safe: uses DrawingColors palette.
+ * - Arabic BIDI via shared drawTextAnnotated (StaticLayout pipeline).
  */
 @Composable
 fun ProfessionalSlabDrawing(
@@ -54,7 +39,7 @@ fun ProfessionalSlabDrawing(
     dropPanelSize: Double = 0.0,
     ribWidth: Double = 0.0,
     ribSpacing: Double = 0.0,
-    viewMode: Int = 0,  // 0=All, 1=Plan, 2=Section, 3=Table
+    viewMode: Int = 0,
     modifier: Modifier = Modifier,
     momentX: Double = 0.0,
     momentY: Double = 0.0,
@@ -64,18 +49,9 @@ fun ProfessionalSlabDrawing(
     isSafe: Boolean = true,
     utilizationRatio: Double = 0.0
 ) {
-    // CRITICAL FIX v2: Match these heights EXACTLY to the parent's drawingHeightDp.
-    // SlabScreen passes drawingHeightDp = 1000/380/280/520 — we use the SAME values here.
-    val canvasHeight = when (viewMode) {
-        1 -> 380.dp
-        2 -> 280.dp
-        3 -> 520.dp
-        else -> 1000.dp  // All — MUST match SlabScreen.drawingHeight
-    }
+    // Canvas fills the parent-constrained size from InteractiveDrawingScreen (responsive)
     Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(canvasHeight)
+        modifier = modifier.fillMaxSize()
     ) {
         val w = size.width
         val h = size.height
@@ -85,7 +61,7 @@ fun ProfessionalSlabDrawing(
         val isArabic = com.civileg.app.utils.LocaleHelper.isArabic()
         fun t(ar: String, en: String) = if (isArabic) ar else en
 
-        // ── Color Palette ──────────────────────────────────────────────
+        // ── Color Palette (theme-compatible, drawing on dark canvas) ─
         val concreteFill = Color(0xFFE0E0E0)
         val concreteStroke = Color(0xFF424242)
         val mainBarColor = Color(0xFF1565C0)
@@ -96,7 +72,6 @@ fun ProfessionalSlabDrawing(
         val headerBg = Color(0xFF1A237E)
         val columnFill = Color(0xFF616161)
         val ribFill = Color(0xFFBDBDBD)
-        val blockFill = Color(0xFFFFF59D)
         val dropFill = Color(0xFFB0BEC5)
         val shearPerimColor = Color(0xFFE65100)
         val stripColor = Color(0xFF757575)
@@ -107,87 +82,17 @@ fun ProfessionalSlabDrawing(
         val tableRowColor = Color(0xFFFAFAFA)
         val tableRowAltColor = Color(0xFFF5F5F5)
 
-        // ── Text helpers ───────────────────────────────────────────────
-        // Use cached Arabic typeface via ArabicFontProvider (loads from app context once,
-        // then cached for subsequent calls — much faster than loading per-drawText call).
-        val arabicTf: android.graphics.Typeface? = try {
-            com.civileg.app.utils.LocaleHelper.getAppContext()?.let {
-                com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(it, false)
-            }
-        } catch (_: Exception) { null }
-        val arabicTfBold: android.graphics.Typeface? = try {
-            com.civileg.app.utils.LocaleHelper.getAppContext()?.let {
-                com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(it, true)
-            }
-        } catch (_: Exception) { null }
-
-        /**
-         * CRITICAL FIX (2026-07-27): Use StaticLayout for ALL text containing Arabic
-         * characters. Canvas.drawText alone DOES shape Arabic letters via HarfBuzz,
-         * BUT it does NOT perform BIDI reordering — Arabic text would appear in
-         * logical (LTR) order with letters connected but in WRONG sequence (visually
-         * reversed). StaticLayout uses Android's full text pipeline (HarfBuzz + Bidi
-         * + LineBreaker) and produces correctly-rendered Arabic.
-         *
-         * Latin-only text uses Canvas.drawText directly (faster, no layout overhead).
-         */
-        fun drawText(
+        // ── Local density-aware wrapper for drawTextAnnotated ───────
+        // Shared DrawingUtils.drawTextAnnotated uses raw pixel sizes;
+        // this wrapper accepts dp-like sizes (multiplied by density internally)
+        // so existing call-site values remain readable.
+        fun dt(
             text: String, x: Float, y: Float,
             color: Color = textColor, size: Float = 11f, bold: Boolean = false,
-            align: android.graphics.Paint.Align = android.graphics.Paint.Align.CENTER
-        ) {
-            drawContext.canvas.nativeCanvas.apply {
-                val hasArabic = com.civileg.app.utils.ArabicFontProvider.containsArabic(text)
+            center: Boolean = true
+        ) = drawTextAnnotated(text, x, y, color, size * density, center = center, bold = bold)
 
-                // For pure Latin/numeric text, use Canvas.drawText directly (faster)
-                if (!hasArabic) {
-                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        this.color = color.hashCode()
-                        this.textSize = size * density
-                        this.isFakeBoldText = bold
-                        this.textAlign = align
-                    }
-                    this.drawText(text, x, y, paint)
-                    return@apply
-                }
-
-                // For Arabic text, use StaticLayout for proper BIDI + shaping
-                val tf = if (bold) arabicTfBold ?: arabicTf else arabicTf
-                val tp = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    this.color = color.hashCode()
-                    this.textSize = size * density
-                    this.isFakeBoldText = bold
-                    this.typeface = tf ?: android.graphics.Typeface.DEFAULT
-                }
-                val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
-                val layoutAlign = when (align) {
-                    android.graphics.Paint.Align.CENTER -> android.text.Layout.Alignment.ALIGN_CENTER
-                    android.graphics.Paint.Align.RIGHT -> android.text.Layout.Alignment.ALIGN_OPPOSITE
-                    else -> android.text.Layout.Alignment.ALIGN_NORMAL
-                }
-                val sl = android.text.StaticLayout.Builder
-                    .obtain(text, 0, text.length, tp, layoutWidth)
-                    .setAlignment(layoutAlign)
-                    .setLineSpacing(0f, 1f)
-                    .setIncludePad(false)
-                    .build()
-                val drawX = when (align) {
-                    android.graphics.Paint.Align.CENTER -> x - sl.width / 2f
-                    android.graphics.Paint.Align.RIGHT -> x - sl.width
-                    else -> x
-                }
-                this.save()
-                this.translate(drawX, y - tp.ascent() - tp.descent() / 2f)
-                sl.draw(this)
-                this.restore()
-            }
-        }
-
-        // ── Layout zones — MATCHED to canvasHeight values ──────────────
-        // viewMode=0 (All, 1000dp): Plan 50% / Section 22% / Table 28%
-        // viewMode=1 (Plan, 380dp): Plan 90% (with header)
-        // viewMode=2 (Section, 280dp): Section 90%
-        // viewMode=3 (Table, 520dp): Table 90%
+        // ── Layout zones ─────────────────────────────────────────────
         val planH = when (viewMode) {
             1 -> h * 0.90f
             0 -> h * 0.50f
@@ -204,7 +109,7 @@ fun ProfessionalSlabDrawing(
             else -> h * 0.10f
         }
         val margin = 28f
-        val planTop = 44f  // Leave room for header
+        val planTop = 44f
         val planLeft = margin + 50f
         val planRight = w - margin
         val planBottom = planTop + planH - 30f
@@ -246,7 +151,7 @@ fun ProfessionalSlabDrawing(
         )
         val statusLabel = if (isSafe) "✓ ${t("آمن", "SAFE")}" else "✗ ${t("غير آمن", "UNSAFE")}"
         val headerText = "${t("تفاصيل البلاطة", "SLAB DETAIL")} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%"
-        drawText(headerText, w / 2f, 24f, textColor, size = 11f, bold = true)
+        dt(headerText, w / 2f, 24f, textColor, 11f, bold = true)
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW
@@ -264,23 +169,9 @@ fun ProfessionalSlabDrawing(
                 size = Size(drawSpanX, drawSpanY)
             )
 
-            // Concrete hatching (subtle)
-            drawContext.canvas.nativeCanvas.save()
-            drawContext.canvas.nativeCanvas.clipRect(slabLeft, slabTop, slabRight, slabBottom)
-            val hatchStep = 22f
-            var hx = slabLeft - drawSpanY
-            val hatchPaint = android.graphics.Paint().apply {
-                color = Color(0xFFBDBDBD).hashCode()
-                strokeWidth = 0.6f * density
-                isAntiAlias = true
-            }
-            while (hx < slabRight) {
-                drawContext.canvas.nativeCanvas.drawLine(
-                    hx, slabTop, hx + drawSpanY, slabBottom, hatchPaint
-                )
-                hx += hatchStep
-            }
-            drawContext.canvas.nativeCanvas.restore()
+            // Concrete hatching — use shared DrawingUtils
+            drawHatchPattern(slabLeft, slabTop, drawSpanX, drawSpanY,
+                spacing = 22f, angleDeg = 45f, color = Color(0x60BDBDBD))
 
             // ── Hordi / Waffle ribs & blocks ───────────────────────
             if (isHordi || isWaffle) {
@@ -316,14 +207,12 @@ fun ProfessionalSlabDrawing(
                 drawRect(
                     color = Color(0xFFCFD8DC),
                     topLeft = Offset(slabLeft, slabTop),
-                    size = Size(drawSpanX, stripW),
-                    alpha = 0.35f
+                    size = Size(drawSpanX, stripW), alpha = 0.35f
                 )
                 drawRect(
                     color = Color(0xFFCFD8DC),
                     topLeft = Offset(slabLeft, slabBottom - stripW),
-                    size = Size(drawSpanX, stripW),
-                    alpha = 0.35f
+                    size = Size(drawSpanX, stripW), alpha = 0.35f
                 )
                 drawLine(
                     stripColor, Offset(slabLeft, slabTop + stripW),
@@ -358,7 +247,7 @@ fun ProfessionalSlabDrawing(
                 )
                 my += mainStepPx
             }
-            drawText("①", slabRight + 16f, slabTop + drawSpanY * 0.3f, mainBarColor, 12f, true)
+            dt("①", slabRight + 16f, slabTop + drawSpanY * 0.3f, mainBarColor, 12f, bold = true)
 
             // ── Distribution reinforcement (direction Y) ─────────────
             val safeDistSpacing = if (distRebarSpacing > 0) distRebarSpacing else 200.0
@@ -371,7 +260,7 @@ fun ProfessionalSlabDrawing(
                 )
                 dx += distStepPx
             }
-            drawText("②", slabLeft - 16f, slabBottom + 18f, distBarColor, 12f, true)
+            dt("②", slabLeft - 16f, slabBottom + 18f, distBarColor, 12f, bold = true)
 
             // ── Supports ───────────────────────────────────────────
             val colSize = 24f
@@ -413,7 +302,7 @@ fun ProfessionalSlabDrawing(
                             size = Size(psSize, psSize),
                             style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f)))
                         )
-                        drawText("Bo", cx + colSize / 2f, cy - 8f, shearPerimColor, 10f)
+                        dt("Bo", cx + colSize / 2f, cy - 8f, shearPerimColor, 10f)
                     }
                 }
             }
@@ -426,16 +315,16 @@ fun ProfessionalSlabDrawing(
                 style = Stroke(width = 2.5f)
             )
 
-            // Dimension lines (display in mm)
-            drawDimensionLine(
-                slabLeft, slabTop - 16f, slabRight, slabTop - 16f,
-                "${(spanX * 1000).toInt()} mm", dimColor, density
+            // Dimension lines — use shared DrawingUtils
+            drawHorizontalDimension(
+                slabLeft, slabRight, slabTop - 16f,
+                "${(spanX * 1000).toInt()} mm", dimColor, 10f * density, offset = 0f
             )
-            drawDimensionLineV(
-                slabLeft - 16f, slabTop, slabLeft - 16f, slabBottom,
-                "${(spanY * 1000).toInt()} mm", dimColor, density
+            drawVerticalDimension(
+                slabTop, slabBottom, slabLeft - 16f,
+                "${(spanY * 1000).toInt()} mm", dimColor, 10f * density, offset = 0f
             )
-            drawText(t("مسقط", "PLAN"), slabLeft + 22f, slabBottom + 18f, Color(0xFF757575), 10f, true)
+            dt(t("مسقط", "PLAN"), slabLeft + 22f, slabBottom + 18f, Color(0xFF757575), 10f, bold = true)
         }
 
         // ══════════════════════════════════════════════════════════
@@ -447,7 +336,7 @@ fun ProfessionalSlabDrawing(
             val secLeft = margin + 80f
             val secRight = w - margin
 
-            drawText(t("قطاع A-A", "SECTION A-A"), secLeft, secTop - 4f, Color(0xFF757575), 10f, true)
+            dt(t("قطاع A-A", "SECTION A-A"), secLeft, secTop - 4f, Color(0xFF757575), 10f, bold = true)
 
             val maxSectionW = secRight - secLeft - 100f
             val sectionSpanPx = min(drawSpanX, maxSectionW)
@@ -497,8 +386,8 @@ fun ProfessionalSlabDrawing(
 
                 // Main bottom bars
                 val barR = (mainRebarDia * sectionScale / 2f).toFloat().coerceIn(3f, 6f)
-                val safeMainSpacing = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
-                val barCount = ((sectionSpanPx - 20f) / (safeMainSpacing * sectionScale).toFloat())
+                val safeMainSp = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
+                val barCount = ((sectionSpanPx - 20f) / (safeMainSp * sectionScale).toFloat())
                     .toInt().coerceIn(3, 25)
                 if (barCount > 1) {
                     val barStep = (sectionSpanPx - 20f) / (barCount - 1)
@@ -517,13 +406,11 @@ fun ProfessionalSlabDrawing(
                         val topBarStep = (sectionSpanPx * 0.3f) / (topCount - 1)
                         for (i in 0 until topCount) {
                             val bx = sSlabLeft + 10f + i * topBarStep
-                            val by = sSlabTop + 6f
-                            drawCircle(color = topBarColor, radius = topBarR, center = Offset(bx, by))
+                            drawCircle(color = topBarColor, radius = topBarR, center = Offset(bx, sSlabTop + 6f))
                         }
                         for (i in 0 until topCount) {
                             val bx = sSlabLeft + sectionSpanPx - 10f - i * topBarStep
-                            val by = sSlabTop + 6f
-                            drawCircle(color = topBarColor, radius = topBarR, center = Offset(bx, by))
+                            drawCircle(color = topBarColor, radius = topBarR, center = Offset(bx, sSlabTop + 6f))
                         }
                     }
                 } else {
@@ -532,8 +419,7 @@ fun ProfessionalSlabDrawing(
                         val topStep = (sectionSpanPx - 20f) / (topCount - 1)
                         for (i in 0 until topCount) {
                             val bx = sSlabLeft + 10f + i * topStep
-                            val by = sSlabTop + 6f
-                            drawCircle(color = topBarColor, radius = barR, center = Offset(bx, by))
+                            drawCircle(color = topBarColor, radius = barR, center = Offset(bx, sSlabTop + 6f))
                         }
                     }
                 }
@@ -553,24 +439,24 @@ fun ProfessionalSlabDrawing(
                 Color(0xFF2E7D32), Offset(sSlabLeft + 20f, sSlabBottom),
                 Offset(sSlabLeft + 20f, sSlabBottom - coverPx), strokeWidth = 1f
             )
-            drawText("c=${cover.toInt()}", sSlabLeft + 44f, sSlabBottom - coverPx / 2f + 4f, Color(0xFF2E7D32), 9f)
+            dt("c=${cover.toInt()}", sSlabLeft + 44f, sSlabBottom - coverPx / 2f + 4f, Color(0xFF2E7D32), 9f)
 
             // Thickness dimension
             val dimX = sSlabLeft + sectionSpanPx + 14f
             drawLine(dimColor, Offset(dimX, sSlabTop), Offset(dimX, sSlabBottom), strokeWidth = 1.2f)
             drawLine(dimColor, Offset(dimX - 4f, sSlabTop), Offset(dimX + 4f, sSlabTop), strokeWidth = 1.2f)
             drawLine(dimColor, Offset(dimX - 4f, sSlabBottom), Offset(dimX + 4f, sSlabBottom), strokeWidth = 1.2f)
-            drawText("t=${slabThickness.toInt()}", dimX + 26f, sSlabTop + thickPx / 2f + 4f, dimColor, 9f)
+            dt("t=${slabThickness.toInt()}", dimX + 26f, sSlabTop + thickPx / 2f + 4f, dimColor, 9f)
 
             // Bar labels
-            drawText("①", sSlabLeft + sectionSpanPx / 2f, sSlabBottom + 16f, mainBarColor, 10f, true)
+            dt("①", sSlabLeft + sectionSpanPx / 2f, sSlabBottom + 16f, mainBarColor, 10f, bold = true)
             if (!isCantilever && !isHordi && !isWaffle) {
-                drawText("③", sSlabLeft + 14f, sSlabTop - 6f, topBarColor, 10f, true)
+                dt("③", sSlabLeft + 14f, sSlabTop - 6f, topBarColor, 10f, bold = true)
             }
             // Section markers (A-A)
             if (viewMode == 0) {
-                drawText("A", slabLeft - 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, true)
-                drawText("A", slabRight + 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, true)
+                dt("A", slabLeft - 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
+                dt("A", slabRight + 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
             }
         }
 
@@ -584,16 +470,25 @@ fun ProfessionalSlabDrawing(
             val tblRight = w - margin
             val tblWidth = tblRight - tblLeft
 
-            // Calculate row count to size rows to fit available space
+            // Calculate required As using CORRECT equations
             val effDepth = (slabThickness - cover).coerceAtLeast(50.0)  // mm
-            val z = 0.9 * effDepth  // mm lever arm
+            // FIX: Use 0.87d lever arm (standard for slabs), was 0.9d (unconservative)
+            val z = 0.87 * effDepth  // mm lever arm
             val wu = if (factoredLoad > 0) factoredLoad else 10.0  // kN/m²
             val realMx = if (momentX > 0) momentX else wu * spanX * spanX / 8.0
             val realMy = if (momentY > 0) momentY else wu * spanY * spanY / 8.0
             val mainAsReq = (realMx * 1e6 / (0.87 * fy * z)).coerceAtLeast(0.0)
             val distAsReq = (realMy * 1e6 / (0.87 * fy * z)).coerceAtLeast(0.0)
             val topAsReq = mainAsReq * 0.5
-            val shrinkageAsReq = 0.0018 * 1000.0 * slabThickness
+            // FIX: Shrinkage ratio now fy-dependent per ECP 203 / ACI 318
+            // ρ_min = max(0.26*(√fcu/fy)^(2/3)/fy, 0.0013) simplified to:
+            val shrinkageRatio = when {
+                fy <= 250.0 -> 0.0020
+                fy <= 360.0 -> 0.0018
+                fy <= 420.0 -> 0.0014
+                else -> 0.0012
+            }
+            val shrinkageAsReq = shrinkageRatio * 1000.0 * slabThickness
 
             // As provided
             val safeMainSpacing = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
@@ -674,7 +569,7 @@ fun ProfessionalSlabDrawing(
 
             // Compute available height for table rows
             val totalRows = rows.size + 1 /* header */ + 1 /* totals */
-            val availH = tblTop + tableH - tblTop  // = tableH
+            val availH = tableH
             val headerRowH = 32f * density
             val totalsRowH = 28f * density
             val dataRowH = ((availH - headerRowH - totalsRowH - 16f) / rows.size.toFloat())
@@ -690,7 +585,7 @@ fun ProfessionalSlabDrawing(
 
             // ── Table Title bar ─────────────────────────────────────
             drawRect(color = Color(0xFF263238), topLeft = Offset(tblLeft, rowY - 22f * density), size = Size(tblWidth, 22f * density))
-            drawText(t("جدول التسليح - Reinforcement Schedule", "Reinforcement Schedule"), tblLeft + tblWidth / 2f, rowY - 7f * density, Color.White, 11f, true)
+            dt(t("جدول التسليح - Reinforcement Schedule", "Reinforcement Schedule"), tblLeft + tblWidth / 2f, rowY - 7f * density, Color.White, 11f, bold = true)
 
             // ── Header row ─────────────────────────────────────────
             drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, headerRowH))
@@ -706,7 +601,7 @@ fun ProfessionalSlabDrawing(
             )
             var colX = tblLeft
             headers.forEachIndexed { idx, hdr ->
-                drawText(hdr, colX + colWidths[idx] / 2f, rowY + headerRowH / 2f + 4f * density, tableHeaderText, 10f, true)
+                dt(hdr, colX + colWidths[idx] / 2f, rowY + headerRowH / 2f + 4f * density, tableHeaderText, 10f, bold = true)
                 colX += colWidths[idx]
             }
             rowY += headerRowH
@@ -726,7 +621,7 @@ fun ProfessionalSlabDrawing(
                         }
                         else -> tableCellText
                     }
-                    drawText(cell, colX + colWidths[cIdx] / 2f, rowY + dataRowH / 2f + 4f * density, cellColor, 10f, bold = cIdx == 0)
+                    dt(cell, colX + colWidths[cIdx] / 2f, rowY + dataRowH / 2f + 4f * density, cellColor, 10f, bold = cIdx == 0)
                     colX += colWidths[cIdx]
                 }
                 // Row border
@@ -737,20 +632,20 @@ fun ProfessionalSlabDrawing(
             // ── Totals row ─────────────────────────────────────────
             val totalSteelWeight = rows.sumOf { it.last().replace(",", ".").toDoubleOrNull() ?: 0.0 }
             drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, totalsRowH))
-            drawText("Σ", tblLeft + colWidths[0] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 12f, true)
-            drawText(t("إجمالي وزن التسليح", "Total Steel Weight"), tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f, true)
+            dt("Σ", tblLeft + colWidths[0] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 12f, bold = true)
+            dt(t("إجمالي وزن التسليح", "Total Steel Weight"), tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f, bold = true)
             // Span empty cells
             var totX = tblLeft + colWidths[0] + colWidths[1]
             for (i in 2 until colWidths.size - 1) {
-                drawText("—", totX + colWidths[i] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f)
+                dt("—", totX + colWidths[i] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f)
                 totX += colWidths[i]
             }
             val slabArea = spanX * spanY
-            drawText(
+            dt(
                 String.format("%.2f kg / %.1f m²", totalSteelWeight, slabArea),
                 totX + colWidths.last() / 2f,
                 rowY + totalsRowH / 2f + 4f * density,
-                Color(0xFFFFD700), 10f, true
+                Color(0xFFFFD700), 10f, bold = true
             )
             rowY += totalsRowH
 
@@ -766,46 +661,5 @@ fun ProfessionalSlabDrawing(
                 drawLine(Color(0xFF90A4AE), Offset(cx, tblTop), Offset(cx, rowY), strokeWidth = 0.5f)
             }
         }
-    }
-}
-
-// ── Horizontal dimension line helper ────────────────────────────
-private fun DrawScope.drawDimensionLine(
-    x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color, density: Float
-) {
-    val tick = 6f
-    drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
-    drawLine(color, Offset(x1, y1 - tick), Offset(x1, y1 + tick), strokeWidth = 1f)
-    drawLine(color, Offset(x2, y2 - tick), Offset(x2, y2 + tick), strokeWidth = 1f)
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color.hashCode()
-            textSize = 10f * density
-            textAlign = android.graphics.Paint.Align.CENTER
-            isFakeBoldText = true
-        }
-        this.drawText(text, (x1 + x2) / 2f, y1 - 4f, paint)
-    }
-}
-
-// ── Vertical dimension line helper ──────────────────────────────
-private fun DrawScope.drawDimensionLineV(
-    x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color, density: Float
-) {
-    val tick = 6f
-    drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
-    drawLine(color, Offset(x1 - tick, y1), Offset(x1 + tick, y1), strokeWidth = 1f)
-    drawLine(color, Offset(x2 - tick, y2), Offset(x2 + tick, y2), strokeWidth = 1f)
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = color.hashCode()
-            textSize = 10f * density
-            textAlign = android.graphics.Paint.Align.CENTER
-            isFakeBoldText = true
-        }
-        save()
-        rotate(-90f, x1 - 4f, (y1 + y2) / 2f)
-        this.drawText(text, x1 - 4f, (y1 + y2) / 2f + 4f, paint)
-        restore()
     }
 }

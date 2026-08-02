@@ -1,8 +1,8 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -69,7 +69,7 @@ fun ProfessionalTankDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(720.dp)
+            .aspectRatio(1.5f)  // Responsive: was hardcoded 720.dp
     ) {
         val cw = size.width
         val ch = size.height
@@ -442,7 +442,8 @@ private fun DrawScope.drawPlanView(
         size = Size(insetSize + 20f, insetSize + 40f),
         cornerRadius = CornerRadius(8f, 8f)
     )
-    drawTextAnnotated("المسقط", insetLeft, insetTop - 2f, DimensionWhite, 18f)
+    val planLabel = try { if (com.civileg.app.utils.LocaleHelper.isArabic()) "المسقط" else "PLAN" } catch (_: Exception) { "PLAN" }
+    drawTextAnnotated(planLabel, insetLeft, insetTop - 2f, DimensionWhite, 18f)
 
     val cx = insetLeft + insetSize / 2f
     val cy = insetTop + 20f + insetSize / 2f
@@ -505,7 +506,8 @@ private fun DrawScope.drawWallDetailInset(
         size = Size(insetW + 16f, insetH + 16f),
         cornerRadius = CornerRadius(8f, 8f)
     )
-    drawTextAnnotated("تفصيل الحائط", insetLeft, insetTop - 2f, DimensionWhite, 16f)
+    val wallDetailLabel = try { if (com.civileg.app.utils.LocaleHelper.isArabic()) "تفصيل الحائط" else "WALL DETAIL" } catch (_: Exception) { "WALL DETAIL" }
+    drawTextAnnotated(wallDetailLabel, insetLeft, insetTop - 2f, DimensionWhite, 16f)
 
     // Wall cross-section (vertical rectangle)
     val wallW = min(insetW * 0.45f, 50f)
@@ -577,7 +579,7 @@ private fun DrawScope.drawWaterPressureDiagram(
     val diagramW = 60f
     val waterTop = tankTop + h - wl
     val gammaW = 9.81 // kN/m³
-    val maxPressure = (waterLevel / 1000.0) * gammaW
+    val maxPressure = waterLevel * gammaW  // waterLevel is already in meters
 
     // Triangular pressure distribution
     val pressurePath = Path().apply {
@@ -625,6 +627,10 @@ private fun DrawScope.drawReinforcementTable(
     hDia: Double, hSpacing: Double,
     height: Double, length: Double
 ) {
+    val isArabic = try {
+        com.civileg.app.utils.LocaleHelper.isArabic()
+    } catch (_: Exception) { false }
+
     val tableLeft = 16f
     val tableTop = ch * 0.70f
     val tableW = cw - 32f
@@ -638,17 +644,22 @@ private fun DrawScope.drawReinforcementTable(
         tableW * 0.20f   // As
     )
 
-    // Title
-    drawTextAnnotated("جدول التسليح", tableLeft, tableTop - 6f, DimensionWhite, 20f)
+    // Title (bilingual)
+    val tableTitle = if (isArabic) "جدول التسليح" else "Reinforcement Schedule"
+    drawTextAnnotated(tableTitle, tableLeft, tableTop - 6f, DimensionWhite, 20f, bold = true)
 
-    // Header
+    // Header (bilingual)
+    val headers = if (isArabic) {
+        arrayOf("الاتجاه", "الموقع", "القطر", "المسافة", "As")
+    } else {
+        arrayOf("Direction", "Location", "Dia", "Spacing", "As")
+    }
     drawRect(color = TableHeaderBg, topLeft = Offset(tableLeft, tableTop),
         size = Size(tableW, headerH))
-    val headers = arrayOf("الاتجاه", "الموقع", "القطر", "المسافة", "As")
     var cx = tableLeft
     for (i in headers.indices) {
         drawTextAnnotated(headers[i], cx + 6f, tableTop + headerH / 2f + 6f,
-            DimensionWhite, 15f)
+            DimensionWhite, 15f, bold = true)
         cx += colWidths[i]
     }
 
@@ -662,10 +673,10 @@ private fun DrawScope.drawReinforcementTable(
     // Row 1: Vertical / Hoop
     val r1Y = tableTop + headerH
     drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, r1Y), size = Size(tableW, rowH))
-    val dir1 = if (isCircular) "حلقي" else "عمودي"
-    val loc1 = if (isCircular) "الحائط" else "حائط جانبي"
-    val as1 = if (isCircular) "Hoop" else "Vert"
-    val row1 = arrayOf(dir1, loc1, "Ø${vDia.toInt()}", "@${vSpacing.toInt()}mm", as1)
+    val dir1 = if (isCircular) (if (isArabic) "حلقي" else "Hoop") else (if (isArabic) "عمودي" else "Vertical")
+    val loc1 = if (isArabic) "الحائط" else "Wall"
+    val as1Label = if (isCircular) "Hoop" else "Vert"
+    val row1 = arrayOf(dir1, loc1, "Ø${vDia.toInt()}", "@${vSpacing.toInt()}mm", as1Label)
     cx = tableLeft
     for (i in row1.indices) {
         drawTextAnnotated(row1[i], cx + 6f, r1Y + rowH / 2f + 5f, RebarBlue, 14f)
@@ -679,8 +690,8 @@ private fun DrawScope.drawReinforcementTable(
 
     // Row 2: Horizontal / Vertical distribution
     val r2Y = r1Y + rowH
-    val dir2 = if (isCircular) "عمودي" else "أفقي"
-    val loc2 = if (isCircular) "الحائط" else "حائط جانبي"
+    val dir2 = if (isCircular) (if (isArabic) "عمودي" else "Vertical") else (if (isArabic) "أفقي" else "Horizontal")
+    val loc2 = if (isArabic) "الحائط" else "Wall"
     val row2 = arrayOf(dir2, loc2, "Ø${hDia.toInt()}", "@${hSpacing.toInt()}mm", "Dist")
     cx = tableLeft
     for (i in row2.indices) {
@@ -696,7 +707,9 @@ private fun DrawScope.drawReinforcementTable(
     // Row 3: Base reinforcement
     val r3Y = r2Y + rowH
     drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, r3Y), size = Size(tableW, rowH))
-    val row3 = arrayOf("أفقي", "القاعدة", "Ø${vDia.toInt()}", "@${hSpacing.toInt()}mm", "Base")
+    val baseDir = if (isArabic) "مزدوج" else "Both"
+    val baseLoc = if (isArabic) "القاعدة" else "Base"
+    val row3 = arrayOf(baseDir, baseLoc, "Ø${vDia.toInt()}", "@${hSpacing.toInt()}mm", "Base")
     cx = tableLeft
     for (i in row3.indices) {
         drawTextAnnotated(row3[i], cx + 6f, r3Y + rowH / 2f + 5f, RebarBlue.copy(alpha = 0.7f), 14f)

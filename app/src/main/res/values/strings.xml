@@ -801,6 +801,28 @@
     <string name="column_estimated_cost">Estimated Cost</string>
     <string name="column_select_code">Select Design Code</string>
     <string name="column_load_combo">Load Combination</string>
+    <string name="column_fcu_label">f\'cu (MPa)</string>
+    <string name="column_fy_label">fy (MPa)</string>
+    <string name="column_height_label">Height (m)</string>
+    <string name="column_drawing_subtitle">Column Reinforcement Detail</string>
+    <string name="column_formula_ecp_pu">Pu = 0.35·f\'cu·Ac + 0.67·fy·As</string>
+    <string name="column_formula_aci_pu">φPn = 0.85·f\'c·Ag + fy·As</string>
+    <string name="column_formula_sbc_pu">Pu = 0.35·f\'cu·Ac + 0.67·fy·As</string>
+    <string name="column_formula_shear">Shear: q_u = Pu / (b·d) ≤ q_cu</string>
+    <string name="column_formula_punching">Punching: q_p = Pu / (perimeter·d) ≤ q_p_limit</string>
+    <string name="column_formula_as_min_ecp">As_min = 0.008·Ac  (ECP 203)</string>
+    <string name="column_formula_as_min_aci">As_min = 0.01·Ag  (ACI 318)</string>
+    <string name="column_formula_as_min_sbc">As_min = 0.008·Ac  (SBC 304)</string>
+    <string name="column_code_ecp">ECP Code</string>
+    <string name="column_code_aci">ACI Code</string>
+    <string name="column_code_sbc">SAUDI Code</string>
+    <string name="column_validation_positive">Value must be positive</string>
+    <string name="column_validation_required">Required field</string>
+    <string name="column_validation_fcu_range">f\'cu must be 20–60 MPa</string>
+    <string name="column_validation_fy_range">fy must be 200–600 MPa</string>
+    <string name="column_validation_dim_range">Dimension must be 100–1500 mm</string>
+    <string name="column_validation_load_range">Load must be positive</string>
+    <string name="column_cover_label">Cover (mm)</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Beam Screen -->
@@ -955,6 +977,10 @@
     <string name="slab_moment_mx">Moment Mx</string>
     <string name="slab_main_steel_lx">Main Steel (Lx):</string>
     <string name="slab_secondary_steel_ly">Secondary Steel (Ly):</string>
+    <string name="slab_dl_label">DL (kN/m²)</string>
+    <string name="slab_ll_label">LL (kN/m²)</string>
+    <string name="slab_reinforcement_subtitle">Slab Reinforcement Detail</string>
+    <string name="slab_validate_inputs">Please enter valid positive values for all fields</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Footing Screen -->
@@ -1171,4 +1197,19 @@
     <string name="steel_weld_result_fail">Weld Result — Failed</string>
     <string name="steel_tons">tons</string>
     <string name="steel_currency_suffix">EGP</string>
+
+    <!-- Footing Screen (additional bilingual strings) -->
+    <string name="footing_fcu_label">f\'cu (MPa)</string>
+    <string name="footing_fy_label">fy (MPa)</string>
+    <string name="footing_pu1_label">Pu1 (kN)</string>
+    <string name="footing_soil_label">Soil Capacity (kPa)</string>
+    <string name="footing_pu2_label">Pu2 (kN)</string>
+    <string name="footing_distance_label">Column Distance (m)</string>
+    <string name="footing_boundary_label">Boundary Constraints (Optional)</string>
+    <string name="footing_max_left_label">Max Left (m)</string>
+    <string name="footing_max_right_label">Max Right (m)</string>
+    <string name="footing_reinforcement_detail">Footing Reinforcement Detail</string>
+    <string name="footing_validate_inputs">Please enter valid positive values for all required fields</string>
+    <string name="rw_drawing_subtitle">Retaining Wall Section Detail</string>
+    <string name="rw_validate_inputs">Please enter valid positive numbers for all fields</string>
 </resources>

@@ -140,32 +140,32 @@ fun FootingScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
-                    FootingInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
+                    FootingInputField(fcu, stringResource(R.string.footing_fcu_label), { fcu = it }, Modifier.weight(1f))
+                    FootingInputField(fy, stringResource(R.string.footing_fy_label), { fy = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(axialLoad, "Pu1 (kN)", { axialLoad = it }, Modifier.weight(1f))
-                    FootingInputField(soilCapacity, "Soil (kPa)", { soilCapacity = it }, Modifier.weight(1f))
+                    FootingInputField(axialLoad, stringResource(R.string.footing_pu1_label), { axialLoad = it }, Modifier.weight(1f))
+                    FootingInputField(soilCapacity, stringResource(R.string.footing_soil_label), { soilCapacity = it }, Modifier.weight(1f))
                 }
             }
 
             if (selectedType == CalculatorEngine.FootingType.COMBINED) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        FootingInputField(axialLoad2, "Pu2 (kN)", { axialLoad2 = it }, Modifier.weight(1f))
-                        FootingInputField(colDistance, "Distance (m)", { colDistance = it }, Modifier.weight(1f))
+                        FootingInputField(axialLoad2, stringResource(R.string.footing_pu2_label), { axialLoad2 = it }, Modifier.weight(1f))
+                        FootingInputField(colDistance, stringResource(R.string.footing_distance_label), { colDistance = it }, Modifier.weight(1f))
                     }
                 }
             }
 
             item {
-                Text("Boundary Constraints (Optional)", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.footing_boundary_label), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(maxLeft, "Max Left (m)", { maxLeft = it }, Modifier.weight(1f))
-                    FootingInputField(maxRight, "Max Right (m)", { maxRight = it }, Modifier.weight(1f))
+                    FootingInputField(maxLeft, stringResource(R.string.footing_max_left_label), { maxLeft = it }, Modifier.weight(1f))
+                    FootingInputField(maxRight, stringResource(R.string.footing_max_right_label), { maxRight = it }, Modifier.weight(1f))
                 }
             }
 
@@ -185,16 +185,23 @@ fun FootingScreen(
             }
 
             item {
+                val inputValid = axialLoad.toDoubleOrNull()?.let { it > 0 } == true
+                        && fcu.toDoubleOrNull()?.let { it > 0 } == true
+                        && fy.toDoubleOrNull()?.let { it > 0 } == true
+                        && soilCapacity.toDoubleOrNull()?.let { it > 0 } == true
+                        && colWidth.toDoubleOrNull()?.let { it > 0 } == true
+                        && colLength.toDoubleOrNull()?.let { it > 0 } == true
                 Button(
                     onClick = {
+                        if (!inputValid) return@Button
                         viewModel.calculateFooting(
                             type = selectedType,
-                            p = axialLoad.toDoubleOrNull() ?: 1200.0,
-                            fcu = fcu.toDoubleOrNull() ?: 25.0,
-                            fy = fy.toDoubleOrNull() ?: 360.0,
-                            soil = soilCapacity.toDoubleOrNull() ?: 150.0,
-                            colB = colWidth.toDoubleOrNull() ?: 300.0,
-                            colT = colLength.toDoubleOrNull() ?: 600.0,
+                            p = axialLoad.toDouble()!!,
+                            fcu = fcu.toDouble()!!,
+                            fy = fy.toDouble()!!,
+                            soil = soilCapacity.toDouble()!!,
+                            colB = colWidth.toDouble()!!,
+                            colT = colLength.toDouble()!!,
                             code = selectedCode,
                             preferredDiameter = barDiameter.toIntOrNull() ?: 16,
                             preferredSpacing = barSpacing.toDoubleOrNull() ?: 150.0,
@@ -206,10 +213,13 @@ fun FootingScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
+                    enabled = !isLoading && inputValid
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                     } else {
                         Icon(Icons.Default.Calculate, null)
                         Spacer(Modifier.width(8.dp))
@@ -300,7 +310,7 @@ fun FootingScreen(
                                     stringResource(R.string.safety_checks),
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 res.safetyChecks.forEach { check ->
@@ -322,7 +332,7 @@ fun FootingScreen(
                                             Text(
                                                 "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
                                                 fontSize = 11.sp,
-                                                color = Color.Gray
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -344,7 +354,7 @@ fun FootingScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, null)
                             }
@@ -387,7 +397,7 @@ fun FootingScreen(
                     }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.footing_drawing_title),
-                        subtitle = "Footing Reinforcement Detail",
+                        subtitle = stringResource(R.string.footing_reinforcement_detail),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalFootingDrawing(
@@ -404,6 +414,8 @@ fun FootingScreen(
                                 cover = 75.0,
                                 col1X = col1XPos,
                                 col2X = col2XPos,
+                                soilPressureMax = res.soilPressure,
+                                soilPressureMin = res.soilPressure,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -429,7 +441,7 @@ fun FootingScreen(
                     
                     Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(

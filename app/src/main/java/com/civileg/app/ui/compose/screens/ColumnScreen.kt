@@ -1,6 +1,5 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,22 +13,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import com.civileg.app.db.Project
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -145,15 +137,42 @@ fun ColumnScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(uiState.fcu, "fcu (MPa)", { viewModel.updateInputs(fcu = it) }, Modifier.weight(1f))
-                    ColumnInputField(uiState.fy, "fy (MPa)", { viewModel.updateInputs(fy = it) }, Modifier.weight(1f))
+                    ColumnInputField(
+                        uiState.fcu,
+                        stringResource(R.string.column_fcu_label),
+                        { viewModel.updateInputs(fcu = it) },
+                        Modifier.weight(1f),
+                        validate = { v -> v.toDoubleOrNull()?.let { it in 20.0..60.0 } ?: true }
+                    )
+                    ColumnInputField(
+                        uiState.fy,
+                        stringResource(R.string.column_fy_label),
+                        { viewModel.updateInputs(fy = it) },
+                        Modifier.weight(1f),
+                        validate = { v -> v.toDoubleOrNull()?.let { it in 200.0..600.0 } ?: true }
+                    )
                 }
             }
 
             item { SectionHeader(stringResource(R.string.column_applied_loads), R.drawable.ic_design) }
             
             item {
-                ColumnInputField(uiState.axialLoad, stringResource(R.string.column_axial_load_pu), { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ColumnInputField(
+                        uiState.axialLoad,
+                        stringResource(R.string.column_axial_load_pu),
+                        { viewModel.updateInputs(axialLoad = it) },
+                        Modifier.weight(1f),
+                        validate = { v -> v.isEmpty() || (v.toDoubleOrNull()?.let { it > 0 } ?: false) }
+                    )
+                    ColumnInputField(
+                        uiState.height,
+                        stringResource(R.string.column_height_label),
+                        { viewModel.updateInputs(height = it) },
+                        Modifier.weight(1f),
+                        validate = { v -> v.toDoubleOrNull()?.let { it in 1.0..15.0 } ?: true }
+                    )
+                }
             }
 
             item {
@@ -174,10 +193,10 @@ fun ColumnScreen(
                 
                 item {
                     val ecoColor = when {
-                        result.utilizationRatio > 1.0 -> Color.Red
-                        result.utilizationRatio > 0.9 -> Color(0xFFFF9800)
-                        result.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
-                        else -> Color(0xFF2196F3)
+                        result.utilizationRatio > 1.0 -> MaterialTheme.colorScheme.error
+                        result.utilizationRatio > 0.9 -> MaterialTheme.colorScheme.tertiary
+                        result.utilizationRatio > 0.4 -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.secondary
                     }
                     
                     Card(
@@ -248,7 +267,7 @@ fun ColumnScreen(
                         Button(
                             onClick = { viewModel.applyEconomicalDesign() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(stringResource(R.string.column_economy_option), fontSize = 12.sp)
@@ -256,7 +275,7 @@ fun ColumnScreen(
                         Button(
                             onClick = { viewModel.applySafetyDesign() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(stringResource(R.string.column_safest_option), fontSize = 12.sp)
@@ -338,23 +357,23 @@ fun ColumnScreen(
 
                 item {
                     Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    EngineeringFormulasCard()
+                    EngineeringFormulasCard(uiState.designCode)
                 }
 
                 item {
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
-                        subtitle = "Column Reinforcement Detail",
+                        subtitle = stringResource(R.string.column_drawing_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
                                 columnDepth = result.depth.toDouble(),
-                                columnHeight = 3000.0,
+                                columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
                                 longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
                                 tieDia = result.stirrups.diameter.toDouble(),
                                 tieSpacing = result.stirrups.spacing.toDouble(),
-                                cover = 40.0,
+                                cover = 40.0, // standard clear cover for columns
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                                 modifier = Modifier.fillMaxWidth()
@@ -381,7 +400,7 @@ fun ColumnScreen(
                     
                     Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
+                        Text(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -420,7 +439,10 @@ fun ColumnScreen(
 private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (result.isSafe) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+            containerColor = if (result.isSafe)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            else
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
         ),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
@@ -430,31 +452,31 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 Icon(
                     if (result.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
                     contentDescription = null,
-                    tint = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+                    tint = if (result.isSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     if (result.isSafe) stringResource(R.string.column_section_safe) else stringResource(R.string.column_section_unsafe_label),
                     fontWeight = FontWeight.Bold,
-                    color = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+                    color = if (result.isSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.Gray.copy(alpha = 0.2f))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
             ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
             
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
             
-            Text(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ResultDataRow(stringResource(R.string.column_concrete_vol), String.format("%.3f m³", result.concreteVolume))
             ResultDataRow(stringResource(R.string.column_steel_weight), String.format("%.2f kg", result.steelWeight))
             ResultDataRow(stringResource(R.string.column_estimated_cost), String.format("%.2f", result.cost))
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
             
-            Text(stringResource(R.string.safety_checks), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text(stringResource(R.string.safety_checks), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             result.safetyChecks.forEach { check ->
                 ResultCheckRow(check)
             }
@@ -472,7 +494,7 @@ private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
     ) {
         Text(
             if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check),
-            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+            color = if (check.isSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp
         )
@@ -482,23 +504,35 @@ private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
             Text(
                 "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
                 fontSize = 11.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
 @Composable
-private fun EngineeringFormulasCard() {
+private fun EngineeringFormulasCard(designCode: DesignCode) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            FormulaItem("Pu_limit = 0.35 * fcu * Ac + 0.67 * fy * As")
-            FormulaItem("Shear Check: q_u = Pu / (b * d) < q_cu")
-            FormulaItem("Punching Check: q_p = Pu / (perimeter * d) < q_p_limit")
-            FormulaItem("As_min = 0.008 * Ac")
+            FormulaItem(
+                when (designCode) {
+                    DesignCode.ACI -> stringResource(R.string.column_formula_aci_pu)
+                    DesignCode.SBC -> stringResource(R.string.column_formula_sbc_pu)
+                    else -> stringResource(R.string.column_formula_ecp_pu)
+                }
+            )
+            FormulaItem(stringResource(R.string.column_formula_shear))
+            FormulaItem(stringResource(R.string.column_formula_punching))
+            FormulaItem(
+                when (designCode) {
+                    DesignCode.ACI -> stringResource(R.string.column_formula_as_min_aci)
+                    DesignCode.SBC -> stringResource(R.string.column_formula_as_min_sbc)
+                    else -> stringResource(R.string.column_formula_as_min_ecp)
+                }
+            )
         }
     }
 }
@@ -518,8 +552,11 @@ private fun ColumnInputField(
     label: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    validate: (String) -> Boolean = { true }
 ) {
+    val isValid = validate(value)
+    val hasValue = value.isNotEmpty()
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -529,7 +566,11 @@ private fun ColumnInputField(
         enabled = enabled,
         shape = RoundedCornerShape(12.dp),
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+        isError = hasValue && !isValid,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+        supportingText = if (hasValue && !isValid) {
+            { Text(stringResource(R.string.column_validation_positive), color = MaterialTheme.colorScheme.error, fontSize = 11.sp) }
+        } else null
     )
 }
 
@@ -571,7 +612,11 @@ private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (Design
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (code == DesignCode.SBC) "SAUDI Code" else if (code == DesignCode.ECP) "ECP Code" else "ACI Code",
+                        text = when (code) {
+                            DesignCode.SBC -> stringResource(R.string.column_code_sbc)
+                            DesignCode.ECP -> stringResource(R.string.column_code_ecp)
+                            DesignCode.ACI -> stringResource(R.string.column_code_aci)
+                        },
                         color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
