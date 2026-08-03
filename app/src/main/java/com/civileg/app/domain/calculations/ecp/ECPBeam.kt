@@ -253,6 +253,7 @@ class ECPBeam : BeamDesign {
         // Note: 0.3 is for plain bars; 0.6 is for deformed (high bond) bars
         val fbd = 0.6 * sqrt(fcu)  // MPa (deformed bars)
         
+        val fs = fy / GAMMA_S
         var Ld = fs * barDiameter / (4 * fbd.coerceAtLeast(0.1))
         
         // عوامل التعديل

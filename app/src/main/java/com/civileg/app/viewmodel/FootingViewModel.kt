@@ -128,7 +128,7 @@ class FootingViewModel @Inject constructor(
                     "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
                     "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
                     "Design Code" to codeName,
-                    "Applied Load" to "${String.format("%.1f", res.appliedLoad)} kN"
+                    "Applied Load" to "${String.format("%.1f", res.soilPressure * res.width * res.length / 1e6)} kN"
                 )
                 val resultsMap = mapOf(
                     "Reinforcement" to res.reinforcementBottom.barString,
@@ -149,7 +149,7 @@ class FootingViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = res.safetyChecks.map {
                         com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                            it.name, it.calculated, it.limit, it.unit, it.passed
+                            it.name, it.value, it.limit, it.unit, it.isSafe
                         )
                     },
                     isSafe = res.isSafe,
