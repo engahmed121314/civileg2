@@ -34,6 +34,7 @@ import com.civileg.app.viewmodel.TankViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 

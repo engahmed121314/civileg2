@@ -33,6 +33,7 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 

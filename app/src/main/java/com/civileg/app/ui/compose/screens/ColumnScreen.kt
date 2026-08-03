@@ -40,6 +40,7 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.max
 import kotlin.math.min

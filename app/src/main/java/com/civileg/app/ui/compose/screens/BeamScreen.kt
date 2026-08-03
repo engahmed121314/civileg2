@@ -37,6 +37,7 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.launch

@@ -38,6 +38,7 @@ import com.civileg.app.viewmodel.RetainingWallViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalMaterial3Api::class)

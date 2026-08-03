@@ -40,6 +40,7 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.*
 import kotlinx.coroutines.launch

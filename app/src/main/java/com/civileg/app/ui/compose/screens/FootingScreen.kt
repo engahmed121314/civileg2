@@ -33,6 +33,7 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 
