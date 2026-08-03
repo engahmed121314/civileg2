@@ -190,8 +190,8 @@ class ECPTank : TankDesign {
         }
 
         // ذراع العزم: z = d * (0.5 + sqrt(0.25 - K/1.25)) حسب ECP 203
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        val leverArm = if (0.25 - K / 0.893 > 0) {
+            d * (0.5 + sqrt(0.25 - K / 0.893))
         } else {
             d * 0.7
         }
@@ -294,8 +294,8 @@ class ECPTank : TankDesign {
         val Mu_Nmm = maxMoment * 1.6 * 1e6
         // K-method حسب ECP 203
         val K = Mu_Nmm / (fcu * b * d * d)
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        val leverArm = if (0.25 - K / 0.893 > 0) {
+            d * (0.5 + sqrt(0.25 - K / 0.893))
         } else {
             d * 0.7
         }
@@ -386,8 +386,8 @@ class ECPTank : TankDesign {
 
         // K-method حسب ECP 203 البند 4-2-2-1
         val K = Mu_Nmm / (fcu * b * d * d)
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        val leverArm = if (0.25 - K / 0.893 > 0) {
+            d * (0.5 + sqrt(0.25 - K / 0.893))
         } else {
             d * 0.7
         }

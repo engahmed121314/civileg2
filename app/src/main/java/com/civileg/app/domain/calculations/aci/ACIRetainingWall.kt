@@ -73,7 +73,7 @@ class ACIRetainingWall : RetainingWallDesign {
 
         // Stem - cantilever
         val stemH = H - tFooting
-        val MuStem = LF_LATERAL * (Ka * gamma * stemH.pow(3) / 6 + Ka * q * stemH.pow(2) / 2) * 1e3 // kN.m -> N.mm
+        val MuStem = LF_LATERAL * (Ka * gamma * stemH.pow(3) / 6 + Ka * q * stemH.pow(2) / 2) * 1e6 // kN.m -> N.mm
         val VuStem = LF_LATERAL * (Ka * gamma * stemH.pow(2) / 2 + Ka * q * stemH) // kN
         val b = 1000.0
         val d = tBase * 1000 - COVER_EARTH - 10.0
@@ -96,7 +96,7 @@ class ACIRetainingWall : RetainingWallDesign {
         val shearOk = VuStem * 1000 <= phiVc
 
         // Toe
-        val toeMu = max(0.0, (maxBP * toe * toe / 2 - minBP * toe * toe / 6)) * 1e3 * PHI_FLEXURE
+        val toeMu = max(0.0, (maxBP * toe * toe / 2 - minBP * toe * toe / 6)) * 1e6
         val toeD = tFooting * 1000 - COVER_EARTH - 10.0
         val toeRn = toeMu / (PHI_FLEXURE * b * toeD * toeD)
         val toeRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * toeRn / (0.85 * fc))))
@@ -105,7 +105,7 @@ class ACIRetainingWall : RetainingWallDesign {
 
         // Heel
         val heelLoad = (H - tFooting) * gamma + q
-        val heelMu = heelLoad * heel * heel / 2 * LF_LIVE * 1e3 * PHI_FLEXURE
+        val heelMu = heelLoad * heel * heel / 2 * LF_LIVE * 1e6
         val heelD = tFooting * 1000 - COVER_EARTH - 10.0
         val heelRn = heelMu / (PHI_FLEXURE * b * heelD * heelD)
         val heelRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * heelRn / (0.85 * fc))))

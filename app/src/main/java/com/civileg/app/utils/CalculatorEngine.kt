@@ -591,7 +591,7 @@ class CalculatorEngine @Inject constructor(
                 // This formula is for short columns with minimum eccentricity.
                 val i = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
                 val lambda = (1.0 * clearHeight) / i
-                val lambdaLimit = if (isCircular) 8.0 else 10.0
+                val lambdaLimit = if (isCircular) 12.0 else 15.0  // ECP 203 Sec. 4-2-7
                 val isSlender = lambda > lambdaLimit
                 
                 asMin = 0.008 * ag // ECP Min reinforcement 0.8%
@@ -1403,11 +1403,11 @@ class CalculatorEngine @Inject constructor(
         
         // --- 4. Moment calculation ---
         // B. Dog-leg stair (Double Flight): M = w*L²/10 (partial fixity from landing)
-        // C. Single Flight: M = w*L²/10 for typical stair with partial fixity at ends
+        // C. Single Flight: M = w*L²/8 (simply supported per ECP/ACI/SBC)
         val momentCoeff = when (type) {
             StairType.DOUBLE_FLIGHT -> 10.0 // Partial fixity from landing
             StairType.SPIRAL -> 8.0         // Simplified, warning already added
-            StairType.SINGLE_FLIGHT -> 10.0 // Standard partial fixity
+            StairType.SINGLE_FLIGHT -> 8.0 // Simply supported
         }
         val mu = (wuHoriz * span.pow(2)) / momentCoeff
         val d = ts - cover
@@ -1429,7 +1429,10 @@ class CalculatorEngine @Inject constructor(
         
         // --- E. Shear check: V = w*span/2, Vc = 0.5*sqrt(fcu)*b*d ---
         val vu = wuHoriz * span / 2.0
-        val vc = 0.5 * sqrt(fcu) * 1000.0 * d / 1000.0 // kN (convert b=1000mm, d in mm)
+        // Shear capacity per code: ECP: 0.24*sqrt(fcu)*b*d, ACI/SBC: 0.17*sqrt(f'c)*b*d
+        val shearCoeff = if (code == DesignCode.EGYPTIAN) 0.24 else 0.17
+        val fcForShear = if (code == DesignCode.EGYPTIAN) fcu else 0.8 * fcu
+        val vc = shearCoeff * sqrt(fcForShear) * 1000.0 * d / 1000.0 // kN
         val shearSafe = vu <= vc
         if (!shearSafe) {
             val msg = if (settingsManager.language == "en")

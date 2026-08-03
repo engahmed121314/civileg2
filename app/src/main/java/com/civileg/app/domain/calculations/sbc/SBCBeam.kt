@@ -184,10 +184,10 @@ class SBCBeam : BeamDesign {
 
     /**
      * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب SBC 304-2018
-     * SBC 304 يعتمد على ACI 318 مع تعديل: f'c = 0.67 × fcu / 1.5
+     * SBC 304 follows ACI 318: f'c = 0.8 × fcu (cube-to-cylinder)
      *
      * طريقة Rn-ρ (مثل ACI لكن مع مقاومة خرسانة SBC):
-     * - fc' = 0.67 × fcu / 1.5
+     * - fc' = 0.8 × fcu
      * - Rn = Mu / (φ × b × d²)
      * - ρ_bal = 0.85β₁(fc'/fy) × 600/(600+fy)
      * - If Rn > Rn_bal: needs compression steel

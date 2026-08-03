@@ -197,7 +197,7 @@ class SBCColumn : ColumnDesign {
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add("SBC 304: Column Shear Design")
-        codeNotes.add("f'c_sbc = 0.67×fcu/1.5 = ${String.format("%.0f", fc)} MPa")
+        codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
         codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
         codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=$phi)")
         if (needsStirrups) {

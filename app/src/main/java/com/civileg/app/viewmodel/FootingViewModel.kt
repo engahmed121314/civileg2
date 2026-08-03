@@ -127,7 +127,8 @@ class FootingViewModel @Inject constructor(
                     "Column Size" to "${res.column1Size.first}×${res.column1Size.second} mm",
                     "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
                     "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
-                    "Design Code" to codeName
+                    "Design Code" to codeName,
+                    "Applied Load" to "${String.format("%.1f", res.appliedLoad)} kN"
                 )
                 val resultsMap = mapOf(
                     "Reinforcement" to res.reinforcementBottom.barString,
@@ -146,7 +147,11 @@ class FootingViewModel @Inject constructor(
                     designType = "Footing (${res.type.displayName})",
                     inputs = inputsMap,
                     results = resultsMap,
-                    safetyChecks = emptyList(),
+                    safetyChecks = res.safetyChecks.map {
+                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                            it.name, it.calculated, it.limit, it.unit, it.passed
+                        )
+                    },
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
                     outputPath = file.absolutePath

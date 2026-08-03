@@ -91,7 +91,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val R = Mu * 1e6 / (fcu / GAMMA_C * b * d * d)
         val K = R / GAMMA_C
         val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
-        val As = Mu * 1e6 / (fy / GAMMA_S * z * d)
+        val As = Mu * 1e6 / (fy / GAMMA_S * z)
         val AsMin = max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * d
         val AsReq = max(As, AsMin)
 
@@ -112,7 +112,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val toeR = toeMoment * 1e6 / (fcu / GAMMA_C * b * toeD * toeD)
         val toeK = toeR / GAMMA_C
         val toeZ = toeD * (0.5 + sqrt(max(0.0, 0.25 - toeK / 0.893)))
-        val toeAs = toeMoment * 1e6 / (fy / GAMMA_S * toeZ * toeD)
+        val toeAs = toeMoment * 1e6 / (fy / GAMMA_S * toeZ)
         val toeAsFinal = max(toeAs, max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * toeD)
         val toeBars = RetainingWallDesign.selectBars(toeAsFinal)
         val toeRebarStr = "${toeBars.first}\u03A6${toeBars.second}"
@@ -125,7 +125,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val heelR = heelMoment * 1e6 / (fcu / GAMMA_C * b * heelD * heelD)
         val heelK = heelR / GAMMA_C
         val heelZ = heelD * (0.5 + sqrt(max(0.0, 0.25 - heelK / 0.893)))
-        val heelAs = heelMoment * 1e6 / (fy / GAMMA_S * heelZ * heelD)
+        val heelAs = heelMoment * 1e6 / (fy / GAMMA_S * heelZ)
         val heelAsFinal = max(heelAs, max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * heelD)
         val heelBars = RetainingWallDesign.selectBars(heelAsFinal)
         val heelRebarStr = "${heelBars.first}\u03A6${heelBars.second}"

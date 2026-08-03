@@ -120,7 +120,7 @@ fun ProfessionalStairDrawing(
         // ── Derived values ────────────────────────────────────────────
         val nRisers = if (numberOfRisers > 0) numberOfRisers
             else (totalHeight / riserHeight).toInt().coerceAtLeast(1)
-        val nTreads = nRisers
+        val nTreads = max(1, nRisers - 1)  // nTreads = nRisers - 1 by definition
         val slopeLength = sqrt(
             (totalLength * totalLength + totalHeight * totalHeight).toDouble()
         )
