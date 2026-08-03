@@ -494,10 +494,13 @@ private fun DrawScope.drawWallDetailInset(
     wallThickness: Double, vDia: Double, hDia: Double,
     cover: Float, scale: Float
 ) {
+    // Position wall detail in right portion of main zone (below plan view)
+    // Plan view ends at approximately y=170f; start wall detail below that
     val insetW = min(150f, cw * 0.20f)
-    val insetH = min(200f, ch * 0.30f)
+    val maxInsetH = ch * 0.58f - 180f  // must fit within main zone
+    val insetH = min(200f, maxInsetH).coerceAtLeast(120f)
     val insetLeft = cw - insetW - 16f
-    val insetTop = ch * 0.62f
+    val insetTop = 170f
 
     // Background
     drawRoundRect(
@@ -628,7 +631,8 @@ private fun DrawScope.drawReinforcementTable(
     height: Double, length: Double
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.70f
+    // Table starts below main zone (ch*0.58f) with generous gap
+    val tableTop = ch * 0.62f
     val tableW = cw - 32f
     val rowH = 24f
     val headerH = 28f
@@ -640,30 +644,31 @@ private fun DrawScope.drawReinforcementTable(
         tableW * 0.20f   // As
     )
 
-    // Title
+    // Title (positioned below tableTop to avoid overlap with drawing zone)
     val tableTitle = "REINFORCEMENT SCHEDULE"
-    drawTextAnnotated(tableTitle, tableLeft, tableTop - 6f, DimensionWhite, 20f, bold = true)
+    drawTextAnnotated(tableTitle, tableLeft, tableTop + 16f, DimensionWhite, 20f, bold = true)
 
     // Header
+    val headerTop = tableTop + 22f
     val headers = arrayOf("Direction", "Location", "Dia.", "Spacing", "As")
-    drawRect(color = TableHeaderBg, topLeft = Offset(tableLeft, tableTop),
+    drawRect(color = TableHeaderBg, topLeft = Offset(tableLeft, headerTop),
         size = Size(tableW, headerH))
     var cx = tableLeft
     for (i in headers.indices) {
-        drawTextAnnotated(headers[i], cx + 6f, tableTop + headerH / 2f + 6f,
+        drawTextAnnotated(headers[i], cx + 6f, headerTop + headerH / 2f + 6f,
             DimensionWhite, 15f, bold = true)
         cx += colWidths[i]
     }
 
     // Separator
     drawLine(color = ExtensionGray.copy(alpha = 0.3f),
-        start = Offset(tableLeft, tableTop + headerH),
-        end = Offset(tableLeft + tableW, tableTop + headerH), strokeWidth = 0.5f)
+        start = Offset(tableLeft, headerTop + headerH),
+        end = Offset(tableLeft + tableW, headerTop + headerH), strokeWidth = 0.5f)
 
     val isCircular = tankType.contains("Circular")
 
     // Row 1: Vertical / Hoop
-    val r1Y = tableTop + headerH
+    val r1Y = headerTop + headerH
     drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, r1Y), size = Size(tableW, rowH))
     val dir1 = if (isCircular) "Hoop" else "Vertical"
     val loc1 = "Wall"
@@ -713,13 +718,13 @@ private fun DrawScope.drawReinforcementTable(
     for (i in 0 until colWidths.size - 1) {
         sepX += colWidths[i]
         drawLine(color = ExtensionGray.copy(alpha = 0.15f),
-            start = Offset(sepX, tableTop),
+            start = Offset(sepX, headerTop),
             end = Offset(sepX, r3Y + rowH), strokeWidth = 0.5f)
     }
 
     // Table border
     drawRect(color = ExtensionGray.copy(alpha = 0.4f),
-        topLeft = Offset(tableLeft, tableTop),
+        topLeft = Offset(tableLeft, headerTop),
         size = Size(tableW, headerH + rowH * 3),
         style = Stroke(width = 1f))
 }

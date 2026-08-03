@@ -98,7 +98,7 @@ fun ProfessionalColumnDrawing(
             columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
 
         // 3. Tie/Spiral Detail Inset (below elevation)
-        drawTieDetailInset(16f, midY + 10f, divX - 32f, H - midY - 120f,
+        drawTieDetailInset(16f, midY + 10f, divX - 32f, H - midY - 130f,
             columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
             isSpiral, spiralPitch, sectionType)
 
@@ -109,11 +109,11 @@ fun ProfessionalColumnDrawing(
         // 5. Interaction Diagram (bottom-right)
         if (interactionPoints.isNotEmpty()) {
             drawInteractionDiagram(divX + 20f, midY + 10f,
-                W - divX - 36f, H - midY - 120f, interactionPoints, designPoint)
+                W - divX - 36f, H - midY - 130f, interactionPoints, designPoint)
         }
 
         // 6. Reinforcement Table (bottom)
-        drawReinforcementTable(16f, H - 100f, W - 32f, 90f,
+        drawReinforcementTable(16f, H - 110f, W - 32f, 90f,
             longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
     }
 }

@@ -101,14 +101,14 @@ fun ProfessionalSlabDrawing(
         }
         val tableH = when (viewMode) {
             3 -> h * 0.92f
-            0 -> h * 0.28f
+            0 -> h * 0.24f
             else -> h * 0.10f
         }
         val margin = 28f
-        val planTop = 44f
+        val planTop = h * 0.05f
         val planLeft = margin + 50f
         val planRight = w - margin
-        val planBottom = planTop + planH - 30f
+        val planBottom = h * 0.50f
         val planW = planRight - planLeft
         val planDrawH = planBottom - planTop
 
@@ -327,8 +327,8 @@ fun ProfessionalSlabDrawing(
         //  SECTION VIEW
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 2) {
-            val secTop = if (viewMode == 0) planBottom + 16f else 44f
-            val secBottom = secTop + sectionH - 30f
+            val secTop = if (viewMode == 0) h * 0.52f else 44f
+            val secBottom = secTop + sectionH
             val secLeft = margin + 80f
             val secRight = w - margin
 
@@ -460,8 +460,7 @@ fun ProfessionalSlabDrawing(
         //  REINFORCEMENT TABLE (data-driven, 8 columns)
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 3) {
-            val secBottom = if (viewMode == 0) planBottom + sectionH + 16f else 44f
-            val tblTop = secBottom
+            val tblTop = if (viewMode == 0) h * 0.76f else 44f
             val tblLeft = margin
             val tblRight = w - margin
             val tblWidth = tblRight - tblLeft

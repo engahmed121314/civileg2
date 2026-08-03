@@ -89,7 +89,7 @@ fun ProfessionalSteelDrawing(
         val sectLeft = margin + 20f
         val sectRight = cw * 0.48f
         val sectTop = elevBottom + 40f
-        val sectBottom = tableTop - 10f
+        val sectBottom = tableTop - 20f   // 20f gap to table
 
         val connLeft = cw * 0.52f
         val connRight = cw - margin - 20f

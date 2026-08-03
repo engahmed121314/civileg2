@@ -127,12 +127,17 @@ fun ProfessionalBeamDrawing(
         val angleX = 0.30f          // horizontal skew factor
         val angleY = 0.20f          // vertical skew factor
 
+        // ── Layout zones (vertical) ────────────────────────────────────
+        // Elevation: 0–46%  |  Section inset: 48–66%  |  Table: 69–100%
+        val sectionZoneTop = ch * 0.48f
+        val sectionZoneBottom = ch * 0.66f
+
         // Main beam drawing area — symmetric margins for proper centering
         val sideMargin = 60f
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
         val mainTop = 50f
-        val mainBottom = ch * 0.48f
+        val mainBottom = ch * 0.44f
 
         // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
         val availableW = mainRight - mainLeft
@@ -202,6 +207,8 @@ fun ProfessionalBeamDrawing(
 
         drawSectionInset(
             cw = cw, ch = ch,
+            zoneTop = sectionZoneTop,
+            zoneBottom = sectionZoneBottom,
             beamWidth = beamWidth, beamDepth = beamDepth,
             mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
             stirrupDia = stirrupDia,
@@ -1018,6 +1025,7 @@ private fun DrawScope.drawDimensionLines(
  */
 private fun DrawScope.drawSectionInset(
     cw: Float, ch: Float,
+    zoneTop: Float, zoneBottom: Float,
     beamWidth: Double, beamDepth: Double,
     mainRebarDia: Double, mainRebarCount: Int,
     stirrupDia: Double,
@@ -1025,11 +1033,11 @@ private fun DrawScope.drawSectionInset(
     hasTopSteel: Boolean,
     topRebarDia: Double, topRebarCount: Int
 ) {
-    // Inset position and size
-    val insetW = min(160f, cw * 0.22f)
-    val insetH = min(220f, ch * 0.35f)
-    val insetLeft = cw - insetW - 16f
-    val insetTop = 8f
+    // Inset position and size — centered in dedicated zone below elevation
+    val insetW = min(200f, cw * 0.28f)
+    val insetH = min(zoneBottom - zoneTop - 16f, 220f)
+    val insetLeft = (cw - insetW) / 2f
+    val insetTop = zoneTop + 8f
 
     // Background panel
     drawRoundRect(
@@ -1144,7 +1152,7 @@ private fun DrawScope.drawReinforcementSchedule(
     cover: Double
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.74f
+    val tableTop = ch * 0.69f
     val tableW = cw - 32f
     val rowH = 26f
     val headerH = 30f

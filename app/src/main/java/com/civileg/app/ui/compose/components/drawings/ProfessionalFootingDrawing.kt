@@ -75,17 +75,22 @@ fun ProfessionalFootingDrawing(
         val critSectionColor = C.SafeGreen
         val tableHeaderBg = Color(0x55333333)
 
-        // ── Layout zones ───────────────────────────────────────────
+        // ── Layout zones (proportional) ────────────────────────────
         val margin = 30f
-        val planH = h * 0.38f
-        val sectionH = h * 0.30f
-        val pressureH = if (footingType == "Combined" || footingType == "Raft") h * 0.10f else 0f
+        val hasPressure = footingType == "Combined" || footingType == "Raft"
+        val planTop = h * 0.05f
+        val planBottom = h * 0.35f
+        val secTop = h * 0.37f
+        val secBottom = h * 0.60f
+        val pressureTop = h * 0.62f
+        val pressureBottom = h * 0.70f
+        val tblTop = if (hasPressure) h * 0.72f else h * 0.64f
         val planLeft = margin + 50f
         val planRight = w - margin
-        val planTop = 50f
-        val planBottom = planTop + planH - 20f
         val planW = planRight - planLeft
         val planDrawH = planBottom - planTop
+        val sectionH = secBottom - secTop
+        val pressureH = if (hasPressure) pressureBottom - pressureTop else 0f
 
         // ══════════════════════════════════════════════════════════
         // HEADER
@@ -295,8 +300,6 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         //  SECTION VIEW
         // ══════════════════════════════════════════════════════════
-        val secTop = fBottom + 36f
-        val secBottom = secTop + sectionH
         val secLeft = margin + 90f
         val secRight = w - margin
 
@@ -413,8 +416,8 @@ fun ProfessionalFootingDrawing(
         //  SOIL PRESSURE DIAGRAM (Combined / Raft)
         // ══════════════════════════════════════════════════════════
         if (footingType == "Combined" || footingType == "Raft") {
-            val prTop = secBottom + 10f
-            val prBottom = prTop + pressureH
+            val prTop = pressureTop
+            val prBottom = pressureBottom
             val prLeft = secLeft
             val prRight = prLeft + secSpanPx
 
@@ -470,7 +473,6 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         //  REINFORCEMENT TABLE using DrawingUtils
         // ══════════════════════════════════════════════════════════
-        val tblTop = if (pressureH > 0) secBottom + pressureH + 18f else secBottom + 14f
         val tblLeft = margin
         val tblWidth = w - 2 * margin
 

@@ -135,17 +135,17 @@ fun ProfessionalStairDrawing(
         // ── Layout zones ──────────────────────────────────────────────
         // Left 58%: Elevation view
         // Right 42%: Cross-section (top) + Plan view (bottom)
-        // Bottom strip: Reinforcement table
+        // Bottom strip: Reinforcement table (starts at 76% with 16f gap)
         val elevZoneRight = cw * 0.58f
-        val tableTop = ch * 0.74f
+        val tableTop = ch * 0.76f
         val rightZoneTop = 30f
-        val rightZoneMid = (rightZoneTop + tableTop) / 2f
+        val rightZoneMid = (rightZoneTop + tableTop - 20f) / 2f
 
         // ── Draw all zones ────────────────────────────────────────────
         // 1. Main elevation view (left)
         drawElevationView(
             zoneLeft = 60f, zoneTop = 28f,
-            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 8f,
+            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
             cw = cw, ch = ch,
             nRisers = nRisers, nTreads = nTreads,
             riserHeight = riserHeight, treadWidth = treadWidth,
@@ -163,7 +163,7 @@ fun ProfessionalStairDrawing(
         // 2. Cross-section view A-A (right-top)
         drawCrossSectionView(
             zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneTop,
-            zoneRight = cw - 16f, zoneBottom = rightZoneMid - 4f,
+            zoneRight = cw - 16f, zoneBottom = rightZoneMid - 6f,
             slabThickness = slabThickness, stairWidth = stairWidth,
             mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
             topRebarDia = topRebarDia, topRebarSpacing = topRebarSpacing,
@@ -174,8 +174,8 @@ fun ProfessionalStairDrawing(
 
         // 3. Plan view (right-bottom)
         drawPlanView(
-            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneMid + 4f,
-            zoneRight = cw - 16f, zoneBottom = tableTop - 8f,
+            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneMid + 6f,
+            zoneRight = cw - 16f, zoneBottom = tableTop - 16f,
             totalLength = totalLength, stairWidth = stairWidth,
             nTreads = nTreads, treadWidth = treadWidth,
             hasLanding = hasLanding, landingLength = landingLength,
@@ -1036,14 +1036,15 @@ private fun DrawScope.drawReinforcementScheduleTable(
     // ── Table title ──────────────────────────────────────────────────
     drawTextAnnotated(
         text = "REINFORCEMENT SCHEDULE",
-        x = tableLeft, y = tableTop - 4f,
+        x = tableLeft, y = tableTop + 18f,
         color = DimensionWhite, size = 18f
     )
 
     // ── Header row ───────────────────────────────────────────────────
+    val headerTop = tableTop + 24f
     drawRect(
         color = TableHeaderBg,
-        topLeft = Offset(tableLeft, tableTop + 6f),
+        topLeft = Offset(tableLeft, headerTop),
         size = Size(tableW, headerH)
     )
 
@@ -1053,7 +1054,7 @@ private fun DrawScope.drawReinforcementScheduleTable(
         drawTextAnnotated(
             text = headers[i],
             x = cx + 6f,
-            y = tableTop + 6f + headerH / 2f + 5f,
+            y = headerTop + headerH / 2f + 5f,
             color = DimensionWhite, size = 16f
         )
         cx += colWidths[i]
@@ -1062,13 +1063,13 @@ private fun DrawScope.drawReinforcementScheduleTable(
     // ── Separator ────────────────────────────────────────────────────
     drawLine(
         color = ExtensionGray.copy(alpha = 0.3f),
-        start = Offset(tableLeft, tableTop + 6f + headerH),
-        end = Offset(tableLeft + tableW, tableTop + 6f + headerH),
+        start = Offset(tableLeft, headerTop + headerH),
+        end = Offset(tableLeft + tableW, headerTop + headerH),
         strokeWidth = 0.5.dp.toPx()
     )
 
     // ── Row 1: Main bottom reinforcement ─────────────────────────────
-    val row1Y = tableTop + 6f + headerH
+    val row1Y = headerTop + headerH
     drawRect(
         color = TableRowAlt,
         topLeft = Offset(tableLeft, row1Y),
@@ -1188,7 +1189,7 @@ private fun DrawScope.drawReinforcementScheduleTable(
         sepX += colWidths[i]
         drawLine(
             color = ExtensionGray.copy(alpha = 0.15f),
-            start = Offset(sepX, tableTop + 6f),
+            start = Offset(sepX, headerTop),
             end = Offset(sepX, currentY),
             strokeWidth = 0.5.dp.toPx()
         )
@@ -1197,8 +1198,8 @@ private fun DrawScope.drawReinforcementScheduleTable(
     // ── Table border ─────────────────────────────────────────────────
     drawRect(
         color = ExtensionGray.copy(alpha = 0.4f),
-        topLeft = Offset(tableLeft, tableTop + 6f),
-        size = Size(tableW, currentY - tableTop - 6f),
+        topLeft = Offset(tableLeft, headerTop),
+        size = Size(tableW, currentY - headerTop),
         style = Stroke(width = 1.dp.toPx())
     )
 }
