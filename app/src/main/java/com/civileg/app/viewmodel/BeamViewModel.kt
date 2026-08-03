@@ -9,6 +9,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,6 +29,10 @@ class BeamViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     private var lastSpan: Double = 5.0
     private var lastWidth: Double = 250.0
@@ -129,7 +134,8 @@ class BeamViewModel @Inject constructor(
                     Pair(x, v)
                 }
 
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateBeamDrawingWithDiagrams(
                         beamWidth = res.width.toDouble(),
                         beamDepth = res.depth.toDouble(),
@@ -149,6 +155,7 @@ class BeamViewModel @Inject constructor(
                         isSafe = res.isSafe
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"

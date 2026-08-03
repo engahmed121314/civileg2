@@ -9,6 +9,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,6 +29,10 @@ class RetainingWallViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateRetainingWallPro(
         height: Double,
@@ -86,7 +91,8 @@ class RetainingWallViewModel @Inject constructor(
                     directory.mkdirs()
                     val file = java.io.File(directory, fileName)
 
-                    val drawingBitmap = try {
+                    // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateRetainingWallDrawing(
                             wallHeight = currentResult.height,
                             wallTopThickness = currentResult.stemThickness * 0.6,
@@ -111,6 +117,7 @@ class RetainingWallViewModel @Inject constructor(
                             allowableBearingPressure = 200.0
                         )
                     } catch (e: Exception) { null }
+                    pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
                         CalculatorEngine.DesignCode.ACI -> "ACI 318"

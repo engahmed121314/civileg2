@@ -36,6 +36,9 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +53,11 @@ fun BeamScreen(
     val isExporting by viewModel.isExporting.observeAsState(false)
     val error by viewModel.error.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var pdfError by remember { mutableStateOf<String?>(null) }
     // ... existing state vars ...
@@ -82,10 +90,10 @@ fun BeamScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -263,6 +271,10 @@ fun BeamScreen(
                         val beamPdfErrorMsg = stringResource(R.string.beam_pdf_error)
                         Button(
                             onClick = {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
                                         pdfError = beamPdfErrorMsg
@@ -370,6 +382,47 @@ fun BeamScreen(
                     )
                 }
             }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalBeamDrawing(
+                        beamWidth = res.width.toDouble(),
+                        beamDepth = res.depth.toDouble(),
+                        span = (span.toDoubleOrNull() ?: 5.0) * 1000.0,
+                        mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
+                        mainRebarCount = res.reinforcementBottom.numBars,
+                        stirrupDia = res.stirrups.diameter.toDouble(),
+                        stirrupSpacing = res.stirrups.spacing.toDouble(),
+                        cover = 50.0,
+                        developmentLength = {
+                            val fcuVal = fcu.toDoubleOrNull() ?: 25.0
+                            val fyVal = fy.toDoubleOrNull() ?: 360.0
+                            val db = res.reinforcementBottom.diameter.toDouble()
+                            (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
+                        }(),
+                        lapLength = {
+                            val fcuVal = fcu.toDoubleOrNull() ?: 25.0
+                            val fyVal = fy.toDoubleOrNull() ?: 360.0
+                            val db = res.reinforcementBottom.diameter.toDouble()
+                            val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
+                            1.3 * ld
+                        }(),
+                        isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
+                        hasTopSteel = res.reinforcementTop.numBars > 0,
+                        topRebarDia = res.reinforcementTop.diameter.toDouble(),
+                        topRebarCount = res.reinforcementTop.numBars,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 

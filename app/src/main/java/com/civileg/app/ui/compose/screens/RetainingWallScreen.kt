@@ -37,6 +37,8 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.RetainingWallViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +52,11 @@ fun RetainingWallScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     val configuration = LocalConfiguration.current
     val screenW = configuration.screenWidthDp.dp
@@ -90,10 +97,10 @@ fun RetainingWallScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
@@ -309,7 +316,13 @@ fun RetainingWallScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { viewModel.exportToPdf(context) { /* Handle completion */ } },
+                            onClick = {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
+                                viewModel.exportToPdf(context) { /* Handle completion */ }
+                            },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -393,6 +406,51 @@ fun RetainingWallScreen(
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            val stemTopT = kotlin.math.max(200.0, res.stemThickness * 0.5)
+            val baseWm = res.baseWidth / 1000.0
+            val toeW = baseWm / 3.0
+            val heelW = baseWm - toeW - (res.stemThickness / 1000.0)
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalRetainingWallDrawing(
+                        wallHeight = res.height,
+                        wallTopThickness = stemTopT / 1000,
+                        wallBottomThickness = res.stemThickness / 1000,
+                        baseWidth = baseWm,
+                        baseThickness = res.stemThickness / 1000,
+                        toeLength = toeW,
+                        heelLength = heelW.coerceAtLeast(0.0),
+                        mainRebarDia = res.stemReinforcement.diameter.toDouble() / 1000,
+                        mainRebarSpacing = res.stemReinforcement.spacing.toDouble() / 1000,
+                        distRebarDia = 10.0 / 1000,
+                        distRebarSpacing = 200.0 / 1000,
+                        baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
+                        baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
+                        cover = when (selectedCode) {
+                            CalculatorEngine.DesignCode.ACI -> 0.075
+                            CalculatorEngine.DesignCode.SAUDI -> 0.065
+                            else -> 0.05
+                        },
+                        backfillAngle = res.backfillAngle,
+                        hasKey = true,
+                        keyDepth = 0.15,
+                        fsOverturning = res.factorOfSafetyOverturning,
+                        fsSliding = res.factorOfSafetySliding,
+                        maxBearingPressure = res.maxBearingPressure,
+                        allowableBearingPressure = 200.0,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 

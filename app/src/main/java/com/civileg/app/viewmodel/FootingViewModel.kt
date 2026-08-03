@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,6 +34,10 @@ class FootingViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
@@ -98,7 +103,8 @@ class FootingViewModel @Inject constructor(
                 val file = File(directory, fileName)
 
                 // Generate drawing for PDF
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateFootingDrawing(
                         footingLX = res.length,
                         footingLY = res.width,
@@ -117,6 +123,7 @@ class FootingViewModel @Inject constructor(
                         soilPressureMin = res.soilPressure
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"

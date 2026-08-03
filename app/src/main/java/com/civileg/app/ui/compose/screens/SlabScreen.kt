@@ -32,6 +32,8 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +70,11 @@ fun SlabScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var pdfError by remember { mutableStateOf<String?>(null) }
@@ -101,10 +108,10 @@ fun SlabScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -365,6 +372,10 @@ fun SlabScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
                                 viewModel.exportToPdf(context) { file ->
                                     if (file == null) {
                                         pdfError = pdfErrorMsg
@@ -446,6 +457,41 @@ fun SlabScreen(
                     )
                 }
             }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalSlabDrawing(
+                        slabType = selectedType.displayName,
+                        slabThickness = res.thickness.toDouble(),
+                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
+                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                        mainRebarDia = res.reinforcementMain.diameter.toDouble(),
+                        mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
+                        distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
+                        distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
+                        cover = 25.0,
+                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                        ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
+                        ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth(),
+                        momentX = res.momentX,
+                        momentY = res.momentY,
+                        factoredLoad = res.totalLoad,
+                        fcu = fcu.toDoubleOrNull() ?: 25.0,
+                        fy = fy.toDoubleOrNull() ?: 360.0,
+                        isSafe = res.isSafe,
+                        utilizationRatio = res.utilizationRatio
+                    )
+                }
+            }
+        }
         }
     }
 

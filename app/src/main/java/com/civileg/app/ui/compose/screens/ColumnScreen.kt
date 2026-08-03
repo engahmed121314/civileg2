@@ -39,6 +39,8 @@ import com.civileg.app.viewmodel.ColumnViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.max
 import kotlin.math.min
 
@@ -52,6 +54,11 @@ fun ColumnScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -75,10 +82,10 @@ fun ColumnScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -318,7 +325,13 @@ fun ColumnScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { viewModel.exportToPdf(context) { /* Handle completion */ } },
+                            onClick = {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
+                                viewModel.exportToPdf(context) { /* Handle completion */ }
+                            },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -387,6 +400,31 @@ fun ColumnScreen(
                     )
                 }
             }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        uiState.result?.let { result ->
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalColumnDrawing(
+                        columnWidth = result.width.toDouble(),
+                        columnDepth = result.depth.toDouble(),
+                        columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
+                        longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
+                        tieDia = result.stirrups.diameter.toDouble(),
+                        tieSpacing = result.stirrups.spacing.toDouble(),
+                        cover = 40.0,
+                        isSpiral = false,
+                        sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 

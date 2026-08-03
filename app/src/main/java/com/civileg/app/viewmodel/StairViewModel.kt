@@ -9,6 +9,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,6 +29,10 @@ class StairViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateStairPro(
         type: CalculatorEngine.StairType,
@@ -98,7 +103,8 @@ class StairViewModel @Inject constructor(
                         CalculatorEngine.DesignCode.SAUDI -> 40.0
                         else -> 25.0
                     }
-                    val drawingBitmap = try {
+                    // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = totalHeight,
                             totalLength = nRisers.toDouble() * currentResult.tread,
@@ -113,6 +119,7 @@ class StairViewModel @Inject constructor(
                             cover = pdfCover
                         )
                     } catch (e: Exception) { e.printStackTrace(); null }
+                    pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
                         CalculatorEngine.DesignCode.ACI -> "ACI 318"

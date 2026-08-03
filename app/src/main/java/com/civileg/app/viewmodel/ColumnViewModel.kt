@@ -14,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 data class ColumnUiState(
@@ -48,6 +49,10 @@ class ColumnViewModel @Inject constructor(
         // Initialize with default code from settings
         _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }
     }
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     val uiStateLiveData: LiveData<ColumnUiState> = _uiState.asLiveData()
     val result: LiveData<CalculatorEngine.ColumnResult?> = _uiState.map { it.result }.asLiveData()
@@ -188,7 +193,8 @@ class ColumnViewModel @Inject constructor(
                 val fyVal = state.fy.toDoubleOrNull() ?: 400.0
 
                 // Generate drawing for PDF
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateColumnDrawing(
                         columnWidth = res.width,
                         columnDepth = res.depth,
@@ -203,6 +209,7 @@ class ColumnViewModel @Inject constructor(
                         sectionType = if (res.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular"
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(state.designCode) {
                     com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"

@@ -39,6 +39,8 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +55,11 @@ fun StairScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -94,10 +101,10 @@ fun StairScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -287,7 +294,13 @@ fun StairScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
+                            onClick = {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
+                                viewModel.exportToPdf(context) { /* Handle complete */ }
+                            },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -365,6 +378,39 @@ fun StairScreen(
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
+            val codeAwareCover = when (selectedCode) {
+                CalculatorEngine.DesignCode.ACI -> 38.0
+                CalculatorEngine.DesignCode.SAUDI -> 40.0
+                else -> 25.0
+            }
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalStairDrawing(
+                        stairWidth = 1200.0,
+                        totalHeight = nRisers.toDouble() * res.riser,
+                        totalLength = nRisers.toDouble() * res.tread,
+                        riserHeight = res.riser,
+                        treadWidth = res.tread,
+                        slabThickness = res.thickness,
+                        mainRebarDia = res.reinforcement.diameter.toDouble(),
+                        mainRebarSpacing = res.reinforcement.spacing,
+                        distributionDia = res.distributionReinforcement.diameter.toDouble(),
+                        distributionSpacing = res.distributionReinforcement.spacing,
+                        cover = codeAwareCover,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 

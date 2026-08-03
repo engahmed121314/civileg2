@@ -32,6 +32,8 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +47,11 @@ fun FootingScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -84,10 +91,10 @@ fun FootingScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -341,7 +348,11 @@ fun FootingScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { 
+                            onClick = {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
                                 viewModel.exportToPdf(context) { file -> }
                             },
                             modifier = Modifier.weight(1f),
@@ -434,6 +445,54 @@ fun FootingScreen(
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            val footingTypeEnglish = when (selectedType) {
+                CalculatorEngine.FootingType.ISOLATED -> "Isolated"
+                CalculatorEngine.FootingType.COMBINED -> "Combined"
+                CalculatorEngine.FootingType.RAFT -> "Raft"
+                CalculatorEngine.FootingType.STRIP -> "Isolated"
+                CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
+            }
+            val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                val dist = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0
+                val p1 = axialLoad.toDoubleOrNull() ?: 1200.0
+                val p2 = axialLoad2.toDoubleOrNull() ?: 1000.0
+                val xR = (p2 * dist) / (p1 + p2)
+                val s1 = 600.0
+                Pair(s1, s1 + dist)
+            } else {
+                Pair(0.0, 0.0)
+            }
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalFootingDrawing(
+                        footingType = footingTypeEnglish,
+                        footingLengthX = res.length.toDouble(),
+                        footingLengthY = res.width.toDouble(),
+                        footingThickness = res.thickness.toDouble(),
+                        columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                        columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                        rebarXDia = res.barDiameter.toDouble(),
+                        rebarXCount = res.barsX,
+                        rebarYDia = res.barDiameter.toDouble(),
+                        rebarYCount = res.barsY,
+                        cover = 70.0,
+                        col1X = col1XPos,
+                        col2X = col2XPos,
+                        soilPressureMax = res.soilPressure,
+                        soilPressureMin = res.soilPressure,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 

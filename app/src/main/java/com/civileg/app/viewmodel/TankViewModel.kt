@@ -11,6 +11,7 @@ import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.io.File
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +31,10 @@ class TankViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateTankPro(
         type: CalculatorEngine.TankType,
@@ -77,7 +82,8 @@ class TankViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = File(directory, fileName)
 
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateTankDrawing(
                         tankType = res.type.displayName,
                         length = res.length,
@@ -93,6 +99,7 @@ class TankViewModel @Inject constructor(
                         foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0
                     )
                 } catch (e: Exception) { null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"

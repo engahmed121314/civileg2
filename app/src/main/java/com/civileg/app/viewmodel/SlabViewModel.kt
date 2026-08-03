@@ -9,6 +9,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,6 +29,10 @@ class SlabViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     // Store actual inputs for PDF export
     private var lastInputs: SlabStoredInputs? = null
@@ -116,7 +121,8 @@ class SlabViewModel @Inject constructor(
                 val file = java.io.File(directory, fileName)
 
                 // Generate drawing bitmap (bilingual, type-aware)
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
                         slabType = inputs.type,
                         spanX = inputs.lx, spanY = inputs.ly, thickness = res.thickness,
@@ -130,6 +136,7 @@ class SlabViewModel @Inject constructor(
                         columnSize = inputs.columnSize
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null  // consume after use
 
                 // Bilingual labels: Arabic descriptions when locale=ar, English for symbols
                 val isAr = com.civileg.app.utils.LocaleHelper.isArabic()
