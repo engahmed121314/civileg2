@@ -197,7 +197,10 @@ class ColumnViewModel @Inject constructor(
                         barDia = res.reinforcement.diameter.toDouble(),
                         tieDia = res.stirrups.diameter.toDouble(),
                         tieSpacing = res.stirrups.spacing,
-                        cover = 40.0
+                        cover = 40.0,
+                        isSpiral = false,
+                        spiralPitch = 0.0,
+                        sectionType = if (res.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular"
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 

@@ -387,7 +387,10 @@ object PdfDrawingGenerator {
     fun generateColumnDrawing(
         columnWidth: Double, columnDepth: Double, columnHeight: Double,
         numBars: Int, barDia: Double, tieDia: Double, tieSpacing: Double,
-        cover: Double = 40.0
+        cover: Double = 40.0,
+        isSpiral: Boolean = false,
+        spiralPitch: Double = 0.0,
+        sectionType: String = "Rectangular"
     ): Bitmap {
         val W = 1200; val H = 800
         val (bitmap, canvas) = createCanvas(W, H)
@@ -445,66 +448,101 @@ object PdfDrawingGenerator {
 
         // Cross-section (right side)
         val csCx = W * 0.65f; val csCy = H * 0.35f
-        val csW2 = columnWidth.toFloat() * 0.8f
-        val csH2 = columnDepth.toFloat() * 0.8f
-        val csLeft = csCx - csW2 / 2f; val csTop2 = csCy - csH2 / 2f
+        val isCircular = sectionType.contains("Circular", ignoreCase = true) ||
+                          sectionType.contains("CIRCULAR", ignoreCase = true)
 
-        canvas.drawRect(csLeft, csTop2, csLeft + csW2, csTop2 + csH2, fillPaint(CONCRETE))
-        canvas.drawRect(csLeft, csTop2, csLeft + csW2, csTop2 + csH2, outlineP)
+        if (isCircular) {
+            // ── Circular cross-section ──
+            val csRadius = columnWidth.toFloat() * 0.4f  // use width as diameter
+            canvas.drawCircle(csCx, csCy, csRadius, fillPaint(CONCRETE))
+            canvas.drawCircle(csCx, csCy, csRadius, outlineP)
 
-        // Tie in section
-        val csCover = cover.toFloat()
-        canvas.drawRect(csLeft + csCover, csTop2 + csCover, csLeft + csW2 - csCover, csTop2 + csH2 - csCover, createPaint(STIRRUP, 1.5f))
+            // Circular tie
+            val tieRadius = csRadius - cover.toFloat()
+            canvas.drawCircle(csCx, csCy, tieRadius, createPaint(STIRRUP, 1.5f))
 
-        // Bars in section
-        val effW = csW2 - 2 * csCover
-        val effH = csH2 - 2 * csCover
-        val barsPerSide = maxOf(2, (numBars - 4) / 4)
-        // 4 corners always
-        val csBarR = maxOf(barDia.toFloat() * 0.5f, 4f)
-        val barPositions = mutableListOf<Offset>()
-        barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR))
-        barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR))
-        barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csH2 - csCover - csBarR))
-        barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csH2 - csCover - csBarR))
+            // Bars in circular pattern
+            val csBarR = maxOf(barDia.toFloat() * 0.5f, 4f)
+            val barCircleR = tieRadius - csBarR - 2f
+            val barPositionsCircular = mutableListOf<Offset>()
+            for (i in 0 until numBars) {
+                val angle = 2 * Math.PI * i / numBars - Math.PI / 2
+                barPositionsCircular.add(Offset(
+                    csCx + (barCircleR * kotlin.math.cos(angle)).toFloat(),
+                    csCy + (barCircleR * kotlin.math.sin(angle)).toFloat()
+                ))
+            }
+            barPositionsCircular.forEachIndexed { idx, pos ->
+                canvas.drawRebar(pos.x, pos.y, csBarR, REBAR_BLUE)
+                val mark = getCircleNumber(idx + 1)
+                canvas.drawTextCentered(mark, pos.x, pos.y - csBarR - 6f, textPaint(DIM_TEXT, 14f, true))
+            }
 
-        val remaining = numBars - 4
-        if (remaining > 0) {
-            val perSide = remaining / 4
-            val extra = remaining % 4
-            for (side in 0 until 4) {
-                val count = perSide + if (side < extra) 1 else 0
-                for (i in 1..count) {
-                    val t = i.toFloat() / (count + 1)
-                    when (side) {
-                        0 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csCover + csBarR))
-                        1 -> barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
-                        2 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csH2 - csCover - csBarR))
-                        3 -> barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+            // Section dimensions
+            canvas.drawHDim(csCx - csRadius, csCx + csRadius, csCy + csRadius + 15f, "Ø${columnWidth.toInt()} mm", 20f)
+            canvas.drawTextCentered("SECTION A-A", csCx, csCy - csRadius - 20f, titleP)
+        } else {
+            // ── Rectangular cross-section (original logic) ──
+            val csW2 = columnWidth.toFloat() * 0.8f
+            val csH2 = columnDepth.toFloat() * 0.8f
+            val csLeft = csCx - csW2 / 2f; val csTop2 = csCy - csH2 / 2f
+
+            canvas.drawRect(csLeft, csTop2, csLeft + csW2, csTop2 + csH2, fillPaint(CONCRETE))
+            canvas.drawRect(csLeft, csTop2, csLeft + csW2, csTop2 + csH2, outlineP)
+
+            // Tie in section
+            val csCover = cover.toFloat()
+            canvas.drawRect(csLeft + csCover, csTop2 + csCover, csLeft + csW2 - csCover, csTop2 + csH2 - csCover, createPaint(STIRRUP, 1.5f))
+
+            // Bars in section
+            val effW = csW2 - 2 * csCover
+            val effH = csH2 - 2 * csCover
+            val csBarR = maxOf(barDia.toFloat() * 0.5f, 4f)
+            val barPositions = mutableListOf<Offset>()
+            barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR))
+            barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR))
+            barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csH2 - csCover - csBarR))
+            barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csH2 - csCover - csBarR))
+
+            val remaining = numBars - 4
+            if (remaining > 0) {
+                val perSide = remaining / 4
+                val extra = remaining % 4
+                for (side in 0 until 4) {
+                    val count = perSide + if (side < extra) 1 else 0
+                    for (i in 1..count) {
+                        val t = i.toFloat() / (count + 1)
+                        when (side) {
+                            0 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csCover + csBarR))
+                            1 -> barPositions.add(Offset(csLeft + csW2 - csCover - csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+                            2 -> barPositions.add(Offset(csLeft + csCover + csBarR + t * (effW - 2 * csBarR), csTop2 + csH2 - csCover - csBarR))
+                            3 -> barPositions.add(Offset(csLeft + csCover + csBarR, csTop2 + csCover + csBarR + t * (effH - 2 * csBarR)))
+                        }
                     }
                 }
             }
-        }
 
-        barPositions.forEachIndexed { idx, pos ->
-            canvas.drawRebar(pos.x, pos.y, csBarR, REBAR_BLUE)
-            // Bar mark number
-            val mark = getCircleNumber(idx + 1)
-            canvas.drawTextCentered(mark, pos.x, pos.y - csBarR - 6f, textPaint(DIM_TEXT, 14f, true))
-        }
+            barPositions.forEachIndexed { idx, pos ->
+                canvas.drawRebar(pos.x, pos.y, csBarR, REBAR_BLUE)
+                val mark = getCircleNumber(idx + 1)
+                canvas.drawTextCentered(mark, pos.x, pos.y - csBarR - 6f, textPaint(DIM_TEXT, 14f, true))
+            }
 
-        // Section dimensions
-        canvas.drawHDim(csLeft, csLeft + csW2, csTop2 + csH2 + 15f, "${columnWidth.toInt()} mm", 20f)
-        canvas.drawVDim(csTop2, csTop2 + csH2, csLeft + csW2 + 15f, "${columnDepth.toInt()} mm", 20f)
-        canvas.drawTextCentered("SECTION A-A", csCx, csTop2 - 20f, titleP)
+            // Section dimensions
+            canvas.drawHDim(csLeft, csLeft + csW2, csTop2 + csH2 + 15f, "${columnWidth.toInt()} mm", 20f)
+            canvas.drawVDim(csTop2, csTop2 + csH2, csLeft + csW2 + 15f, "${columnDepth.toInt()} mm", 20f)
+            canvas.drawTextCentered("SECTION A-A", csCx, csTop2 - 20f, titleP)
+        }
 
         // Rebar table
+        val tieTypeLabel = if (isSpiral) "Spiral" else "Ties"
+        val tieSpacingLabel = if (isSpiral) "${spiralPitch.toInt()}mm" else "${tieSpacing.toInt()}mm"
         drawRebarTable(canvas, 
             x = 100f, y = H * 0.65f,
             data = listOf(
                 listOf("Mark", "Dia", "No.", "Type", "Spacing"),
                 listOf("M1", "${barDia.toInt()}mm", "$numBars", "Main", "-"),
-                listOf("T1", "${tieDia.toInt()}mm", "-", "Ties", "${tieSpacing.toInt()}mm")
+                listOf("T1", "${tieDia.toInt()}mm", "-", tieTypeLabel, tieSpacingLabel)
             )
         )
 
@@ -1236,7 +1274,11 @@ object PdfDrawingGenerator {
         footingLX: Double, footingLY: Double, footingThickness: Double,
         colW: Double, colD: Double,
         rebarXCount: Int, rebarXDia: Double, rebarXSpacing: Double,
-        rebarYCount: Int, rebarYDia: Double, rebarYSpatial: Double
+        rebarYCount: Int, rebarYDia: Double, rebarYSpatial: Double,
+        footingType: String = "Isolated",
+        cover: Double = 70.0,
+        soilPressureMax: Double = 0.0,
+        soilPressureMin: Double = 0.0
     ): Bitmap {
         val W = 1200; val H = 700
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1276,7 +1318,7 @@ object PdfDrawingGenerator {
         canvas.drawVDim(planT, planT + fH, planL + fW + 15f, "${footingLY.toInt()} mm (Ly)")
 
         val titleP = textPaint(Color.WHITE, 22f, true)
-        canvas.drawTextCentered("FOOTING PLAN", planL + fW / 2f, planT - 20f, titleP)
+        canvas.drawTextCentered("FOOTING PLAN — ${footingType.uppercase()}", planL + fW / 2f, planT - 20f, titleP)
 
         // Section (right side)
         val secL = W * 0.52f; val secT = 80f
@@ -1311,7 +1353,7 @@ object PdfDrawingGenerator {
             )
         )
 
-        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Footing Detail")
+        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Footing Detail — ${footingType.uppercase()}")
         return bitmap
     }
 
@@ -1319,7 +1361,8 @@ object PdfDrawingGenerator {
     fun generateStairDrawing(
         totalHeight: Double, totalLength: Double, stairWidth: Double,
         riserHeight: Double, treadWidth: Double, slabThickness: Double,
-        mainDia: Double, mainSpacing: Double, distDia: Double = 8.0, distSpacing: Double = 200.0
+        mainDia: Double, mainSpacing: Double, distDia: Double = 8.0, distSpacing: Double = 200.0,
+        cover: Double = 25.0
     ): Bitmap {
         val W = 1200; val H = 700
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1351,11 +1394,12 @@ object PdfDrawingGenerator {
         canvas.drawPath(path, fillPaint(CONCRETE))
         canvas.drawPath(path, outlineP)
 
-        // Main reinforcement (following slope)
+        // Main reinforcement (following slope) — offset by cover
         val rebarP = createPaint(REBAR_BLUE, 2f)
         val nBars = 4
+        val coverOffset = cover.toFloat() * scale
         for (i in 0 until nBars) {
-            val offset = (i + 1) * soffitOffset / (nBars + 1)
+            val offset = coverOffset + (i + 1) * (soffitOffset - coverOffset) / (nBars + 1)
             val yOff = offset * cos(angle)
             val xOff = offset * sin(angle)
             canvas.drawLine(
@@ -1622,7 +1666,11 @@ object PdfDrawingGenerator {
         baseRebarDia: Double, baseRebarSpacing: Double,
         cover: Double = 50.0,
         backfillAngle: Double = 0.3,
-        hasKey: Boolean = false, keyDepth: Double = 150.0
+        hasKey: Boolean = false, keyDepth: Double = 150.0,
+        fsOverturning: Double = 2.0,
+        fsSliding: Double = 1.5,
+        maxBearingPressure: Double = 0.0,
+        allowableBearingPressure: Double = 200.0
     ): Bitmap {
         val W = 1200; val H = 800
         val (bitmap, canvas) = createCanvas(W, H)

@@ -92,18 +92,25 @@ class StairViewModel @Inject constructor(
 
                     // Generate drawing for PDF
                     val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
+                    val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
+                    val pdfCover = when(currentResult.code) {
+                        CalculatorEngine.DesignCode.ACI -> 38.0
+                        CalculatorEngine.DesignCode.SAUDI -> 40.0
+                        else -> 25.0
+                    }
                     val drawingBitmap = try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = totalHeight,
-                            totalLength = currentResult.span,
-                            stairWidth = 1000.0,
+                            totalLength = nRisers.toDouble() * currentResult.tread,
+                            stairWidth = 1200.0,
                             riserHeight = currentResult.riser,
                             treadWidth = currentResult.tread,
                             slabThickness = currentResult.thickness,
                             mainDia = currentResult.reinforcement.diameter.toDouble(),
                             mainSpacing = currentResult.reinforcement.spacing,
                             distDia = currentResult.distributionReinforcement.diameter.toDouble(),
-                            distSpacing = currentResult.distributionReinforcement.spacing
+                            distSpacing = currentResult.distributionReinforcement.spacing,
+                            cover = pdfCover
                         )
                     } catch (e: Exception) { e.printStackTrace(); null }
 

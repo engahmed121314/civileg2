@@ -3,7 +3,6 @@ package com.civileg.app.ui.compose.components.drawings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -107,6 +106,7 @@ fun ProfessionalStairDrawing(
     distributionSpacing: Double = 0.0, // mm
     cover: Double = 25.0,         // mm
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
+    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -132,17 +132,35 @@ fun ProfessionalStairDrawing(
         val actualLandingThickness = if (hasLanding && landingThickness > 0.0)
             landingThickness else slabThickness
 
-        // ── Layout zones ──────────────────────────────────────────────
+        // ── Layout zones (viewMode-aware) ────────────────────
         // Left 58%: Elevation view
         // Right 42%: Cross-section (top) + Plan view (bottom)
-        // Bottom strip: Reinforcement table (starts at 76% with 16f gap)
-        val elevZoneRight = cw * 0.58f
-        val tableTop = ch * 0.76f
-        val rightZoneTop = 30f
-        val rightZoneMid = (rightZoneTop + tableTop - 20f) / 2f
+        // Bottom strip: Reinforcement table
+        val elevZoneRight = when (viewMode) {
+            1 -> cw  // full width for elevation only
+            0 -> cw * 0.58f
+            2 -> 0f  // not visible
+            else -> 0f // not visible
+        }
+        val tableTop = when (viewMode) {
+            3 -> ch * 0.08f  // table near top for reinforcement-only
+            0 -> ch * 0.76f
+            else -> ch * 0.92f // tables near bottom
+        }
+        val rightZoneTop = when (viewMode) {
+            2 -> 28f  // section views start near top
+            0 -> 30f
+            else -> 0f
+        }
+        val rightZoneMid = when (viewMode) {
+            2 -> (rightZoneTop + tableTop) / 2f  // split right zone evenly
+            0 -> (rightZoneTop + tableTop - 20f) / 2f
+            else -> 0f
+        }
 
-        // ── Draw all zones ────────────────────────────────────────────
+        // ── Draw zones based on viewMode ──────────────────────────
         // 1. Main elevation view (left)
+        if (viewMode == 0 || viewMode == 1) {
         drawElevationView(
             zoneLeft = 60f, zoneTop = 28f,
             zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
@@ -159,10 +177,13 @@ fun ProfessionalStairDrawing(
             cover = cover,
             slopeAngleRad = slopeAngleRad, cosSlope = cosSlope, sinSlope = sinSlope
         )
+        } // end elevation view
 
-        // 2. Cross-section view A-A (right-top)
+        // 2. Cross-section view A-A (right-top) + 3. Plan view (right-bottom)
+        if (viewMode == 0 || viewMode == 2) {
+        val secZoneLeft = if (viewMode == 2) 60f else elevZoneRight + 10f
         drawCrossSectionView(
-            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneTop,
+            zoneLeft = secZoneLeft, zoneTop = rightZoneTop,
             zoneRight = cw - 16f, zoneBottom = rightZoneMid - 6f,
             slabThickness = slabThickness, stairWidth = stairWidth,
             mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
@@ -174,7 +195,7 @@ fun ProfessionalStairDrawing(
 
         // 3. Plan view (right-bottom)
         drawPlanView(
-            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneMid + 6f,
+            zoneLeft = secZoneLeft, zoneTop = rightZoneMid + 6f,
             zoneRight = cw - 16f, zoneBottom = tableTop - 16f,
             totalLength = totalLength, stairWidth = stairWidth,
             nTreads = nTreads, treadWidth = treadWidth,
@@ -182,8 +203,10 @@ fun ProfessionalStairDrawing(
             mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
             distributionDia = distributionDia, distributionSpacing = distributionSpacing
         )
+        } // end section/plan views
 
         // 4. Reinforcement schedule table (bottom)
+        if (viewMode == 0 || viewMode == 3) {
         drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
@@ -197,8 +220,9 @@ fun ProfessionalStairDrawing(
             cover = cover, hasLanding = hasLanding,
             landingLength = landingLength, actualLandingThickness = actualLandingThickness
         )
+        } // end reinforcement table
 
-        // 5. Title block (above table, right-aligned)
+        // 5. Title block (always visible)
         drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength)
     }
 }

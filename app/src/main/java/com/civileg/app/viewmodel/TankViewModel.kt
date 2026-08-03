@@ -89,7 +89,8 @@ class TankViewModel @Inject constructor(
                         verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
                         horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                         horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                        waterLevel = res.height * 0.85
+                        waterLevel = res.height * 0.85,
+                        foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0
                     )
                 } catch (e: Exception) { null }
 

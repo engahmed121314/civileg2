@@ -110,9 +110,27 @@ class BeamViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate drawing bitmap
+                // Generate moment/shear point arrays for PDF diagrams
+                // Simply supported beam with UDL: M(x) = w*x*(L-x)/2, V(x) = w*(L/2-x)
+                val L = lastSpan // span in meters
+                val maxM = res.appliedMoment  // kN.m
+                val maxV = res.appliedShear    // kN
+                // Derive UDL from max moment: M_max = w*L²/8 → w = 8*M_max/L²
+                val wUDL = if (L > 0) 8.0 * maxM / (L * L) else 0.0
+                val numPoints = 21
+                val momentPoints = (0..numPoints).map { i ->
+                    val x = L * i / numPoints
+                    val m = wUDL * x * (L - x) / 2.0
+                    Pair(x, m)
+                }
+                val shearPoints = (0..numPoints).map { i ->
+                    val x = L * i / numPoints
+                    val v = wUDL * (L / 2.0 - x)
+                    Pair(x, v)
+                }
+
                 val drawingBitmap = try {
-                    PdfDrawingGenerator.generateBeamDrawing(
+                    PdfDrawingGenerator.generateBeamDrawingWithDiagrams(
                         beamWidth = res.width.toDouble(),
                         beamDepth = res.depth.toDouble(),
                         span = lastSpan * 1000.0,
@@ -123,7 +141,12 @@ class BeamViewModel @Inject constructor(
                         cover = 50.0,
                         hasTopSteel = res.reinforcementTop.numBars > 0,
                         topRebarDia = res.reinforcementTop.diameter.toDouble(),
-                        topRebarCount = res.reinforcementTop.numBars
+                        topRebarCount = res.reinforcementTop.numBars,
+                        momentPoints = momentPoints,
+                        shearPoints = shearPoints,
+                        maxMoment = maxM,
+                        maxShear = maxV,
+                        isSafe = res.isSafe
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 

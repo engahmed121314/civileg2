@@ -104,7 +104,11 @@ class RetainingWallViewModel @Inject constructor(
                             cover = 0.05,
                             backfillAngle = currentResult.backfillAngle,
                             hasKey = true,
-                            keyDepth = 0.15
+                            keyDepth = 0.15,
+                            fsOverturning = currentResult.factorOfSafetyOverturning,
+                            fsSliding = currentResult.factorOfSafetySliding,
+                            maxBearingPressure = currentResult.maxBearingPressure,
+                            allowableBearingPressure = 200.0
                         )
                     } catch (e: Exception) { null }
 

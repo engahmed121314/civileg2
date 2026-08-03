@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -63,21 +63,23 @@ fun ProfessionalRetainingWallDrawing(
     fsSliding: Double = 1.5,
     maxBearingPressure: Double = 0.0,
     allowableBearingPressure: Double = 200.0,
+    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(4f / 3f)
+        modifier = modifier.fillMaxSize()
     ) {
         val cw = size.width
         val ch = size.height
 
-        // ── Layout ──
+        // ── Layout (adjusted per viewMode) ──
         val mainLeft = 110f
         val mainRight = cw - 110f
         val mainTop = 60f
-        val mainBottom = ch * 0.45f
+        val mainBottom = when (viewMode) {
+            1 -> ch * 0.90f  // Section only: fill most of canvas
+            else -> ch * 0.45f
+        }
 
         // ── Scaling ──
         val totalH = wallHeight + baseThickness + (if (hasKey) keyDepth else 0.0)
@@ -106,53 +108,61 @@ fun ProfessionalRetainingWallDrawing(
         val baseBottom = baseTop + drawBaseT
 
         // ── Draw layers ──
-        // 1. Backfill soil
-        drawBackfillSoil(baseRight, stemTop, drawHeel, drawH, tanAngle, cw, baseTop)
+        // Zone 1: Wall Section (viewMode 0 or 1)
+        if (viewMode == 0 || viewMode == 1) {
+            // 1. Backfill soil
+            drawBackfillSoil(baseRight, stemTop, drawHeel, drawH, tanAngle, cw, baseTop)
 
-        // 2. Wall cross-section
-        drawWallCrossSection(
-            stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
-            baseLeft, baseTop, drawBaseW, drawBaseT,
-            drawToe, drawHeel, hasKey, drawKeyD, drawKeyW
-        )
+            // 2. Wall cross-section
+            drawWallCrossSection(
+                stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
+                baseLeft, baseTop, drawBaseW, drawBaseT,
+                drawToe, drawHeel, hasKey, drawKeyD, drawKeyW
+            )
 
-        // 3. Reinforcement
-        drawReinforcementDetail(
-            stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
-            baseLeft, baseTop, baseBottom, drawBaseW, drawBaseT,
-            drawToe, drawHeel, coverPx, cover, scale,
-            mainRebarDia, mainRebarSpacing,
-            distRebarDia, distRebarSpacing,
-            baseRebarDia, baseRebarSpacing
-        )
+            // 5. Dimension lines (using shared DrawingUtils)
+            drawDimensions(
+                stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
+                baseLeft, baseTop, baseBottom, drawBaseW, drawBaseT,
+                drawToe, drawHeel, coverPx,
+                wallHeight, wallTopThickness, wallBottomThickness,
+                baseWidth, baseThickness, toeLength, heelLength, cover
+            )
+        }
 
-        // 4. Earth pressure diagram
-        drawEarthPressureDiagram(
-            stemTopLeftX, stemTop, drawH, drawTopT, drawBotT, backfillAngle
-        )
+        // Zone 2: Earth Pressure diagram (viewMode 0 or 2)
+        if (viewMode == 0 || viewMode == 2) {
+            drawEarthPressureDiagram(
+                stemTopLeftX, stemTop, drawH, drawTopT, drawBotT, backfillAngle
+            )
+        }
 
-        // 5. Dimension lines (using shared DrawingUtils)
-        drawDimensions(
-            stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
-            baseLeft, baseTop, baseBottom, drawBaseW, drawBaseT,
-            drawToe, drawHeel, coverPx,
-            wallHeight, wallTopThickness, wallBottomThickness,
-            baseWidth, baseThickness, toeLength, heelLength, cover
-        )
+        // Zone 3: Reinforcement + Stability + Table (viewMode 0 or 3)
+        if (viewMode == 0 || viewMode == 3) {
+            // 3. Reinforcement
+            drawReinforcementDetail(
+                stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
+                baseLeft, baseTop, baseBottom, drawBaseW, drawBaseT,
+                drawToe, drawHeel, coverPx, cover, scale,
+                mainRebarDia, mainRebarSpacing,
+                distRebarDia, distRebarSpacing,
+                baseRebarDia, baseRebarSpacing
+            )
 
-        // 6. Stability checks visual
-        drawStabilityChecks(
-            ch, baseLeft, baseBottom, drawBaseW, drawBaseT, drawH,
-            stemTop, wallHeight,
-            fsOverturning, fsSliding, maxBearingPressure, allowableBearingPressure
-        )
+            // 6. Stability checks visual
+            drawStabilityChecks(
+                ch, baseLeft, baseBottom, drawBaseW, drawBaseT, drawH,
+                stemTop, wallHeight,
+                fsOverturning, fsSliding, maxBearingPressure, allowableBearingPressure
+            )
 
-        // 7. Reinforcement table (using shared DrawingUtils)
-        drawReinforcementTable(
-            cw, ch, mainRebarDia, mainRebarSpacing,
-            distRebarDia, distRebarSpacing,
-            baseRebarDia, baseRebarSpacing, wallHeight
-        )
+            // 7. Reinforcement table (using shared DrawingUtils)
+            drawReinforcementTable(
+                cw, ch, mainRebarDia, mainRebarSpacing,
+                distRebarDia, distRebarSpacing,
+                baseRebarDia, baseRebarSpacing, wallHeight
+            )
+        }
     }
 }
 

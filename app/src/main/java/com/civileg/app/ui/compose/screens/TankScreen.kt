@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -45,6 +46,9 @@ fun TankScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    val configuration = LocalConfiguration.current
+    val screenW = configuration.screenWidthDp.dp
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -346,11 +350,22 @@ fun TankScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (480 * wRatio).toInt().coerceIn(300, 600)
+                        2 -> (320 * wRatio).toInt().coerceIn(220, 450)
+                        3 -> (580 * wRatio).toInt().coerceIn(380, 750)
+                        else -> (780 * wRatio).toInt().coerceIn(500, 1000)
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.tank_drawing_title),
                         subtitle = stringResource(R.string.tank_drawing_subtitle),
-                        drawingHeightDp = 780,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeight,
                         drawingContent = {
                             ProfessionalTankDrawing(
                                 tankType = selectedType.displayName,
@@ -365,6 +380,7 @@ fun TankScreen(
                                 horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -39,12 +39,13 @@ fun ProfessionalFootingDrawing(
     col2X: Double = 0.0,
     soilPressureMax: Double = 0.0,
     soilPressureMin: Double = 0.0,
+    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(4f / 3f)
+            .fillMaxSize()
     ) {
         val w = size.width
         val h = size.height
@@ -75,22 +76,44 @@ fun ProfessionalFootingDrawing(
         val critSectionColor = C.SafeGreen
         val tableHeaderBg = Color(0x55333333)
 
-        // ── Layout zones (proportional) ────────────────────────────
+        // ── Layout zones (proportional, viewMode-aware) ──────────
         val margin = 30f
         val hasPressure = footingType == "Combined" || footingType == "Raft"
+
+        val planH = when (viewMode) {
+            1 -> h * 0.88f
+            0 -> h * 0.32f
+            else -> h * 0.10f
+        }
+        val sectionH = when (viewMode) {
+            2 -> h * 0.55f
+            0 -> h * 0.24f
+            else -> h * 0.10f
+        }
+        val pressureH = if (hasPressure) when (viewMode) {
+            2 -> h * 0.18f
+            0 -> h * 0.08f
+            else -> 0f
+        } else 0f
+        val tableH = when (viewMode) {
+            3 -> h * 0.88f
+            0 -> h * 0.22f
+            else -> h * 0.10f
+        }
+
         val planTop = h * 0.05f
-        val planBottom = h * 0.35f
-        val secTop = h * 0.37f
-        val secBottom = h * 0.60f
-        val pressureTop = h * 0.62f
-        val pressureBottom = h * 0.70f
-        val tblTop = if (hasPressure) h * 0.74f else h * 0.66f
+        val planBottom = planTop + planH
+        val secTop = planBottom + h * 0.02f
+        val secBottom = secTop + sectionH
+        val pressureTop = secBottom + h * 0.01f
+        val pressureBottom = pressureTop + pressureH
+        val tblTop = if (hasPressure && viewMode == 0) pressureBottom + h * 0.02f
+                     else secBottom + h * 0.02f
+
         val planLeft = margin + 50f
         val planRight = w - margin
         val planW = planRight - planLeft
         val planDrawH = planBottom - planTop
-        val sectionH = secBottom - secTop
-        val pressureH = if (hasPressure) pressureBottom - pressureTop else 0f
 
         // ══════════════════════════════════════════════════════════
         // HEADER
@@ -104,11 +127,14 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW
         // ══════════════════════════════════════════════════════════
+        // Scaling (used by both plan and section views)
         val scaleX = planW / safeLX.toFloat()
         val scaleY = planDrawH / safeLY.toFloat()
         val scale = min(scaleX, scaleY) * 0.85f
         val drawLX = safeLX.toFloat() * scale
         val drawLY = safeLY.toFloat() * scale
+
+        if (viewMode == 0 || viewMode == 1) {
         val fLeft = planLeft + (planW - drawLX) / 2f
         val fTop = planTop + (planDrawH - drawLY) / 2f
         val fRight = fLeft + drawLX
@@ -291,15 +317,19 @@ fun ProfessionalFootingDrawing(
         drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
 
         // Section cut line using DrawingUtils
-        drawSectionCutLine(
-            x1 = fCenterX, y1 = fTop - 20f,
-            x2 = fCenterX, y2 = fBottom + 6f,
-            label = "A", color = C.SectionLine
-        )
+        if (viewMode == 0) {
+            drawSectionCutLine(
+                x1 = fCenterX, y1 = fTop - 20f,
+                x2 = fCenterX, y2 = fBottom + 6f,
+                label = "A", color = C.SectionLine
+            )
+        }
+        } // end plan view
 
         // ══════════════════════════════════════════════════════════
         //  SECTION VIEW
         // ══════════════════════════════════════════════════════════
+        if (viewMode == 0 || viewMode == 2) {
         val secLeft = margin + 90f
         val secRight = w - margin
 
@@ -471,9 +501,12 @@ fun ProfessionalFootingDrawing(
             drawTextAnnotated("R", resultantX, prBottom - resultantH - 6f, C.WarningOrange, 9f * density, center = true, bold = true)
         }
 
+        } // end section view
+
         // ══════════════════════════════════════════════════════════
         //  REINFORCEMENT TABLE using DrawingUtils
         // ══════════════════════════════════════════════════════════
+        if (viewMode == 0 || viewMode == 3) {
         val tblLeft = margin
         val tblWidth = w - 2 * margin
 
@@ -504,5 +537,6 @@ fun ProfessionalFootingDrawing(
             textColor = textColor,
             textSize = 9f * density
         )
+        } // end reinforcement table
     }
 }

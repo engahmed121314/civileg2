@@ -110,7 +110,11 @@ class FootingViewModel @Inject constructor(
                         rebarXSpacing = res.reinforcementBottom.spacing,
                         rebarYCount = res.barsY,
                         rebarYDia = res.barDiameter.toDouble(),
-                        rebarYSpatial = res.reinforcementBottom.spacing
+                        rebarYSpatial = res.reinforcementBottom.spacing,
+                        footingType = res.type.displayName,
+                        cover = 70.0,
+                        soilPressureMax = res.soilPressure,
+                        soilPressureMin = res.soilPressure
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 

@@ -304,11 +304,20 @@ fun BeamScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val drawingHeightDp = when (selectedViewMode) {
+                        1 -> 400
+                        2 -> 350
+                        3 -> 300
+                        else -> 780
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.beam_drawing_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
-                        drawingHeightDp = 780,
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeightDp,
                         drawingContent = {
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
@@ -335,7 +344,9 @@ fun BeamScreen(
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),
-                                topRebarCount = res.reinforcementTop.numBars
+                                topRebarCount = res.reinforcementTop.numBars,
+                                viewMode = selectedViewMode,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     )

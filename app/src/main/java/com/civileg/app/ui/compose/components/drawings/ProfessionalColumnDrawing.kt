@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -80,41 +80,104 @@ fun ProfessionalColumnDrawing(
     sectionType: String = "Rectangular",
     interactionPoints: List<Pair<Double, Double>> = emptyList(),
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
+    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
+    Canvas(modifier = modifier.fillMaxSize()) {
         val W = size.width
         val H = size.height
-        val divX = W * 0.40f
-        val midY = H * 0.50f
 
-        // 1. 3D Column Elevation (left)
-        draw3DElevation(16f, 16f, divX - 32f, midY - 20f,
-            columnWidth, columnDepth, columnHeight,
-            longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType)
-
-        // 2. Cross-Section View (right-top)
-        drawCrossSection(divX + 16f, 16f, W - divX - 32f, midY - 20f,
-            columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
-
-        // 3. Tie/Spiral Detail Inset (below elevation)
-        drawTieDetailInset(16f, midY + 14f, divX - 32f, H - midY - 140f,
-            columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
-            isSpiral, spiralPitch, sectionType)
-
-        // 4. Section Dimensions (overlaid on cross-section)
-        drawSectionDimensions(divX + 16f, 16f, W - divX - 32f, midY - 20f,
-            columnWidth, columnDepth, cover, longitudinalBars)
-
-        // 5. Interaction Diagram (bottom-right)
-        if (interactionPoints.isNotEmpty()) {
-            drawInteractionDiagram(divX + 20f, midY + 14f,
-                W - divX - 36f, H - midY - 140f, interactionPoints, designPoint)
+        // ── Layout zones — adjusted based on viewMode ──────────────
+        val divX = when (viewMode) {
+            1 -> W * 0.50f   // elevation mode: centered divider for tie detail below
+            2 -> W * 0.50f   // section mode: centered for interaction diagram
+            else -> W * 0.40f // all / reinforcement: standard layout
+        }
+        val midY = when (viewMode) {
+            0 -> H * 0.50f   // all: standard 50/50
+            1 -> H * 0.55f   // elevation: give more space to elevation
+            2 -> H * 0.55f   // section: give more space to section
+            3 -> H * 0.35f   // reinforcement: table gets more space
+            else -> H * 0.50f
         }
 
-        // 6. Reinforcement Table (bottom)
-        drawReinforcementTable(16f, H - 100f, W - 32f, 90f,
-            longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
+        // Zone heights
+        val elevH = when (viewMode) {
+            1 -> H * 0.90f
+            0 -> H * 0.45f
+            else -> H * 0.05f
+        }
+        val secH = when (viewMode) {
+            2 -> H * 0.90f
+            0 -> H * 0.45f
+            else -> H * 0.05f
+        }
+        val tieH = when (viewMode) {
+            3 -> H * 0.55f
+            0 -> H * 0.20f
+            else -> H * 0.05f
+        }
+        val tableH = when (viewMode) {
+            3 -> H * 0.38f
+            0 -> H * 0.12f
+            else -> H * 0.05f
+        }
+
+        val tableBottom = H - 8f
+        val tableTop = tableBottom - tableH
+        val tieBottom = if (viewMode == 0) midY + (H - midY - tableH) * 0.6f else tableTop - 4f
+        val tieTop = tieBottom - tieH
+        val elevBottom = if (viewMode == 0) midY - 10f else if (viewMode == 1) H * 0.92f else tieTop - 4f
+        val elevTop = elevBottom - elevH
+        val secBottom = if (viewMode == 0) midY - 10f else if (viewMode == 2) H * 0.92f else tieTop - 4f
+        val secTop = secBottom - secH
+
+        // 1. 3D Column Elevation (left) — viewMode 0 or 1
+        if (viewMode == 0 || viewMode == 1) {
+            val eLeft = if (viewMode == 1) 16f else 16f
+            val eRight = if (viewMode == 1) W - 32f else divX - 32f
+            draw3DElevation(eLeft, elevTop, eRight - eLeft, elevBottom - elevTop,
+                columnWidth, columnDepth, columnHeight,
+                longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType)
+        }
+
+        // 2. Cross-Section View (right-top) — viewMode 0 or 2
+        if (viewMode == 0 || viewMode == 2) {
+            val sLeft = if (viewMode == 2) 16f else divX + 16f
+            val sRight = if (viewMode == 2) W - 32f else W - 32f
+            drawCrossSection(sLeft, secTop, sRight - sLeft, secBottom - secTop,
+                columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
+            drawSectionDimensions(sLeft, secTop, sRight - sLeft, secBottom - secTop,
+                columnWidth, columnDepth, cover, longitudinalBars)
+        }
+
+        // 3. Tie/Spiral Detail Inset — viewMode 0 or 3
+        if (viewMode == 0 || viewMode == 3) {
+            val tLeft = if (viewMode == 3) 16f else 16f
+            val tRight = if (viewMode == 3) W - 32f else divX - 32f
+            drawTieDetailInset(tLeft, tieTop, tRight - tLeft, tieBottom - tieTop,
+                columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
+                isSpiral, spiralPitch, sectionType)
+        }
+
+        // 4. Section Dimensions (overlaid on cross-section) — viewMode 0 or 2
+        // (already drawn above inside the cross-section guard)
+
+        // 5. Interaction Diagram (bottom-right) — viewMode 0 or 2
+        if (viewMode == 0 || viewMode == 2) {
+            if (interactionPoints.isNotEmpty()) {
+                val iLeft = if (viewMode == 2) 16f else divX + 20f
+                val iRight = if (viewMode == 2) W - 32f else W - 36f
+                drawInteractionDiagram(iLeft, tieTop,
+                    iRight - iLeft, tieBottom - tieTop, interactionPoints, designPoint)
+            }
+        }
+
+        // 6. Reinforcement Table (bottom) — viewMode 0 or 3
+        if (viewMode == 0 || viewMode == 3) {
+            drawReinforcementTable(16f, tableTop, W - 32f, tableBottom - tableTop,
+                longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
+        }
     }
 }
 

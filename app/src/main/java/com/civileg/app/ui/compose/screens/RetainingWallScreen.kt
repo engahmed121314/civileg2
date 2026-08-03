@@ -22,6 +22,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,9 @@ fun RetainingWallScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    val configuration = LocalConfiguration.current
+    val screenW = configuration.screenWidthDp.dp
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -334,11 +338,22 @@ fun RetainingWallScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (420 * wRatio).toInt().coerceIn(280, 550)
+                        2 -> (320 * wRatio).toInt().coerceIn(220, 450)
+                        3 -> (580 * wRatio).toInt().coerceIn(380, 750)
+                        else -> (780 * wRatio).toInt().coerceIn(500, 1000)
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.rw_drawing_title),
                         subtitle = stringResource(R.string.rw_drawing_subtitle),
-                        drawingHeightDp = 780,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeight,
                         drawingContent = {
                             val stemTopT = kotlin.math.max(200.0, res.stemThickness * 0.5)
                             val baseWm = res.baseWidth / 1000.0
@@ -370,6 +385,7 @@ fun RetainingWallScreen(
                                 fsSliding = res.factorOfSafetySliding,
                                 maxBearingPressure = res.maxBearingPressure,
                                 allowableBearingPressure = 200.0,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

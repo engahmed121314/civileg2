@@ -1,8 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -110,12 +109,11 @@ fun ProfessionalBeamDrawing(
     hasTopSteel: Boolean = false,
     topRebarDia: Double = 0.0,
     topRebarCount: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewMode: Int = 0
 ) {
     Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(780.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // ---------------------------------------------------------------
         // Layout constants (in px)
@@ -129,15 +127,26 @@ fun ProfessionalBeamDrawing(
 
         // ── Layout zones (vertical) ────────────────────────────────────
         // Elevation: 0–40%  |  Section inset: 46–62%  |  Table: 66–100%
-        val sectionZoneTop = ch * 0.46f
-        val sectionZoneBottom = ch * 0.62f
+        // Adjust zones based on viewMode
+        val elevationFrac = when (viewMode) {
+            1 -> 0.88f  // Elevation-only: use most of the height
+            0 -> 0.40f  // All: normal split
+            else -> 0.08f // Other modes: minimal
+        }
+        val sectionFrac = when (viewMode) {
+            2 -> 0.88f  // Section-only: use most of the height
+            0 -> 0.16f  // All: normal split
+            else -> 0.08f // Other modes: minimal
+        }
+        val mainBottom = ch * elevationFrac
+        val sectionZoneTop = ch * (elevationFrac + 0.04f)
+        val sectionZoneBottom = ch * (elevationFrac + 0.04f + sectionFrac)
 
         // Main beam drawing area — symmetric margins for proper centering
         val sideMargin = 60f
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
         val mainTop = 50f
-        val mainBottom = ch * 0.40f
 
         // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
         val availableW = mainRight - mainLeft
@@ -159,75 +168,87 @@ fun ProfessionalBeamDrawing(
         // ---------------------------------------------------------------
         // Draw all layers in order (back-to-front)
         // ---------------------------------------------------------------
-        draw3DBeamBody(
-            left = beamLeft, top = beamTop,
-            w = beamDrawW, h = beamDrawH, d = beamDrawD,
-            angleX = angleX, angleY = angleY
-        )
 
-        drawSupports(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamBottom = beamBottom, beamRight = beamRight,
-            isContinuous = isContinuous
-        )
+        // ═══ ELEVATION VIEW (viewMode 0 or 1) ═══
+        if (viewMode == 0 || viewMode == 1) {
+            draw3DBeamBody(
+                left = beamLeft, top = beamTop,
+                w = beamDrawW, h = beamDrawH, d = beamDrawD,
+                angleX = angleX, angleY = angleY
+            )
 
-        drawCutawayReinforcement(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamRight = beamRight, beamBottom = beamBottom,
-            beamDrawW = beamDrawW, beamDrawH = beamDrawH,
-            beamDrawD = beamDrawD,
-            scale = scale,
-            angleX = angleX, angleY = angleY,
-            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
-            stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
-            cover = cover,
-            hasTopSteel = hasTopSteel,
-            topRebarDia = topRebarDia, topRebarCount = topRebarCount
-        )
+            drawSupports(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamBottom = beamBottom, beamRight = beamRight,
+                isContinuous = isContinuous
+            )
 
-        drawDevelopmentAndLap(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamRight = beamRight, beamBottom = beamBottom,
-            beamDrawW = beamDrawW, beamDrawH = beamDrawH,
-            scale = scale,
-            developmentLength = developmentLength,
-            lapLength = lapLength,
-            mainRebarDia = mainRebarDia
-        )
+            drawCutawayReinforcement(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                beamDrawW = beamDrawW, beamDrawH = beamDrawH,
+                beamDrawD = beamDrawD,
+                scale = scale,
+                angleX = angleX, angleY = angleY,
+                mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+                stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
+                cover = cover,
+                hasTopSteel = hasTopSteel,
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount
+            )
 
-        drawDimensionLines(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamRight = beamRight, beamBottom = beamBottom,
-            beamDrawH = beamDrawH,
-            scale = scale,
-            beamWidth = beamWidth, beamDepth = beamDepth,
-            span = span, cover = cover,
-            stirrupSpacing = stirrupSpacing
-        )
+            drawDevelopmentAndLap(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                beamDrawW = beamDrawW, beamDrawH = beamDrawH,
+                scale = scale,
+                developmentLength = developmentLength,
+                lapLength = lapLength,
+                mainRebarDia = mainRebarDia
+            )
 
-        drawSectionInset(
-            cw = cw, ch = ch,
-            zoneTop = sectionZoneTop,
-            zoneBottom = sectionZoneBottom,
-            beamWidth = beamWidth, beamDepth = beamDepth,
-            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
-            stirrupDia = stirrupDia,
-            cover = cover,
-            hasTopSteel = hasTopSteel,
-            topRebarDia = topRebarDia, topRebarCount = topRebarCount
-        )
+            drawDimensionLines(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                beamDrawH = beamDrawH,
+                scale = scale,
+                beamWidth = beamWidth, beamDepth = beamDepth,
+                span = span, cover = cover,
+                stirrupSpacing = stirrupSpacing
+            )
+        }
 
-        drawReinforcementSchedule(
-            cw = cw, ch = ch,
-            beamWidth = beamWidth, beamDepth = beamDepth,
-            span = span,
-            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
-            stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
-            hasTopSteel = hasTopSteel,
-            topRebarDia = topRebarDia, topRebarCount = topRebarCount,
-            developmentLength = developmentLength,
-            cover = cover
-        )
+        // ═══ CROSS-SECTION VIEW (viewMode 0 or 2) ═══
+        if (viewMode == 0 || viewMode == 2) {
+            drawSectionInset(
+                cw = cw, ch = ch,
+                zoneTop = sectionZoneTop,
+                zoneBottom = sectionZoneBottom,
+                beamWidth = beamWidth, beamDepth = beamDepth,
+                mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+                stirrupDia = stirrupDia,
+                cover = cover,
+                hasTopSteel = hasTopSteel,
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount
+            )
+        }
+
+        // ═══ REINFORCEMENT TABLE (viewMode 0 or 3) ═══
+        if (viewMode == 0 || viewMode == 3) {
+            val tableZoneTop = if (viewMode == 3) ch * 0.06f else 0f
+            drawReinforcementSchedule(
+                cw = cw, ch = ch,
+                beamWidth = beamWidth, beamDepth = beamDepth,
+                span = span,
+                mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+                stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
+                hasTopSteel = hasTopSteel,
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount,
+                developmentLength = developmentLength,
+                cover = cover,
+                tableZoneTop = tableZoneTop
+            )
+        }
     }
 }
 
@@ -1149,10 +1170,11 @@ private fun DrawScope.drawReinforcementSchedule(
     hasTopSteel: Boolean,
     topRebarDia: Double, topRebarCount: Int,
     developmentLength: Double,
-    cover: Double
+    cover: Double,
+    tableZoneTop: Float = 0f
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.66f
+    val tableTop = if (tableZoneTop > 0f) tableZoneTop + 8f else ch * 0.66f
     val tableW = cw - 32f
     val rowH = 26f
     val headerH = 30f

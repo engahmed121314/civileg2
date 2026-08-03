@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -64,12 +64,11 @@ fun ProfessionalTankDrawing(
     horizontalRebarDia: Double,
     horizontalRebarSpacing: Double,
     foundationDepth: Double = 0.0,
+    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1.5f)  // Responsive: was hardcoded 720.dp
+        modifier = modifier.fillMaxSize()
     ) {
         val cw = size.width
         val ch = size.height
@@ -78,10 +77,13 @@ fun ProfessionalTankDrawing(
         val isElevated = tankType.contains("Elevated")
         val isUnderground = foundationDepth > 0
 
-        // ── Layout zones ──
+        // ── Layout zones (adjusted per viewMode) ──
         val margin = 30f
         val mainTop = 50f
-        val mainBottom = ch * 0.58f
+        val mainBottom = when (viewMode) {
+            1 -> ch * 0.92f  // Elevation only: fill most of canvas
+            else -> ch * 0.58f
+        }
         val mainLeft = 60f
         val mainRight = cw - 60f
 
@@ -107,66 +109,75 @@ fun ProfessionalTankDrawing(
         val baseBottom = tankBottom + drawBT
 
         // ── Draw layers ──
-        if (isUnderground) {
-            drawSoilBelowBase(cw, ch, tankLeft, baseBottom, drawWT, tankRight, drawFD, tankTop)
-        }
+        // Zone 1: Elevation / Perspective (viewMode 0 or 1)
+        if (viewMode == 0 || viewMode == 1) {
+            if (isUnderground) {
+                drawSoilBelowBase(cw, ch, tankLeft, baseBottom, drawWT, tankRight, drawFD, tankTop)
+            }
 
-        if (isElevated) {
-            drawElevatedSupports(tankLeft, tankRight, baseBottom, ch)
-        }
+            if (isElevated) {
+                drawElevatedSupports(tankLeft, tankRight, baseBottom, ch)
+            }
 
-        if (isCircular) {
-            drawCircularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
-        } else {
-            drawRectangularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
-        }
+            if (isCircular) {
+                drawCircularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
+            } else {
+                drawRectangularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
+            }
 
-        // Water fill
-        if (drawWL > 0) {
-            drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, isCircular)
-        }
+            // Water fill
+            if (drawWL > 0) {
+                drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, isCircular)
+            }
 
-        // Reinforcement on elevation
-        drawElevationReinforcement(
-            tankLeft, tankTop, tankRight, tankBottom, baseBottom,
-            drawWT, drawBT, drawWL, cover, scale,
-            verticalRebarDia, verticalRebarSpacing,
-            horizontalRebarDia, horizontalRebarSpacing,
-            isCircular
-        )
+            // Ground level line
+            if (isUnderground) {
+                val glY = tankTop - drawFD
+                val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
+                drawLine(
+                    color = GroundLineBrown,
+                    start = Offset(tankLeft - 60f, glY),
+                    end = Offset(tankRight + 60f, glY),
+                    strokeWidth = 2f,
+                    pathEffect = dashEffect
+                )
+                drawTextAnnotated("GL ±0.00", tankLeft - 90f, glY - 6f, GroundLineBrown, 16f)
+            }
 
-        // Ground level line
-        if (isUnderground) {
-            val glY = tankTop - drawFD
-            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
-            drawLine(
-                color = GroundLineBrown,
-                start = Offset(tankLeft - 60f, glY),
-                end = Offset(tankRight + 60f, glY),
-                strokeWidth = 2f,
-                pathEffect = dashEffect
+            // Dimension lines
+            drawTankDimensions(
+                tankLeft, tankTop, tankRight, tankBottom, baseBottom,
+                drawWT, drawBT, drawL, drawH, isCircular, length, height
             )
-            drawTextAnnotated("GL ±0.00", tankLeft - 90f, glY - 6f, GroundLineBrown, 16f)
+
+            // Plan view (top-right)
+            drawPlanView(cw, tankType, length, width, isCircular)
         }
 
-        // Dimension lines
-        drawTankDimensions(
-            tankLeft, tankTop, tankRight, tankBottom, baseBottom,
-            drawWT, drawBT, drawL, drawH, isCircular, length, height
-        )
+        // Zone 2: Water Pressure diagram (viewMode 0 or 2)
+        if (viewMode == 0 || viewMode == 2) {
+            val pressureTop = if (viewMode == 2) 50f else tankTop
+            drawWaterPressureDiagram(cw, tankLeft, pressureTop, drawL, drawH, drawWL, waterLevel, isElevated)
+        }
 
-        // Plan view (top-right)
-        drawPlanView(cw, tankType, length, width, isCircular)
+        // Zone 3: Reinforcement details + table (viewMode 0 or 3)
+        if (viewMode == 0 || viewMode == 3) {
+            // Reinforcement on elevation
+            drawElevationReinforcement(
+                tankLeft, tankTop, tankRight, tankBottom, baseBottom,
+                drawWT, drawBT, drawWL, cover, scale,
+                verticalRebarDia, verticalRebarSpacing,
+                horizontalRebarDia, horizontalRebarSpacing,
+                isCircular
+            )
 
-        // Wall detail inset
-        drawWallDetailInset(cw, ch, wallThickness, verticalRebarDia, horizontalRebarDia, cover, scale)
+            // Wall detail inset
+            drawWallDetailInset(cw, ch, wallThickness, verticalRebarDia, horizontalRebarDia, cover, scale)
 
-        // Water pressure diagram
-        drawWaterPressureDiagram(cw, tankLeft, tankTop, drawL, drawH, drawWL, waterLevel, isElevated)
-
-        // Reinforcement table
-        drawReinforcementTable(cw, ch, tankType, verticalRebarDia, verticalRebarSpacing,
-            horizontalRebarDia, horizontalRebarSpacing, height, length)
+            // Reinforcement table
+            drawReinforcementTable(cw, ch, tankType, verticalRebarDia, verticalRebarSpacing,
+                horizontalRebarDia, horizontalRebarSpacing, height, length)
+        }
     }
 }
 

@@ -28,6 +28,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
@@ -320,10 +321,23 @@ fun StairScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val configuration = LocalConfiguration.current
+                    val screenW = configuration.screenWidthDp.dp
+                    val wRatio = screenW.value / 360f
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (550 * wRatio).toInt().coerceIn(350, 750)
+                        2 -> (450 * wRatio).toInt().coerceIn(300, 650)
+                        3 -> (400 * wRatio).toInt().coerceIn(250, 550)
+                        else -> (780 * wRatio).toInt().coerceIn(500, 1100)
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.stair_drawing_title),
                         subtitle = stringResource(R.string.stair_drawing_subtitle),
-                        drawingHeightDp = 780,
+                        drawingHeightDp = drawingHeight,
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
                             val codeAwareCover = when (selectedCode) {
@@ -343,6 +357,7 @@ fun StairScreen(
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
                                 cover = codeAwareCover,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -14,6 +14,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.civileg.app.db.Project
 import androidx.compose.ui.Modifier
@@ -351,11 +352,23 @@ fun ColumnScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val configuration = LocalConfiguration.current
+                    val screenW = configuration.screenWidthDp.dp
+                    val wRatio = screenW.value / 360f
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (450 * wRatio).toInt().coerceIn(300, 600)
+                        2 -> (450 * wRatio).toInt().coerceIn(300, 600)
+                        3 -> (400 * wRatio).toInt().coerceIn(250, 550)
+                        else -> (700 * wRatio).toInt().coerceIn(450, 1000)
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
-                        drawingHeightDp = 700,
+                        drawingHeightDp = drawingHeight,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
@@ -367,6 +380,7 @@ fun ColumnScreen(
                                 cover = 40.0, // standard clear cover for columns
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

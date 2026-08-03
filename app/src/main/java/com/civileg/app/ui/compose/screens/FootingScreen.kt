@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.animation.core.animateFloatAsState
@@ -371,6 +372,17 @@ fun FootingScreen(
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val configuration = LocalConfiguration.current
+                    val screenW = configuration.screenWidthDp.dp
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (350 * wRatio).toInt().coerceIn(250, 450)
+                        2 -> (320 * wRatio).toInt().coerceIn(220, 420)
+                        3 -> (280 * wRatio).toInt().coerceIn(200, 380)
+                        else -> (700 * wRatio).toInt().coerceIn(500, 900)
+                    }
                     // Map footing type to English name expected by the drawing
                     val footingTypeEnglish = when (selectedType) {
                         CalculatorEngine.FootingType.ISOLATED -> "Isolated"
@@ -393,8 +405,10 @@ fun FootingScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.footing_drawing_title),
                         subtitle = stringResource(R.string.footing_reinforcement_detail),
-                        drawingHeightDp = 700,
+                        drawingHeightDp = drawingHeight,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             ProfessionalFootingDrawing(
                                 footingType = footingTypeEnglish,
@@ -412,6 +426,7 @@ fun FootingScreen(
                                 col2X = col2XPos,
                                 soilPressureMax = res.soilPressure,
                                 soilPressureMin = res.soilPressure,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
