@@ -347,11 +347,15 @@ fun RetainingWallScreen(
                                 heelLength = heelW.coerceAtLeast(0.0),
                                 mainRebarDia = res.stemReinforcement.diameter.toDouble() / 1000,
                                 mainRebarSpacing = res.stemReinforcement.spacing.toDouble() / 1000,
-                                distRebarDia = res.stemReinforcement.diameter.toDouble() * 0.7 / 1000,
-                                distRebarSpacing = res.stemReinforcement.spacing.toDouble() * 1.5 / 1000,
+                                distRebarDia = 10.0 / 1000,
+                                distRebarSpacing = 200.0 / 1000,
                                 baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
                                 baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
-                                cover = 0.05,
+                                cover = when (selectedCode) {
+                                    CalculatorEngine.DesignCode.ACI -> 0.075
+                                    CalculatorEngine.DesignCode.SAUDI -> 0.065
+                                    else -> 0.05
+                                },
                                 backfillAngle = res.backfillAngle,
                                 hasKey = true,
                                 keyDepth = 0.15,

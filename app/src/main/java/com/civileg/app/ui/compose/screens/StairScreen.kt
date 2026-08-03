@@ -320,10 +320,16 @@ fun StairScreen(
                         subtitle = "Staircase Reinforcement Detail",
                         drawingHeightDp = 780,
                         drawingContent = {
+                            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
+                            val codeAwareCover = when (selectedCode) {
+                                CalculatorEngine.DesignCode.ACI -> 38.0
+                                CalculatorEngine.DesignCode.SAUDI -> 40.0
+                                else -> 25.0
+                            }
                             ProfessionalStairDrawing(
                                 stairWidth = 1200.0,
-                                totalHeight = ((res.span * 1000.0) / res.tread).toInt() * res.riser,
-                                totalLength = res.span * 1000.0,
+                                totalHeight = nRisers.toDouble() * res.riser,
+                                totalLength = nRisers.toDouble() * res.tread,
                                 riserHeight = res.riser,
                                 treadWidth = res.tread,
                                 slabThickness = res.thickness,
@@ -331,6 +337,7 @@ fun StairScreen(
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
+                                cover = codeAwareCover,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
