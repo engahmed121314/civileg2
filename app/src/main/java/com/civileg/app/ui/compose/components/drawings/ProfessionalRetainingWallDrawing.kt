@@ -212,7 +212,7 @@ private fun DrawScope.drawBackfillSoil(
         end = Offset(soilRight + 10f, soilTop + surfaceDrop),
         strokeWidth = 2f, pathEffect = dashEffect
     )
-    drawTextAnnotated("Ground Level / سطح التربة", soilRight - 100f, soilTop + surfaceDrop - 8f, GroundBrown, 14f)
+    drawTextAnnotated("Ground Level", soilRight - 100f, soilTop + surfaceDrop - 8f, GroundBrown, 14f)
 }
 
 // ============================================================================
@@ -422,7 +422,7 @@ private fun DrawScope.drawEarthPressureDiagram(
 
     // Labels
     drawTextAnnotated("Pa", stemBackX + 10f + arrowLen, resultY - 6f, PressureOrange, 16f)
-    drawTextAnnotated("Active / فعال", stemBackX + diagramW + 14f, stemTop + drawH / 2f, PressureOrange, 14f)
+    drawTextAnnotated("Active", stemBackX + diagramW + 14f, stemTop + drawH / 2f, PressureOrange, 14f)
     drawTextAnnotated("Ka = ${"%.2f".format(ka)}", stemBackX + 10f, stemTop + drawH + 40f,
         PressureOrange, 13f)
 
@@ -515,8 +515,8 @@ private fun DrawScope.drawStabilityChecks(
     val slidePass = fsSliding >= 1.5
     val bearingPass = maxBearingPressure <= allowableBearingPressure && maxBearingPressure > 0
 
-    // Title (bilingual)
-    drawTextAnnotated("STABILITY CHECKS / فحوصات الاستقرار", checkX, checkY, dimWhite, 17f)
+    // Title
+    drawTextAnnotated("STABILITY CHECKS", checkX, checkY, dimWhite, 17f)
     // F.S. Overturning
     val otColor = if (otPass) DrawingColors.SafeGreen else DrawingColors.UnsafeRed
     drawTextAnnotated("F.S.(O.T.) = ${"%.2f".format(fsOverturning)}", checkX, checkY + lineH, otColor, 15f)
@@ -579,13 +579,13 @@ private fun DrawScope.drawReinforcementTable(
         tableW * 0.22f   // Length
     )
 
-    // Title (bilingual)
-    drawTextAnnotated("REINFORCEMENT TABLE / جدول التسليح", tableLeft, tableTop - 6f, DrawingColors.DimensionWhite, 20f)
+    // Title
+    drawTextAnnotated("REINFORCEMENT SCHEDULE", tableLeft, tableTop - 6f, DrawingColors.DimensionWhite, 20f)
 
-    // Header (bilingual)
+    // Header
     drawRect(color = DrawingColors.TableHeaderBg, topLeft = Offset(tableLeft, tableTop),
         size = Size(tableW, headerH))
-    val headers = arrayOf("Direction / الاتجاه", "Location / الموقع", "Dia / القطر", "Spacing / المسافة", "Length / الطول")
+    val headers = arrayOf("Direction", "Location", "Dia.", "Spacing", "Length")
     var cx = tableLeft
     for (i in headers.indices) {
         drawTextAnnotated(headers[i], cx + 6f, tableTop + headerH / 2f + 6f,
@@ -598,11 +598,11 @@ private fun DrawScope.drawReinforcementTable(
         start = Offset(tableLeft, tableTop + headerH),
         end = Offset(tableLeft + tableW, tableTop + headerH), strokeWidth = 0.5f)
 
-    // Row 1: Main vertical stem bars (bilingual)
+    // Row 1: Main vertical stem bars
     val r1Y = tableTop + headerH
     drawRect(color = DrawingColors.TableRowAlt, topLeft = Offset(tableLeft, r1Y), size = Size(tableW, rowH))
-    val row1 = arrayOf("Vertical (Main) / عمودي", "Soil side / جهة التربة", "Ø${mainRebarDia.toInt()}",
-        "@${mainRebarSpacing.toInt()}mm", "H+Ld")
+    val row1 = arrayOf("Vertical (Main)", "Soil Side", "Ø${(mainRebarDia * 1000).toInt()}",
+        "@${(mainRebarSpacing * 1000).toInt()}mm", "H+Ld")
     cx = tableLeft
     for (i in row1.indices) {
         drawTextAnnotated(row1[i], cx + 6f, r1Y + rowH / 2f + 5f, DrawingColors.RebarBlue, 13f)
@@ -612,10 +612,10 @@ private fun DrawScope.drawReinforcementTable(
         start = Offset(tableLeft, r1Y + rowH),
         end = Offset(tableLeft + tableW, r1Y + rowH), strokeWidth = 0.5f)
 
-    // Row 2: Horizontal distribution bars (bilingual)
+    // Row 2: Horizontal distribution bars
     val r2Y = r1Y + rowH
-    val row2 = arrayOf("Horizontal (Dist.) / أفقي", "Soil side / جهة التربة", "Ø${distRebarDia.toInt()}",
-        "@${distRebarSpacing.toInt()}mm", "L")
+    val row2 = arrayOf("Horizontal (Dist.)", "Soil Side", "Ø${(distRebarDia * 1000).toInt()}",
+        "@${(distRebarSpacing * 1000).toInt()}mm", "L")
     cx = tableLeft
     for (i in row2.indices) {
         drawTextAnnotated(row2[i], cx + 6f, r2Y + rowH / 2f + 5f, DrawingColors.TopRebarBlue, 13f)
@@ -625,11 +625,11 @@ private fun DrawScope.drawReinforcementTable(
         start = Offset(tableLeft, r2Y + rowH),
         end = Offset(tableLeft + tableW, r2Y + rowH), strokeWidth = 0.5f)
 
-    // Row 3: Base bottom bars (bilingual)
+    // Row 3: Base bottom bars
     val r3Y = r2Y + rowH
     drawRect(color = DrawingColors.TableRowAlt, topLeft = Offset(tableLeft, r3Y), size = Size(tableW, rowH))
-    val row3 = arrayOf("Horizontal (Base) / أفقي", "Bottom / أسفل القاعدة", "Ø${baseRebarDia.toInt()}",
-        "@${baseRebarSpacing.toInt()}mm", "B")
+    val row3 = arrayOf("Horiz. (Base)", "Bottom", "Ø${(baseRebarDia * 1000).toInt()}",
+        "@${(baseRebarSpacing * 1000).toInt()}mm", "B")
     cx = tableLeft
     for (i in row3.indices) {
         drawTextAnnotated(row3[i], cx + 6f, r3Y + rowH / 2f + 5f, DrawingColors.RebarBlue.copy(alpha = 0.8f), 13f)
@@ -639,10 +639,10 @@ private fun DrawScope.drawReinforcementTable(
         start = Offset(tableLeft, r3Y + rowH),
         end = Offset(tableLeft + tableW, r3Y + rowH), strokeWidth = 0.5f)
 
-    // Row 4: Base top bars near stem (bilingual)
+    // Row 4: Base top bars near stem
     val r4Y = r3Y + rowH
-    val row4 = arrayOf("Horizontal (Base) / أفقي", "Top / أعلى القاعدة", "Ø${distRebarDia.toInt()}",
-        "@${distRebarSpacing.toInt()}mm", "Heel")
+    val row4 = arrayOf("Horiz. (Base)", "Top", "Ø${(distRebarDia * 1000).toInt()}",
+        "@${(distRebarSpacing * 1000).toInt()}mm", "Heel")
     cx = tableLeft
     for (i in row4.indices) {
         drawTextAnnotated(row4[i], cx + 6f, r4Y + rowH / 2f + 5f, DrawingColors.SecondaryRed, 13f)

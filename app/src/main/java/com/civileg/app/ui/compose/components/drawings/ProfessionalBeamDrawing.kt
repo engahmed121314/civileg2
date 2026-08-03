@@ -495,11 +495,11 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // "CUT" labels
     drawTextAnnotated(
-        text = "قطع", x = cutLeft + 2f, y = beamTop - 4f,
+        text = "CUT", x = cutLeft + 2f, y = beamTop - 4f,
         color = ExtensionGray, size = 22f
     )
     drawTextAnnotated(
-        text = "قطع", x = cutRight - 30f, y = beamTop - 4f,
+        text = "CUT", x = cutRight - 30f, y = beamTop - 4f,
         color = ExtensionGray, size = 22f
     )
 
@@ -1039,7 +1039,7 @@ private fun DrawScope.drawSectionInset(
 
     // Title
     drawTextAnnotated(
-        text = "المقطع", x = insetLeft, y = insetTop - 2f,
+        text = "SECTION", x = insetLeft, y = insetTop - 2f,
         color = DimensionWhite, size = 20f
     )
 
@@ -1155,7 +1155,7 @@ private fun DrawScope.drawReinforcementSchedule(
 
     // Table title
     drawTextAnnotated(
-        text = "جدول التسليح",
+        text = "REINFORCEMENT SCHEDULE",
         x = tableLeft, y = tableTop - 8f,
         color = DimensionWhite, size = 22f
     )
@@ -1168,7 +1168,7 @@ private fun DrawScope.drawReinforcementSchedule(
     )
 
     // Header texts
-    val headers = arrayOf("العلامة", "القطر", "العدد", "الطول", "المسافة")
+    val headers = arrayOf("Mark", "Dia.", "No.", "Length", "Spacing")
     var cx = tableLeft
     for (i in headers.indices) {
         drawTextAnnotated(
@@ -1409,11 +1409,11 @@ private fun DrawScope.drawStressDiagram(
 
     // Labels
     drawTextAnnotated(
-        text = "ضغط", x = beamLeft + 4f, y = diagramTop + diagramH / 2f + 5f,
+        text = "COMP", x = beamLeft + 4f, y = diagramTop + diagramH / 2f + 5f,
         color = StressPink, size = 16f
     )
     drawTextAnnotated(
-        text = "شد", x = naX + (beamRight - naX) / 2f - 10f, y = diagramTop + diagramH / 2f + 5f,
+        text = "TENS", x = naX + (beamRight - naX) / 2f - 10f, y = diagramTop + diagramH / 2f + 5f,
         color = StressPink.copy(alpha = 0.7f), size = 16f
     )
 

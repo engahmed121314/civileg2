@@ -57,10 +57,6 @@ fun ProfessionalSlabDrawing(
         val h = size.height
         val density = this.density
 
-        // ── Bilingual labels ──────────────────────────────────────────
-        val isArabic = com.civileg.app.utils.LocaleHelper.isArabic()
-        fun t(ar: String, en: String) = if (isArabic) ar else en
-
         // ── Color Palette (theme-compatible, drawing on dark canvas) ─
         val concreteFill = Color(0xFFE0E0E0)
         val concreteStroke = Color(0xFF424242)
@@ -149,8 +145,8 @@ fun ProfessionalSlabDrawing(
             color = headerColor, topLeft = Offset(0f, 0f),
             size = Size(w, 36f), cornerRadius = CornerRadius(0f)
         )
-        val statusLabel = if (isSafe) "✓ ${t("آمن", "SAFE")}" else "✗ ${t("غير آمن", "UNSAFE")}"
-        val headerText = "${t("تفاصيل البلاطة", "SLAB DETAIL")} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%"
+        val statusLabel = if (isSafe) "✓ ${"SAFE"}" else "✗ ${"UNSAFE"}"
+        val headerText = "${"SLAB DETAIL"} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%"
         dt(headerText, w / 2f, 24f, textColor, 11f, bold = true)
 
         // ══════════════════════════════════════════════════════════
@@ -177,8 +173,8 @@ fun ProfessionalSlabDrawing(
             if (isHordi || isWaffle) {
                 val rs = if (ribSpacing > 0) ribSpacing else 500.0
                 val rw = if (ribWidth > 0) ribWidth else 100.0
-                val ribStepPx = (rs * scale).toFloat()
-                val ribWPx = (rw * scale).toFloat()
+                val ribStepPx = (rs / 1000.0 * scale).toFloat()
+                val ribWPx = (rw / 1000.0 * scale).toFloat()
                 var rx = slabLeft + ribStepPx
                 while (rx < slabRight) {
                     drawRect(
@@ -238,7 +234,7 @@ fun ProfessionalSlabDrawing(
 
             // ── Main reinforcement (parallel blue lines, direction X) ──
             val safeMainSpacing = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
-            val mainStepPx = (safeMainSpacing * scale).toFloat().coerceAtLeast(10f)
+            val mainStepPx = (safeMainSpacing / 1000.0 * scale).toFloat().coerceAtLeast(10f)
             var my = slabTop + mainStepPx / 2f
             while (my < slabBottom - mainStepPx / 4f) {
                 drawLine(
@@ -251,7 +247,7 @@ fun ProfessionalSlabDrawing(
 
             // ── Distribution reinforcement (direction Y) ─────────────
             val safeDistSpacing = if (distRebarSpacing > 0) distRebarSpacing else 200.0
-            val distStepPx = (safeDistSpacing * scale).toFloat().coerceAtLeast(10f)
+            val distStepPx = (safeDistSpacing / 1000.0 * scale).toFloat().coerceAtLeast(10f)
             var dx = slabLeft + distStepPx / 2f
             while (dx < slabRight - distStepPx / 4f) {
                 drawLine(
@@ -294,7 +290,7 @@ fun ProfessionalSlabDrawing(
                         val cy = slabTop + drawSpanY / 2f - colSize / 2f
                         drawRect(color = columnFill, topLeft = Offset(cx, cy), size = Size(colSize, colSize))
                         val d = slabThickness - cover
-                        val dPx = (d * scale).toFloat().coerceAtLeast(colSize * 0.6f)
+                        val dPx = (d / 1000.0 * scale).toFloat().coerceAtLeast(colSize * 0.6f)
                         val psSize = colSize + dPx
                         drawRect(
                             color = shearPerimColor,
@@ -324,7 +320,7 @@ fun ProfessionalSlabDrawing(
                 slabTop, slabBottom, slabLeft - 16f,
                 "${(spanY * 1000).toInt()} mm", dimColor, 10f * density, offset = 0f
             )
-            dt(t("مسقط", "PLAN"), slabLeft + 22f, slabBottom + 18f, Color(0xFF757575), 10f, bold = true)
+            dt("PLAN", slabLeft + 22f, slabBottom + 18f, Color(0xFF757575), 10f, bold = true)
         }
 
         // ══════════════════════════════════════════════════════════
@@ -336,21 +332,21 @@ fun ProfessionalSlabDrawing(
             val secLeft = margin + 80f
             val secRight = w - margin
 
-            dt(t("قطاع A-A", "SECTION A-A"), secLeft, secTop - 4f, Color(0xFF757575), 10f, bold = true)
+            dt("SECTION A-A", secLeft, secTop - 4f, Color(0xFF757575), 10f, bold = true)
 
             val maxSectionW = secRight - secLeft - 100f
             val sectionSpanPx = min(drawSpanX, maxSectionW)
             val sectionScale = sectionSpanPx / spanX.toFloat()
-            val thickPx = (slabThickness * sectionScale).toFloat().coerceIn(20f, 80f)
+            val thickPx = (slabThickness / 1000.0 * sectionScale).toFloat().coerceIn(20f, 80f)
             val sSlabLeft = secLeft + (maxSectionW - sectionSpanPx) / 2f
             val sSlabTop = secTop + (sectionH - thickPx) / 2f
             val sSlabBottom = sSlabTop + thickPx
 
             if (isHordi || isWaffle) {
-                val toppingH = (slabThickness * 0.3 * sectionScale).toFloat().coerceAtLeast(12f)
+                val toppingH = (slabThickness / 1000.0 * 0.3 * sectionScale).toFloat().coerceAtLeast(12f)
                 val ribH = thickPx - toppingH
-                val ribWPx = (ribWidth * sectionScale).toFloat().coerceAtLeast(8f)
-                val ribSPx = (ribSpacing * sectionScale).toFloat().coerceAtLeast(24f)
+                val ribWPx = (ribWidth / 1000.0 * sectionScale).toFloat().coerceAtLeast(8f)
+                val ribSPx = (ribSpacing / 1000.0 * sectionScale).toFloat().coerceAtLeast(24f)
                 drawRect(
                     color = concreteFill,
                     topLeft = Offset(sSlabLeft, sSlabTop),
@@ -385,9 +381,9 @@ fun ProfessionalSlabDrawing(
                 )
 
                 // Main bottom bars
-                val barR = (mainRebarDia * sectionScale / 2f).toFloat().coerceIn(3f, 6f)
+                val barR = (mainRebarDia / 1000.0 * sectionScale / 2f).toFloat().coerceIn(3f, 6f)
                 val safeMainSp = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
-                val barCount = ((sectionSpanPx - 20f) / (safeMainSp * sectionScale).toFloat())
+                val barCount = ((sectionSpanPx - 20f) / (safeMainSp / 1000.0 * sectionScale).toFloat())
                     .toInt().coerceIn(3, 25)
                 if (barCount > 1) {
                     val barStep = (sectionSpanPx - 20f) / (barCount - 1)
@@ -434,7 +430,7 @@ fun ProfessionalSlabDrawing(
             )
 
             // Cover dimension
-            val coverPx = (cover * sectionScale).toFloat().coerceIn(5f, 18f)
+            val coverPx = (cover / 1000.0 * sectionScale).toFloat().coerceIn(5f, 18f)
             drawLine(
                 Color(0xFF2E7D32), Offset(sSlabLeft + 20f, sSlabBottom),
                 Offset(sSlabLeft + 20f, sSlabBottom - coverPx), strokeWidth = 1f
@@ -506,7 +502,7 @@ fun ProfessionalSlabDrawing(
             val rows = mutableListOf<List<String>>()
             rows.add(listOf(
                 "①",
-                t("رئيسي سفلي (X)", "Main Bottom (X)"),
+                "Main Bottom (X)",
                 safeMainDia.toInt().toString(),
                 safeMainSpacing.toInt().toString(),
                 "${(mainLength * 1000).toInt()}",
@@ -516,7 +512,7 @@ fun ProfessionalSlabDrawing(
             ))
             rows.add(listOf(
                 "②",
-                t("توزيع سفلي (Y)", "Dist. Bottom (Y)"),
+                "Dist. Bottom (Y)",
                 safeDistDia.toInt().toString(),
                 safeDistSpacing.toInt().toString(),
                 "${(distLength * 1000).toInt()}",
@@ -528,7 +524,7 @@ fun ProfessionalSlabDrawing(
                 val topAsProvided = mainAsProvided
                 rows.add(listOf(
                     "③",
-                    t("علوي فوق المساند", "Top Support"),
+                    "Top Support",
                     safeMainDia.toInt().toString(),
                     safeMainSpacing.toInt().toString(),
                     "${(topBarLength * 1000).toInt()}",
@@ -543,7 +539,7 @@ fun ProfessionalSlabDrawing(
             val shrinkageAsProvided = (Math.PI * shrinkageDia * shrinkageDia / 4.0) * (1000.0 / shrinkageSpacing)
             rows.add(listOf(
                 "④",
-                t("انكماش §4-2-5", "Shrinkage §4-2-5"),
+                "Shrinkage §4-2-5",
                 shrinkageDia.toInt().toString(),
                 shrinkageSpacing.toInt().toString(),
                 "${(distLength * 1000).toInt()}",
@@ -557,7 +553,7 @@ fun ProfessionalSlabDrawing(
                 val ribAs = (Math.PI * safeMainDia * safeMainDia / 4.0) * (1000.0 / safeRibSpacing)
                 rows.add(listOf(
                     "⑤",
-                    t("تسليح الكمرات", "Rib Bars"),
+                    "Rib Bars",
                     safeMainDia.toInt().toString(),
                     safeRibSpacing.toInt().toString(),
                     ribBarLen,
@@ -585,19 +581,19 @@ fun ProfessionalSlabDrawing(
 
             // ── Table Title bar ─────────────────────────────────────
             drawRect(color = Color(0xFF263238), topLeft = Offset(tblLeft, rowY - 22f * density), size = Size(tblWidth, 22f * density))
-            dt(t("جدول التسليح - Reinforcement Schedule", "Reinforcement Schedule"), tblLeft + tblWidth / 2f, rowY - 7f * density, Color.White, 11f, bold = true)
+            dt("REINFORCEMENT SCHEDULE", tblLeft + tblWidth / 2f, rowY - 7f * density, Color.White, 11f, bold = true)
 
             // ── Header row ─────────────────────────────────────────
             drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, headerRowH))
             val headers = listOf(
-                t("الرمز", "Mark"),
-                t("الاتجاه", "Direction"),
-                t("قطر", "Dia"),
-                t("تباعد", "Spacing"),
-                t("الطول", "Length"),
-                "As ${t("مطلوب", "Req")}",
-                "As ${t("موجود", "Prov")}",
-                t("الوزن", "Weight")
+                "Mark",
+                "Direction",
+                "Dia",
+                "Spacing",
+                "Length",
+                "As Req",
+                "As Prov",
+                "Weight"
             )
             var colX = tblLeft
             headers.forEachIndexed { idx, hdr ->
@@ -633,7 +629,7 @@ fun ProfessionalSlabDrawing(
             val totalSteelWeight = rows.sumOf { it.last().replace(",", ".").toDoubleOrNull() ?: 0.0 }
             drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, totalsRowH))
             dt("Σ", tblLeft + colWidths[0] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 12f, bold = true)
-            dt(t("إجمالي وزن التسليح", "Total Steel Weight"), tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f, bold = true)
+            dt("Total Steel Weight", tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f, bold = true)
             // Span empty cells
             var totX = tblLeft + colWidths[0] + colWidths[1]
             for (i in 2 until colWidths.size - 1) {
