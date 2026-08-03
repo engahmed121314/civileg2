@@ -9,11 +9,11 @@ import kotlin.math.*
  * compression steel is added to increase the moment capacity.
  *
  * Key equations:
- * - K_bal = 0.36 * (fcu / (fy * gamma_s)) * (gamma_c / (1 + (fy / (1.15 * 440))))
- * - R_bal = K_bal * (1 - 0.5 * K_bal)
+ * - K_bal uses strain compatibility per ECP 203 §4-2-2-1
+ * - R = Mu / (fcu/γc × b × d²)
  * - If R > R_bal -> need compression steel
- * - As' = (Mu - R_bal * fcu * b * d^2) / (fy/gamma_s * (d - d'))
- * - As = (K_bal * fcu * b * d) / (fy/gamma_s) + As'
+ * - As' = (Mu - Mu_bal) / (fy/γs × (d - d'))
+ * - As = As1 (concrete balanced) + As' (compression steel couple)
  *
  * Where:
  * - fcu = concrete compressive strength (MPa)
@@ -168,8 +168,9 @@ class ECPDoublyReinforcedBeam {
 
         if (!needsCompressionSteel) {
             // ========== SINGLY REINFORCED IS SUFFICIENT ==========
-            // Lever arm: z = d * (0.5 + sqrt(0.25 - K/1.25)) per ECP 203
-            val discriminant = 0.25 - k / 1.25
+            // Lever arm: z = d * (0.5 + sqrt(0.25 - K/0.893)) per ECP 203 K-method
+            // 0.893 = γc/(2×0.67) = 1.5/1.34
+            val discriminant = 0.25 - k / 0.893
             val z = if (discriminant >= 0) {
                 d * (0.5 + sqrt(discriminant))
             } else {
@@ -302,13 +303,14 @@ class ECPDoublyReinforcedBeam {
         // fbd = 0.6 * sqrt(fcu) for deformed bars per ECP 203
         val fbd = 0.6 * sqrt(fcu)
         if (tensionBarDia > 0) {
-            val laTension = 0.5 * fy * tensionBarDia / fbd.coerceAtLeast(0.1)
+            // ECP 203 §5-2-2: La = 0.5 * (fy/γs) * φ / fbd
+            val laTension = 0.5 * (fy / GAMMA_S) * tensionBarDia / fbd.coerceAtLeast(0.1)
             if (laTension > d * 0.8) {
                 warnings.add("Tension development length L_a = ${String.format("%.0f", laTension)} mm may be excessive")
             }
         }
         if (compBarDia > 0 && asCompressionValue > 0) {
-            val laComp = 0.5 * fy * compBarDia / fbd.coerceAtLeast(0.1)
+            val laComp = 0.5 * (fy / GAMMA_S) * compBarDia / fbd.coerceAtLeast(0.1)
             if (laComp > d * 0.6) {
                 warnings.add("Compression development length L_a = ${String.format("%.0f", laComp)} mm - verify anchorage")
             }
@@ -472,6 +474,7 @@ class ECPDoublyReinforcedBeam {
      */
     private fun calculateDevelopmentLength(fy: Double, dia: Double, fcu: Double): Double {
         val fbd = calculateBondStress(fcu)
-        return 0.5 * fy * dia / fbd.coerceAtLeast(0.1)
+        // ECP 203 §5-2-2: La = 0.5 * (fy/γs) * φ / fbd
+        return 0.5 * (fy / GAMMA_S) * dia / fbd.coerceAtLeast(0.1)
     }
 }

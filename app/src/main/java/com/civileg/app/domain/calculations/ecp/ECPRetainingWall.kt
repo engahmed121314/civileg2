@@ -97,13 +97,15 @@ class ECPRetainingWall : RetainingWallDesign {
 
         val (numBars, barDia) = RetainingWallDesign.selectBars(AsReq)
         val AsProvided = numBars * PI * (barDia / 2.0).pow(2)
-        val distBars = RetainingWallDesign.selectBars(AsMin * 0.25).let { "${it.first}\u03A6${it.second}" }
+        // ECP 203: distribution steel = 0.25% of b×d (min for walls)
+        val distAsMin = 0.0025 * b * d
+        val distBars = RetainingWallDesign.selectBars(distAsMin).let { "${it.first}\u03A6${it.second}" }
 
         // Shear check
         val qu = Vu * 1000 / (b * d)
-        val qcu = 0.24 * sqrt(fcu)
-        val qcuLimit = 0.45 * sqrt(fcu)
-        val needStirrups = qu > 0.67 * qcu
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // ECP 203 §4-3-1-2
+        val qcuLimit = 0.45 * sqrt(fcu / GAMMA_C)  // ECP 203
+        val needStirrups = qu > qcu  // ECP 203: direct comparison
 
         // Toe design
         val toeMoment = max(0.0, maxBearing * toe * toe / 2 - minBearing * toe * toe / 6)

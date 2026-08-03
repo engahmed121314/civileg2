@@ -52,8 +52,10 @@ class ACISlab : SlabDesign {
             0.025  // تصميم مضغوط
         }
 
-        // الحد الأدنى للتسليح (ACI 7.6.1.1)
-        val rhoMin = max(MIN_REIN_RATIO, 0.25 * sqrt(fc_prime) / fy)
+        // الحد الأدنى للتسليح (ACI 7.6.1.1 for slabs, NOT ACI 9.6.1.2 for beams)
+        // ACI 7.6.1.1(a): As_min = max(0.0018, 0.0018 × 420/fy) × b × h
+        val rhoMinSlab = max(0.0018, 0.0018 * 420.0 / fy)
+        val rhoMin = max(MIN_REIN_RATIO, rhoMinSlab)
         val rhoMax = 0.025  // ACI الحد الأقصى
         val rhoFinal = rho.coerceIn(0.0, rhoMax)
         val asRequired = max(rhoFinal, rhoMin) * b * effectiveDepth  // As = ρ × b × d

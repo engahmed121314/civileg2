@@ -101,7 +101,7 @@ class SBCBeam : BeamDesign {
             }
             // SBC 304-18.5.2: نسبة القص الأدنى في المناطق الزلزالية
             val Av_min_seismic = 0.062 * sqrt(0.8 * fcu) * width / fy * 1000  // mm²/m
-            if (result.providedShearReinforcement < Av_min_seismic * 0.8) {
+            if (result.providedShearReinforcement < Av_min_seismic) {
                 updatedWarnings.add("SBC 304-18: تسليح القص أقل من النسبة الزلزالية الدنيا")
             }
             updatedNotes.add("SBC 304: Seismic shear provisions (Section 18.5)")

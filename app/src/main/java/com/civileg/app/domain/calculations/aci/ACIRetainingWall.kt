@@ -104,8 +104,8 @@ class ACIRetainingWall : RetainingWallDesign {
         val tb = RetainingWallDesign.selectBars(toeAs)
 
         // Heel
-        val heelLoad = (H - tFooting) * gamma + q
-        val heelMu = heelLoad * heel * heel / 2 * LF_LIVE * 1e6
+        val heelLoad = (H - tFooting) * gamma + q  // soil weight + surcharge (DEAD load)
+        val heelMu = heelLoad * heel * heel / 2 * LF_DEAD * 1e6  // ACI: soil is dead load → γD=1.2
         val heelD = tFooting * 1000 - COVER_EARTH - 10.0
         val heelRn = heelMu / (PHI_FLEXURE * b * heelD * heelD)
         val heelRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * heelRn / (0.85 * fc))))

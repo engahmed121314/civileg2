@@ -140,7 +140,7 @@ class SBCColumn : ColumnDesign {
         cover: Double = 40.0
     ): ColumnShearDesignResult {
         val b = width
-        val d = depth - cover
+        val d = depth - cover - 10.0 - 8.0  // deduct tie dia (~10mm) + half bar dia (~8mm) approximation
         // SBC 304: f'c = 0.8 × fcu (cube to cylinder, same as ACI 318)
         val fc = 0.8 * fcu
         val phi = 0.75

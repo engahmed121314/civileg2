@@ -189,7 +189,7 @@ class ECPTank : TankDesign {
             warnings.add("المقطع مفرط التسليح - يُنصح بزيادة سمك الجدار")
         }
 
-        // ذراع العزم: z = d * (0.5 + sqrt(0.25 - K/1.25)) حسب ECP 203
+        // ذراع العزم: z = d * (0.5 + sqrt(0.25 - K/0.893)) حسب ECP 203 K-method
         val leverArm = if (0.25 - K / 0.893 > 0) {
             d * (0.5 + sqrt(0.25 - K / 0.893))
         } else {
@@ -220,7 +220,7 @@ class ECPTank : TankDesign {
         val hSpacing = (1000.0 / hBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
 
         // فحص القص
-        val qcu = 0.24 * sqrt(fcu)
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // ECP 203 §4-3-1-2
         val concreteShearCapacity = qcu * b * d / 1000.0
         val shearCheck = maxShear <= concreteShearCapacity
         safetyChecks.add(TankSafetyCheck(
@@ -412,7 +412,7 @@ class ECPTank : TankDesign {
         } else {
             2 * (wallThickness / 1000.0 + d / 1000.0 + wallThickness / 1000.0 + d / 1000.0)
         }
-        val punchingShearCapacity = 0.316 * sqrt(fcu) * punchingPerimeter * d / 1000.0 // kN
+        val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * punchingPerimeter * d / 1000.0 // kN (ECP 203 §4-3-2)
         val punchingLoad = totalPressure * L * B // kN
         val punchingCheck = punchingLoad * 0.5 <= punchingShearCapacity // تقريبي
 

@@ -9,7 +9,7 @@ class ECPBeam : BeamDesign {
     companion object {
         private const val GAMMA_C = 1.5      // معامل أمان الخرسانة
         private const val GAMMA_S = 1.15     // معامل أمان الحديد
-        private const val BETA_1 = 0.8       // عامل كتلة الإجهاد
+        private const val BETA_1 = 0.9       // ECP 203 K-method factor (consistent with K_bal derivation)
         // Ec = 4400 * sqrt(fcu) per ECP 203 (MPa, fcu in MPa)
         private fun ec(fcu: Double) = 4400.0 * sqrt(fcu)
         private const val E_S = 200000.0     // معامل مرونة الحديد
@@ -42,9 +42,11 @@ class ECPBeam : BeamDesign {
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
         }
         
-        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/0.9)) حسب ECP 203
-        val leverArm = if (0.25 - K / 0.9 > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / 0.9))
+        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/0.893)) حسب ECP 203 K-method
+        // 0.893 = γc/(2×0.67) = 1.5/1.34 — the mathematically correct divisor
+        val K_DIVISOR = 0.893
+        val leverArm = if (0.25 - K / K_DIVISOR > 0) {
+            effectiveDepth * (0.5 + sqrt(0.25 - K / K_DIVISOR))
         } else {
             effectiveDepth * 0.7 // Fallback for over-reinforced
         }
@@ -139,8 +141,8 @@ class ECPBeam : BeamDesign {
         val Vu = designShear * 1000  // N (القوة القصية التصميمية)
         
         // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu) ثم يُقسم على γc عند حساب القدرة
-        val qcu = 0.24 * sqrt(fcu)  // MPa
+        // qcu = 0.24 × √(fcu/γc) — ECP 203 §4-3-1-2
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
         val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
         
         // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
@@ -166,7 +168,7 @@ class ECPBeam : BeamDesign {
         stirrupSpacing = stirrupSpacing.coerceIn(50.0, getMaxShearSpacing())
         
         // الحد الأقصى لإجهاد القص: qcu_max = 0.7 × √(fcu/γc) (ECP 203)
-        val maxShearStress = 0.7 * sqrt(fcu)  // MPa
+        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
         val maxShearCapacity = maxShearStress * width * effectiveDepth / 1000  // kN
         val isSafe = (Vu / 1000) <= maxShearCapacity
         
@@ -247,9 +249,9 @@ class ECPBeam : BeamDesign {
         // حسب الكود المصري: Ld = (fy/γs) * φ / (4 * fb)
         // حيث fb = إجهاد التماسك
         
-        val fs = fy / GAMMA_S
-        // fbd = 0.3 × √(fcu) per ECP 203 §5-2-2
-        val fbd = 0.3 * sqrt(fcu)  // MPa
+        // ECP 203 §5-2-2: fbd = 0.6 × √(fcu) for deformed bars (good bond)
+        // Note: 0.3 is for plain bars; 0.6 is for deformed (high bond) bars
+        val fbd = 0.6 * sqrt(fcu)  // MPa (deformed bars)
         
         var Ld = fs * barDiameter / (4 * fbd.coerceAtLeast(0.1))
         
@@ -257,8 +259,8 @@ class ECPBeam : BeamDesign {
         if (barLocation == BarLocation.TOP) Ld *= 1.3  // حديد علوي
         if (coating == CoatingType.EPOXY_COATED) Ld *= 1.2
         
-        // حد أدنى
-        Ld = max(Ld, 350.0)  // 350 مم كحد أدنى
+        // حد أدنى حسب ECP 203: max(10φ, 100 مم)
+        Ld = max(Ld, 10.0 * barDiameter, 100.0)
         
         // تقريب لأعلى لأقرب 50 مم
         return ceil(Ld / 50) * 50
@@ -371,7 +373,7 @@ class ECPBeam : BeamDesign {
         
         // إذا كان K ≤ K_bal: المقطع لا يحتاج حديد ضغط
         if (K <= kBal) {
-            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.9)))
+            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
             val fs = fy / GAMMA_S
             val asReq = Mu / (fs * leverArm)
             
@@ -403,8 +405,8 @@ class ECPBeam : BeamDesign {
         
         // Mu1 = العزم المتوازن (الذي يتحمله المقطع بالتسليح الأحادي)
         val Mu1 = kBal * fcu * b * d * d
-        // ذراع العزم للجزء المتوازن
-        val z1 = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 1.25)))
+        // ذراع العزم للجزء المتوازن (0.893 = γc/(2×0.67))
+        val z1 = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
         // As1 = حديد الشد للعزم المتوازن
         val As1 = Mu1 / (fs * z1)
         

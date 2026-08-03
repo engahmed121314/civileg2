@@ -38,7 +38,7 @@ class SBCAdvancedSlab {
         private const val GAMMA_C = 1.5
 
         // SBC 304 Cover requirements (mm) — البند 8.2, Table 8.2
-        private const val COVER_NORMAL = 50.0      // Normal exposure (interior)
+        private const val COVER_NORMAL = 20.0      // Interior not exposed to weather (SBC 304 §7.7)
         private const val COVER_COASTAL = 65.0     // Corrosive / coastal zones
         private const val COVER_SEVERE = 75.0      // Severe / chemical exposure
 

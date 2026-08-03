@@ -176,8 +176,8 @@ class ECPColumn : ColumnDesign {
         val d = depth - cover  // effective depth (mm)
         val codeNotes = mutableListOf<String>()
 
-        // Vc = 0.24 × √(fcu) × b × d   (ECP 203 §4-2-5 — no γc in Vc formula)
-        val Vc = 0.24 * sqrt(fcu) * b * d / 1000.0  // kN
+        // Vc = 0.24 × √(fcu/γc) × b × d   (ECP 203 §4-3-1-2)
+        val Vc = 0.24 * sqrt(fcu / GAMMA_C) * b * d / 1000.0  // kN
 
         val needsStirrups = Vu > Vc
 

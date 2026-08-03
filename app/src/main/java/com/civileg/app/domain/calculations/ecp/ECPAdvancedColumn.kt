@@ -191,8 +191,8 @@ class ECPAdvancedColumn : ColumnDesign {
         // فحص K_bal
         val K_check = Mu_capacity * 1e6 / (fcu * b * h_eff * h_eff)
         val momentCapX = if (K_check <= 0.186) Mu_capacity else {
-            // إذا K > K_bal: نستخدم z = d*(0.5+√(0.25-K/1.25))
-            val z = h_eff * (0.5 + sqrt(max(0.001, 0.25 - 0.186 / 1.25)))
+            // ECP 203 K-method: z = d*(0.5+√(0.25-K/0.893))
+            val z = h_eff * (0.5 + sqrt(max(0.001, 0.25 - 0.186 / 0.893)))
             As * fs * z / 1e6
         }
 

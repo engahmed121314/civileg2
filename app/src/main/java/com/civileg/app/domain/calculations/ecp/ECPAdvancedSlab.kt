@@ -112,8 +112,8 @@ class ECPAdvancedSlab {
             warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد سماكة البلاطة الهوردية", K, K_bal))
         }
         
-        // z = d × (0.5 + √(0.25 - K/1.25))
-        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
+        // z = d × (0.5 + √(0.25 - K/0.893))  — 0.893 = γc/(2×0.67) per ECP 203
+        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 0.893)))
         val fs = fy / 1.15
         val astRequired = Mu_Nmm / (fs * leverArm)
         
@@ -169,7 +169,7 @@ class ECPAdvancedSlab {
             warnings.add(String.format("K=%.3f > K_bal=%.3f", K, K_bal))
         }
         
-        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
+        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 0.893)))
         val fs = fy / 1.15
         val astRequired = Mu_Nmm / (fs * leverArm)
         
@@ -393,7 +393,7 @@ class ECPAdvancedSlab {
         }
 
         // ذراع القوة
-        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 1.25)))
+        val leverArm = effectiveDepth * (0.5 + sqrt(max(0.001, 0.25 - K / 0.893)))
         val fs = fy / 1.15
         val astRequired = Mu_Nmm / (fs * leverArm)
 

@@ -213,8 +213,8 @@ class ECPAdvancedBeam {
             codeNotes.add("Design as rectangular beam with b = b_eff = ${beff.toInt()} mm")
 
             val K = Mu / (fcu * beff * d * d)
-            val leverArm = if (0.25 - K / 0.9 > 0) {
-                d * (0.5 + sqrt(0.25 - K / 0.9))
+            val leverArm = if (0.25 - K / 0.893 > 0) {
+                d * (0.5 + sqrt(0.25 - K / 0.893))
             } else {
                 d * 0.7
             }
@@ -243,8 +243,8 @@ class ECPAdvancedBeam {
             } else {
                 // تصميم الجذع بطريقة K مع b = bw
                 val K_web = M_web / (fcu * webWidth * d * d)
-                val leverArm_web = if (0.25 - K_web / 0.9 > 0) {
-                    d * (0.5 + sqrt(0.25 - K_web / 0.9))
+                val leverArm_web = if (0.25 - K_web / 0.893 > 0) {
+                    d * (0.5 + sqrt(0.25 - K_web / 0.893))
                 } else {
                     warnings.add("تحذير: المقطع شبه مفرط التسليح - فكر في زيادة الأبعاد")
                     d * 0.7
@@ -410,8 +410,8 @@ class ECPAdvancedBeam {
         if (neutralAxisInFlange) {
             codeNotes.add("Neutral axis in FLANGE (a=${"%.1f".format(a_trial)}mm ≤ hf=${"%.0f".format(flangeThickness)}mm)")
             val K = Mu_eccentric / (fcu * beff * d * d)
-            val leverArm = if (0.25 - K / 0.9 > 0) {
-                d * (0.5 + sqrt(0.25 - K / 0.9))
+            val leverArm = if (0.25 - K / 0.893 > 0) {
+                d * (0.5 + sqrt(0.25 - K / 0.893))
             } else {
                 d * 0.7
             }
@@ -427,8 +427,8 @@ class ECPAdvancedBeam {
                 As_flange
             } else {
                 val K_web = M_web / (fcu * webWidth * d * d)
-                val leverArm_web = if (0.25 - K_web / 0.9 > 0) {
-                    d * (0.5 + sqrt(0.25 - K_web / 0.9))
+                val leverArm_web = if (0.25 - K_web / 0.893 > 0) {
+                    d * (0.5 + sqrt(0.25 - K_web / 0.893))
                 } else {
                     warnings.add("تحذير: المقطع شبه مفرط التسليح - فكر في زيادة الأبعاد")
                     d * 0.7

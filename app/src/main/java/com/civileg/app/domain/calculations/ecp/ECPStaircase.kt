@@ -143,8 +143,9 @@ class ECPStaircase : StaircaseDesign {
 
         codeNotes.add("K = ${String.format("%.4f", K)}, K_bal = ${String.format("%.4f", kBal)}")
 
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        val K_DIVISOR = 0.893  // γc/(2×0.67) per ECP 203 K-method
+        val leverArm = if (0.25 - K / K_DIVISOR > 0) {
+            d * (0.5 + sqrt(0.25 - K / K_DIVISOR))
         } else {
             d * 0.7
         }
@@ -185,9 +186,9 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 6. تصميم القص ==========
         val Vu = adjustedShear * 1000.0
-        val qcu = 0.24 * sqrt(input.fcu)
+        val qcu = 0.24 * sqrt(input.fcu / GAMMA_C)  // ECP 203 §4-3-1-2
         val concreteShearCapacity = qcu * b * d / 1000.0
-        val maxShearStress = 0.7 * sqrt(input.fcu)
+        val maxShearStress = 0.7 * sqrt(input.fcu / GAMMA_C)  // ECP 203
         val maxShearCapacity = maxShearStress * b * d / 1000.0
 
         val shearSafe = (Vu / 1000.0) <= maxShearCapacity
