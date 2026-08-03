@@ -42,6 +42,7 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +57,7 @@ fun StairScreen(
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
@@ -295,11 +297,13 @@ fun StairScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
-                                val captureBitmap = try {
-                                    pdfCaptureLayer.captureToAndroidBitmap()
-                                } catch (_: Exception) { null }
-                                viewModel.pendingDrawingBitmap = captureBitmap
-                                viewModel.exportToPdf(context) { /* Handle complete */ }
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { /* Handle complete */ }
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),

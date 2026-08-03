@@ -34,6 +34,7 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -372,15 +373,17 @@ fun SlabScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
-                                val captureBitmap = try {
-                                    pdfCaptureLayer.captureToAndroidBitmap()
-                                } catch (_: Exception) { null }
-                                viewModel.pendingDrawingBitmap = captureBitmap
-                                viewModel.exportToPdf(context) { file ->
-                                    if (file == null) {
-                                        pdfError = pdfErrorMsg
-                                    } else {
-                                        pdfError = null
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file ->
+                                        if (file == null) {
+                                            pdfError = pdfErrorMsg
+                                        } else {
+                                            pdfError = null
+                                        }
                                     }
                                 }
                             },

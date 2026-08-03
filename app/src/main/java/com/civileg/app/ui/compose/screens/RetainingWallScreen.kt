@@ -317,11 +317,13 @@ fun RetainingWallScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
-                                val captureBitmap = try {
-                                    pdfCaptureLayer.captureToAndroidBitmap()
-                                } catch (_: Exception) { null }
-                                viewModel.pendingDrawingBitmap = captureBitmap
-                                viewModel.exportToPdf(context) { /* Handle completion */ }
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { /* Handle completion */ }
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),

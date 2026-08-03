@@ -39,6 +39,7 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +55,7 @@ fun BeamScreen(
     val error by viewModel.error.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
@@ -271,15 +273,17 @@ fun BeamScreen(
                         val beamPdfErrorMsg = stringResource(R.string.beam_pdf_error)
                         Button(
                             onClick = {
-                                val captureBitmap = try {
-                                    pdfCaptureLayer.captureToAndroidBitmap()
-                                } catch (_: Exception) { null }
-                                viewModel.pendingDrawingBitmap = captureBitmap
-                                viewModel.exportToPdf(context) { file ->
-                                    if (file == null) {
-                                        pdfError = beamPdfErrorMsg
-                                    } else {
-                                        pdfError = null
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file ->
+                                        if (file == null) {
+                                            pdfError = beamPdfErrorMsg
+                                        } else {
+                                            pdfError = null
+                                        }
                                     }
                                 }
                             },

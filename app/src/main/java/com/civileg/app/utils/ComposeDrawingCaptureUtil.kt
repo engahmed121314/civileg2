@@ -3,19 +3,16 @@ package com.civileg.app.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.dp
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -26,27 +23,19 @@ import java.io.FileOutputStream
  */
 object ComposeDrawingCaptureUtil {
 
-    // ─────────────────────────────────────────────────────────────
-    //  GraphicsLayer-based capture (Compose UI 1.7+)
-    // ─────────────────────────────────────────────────────────────
-
     /**
      * Creates a [GraphicsLayer] that can be attached to a composable via
-     * [DrawingCaptureArea]. Call [GraphicsLayer.captureToAndroidBitmap] to
-     * obtain the rendered Bitmap.
+     * [DrawingCaptureArea]. Call [captureLayerToBitmap] to obtain the rendered Bitmap.
      */
     @Composable
     fun rememberDrawingCaptureLayer(): GraphicsLayer = rememberGraphicsLayer()
 
     /**
      * Invisible rendering area that records drawing content into [captureLayer].
-     * The content is measured at exactly [widthPx] × [heightPx] pixels but is
+     * The content is measured at exactly [widthPx] x [heightPx] pixels but is
      * invisible on screen (alpha = 0). The [captureLayer] captures the full-
      * opacity content so the resulting Bitmap looks identical to the on-screen
      * drawing.
-     *
-     * Place this inside a `Box` that also contains your `LazyColumn` so it
-     * floats on top without affecting touch-input / scroll behaviour.
      */
     @Composable
     fun DrawingCaptureArea(
@@ -66,28 +55,18 @@ object ComposeDrawingCaptureUtil {
                     }
                 }
                 .alpha(0f)
-                .graphicsLayer(captureLayer)
+                .drawWithContent {
+                    captureLayer.record { this@drawWithContent.drawContent() }
+                }
         ) {
             content()
         }
-    }
-
-    /**
-     * Converts the recorded [GraphicsLayer] content into an Android [Bitmap].
-     * Must be called on the main thread.
-     */
-    fun GraphicsLayer.captureToAndroidBitmap(): Bitmap {
-        return toImageBitmap().asAndroidBitmap()
     }
 
     // ─────────────────────────────────────────────────────────────
     //  Legacy helpers (kept for backward-compatibility)
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Creates a drawing-sized Bitmap with dark background, ready for
-     * the PDF exporter to draw engineering content onto using Android Canvas.
-     */
     fun createDrawingCanvas(
         widthPx: Int = 1200,
         heightPx: Int = 800,
@@ -104,18 +83,12 @@ object ComposeDrawingCaptureUtil {
         }
     }
 
-    /**
-     * Compresses a Bitmap to PNG byte array for iText PDF embedding.
-     */
     fun bitmapToPngBytes(bitmap: Bitmap, quality: Int = 100): ByteArray {
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, quality, stream)
         return stream.toByteArray()
     }
 
-    /**
-     * Saves a Bitmap to a temporary file in the app's cache directory.
-     */
     fun saveBitmapToCache(context: Context, bitmap: Bitmap, fileName: String): File? {
         return try {
             val file = File(context.cacheDir, fileName)
@@ -129,9 +102,6 @@ object ComposeDrawingCaptureUtil {
         }
     }
 
-    /**
-     * Standard drawing dimensions for PDF export (pixels).
-     */
     object DrawingSizes {
         val BEAM = DrawingSize(1200, 1400)
         val COLUMN = DrawingSize(1200, 900)
@@ -145,4 +115,13 @@ object ComposeDrawingCaptureUtil {
     }
 
     data class DrawingSize(val width: Int, val height: Int)
+}
+
+/**
+ * Captures the recorded content of a [GraphicsLayer] into an Android [Bitmap].
+ * This is a suspend function because [GraphicsLayer.toImageBitmap] is suspend.
+ * Call from a coroutine (e.g. `rememberCoroutineScope().launch { }`).
+ */
+suspend fun GraphicsLayer.captureToAndroidBitmap(): Bitmap {
+    return toImageBitmap().asAndroidBitmap()
 }

@@ -43,6 +43,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +56,7 @@ fun ColumnScreen(
     val uiState by viewModel.uiState.collectAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
@@ -326,11 +328,13 @@ fun ColumnScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
-                                val captureBitmap = try {
-                                    pdfCaptureLayer.captureToAndroidBitmap()
-                                } catch (_: Exception) { null }
-                                viewModel.pendingDrawingBitmap = captureBitmap
-                                viewModel.exportToPdf(context) { /* Handle completion */ }
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { /* Handle completion */ }
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
