@@ -66,6 +66,13 @@ fun RetainingWallScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Validation messages (captured in composable scope for use in onClick)
+    val rwErrAllPositive = stringResource(R.string.rw_err_all_positive)
+    val rwErrFrictionAngle = stringResource(R.string.rw_err_friction_angle)
+    val rwErrSurcharge = stringResource(R.string.rw_err_surcharge)
+    val rwErrFcu = stringResource(R.string.rw_err_fcu)
+    val rwErrFy = stringResource(R.string.rw_err_fy)
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -106,9 +113,9 @@ fun RetainingWallScreen(
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text(stringResource(R.string.fcu_label)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text(stringResource(R.string.rw_fcu_mpa)) }, modifier = Modifier.weight(1f))
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text(stringResource(R.string.fy_label)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text(stringResource(R.string.rw_fy_mpa)) }, modifier = Modifier.weight(1f))
                 }
             }
 
@@ -134,12 +141,12 @@ fun RetainingWallScreen(
                         val fyVal = fy.toDoubleOrNull()
 
                         val errorMsg = when {
-                            h == null || h <= 0 -> "Invalid: all fields must be positive"
-                            sd == null || sd <= 0 -> "Invalid: all fields must be positive"
-                            fa == null || fa <= 0 || fa >= 90 -> "Invalid: friction angle 0-90"
-                            sc == null || sc < 0 -> "Invalid: surcharge must be >= 0"
-                            fcuVal == null || fcuVal <= 0 -> "Invalid: fcu must be positive"
-                            fyVal == null || fyVal <= 0 -> "Invalid: fy must be positive"
+                            h == null || h <= 0 -> rwErrAllPositive
+                            sd == null || sd <= 0 -> rwErrAllPositive
+                            fa == null || fa <= 0 || fa >= 90 -> rwErrFrictionAngle
+                            sc == null || sc < 0 -> rwErrSurcharge
+                            fcuVal == null || fcuVal <= 0 -> rwErrFcu
+                            fyVal == null || fyVal <= 0 -> rwErrFy
                             else -> null
                         }
 

@@ -1050,6 +1050,41 @@
     <string name="stair_equations_title">📝 المعادلات الهندسية</string>
     <string name="stair_save_dialog_title">حفظ التصميم في مشروع</string>
     <string name="stair_name_hint">اسم السلم (مثلاً: S1)</string>
+    <string name="stair_tread_mm">النائمة T (مم)</string>
+    <string name="stair_dead_load_kn_m2">حمل ميت (ك.ن/م²)</string>
+    <string name="stair_live_load_kn_m2">حمل حي (ك.ن/م²)</string>
+    <string name="stair_fcu_mpa">إجهاد الخرسانة f\'cu (ميجاباسكال)</string>
+    <string name="stair_fy_mpa">إجهاد الحديد fy (ميجاباسكال)</string>
+    <string name="tank_fcu_mpa">إجهاد الخرسانة f\'cu (ميجاباسكال)</string>
+    <string name="tank_fy_mpa">إجهاد الحديد fy (ميجاباسكال)</string>
+    <string name="beam_fcu_mpa">إجهاد الخرسانة f\'cu (ميجاباسكال)</string>
+    <string name="beam_fy_mpa">إجهاد الحديد fy (ميجاباسكال)</string>
+    <string name="beam_dead_load_kn_m">حمل ميت (ك.ن/م)</string>
+    <string name="beam_live_load_kn_m">حمل حي (ك.ن/م)</string>
+    <string name="rw_fcu_mpa">إجهاد الخرسانة f\'cu (ميجاباسكال)</string>
+    <string name="rw_fy_mpa">إجهاد الحديد fy (ميجاباسكال)</string>
+    <string name="beam_drawing_subtitle">تفاصيل تسليح الكمر</string>
+    <string name="stair_drawing_subtitle">تفاصيل تسليح السلم</string>
+    <string name="tank_drawing_subtitle">تفاصيل الخزان</string>
+    <string name="stair_span_range">1-15 م</string>
+    <string name="stair_riser_range">100-200 مم</string>
+    <string name="stair_tread_range">200-400 مم</string>
+    <string name="rw_err_all_positive">خطأ: جميع القيم يجب أن تكون موجبة</string>
+    <string name="rw_err_friction_angle">خطأ: زاوية الاحتكاك بين 0 و 90</string>
+    <string name="rw_err_surcharge">خطأ: الحمل الإضافي يجب أن يكون ≥ 0</string>
+    <string name="rw_err_fcu">خطأ: إجهاد الخرسانة يجب أن يكون موجب</string>
+    <string name="rw_err_fy">خطأ: إجهاد الحديد يجب أن يكون موجب</string>
+    <string name="slab_err_invalid_values">يرجى إدخال قيم صالحة لجميع الحقول</string>
+    <string name="slab_err_range_check">تحقق من النطاق: fcu 15-60، fy 200-700، السماكة 50-500</string>
+    <string name="tank_err_invalid_number">رقم غير صالح</string>
+    <string name="tank_err_gt_zero">يجب أن يكون أكبر من صفر</string>
+    <string name="tank_err_max_10000">الحد الأقصى 10000 م³</string>
+    <string name="tank_err_min_height">الحد الأدنى 1.0 م</string>
+    <string name="tank_err_max_height">الحد الأقصى 10.0 م</string>
+    <string name="tank_err_min_fcu">الحد الأدنى 20 ميجاباسكال</string>
+    <string name="tank_err_max_fcu">الحد الأقصى 60 ميجاباسكال</string>
+    <string name="tank_err_min_fy">الحد الأدنى 240 ميجاباسكال</string>
+    <string name="tank_err_max_fy">الحد الأقصى 500 ميجاباسكال</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Archive Screen -->

@@ -74,6 +74,11 @@ fun StairScreen(
     var riserError by remember { mutableStateOf("") }
     var treadError by remember { mutableStateOf("") }
 
+    // Validation messages (captured in composable scope for use in onClick)
+    val spanRangeMsg = stringResource(R.string.stair_span_range)
+    val riserRangeMsg = stringResource(R.string.stair_riser_range)
+    val treadRangeMsg = stringResource(R.string.stair_tread_range)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -136,20 +141,20 @@ fun StairScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(tread, "Tread (mm)", { tread = it }, Modifier.weight(1f), treadError)
-                    StairInputField(deadLoad, "D.L (kN/m²)", { deadLoad = it }, Modifier.weight(1f))
+                    StairInputField(tread, stringResource(R.string.stair_tread_mm), { tread = it }, Modifier.weight(1f), treadError)
+                    StairInputField(deadLoad, stringResource(R.string.stair_dead_load_kn_m2), { deadLoad = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(liveLoad, "L.L (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
-                    StairInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
+                    StairInputField(liveLoad, stringResource(R.string.stair_live_load_kn_m2), { liveLoad = it }, Modifier.weight(1f))
+                    StairInputField(fcu, stringResource(R.string.stair_fcu_mpa), { fcu = it }, Modifier.weight(1f))
                 }
             }
 
             item {
-                StairInputField(fy, "fy (MPa)", { fy = it }, Modifier.fillMaxWidth())
+                StairInputField(fy, stringResource(R.string.stair_fy_mpa), { fy = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -168,9 +173,9 @@ fun StairScreen(
                         val r = riser.toDoubleOrNull()
                         val t = tread.toDoubleOrNull()
                         var valid = true
-                        if (s == null || s < 1.0 || s > 15.0) { spanError = "1-15 m"; valid = false }
-                        if (r == null || r < 100.0 || r > 200.0) { riserError = "100-200 mm"; valid = false }
-                        if (t == null || t < 200.0 || t > 400.0) { treadError = "200-400 mm"; valid = false }
+                        if (s == null || s < 1.0 || s > 15.0) { spanError = spanRangeMsg; valid = false }
+                        if (r == null || r < 100.0 || r > 200.0) { riserError = riserRangeMsg; valid = false }
+                        if (t == null || t < 200.0 || t > 400.0) { treadError = treadRangeMsg; valid = false }
                         if (!valid) return@Button
 
                         viewModel.calculateStairPro(
@@ -317,7 +322,7 @@ fun StairScreen(
                 item {
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.stair_drawing_title),
-                        subtitle = "Staircase Reinforcement Detail",
+                        subtitle = stringResource(R.string.stair_drawing_subtitle),
                         drawingHeightDp = 780,
                         drawingContent = {
                             val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)

@@ -65,6 +65,17 @@ fun TankScreen(
     var fcuError by remember { mutableStateOf("") }
     var fyError by remember { mutableStateOf("") }
 
+    // Validation messages (captured in composable scope)
+    val tankErrInvalid = stringResource(R.string.tank_err_invalid_number)
+    val tankErrGtZero = stringResource(R.string.tank_err_gt_zero)
+    val tankErrMax10000 = stringResource(R.string.tank_err_max_10000)
+    val tankErrMinH = stringResource(R.string.tank_err_min_height)
+    val tankErrMaxH = stringResource(R.string.tank_err_max_height)
+    val tankErrMinFcu = stringResource(R.string.tank_err_min_fcu)
+    val tankErrMaxFcu = stringResource(R.string.tank_err_max_fcu)
+    val tankErrMinFy = stringResource(R.string.tank_err_min_fy)
+    val tankErrMaxFy = stringResource(R.string.tank_err_max_fy)
+
     val validateInputs: () -> Boolean = {
         var valid = true
         val cap = capacity.toDoubleOrNull()
@@ -72,30 +83,30 @@ fun TankScreen(
         val f = fcu.toDoubleOrNull()
         val y = fy.toDoubleOrNull()
         capacityError = when {
-            cap == null -> "Invalid number"
-            cap <= 0 -> "Must be > 0"
-            cap > 10000 -> "Max 10000 m³"
+            cap == null -> tankErrInvalid
+            cap <= 0 -> tankErrGtZero
+            cap > 10000 -> tankErrMax10000
             else -> { valid = valid && true; "" }
         }
         if (capacityError.isNotEmpty()) valid = false
         heightError = when {
-            h == null -> "Invalid number"
-            h < 1.0 -> "Min 1.0 m"
-            h > 10.0 -> "Max 10.0 m"
+            h == null -> tankErrInvalid
+            h < 1.0 -> tankErrMinH
+            h > 10.0 -> tankErrMaxH
             else -> ""
         }
         if (heightError.isNotEmpty()) valid = false
         fcuError = when {
-            f == null -> "Invalid"
-            f < 20.0 -> "Min 20 MPa"
-            f > 60.0 -> "Max 60 MPa"
+            f == null -> tankErrInvalid
+            f < 20.0 -> tankErrMinFcu
+            f > 60.0 -> tankErrMaxFcu
             else -> ""
         }
         if (fcuError.isNotEmpty()) valid = false
         fyError = when {
-            y == null -> "Invalid"
-            y < 240.0 -> "Min 240 MPa"
-            y > 500.0 -> "Max 500 MPa"
+            y == null -> tankErrInvalid
+            y < 240.0 -> tankErrMinFy
+            y > 500.0 -> tankErrMaxFy
             else -> ""
         }
         if (fyError.isNotEmpty()) valid = false
@@ -180,8 +191,8 @@ fun TankScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TankInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f), fcuError)
-                    TankInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f), fyError)
+                    TankInputField(fcu, stringResource(R.string.tank_fcu_mpa), { fcu = it }, Modifier.weight(1f), fcuError)
+                    TankInputField(fy, stringResource(R.string.tank_fy_mpa), { fy = it }, Modifier.weight(1f), fyError)
                 }
             }
 
@@ -337,7 +348,7 @@ fun TankScreen(
                 item {
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.tank_drawing_title),
-                        subtitle = "Water Tank Detail",
+                        subtitle = stringResource(R.string.tank_drawing_subtitle),
                         drawingHeightDp = 780,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {

@@ -78,6 +78,10 @@ fun SlabScreen(
     val configuration = LocalConfiguration.current
     val screenW = configuration.screenWidthDp.dp
 
+    // Validation messages (captured in composable scope for use in onClick)
+    val slabInvalidMsg = stringResource(R.string.slab_err_invalid_values)
+    val slabRangeMsg = stringResource(R.string.slab_err_range_check)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -143,7 +147,7 @@ fun SlabScreen(
                             value = selectedCode.displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.seismic_pdf_code)) },
+                            label = { Text(stringResource(R.string.slab_code_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp)
@@ -263,13 +267,13 @@ fun SlabScreen(
 
                         if (lxVal == null || lyVal == null || dlVal == null || llVal == null ||
                             fcuVal == null || fyVal == null || tVal == null) {
-                            inputError = "Please enter valid values for all fields"
+                            inputError = slabInvalidMsg
                             return@Button
                         }
                         if (lxVal <= 0 || lyVal <= 0 || dlVal < 0 || llVal < 0 ||
                             fcuVal < 15 || fcuVal > 60 || fyVal < 200 || fyVal > 700 ||
                             tVal < 50 || tVal > 500) {
-                            inputError = "Check value ranges: fcu 15-60, fy 200-700, thickness 50-500"
+                            inputError = slabRangeMsg
                             return@Button
                         }
                         inputError = null

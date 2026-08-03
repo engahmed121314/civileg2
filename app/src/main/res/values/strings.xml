@@ -1056,6 +1056,41 @@
     <string name="stair_equations_title">📝 Engineering Equations</string>
     <string name="stair_save_dialog_title">Save Stair Design in Project</string>
     <string name="stair_name_hint">Stair name (e.g.: S1)</string>
+    <string name="stair_tread_mm">Tread T (mm)</string>
+    <string name="stair_dead_load_kn_m2">D.L (kN/m²)</string>
+    <string name="stair_live_load_kn_m2">L.L (kN/m²)</string>
+    <string name="stair_fcu_mpa">f\'cu (MPa)</string>
+    <string name="stair_fy_mpa">fy (MPa)</string>
+    <string name="tank_fcu_mpa">f\'cu (MPa)</string>
+    <string name="tank_fy_mpa">fy (MPa)</string>
+    <string name="beam_fcu_mpa">f\'cu (MPa)</string>
+    <string name="beam_fy_mpa">fy (MPa)</string>
+    <string name="beam_dead_load_kn_m">Dead Load (kN/m)</string>
+    <string name="beam_live_load_kn_m">Live Load (kN/m)</string>
+    <string name="rw_fcu_mpa">f\'cu (MPa)</string>
+    <string name="rw_fy_mpa">fy (MPa)</string>
+    <string name="beam_drawing_subtitle">Beam Reinforcement Detail</string>
+    <string name="stair_drawing_subtitle">Staircase Reinforcement Detail</string>
+    <string name="tank_drawing_subtitle">Water Tank Detail</string>
+    <string name="stair_span_range">1-15 m</string>
+    <string name="stair_riser_range">100-200 mm</string>
+    <string name="stair_tread_range">200-400 mm</string>
+    <string name="rw_err_all_positive">Invalid: all fields must be positive</string>
+    <string name="rw_err_friction_angle">Invalid: friction angle 0-90</string>
+    <string name="rw_err_surcharge">Invalid: surcharge must be ≥ 0</string>
+    <string name="rw_err_fcu">Invalid: fcu must be positive</string>
+    <string name="rw_err_fy">Invalid: fy must be positive</string>
+    <string name="slab_err_invalid_values">Please enter valid values for all fields</string>
+    <string name="slab_err_range_check">Check value ranges: fcu 15-60, fy 200-700, thickness 50-500</string>
+    <string name="tank_err_invalid_number">Invalid number</string>
+    <string name="tank_err_gt_zero">Must be > 0</string>
+    <string name="tank_err_max_10000">Max 10000 m³</string>
+    <string name="tank_err_min_height">Min 1.0 m</string>
+    <string name="tank_err_max_height">Max 10.0 m</string>
+    <string name="tank_err_min_fcu">Min 20 MPa</string>
+    <string name="tank_err_max_fcu">Max 60 MPa</string>
+    <string name="tank_err_min_fy">Min 240 MPa</string>
+    <string name="tank_err_max_fy">Max 500 MPa</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Archive Screen -->

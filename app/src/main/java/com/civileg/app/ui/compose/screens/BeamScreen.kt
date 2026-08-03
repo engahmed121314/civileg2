@@ -66,7 +66,6 @@ fun BeamScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
     var barDiameter by remember { mutableStateOf("16") }
-    var numBars by remember { mutableStateOf("4") }
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
@@ -135,8 +134,8 @@ fun BeamScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(deadLoad, "Dead Load (kN/m)", { deadLoad = it }, Modifier.weight(1f))
-                    BeamInputField(liveLoad, "Live Load (kN/m)", { liveLoad = it }, Modifier.weight(1f))
+                    BeamInputField(deadLoad, stringResource(R.string.beam_dead_load_kn_m), { deadLoad = it }, Modifier.weight(1f))
+                    BeamInputField(liveLoad, stringResource(R.string.beam_live_load_kn_m), { liveLoad = it }, Modifier.weight(1f))
                 }
             }
 
@@ -150,17 +149,14 @@ fun BeamScreen(
             item {
                 Text(stringResource(R.string.beam_material_props), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
-                    BeamInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
+                    BeamInputField(fcu, stringResource(R.string.beam_fcu_mpa), { fcu = it }, Modifier.weight(1f))
+                    BeamInputField(fy, stringResource(R.string.beam_fy_mpa), { fy = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Text(stringResource(R.string.beam_rebar_selection), fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(numBars, stringResource(R.string.column_num_bars_label), { numBars = it }, Modifier.weight(1f))
-                    BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.weight(1f))
-                }
+                BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -310,7 +306,7 @@ fun BeamScreen(
                 item {
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
-                        subtitle = "Beam Reinforcement Detail",
+                        subtitle = stringResource(R.string.beam_drawing_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingHeightDp = 780,
                         drawingContent = {

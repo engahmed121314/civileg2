@@ -49,12 +49,24 @@ class CalculatorEngine @Inject constructor(
             get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
     
-    enum class SupportType(val displayName: String) {
-        HINGED_HINGED("Hinged-Hinged"), ROLLER_HINGED("Roller-Hinged"), FIXED_HINGED("Fixed-Hinged"), FIXED_FIXED("Fixed-Fixed"), CANTILEVER("Cantilever")
+    enum class SupportType(val displayNameAr: String, val displayNameEn: String) {
+        HINGED_HINGED("مفصلي - مفصلي", "Hinged-Hinged"),
+        ROLLER_HINGED("متدحرج - مفصلي", "Roller-Hinged"),
+        FIXED_HINGED("تثبيت - مفصلي", "Fixed-Hinged"),
+        FIXED_FIXED("تثبيت - تثبيت", "Fixed-Fixed"),
+        CANTILEVER("كابولي", "Cantilever");
+
+        val displayName: String
+            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
-    
-    enum class StairType(val displayName: String) { 
-        SINGLE_FLIGHT("Single Flight"), DOUBLE_FLIGHT("Double Flight"), SPIRAL("Spiral") 
+
+    enum class StairType(val displayNameAr: String, val displayNameEn: String) {
+        SINGLE_FLIGHT("رمح واحد", "Single Flight"),
+        DOUBLE_FLIGHT("رمح مزدوج (هبوط نصف دور)", "Double Flight"),
+        SPIRAL("لولبي", "Spiral");
+
+        val displayName: String
+            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
     
     enum class TankType(val displayNameAr: String, val displayNameEn: String) { 
@@ -153,7 +165,8 @@ class CalculatorEngine @Inject constructor(
         RAFT("لبشة خرسانية", "Raft"),
         PILE_CAP("هامة خوازيق", "Pile Cap");
 
-        val displayName: String get() = displayNameEn
+        val displayName: String
+            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
 
     @Parcelize

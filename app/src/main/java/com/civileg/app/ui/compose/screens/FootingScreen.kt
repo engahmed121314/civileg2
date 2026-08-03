@@ -129,7 +129,7 @@ fun FootingScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(colLength, stringResource(R.string.footing_column_length_mm), { colLength = it }, Modifier.weight(1f))
-                    FootingInputField(colWidth, stringResource(R.string.slab_column_width_mm), { colWidth = it }, Modifier.weight(1f))
+                    FootingInputField(colWidth, stringResource(R.string.footing_column_width_mm), { colWidth = it }, Modifier.weight(1f))
                 }
             }
 
