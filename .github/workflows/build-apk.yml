@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -28,12 +28,29 @@ jobs:
           restore-keys: |
             gradle-linux-
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Generate temporary keystore for signing
+        run: |
+          keytool -genkeypair -v \
+            -keystore /tmp/release.keystore \
+            -alias civileg2 \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass civileg2024 \
+            -keypass civileg2024 \
+            -dname "CN=CivilEG, OU=Dev, O=CivilEG, L=Cairo, ST=Cairo, C=EG"
 
-      - name: Upload debug APK
+      - name: Build release APK
+        env:
+          KEY_ALIAS: civileg2
+          KEY_PASSWORD: civileg2024
+          KEYSTORE_FILE: /tmp/release.keystore
+          STORE_PASSWORD: civileg2024
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: civileg2-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: civileg2-release-apk
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 7
