@@ -261,7 +261,7 @@ class ECPBeam : BeamDesign {
         if (coating == CoatingType.EPOXY_COATED) Ld *= 1.2
         
         // حد أدنى حسب ECP 203: max(10φ, 100 مم)
-        Ld = max(Ld, 10.0 * barDiameter, 100.0)
+        Ld = maxOf(Ld, 10.0 * barDiameter, 100.0)
         
         // تقريب لأعلى لأقرب 50 مم
         return ceil(Ld / 50) * 50
