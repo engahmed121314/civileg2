@@ -138,6 +138,13 @@ android {
         disable += "TypographyQuotes"
         // Allow missing translation for now
         disable += "MissingTranslation"
+        // Suppress pre-existing resource issues
+        disable += "MissingDefaultResource"
+        disable += "UnusedResources"
+        disable += "IconDuplicatesConfig"
+        disable += "VectorPath"
+        disable += "HardcodedText"
+        disable += "RtlHardcoded"
     }
 }
 

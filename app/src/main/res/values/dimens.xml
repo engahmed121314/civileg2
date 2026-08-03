@@ -16,6 +16,7 @@
 
     <dimen name="card_radius">12dp</dimen>
     <dimen name="card_elevation">4dp</dimen>
+    <dimen name="card_margin">12dp</dimen>
     <dimen name="button_radius">12dp</dimen>
     <dimen name="input_radius">8dp</dimen>
 </resources>
