@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -451,7 +452,7 @@ fun ProfessionalSlabDrawing(
             }
             // Section markers (A-A)
             if (viewMode == 0) {
-                dt("A", slabLeft - 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
+                dt("A", max(8f, slabLeft - 26f), slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
                 dt("A", slabRight + 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
             }
         }
@@ -460,7 +461,7 @@ fun ProfessionalSlabDrawing(
         //  REINFORCEMENT TABLE (data-driven, 8 columns)
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 3) {
-            val tblTop = if (viewMode == 0) h * 0.76f else 44f
+            val tblTop = if (viewMode == 0) h * 0.78f else 44f
             val tblLeft = margin
             val tblRight = w - margin
             val tblWidth = tblRight - tblLeft

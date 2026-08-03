@@ -142,7 +142,7 @@ fun ProfessionalRetainingWallDrawing(
 
         // 6. Stability checks visual
         drawStabilityChecks(
-            baseLeft, baseBottom, drawBaseW, drawBaseT, drawH,
+            ch, baseLeft, baseBottom, drawBaseW, drawBaseT, drawH,
             stemTop, wallHeight,
             fsOverturning, fsSliding, maxBearingPressure, allowableBearingPressure
         )
@@ -392,7 +392,8 @@ private fun DrawScope.drawEarthPressureDiagram(
     drawTopT: Float, drawBotT: Float, backfillAngle: Double
 ) {
     val stemBackX = stemLeft + drawBotT
-    val diagramW = 50f
+    val diagramW = 40f
+    val diagramX = min(stemBackX + 5f, size.width - 120f)
 
     // Ka coefficient (Rankine) using actual backfill friction angle
     // Ka = (1 - sin φ) / (1 + sin φ) = tan²(45° - φ/2)
@@ -400,9 +401,9 @@ private fun DrawScope.drawEarthPressureDiagram(
 
     // Triangular active earth pressure
     val pressurePath = Path().apply {
-        moveTo(stemBackX + 5f, stemTop)
-        lineTo(stemBackX + 5f + diagramW, stemTop + drawH)
-        lineTo(stemBackX + 5f, stemTop + drawH)
+        moveTo(diagramX, stemTop)
+        lineTo(diagramX + diagramW, stemTop + drawH)
+        lineTo(diagramX, stemTop + drawH)
         close()
     }
     drawPath(path = pressurePath, color = PressureOrange.copy(alpha = 0.25f))
@@ -413,21 +414,21 @@ private fun DrawScope.drawEarthPressureDiagram(
     val arrowLen = diagramW * 0.6f
     drawLine(
         color = PressureOrange,
-        start = Offset(stemBackX + 8f + arrowLen, resultY),
-        end = Offset(stemBackX + 8f, resultY),
+        start = Offset(diagramX + 3f + arrowLen, resultY),
+        end = Offset(diagramX + 3f, resultY),
         strokeWidth = 2.5f,
         cap = StrokeCap.Round
     )
-    drawArrowHead(stemBackX + 8f, resultY, -1f, PressureOrange, vertical = false)
+    drawArrowHead(diagramX + 3f, resultY, -1f, PressureOrange, vertical = false)
 
     // Labels
-    drawTextAnnotated("Pa", stemBackX + 10f + arrowLen, resultY - 6f, PressureOrange, 16f)
-    drawTextAnnotated("Active", stemBackX + diagramW + 14f, stemTop + drawH / 2f, PressureOrange, 14f)
-    drawTextAnnotated("Ka = ${"%.2f".format(ka)}", stemBackX + 10f, stemTop + drawH + 40f,
+    drawTextAnnotated("Pa", diagramX + 5f + arrowLen, resultY - 6f, PressureOrange, 16f)
+    drawTextAnnotated("Active", diagramX + diagramW + 9f, stemTop + drawH / 2f, PressureOrange, 14f)
+    drawTextAnnotated("Ka = ${"%.2f".format(ka)}", diagramX + 5f, stemTop + drawH + 40f,
         PressureOrange, 13f)
 
     // Zero at top
-    drawTextAnnotated("0", stemBackX + 12f, stemTop - 4f, PressureOrange.copy(alpha = 0.6f), 12f)
+    drawTextAnnotated("0", diagramX + 7f, stemTop - 4f, PressureOrange.copy(alpha = 0.6f), 12f)
 }
 
 // ============================================================================
@@ -501,13 +502,13 @@ private fun DrawScope.drawDimensions(
 // ============================================================================
 
 private fun DrawScope.drawStabilityChecks(
-    baseLeft: Float, baseBottom: Float, drawBaseW: Float, drawBaseT: Float,
+    ch: Float, baseLeft: Float, baseBottom: Float, drawBaseW: Float, drawBaseT: Float,
     drawH: Float, stemTop: Float, wallHeight: Double,
     fsOverturning: Double, fsSliding: Double,
     maxBearingPressure: Double, allowableBearingPressure: Double
 ) {
     val checkX = 20f
-    val checkY = baseBottom + 50f
+    val checkY = ch * 0.50f
     val lineH = 22f
     val dimWhite = DrawingColors.DimensionWhite
 
@@ -535,7 +536,7 @@ private fun DrawScope.drawStabilityChecks(
     // Bearing pressure diagram under base (trapezoidal)
     val bpLeft = baseLeft + drawBaseW * 0.05f
     val bpRight = baseLeft + drawBaseW * 0.95f
-    val bpBaseY = baseBottom + 145f
+    val bpBaseY = ch * 0.62f
     val bpMaxH = 20f
     val bpMinH = 6f
 
@@ -567,9 +568,9 @@ private fun DrawScope.drawReinforcementTable(
     wallHeight: Double
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.78f
+    val tableTop = ch * 0.80f
     val tableW = cw - 32f
-    val rowH = 24f
+    val rowH = 22f
     val headerH = 28f
     val colWidths = floatArrayOf(
         tableW * 0.20f,  // Direction

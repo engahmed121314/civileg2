@@ -770,7 +770,7 @@ class CalculatorEngine @Inject constructor(
 
         // --- Shear Design ---
         val vc = when(code) {
-            DesignCode.EGYPTIAN -> 0.24 * sqrt(fcu / 1.5)
+            DesignCode.EGYPTIAN -> 0.24 * sqrt(fcu)
             else -> 0.17 * sqrt(fcu * 0.8) * 0.75 // ACI Phi*0.17*sqrt(fc')
             }
         val v_stress = (vu * 1000.0) / (width * d)
@@ -807,7 +807,7 @@ class CalculatorEngine @Inject constructor(
         val totalSteelWeight = (bottomSteel + topSteel + stirrupSteel) * 1.10 // 10% for laps/anchorage
         
         safetyChecks.add(DesignSafetyCheck("Flexural Strength", momentCapacity, mu, "kN.m", momentCapacity >= mu))
-        safetyChecks.add(DesignSafetyCheck("Shear Stress", v_stress, vc * 2.5, "MPa", v_stress <= vc * 2.5)) // Max limit check
+        safetyChecks.add(DesignSafetyCheck("Shear Stress", v_stress, 0.7 * sqrt(fcu), "MPa", v_stress <= 0.7 * sqrt(fcu))) // Max limit check
 
         val e_concrete = when(code) {
             DesignCode.EGYPTIAN -> 4400 * sqrt(fcu)
@@ -825,7 +825,7 @@ class CalculatorEngine @Inject constructor(
             reinforcementBottom = ReinforcementBar(numBars, preferredDiameter), 
             reinforcementTop = ReinforcementBar(max(2, numBars/3), topDia), 
             stirrups = StirrupReinforcement(stirrupDia, stirrupSpacing), 
-            safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= vc * 2.5, 
+            safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= 0.7 * sqrt(fcu), 
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
             code = code, appliedMoment = mu, appliedShear = vu, 

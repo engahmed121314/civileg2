@@ -86,7 +86,7 @@ fun ProfessionalColumnDrawing(
         val W = size.width
         val H = size.height
         val divX = W * 0.40f
-        val midY = H * 0.52f
+        val midY = H * 0.50f
 
         // 1. 3D Column Elevation (left)
         draw3DElevation(16f, 16f, divX - 32f, midY - 20f,
@@ -98,7 +98,7 @@ fun ProfessionalColumnDrawing(
             columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
 
         // 3. Tie/Spiral Detail Inset (below elevation)
-        drawTieDetailInset(16f, midY + 10f, divX - 32f, H - midY - 130f,
+        drawTieDetailInset(16f, midY + 14f, divX - 32f, H - midY - 140f,
             columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
             isSpiral, spiralPitch, sectionType)
 
@@ -108,12 +108,12 @@ fun ProfessionalColumnDrawing(
 
         // 5. Interaction Diagram (bottom-right)
         if (interactionPoints.isNotEmpty()) {
-            drawInteractionDiagram(divX + 20f, midY + 10f,
-                W - divX - 36f, H - midY - 130f, interactionPoints, designPoint)
+            drawInteractionDiagram(divX + 20f, midY + 14f,
+                W - divX - 36f, H - midY - 140f, interactionPoints, designPoint)
         }
 
         // 6. Reinforcement Table (bottom)
-        drawReinforcementTable(16f, H - 110f, W - 32f, 90f,
+        drawReinforcementTable(16f, H - 100f, W - 32f, 90f,
             longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
     }
 }
@@ -246,7 +246,7 @@ private fun DrawScope.draw3DElevation(
         restore()
     }
 
-    drawLabel("ELEVATION", left + width / 2f, top + height - 8f, 26f, true)
+    drawLabel("ELEVATION", left + width / 2f, top + height - 14f, 26f, true)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

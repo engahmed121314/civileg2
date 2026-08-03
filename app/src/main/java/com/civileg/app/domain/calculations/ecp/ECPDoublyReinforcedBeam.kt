@@ -71,8 +71,10 @@ class ECPDoublyReinforcedBeam {
      * with the tension steel reaching its yield strain.
      */
     fun calculateKBal(fcu: Double, fy: Double): Double {
-        val fyGammaS = fy / GAMMA_S
-        val kBal = 0.36 * (fcu / fyGammaS) * (GAMMA_C / (1 + fy / (GAMMA_S * 440)))
+        val epsilonCu = 0.003
+        val epsilonY = fy / (200000.0 * GAMMA_S)
+        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
+        val kBal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
         return kBal
     }
 
@@ -87,7 +89,7 @@ class ECPDoublyReinforcedBeam {
     fun calculateKBalStrainCompatibility(fcu: Double, fy: Double): Double {
         val epsilonY = fy / (E_S * GAMMA_S)
         val cOverD = EPSILON_CU / (EPSILON_CU + epsilonY)
-        val beta = 0.8  // Whitney stress block factor per ECP 203
+        val beta = 0.9  // Whitney stress block factor per ECP 203
         val aOverD = beta * cOverD
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
@@ -156,7 +158,7 @@ class ECPDoublyReinforcedBeam {
 
         // ==================== Min/Max Steel ====================
         // ECP 203 Clause 4-2-1-2: As_min = max(0.26*fcu/fy, 0.0013) * b * d
-        val asMinValue = max(0.26 * (fcu / fy), 0.0013) * b * d
+        val asMinValue = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
         // ECP 203: As_max = 0.04 * b * h
         val asMaxValue = 0.04 * b * h
 

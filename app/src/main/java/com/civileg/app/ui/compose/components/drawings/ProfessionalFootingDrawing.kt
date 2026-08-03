@@ -84,7 +84,7 @@ fun ProfessionalFootingDrawing(
         val secBottom = h * 0.60f
         val pressureTop = h * 0.62f
         val pressureBottom = h * 0.70f
-        val tblTop = if (hasPressure) h * 0.72f else h * 0.64f
+        val tblTop = if (hasPressure) h * 0.74f else h * 0.66f
         val planLeft = margin + 50f
         val planRight = w - margin
         val planW = planRight - planLeft
@@ -315,7 +315,8 @@ fun ProfessionalFootingDrawing(
         val sCenterX = sLeft + secSpanPx / 2f
 
         // Soil below footing (hatched area) using DrawingUtils
-        val soilDepth = 30f
+        val soilBottom = min(sBottom + 20f, h * 0.60f)
+        val soilDepth = (soilBottom - sBottom).coerceAtLeast(0f)
         drawRect(
             color = soilColor.copy(alpha = 0.4f),
             topLeft = Offset(sLeft - 20f, sBottom),

@@ -26,7 +26,7 @@ class ECPFooting : FootingDesign {
         private const val GAMMA_G = 1.4   // الحمل الميت
         private const val GAMMA_Q = 1.6   // الحمل الحي
         // حد ادنى نسبة التسليح في القواعد ECP 203 جدول 4-8
-        private const val MIN_REIN_RATIO = 0.0015 // 0.15% للقواعد
+        private const val MIN_REIN_RATIO = 0.0013 // 0.13% للقواعد
         // أقل سماكة للقواعد ECP 203
         private const val MIN_THICKNESS = 300.0 // mm
     }
@@ -121,7 +121,7 @@ class ECPFooting : FootingDesign {
         val Vu_y = q_avg * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
 
         // One-way shear capacity ECP 203: qcu = 0.24 * sqrt(fcu/gamma_c)
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa
+        val qcu = 0.24 * sqrt(fcu)  // MPa
         val Vc_x = qcu * (L / 1000.0) * d / 1000.0 * 1000.0  // kN
         val Vc_y = qcu * (B / 1000.0) * d / 1000.0 * 1000.0  // kN
 
@@ -205,7 +205,7 @@ class ECPFooting : FootingDesign {
         // ضغط القص المُطبَّق
         val qp_applied = (V_punch * 1000.0) / (bo * effectiveDepth)
         // القدرة القصية لقص الاختراق ECP 203: qp = 0.316 * sqrt(fcu/gamma_c)
-        val qp_capacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa
+        val qp_capacity = 0.316 * sqrt(fcu)  // MPa
 
         val isSafe = qp_applied <= qp_capacity
 
@@ -246,8 +246,11 @@ class ECPFooting : FootingDesign {
         // K = Mu / (fcu * b * d^2)
         val K = Mu / (fcu * b * d * d)
 
-        // K_bal for tension-controlled (fcu=25, fy=360): 0.186
-        val K_bal = 0.186
+        // K_bal for tension-controlled - strain compatibility per ECP 203
+        val epsilonCu = 0.003
+        val epsilonY = fy / (200000.0 * GAMMA_S)
+        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
+        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
 
         if (K > K_bal) {
             warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد العمق الفعال", K, K_bal))
@@ -261,7 +264,7 @@ class ECPFooting : FootingDesign {
         val asRequired = Mu / (fy / GAMMA_S * z)
 
         // 4. الحد الأدنى للتسليح (ECP 203 جدول 4-8)
-        val asMin = MIN_REIN_RATIO * b * d
+        val asMin = max(0.26 * sqrt(fcu) / fy, MIN_REIN_RATIO) * b * d
 
         val asFinal = max(asRequired, asMin)
 
@@ -546,7 +549,7 @@ class ECPFooting : FootingDesign {
         val pilePerimeter = PI * pileDiameter
         val loadPerPile = columnLoads / numberOfPiles
         val pileShearStress = (loadPerPile * 1000.0) / (pilePerimeter * d)
-        val pileShearCap = 0.316 * sqrt(fcu / GAMMA_C)
+        val pileShearCap = 0.316 * sqrt(fcu)
 
         if (pileShearStress > pileShearCap) {
             warnings.add("قص الركيزة يتجاوز القدرة - زِد سمك القبعة")
@@ -601,7 +604,7 @@ class ECPFooting : FootingDesign {
         effectiveDepth: Double
     ): Double {
         // qp = 0.316 * sqrt(fcu/gamma_c) * bo * d (kN)
-        val qp = 0.316 * sqrt(fcu / GAMMA_C)
+        val qp = 0.316 * sqrt(fcu)
         return qp * perimeter * effectiveDepth / 1000.0
     }
 

@@ -40,8 +40,8 @@ object PdfDrawingGenerator {
     private val SUPPORT = Color.parseColor("#CCCCCC")
     private val TABLE_HEADER = Color.parseColor("#33FFFFFF")
     private val TABLE_ALT = Color.parseColor("#1AFFFFFF")
-    private val SOIL_BROWN = Color.parseColor("#8B6914")
-    private val WATER_BLUE = Color.parseColor("#1A5276")
+    private val SOIL_BROWN = Color.parseColor("#8B4513")
+    private val WATER_BLUE = Color.argb(128, 74, 144, 217)
 
     /** Arabic typeface (cached, lazy-loaded) for bilingual drawing text */
     @Volatile private var arabicTypeface: Typeface? = null
@@ -1283,7 +1283,7 @@ object PdfDrawingGenerator {
         val secW2 = fW * 0.7f; val secH2 = footingThickness.toFloat() * scale * 1.5f
 
         // Soil
-        canvas.drawRect(secL - 20f, secT + secH2, secL + secW2 + 20f, secT + secH2 + 30f, fillPaint(Color.parseColor("#8B6914")))
+        canvas.drawRect(secL - 20f, secT + secH2, secL + secW2 + 20f, secT + secH2 + 30f, fillPaint(Color.parseColor("#8B4513")))
         // Concrete
         canvas.drawRect(secL, secT, secL + secW2, secT + secH2, fillPaint(CONCRETE))
         canvas.drawRect(secL, secT, secL + secW2, secT + secH2, outlineP)
@@ -1665,7 +1665,7 @@ object PdfDrawingGenerator {
         canvas.drawHatch(wallBottomRight, maxOf(wallTopY, groundY - whPx - 30f), groundRight - wallBottomRight, groundY - maxOf(wallTopY, groundY - whPx - 30f), 12f)
 
         // Soil pressure triangle (active earth pressure)
-        val pressureP = fillPaint(Color.argb(80, 231, 76, 60))
+        val pressureP = fillPaint(Color.parseColor("#FF5722"))
         canvas.drawPath(Path().apply {
             moveTo(wallBottomRight, groundY)
             lineTo(wallBottomRight, wallTopY)

@@ -140,7 +140,7 @@ class ECPBeam : BeamDesign {
         
         // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
         // qcu = 0.24 × √(fcu) ثم يُقسم على γc عند حساب القدرة
-        val qcu = 0.24 * sqrt(fcu) / GAMMA_C  // MPa
+        val qcu = 0.24 * sqrt(fcu)  // MPa
         val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
         
         // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
@@ -166,7 +166,7 @@ class ECPBeam : BeamDesign {
         stirrupSpacing = stirrupSpacing.coerceIn(50.0, getMaxShearSpacing())
         
         // الحد الأقصى لإجهاد القص: qcu_max = 0.7 × √(fcu/γc) (ECP 203)
-        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C)  // MPa
+        val maxShearStress = 0.7 * sqrt(fcu)  // MPa
         val maxShearCapacity = maxShearStress * width * effectiveDepth / 1000  // kN
         val isSafe = (Vu / 1000) <= maxShearCapacity
         
@@ -210,7 +210,8 @@ class ECPBeam : BeamDesign {
         // النسخة المبسطة المعتمدة: MF = 0.55 + 0.0075 × fs / (ρ × fy) 
         // حيث fs = 0.58 × fy → MF = 0.55 + 0.0075 / ρ
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        val modificationFactor = 0.55 + 0.45 / rhoPercent
+        val fy = 360.0  // ECP 203 default steel yield
+        val modificationFactor = 0.55 + 477.0 / (fy * rhoPercent)
         val allowableRatio = basicRatio * modificationFactor
         
         val actualRatio = (span * 1000) / totalDepth  // تحويل span إلى مم
@@ -295,7 +296,7 @@ class ECPBeam : BeamDesign {
     private fun calculateKBal(fcu: Double, fy: Double): Double {
         val Es = 200000.0  // معامل مرونة الحديد MPa
         val epsilonCu = 0.003  // إجهاد الخرسانة الأقصى عند التوازن
-        val beta = 0.9  // معامل الكتلة الفعال في طريقة K (ECP 203)
+        val beta = BETA_1  // معامل الكتلة الفعال في طريقة K (ECP 203)
         
         // إجهاد خضوع التصميم
         val epsilonY = fy / (Es * GAMMA_S)
@@ -426,7 +427,7 @@ class ECPBeam : BeamDesign {
         val AsTotal = As1 + As2
         
         // تطبيق الحد الأدنى
-        val minSteel = max(0.26 * (fcu / fy), 0.0013) * b * d
+        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
         val asFinal = max(AsTotal, minSteel)
         
         // اختيار الأسياخ

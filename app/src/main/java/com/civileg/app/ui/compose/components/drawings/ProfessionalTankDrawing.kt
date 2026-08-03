@@ -162,7 +162,7 @@ fun ProfessionalTankDrawing(
         drawWallDetailInset(cw, ch, wallThickness, verticalRebarDia, horizontalRebarDia, cover, scale)
 
         // Water pressure diagram
-        drawWaterPressureDiagram(tankLeft, tankTop, drawL, drawH, drawWL, waterLevel, isElevated)
+        drawWaterPressureDiagram(cw, tankLeft, tankTop, drawL, drawH, drawWL, waterLevel, isElevated)
 
         // Reinforcement table
         drawReinforcementTable(cw, ch, tankType, verticalRebarDia, verticalRebarSpacing,
@@ -431,7 +431,7 @@ private fun DrawScope.drawTankDimensions(
 private fun DrawScope.drawPlanView(
     cw: Float, tankType: String, length: Double, width: Double, isCircular: Boolean
 ) {
-    val insetSize = min(120f, cw * 0.18f)
+    val insetSize = min(100f, cw * 0.18f)
     val insetLeft = cw - insetSize - 20f
     val insetTop = 12f
 
@@ -494,13 +494,14 @@ private fun DrawScope.drawWallDetailInset(
     wallThickness: Double, vDia: Double, hDia: Double,
     cover: Float, scale: Float
 ) {
-    // Position wall detail in right portion of main zone (below plan view)
-    // Plan view ends at approximately y=170f; start wall detail below that
+    // Position wall detail below plan view, dynamically calculated
+    val planViewBottom = 12f + 20f + min(100f, cw * 0.18f) + 16f
+    val tableTop = ch * 0.64f
     val insetW = min(150f, cw * 0.20f)
-    val maxInsetH = ch * 0.58f - 180f  // must fit within main zone
-    val insetH = min(200f, maxInsetH).coerceAtLeast(120f)
+    val maxInsetH = (tableTop - planViewBottom - 20f).coerceAtLeast(80f)
+    val insetH = min(200f, maxInsetH).coerceAtLeast(100f)
     val insetLeft = cw - insetW - 16f
-    val insetTop = 170f
+    val insetTop = (planViewBottom + 10f).coerceAtMost(tableTop - insetH - 10f)
 
     // Background
     drawRoundRect(
@@ -573,12 +574,12 @@ private fun DrawScope.drawWallDetailInset(
 // ============================================================================
 
 private fun DrawScope.drawWaterPressureDiagram(
-    tankLeft: Float, tankTop: Float, l: Float, h: Float,
+    cw: Float, tankLeft: Float, tankTop: Float, l: Float, h: Float,
     wl: Float, waterLevel: Double, isElevated: Boolean
 ) {
     if (wl <= 0) return
 
-    val diagramX = tankLeft + l + 50f
+    val diagramX = min(tankLeft + l + 30f, cw - 180f)
     val diagramW = 60f
     val waterTop = tankTop + h - wl
     val gammaW = 9.81 // kN/m³
@@ -631,10 +632,10 @@ private fun DrawScope.drawReinforcementTable(
     height: Double, length: Double
 ) {
     val tableLeft = 16f
-    // Table starts below main zone (ch*0.58f) with generous gap
-    val tableTop = ch * 0.62f
+    // Table starts below main zone with generous gap (moved from 0.62f to 0.64f)
+    val tableTop = ch * 0.64f
     val tableW = cw - 32f
-    val rowH = 24f
+    val rowH = if (ch < 400f) 22f else 24f
     val headerH = 28f
     val colWidths = floatArrayOf(
         tableW * 0.22f,  // Direction

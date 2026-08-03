@@ -180,7 +180,10 @@ class ECPTank : TankDesign {
         // K-method حسب ECP 203 البند 4-2-2-1
         // K = Mu / (fcu * b * d^2)
         val K = Mu_Nmm / (fcu * b * d * d)
-        val K_bal = 0.186
+        val epsilonCu = 0.003
+        val epsilonY = fy / (200000.0 * GAMMA_S)
+        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
+        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
 
         if (K > K_bal) {
             warnings.add("المقطع مفرط التسليح - يُنصح بزيادة سمك الجدار")
@@ -217,7 +220,7 @@ class ECPTank : TankDesign {
         val hSpacing = (1000.0 / hBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
 
         // فحص القص
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)
+        val qcu = 0.24 * sqrt(fcu)
         val concreteShearCapacity = qcu * b * d / 1000.0
         val shearCheck = maxShear <= concreteShearCapacity
         safetyChecks.add(TankSafetyCheck(
@@ -288,7 +291,7 @@ class ECPTank : TankDesign {
         var asHoopRequired = maxHoopTension * 1000.0 / fs // mm²/m
 
         // تصميم التسليح العمودي (للانحناء) - K-method حسب ECP 203
-        val Mu_Nmm = maxMoment * 1.15 * 1e6
+        val Mu_Nmm = maxMoment * 1.6 * 1e6
         // K-method حسب ECP 203
         val K = Mu_Nmm / (fcu * b * d * d)
         val leverArm = if (0.25 - K / 1.25 > 0) {
@@ -318,7 +321,7 @@ class ECPTank : TankDesign {
 
         // فحص الشق
         val hoopStress = maxHoopTension / (wallThickness / 1000.0)
-        val fct = 0.6 * sqrt(fcu / 1.5)  // ECP 203: fct = 0.6 * sqrt(fcu / gamma_c)
+        val fct = 0.6 * sqrt(fcu)  // ECP 203: fct = 0.6 * sqrt(fcu)
         val isCrackSafe = hoopStress <= fct
 
         codeNotes.add("ECP 203-2020: Section 8-1 (Circular Tank - Hoop Tension)")
@@ -379,7 +382,7 @@ class ECPTank : TankDesign {
 
         // تصميم الانحناء بطريقة K حسب ECP 203 البند 4-2-2-1
         val fs = fy / GAMMA_S
-        val Mu_Nmm = maxMomentBase * 1.15 * 1e6
+        val Mu_Nmm = maxMomentBase * 1.6 * 1e6
 
         // K-method حسب ECP 203 البند 4-2-2-1
         val K = Mu_Nmm / (fcu * b * d * d)
@@ -409,7 +412,7 @@ class ECPTank : TankDesign {
         } else {
             2 * (wallThickness / 1000.0 + d / 1000.0 + wallThickness / 1000.0 + d / 1000.0)
         }
-        val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * punchingPerimeter * d / 1000.0 // kN
+        val punchingShearCapacity = 0.316 * sqrt(fcu) * punchingPerimeter * d / 1000.0 // kN
         val punchingLoad = totalPressure * L * B // kN
         val punchingCheck = punchingLoad * 0.5 <= punchingShearCapacity // تقريبي
 

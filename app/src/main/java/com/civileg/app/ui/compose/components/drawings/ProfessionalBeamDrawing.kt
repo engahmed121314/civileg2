@@ -128,16 +128,16 @@ fun ProfessionalBeamDrawing(
         val angleY = 0.20f          // vertical skew factor
 
         // ── Layout zones (vertical) ────────────────────────────────────
-        // Elevation: 0–46%  |  Section inset: 48–66%  |  Table: 69–100%
-        val sectionZoneTop = ch * 0.48f
-        val sectionZoneBottom = ch * 0.66f
+        // Elevation: 0–40%  |  Section inset: 46–62%  |  Table: 66–100%
+        val sectionZoneTop = ch * 0.46f
+        val sectionZoneBottom = ch * 0.62f
 
         // Main beam drawing area — symmetric margins for proper centering
         val sideMargin = 60f
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
         val mainTop = 50f
-        val mainBottom = ch * 0.44f
+        val mainBottom = ch * 0.40f
 
         // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
         val availableW = mainRight - mainLeft
@@ -360,9 +360,9 @@ private fun DrawScope.drawSupports(
     beamBottom: Float, beamRight: Float,
     isContinuous: Boolean
 ) {
-    val supportH = 30f
-    val supportW = 28f
-    val circleR = 4f
+    val supportH = 22f
+    val supportW = 22f
+    val circleR = 3f
     val lineW = 2.dp.toPx()
 
     val supportPaint = SupportColor
@@ -400,7 +400,7 @@ private fun DrawScope.drawSupports(
             drawLine(
                 color = supportPaint,
                 start = Offset(hx, groundY + circleR * 2 + 4f),
-                end = Offset(hx - 6f, groundY + circleR * 2 + 12f),
+                end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
                 strokeWidth = 1.5f
             )
         }
@@ -459,7 +459,7 @@ private fun DrawScope.drawSupports(
         drawLine(
             color = supportPaint,
             start = Offset(hx, groundY + circleR * 2 + 4f),
-            end = Offset(hx - 6f, groundY + circleR * 2 + 12f),
+            end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
             strokeWidth = 1.5f
         )
     }
@@ -806,7 +806,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
 
     // Lap dimension bracket (below beam)
-    val lapBracketY = beamBottom + 50f
+    val lapBracketY = beamBottom + 40f
     drawLine(
         color = LapSpliceColor,
         start = Offset(lapZoneStart, lapBracketY),
@@ -863,7 +863,7 @@ private fun DrawScope.drawDimensionLines(
     val arrowSize = 8f
 
     // --- Overall SPAN dimension (bottom) ---
-    val spanY = beamBottom + 80f
+    val spanY = beamBottom + 60f
     drawLine(
         color = DimensionWhite,
         start = Offset(beamLeft, spanY),
@@ -1152,7 +1152,7 @@ private fun DrawScope.drawReinforcementSchedule(
     cover: Double
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.69f
+    val tableTop = ch * 0.66f
     val tableW = cw - 32f
     val rowH = 26f
     val headerH = 30f
