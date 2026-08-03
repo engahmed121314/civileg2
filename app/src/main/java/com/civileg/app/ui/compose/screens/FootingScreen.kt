@@ -79,11 +79,6 @@ fun FootingScreen(
                     }
                 },
                 actions = {
-                    if (result != null) {
-                        IconButton(onClick = { showSaveDialog = true }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
                 }
             )
         }

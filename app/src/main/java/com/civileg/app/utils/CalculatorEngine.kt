@@ -686,7 +686,8 @@ class CalculatorEngine @Inject constructor(
                 val areaOne = PI * dia.toDouble().pow(2) / 4.0
                 ReinforcementBar(ceil(asReqTotal/areaOne).toInt().coerceAtLeast(if(isCircular) 6 else 4), dia)
             },
-            utilizationRatio = utilizationRatio
+            utilizationRatio = utilizationRatio,
+            columnType = if (isCircular) "CIRCULAR" else "RECTANGULAR"
         )
         }
 

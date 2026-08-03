@@ -120,7 +120,7 @@ fun ProfessionalStairDrawing(
         // ── Derived values ────────────────────────────────────────────
         val nRisers = if (numberOfRisers > 0) numberOfRisers
             else (totalHeight / riserHeight).toInt().coerceAtLeast(1)
-        val nTreads = nRisers - 1
+        val nTreads = nRisers
         val slopeLength = sqrt(
             (totalLength * totalLength + totalHeight * totalHeight).toDouble()
         )
@@ -778,7 +778,7 @@ private fun DrawScope.drawCrossSectionView(
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             this.drawText(
-                "t=${slabThickness.toInt()}",
+                "t=${slabThickness.toInt()} mm",
                 tDimX + 16f,
                 secTop + secT / 2f + 4f,
                 paint
@@ -1233,7 +1233,7 @@ private fun DrawScope.drawTitleBlock(
         color = DimensionWhite, size = 16f
     )
     drawTextAnnotated(
-        text = "${nRisers}R × ${treadWidth.toInt()}T  |  H=${totalHeight.toInt()}  L=${totalLength.toInt()}",
+        text = "${nRisers}R × ${treadWidth.toInt()}T  |  H=${totalHeight.toInt()} mm  L=${totalLength.toInt()} mm",
         x = blockLeft + 8f, y = blockTop + 36f,
         color = ExtensionGray, size = 12f
     )
@@ -1378,7 +1378,7 @@ private fun DrawScope.drawElevationDimensions(
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             this.drawText(
-                "H=${totalHeight.toInt()}",
+                "H=${totalHeight.toInt()} mm",
                 heightX - 14f,
                 stairEndY + (originY - stairEndY) / 2f + 4f,
                 paint
@@ -1441,7 +1441,7 @@ private fun DrawScope.drawElevationDimensions(
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
                 this.drawText(
-                    "R=${riserHeight.toInt()}",
+                    "R=${riserHeight.toInt()} mm",
                     rX - 10f,
                     (rY1 + rY2) / 2f + 3f,
                     paint
@@ -1464,7 +1464,7 @@ private fun DrawScope.drawElevationDimensions(
         drawArrowHead(tX1, tY, direction = 1f, color = TopRebarBlue.copy(alpha = 0.8f))
         drawArrowHead(tX2, tY, direction = -1f, color = TopRebarBlue.copy(alpha = 0.8f))
         drawTextAnnotated(
-            text = "T=${treadWidth.toInt()}",
+            text = "T=${treadWidth.toInt()} mm",
             x = (tX1 + tX2) / 2f - 16f, y = tY + 13f,
             color = TopRebarBlue.copy(alpha = 0.8f), size = 11f
         )

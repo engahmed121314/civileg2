@@ -66,22 +66,6 @@ fun ColumnScreen(
                     }
                 },
                 actions = {
-                    if (uiState.result != null) {
-                        if (uiState.isExporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp).padding(end = 8.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            IconButton(onClick = { viewModel.exportToPdf(context) {} }) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF", tint = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                        IconButton(onClick = { showSaveDialog = true }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
                     IconButton(onClick = { viewModel.reset() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Reset")
                     }
