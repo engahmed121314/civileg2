@@ -50,7 +50,6 @@ fun ColumnScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -322,9 +321,9 @@ fun ColumnScreen(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !isExporting
+                            enabled = !uiState.isExporting
                         ) {
-                            if (isExporting) {
+                            if (uiState.isExporting) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
