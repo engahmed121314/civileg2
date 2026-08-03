@@ -7,11 +7,7 @@
 name: Android CI/CD
 
 on:
-  push:
-    branches: [ master, develop ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ master ]
+  workflow_dispatch:
 
 concurrency:
   group: android-ci-${{ github.ref }}
