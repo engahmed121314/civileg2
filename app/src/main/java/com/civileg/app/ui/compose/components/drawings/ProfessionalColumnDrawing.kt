@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.toArgb
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 // ─── Data classes ───────────────────────────────────────────────────────────
@@ -695,8 +696,8 @@ private fun DrawScope.drawReinforcementTable(
         if (y > top + height - 4f) return@forEachIndexed
         val mark = if (idx < circledNums.size) circledNums[idx] else (idx + 1).toString()
         val pos = if (barList.any { it.isCorner }) "Corner+Side" else "Side"
-        val tieInfo = if (isSpiral) "\u00D8${tieDia.toInt()} @ ${spiralPitch.toInt()}mm"
-            else "\u00D8${tieDia.toInt()} @ ${tieSpacing.toInt()}mm"
+        val tieInfo = if (isSpiral) "\u00D8${tieDia.toInt()} @ ${spiralPitch.roundToInt()} mm"
+            else "\u00D8${tieDia.toInt()} @ ${tieSpacing.roundToInt()} mm"
         val tieType = if (isSpiral) "Spiral" else "Ties"
         val rowTexts = listOf(mark, "${barList.size}", "\u00D8${dia.toInt()}", pos, tieInfo, tieType)
         xOff = left

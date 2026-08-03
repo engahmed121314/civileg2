@@ -416,7 +416,7 @@ fun SlabScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isExporting
                         ) {
@@ -437,7 +437,7 @@ fun SlabScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save_in_project))
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }

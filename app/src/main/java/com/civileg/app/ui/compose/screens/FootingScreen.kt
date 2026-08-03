@@ -349,12 +349,12 @@ fun FootingScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                             } else {
-                                Icon(Icons.Default.PictureAsPdf, null)
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
                             }
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (isExporting) stringResource(R.string.footing_exporting) else stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -406,7 +406,7 @@ fun FootingScreen(
                                 rebarXCount = res.barsX,
                                 rebarYDia = res.barDiameter.toDouble(),
                                 rebarYCount = res.barsY,
-                                cover = 75.0,
+                                cover = 70.0,
                                 col1X = col1XPos,
                                 col2X = col2XPos,
                                 soilPressureMax = res.soilPressure,

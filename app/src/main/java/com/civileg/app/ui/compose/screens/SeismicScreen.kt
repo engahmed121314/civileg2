@@ -603,9 +603,9 @@ fun SeismicScreen(
                     val labelEquation = stringResource(R.string.seismic_pdf_equation)
                     val labelCodeRef = stringResource(R.string.seismic_pdf_code_ref)
                     val labelTitle = stringResource(R.string.seismic_pdf_title, selectedCode.displayName)
-                    val labelExporting = stringResource(R.string.exporting_pdf)
+                    // Exporting state managed inline
                     val labelError = stringResource(R.string.beam_pdf_error)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
                                 if (isExporting) return@Button
@@ -675,13 +675,7 @@ fun SeismicScreen(
                             enabled = !isExporting
                         ) {
                             if (isExporting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(labelExporting)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -697,7 +691,7 @@ fun SeismicScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save_in_project))
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }

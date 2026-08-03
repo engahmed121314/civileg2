@@ -221,7 +221,7 @@ fun ProfessionalSlabDrawing(
                     strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 4f))
                 )
                 if (dropPanelSize > 0) {
-                    val dpPx = (dropPanelSize * scale).toFloat()
+                    val dpPx = (dropPanelSize / 1000.0 * scale).toFloat()
                     val dpL = (drawSpanX - dpPx) / 2f + slabLeft
                     val dpT = (drawSpanY - dpPx) / 2f + slabTop
                     drawRect(color = dropFill, topLeft = Offset(dpL, dpT), size = Size(dpPx, dpPx))
@@ -435,14 +435,14 @@ fun ProfessionalSlabDrawing(
                 Color(0xFF2E7D32), Offset(sSlabLeft + 20f, sSlabBottom),
                 Offset(sSlabLeft + 20f, sSlabBottom - coverPx), strokeWidth = 1f
             )
-            dt("c=${cover.toInt()}", sSlabLeft + 44f, sSlabBottom - coverPx / 2f + 4f, Color(0xFF2E7D32), 9f)
+            dt("c = ${cover.toInt()} mm", sSlabLeft + 44f, sSlabBottom - coverPx / 2f + 4f, Color(0xFF2E7D32), 9f)
 
             // Thickness dimension
             val dimX = sSlabLeft + sectionSpanPx + 14f
             drawLine(dimColor, Offset(dimX, sSlabTop), Offset(dimX, sSlabBottom), strokeWidth = 1.2f)
             drawLine(dimColor, Offset(dimX - 4f, sSlabTop), Offset(dimX + 4f, sSlabTop), strokeWidth = 1.2f)
             drawLine(dimColor, Offset(dimX - 4f, sSlabBottom), Offset(dimX + 4f, sSlabBottom), strokeWidth = 1.2f)
-            dt("t=${slabThickness.toInt()}", dimX + 26f, sSlabTop + thickPx / 2f + 4f, dimColor, 9f)
+            dt("t = ${slabThickness.toInt()} mm", dimX + 26f, sSlabTop + thickPx / 2f + 4f, dimColor, 9f)
 
             // Bar labels
             dt("①", sSlabLeft + sectionSpanPx / 2f, sSlabBottom + 16f, mainBarColor, 10f, bold = true)
@@ -590,10 +590,10 @@ fun ProfessionalSlabDrawing(
                 "Direction",
                 "Dia",
                 "Spacing",
-                "Length",
+                "Length (mm)",
                 "As Req",
                 "As Prov",
-                "Weight"
+                "Weight (kg)"
             )
             var colX = tblLeft
             headers.forEachIndexed { idx, hdr ->

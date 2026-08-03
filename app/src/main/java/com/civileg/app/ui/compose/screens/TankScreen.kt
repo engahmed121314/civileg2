@@ -43,6 +43,7 @@ fun TankScreen(
     val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -308,11 +309,16 @@ fun TankScreen(
                             onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isExporting
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report))
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
                         }
 
                         Button(
@@ -321,7 +327,7 @@ fun TankScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Icon(Icons.Default.Save, null)
+                            Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }

@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 // ============================================================================
 // COLOR PALETTE — matches the reference image exactly
@@ -217,7 +218,8 @@ fun ProfessionalBeamDrawing(
             stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
             hasTopSteel = hasTopSteel,
             topRebarDia = topRebarDia, topRebarCount = topRebarCount,
-            developmentLength = developmentLength
+            developmentLength = developmentLength,
+            cover = cover
         )
     }
 }
@@ -764,7 +766,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
     // Label
     drawTextAnnotated(
-        text = "La = ${developmentLength.toInt()} mm",
+        text = "La = ${developmentLength.roundToInt()} mm",
         x = laEndX - 10f, y = bracketY + 22f,
         color = DevLengthColor, size = 22f
     )
@@ -823,7 +825,7 @@ private fun DrawScope.drawDevelopmentAndLap(
 
     // Label
     drawTextAnnotated(
-        text = "Lap = ${lapLength.toInt()} mm",
+        text = "Lap = ${lapLength.roundToInt()} mm",
         x = lapZoneStart + 5f, y = lapBracketY + 20f,
         color = LapSpliceColor, size = 22f
     )
@@ -924,7 +926,7 @@ private fun DrawScope.drawDimensionLines(
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             drawText(
-                "h = ${beamDepth.toInt()}",
+                "h = ${beamDepth.roundToInt()} mm",
                 depthX + 22f,
                 beamTop + beamDrawH / 2f + 6f,
                 paint
@@ -976,7 +978,7 @@ private fun DrawScope.drawDimensionLines(
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             drawText(
-                "c=${cover.toInt()}",
+                "c = ${cover.roundToInt()} mm",
                 coverX - 14f,
                 coverTopY + coverPx / 2f + 4f,
                 paint
@@ -1138,7 +1140,8 @@ private fun DrawScope.drawReinforcementSchedule(
     stirrupDia: Double, stirrupSpacing: Double,
     hasTopSteel: Boolean,
     topRebarDia: Double, topRebarCount: Int,
-    developmentLength: Double
+    developmentLength: Double,
+    cover: Double
 ) {
     val tableLeft = 16f
     val tableTop = ch * 0.68f
@@ -1223,7 +1226,8 @@ private fun DrawScope.drawReinforcementSchedule(
     // --- Row 2: Stirrups ---
     val row2Y = row1Y + rowH
     val stirrupCount = ((span / stirrupSpacing) + 1).toInt()
-    val stirrupLength = 2 * (beamWidth + beamDepth) - 8 * 25  // approximate
+    val stirrupCutLength = 2 * (beamWidth + beamDepth) - 8 * cover + 2 * 10 * stirrupDia  // 10d hooks per ECP 203
+    val stirrupLength = stirrupCutLength
     val row2Data = arrayOf(
         "S1",
         "Ø${stirrupDia.toInt()}",

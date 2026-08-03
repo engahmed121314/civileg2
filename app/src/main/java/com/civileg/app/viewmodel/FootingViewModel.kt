@@ -100,11 +100,11 @@ class FootingViewModel @Inject constructor(
                 // Generate drawing for PDF
                 val drawingBitmap = try {
                     PdfDrawingGenerator.generateFootingDrawing(
-                        footingLX = res.width,
-                        footingLY = res.length,
+                        footingLX = res.length,
+                        footingLY = res.width,
                         footingThickness = res.thickness,
-                        colW = res.column1Size.first,
-                        colD = res.column1Size.second,
+                        colW = res.column1Size.second,
+                        colD = res.column1Size.first,
                         rebarXCount = res.barsX,
                         rebarXDia = res.barDiameter.toDouble(),
                         rebarXSpacing = res.reinforcementBottom.spacing,
