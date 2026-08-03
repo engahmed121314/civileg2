@@ -104,8 +104,10 @@ android {
             isDebuggable = true
             isMinifyEnabled = false
             isShrinkResources = false
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            if (!project.hasProperty("noDebugSuffix")) {
+                applicationIdSuffix = ".debug"
+                versionNameSuffix = "-debug"
+            }
         }
     }
 
