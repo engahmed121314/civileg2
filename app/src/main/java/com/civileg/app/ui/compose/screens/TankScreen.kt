@@ -338,6 +338,7 @@ fun TankScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.tank_drawing_title),
                         subtitle = "Water Tank Detail",
+                        drawingHeightDp = 780,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalTankDrawing(

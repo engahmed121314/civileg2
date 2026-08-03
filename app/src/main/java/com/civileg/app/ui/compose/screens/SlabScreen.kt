@@ -357,6 +357,46 @@ fun SlabScreen(
                 }
 
                 item {
+                    val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                viewModel.exportToPdf(context) { file ->
+                                    if (file == null) {
+                                        pdfError = pdfErrorMsg
+                                    } else {
+                                        pdfError = null
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
+                        }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.save))
+                        }
+                    }
+                }
+
+                item {
                     var selectedViewMode by remember { mutableStateOf(0) }
                     // Responsive height: scale proportionally to screen width
                     val wRatio = screenW.value / 360f  // baseline 360dp
@@ -400,46 +440,6 @@ fun SlabScreen(
                             )
                         }
                     )
-                }
-                
-                item {
-                    val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                viewModel.exportToPdf(context) { file ->
-                                    if (file == null) {
-                                        pdfError = pdfErrorMsg
-                                    } else {
-                                        pdfError = null
-                                    }
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
-
-                        Button(
-                            onClick = { showSaveDialog = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
-                    }
                 }
             }
         }

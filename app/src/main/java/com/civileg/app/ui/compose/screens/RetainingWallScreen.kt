@@ -330,6 +330,7 @@ fun RetainingWallScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.rw_drawing_title),
                         subtitle = stringResource(R.string.rw_drawing_subtitle),
+                        drawingHeightDp = 780,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             val stemTopT = kotlin.math.max(200.0, res.stemThickness * 0.5)

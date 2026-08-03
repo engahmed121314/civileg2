@@ -310,14 +310,15 @@ fun StairScreen(
                 }
 
                 item {
-                    Text(stringResource(R.string.stair_reinforcement_drawing), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().aspectRatio(1.5f))
+                    Text(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    StairFormulasCard()
                 }
 
                 item {
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.stair_drawing_title),
                         subtitle = "Staircase Reinforcement Detail",
+                        drawingHeightDp = 780,
                         drawingContent = {
                             ProfessionalStairDrawing(
                                 stairWidth = 1200.0,
@@ -334,11 +335,6 @@ fun StairScreen(
                             )
                         }
                     )
-                }
-
-                item {
-                    Text(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairFormulasCard()
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }

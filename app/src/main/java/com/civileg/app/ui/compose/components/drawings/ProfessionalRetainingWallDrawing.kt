@@ -77,7 +77,7 @@ fun ProfessionalRetainingWallDrawing(
         val mainLeft = 110f
         val mainRight = cw - 110f
         val mainTop = 60f
-        val mainBottom = ch * 0.52f
+        val mainBottom = ch * 0.45f
 
         // ── Scaling ──
         val totalH = wallHeight + baseThickness + (if (hasKey) keyDepth else 0.0)
@@ -507,7 +507,7 @@ private fun DrawScope.drawStabilityChecks(
     maxBearingPressure: Double, allowableBearingPressure: Double
 ) {
     val checkX = 20f
-    val checkY = baseBottom + 60f
+    val checkY = ch * 0.55f
     val lineH = 22f
     val dimWhite = DrawingColors.DimensionWhite
 
@@ -567,7 +567,7 @@ private fun DrawScope.drawReinforcementTable(
     wallHeight: Double
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.68f
+    val tableTop = ch * 0.78f
     val tableW = cw - 32f
     val rowH = 24f
     val headerH = 28f

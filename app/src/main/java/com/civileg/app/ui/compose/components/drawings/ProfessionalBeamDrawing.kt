@@ -115,7 +115,7 @@ fun ProfessionalBeamDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(560.dp)
+            .height(780.dp)
     ) {
         // ---------------------------------------------------------------
         // Layout constants (in px)
@@ -132,7 +132,7 @@ fun ProfessionalBeamDrawing(
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
         val mainTop = 50f
-        val mainBottom = ch * 0.55f
+        val mainBottom = ch * 0.48f
 
         // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
         val availableW = mainRight - mainLeft
@@ -1027,9 +1027,9 @@ private fun DrawScope.drawSectionInset(
 ) {
     // Inset position and size
     val insetW = min(160f, cw * 0.22f)
-    val insetH = min(220f, ch * 0.40f)
+    val insetH = min(220f, ch * 0.35f)
     val insetLeft = cw - insetW - 16f
-    val insetTop = 12f
+    val insetTop = 8f
 
     // Background panel
     drawRoundRect(
@@ -1144,7 +1144,7 @@ private fun DrawScope.drawReinforcementSchedule(
     cover: Double
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.68f
+    val tableTop = ch * 0.74f
     val tableW = cw - 32f
     val rowH = 26f
     val headerH = 30f

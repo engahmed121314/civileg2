@@ -303,10 +303,16 @@ fun BeamScreen(
                 }
 
                 item {
+                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    BeamFormulasCard()
+                }
+
+                item {
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = "Beam Reinforcement Detail",
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        drawingHeightDp = 780,
                         drawingContent = {
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
@@ -355,11 +361,6 @@ fun BeamScreen(
                         designCode = diagramCode,
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-
-                item {
-                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    BeamFormulasCard()
                 }
             }
         }

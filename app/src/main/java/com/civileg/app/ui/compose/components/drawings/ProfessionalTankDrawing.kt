@@ -497,7 +497,7 @@ private fun DrawScope.drawWallDetailInset(
     val insetW = min(150f, cw * 0.20f)
     val insetH = min(200f, ch * 0.30f)
     val insetLeft = cw - insetW - 16f
-    val insetTop = ch * 0.42f
+    val insetTop = ch * 0.62f
 
     // Background
     drawRoundRect(
