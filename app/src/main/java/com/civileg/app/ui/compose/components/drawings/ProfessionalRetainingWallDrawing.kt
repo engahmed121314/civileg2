@@ -507,7 +507,7 @@ private fun DrawScope.drawStabilityChecks(
     maxBearingPressure: Double, allowableBearingPressure: Double
 ) {
     val checkX = 20f
-    val checkY = ch * 0.55f
+    val checkY = baseBottom + 50f
     val lineH = 22f
     val dimWhite = DrawingColors.DimensionWhite
 
