@@ -138,35 +138,34 @@ class SlabViewModel @Inject constructor(
                 } catch (e: Exception) { e.printStackTrace(); null }
                 pendingDrawingBitmap = null  // consume after use
 
-                // Bilingual labels: Arabic descriptions when locale=ar, English for symbols
-                val isAr = com.civileg.app.utils.LocaleHelper.isArabic()
-                fun t(ar: String, en: String) = if (isAr) ar else en
+                // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
+                // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when(inputs.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"
                     CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(
-                    t("نوع البلاطة", "Slab Type") to inputs.type.displayName,
-                    t("كود التصميم", "Design Code") to codeName,
-                    t("البحر القصير Lx", "Short Span Lx") to "${inputs.lx} m",
-                    t("البحر الطويل Ly", "Long Span Ly") to "${inputs.ly} m",
-                    t("الحمل الميت DL", "Dead Load") to "${inputs.deadLoad} kN/m²",
-                    t("الحمل الحي LL", "Live Load") to "${inputs.liveLoad} kN/m²",
+                    "Slab Type" to inputs.type.displayName,
+                    "Design Code" to codeName,
+                    "Short Span Lx" to "${inputs.lx} m",
+                    "Long Span Ly" to "${inputs.ly} m",
+                    "Dead Load" to "${inputs.deadLoad} kN/m²",
+                    "Live Load" to "${inputs.liveLoad} kN/m²",
                     "f'cu" to "${inputs.fcu} MPa",
                     "fy" to "${inputs.fy} MPa",
-                    t("السمك", "Thickness") to "${res.thickness} mm",
-                    t("قطر السيخ", "Bar Diameter") to "${inputs.preferredDiameter} mm"
+                    "Thickness" to "${res.thickness} mm",
+                    "Bar Diameter" to "${inputs.preferredDiameter} mm"
                 )
                 val resultsMap = mapOf(
-                    t("عزم Mx", "Moment Mx") to "${String.format("%.2f", res.momentX)} kN.m",
-                    t("عزم My", "Moment My") to "${String.format("%.2f", res.momentY)} kN.m",
-                    t("التسليح الرئيسي", "Main Reinforcement") to res.reinforcementMain.barString,
-                    t("التسليح الثانوي", "Secondary Reinforcement") to res.reinforcementSecondary.barString,
-                    t("أدنى سمك", "Min Thickness") to "${String.format("%.0f", res.minThickness)} mm",
-                    t("نسبة الاستغلال", "Utilization") to "${(res.utilizationRatio * 100).toInt()}%",
-                    t("حجم الخرسانة", "Concrete Volume") to "${String.format("%.2f", res.concreteVolume)} m³",
-                    t("وزن التسليح", "Steel Weight") to "${String.format("%.1f", res.steelWeight)} kg"
+                    "Moment Mx" to "${String.format("%.2f", res.momentX)} kN.m",
+                    "Moment My" to "${String.format("%.2f", res.momentY)} kN.m",
+                    "Main Reinforcement" to res.reinforcementMain.barString,
+                    "Secondary Reinforcement" to res.reinforcementSecondary.barString,
+                    "Min Thickness" to "${String.format("%.0f", res.minThickness)} mm",
+                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Concrete Volume" to "${String.format("%.2f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
@@ -178,11 +177,10 @@ class SlabViewModel @Inject constructor(
                     )
                 }
 
-                // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                     titleAr = "تقرير تصميم بلاطة - ${inputs.type.displayName}",
                     titleEn = "Slab Design Report — ${inputs.type.displayName}",
-                    subtitle = "${t("الكود", "Code")}: $codeName  •  Lx=${inputs.lx}m, Ly=${inputs.ly}m",
+                    subtitle = "Code: $codeName  •  Lx=${inputs.lx}m, Ly=${inputs.ly}m",
                     designType = inputs.type.displayName,
                     inputs = inputsMap,
                     results = resultsMap,
