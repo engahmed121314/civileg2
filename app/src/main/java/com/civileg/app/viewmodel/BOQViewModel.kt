@@ -161,14 +161,26 @@ class BOQViewModel @Inject constructor(
                     val span = input.optDouble("span", input.optDouble("L", 0.0))
                     val mainDia = input.optDouble("mainDia", input.optDouble("d1", 0.0))
                     val mainBars = input.optInt("mainBars", input.optInt("n1", 0))
-                    val ast = input.optDouble("ast", 0.0)
+                    val astRequired = input.optDouble("astRequired", input.optDouble("ast", 0.0))
+                    val astProvided = input.optDouble("astProvided", astRequired)
                     val stirDia = input.optDouble("stirrupDia", input.optDouble("d2", 8.0))
                     val stirSp = input.optDouble("stirrupSpacing", input.optDouble("s2", 200.0))
                     if (w > 0 && d > 0 && span > 0 && mainDia > 0) {
                         calculateElementBoq.calculateBeamBoq(
                             w, d, span,
-                            ReinforcementResult(mainDia, mainBars, ast, ast, 0.0, 8.0, 0.0, 0),
-                            ShearReinforcementResult(stirDia, stirSp, 0.0, 0.0, 0.0, 0.0),
+                            ReinforcementResult(
+                                astRequired = astRequired,
+                                astProvided = astProvided,
+                                barDiameter = mainDia,
+                                numberOfBars = mainBars,
+                                tiesDiameter = 8.0,
+                                tiesSpacing = 200.0,
+                                isSafe = true
+                            ),
+                            ShearReinforcementResult(
+                                stirrupDiameter = stirDia,
+                                stirrupSpacing = stirSp
+                            ),
                             prices
                         )
                     } else emptyList()
@@ -179,13 +191,22 @@ class BOQViewModel @Inject constructor(
                     val h = input.optDouble("height", input.optDouble("L", 0.0))
                     val mainDia = input.optDouble("mainDia", input.optDouble("d1", 0.0))
                     val mainBars = input.optInt("mainBars", input.optInt("n1", 0))
-                    val ast = input.optDouble("ast", 0.0)
+                    val astRequired = input.optDouble("astRequired", input.optDouble("ast", 0.0))
+                    val astProvided = input.optDouble("astProvided", astRequired)
                     val tieDia = input.optDouble("tiesDiameter", input.optDouble("d2", 8.0))
                     val tieSp = input.optDouble("tiesSpacing", input.optDouble("s2", 200.0))
                     if (w > 0 && d > 0 && h > 0 && mainDia > 0) {
                         calculateElementBoq.calculateColumnBoq(
                             w, d, h,
-                            ReinforcementResult(mainDia, mainBars, ast, ast, 0.0, tieDia, tieSp, 0),
+                            ReinforcementResult(
+                                astRequired = astRequired,
+                                astProvided = astProvided,
+                                barDiameter = mainDia,
+                                numberOfBars = mainBars,
+                                tiesDiameter = tieDia,
+                                tiesSpacing = tieSp,
+                                isSafe = true
+                            ),
                             prices
                         )
                     } else emptyList()
