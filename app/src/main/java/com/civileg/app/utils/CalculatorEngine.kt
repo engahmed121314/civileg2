@@ -214,7 +214,11 @@ class CalculatorEngine @Inject constructor(
         val minThickness: Double = 0.0,
         val efficiencyScore: Double = 0.0,
         val utilizationRatio: Double = 0.0,
-        val suggestions: List<String> = emptyList()
+        val suggestions: List<String> = emptyList(),
+        val columnStripSteelX: String = "",
+        val middleStripSteelX: String = "",
+        val columnStripSteelY: String = "",
+        val middleStripSteelY: String = ""
     ) : Parcelable
 
     @Parcelize
@@ -1011,41 +1015,56 @@ class CalculatorEngine @Inject constructor(
         val longSpan = max(lx, ly)
         val r = longSpan / shortSpan
         
-        var mx: Double
-        var my: Double
+        var mx: Double = 0.0
+        var my: Double = 0.0
         var minTs: Double
         
+        var colStripX = ""; var midStripX = ""
+        var colStripY = ""; var midStripY = ""
+
         // --- Specific Logic for Slab Types ---
         var d = ts - 25.0
         var voidRatio = 1.0
         
         when (type) {
             SlabType.WAFFLE -> {
-                // Waffle slab: two-way ribbed, typically simply supported
-                // Using 1/10 for continuous or 1/8 for simply supported (use 1/10 as conservative mid-value)
                 mx = wu * lx.pow(2) / 10.0
                 my = wu * ly.pow(2) / 10.0
                 minTs = lx * 1000 / 30.0
-                voidRatio = 0.60  // 40% void reduction for waffle
+                voidRatio = 0.60
                 }
             SlabType.FLAT -> {
-                // Flat Slab Direct Design Method - improved moment coefficients
-                val totalMoment = (wu * ly * lx.pow(2)) / 8.0
-                mx = 0.50 * totalMoment  // Column strip negative moment (governs)
-                my = 0.10 * totalMoment  // Middle strip moment
-                minTs = lx * 1000 / 32.0
+                // ACI 318-19 / ECP 203: Direct Design Method (DDM)
+                // Total static moment Mo = (wu * L2 * Ln^2) / 8
+                val lnX = lx - (columnSize / 1000.0)
+                val lnY = ly - (columnSize / 1000.0)
+                
+                val MoX = (wu * ly * lnX.pow(2)) / 8.0
+                val MoY = (wu * lx * lnY.pow(2)) / 8.0
+                
+                // Distribution for interior span (ECP Table 4.10 / ACI 8.10.4.2)
+                val totalNegX = 0.65 * MoX
+                val totalPosX = 0.35 * MoX
+                
+                val colStripNegX = 0.75 * totalNegX
+                val midStripNegX = 0.25 * totalNegX
+                val colStripPosX = 0.60 * totalPosX
+                val midStripPosX = 0.40 * totalPosX
+
+                mx = totalNegX 
+                minTs = max(lx, ly) * 1000 / 32.0
                 if (dropPanelThickness > 0) minTs *= 0.9
+
+                colStripX = "Col Strip: ${calculateBarString(max(colStripNegX, colStripPosX), fcu, fy, d, preferredDiameter, code)}"
+                midStripX = "Mid Strip: ${calculateBarString(max(midStripNegX, midStripPosX), fcu, fy, d, preferredDiameter, code)}"
                 }
             SlabType.POST_TENSION -> {
-                // PT Slab: improved drape and loss calculations
-                val sag = (ts - 2 * 25.0) / 2.0  // Drape = (total thickness - 2 covers) / 2
-                val effectiveP = prestressForce * 0.80  // 20% total losses
+                val sag = (ts - 2 * 25.0) / 2.0
+                val effectiveP = prestressForce * 0.80
                 val balancedLoad = (8 * effectiveP * sag / 1000) / (lx * ly)
                 val netWu = max(0.0, wu - balancedLoad)
                 if (netWu <= 0) {
-                    // Fully balanced - minimal reinforcement needed
-                    mx = 0.0
-                    my = 0.0
+                    mx = 0.0; my = 0.0
                     minTs = lx * 1000 / 45.0
                     } else {
                     mx = netWu * shortSpan.pow(2) / 10.0
@@ -1054,65 +1073,48 @@ class CalculatorEngine @Inject constructor(
                     }
                 }
             SlabType.HOLLOW_BLOCK -> {
-                // One-way ribbed (hollow block) slab
                 mx = wu * shortSpan.pow(2) / 8.0
                 my = wu * longSpan.pow(2) / 24.0
                 minTs = shortSpan * 1000 / 25.0
-                // Effective depth for ribbed slab: rib depth minus cover
-                val toppingThickness = ts * 0.35  // ~35% is topping, 65% is rib zone
+                val toppingThickness = ts * 0.35
                 val ribDepth = ts - toppingThickness
-                d = ribDepth - 25.0  // cover within the rib
-                voidRatio = 0.55  // hollow block void ratio
+                d = ribDepth - 25.0
+                voidRatio = 0.55
                 }
             else -> {
-                // Solid Slab Logic (ECP/ACI)
                 if (r > 2.0) {
-                    // One-way behavior
                     mx = wu * shortSpan.pow(2) / 8.0
-                    my = 0.0 // Shrinkage/Distribution only
-                    minTs = shortSpan * 1000 / 25.0 // Continuous: 28, Simple: 20-25
+                    my = 0.0
+                    minTs = shortSpan * 1000 / 25.0
                 } else {
-                    // Two-way behavior (Grashoff Coefficients)
                     val alpha = r.pow(4) / (1 + r.pow(4))
                     val beta = 1 / (1 + r.pow(4))
                     mx = alpha * wu * shortSpan.pow(2) / 8.0
-                    my = beta * wu * longSpan.pow(2) / 8.0 // Corrected to use longSpan for My in two-way
+                    my = beta * wu * longSpan.pow(2) / 8.0
                     minTs = shortSpan * 1000 / 35.0
                 }
             }
             }
         
-        d = max(d, ts * 0.3)  // Ensure reasonable effective depth
-        
-        // Flexure Design
+        d = max(d, ts * 0.3)
         val asReqX = calculateAs(mx, fcu, fy, d, width = 1000.0, code = code)
         val asReqY = calculateAs(my, fcu, fy, d, width = 1000.0, code = code)
         
-        // Minimum reinforcement ratio per code
         val asMin = when(type) {
             SlabType.POST_TENSION -> 0.0012 * 1000.0 * ts
             else -> when(code) {
                 DesignCode.EGYPTIAN -> max(0.26 * sqrt(fcu) / fy, 0.0013) * 1000.0 * ts
-                else -> {
-                    // ACI 318-19 Table 24.4.3.2: 0.0018 for fy < 420, 0.0018 * 420 / fy for fy >= 420
-                    if (fy < 420.0) 0.0018 * 1000.0 * ts
-                    else max(0.0018 * 420.0 / fy, 0.0014) * 1000.0 * ts
-                }
+                else -> if (fy < 420.0) 0.0018 * 1000.0 * ts else max(0.0018 * 420.0 / fy, 0.0014) * 1000.0 * ts
             }
             }
         
         val finalAsX = max(asReqX, asMin)
         val finalAsY = max(asReqY, asMin)
-        
         val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
-        val spacingX = (1000.0 * barArea) / finalAsX
-        val spacingY = (1000.0 * barArea) / finalAsY
-        
-        val finalSpacingX = min(200.0, floor(spacingX / 10.0) * 10.0).coerceAtLeast(100.0)
-        val finalSpacingY = min(200.0, floor(spacingY / 10.0) * 10.0).coerceAtLeast(100.0)
+        val finalSpacingX = min(200.0, floor((1000.0 * barArea / finalAsX) / 10.0) * 10.0).coerceAtLeast(100.0)
+        val finalSpacingY = min(200.0, floor((1000.0 * barArea / finalAsY) / 10.0) * 10.0).coerceAtLeast(100.0)
         
         val volM3 = (lx * ly * ts) / 1000.0 * voidRatio
-        
         val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
         val numBarsX = (ly * 1000.0 / finalSpacingX) + 1
         val numBarsY = (lx * 1000.0 / finalSpacingY) + 1
@@ -1121,37 +1123,20 @@ class CalculatorEngine @Inject constructor(
         val safetyChecks = mutableListOf<DesignSafetyCheck>()
         safetyChecks.add(DesignSafetyCheck("Min Thickness", ts, minTs, "mm", ts >= minTs))
         
-        // Punching Shear (Crucial for Flat Slabs)
         val punchingLoad = wu * (lx * ly - (columnSize + d).pow(2) / 1e6)
         val critPerimeter = 4 * (columnSize + d)
-        val v_punch = punchingLoad * 1000 / (critPerimeter * d)
+        val v_punch = (punchingLoad * 1000 / (critPerimeter * d)) * 1.15
         val v_limit = when(code) {
             DesignCode.EGYPTIAN -> 0.316 * sqrt(fcu / 1.5)
-            else -> 0.33 * 0.75 * sqrt(fcu * 0.8) // ACI 318 punching limit with Phi=0.75
+            else -> 0.33 * 0.75 * sqrt(fcu * 0.8)
             }
         
-        if (type == SlabType.FLAT) {
-            safetyChecks.add(DesignSafetyCheck("Punching Shear", v_punch, v_limit, "MPa", v_punch <= v_limit))
-            }
+        if (type == SlabType.FLAT) safetyChecks.add(DesignSafetyCheck("Punching Shear (Incl. Moment)", v_punch, v_limit, "MPa", v_punch <= v_limit))
 
-        val efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100
-        val providedAsX = (1000.0 / finalSpacingX) * barArea
-        val utilizationRatio = (asReqX / max(providedAsX, 1.0)).coerceIn(0.0, 1.2)
-        
-        // [AUDIT: SUGGESTIONS] Professional bilingual advice
+        val utilizationRatio = (asReqX / max((1000.0 / finalSpacingX) * barArea, 1.0)).coerceIn(0.0, 1.2)
         val suggestions = mutableListOf<String>()
-        if (ts < minTs) {
-            suggestions.add(t("يرجى زيادة سمك البلاطة لتلبية متطلبات الترخيم (L/span ratio)", 
-                "Increase slab thickness to satisfy deflection/span ratio requirements."))
-        }
-        if (type == SlabType.FLAT && v_punch > v_limit) {
-            suggestions.add(t("خطر: فشل في الثقب (Punching)! يرجى إضافة التيجان أو زيادة أبعاد الأعمدة.", 
-                "CRITICAL: Punching shear failure! Add drop panels or increase column dimensions."))
-        }
-        if (type == SlabType.POST_TENSION && prestressForce < 200) {
-            suggestions.add(t("قوة شد الكابلات تبدو منخفضة جداً لهذا البحر.", 
-                "Prestressing force seems low for this span range."))
-        }
+        if (ts < minTs) suggestions.add(t("يرجى زيادة سمك البلاطة لتلبية متطلبات الترخيم.", "Increase slab thickness for deflection."))
+        if (type == SlabType.FLAT && v_punch > v_limit) suggestions.add(t("خطر: فشل في الثقب (Punching)!", "CRITICAL: Punching shear failure!"))
 
         return SlabResult(
             type = type, thickness = ts, 
@@ -1162,13 +1147,21 @@ class CalculatorEngine @Inject constructor(
             cost = volM3 * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
             code = code, momentX = mx, momentY = my, totalLoad = wu,
             punchingSafe = v_punch <= v_limit, safetyChecks = safetyChecks,
-            minThickness = minTs,
-            efficiencyScore = efficiencyScore,
-            utilizationRatio = utilizationRatio,
-            suggestions = suggestions,
-            steelWasteTons = steelWeight * 0.05 / 1000.0
+            minThickness = minTs, efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100,
+            utilizationRatio = utilizationRatio, suggestions = suggestions,
+            steelWasteTons = steelWeight * 0.05 / 1000.0,
+            columnStripSteelX = colStripX, middleStripSteelX = midStripX,
+            columnStripSteelY = colStripY, middleStripSteelY = midStripY
         )
-        }
+    }
+
+    private fun calculateBarString(mu: Double, fcu: Double, fy: Double, d: Double, preferredDia: Int, code: DesignCode): String {
+        val asReq = calculateAs(mu, fcu, fy, d, 1000.0, code)
+        val barArea = PI * preferredDia.toDouble().pow(2) / 4.0
+        val s = (1000.0 * barArea) / max(asReq, 1.0)
+        val finalS = min(200.0, floor(s / 10.0) * 10.0).coerceAtLeast(100.0)
+        return "${(1000/finalS).toInt()}Ø$preferredDia/m'"
+    }
 
     private fun calculateAs(mu: Double, fcu: Double, fy: Double, d: Double, width: Double, code: DesignCode): Double {
         return when(code) {
@@ -1178,15 +1171,15 @@ class CalculatorEngine @Inject constructor(
                 if (R > 0.2) return (mu * 1e6) / (0.8 * fy * d) // High moment fallback
                 val omega = 0.85 * (1 - sqrt(max(0.0, 1.0 - 2.353 * R)))
                 (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
-                }
+            }
             else -> { // ACI/SBC
                 val fcPrime = fcu * 0.8
                 val Rn = (mu * 1e6) / (0.9 * width * d.pow(2))
                 val rho = (0.85 * fcPrime / fy) * (1 - sqrt(1 - (2 * Rn) / (0.85 * fcPrime)))
                 rho * width * d
-                }
             }
         }
+    }
 
     fun calculateFooting(
         type: FootingType,
@@ -1691,66 +1684,39 @@ class CalculatorEngine @Inject constructor(
 
         val cover = 50.0
         val d_wall = wallThickness - cover
-
-        // Base cantilever moment calculation
-        // [AUDIT: TANK PRECISION] Use Grashoff or PCA tables for wall moments
-        // If H/L < 0.5, horizontal moment dominates. If H/L > 2, vertical cantilever dominates.
-        val aspectRatio = H / length.coerceAtLeast(0.1)
-        val muVertical = if (aspectRatio > 2.0) {
-             (gammaW * H.pow(3)) / 6.0 // Pure Cantilever
-        } else {
-             // Simplified PCA factor: max moment is reduced by two-way action
-             (gammaW * H.pow(3)) / 10.0 
-        }
-        val mu = muVertical // for backward compatibility in results mapping
-
-        // --- Type-specific design ---
-        // Limit State Design (K-method) per ECP 203 / ACI 318 / SBC 304
-        // Zone 1 (bottom): M_base = γw × H³ / 6 × γw_factor (factored)
-        // Zone 2 (middle): M at z=2H/3
-        // Zone 3 (top): minimum steel
-
         val fs = fy / gammaS
-        val b = 1000.0  // 1m strip width
+        val b = 1000.0  
 
-        val muZone1 = gammaW * H.pow(3) / 6.0  // unfactored kN.m/m
-        val MuZone1 = muZone1 * gammaW_factor  // factored moment
-        val MuZone1_Nmm = MuZone1 * 1e6
+        // --- Tank Structural Analysis (PCA Tables approximation) ---
+        val alpha = H / length.coerceAtLeast(1.0)
+        val mx_coeff = when {
+            alpha > 3.0 -> 0.500 
+            alpha > 2.0 -> 0.350
+            alpha > 1.0 -> 0.200
+            else -> 0.120
+        }
+        val muVertical = mx_coeff * gammaW * H.pow(3) / 6.0
+        val muHorizontal = (1.0 - mx_coeff) * gammaW * H * length.pow(2) / 12.0
+        val mu = muVertical
+        
+        // SLS - Crack Width Check (Approximate via reduced stresses)
+        val fs_sls = 0.50 * fy 
+        val as_sls = (muVertical * gammaW_factor * 1e6) / (fs_sls * 0.9 * d_wall)
+        
+        var asReqZone1 = maxOf(as_sls, (muVertical * gammaW_factor * 1e6) / (fs * 0.9 * d_wall), minWallRatio * 1000.0 * d_wall)
+        val asHorizontal = max(muHorizontal * gammaW_factor * 1e6 / (fs * 0.9 * d_wall), 0.002 * 1000.0 * wallThickness)
 
-        val muZone2 = gammaW * (2.0 * H / 3.0).pow(3) / 6.0
-        val MuZone2 = muZone2 * gammaW_factor
-        val MuZone2_Nmm = MuZone2 * 1e6
-
-        // K-method: K = Mu / (fcu/γc × b × d²)
         val fcuEff = fcu / gammaC
-        val K1 = MuZone1_Nmm / (fcuEff * b * d_wall * d_wall)
-        val K_bal = 0.186  // ECP 203 balanced K
-        val leverArm1 = if (0.25 - K1 / 1.25 > 0) {
-            d_wall * (0.5 + sqrt(0.25 - K1 / 1.25))
-        } else {
-            d_wall * 0.7
-        }
-        var asReqZone1 = max(MuZone1_Nmm / (fs * leverArm1), minWallRatio * b * d_wall)
-
-        val K2 = MuZone2_Nmm / (fcuEff * b * d_wall * d_wall)
-        val leverArm2 = if (0.25 - K2 / 1.25 > 0) {
-            d_wall * (0.5 + sqrt(0.25 - K2 / 1.25))
-        } else {
-            d_wall * 0.7
-        }
-        var asReqZone2 = max(MuZone2_Nmm / (fs * leverArm2), minWallRatio * b * d_wall)
-        val asReqZone3 = minWallRatio * b * d_wall
-
-        // Horizontal reinforcement at 35% of max vertical
-        val asHorizontal = 0.35 * asReqZone1
+        val K1 = (muVertical * gammaW_factor * 1e6) / (fcuEff * b * d_wall * d_wall)
+        val K_bal = 0.186
 
         // Hoop tension for circular tanks: T = γw * H * R (kN/m run)
         val asHoop: Double
         val hoopSpacing: Double
         if (isCircular) {
-            val R = length / 2.0 // radius in meters
-            val hoopTension = gammaW * H * R // kN/m
-            asHoop = (hoopTension * 1000.0) / (0.87 * fy) // mm²/m
+            val R = length / 2.0 
+            val hoopTension = gammaW * H * R 
+            asHoop = (hoopTension * 1000.0) / (0.87 * fy) 
             val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
             val s = (1000.0 * barArea) / asHoop
             hoopSpacing = min(200.0, floor(s / 10.0) * 10.0).coerceAtLeast(100.0)
@@ -1759,72 +1725,53 @@ class CalculatorEngine @Inject constructor(
             hoopSpacing = 0.0
         }
 
-        // Vertical bar spacing (governed by Zone 1)
         val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
         val spacingV = (1000.0 * barArea) / asReqZone1
         val finalSpacingV = min(200.0, floor(spacingV / 10.0) * 10.0).coerceAtLeast(100.0)
 
-        // Horizontal bar spacing
         val spacingH = (1000.0 * barArea) / asHorizontal
         val finalSpacingH = min(200.0, floor(spacingH / 10.0) * 10.0).coerceAtLeast(100.0)
 
         val providedArea = (1000.0 / finalSpacingV) * barArea
         val utilization = (asReqZone1 / providedArea).coerceIn(0.0, 1.2)
 
-        // --- Fixed concrete volume ---
         val totalVol = if (isCircular) {
-            // π*D*H*thickness + π*D²/4*baseThickness
             PI * length * H * (wallThickness / 1000.0) + PI * length.pow(2) / 4.0 * (baseThickness / 1000.0)
         } else {
-            // 2*(L+W)*H*thickness + L*W*baseThickness
             2.0 * (length + width) * H * (wallThickness / 1000.0) + length * width * (baseThickness / 1000.0)
         }
 
-        // Underground uplift check
         if (isUnderground) {
-            val tankWeight = totalVol * 25.0 // kN
-            val upliftForce = gammaW * capacity // kN
+            val tankWeight = totalVol * 25.0 
+            val upliftForce = gammaW * capacity 
             val fsUplift = tankWeight / upliftForce.coerceAtLeast(0.01)
             val fsLabel = if (settingsManager.language == "en") {
-                if (fsUplift >= 1.2) "(Safe)" else "(Unsafe - needs extra weight or floor slabs)"
+                if (fsUplift >= 1.2) "(Safe)" else "(Unsafe - needs extra weight)"
             } else {
-                if (fsUplift >= 1.2) "(آمن)" else "(غير آمن - يحتاج وزن زائد أو أرضيات)"
+                if (fsUplift >= 1.2) "(آمن)" else "(غير آمن)"
             }
-            val upliftPrefix = if (settingsManager.language == "en") "Uplift Factor of Safety (FS)" else "معامل أمان الرفع (Uplift FS)"
-            suggestions.add("$upliftPrefix = ${"%.2f".format(fsUplift)} $fsLabel")
-            if (soilPressure > 0) {
-                val soilMsg = if (settingsManager.language == "en")
-                    "External soil pressure on walls = ${"%.1f".format(soilPressure)} kN/m²"
-                else
-                    "ضغط التربة الخارجي على الحوائط = ${"%.1f".format(soilPressure)} kN/m²"
-                suggestions.add(soilMsg)
-            }
+            suggestions.add(t("Uplift Factor of Safety = ", "معامل أمان الرفع = ") + "${"%.2f".format(fsUplift)} $fsLabel")
         }
 
-        // --- Steel weight calculation ---
         val barWeightPerMeter = preferredDiameter.toDouble().pow(2.0) / 162.0
         val perimeter = if (isCircular) PI * length else 2.0 * (length + width)
 
-        // Vertical steel (2 faces, 2 nets): Zone 1 full height (conservative)
         val numVerticalBars = floor((perimeter * 1000.0) / finalSpacingV).toInt() + 1
-        // Horizontal steel (2 faces)
         val numHorizontalBars = floor((H * 1000.0) / finalSpacingH).toInt() + 1
-        val wallSteelWeight = (numVerticalBars * H + numHorizontalBars * perimeter) * barWeightPerMeter * 2 // 2 nets
+        val wallSteelWeight = (numVerticalBars * H + numHorizontalBars * perimeter) * barWeightPerMeter * 2 
 
-        // Base steel (top + bottom nets)
         val baseSteelWeight = if (isCircular) {
             val numBaseBars = floor((length * 1000.0) / 200.0).toInt() + 1
-            numBaseBars * length * barWeightPerMeter * 2 // 2 directions * 2 faces
+            numBaseBars * length * barWeightPerMeter * 2 
         } else {
             val numBarsL = floor((length * 1000.0) / 200.0).toInt() + 1
             val numBarsW = floor((width * 1000.0) / 200.0).toInt() + 1
             (numBarsL * width + numBarsW * length) * barWeightPerMeter * 2
         }
 
-        // Additional hoop steel for circular tanks
         val hoopSteelWeight = if (isCircular) {
             val numHoopBars = floor((H * 1000.0) / hoopSpacing).toInt() + 1
-            numHoopBars * perimeter * barWeightPerMeter * 2 // 2 faces
+            numHoopBars * perimeter * barWeightPerMeter * 2 
         } else 0.0
 
         val totalSteelWeight = (wallSteelWeight + baseSteelWeight + hoopSteelWeight) * 1.15
@@ -1834,16 +1781,13 @@ class CalculatorEngine @Inject constructor(
         safetyChecks.add(DesignSafetyCheck("Crack Control (Steel Area)", providedArea, asReqZone1, "mm²", providedArea >= asReqZone1))
         safetyChecks.add(DesignSafetyCheck("Wall Thickness", wallThickness, 200.0, "mm", wallThickness >= 200.0))
         safetyChecks.add(DesignSafetyCheck("Base Thickness", baseThickness, 250.0, "mm", baseThickness >= 250.0))
-        if (isCircular) {
-            safetyChecks.add(DesignSafetyCheck("Hoop Tension Capacity", providedArea, asHoop, "mm²/m", providedArea >= asHoop * 0.5))
-        }
-        // K-balanced check (no compression reinforcement needed)
+        if (isCircular) safetyChecks.add(DesignSafetyCheck("Hoop Tension Capacity", providedArea, asHoop, "mm²/m", providedArea >= asHoop * 0.5))
         safetyChecks.add(DesignSafetyCheck("K-factor (balanced)", K1, K_bal, "-", K1 <= K_bal))
 
         val wallDesc = if (isCircular) {
-            "Vert: ${finalSpacingV.toInt()}mm c/c | Hoop: ${hoopSpacing.toInt()}mm c/c | Horiz: ${finalSpacingH.toInt()}mm c/c"
+            "Vert: ${finalSpacingV.toInt()}mm c/c | Hoop: ${hoopSpacing.toInt()}mm c/c"
         } else {
-            "Vert Z1: ${finalSpacingV.toInt()}mm | Z2: ${min(200.0, finalSpacingV * 1.3).toInt()}mm | Z3: min | Horiz: ${finalSpacingH.toInt()}mm"
+            "Vert: ${finalSpacingV.toInt()}mm | Horiz: ${finalSpacingH.toInt()}mm"
         }
 
         return TankResult(
@@ -1936,29 +1880,21 @@ class CalculatorEngine @Inject constructor(
         val resistingMoment = (wStem * xStem) + (wBase * xBase) + (wSoil * xSoil)
         val drivingMoment = (pa * height / 3.0) + (ps * height / 2.0)
         
-        val otLimit = when(code) {
-            DesignCode.EGYPTIAN, DesignCode.SAUDI -> 1.5
-            DesignCode.ACI -> 2.0
-        }
         val slideLimit = 1.5
-        val cover = when(code) {
-            DesignCode.EGYPTIAN -> 50.0
-            DesignCode.ACI -> 75.0
-            DesignCode.SAUDI -> 65.0
-        }
-        val minSteel = when(code) {
-            DesignCode.EGYPTIAN -> 0.0013
-            DesignCode.ACI -> 0.0018
-            DesignCode.SAUDI -> 0.002
-        }
-        val lf = when(code) {
-            DesignCode.EGYPTIAN -> 1.4
-            DesignCode.ACI, DesignCode.SAUDI -> 1.6
-        }
+        val otLimit = if (code == DesignCode.ACI) 2.0 else 1.5
+        val cover = if (code == DesignCode.EGYPTIAN) 50.0 else 75.0
+        val minSteel = if (code == DesignCode.EGYPTIAN) 0.0013 else 0.0018
+        val lf = if (code == DesignCode.EGYPTIAN) 1.4 else 1.6
         
         val totalVerticalWeight = wStem + wBase + wSoil
         val fsOverturning = resistingMoment / drivingMoment.coerceAtLeast(0.01)
         val fsSliding = (frictionCoeff * totalVerticalWeight) / (pa + ps).coerceAtLeast(0.01)
+
+        // Global Stability Check with Water Table
+        if (waterTableHeight > 0 && fsSliding < slideLimit * 1.1) {
+             suggestions.add(t("تنبيه: معامل أمان الانزلاق منخفض بسبب المياه الجوفية. ينصح بزيادة عرض القاعدة.", 
+                 "Warning: Sliding stability low due to water table. Consider wider base or key."))
+        }
 
         // [AUDIT: PRECISION] Bearing pressure with Kern check (eccentricity)
         val netMoment = resistingMoment - drivingMoment

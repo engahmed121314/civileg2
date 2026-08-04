@@ -501,6 +501,8 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
                 result.stirrups.zones.forEach { zone ->
                     ResultRow("${zone.name} (${String.format(Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
                 }
+                // [NEW] Display Multi-leg info
+                ResultRow(stringResource(R.string.stirrups) + " Legs", "${result.stirrups.numLegs} Branches")
             } else {
                 ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
             }

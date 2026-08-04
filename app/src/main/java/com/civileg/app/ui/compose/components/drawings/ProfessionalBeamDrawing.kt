@@ -331,43 +331,59 @@ private fun DrawScope.draw3DBeamBody(
 /**
  * Subtle diagonal hatching lines across the front face to indicate concrete.
  */
+/**
+ * Draws professional concrete hatching pattern for section cuts.
+ */
 private fun DrawScope.drawConcreteHatching(
     left: Float, top: Float, w: Float, h: Float
 ) {
-    val step = 24f
-    val paint = HatchColor
+    val step = 15f
+    val paint = HatchColor.copy(alpha = 0.6f)
     for (offset in -h.toInt()..(w + h).toInt() step step.toInt()) {
         val x1 = left + offset.toFloat()
         val y1 = top
         val x2 = left + offset.toFloat() - h
         val y2 = top + h
-        // Clip to front face bounds
-        val clipX1 = max(left, min(x1, left + w))
-        val clipY1 = when {
-            x1 < left -> top + (left - x1)
-            x1 > left + w -> top
-            else -> top
+        
+        // Main diagonal lines
+        drawLine(color = paint, start = Offset(max(left, x1), max(top, y1)), end = Offset(min(left + w, x2), min(top + h, y2)), strokeWidth = 0.5f)
+        
+        // Small stone/aggregate symbols for "Pro" look
+        if (offset % (step * 4) == 0f) {
+            drawCircle(color = paint, radius = 1.5f, center = Offset(left + (offset % w), top + (offset % h)))
         }
-        val clipX2 = max(left, min(x2, left + w))
-        val clipY2 = when {
-            x2 < left -> top + (left - x2)
-            x2 > left + w -> top + (x2 - (left + w))
-            else -> top + h
-        }
-        if (clipX1 in left..(left + w) || clipX2 in left..(left + w)) {
-            drawLine(
-                color = paint,
-                start = Offset(
-                    x = max(left, min(left + w, x1)),
-                    y = max(top, min(top + h, y1.coerceAtLeast(top)))
-                ),
-                end = Offset(
-                    x = max(left, min(left + w, x2)),
-                    y = min(top + h, y2.coerceAtMost(top + h))
-                ),
-                strokeWidth = 0.5f
-            )
-        }
+    }
+}
+
+private fun DrawScope.drawAutoDimensions(
+    left: Float, top: Float, w: Float, h: Float,
+    span: Double, depth: Double, width: Double
+) {
+    val dimPaint = DimensionWhite
+    val extPaint = ExtensionGray
+    val textS = 18f
+    
+    // Span Dimension (Bottom)
+    val spanY = top + h + 60f
+    drawLine(extPaint, Offset(left, top + h + 5f), Offset(left, spanY + 10f), 1f)
+    drawLine(extPaint, Offset(left + w, top + h + 5f), Offset(left + w, spanY + 10f), 1f)
+    drawLine(dimPaint, Offset(left, spanY), Offset(left + w, spanY), 1.5f)
+    drawArrowHead(left, spanY, 1f, dimPaint)
+    drawArrowHead(left + w, spanY, -1f, dimPaint)
+    drawTextAnnotated("L = ${span.toInt()} mm", left + w / 2f, spanY + 25f, dimPaint, textS, center = true)
+
+    // Depth Dimension (Left)
+    val depthX = left - 60f
+    drawLine(extPaint, Offset(left - 5f, top), Offset(depthX - 10f, top), 1f)
+    drawLine(extPaint, Offset(left - 5f, top + h), Offset(depthX - 10f, top + h), 1f)
+    drawLine(dimPaint, Offset(depthX, top), Offset(depthX, top + h), 1.5f)
+    drawArrowHead(depthX, top, 1f, dimPaint, vertical = true)
+    drawArrowHead(depthX, top + h, -1f, dimPaint, vertical = true)
+    
+    drawContext.canvas.nativeCanvas.apply {
+        save(); rotate(-90f, depthX - 15f, top + h / 2f)
+        drawText("h = ${depth.toInt()} mm", depthX - 15f, top + h / 2f, android.graphics.Paint().apply { color = dimPaint.toArgb(); textSize = textS })
+        restore()
     }
 }
 
