@@ -896,10 +896,24 @@ class CalculatorEngine @Inject constructor(
             DesignCode.EGYPTIAN -> 4400 * sqrt(fcu)
             else -> 4700 * sqrt(fcu * 0.8)
             }
-        // Deflection must use SERVICE loads (unfactored), not factored loads
+        // [AUDIT: DEFLECTION PRECISION] Effective Inertia Ie (Branson's Formula)
+        // Deflection must use SERVICE loads (unfactored)
         val serviceLoad = deadLoad + liveLoad
-        val I_gross = width * height.pow(3) / 12.0
-        val deflection = (5 * serviceLoad * (span * 1000).pow(4)) / (384 * e_concrete * I_gross)
+        val Ig = width * height.pow(3) / 12.0
+        val Mcr = (0.6 * sqrt(fcu) * Ig) / (height / 2.0) / 1e6 // Cracking moment in kN.m
+        val Ma = mu / domainCode.getDeadLoadFactor() // Approximate service moment
+        
+        val I_eff = if (Ma > Mcr) {
+            // Ie = (Mcr/Ma)^3 * Ig + [1 - (Mcr/Ma)^3] * Icr
+            // For simplicity, using Icr = 0.35 * Ig as a standard code approximation
+            val Icr = 0.35 * Ig
+            val ratio = (Mcr / Ma).pow(3).coerceAtMost(1.0)
+            ratio * Ig + (1 - ratio) * Icr
+        } else {
+            Ig
+        }
+
+        val deflection = (5 * serviceLoad * (span * 1000).pow(4)) / (384 * e_concrete * I_eff)
         val allowableDeflection = (span * 1000) / 250.0
         
         val utilizationRatio = maxOf(mu / momentCapacity, deflection / allowableDeflection).coerceIn(0.0, 1.2)
@@ -1003,13 +1017,21 @@ class CalculatorEngine @Inject constructor(
                 voidRatio = 0.55  // hollow block void ratio
                 }
             else -> {
-                // Solid Slab Grashoff
-                val alpha = if (r <= 2.0) r.pow(4) / (1 + r.pow(4)) else 1.0
-                val beta = if (r <= 2.0) 1 / (1 + r.pow(4)) else 0.0
-                mx = alpha * wu * shortSpan.pow(2) / 8.0
-                my = beta * wu * shortSpan.pow(2) / 8.0
-                minTs = shortSpan * 1000 / 35.0
+                // Solid Slab Logic (ECP/ACI)
+                if (r > 2.0) {
+                    // One-way behavior
+                    mx = wu * shortSpan.pow(2) / 8.0
+                    my = 0.0 // Shrinkage/Distribution only
+                    minTs = shortSpan * 1000 / 25.0 // Continuous: 28, Simple: 20-25
+                } else {
+                    // Two-way behavior (Grashoff Coefficients)
+                    val alpha = r.pow(4) / (1 + r.pow(4))
+                    val beta = 1 / (1 + r.pow(4))
+                    mx = alpha * wu * shortSpan.pow(2) / 8.0
+                    my = beta * wu * longSpan.pow(2) / 8.0 // Corrected to use longSpan for My in two-way
+                    minTs = shortSpan * 1000 / 35.0
                 }
+            }
             }
         
         d = max(d, ts * 0.3)  // Ensure reasonable effective depth
@@ -1622,8 +1644,17 @@ class CalculatorEngine @Inject constructor(
         val cover = 50.0
         val d_wall = wallThickness - cover
 
-        // Base cantilever moment: M = γw * H³ / 6 (kN.m/m)
-        val mu = (gammaW * H.pow(3)) / 6.0
+        // Base cantilever moment calculation
+        // [AUDIT: TANK PRECISION] Use Grashoff or PCA tables for wall moments
+        // If H/L < 0.5, horizontal moment dominates. If H/L > 2, vertical cantilever dominates.
+        val aspectRatio = H / length.coerceAtLeast(0.1)
+        val muVertical = if (aspectRatio > 2.0) {
+             (gammaW * H.pow(3)) / 6.0 // Pure Cantilever
+        } else {
+             // Simplified PCA factor: max moment is reduced by two-way action
+             (gammaW * H.pow(3)) / 10.0 
+        }
+        val mu = muVertical // for backward compatibility in results mapping
 
         // --- Type-specific design ---
         // Limit State Design (K-method) per ECP 203 / ACI 318 / SBC 304

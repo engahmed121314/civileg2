@@ -102,6 +102,14 @@ object CalculationValidator {
         if (result.wallThickness < 200.0) {
             warnings.add("Logic Warning: Wall thickness (${result.wallThickness}mm) is less than recommended 200mm for water-tightness.")
         }
+        
+        // Check structural weight vs uplift
+        if (result.type == TankType.UNDERGROUND) {
+            val upliftCheck = result.suggestions.find { it.contains("Uplift") }
+            if (upliftCheck != null && upliftCheck.contains("Unsafe")) {
+                errors.add("CRITICAL: Underground tank fails uplift check. Needs more weight or mechanical anchors.")
+            }
+        }
 
         if (result.utilizationRatio > 0.95 && result.isSafe) {
             warnings.add("Warning: Section is at 95%+ capacity. Consider increasing thickness for better crack control in water structures.")
