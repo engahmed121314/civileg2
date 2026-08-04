@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.Date
 import javax.inject.Inject
 
@@ -78,11 +79,22 @@ class ProjectViewModel @Inject constructor(
     fun saveSeismic(projectId: Long, name: String, result: CalculatorEngine.SeismicResult) {
         viewModelScope.launch {
             val gson = Gson()
+            val inputData = JSONObject().apply {
+                put("zone", result.zone)
+                put("importance", result.importance)
+                put("reductionFactor", result.reductionFactor)
+                put("totalWeight", result.totalWeight)
+                put("height", result.height)
+                put("baseShear", result.baseShear)
+                put("storyDrift", result.storyDrift)
+                put("timePeriod", result.timePeriod)
+                put("spectralAcceleration", result.spectralAcceleration)
+            }.toString()
             val design = Design(
                 projectId = projectId,
                 type = DesignType.SEISMIC,
                 name = name,
-                inputData = "{}",
+                inputData = inputData,
                 results = gson.toJson(result),
                 isSafe = result.isSafe,
                 utilizationRatio = 0.0,

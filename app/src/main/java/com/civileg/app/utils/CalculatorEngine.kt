@@ -365,19 +365,9 @@ class CalculatorEngine @Inject constructor(
             )
         }
 
-        // RHS — kept as generated (SteelTables has no RHS data)
-        val rhs = mutableListOf<SteelSectionType>()
-        listOf(
-            Triple(50.0, 25.0, 3.0), Triple(50.0, 30.0, 3.2),
-            Triple(80.0, 40.0, 3.6), Triple(100.0, 50.0, 4.0),
-            Triple(120.0, 60.0, 4.0), Triple(120.0, 80.0, 5.0),
-            Triple(150.0, 75.0, 5.0), Triple(150.0, 100.0, 5.0),
-            Triple(200.0, 100.0, 6.3), Triple(200.0, 150.0, 6.3),
-            Triple(250.0, 150.0, 6.3), Triple(300.0, 150.0, 8.0),
-            Triple(300.0, 200.0, 10.0), Triple(400.0, 200.0, 10.0),
-            Triple(400.0, 300.0, 12.5)
-        ).forEach { (h, w, t) ->
-            rhs.add(SteelSectionType.RHS(w, h, t, SteelGrade.S275, "RHS ${w.toInt()}x${h.toInt()}x${t.toInt()}"))
+        // RHS — use SteelTables catalog data when available (real manufacturer I, S, Z, J values)
+        val rhs = SteelTables.rhsSections.map { s ->
+            SteelSectionType.RHS(s.width, s.depth, s.tw, SteelGrade.S275, s.name)
         }
 
         return mapOf(

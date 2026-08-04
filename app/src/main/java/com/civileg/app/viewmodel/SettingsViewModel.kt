@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.repository.ProjectRepository
 import com.civileg.app.ui.theme.ThemeMode
+import com.civileg.app.utils.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,6 +83,10 @@ class SettingsViewModel @Inject constructor(
     fun setAppLanguage(lang: String) {
         viewModelScope.launch {
             repository.setReportLanguage(lang)
+            // Actually change the app locale so the UI updates
+            LocaleHelper.getAppContext()?.let { ctx ->
+                LocaleHelper.setLocale(ctx, lang)
+            }
         }
     }
 

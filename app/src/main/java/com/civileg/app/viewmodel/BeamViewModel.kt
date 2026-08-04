@@ -110,7 +110,7 @@ class BeamViewModel @Inject constructor(
 
     fun saveBeam(projectId: Long, name: String, result: CalculatorEngine.BeamResult) {
         viewModelScope.launch {
-            repository.saveBeamDesign(projectId, name, result)
+            repository.saveBeamDesign(projectId, name, result, lastSpan, lastFcu, lastFy)
         }
     }
 

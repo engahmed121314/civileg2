@@ -1,5 +1,10 @@
 package com.civileg.app.ui.compose.screens
 
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -15,12 +20,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 private data class LevelPoint(
     val pointName: String,
@@ -36,6 +46,8 @@ private data class LevelPoint(
 fun WaterLevelScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var benchmarkRL by remember { mutableStateOf("") }
     var backSight by remember { mutableStateOf("") }
     var numPoints by remember { mutableStateOf("3") }
@@ -328,9 +340,19 @@ fun WaterLevelScreen(
                     }
                 }
 
-                // ── Export Placeholder ──
+                // ── Export to PDF ──
                 OutlinedButton(
-                    onClick = { /* Future: Export to PDF */ },
+                    onClick = {
+                        scope.launch {
+                            exportWaterLevelPdf(
+                                context = context,
+                                benchmarkRL = bmValue,
+                                backSight = bsValue,
+                                hi = hi,
+                                pointReadings = results
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -429,5 +451,162 @@ private fun SummaryRow(label: String, value: String) {
     ) {
         Text(label, color = Color.Gray, fontSize = 13.sp)
         Text(value, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
+}
+
+// ========== PDF Export ==========
+
+/**
+ * Export water-level survey data to a simple PDF using Android's native PdfDocument.
+ * Draws a title, summary info (BM, BS, HI), and a table of all reduced levels.
+ */
+private suspend fun exportWaterLevelPdf(
+    context: Context,
+    benchmarkRL: Double,
+    backSight: Double,
+    hi: Double,
+    pointReadings: List<LevelPoint>
+) {
+    withContext(Dispatchers.IO) {
+        try {
+            val fileName = "Water_Level_Survey_${System.currentTimeMillis()}.pdf"
+            val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                ?: context.cacheDir
+            directory.mkdirs()
+            val file = File(directory, fileName)
+
+            val pageWidth = 595  // A4 width in points
+            val pageHeight = 842 // A4 height in points
+            val margin = 36f
+
+            val pdfDocument = PdfDocument()
+            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+            val page = pdfDocument.startPage(pageInfo)
+            val canvas = page.canvas
+
+            // ── Paints ──
+            val titlePaint = Paint().apply {
+                textSize = 18f
+                isFakeBoldText = true
+                color = AndroidColor.rgb(21, 101, 192)
+                typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            }
+            val headerPaint = Paint().apply {
+                textSize = 11f
+                isFakeBoldText = true
+                color = AndroidColor.WHITE
+                textAlign = Paint.Align.CENTER
+                typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            }
+            val cellPaint = Paint().apply {
+                textSize = 10f
+                color = AndroidColor.rgb(33, 33, 33)
+                textAlign = Paint.Align.CENTER
+            }
+            val labelPaint = Paint().apply {
+                textSize = 12f
+                isFakeBoldText = true
+                color = AndroidColor.rgb(33, 33, 33)
+            }
+            val valuePaint = Paint().apply {
+                textSize = 12f
+                color = AndroidColor.rgb(33, 33, 33)
+            }
+            val linePaint = Paint().apply {
+                strokeWidth = 1f
+                color = AndroidColor.rgb(150, 150, 150)
+            }
+
+            var y = margin + 20f
+
+            // ── Title ──
+            canvas.drawText("Water Level Survey Report", pageWidth / 2f, y, titlePaint)
+            y += 30f
+
+            // ── Summary ──
+            canvas.drawText("Benchmark RL: ", margin, y, labelPaint)
+            canvas.drawText("%.3f m".format(benchmarkRL), margin + 120f, y, valuePaint)
+            y += 20f
+            canvas.drawText("Back Sight: ", margin, y, labelPaint)
+            canvas.drawText("%.3f m".format(backSight), margin + 120f, y, valuePaint)
+            y += 20f
+            canvas.drawText("Height of Instrument (HI): ", margin, y, labelPaint)
+            canvas.drawText("%.3f m".format(hi), margin + 200f, y, valuePaint)
+            y += 30f
+
+            // ── Table ──
+            val colX = floatArrayOf(
+                margin,                           // Point
+                margin + 100f,                    // Type
+                margin + 220f,                    // Staff Reading
+                margin + 340f,                    // RL
+                margin + 440f                     // right edge
+            )
+            val rowHeight = 24f
+
+            // Header row
+            val headerBg = Paint().apply { color = AndroidColor.rgb(21, 101, 192) }
+            canvas.drawRect(colX[0], y, colX[4], y + rowHeight, headerBg)
+            canvas.drawText("Point", (colX[0] + colX[1]) / 2f, y + 16f, headerPaint)
+            canvas.drawText("Type", (colX[1] + colX[2]) / 2f, y + 16f, headerPaint)
+            canvas.drawText("Reading (m)", (colX[2] + colX[3]) / 2f, y + 16f, headerPaint)
+            canvas.drawText("RL (m)", (colX[3] + colX[4]) / 2f, y + 16f, headerPaint)
+            y += rowHeight
+
+            // Row helper
+            fun drawRow(point: String, type: String, reading: String, rl: String, bgColor: Int) {
+                if (y + rowHeight > pageHeight - margin) return
+                val bgPaint = Paint().apply { color = bgColor }
+                canvas.drawRect(colX[0], y, colX[4], y + rowHeight, bgPaint)
+                canvas.drawText(point, (colX[0] + colX[1]) / 2f, y + 16f, cellPaint)
+                canvas.drawText(type, (colX[1] + colX[2]) / 2f, y + 16f, cellPaint)
+                canvas.drawText(reading, (colX[2] + colX[3]) / 2f, y + 16f, cellPaint)
+                canvas.drawText(rl, (colX[3] + colX[4]) / 2f, y + 16f, cellPaint)
+                // Cell borders
+                for (x in colX) {
+                    canvas.drawLine(x, y, x, y + rowHeight, linePaint)
+                }
+                canvas.drawLine(colX[0], y, colX[4], y, linePaint)
+                y += rowHeight
+            }
+
+            // Benchmark row
+            drawRow("BM", "Benchmark", "—", "%.3f".format(benchmarkRL), AndroidColor.rgb(232, 245, 253))
+
+            // Back Sight row
+            drawRow("BS", "Back Sight", "%.3f".format(backSight), "—", AndroidColor.rgb(227, 242, 253))
+
+            // Forward Sight rows
+            pointReadings.forEachIndexed { index, point ->
+                val hasReading = point.staffReading != 0.0 || pointReadings.getOrNull(index)?.staffReading != 0.0
+                val bgColor = if (index % 2 == 0) AndroidColor.WHITE else AndroidColor.rgb(245, 245, 245)
+                drawRow(
+                    point = point.pointName,
+                    type = "Fore Sight",
+                    reading = if (hasReading) "%.3f".format(point.staffReading) else "—",
+                    rl = if (hasReading) "%.3f".format(point.rl) else "—",
+                    bgColor = bgColor
+                )
+            }
+
+            // ── Footer ──
+            y += 10f
+            if (y < pageHeight - margin) {
+                val validResults = pointReadings.filter { it.staffReading != 0.0 }
+                if (validResults.isNotEmpty()) {
+                    val maxRL = validResults.maxOf { it.rl }
+                    val minRL = validResults.minOf { it.rl }
+                    canvas.drawText("Max RL: %.3f m  |  Min RL: %.3f m  |  Difference: %.3f m".format(maxRL, minRL, maxRL - minRL), margin, y, labelPaint)
+                }
+            }
+
+            pdfDocument.finishPage(page)
+            pdfDocument.close()
+
+            // Open the PDF
+            com.civileg.app.utils.ExportUtils.openPdf(context, file)
+        } catch (e: Exception) {
+            android.util.Log.e("WaterLevelScreen", "PDF export failed", e)
+        }
     }
 }

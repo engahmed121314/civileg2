@@ -16,14 +16,18 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Professional Slab Engineering Drawing — v3 (2026-07-27)
+ * Professional Slab Engineering Drawing — v4 (2026-07-27)
  *
- * CHANGES IN v3:
+ * CHANGES IN v4:
+ * - Dark mode support: uses theme-aware [DrawingColors] palette via [drawingColors()].
+ * - Distribution bars drawn in cross-section view (smaller green circles above main bars).
+ * - Legend entry added for distribution bars in section view.
+ *
+ * PREVIOUS (v3):
  * - Uses shared DrawingUtils (drawTextAnnotated, drawHatchPattern, drawHorizontalDimension,
  *   drawVerticalDimension) instead of duplicated local helpers.
  * - Fixes lever arm: z = 0.87d (standard for slabs, was incorrectly 0.9d → unconservative).
  * - Fixes shrinkage steel ratio: now fy-dependent per ECP 203 (was hardcoded 0.0018).
- * - Dark theme safe: uses DrawingColors palette.
  * - Arabic BIDI via shared drawTextAnnotated (StaticLayout pipeline).
  */
 @Composable
@@ -50,6 +54,9 @@ fun ProfessionalSlabDrawing(
     isSafe: Boolean = true,
     utilizationRatio: Double = 0.0
 ) {
+    // Obtain theme-aware palette (reacts to isSystemInDarkTheme)
+    val palette = drawingColors()
+
     // Canvas fills the parent-constrained size from InteractiveDrawingScreen (responsive)
     Canvas(
         modifier = modifier.fillMaxSize()
@@ -58,26 +65,26 @@ fun ProfessionalSlabDrawing(
         val h = size.height
         val density = this.density
 
-        // ── Color Palette (theme-compatible, drawing on dark canvas) ─
-        val concreteFill = Color(0xFFE0E0E0)
-        val concreteStroke = Color(0xFF424242)
-        val mainBarColor = Color(0xFF1565C0)
-        val distBarColor = Color(0xFF43A047)
-        val topBarColor = Color(0xFFC62828)
-        val dimColor = Color(0xFF6A1B9A)
-        val textColor = Color(0xFFFFFFFF)
-        val headerBg = Color(0xFF1A237E)
-        val columnFill = Color(0xFF616161)
-        val ribFill = Color(0xFFBDBDBD)
-        val dropFill = Color(0xFFB0BEC5)
-        val shearPerimColor = Color(0xFFE65100)
-        val stripColor = Color(0xFF757575)
-        val safeColor = Color(0xFF2E7D32)
-        val unsafeColor = Color(0xFFC62828)
-        val tableHeaderText = Color(0xFFFFFFFF)
-        val tableCellText = Color(0xFF212121)
-        val tableRowColor = Color(0xFFFAFAFA)
-        val tableRowAltColor = Color(0xFFF5F5F5)
+        // ── Color Palette from theme-aware DrawingColors ─
+        val concreteFill = palette.concreteFill
+        val concreteStroke = palette.concreteStroke
+        val mainBarColor = palette.rebarBlue
+        val distBarColor = palette.distBarGreen
+        val topBarColor = palette.unsafeRed
+        val dimColor = palette.dimColor
+        val textColor = palette.textOnHeader
+        val headerBg = palette.tableHeaderBg
+        val columnFill = palette.columnFill
+        val ribFill = palette.ribFill
+        val dropFill = palette.dropFill
+        val shearPerimColor = palette.shearPerimColor
+        val stripColor = palette.stripColor
+        val safeColor = palette.safeGreen
+        val unsafeColor = palette.unsafeRed
+        val tableHeaderText = palette.tableHeaderText
+        val tableCellText = palette.tableCellText
+        val tableRowColor = palette.tableRowColor
+        val tableRowAltColor = palette.tableRowAltColor
 
         // ── Local density-aware wrapper for drawTextAnnotated ───────
         // Shared DrawingUtils.drawTextAnnotated uses raw pixel sizes;
@@ -141,7 +148,7 @@ fun ProfessionalSlabDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER (always visible)
         // ══════════════════════════════════════════════════════════
-        val headerColor = if (isSafe) Color(0xFF1B5E20) else Color(0xFF7F0000)
+        val headerColor = if (isSafe) safeColor else unsafeColor
         drawRoundRect(
             color = headerColor, topLeft = Offset(0f, 0f),
             size = Size(w, 36f), cornerRadius = CornerRadius(0f)
@@ -156,7 +163,7 @@ fun ProfessionalSlabDrawing(
         if (viewMode == 0 || viewMode == 1) {
             // Plan background card
             drawRoundRect(
-                color = Color(0xFF37474F), topLeft = Offset(slabLeft - 6f, slabTop - 6f),
+                color = palette.planBackground, topLeft = Offset(slabLeft - 6f, slabTop - 6f),
                 size = Size(drawSpanX + 12f, drawSpanY + 12f), cornerRadius = CornerRadius(3f)
             )
             // Slab concrete fill
@@ -168,7 +175,7 @@ fun ProfessionalSlabDrawing(
 
             // Concrete hatching — use shared DrawingUtils
             drawHatchPattern(slabLeft, slabTop, drawSpanX, drawSpanY,
-                spacing = 22f, angleDeg = 45f, color = Color(0x60BDBDBD))
+                spacing = 22f, angleDeg = 45f, color = palette.hatchColor)
 
             // ── Hordi / Waffle ribs & blocks ───────────────────────
             if (isHordi || isWaffle) {
@@ -202,12 +209,12 @@ fun ProfessionalSlabDrawing(
             if (isFlat) {
                 val stripW = drawSpanY / 6f
                 drawRect(
-                    color = Color(0xFFCFD8DC),
+                    color = palette.dropFill,
                     topLeft = Offset(slabLeft, slabTop),
                     size = Size(drawSpanX, stripW), alpha = 0.35f
                 )
                 drawRect(
-                    color = Color(0xFFCFD8DC),
+                    color = palette.dropFill,
                     topLeft = Offset(slabLeft, slabBottom - stripW),
                     size = Size(drawSpanX, stripW), alpha = 0.35f
                 )
@@ -321,7 +328,7 @@ fun ProfessionalSlabDrawing(
                 slabTop, slabBottom, slabLeft - 16f,
                 "${(spanY * 1000).toInt()} mm", dimColor, 10f * density, offset = 0f
             )
-            dt("PLAN", slabLeft + 22f, slabBottom + 18f, Color(0xFF757575), 10f, bold = true)
+            dt("PLAN", slabLeft + 22f, slabBottom + 18f, palette.labelGray, 10f, bold = true)
         }
 
         // ══════════════════════════════════════════════════════════
@@ -333,7 +340,7 @@ fun ProfessionalSlabDrawing(
             val secLeft = margin + 80f
             val secRight = w - margin
 
-            dt("SECTION A-A", secLeft, secTop - 4f, Color(0xFF757575), 10f, bold = true)
+            dt("SECTION A-A", secLeft, secTop - 4f, palette.labelGray, 10f, bold = true)
 
             val maxSectionW = secRight - secLeft - 100f
             val sectionSpanPx = min(drawSpanX, maxSectionW)
@@ -342,6 +349,12 @@ fun ProfessionalSlabDrawing(
             val sSlabLeft = secLeft + (maxSectionW - sectionSpanPx) / 2f
             val sSlabTop = secTop + (sectionH - thickPx) / 2f
             val sSlabBottom = sSlabTop + thickPx
+
+            // Pre-compute bar radii for use in drawing and labels
+            val barR = (mainRebarDia / 1000.0 * sectionScale / 2f).toFloat().coerceIn(3f, 6f)
+            val safeDistDiaSec = if (distRebarDia > 0) distRebarDia else 10.0
+            val safeDistSpSec = if (distRebarSpacing > 0) distRebarSpacing else 200.0
+            val distBarR = (safeDistDiaSec / 1000.0 * sectionScale / 2f).toFloat().coerceIn(2f, 4.5f)
 
             if (isHordi || isWaffle) {
                 val toppingH = (slabThickness / 1000.0 * 0.3 * sectionScale).toFloat().coerceAtLeast(12f)
@@ -382,7 +395,6 @@ fun ProfessionalSlabDrawing(
                 )
 
                 // Main bottom bars
-                val barR = (mainRebarDia / 1000.0 * sectionScale / 2f).toFloat().coerceIn(3f, 6f)
                 val safeMainSp = if (mainRebarSpacing > 0) mainRebarSpacing else 200.0
                 val barCount = ((sectionSpanPx - 20f) / (safeMainSp / 1000.0 * sectionScale).toFloat())
                     .toInt().coerceIn(3, 25)
@@ -392,6 +404,18 @@ fun ProfessionalSlabDrawing(
                         val bx = sSlabLeft + 10f + i * barStep
                         val by = sSlabBottom - 6f
                         drawCircle(color = mainBarColor, radius = barR, center = Offset(bx, by))
+                    }
+                }
+
+                // Distribution bars ABOVE main bars at bottom (both layers at bottom per engineering practice)
+                val numDistBars = ((sectionSpanPx - 20f) / (safeDistSpSec / 1000.0 * sectionScale).toFloat())
+                    .toInt().coerceIn(2, 10)
+                if (numDistBars > 1) {
+                    val distBarStep = (sectionSpanPx - 20f) / (numDistBars - 1)
+                    val distBarY = sSlabBottom - 6f - barR - distBarR - 2f  // just above main bars
+                    for (i in 0 until numDistBars) {
+                        val bx = sSlabLeft + 10f + i * distBarStep
+                        drawCircle(color = distBarColor, radius = distBarR, center = Offset(bx, distBarY))
                     }
                 }
 
@@ -433,10 +457,10 @@ fun ProfessionalSlabDrawing(
             // Cover dimension
             val coverPx = (cover / 1000.0 * sectionScale).toFloat().coerceIn(5f, 18f)
             drawLine(
-                Color(0xFF2E7D32), Offset(sSlabLeft + 20f, sSlabBottom),
+                palette.coverColor, Offset(sSlabLeft + 20f, sSlabBottom),
                 Offset(sSlabLeft + 20f, sSlabBottom - coverPx), strokeWidth = 1f
             )
-            dt("c = ${cover.toInt()} mm", sSlabLeft + 44f, sSlabBottom - coverPx / 2f + 4f, Color(0xFF2E7D32), 9f)
+            dt("c = ${cover.toInt()} mm", sSlabLeft + 44f, sSlabBottom - coverPx / 2f + 4f, palette.coverColor, 9f)
 
             // Thickness dimension
             val dimX = sSlabLeft + sectionSpanPx + 14f
@@ -447,13 +471,18 @@ fun ProfessionalSlabDrawing(
 
             // Bar labels
             dt("①", sSlabLeft + sectionSpanPx / 2f, sSlabBottom + 16f, mainBarColor, 10f, bold = true)
+            // Distribution bar label in section
+            if (!isHordi && !isWaffle) {
+                val distLabelY = sSlabBottom - 6f - barR - distBarR - 2f
+                dt("②", sSlabLeft + sectionSpanPx / 2f + 18f, distLabelY, distBarColor, 9f, bold = true)
+            }
             if (!isCantilever && !isHordi && !isWaffle) {
                 dt("③", sSlabLeft + 14f, sSlabTop - 6f, topBarColor, 10f, bold = true)
             }
             // Section markers (A-A)
             if (viewMode == 0) {
-                dt("A", max(8f, slabLeft - 26f), slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
-                dt("A", slabRight + 26f, slabTop + drawSpanY / 2f + 4f, Color(0xFFC62828), 11f, bold = true)
+                dt("A", max(8f, slabLeft - 26f), slabTop + drawSpanY / 2f + 4f, palette.sectionLineColor, 11f, bold = true)
+                dt("A", slabRight + 26f, slabTop + drawSpanY / 2f + 4f, palette.sectionLineColor, 11f, bold = true)
             }
         }
 
@@ -580,7 +609,7 @@ fun ProfessionalSlabDrawing(
             var rowY = tblTop
 
             // ── Table Title bar ─────────────────────────────────────
-            drawRect(color = Color(0xFF263238), topLeft = Offset(tblLeft, rowY - 22f * density), size = Size(tblWidth, 22f * density))
+            drawRect(color = palette.tableTitleBg, topLeft = Offset(tblLeft, rowY - 22f * density), size = Size(tblWidth, 22f * density))
             dt("REINFORCEMENT SCHEDULE", tblLeft + tblWidth / 2f, rowY - 7f * density, Color.White, 11f, bold = true)
 
             // ── Header row ─────────────────────────────────────────
@@ -621,19 +650,19 @@ fun ProfessionalSlabDrawing(
                     colX += colWidths[cIdx]
                 }
                 // Row border
-                drawLine(Color(0xFFBDBDBD), Offset(tblLeft, rowY + dataRowH), Offset(tblLeft + tblWidth, rowY + dataRowH), strokeWidth = 0.5f)
+                drawLine(palette.tableRowBorder, Offset(tblLeft, rowY + dataRowH), Offset(tblLeft + tblWidth, rowY + dataRowH), strokeWidth = 0.5f)
                 rowY += dataRowH
             }
 
             // ── Totals row ─────────────────────────────────────────
             val totalSteelWeight = rows.sumOf { it.last().replace(",", ".").toDoubleOrNull() ?: 0.0 }
             drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, totalsRowH))
-            dt("Σ", tblLeft + colWidths[0] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 12f, bold = true)
-            dt("Total Steel Weight", tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f, bold = true)
+            dt("Σ", tblLeft + colWidths[0] / 2f, rowY + totalsRowH / 2f + 4f * density, palette.totalsGold, 12f, bold = true)
+            dt("Total Steel Weight", tblLeft + colWidths[0] + colWidths[1] / 2f, rowY + totalsRowH / 2f + 4f * density, palette.totalsGold, 10f, bold = true)
             // Span empty cells
             var totX = tblLeft + colWidths[0] + colWidths[1]
             for (i in 2 until colWidths.size - 1) {
-                dt("—", totX + colWidths[i] / 2f, rowY + totalsRowH / 2f + 4f * density, Color(0xFFFFD700), 10f)
+                dt("—", totX + colWidths[i] / 2f, rowY + totalsRowH / 2f + 4f * density, palette.totalsGold, 10f)
                 totX += colWidths[i]
             }
             val slabArea = spanX * spanY
@@ -641,20 +670,20 @@ fun ProfessionalSlabDrawing(
                 String.format("%.2f kg / %.1f m²", totalSteelWeight, slabArea),
                 totX + colWidths.last() / 2f,
                 rowY + totalsRowH / 2f + 4f * density,
-                Color(0xFFFFD700), 10f, bold = true
+                palette.totalsGold, 10f, bold = true
             )
             rowY += totalsRowH
 
             // ── Table outer border ─────────────────────────────────
             drawRect(
-                color = Color(0xFF37474F), topLeft = Offset(tblLeft, tblTop),
+                color = palette.tableBorder, topLeft = Offset(tblLeft, tblTop),
                 size = Size(tblWidth, rowY - tblTop), style = Stroke(width = 1.5f)
             )
             // Vertical separators
             var cx = tblLeft
             for (i in 0 until colWidths.size - 1) {
                 cx += colWidths[i]
-                drawLine(Color(0xFF90A4AE), Offset(cx, tblTop), Offset(cx, rowY), strokeWidth = 0.5f)
+                drawLine(palette.tableColumnBorder, Offset(cx, tblTop), Offset(cx, rowY), strokeWidth = 0.5f)
             }
         }
     }

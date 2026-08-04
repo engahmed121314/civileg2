@@ -184,6 +184,74 @@ object SteelTables {
     )
 
     // ============================================================
+    // RHS — Rectangular Hollow Sections (EN 10210 S355J2H Hot-Finished)
+    // Real manufacturer catalog data for 19 common sizes.
+    // Previously RHS sections were procedurally generated with no
+    // realistic I, S, Z, J values, making RHS design non-functional.
+    // For RHS, tw = tf = wall thickness (uniform wall).
+    // Axis convention: iy = strong axis (about depth H), iz = weak axis (about width B)
+    // ============================================================
+    val rhsSections = listOf(
+        // RHS 50x30x3
+        SectionProperties("RHS 50x30x3", 50.0, 30.0, 3.0, 3.0, 4.44, 3.49, 14.21, 6.18, 5.69, 4.12, 1.79, 1.18,
+            Sx = 5.69, Sy_aisc = 4.12, Zx = 7.13, Zy = 4.91, J = 13.06),
+        // RHS 60x40x3
+        SectionProperties("RHS 60x40x3", 60.0, 40.0, 3.0, 3.0, 5.64, 4.43, 27.39, 14.31, 9.13, 7.16, 2.20, 1.59,
+            Sx = 9.13, Sy_aisc = 7.16, Zx = 11.21, Zy = 8.39, J = 28.39),
+        // RHS 80x40x3
+        SectionProperties("RHS 80x40x3", 80.0, 40.0, 3.0, 3.0, 6.84, 5.37, 55.85, 18.43, 13.96, 9.21, 2.86, 1.64,
+            Sx = 13.96, Sy_aisc = 9.21, Zx = 17.45, Zy = 10.61, J = 42.72),
+        // RHS 80x40x4
+        SectionProperties("RHS 80x40x4", 80.0, 40.0, 4.0, 4.0, 8.96, 7.03, 71.13, 23.01, 17.78, 11.50, 2.82, 1.60,
+            Sx = 17.78, Sy_aisc = 11.50, Zx = 22.53, Zy = 13.57, J = 53.47),
+        // RHS 80x40x5
+        SectionProperties("RHS 80x40x5", 80.0, 40.0, 5.0, 5.0, 11.00, 8.63, 84.92, 26.92, 21.23, 13.46, 2.78, 1.56,
+            Sx = 21.23, Sy_aisc = 13.46, Zx = 27.25, Zy = 16.25, J = 62.64),
+        // RHS 100x50x3
+        SectionProperties("RHS 100x50x3", 100.0, 50.0, 3.0, 3.0, 8.64, 6.78, 112.12, 37.44, 22.42, 14.98, 3.60, 2.08,
+            Sx = 22.42, Sy_aisc = 14.98, Zx = 27.80, Zy = 17.00, J = 86.60),
+        // RHS 100x50x4
+        SectionProperties("RHS 100x50x4", 100.0, 50.0, 4.0, 4.0, 11.36, 8.92, 144.13, 47.37, 28.83, 18.95, 3.56, 2.04,
+            Sx = 28.83, Sy_aisc = 18.95, Zx = 36.13, Zy = 21.93, J = 109.87),
+        // RHS 100x50x5
+        SectionProperties("RHS 100x50x5", 100.0, 50.0, 5.0, 5.0, 14.00, 10.99, 173.67, 56.17, 34.73, 22.47, 3.52, 2.00,
+            Sx = 34.73, Sy_aisc = 22.47, Zx = 44.00, Zy = 26.50, J = 130.54),
+        // RHS 120x60x4
+        SectionProperties("RHS 120x60x4", 120.0, 60.0, 4.0, 4.0, 13.76, 10.80, 255.20, 84.77, 42.53, 28.26, 4.31, 2.48,
+            Sx = 42.53, Sy_aisc = 28.26, Zx = 52.93, Zy = 32.29, J = 196.27),
+        // RHS 120x60x5
+        SectionProperties("RHS 120x60x5", 120.0, 60.0, 5.0, 5.0, 17.00, 13.34, 309.42, 101.42, 51.57, 33.81, 4.27, 2.44,
+            Sx = 51.57, Sy_aisc = 33.81, Zx = 64.75, Zy = 39.25, J = 235.33),
+        // RHS 120x80x4
+        SectionProperties("RHS 120x80x4", 120.0, 80.0, 4.0, 4.0, 15.36, 12.06, 309.04, 163.64, 51.51, 40.91, 4.49, 3.26,
+            Sx = 51.51, Sy_aisc = 40.91, Zx = 62.21, Zy = 46.85, J = 323.84),
+        // RHS 120x80x5
+        SectionProperties("RHS 120x80x5", 120.0, 80.0, 5.0, 5.0, 19.00, 14.91, 375.58, 197.58, 62.60, 49.40, 4.45, 3.22,
+            Sx = 62.60, Sy_aisc = 49.40, Zx = 76.25, Zy = 57.25, J = 391.53),
+        // RHS 150x100x5
+        SectionProperties("RHS 150x100x5", 150.0, 100.0, 5.0, 5.0, 24.00, 18.84, 754.50, 399.50, 100.60, 79.90, 5.61, 4.08,
+            Sx = 100.60, Sy_aisc = 79.90, Zx = 121.50, Zy = 91.50, J = 790.63),
+        // RHS 150x100x6
+        SectionProperties("RHS 150x100x6", 150.0, 100.0, 6.0, 6.0, 28.56, 22.42, 885.25, 466.31, 118.03, 93.26, 5.57, 4.04,
+            Sx = 118.03, Sy_aisc = 93.26, Zx = 143.53, Zy = 107.83, J = 923.81),
+        // RHS 200x100x5
+        SectionProperties("RHS 200x100x5", 200.0, 100.0, 5.0, 5.0, 29.00, 22.76, 1522.42, 512.42, 152.24, 102.48, 7.25, 4.20,
+            Sx = 152.24, Sy_aisc = 102.48, Zx = 187.75, Zy = 115.25, J = 1183.36),
+        // RHS 200x100x6
+        SectionProperties("RHS 200x100x6", 200.0, 100.0, 6.0, 6.0, 34.56, 27.13, 1793.91, 599.03, 179.39, 119.81, 7.20, 4.16,
+            Sx = 179.39, Sy_aisc = 119.81, Zx = 222.43, Zy = 136.03, J = 1385.63),
+        // RHS 200x150x5
+        SectionProperties("RHS 200x150x5", 200.0, 150.0, 5.0, 5.0, 34.00, 26.69, 1997.83, 1280.33, 199.78, 170.71, 7.67, 6.14,
+            Sx = 199.78, Sy_aisc = 170.71, Zx = 236.50, Zy = 194.00, J = 2351.40),
+        // RHS 200x150x6
+        SectionProperties("RHS 200x150x6", 200.0, 150.0, 6.0, 6.0, 40.56, 31.84, 2358.63, 1507.69, 235.86, 201.02, 7.63, 6.10,
+            Sx = 235.86, Sy_aisc = 201.02, Zx = 280.63, Zy = 229.93, J = 2770.72),
+        // RHS 250x150x6
+        SectionProperties("RHS 250x150x6", 250.0, 150.0, 6.0, 6.0, 46.56, 36.55, 4027.79, 1818.91, 322.22, 242.52, 9.30, 6.25,
+            Sx = 322.22, Sy_aisc = 242.52, Zx = 389.53, Zy = 273.13, J = 3818.16)
+    )
+
+    // ============================================================
     // AISC W-Shapes (American Wide Flange) — Critical missing data
     // Real AISC database values for the most commonly used sections.
     // Previously the AISCSteelDesignEngine (1978 lines) had NO section
@@ -262,7 +330,7 @@ object SteelTables {
     )
 
     fun getAllSections(): List<SectionProperties> =
-        ipeSections + heaSections + hebSections + upnSections + angleSections + wShapeSections
+        ipeSections + heaSections + hebSections + upnSections + angleSections + wShapeSections + rhsSections
 
     fun getSectionByName(name: String): SectionProperties? = getAllSections().find {
         it.name.equals(name, ignoreCase = true)
@@ -283,8 +351,19 @@ object SteelTables {
             "UPN" -> upnSections
             "ANGLE" -> angleSections
             "W" -> wShapeSections
+            "RHS" -> rhsSections
             else -> ipeSections
         }
         return list.minByOrNull { kotlin.math.abs(it.depth - depth) }
+    }
+
+    /**
+     * Search RHS sections by dimensions (height × width × thickness).
+     * Returns the closest match if no exact match is found.
+     */
+    fun getRhsByDimensions(height: Double, width: Double, thickness: Double): SectionProperties? {
+        return rhsSections.minByOrNull {
+            kotlin.math.abs(it.depth - height) + kotlin.math.abs(it.width - width) + kotlin.math.abs(it.tw - thickness) * 10
+        }
     }
 }

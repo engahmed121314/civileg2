@@ -114,7 +114,14 @@ class SlabViewModel @Inject constructor(
     }
 
     fun saveSlab(projectId: Long, name: String, result: CalculatorEngine.SlabResult) {
-        viewModelScope.launch { repository.saveSlabDesign(projectId, name, result) }
+        viewModelScope.launch {
+            val inputs = lastInputs
+            if (inputs != null) {
+                repository.saveSlabDesign(projectId, name, result, inputs.lx, inputs.ly, inputs.fcu, inputs.fy)
+            } else {
+                repository.saveSlabDesign(projectId, name, result)
+            }
+        }
     }
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {

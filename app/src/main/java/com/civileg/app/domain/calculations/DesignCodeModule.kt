@@ -23,71 +23,79 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Qualifier
 
+/**
+ * NOTE: This module is currently unused by Hilt.
+ * The active DI module is at com.civileg.app.di.DesignCodeModule.
+ * This file is retained for reference; rename to avoid class name collision.
+ */
+@Deprecated("Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.")
 @Qualifier
 @Retention(AnnotationRetention.RUNTIME)
-annotation class DesignCodeType(val code: DesignCode)
+annotation class DesignCodeQualifier(val code: DesignCode)
 
+@Deprecated("Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.")
 @Module
 @InstallIn(SingletonComponent::class)
-object DesignCodeModule {
+@Suppress("unused")
+object LegacyDesignCodeModule {
 
     @Provides
-    @DesignCodeType(DesignCode.ECP)
+    @DesignCodeQualifier(DesignCode.ECP)
     fun provideECPColumnDesign(): ColumnDesign = ECPColumn()
 
     @Provides
-    @DesignCodeType(DesignCode.ACI)
+    @DesignCodeQualifier(DesignCode.ACI)
     fun provideACIColumnDesign(): ColumnDesign = ACIColumn()
 
     @Provides
-    @DesignCodeType(DesignCode.SBC)
+    @DesignCodeQualifier(DesignCode.SBC)
     fun provideSBCColumnDesign(): ColumnDesign = SBCColumn()
 
     @Provides
-    @DesignCodeType(DesignCode.ECP)
+    @DesignCodeQualifier(DesignCode.ECP)
     fun provideECPBeamDesign(): BeamDesign = ECPBeam()
 
     @Provides
-    @DesignCodeType(DesignCode.ACI)
+    @DesignCodeQualifier(DesignCode.ACI)
     fun provideACIBeamDesign(): BeamDesign = ACIBeam()
 
     @Provides
-    @DesignCodeType(DesignCode.SBC)
+    @DesignCodeQualifier(DesignCode.SBC)
     fun provideSBCBeamDesign(): BeamDesign = SBCBeam()
 
     @Provides
-    @DesignCodeType(DesignCode.ECP)
+    @DesignCodeQualifier(DesignCode.ECP)
     fun provideECPSlabDesign(): SlabDesign = ECPSlab()
 
     @Provides
-    @DesignCodeType(DesignCode.ACI)
+    @DesignCodeQualifier(DesignCode.ACI)
     fun provideACISlabDesign(): SlabDesign = ACISlab()
 
     @Provides
-    @DesignCodeType(DesignCode.SBC)
+    @DesignCodeQualifier(DesignCode.SBC)
     fun provideSBCSlabDesign(): SlabDesign = SBCSlab()
 
     @Provides
-    @DesignCodeType(DesignCode.ECP)
+    @DesignCodeQualifier(DesignCode.ECP)
     fun provideECPTankDesign(): TankDesign = ECPTank()
 
     @Provides
-    @DesignCodeType(DesignCode.ACI)
+    @DesignCodeQualifier(DesignCode.ACI)
     fun provideACITankDesign(): TankDesign = ACITank()
 
     @Provides
-    @DesignCodeType(DesignCode.SBC)
+    @DesignCodeQualifier(DesignCode.SBC)
     fun provideSBCTankDesign(): TankDesign = SBCTank()
 
     @Provides
-    @DesignCodeType(DesignCode.ECP)
+    @DesignCodeQualifier(DesignCode.ECP)
     fun provideECPFootingDesign(): FootingDesign = ECPFooting()
 
     @Provides
-    @DesignCodeType(DesignCode.ACI)
+    @DesignCodeQualifier(DesignCode.ACI)
     fun provideACIFootingDesign(): FootingDesign = ACIFooting()
 
     @Provides
-    @DesignCodeType(DesignCode.SBC)
+    @DesignCodeQualifier(DesignCode.SBC)
     fun provideSBCFootingDesign(): FootingDesign = SBCFooting()
 }

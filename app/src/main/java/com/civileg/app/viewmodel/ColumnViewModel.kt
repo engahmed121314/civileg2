@@ -284,7 +284,9 @@ class ColumnViewModel @Inject constructor(
 
     fun saveColumn(projectId: Long, name: String, result: CalculatorEngine.ColumnResult) {
         viewModelScope.launch {
-            repository.saveColumnDesign(projectId, name, result)
+            val fcuVal = _uiState.value.fcu.toDoubleOrNull() ?: 25.0
+            val fyVal = _uiState.value.fy.toDoubleOrNull() ?: 400.0
+            repository.saveColumnDesign(projectId, name, result, fcuVal, fyVal)
         }
     }
 

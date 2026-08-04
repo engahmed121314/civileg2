@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import android.content.Context
@@ -32,6 +33,9 @@ class TankViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
@@ -50,6 +54,11 @@ class TankViewModel @Inject constructor(
             try {
                 val res = calculatorEngine.designTank(type, capacity, height, fcu, fy, preferredDiameter, code)
                 _result.value = res
+
+                // Validate result for engineering consistency
+                val report = CalculationValidator.validateTank(res)
+                _validationReport.value = report
+
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"

@@ -12,6 +12,7 @@ import kotlin.math.min
  * Professional Slab Detail View
  * Supports Solid, Flat, Ribbed, Waffle, and PT slabs with engineering visualization.
  */
+@Deprecated("Use ProfessionalSlabDrawing")
 class SlabDetailView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {

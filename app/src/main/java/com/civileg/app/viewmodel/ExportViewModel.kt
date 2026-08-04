@@ -97,8 +97,8 @@ class ExportViewModel @Inject constructor(
                         beamWidth = inputs.width,
                         beamDepth = inputs.totalDepth,
                         span = inputs.span,
-                        mainRebarDia = 20.0, // default, should come from result
-                        mainRebarCount = 4,
+                        mainRebarDia = result.flexureResult.barDiameter,
+                        mainRebarCount = result.flexureResult.numberOfBars,
                         stirrupDia = 8.0,
                         stirrupSpacing = 200.0,
                         momentPoints = diagrams.momentPoints,

@@ -58,7 +58,7 @@ fun ProfessionalFootingDrawing(
         val safeColD = columnDepth.coerceAtLeast(50.0)
 
         // ── Color Palette (delegates to shared DrawingColors) ─────
-        val C = DrawingColors
+        val C = DrawingColorDefaults
         val concreteFill = Color(0xFF3D3D3D)
         val concreteStroke = Color(0xFF6B6B6B)
         val footingBorder = Color(0xFF8A8A8A)

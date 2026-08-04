@@ -93,17 +93,84 @@ object CalculationValidator {
     }
 
     /**
+     * Validates a Staircase calculation result with focus on geometry and reinforcement.
+     */
+    fun validateStair(result: StairResult): ValidationReport {
+        val errors = mutableListOf<String>()
+        val warnings = mutableListOf<String>()
+
+        // 1. Geometry checks
+        if (result.riser <= 0 || result.tread <= 0) {
+            errors.add("CRITICAL: Riser and tread must be positive values.")
+        } else {
+            // 2*R + G = 600-640mm rule
+            val sum = 2 * result.riser + result.tread
+            if (sum < 550 || sum > 700) {
+                warnings.add("Logic Warning: 2R+G = ${String.format(java.util.Locale.US, "%.0f", sum)}mm is outside the typical comfort range (550-700mm).")
+            }
+        }
+
+        // 2. Thickness reasonableness
+        if (result.thickness < 100.0) {
+            warnings.add("Logic Warning: Stair slab thickness (${result.thickness}mm) is very thin. Minimum 120-150mm recommended.")
+        }
+
+        // 3. Non-zero concrete volume
+        if (result.concreteVolume <= 0) {
+            if (result.isSafe) errors.add("CRITICAL: Concrete volume is zero or negative but element marked SAFE.")
+        }
+
+        // 4. Utilization check
+        if (result.utilizationRatio > 0.95 && result.isSafe) {
+            warnings.add("Warning: Stair design is at 95%+ utilization. Consider increasing thickness.")
+        }
+
+        return ValidationReport(errors.isEmpty(), errors, warnings)
+    }
+
+    /**
      * Validates a Tank (Water Structure) calculation result.
      */
     fun validateTank(result: TankResult): ValidationReport {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
+        // 1. Positive dimensions
+        if (result.length <= 0) errors.add("CRITICAL: Tank length must be positive.")
+        if (result.width <= 0) errors.add("CRITICAL: Tank width must be positive.")
+        if (result.height <= 0) errors.add("CRITICAL: Tank height must be positive.")
+
+        // 2. Reasonable wall/base thickness ratio
+        if (result.wallThickness > 0 && result.baseThickness > 0) {
+            val ratio = result.wallThickness / result.baseThickness
+            if (ratio > 2.0) {
+                warnings.add("Logic Warning: Wall-to-base thickness ratio ($ratio) is very high. Consider increasing base thickness.")
+            }
+            if (ratio < 0.3) {
+                warnings.add("Logic Warning: Wall-to-base thickness ratio ($ratio) is very low. Verify design assumptions.")
+            }
+        }
+
+        // 3. Non-zero concrete volume
+        if (result.concreteVolume <= 0) {
+            if (result.isSafe) errors.add("CRITICAL: Concrete volume is zero or negative but tank is marked SAFE.")
+        }
+
+        // 4. Reinforcement ratio within 0.1%-4%
+        val wallReinfArea = result.wallReinforcement.area // mm² per meter
+        val wallSection = result.wallThickness * 1000.0 // mm² per meter (b=1000mm)
+        if (wallSection > 0) {
+            val rho = (wallReinfArea / wallSection) * 100.0
+            if (rho < 0.1) warnings.add("Logic Warning: Wall reinforcement ratio (${String.format(java.util.Locale.US, "%.2f", rho)}%) is below 0.1%. Ensure minimum shrinkage/temp reinforcement.")
+            if (rho > 4.0) warnings.add("Logic Warning: Wall reinforcement ratio (${String.format(java.util.Locale.US, "%.2f", rho)}%) exceeds 4%. Congestion risk.")
+        }
+
+        // 5. Water-tightness: minimum wall thickness
         if (result.wallThickness < 200.0) {
             warnings.add("Logic Warning: Wall thickness (${result.wallThickness}mm) is less than recommended 200mm for water-tightness.")
         }
-        
-        // Check structural weight vs uplift
+
+        // 6. Check structural weight vs uplift for underground tanks
         if (result.type == TankType.UNDERGROUND) {
             val upliftCheck = result.suggestions.find { it.contains("Uplift") }
             if (upliftCheck != null && upliftCheck.contains("Unsafe")) {
@@ -111,6 +178,7 @@ object CalculationValidator {
             }
         }
 
+        // 7. High utilization audit
         if (result.utilizationRatio > 0.95 && result.isSafe) {
             warnings.add("Warning: Section is at 95%+ capacity. Consider increasing thickness for better crack control in water structures.")
         }
@@ -125,21 +193,40 @@ object CalculationValidator {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
-        // 1. Overturning & Sliding Stability Audit
+        // 1. Positive dimensions
+        if (result.height <= 0) errors.add("CRITICAL: Wall height must be positive.")
+        if (result.stemThickness <= 0) errors.add("CRITICAL: Stem thickness must be positive.")
+        if (result.baseWidth <= 0) errors.add("CRITICAL: Base width must be positive.")
+
+        // 2. Base width >= stem thickness
+        if (result.baseWidth > 0 && result.stemThickness > 0 && result.baseWidth < result.stemThickness) {
+            errors.add("CRITICAL: Base width (${result.baseWidth}mm) is less than stem thickness (${result.stemThickness}mm).")
+        }
+
+        // 3. Overturning stability (FS > 1.5)
         if (result.factorOfSafetyOverturning < 1.5) {
             if (result.isSafe) errors.add("CRITICAL: Wall fails overturning check (FS=${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetyOverturning)} < 1.5)")
         }
 
+        // 4. Sliding stability (FS > 1.5)
         if (result.factorOfSafetySliding < 1.5) {
             if (result.isSafe) errors.add("CRITICAL: Wall fails sliding check (FS=${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetySliding)} < 1.5)")
         }
 
-        // 2. Bearing Capacity
+        // 5. Bearing pressure within allowable
         if (result.bearingFS < 2.5) {
             warnings.add("Logic: Bearing safety factor (${String.format(java.util.Locale.US, "%.2f", result.bearingFS)}) is below standard 2.5-3.0 range.")
         }
-        
-        // 3. Geometrical consistency
+        if (result.maxBearingPressure > 0 && result.bearingFS > 0) {
+            val allowablePressure = result.maxBearingPressure * result.bearingFS
+            // If bearingFS is the actual factor, maxBearingPressure * bearingFS should be the soil capacity
+            // The check is indirect via bearingFS, but we also verify no negative (tension) bearing
+            if (result.minBearingPressure < 0) {
+                errors.add("CRITICAL: Negative bearing pressure detected (toe lift-off). Base width may be insufficient.")
+            }
+        }
+
+        // 6. Geometrical consistency
         if (result.baseWidth < result.height * 0.4) {
             warnings.add("Logic: Base width is very narrow compared to wall height (< 0.4H).")
         }
@@ -194,6 +281,7 @@ object CalculationValidator {
             is BeamResult -> validateBeam(result)
             is ColumnResult -> validateColumn(result)
             is SlabResult -> validateSlab(result)
+            is StairResult -> validateStair(result)
             is TankResult -> validateTank(result)
             is RetainingWallResult -> validateRetainingWall(result)
             else -> ValidationReport(true, emptyList(), emptyList())

@@ -51,6 +51,16 @@ class SteelViewModel @Inject constructor(
 
     val sectionLibrary: Map<String, List<SteelSectionType>> = calculatorEngine.getSteelSectionLibrary()
 
+    // Configurable connection design defaults (mm). Override via constructor or
+    // update from actual connection design results before PDF export.
+    var defaultBoltDia: Double = 20.0
+    var defaultBoltCount: Int = 4
+    var defaultBoltGauge: Double = 90.0
+    var defaultBoltPitch: Double = 75.0
+    var defaultEndPlateThickness: Double = 12.0
+    var defaultWeldSize: Double = 6.0
+    var defaultHasStiffener: Boolean = false
+
     private val _searchResults = MutableLiveData<List<SteelSectionType>>()
     val searchResults: LiveData<List<SteelSectionType>> = _searchResults
 
@@ -180,14 +190,14 @@ class SteelViewModel @Inject constructor(
                         sx = stored.section.sx,
                         zx = stored.section.zx,
                         weightPerMeter = stored.section.weight,
-                        // Connection defaults (user can configure these in the screen)
-                        boltDia = 20.0,
-                        boltCount = 4,
-                        boltGauge = 90.0,
-                        boltPitch = 75.0,
-                        endPlateThickness = 12.0,
-                        hasStiffener = false,
-                        weldSize = 6.0,
+                        // Connection parameters — use configurable defaults (set from connection design if available)
+                        boltDia = defaultBoltDia,
+                        boltCount = defaultBoltCount,
+                        boltGauge = defaultBoltGauge,
+                        boltPitch = defaultBoltPitch,
+                        endPlateThickness = defaultEndPlateThickness,
+                        hasStiffener = defaultHasStiffener,
+                        weldSize = defaultWeldSize,
                         isColumn = stored.memberType == com.civileg.app.domain.entities.SteelMemberType.COLUMN
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
