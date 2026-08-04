@@ -187,7 +187,7 @@ class BeamViewModel @Inject constructor(
                     "Live Load" to "${lastLiveLoad} kN/m",
                     "Design Code" to codeName
                 )
-                val resultsMap = mapOf(
+                val resultsMap = mutableMapOf(
                     "Max Moment Mu" to "${String.format("%.2f", res.mu)} kN.m",
                     "Max Shear Vu" to "${String.format("%.2f", res.vu)} kN",
                     "Bottom Reinforcement" to res.reinforcementBottom.barString,
@@ -199,6 +199,12 @@ class BeamViewModel @Inject constructor(
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
+                
+                if (res.stirrups.zones.isNotEmpty()) {
+                    res.stirrups.zones.forEachIndexed { i, zone ->
+                         resultsMap["Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
+                    }
+                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,

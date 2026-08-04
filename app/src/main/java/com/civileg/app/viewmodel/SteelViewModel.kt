@@ -8,6 +8,7 @@ import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -49,6 +50,9 @@ class SteelViewModel @Inject constructor(
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
     val sectionLibrary: Map<String, List<SteelSectionType>> = calculatorEngine.getSteelSectionLibrary()
 
     private val _searchResults = MutableLiveData<List<SteelSectionType>>()
@@ -77,6 +81,11 @@ class SteelViewModel @Inject constructor(
             _errorMessage.value = null
             try {
                 val res = calculatorEngine.calculateSteelMember(section, memberType, inputs, code)
+                
+                // Validate Steel Member
+                val report = CalculationValidator.validate(res)
+                _validationReport.value = report
+                
                 _result.value = res
             } catch (e: Exception) {
                 _result.value = null

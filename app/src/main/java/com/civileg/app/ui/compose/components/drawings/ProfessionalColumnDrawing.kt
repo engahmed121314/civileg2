@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import com.civileg.app.domain.entities.StirrupZone
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.pow
@@ -78,6 +79,7 @@ fun ProfessionalColumnDrawing(
     isSpiral: Boolean = false,
     spiralPitch: Double = 0.0,
     sectionType: String = "Rectangular",
+    zones: List<StirrupZone> = emptyList(),
     interactionPoints: List<Pair<Double, Double>> = emptyList(),
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
     viewMode: Int = 0,
@@ -138,7 +140,7 @@ fun ProfessionalColumnDrawing(
             val eRight = if (viewMode == 1) W - 32f else divX - 32f
             draw3DElevation(eLeft, elevTop, eRight - eLeft, elevBottom - elevTop,
                 columnWidth, columnDepth, columnHeight,
-                longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType)
+                longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType, zones)
         }
 
         // 2. Cross-Section View (right-top) — viewMode 0 or 2
@@ -189,7 +191,8 @@ private fun DrawScope.draw3DElevation(
     left: Float, top: Float, width: Float, height: Float,
     colW: Double, colD: Double, colH: Double,
     bars: List<BarInfo>, tieDia: Double, tieSpacing: Double,
-    cover: Double, isSpiral: Boolean, sectionType: String
+    cover: Double, isSpiral: Boolean, sectionType: String,
+    zones: List<StirrupZone> = emptyList()
 ) {
     val cosA = cos(Math.toRadians(30.0)).toFloat()
     val sinA = sin(Math.toRadians(30.0)).toFloat()
@@ -272,16 +275,38 @@ private fun DrawScope.draw3DElevation(
     }
 
     // ── Ties (purple horizontal lines) ─────────────────────────────────
-    val numTies = (colH / tieSpacing).toInt().coerceIn(3, 20)
-    val step = h / (numTies + 1)
-    val covOff = cover.toFloat() * scale * 0.4f
-    for (i in 1..numTies) {
-        val ty = oy + i * step
-        drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
-            strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
-        drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
-            end = Offset(ox + w + d * cosA, ty - d * sinA),
-            strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
+    if (zones.isNotEmpty()) {
+        val covOff = cover.toFloat() * scale * 0.4f
+        zones.forEach { zone ->
+            // Convert mm from bottom to screen coordinates (oy is top)
+            val zStartScreen = oy + h - (zone.endLocation.toFloat() / colH.toFloat()) * h
+            val zEndScreen = oy + h - (zone.startLocation.toFloat() / colH.toFloat()) * h
+            val zStep = (zone.spacing.toFloat() / colH.toFloat()) * h
+            
+            var ty = zEndScreen
+            while (ty > zStartScreen + 1f) {
+                if (ty in oy..(oy + h)) {
+                    drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
+                        strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
+                    drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
+                        end = Offset(ox + w + d * cosA, ty - d * sinA),
+                        strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
+                }
+                ty -= zStep
+            }
+        }
+    } else {
+        val numTies = (colH / tieSpacing).toInt().coerceIn(3, 20)
+        val step = h / (numTies + 1)
+        val covOff = cover.toFloat() * scale * 0.4f
+        for (i in 1..numTies) {
+            val ty = oy + i * step
+            drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
+                strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
+            drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
+                end = Offset(ox + w + d * cosA, ty - d * sinA),
+                strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
+        }
     }
 
     // Column dimensions label on elevation

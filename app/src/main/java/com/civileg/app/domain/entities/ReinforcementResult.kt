@@ -11,6 +11,8 @@ data class ReinforcementResult(
     val numberOfBars: Int,          // عدد الأسياخ
     val tiesDiameter: Double,       // mm - قطر الكانات
     val tiesSpacing: Double,        // mm - تباعد الكانات
+    val numLegs: Int = 2,           // عدد الفروع
+    val zones: List<StirrupZone> = emptyList(), // مناطق التوزيع
     val isSafe: Boolean,            // هل التصميم آمن؟
     val utilizationRatio: Double,   // نسبة الاستغلال
     val warnings: List<String> = emptyList(), // تحذيرات إن وجدت

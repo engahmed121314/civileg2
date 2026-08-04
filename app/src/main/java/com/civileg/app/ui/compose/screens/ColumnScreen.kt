@@ -398,6 +398,7 @@ fun ColumnScreen(
                                 cover = 40.0, // standard clear cover for columns
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
+                                zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                                 viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -424,6 +425,7 @@ fun ColumnScreen(
                         cover = 40.0,
                         isSpiral = false,
                         sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
+                        zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -512,7 +514,15 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
-            ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
+            
+            if (result.stirrups.zones.isNotEmpty()) {
+                 Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                 result.stirrups.zones.forEach { zone ->
+                     ResultDataRow("${zone.name} (${String.format(java.util.Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
+                 }
+            } else {
+                ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
+            }
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))

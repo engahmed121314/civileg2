@@ -15,6 +15,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
+import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.sqrt
 import androidx.compose.ui.Modifier
@@ -362,6 +363,7 @@ fun BeamScreen(
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),
                                 topRebarCount = res.reinforcementTop.numBars,
+                                zones = res.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                                 viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -422,6 +424,7 @@ fun BeamScreen(
                         hasTopSteel = res.reinforcementTop.numBars > 0,
                         topRebarDia = res.reinforcementTop.diameter.toDouble(),
                         topRebarCount = res.reinforcementTop.numBars,
+                        zones = res.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -492,7 +495,15 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             Spacer(modifier = Modifier.height(8.dp))
             ResultRow(stringResource(R.string.beam_bottom_reinforcement), result.reinforcementBottom.barString)
             ResultRow(stringResource(R.string.beam_top_reinforcement), result.reinforcementTop.barString)
-            ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
+            
+            if (result.stirrups.zones.isNotEmpty()) {
+                Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                result.stirrups.zones.forEach { zone ->
+                    ResultRow("${zone.name} (${String.format(Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
+                }
+            } else {
+                ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
+            }
             ResultRow(stringResource(R.string.beam_max_moment), "${"%.1f".format(result.appliedMoment)} kN.m")
             ResultRow(stringResource(R.string.beam_max_shear), "${"%.1f".format(result.appliedShear)} kN")
             

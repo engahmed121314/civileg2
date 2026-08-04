@@ -237,7 +237,7 @@ class ColumnViewModel @Inject constructor(
                     "Design Code" to codeName,
                     "Load Combination" to state.loadCombination.name
                 )
-                val resultsMap = mapOf(
+                val resultsMap = mutableMapOf(
                     "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",
                     "Reinforcement" to res.reinforcement.barString,
                     "Stirrups" to res.stirrups.description,
@@ -247,6 +247,12 @@ class ColumnViewModel @Inject constructor(
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
+                
+                if (res.stirrups.zones.isNotEmpty()) {
+                    res.stirrups.zones.forEachIndexed { i, zone ->
+                        resultsMap["Tie Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
+                    }
+                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,

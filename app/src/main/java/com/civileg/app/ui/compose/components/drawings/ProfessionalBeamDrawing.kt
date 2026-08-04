@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import com.civileg.app.domain.entities.StirrupZone
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -109,6 +110,7 @@ fun ProfessionalBeamDrawing(
     hasTopSteel: Boolean = false,
     topRebarDia: Double = 0.0,
     topRebarCount: Int = 0,
+    zones: List<StirrupZone> = emptyList(),
     modifier: Modifier = Modifier,
     viewMode: Int = 0
 ) {
@@ -194,7 +196,8 @@ fun ProfessionalBeamDrawing(
                 stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
                 cover = cover,
                 hasTopSteel = hasTopSteel,
-                topRebarDia = topRebarDia, topRebarCount = topRebarCount
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount,
+                zones = zones
             )
 
             drawDevelopmentAndLap(
@@ -505,7 +508,8 @@ private fun DrawScope.drawCutawayReinforcement(
     stirrupDia: Double, stirrupSpacing: Double,
     cover: Double,
     hasTopSteel: Boolean,
-    topRebarDia: Double, topRebarCount: Int
+    topRebarDia: Double, topRebarCount: Int,
+    zones: List<StirrupZone> = emptyList()
 ) {
     val dimLineW = 1.dp.toPx()
 
@@ -659,47 +663,92 @@ private fun DrawScope.drawCutawayReinforcement(
     }
 
     // --- Stirrups (PURPLE) ---
-    val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
     val stirrupLineW = max(stirrupDia.toFloat() * scale * 0.15f, 1.5f)
+    val stirrupInnerTop = beamTop + coverPx
+    val stirrupInnerBottom = beamBottom - coverPx
 
-    if (stirrupSpacingPx > 5f) {
-        var sx = cutLeft
-        while (sx <= cutRight) {
-            // Stirrup inner boundaries
-            val stirrupInnerTop = beamTop + coverPx
-            val stirrupInnerBottom = beamBottom - coverPx
+    if (zones.isNotEmpty()) {
+        zones.forEach { zone ->
+            val zoneStart = beamLeft + zone.startLocation.toFloat() * scale
+            val zoneEnd = beamLeft + zone.endLocation.toFloat() * scale
+            val zSpacing = (zone.spacing.toFloat() * scale).coerceAtLeast(5f)
+            
+            var sx = zoneStart
+            while (sx < zoneEnd - 1f) {
+                if (sx >= beamLeft && sx <= beamRight) {
+                    val isInCut = sx in cutLeft..cutRight
+                    
+                    // Draw vertical stirrup legs
+                    drawLine(
+                        color = if (isInCut) StirrupPurple else StirrupPurple.copy(alpha = 0.2f),
+                        start = Offset(sx, stirrupInnerTop),
+                        end = Offset(sx, stirrupInnerBottom),
+                        strokeWidth = stirrupLineW,
+                        pathEffect = if (isInCut) null else PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+                    )
 
-            // Draw vertical stirrup legs
-            drawLine(
-                color = StirrupPurple,
-                start = Offset(sx, stirrupInnerTop),
-                end = Offset(sx, stirrupInnerBottom),
-                strokeWidth = stirrupLineW,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+                    // Draw internal legs for multi-leg stirrups in cutaway
+                    if (zone.numLegs > 2 && isInCut) {
+                        val internalLegs = zone.numLegs - 2
+                        val dx = (beamDrawD * 0.8f) / (internalLegs + 1)
+                        for (i in 1..internalLegs) {
+                            val lx = sx + i * dx * angleX
+                            val ly_offset = i * dx * angleY
+                            drawLine(
+                                color = StirrupPurple.copy(alpha = 0.7f),
+                                start = Offset(lx, stirrupInnerTop - ly_offset),
+                                end = Offset(lx, stirrupInnerBottom - ly_offset),
+                                strokeWidth = stirrupLineW * 0.9f
+                            )
+                        }
+                    }
+                }
+                sx += zSpacing
+            }
+            
+            // Zone label
+            drawTextAnnotated(
+                text = zone.name,
+                x = zoneStart + 5f, y = beamTop - 35f,
+                color = ExtensionGray, size = 18f
             )
-
-            // Bottom horizontal leg of stirrup
-            drawLine(
-                color = StirrupPurple,
-                start = Offset(sx, stirrupInnerBottom),
-                end = Offset(
-                    sx + min(stirrupSpacingPx * 0.8f, cutRight - sx),
-                    stirrupInnerBottom
-                ),
-                strokeWidth = stirrupLineW
+            drawTextAnnotated(
+                text = zone.description,
+                x = zoneStart + 5f, y = beamTop - 15f,
+                color = StirrupPurple, size = 20f
             )
-
-            // Top hook (135° bend indication)
-            val hookLen = 10f
-            drawLine(
-                color = StirrupPurple,
-                start = Offset(sx, stirrupInnerTop),
-                end = Offset(sx - hookLen, stirrupInnerTop - hookLen * 0.6f),
-                strokeWidth = stirrupLineW,
-                cap = StrokeCap.Round
-            )
-
-            sx += stirrupSpacingPx
+        }
+    } else {
+        val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+        if (stirrupSpacingPx > 5f) {
+            var sx = cutLeft
+            while (sx <= cutRight) {
+                drawLine(
+                    color = StirrupPurple,
+                    start = Offset(sx, stirrupInnerTop),
+                    end = Offset(sx, stirrupInnerBottom),
+                    strokeWidth = stirrupLineW,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+                )
+                drawLine(
+                    color = StirrupPurple,
+                    start = Offset(sx, stirrupInnerBottom),
+                    end = Offset(
+                        sx + min(stirrupSpacingPx * 0.8f, cutRight - sx),
+                        stirrupInnerBottom
+                    ),
+                    strokeWidth = stirrupLineW
+                )
+                val hookLen = 10f
+                drawLine(
+                    color = StirrupPurple,
+                    start = Offset(sx, stirrupInnerTop),
+                    end = Offset(sx - hookLen, stirrupInnerTop - hookLen * 0.6f),
+                    strokeWidth = stirrupLineW,
+                    cap = StrokeCap.Round
+                )
+                sx += stirrupSpacingPx
+            }
         }
     }
 
@@ -721,12 +770,14 @@ private fun DrawScope.drawCutawayReinforcement(
         )
     }
 
-    // Stirrup label
-    drawTextAnnotated(
-        text = "Ø${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()}",
-        x = cutRight - 80f, y = beamTop + coverPx + 18f,
-        color = StirrupPurple, size = 20f
-    )
+    // Stirrup label (only if zones empty)
+    if (zones.isEmpty()) {
+        drawTextAnnotated(
+            text = "Ø${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()}",
+            x = cutRight - 80f, y = beamTop + coverPx + 18f,
+            color = StirrupPurple, size = 20f
+        )
+    }
 }
 
 // ============================================================================
@@ -1052,7 +1103,8 @@ private fun DrawScope.drawSectionInset(
     stirrupDia: Double,
     cover: Double,
     hasTopSteel: Boolean,
-    topRebarDia: Double, topRebarCount: Int
+    topRebarDia: Double, topRebarCount: Int,
+    zones: List<StirrupZone> = emptyList()
 ) {
     // Inset position and size — centered in dedicated zone below elevation
     val insetW = min(200f, cw * 0.28f)

@@ -33,7 +33,7 @@ class CalculateElementBoq @Inject constructor() {
 
         // 1. الخرسانة: V = b × d × h  (mm³ → m³)
         val concreteVolume = width * depth * height / 1e9
-        items += concreteItem("COL_CONC_001", "Column ${width.toInt()}×${depth.toInt()}mm, h=${height.toInt()}mm", concreteVolume, prices.concretePerM3, "V = b × d × h")
+        items += concreteItem("COL_CONC_001", "Column Concrete C${reinforcementResult.codeNotes.find { it.contains("fcu") }?.filter { it.isDigit() } ?: "25"}", concreteVolume, prices.concretePerM3, "V = b × d × h")
 
         // 2. حديد التسليح الرئيسي: W = As × L × 7850 / 1e12  (tons)
         // [PRECISION]: Include standard 7% lap & waste factor for professional site estimates
@@ -44,8 +44,8 @@ class CalculateElementBoq @Inject constructor() {
         }
 
         // 3. الكانات
-        val tiesWeight = calculateTiesWeight(width, depth, height, reinforcementResult.tiesDiameter, reinforcementResult.tiesSpacing) * wasteFactor
-        items += steelItem("COL_TIES_001", "Ties Ø${reinforcementResult.tiesDiameter.toInt()}mm @ ${reinforcementResult.tiesSpacing.toInt()}mm c/c", tiesWeight, prices.steelPerTon)
+        val tiesWeight = calculateTiesWeight(width, depth, reinforcementResult.zones) * wasteFactor
+        items += steelItem("COL_TIES_001", "Ties Detailed Distribution (Incl. confinement & 7% waste)", tiesWeight, prices.steelPerTon)
 
         // 4. الشدة الخشبية (2 × عرض + 2 × عمق) × ارتفاع
         val formworkArea = 2.0 * (width + depth) * height / 1e6
@@ -83,8 +83,8 @@ class CalculateElementBoq @Inject constructor() {
         }
 
         // 3. الكانات
-        val stirrupsWeight = calculateStirrupsWeight(width, depth, spanMm, shearResult.stirrupDiameter, shearResult.stirrupSpacing) * wasteFactor
-        items += steelItem("BEAM_STIR_001", "Stirrups Ø${shearResult.stirrupDiameter.toInt()}mm @ ${shearResult.stirrupSpacing.toInt()}mm", stirrupsWeight, prices.steelPerTon)
+        val stirrupsWeight = calculateStirrupsWeight(width, depth, shearResult.zones) * wasteFactor
+        items += steelItem("BEAM_STIR_001", "Stirrups Detailed Distribution (Incl. 10% waste)", stirrupsWeight, prices.steelPerTon)
 
         // 4. الشدة الخشبية (3 وجوه: جانبين + سفل)
         val formworkArea = (2.0 * depth + width) * spanMm / 1e6
@@ -225,7 +225,8 @@ class CalculateElementBoq @Inject constructor() {
         // 3. الكانات
         // approximate: use average section width for perimeter
         val avgWidth = (stairWidth + waistThickness) / 2.0
-        val stirrupsWeight = calculateStirrupsWeight(avgWidth, waistThickness, inclinedLength, stirrupDia, stirrupSpacing)
+        val defaultZones = listOf(StirrupZone("Stair Stirrups", 0.0, inclinedLength, stirrupSpacing, 2, stirrupDia.toInt(), "${(1000/stirrupSpacing).toInt()}Ø${stirrupDia.toInt()}/m'"))
+        val stirrupsWeight = calculateStirrupsWeight(avgWidth, waistThickness, defaultZones)
         items += steelItem("STR_STIR_001", "Stirrups Ø${stirrupDia.toInt()}mm @ ${stirrupSpacing.toInt()}mm", stirrupsWeight, prices.steelPerTon)
 
         // 4. الشدة (سفل + جانب واحد)
@@ -369,38 +370,59 @@ class CalculateElementBoq @Inject constructor() {
     // دوال مساعدة لحساب وزن الكانات والأطواق
     // ==============================================================
     /**
-     * حساب وزن الكانات للعمود
-     * محيط الكانة = 2×(b-2c + d-2c) + 24mm للخطافين
+     * حساب وزن الكانات للعمود بناءً على مناطق التوزيع
      */
     private fun calculateTiesWeight(
-        colWidth: Double, colDepth: Double, colHeight: Double,
-        tiesDiameter: Double, tiesSpacing: Double
+        colWidth: Double, colDepth: Double,
+        zones: List<StirrupZone>
     ): Double {
-        if (tiesSpacing <= 0 || tiesDiameter <= 0) return 0.0
+        if (zones.isEmpty()) return 0.0
+        var totalWeightKg = 0.0
         val cover = 40.0 // mm
-        val tiePerimeter = 2 * (colWidth - 2 * cover + colDepth - 2 * cover) + 24.0 // mm
-        val tieLength = tiePerimeter / 1000.0 // m
-        val numberOfTies = (colHeight / tiesSpacing).toInt() + 1
-        val barArea = PI * tiesDiameter * tiesDiameter / 4.0 // mm²
-        // weight = n × (A / 1e6) × L × 7850  [m³ × kg/m³ = kg]
-        val weightKg = numberOfTies * (barArea / 1e6) * tieLength * 7850.0
-        return weightKg / 1000.0 // tons
+        
+        zones.forEach { zone ->
+            val zoneHeight = (zone.endLocation - zone.startLocation)
+            if (zoneHeight <= 0) return@forEach
+            
+            // محيط الكانة: 2*(b+d) + 100mm للخطافين + طول الفروع الداخلية
+            val outerPerimeter = 2 * (colWidth - 2 * cover + colDepth - 2 * cover) + 100.0
+            val internalLegsLength = if (zone.numLegs > 2) {
+                (zone.numLegs - 2) * (minOf(colWidth, colDepth) - 2 * cover) 
+            } else 0.0
+            
+            val tieLength = (outerPerimeter + internalLegsLength) / 1000.0 // m
+            val numberOfTies = (zoneHeight / zone.spacing).toInt() + 1
+            val barArea = PI * zone.diameter * zone.diameter / 4.0 // mm²
+            totalWeightKg += numberOfTies * (barArea / 1e6) * tieLength * 7850.0
+        }
+        return totalWeightKg / 1000.0 // tons
     }
 
     /**
-     * حساب وزن الكانات للكمرة
+     * حساب وزن الكانات للكمرة بناءً على مناطق التوزيع
      */
     private fun calculateStirrupsWeight(
-        beamWidth: Double, beamDepth: Double, beamSpanMm: Double,
-        stirrupDiameter: Double, stirrupSpacing: Double
+        beamWidth: Double, beamDepth: Double,
+        zones: List<StirrupZone>
     ): Double {
-        if (stirrupSpacing <= 0 || stirrupDiameter <= 0) return 0.0
+        if (zones.isEmpty()) return 0.0
+        var totalWeightKg = 0.0
         val cover = 40.0 // mm
-        val stirrupPerimeter = 2 * (beamWidth - 2 * cover + beamDepth - 2 * cover) + 24.0 // mm
-        val stirrupLength = stirrupPerimeter / 1000.0 // m
-        val numberOfStirrups = (beamSpanMm / stirrupSpacing).toInt() + 1
-        val barArea = PI * stirrupDiameter * stirrupDiameter / 4.0 // mm²
-        val weightKg = numberOfStirrups * (barArea / 1e6) * stirrupLength * 7850.0
-        return weightKg / 1000.0 // tons
+        
+        zones.forEach { zone ->
+            val zoneLen = (zone.endLocation - zone.startLocation)
+            if (zoneLen <= 0) return@forEach
+            
+            val outerPerimeter = 2 * (beamWidth - 2 * cover + beamDepth - 2 * cover) + 100.0
+            val internalLegsLength = if (zone.numLegs > 2) {
+                (zone.numLegs - 2) * (beamDepth - 2 * cover) 
+            } else 0.0
+            
+            val stirrupLength = (outerPerimeter + internalLegsLength) / 1000.0 // m
+            val numberOfStirrups = (zoneLen / zone.spacing).toInt() + 1
+            val barArea = PI * zone.diameter * zone.diameter / 4.0 // mm²
+            totalWeightKg += numberOfStirrups * (barArea / 1e6) * stirrupLength * 7850.0
+        }
+        return totalWeightKg / 1000.0 // tons
     }
 }

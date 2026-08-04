@@ -96,12 +96,24 @@ class CalculatorEngine @Inject constructor(
     }
 
     @Parcelize
+    data class StirrupZone(
+        val name: String,
+        val startLocation: Double, // mm from start
+        val endLocation: Double,   // mm from start
+        val spacing: Double,       // mm
+        val numLegs: Int = 2,
+        val diameter: Int = 8,
+        val description: String = ""
+    ) : Parcelable
+
+    @Parcelize
     data class StirrupReinforcement(
         val diameter: Int = 8, 
         val spacing: Double = 200.0, 
         val description: String = "5Ø8/m'", 
         val weightKg: Double = 0.0,
-        val numLegs: Int = 2
+        val numLegs: Int = 2,
+        val zones: List<StirrupZone> = emptyList()
     ) : Parcelable {
         val area: Double get() = numLegs * (PI * diameter.toDouble().pow(2.0) / 4.0)
     }
@@ -716,12 +728,25 @@ class CalculatorEngine @Inject constructor(
         val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
         val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
         
-        // Stirrups Weight (8mm @ 200mm or code min)
-        val stirrupLength = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
-        val numStirrups = (clearHeight / 200.0) + 1
-        val stirrupWeight = numStirrups * stirrupLength * (8.0.pow(2.0) / 162.0)
+        // --- Detailed Tie Zoning (Confinement) ---
+        val confinementLength = maxOf(width, depth, clearHeight / 6.0, 450.0)
+        val s_confinement = minOf(8 * preferredDiameter.toDouble(), 24 * 8.0, min(width, depth) / 2.0, 200.0)
+        val s_normal = min(200.0, min(width, depth))
         
-        val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05
+        val columnZones = mutableListOf<StirrupZone>()
+        columnZones.add(StirrupZone("Confinement (Bottom)", 0.0, confinementLength, s_confinement, 2, 8, "${(1000/s_confinement).toInt()}Ø8/m'"))
+        columnZones.add(StirrupZone("Mid-Height Zone", confinementLength, clearHeight - confinementLength, s_normal, 2, 8, "${(1000/s_normal).toInt()}Ø8/m'"))
+        columnZones.add(StirrupZone("Confinement (Top)", clearHeight - confinementLength, clearHeight, s_confinement, 2, 8, "${(1000/s_confinement).toInt()}Ø8/m'"))
+
+        var totalTieWeight = 0.0
+        val tiePerimeter = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
+        columnZones.forEach { zone ->
+            val n = ((zone.endLocation - zone.startLocation) / zone.spacing).toInt() + 1
+            totalTieWeight += n * tiePerimeter * (zone.diameter.toDouble().pow(2.0) / 162.0)
+        }
+        
+        val stirrupResult = StirrupReinforcement(8, s_normal, "${(1000/s_normal).toInt()}Ø8/m'", zones = columnZones)
+        val totalSteelWeight = (mainSteelWeight + totalTieWeight) * 1.05
         val steelWasteKg = totalSteelWeight * 0.05
         
         val utilizationRatio = (effectivePu / capacity).coerceIn(0.0, 1.2)
@@ -732,7 +757,7 @@ class CalculatorEngine @Inject constructor(
         return ColumnResult(
             width = width, depth = depth, pu = effectivePu, 
             reinforcement = ReinforcementBar(finalNumBars, preferredDiameter), 
-            stirrups = StirrupReinforcement(8, 200.0), 
+            stirrups = stirrupResult, 
             safetyChecks = safetyChecks, isSafe = safetyChecks.all { it.isSafe } && rho <= (asMax/ag)*100.0,
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
@@ -845,11 +870,22 @@ class CalculatorEngine @Inject constructor(
             }
         val v_stress = (vu * 1000.0) / (width * d)
         
+        // Multi-leg determination
+        val numLegs = when {
+            width > 600 -> 6
+            width > 400 -> 4
+            else -> 2
+        }
+
         var stirrupSpacing = 200.0
         var stirrupDia = 8
+        val zones = mutableListOf<StirrupZone>()
+        val spanMm = span * 1000.0
+        val confinementLength = min(2 * height, spanMm / 4.0) // Typical confinement zone
+
         if (v_stress > vc) {
-            val vs = v_stress - vc // Vs = Vu - Vc (ECP 203 Eq. 4-25)
-            val stirrupArea = 2 * (PI * 8.0.pow(2) / 4.0) // 2 branches of 8mm
+            val vs = v_stress - vc // Vs = Vu - Vc
+            val stirrupArea = numLegs * (PI * 8.0.pow(2) / 4.0) 
             // ECP 203: s = Av * fy/(γs * vs * bw) — ACI: s = Av*fy*d/(vs*bw) with Φ factor
             stirrupSpacing = when(code) {
                 DesignCode.EGYPTIAN -> (stirrupArea * (fy / 1.15)) / (vs * width)
@@ -858,7 +894,7 @@ class CalculatorEngine @Inject constructor(
             stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
             if (stirrupSpacing < 100.0) {
                 stirrupDia = 10
-                val area10 = 2 * (PI * 10.0.pow(2) / 4.0)
+                val area10 = numLegs * (PI * 10.0.pow(2) / 4.0)
                 stirrupSpacing = when(code) {
                     DesignCode.EGYPTIAN -> (area10 * (fy / 1.15)) / (vs * width)
                     else -> (area10 * (fy / 1.15) * d) / (vs * width * 0.75)
@@ -866,22 +902,34 @@ class CalculatorEngine @Inject constructor(
                 stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
                 }
             }
+
+        // Create detailed zones for site detailing
+        val midSpacing = min(200.0, stirrupSpacing * 1.5).coerceAtLeast(min(200.0, d/2))
+        zones.add(StirrupZone("Support Zone (Left)", 0.0, confinementLength, stirrupSpacing, numLegs, stirrupDia, "${(1000/stirrupSpacing).toInt()}Ø${stirrupDia}/m'"))
+        zones.add(StirrupZone("Mid-Span Zone", confinementLength, spanMm - confinementLength, midSpacing, numLegs, stirrupDia, "${(1000/midSpacing).toInt()}Ø${stirrupDia}/m'"))
+        zones.add(StirrupZone("Support Zone (Right)", spanMm - confinementLength, spanMm, stirrupSpacing, numLegs, stirrupDia, "${(1000/stirrupSpacing).toInt()}Ø${stirrupDia}/m'"))
+
+        val stirrupResult = StirrupReinforcement(stirrupDia, stirrupSpacing, "${(1000/stirrupSpacing).toInt()}Ø${stirrupDia}/m'", numLegs = numLegs, zones = zones)
         
-        val vol = (width * height * span) / 1e6
+        val vol = (width * height * span * 1000.0) / 1e9
         
         // Accurate Steel Weight Calculation
         val bottomWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
         val topDia = (preferredDiameter * 0.8).toInt().coerceAtLeast(10)
         val topWeightPerMeter = (topDia.toDouble().pow(2.0) / 162.0)
-        val stirrupWeightPerMeter = (stirrupDia.toDouble().pow(2.0) / 162.0)
         
-        val bottomSteel = numBars * (span / 1000.0) * bottomWeightPerMeter
-        val topSteel = max(2, numBars/3) * (span / 1000.0) * topWeightPerMeter
-        val numStirrups = (span / stirrupSpacing) + 1
-        val stirrupLength = (2 * (width + height) / 1000.0)
-        val stirrupSteel = numStirrups * stirrupLength * stirrupWeightPerMeter
+        val bottomSteel = numBars * span * bottomWeightPerMeter
+        val topSteel = max(2, numBars/3) * span * topWeightPerMeter
         
-        val totalSteelWeight = (bottomSteel + topSteel + stirrupSteel) * 1.10 // 10% for laps/anchorage
+        var totalStirrupWeight = 0.0
+        zones.forEach { zone ->
+            val zoneLen = (zone.endLocation - zone.startLocation) / 1000.0
+            val n = (zoneLen * 1000.0 / zone.spacing).toInt() + 1
+            val stirrupPerimeter = (2 * (width + height) + 2 * (numLegs - 2) * height) / 1000.0 
+            totalStirrupWeight += n * stirrupPerimeter * (zone.diameter.toDouble().pow(2.0) / 162.0)
+        }
+        
+        val totalSteelWeight = (bottomSteel + topSteel + totalStirrupWeight) * 1.10 // 10% for laps/anchorage
         
         safetyChecks.add(DesignSafetyCheck("Flexural Strength", momentCapacity, mu, "kN.m", momentCapacity >= mu))
         // Max shear stress limit depends on design code
@@ -924,7 +972,7 @@ class CalculatorEngine @Inject constructor(
             width = width, depth = height, mu = mu, vu = vu, 
             reinforcementBottom = ReinforcementBar(numBars, preferredDiameter), 
             reinforcementTop = ReinforcementBar(max(2, numBars/3), topDia), 
-            stirrups = StirrupReinforcement(stirrupDia, stirrupSpacing), 
+            stirrups = stirrupResult, 
             safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= maxShearLimit, 
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 

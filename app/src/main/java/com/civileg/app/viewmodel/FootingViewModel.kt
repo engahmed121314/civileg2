@@ -80,8 +80,11 @@ class FootingViewModel @Inject constructor(
                 )
                 
                 // Validate Footing
+                val report = CalculationValidator.validate(res)
                 val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to colB, "depth" to colT), p)
-                _validationReport.value = dlReport
+                
+                val combinedWarnings = report.warnings + dlReport.warnings
+                _validationReport.value = report.copy(warnings = combinedWarnings)
                 
                 _result.value = res
                 _error.value = null

@@ -158,7 +158,6 @@ object CalculationValidator {
             "BEAM" -> {
                 val b = dimensions["width"] ?: 250.0
                 val h = dimensions["depth"] ?: 600.0
-                val L = dimensions["span"] ?: 1.0
                 (b/1000.0) * (h/1000.0) * 25.0 // kN/m
             }
             "COLUMN" -> {
