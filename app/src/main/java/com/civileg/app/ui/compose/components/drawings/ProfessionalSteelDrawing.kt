@@ -274,8 +274,8 @@ private fun DrawScope.drawPropertiesTable(
     drawTextAnnotated("STEEL PROPERTIES: $name", x + 10f, y + 18f, DimWhite, 12f, bold = true)
     
     val rows = listOf(
-        "Area: ${"%.1f".format(area)} cm²",
-        "Inertia Ix: ${"%.0f".format(ix)} cm⁴",
+        "Area: ${"%.1f".format(area / 100.0)} cm²",
+        "Inertia Ix: ${"%.0f".format(ix / 1e8)} cm⁴",
         "Weight: ${"%.1f".format(w)} kg/m",
         "Length: ${"%.0f".format(len)} mm"
     )

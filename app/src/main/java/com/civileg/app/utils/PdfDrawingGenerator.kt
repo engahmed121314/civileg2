@@ -2060,8 +2060,9 @@ object PdfDrawingGenerator {
         val colX1 = tblX + 20f
         val colX2 = tblX + tblW / 2f + 20f
 
-        val areaStr = if (area > 0) "%.1f".format(area) else "--"
-        val ixStr = if (ix > 0) "%.0f".format(ix) else "--"
+        // Convert from mm² to cm² and mm⁴ to cm⁴ for display
+        val areaStr = if (area > 0) "%.1f".format(area / 100.0) else "--"
+        val ixStr = if (ix > 0) "%.0f".format(ix / 1e8) else "--"
         val wStr = if (weightPerMeter > 0) "%.1f".format(weightPerMeter) else "--"
 
         canvas.drawText("Area: $areaStr cm\u00B2", colX1, rowY1, smallP)

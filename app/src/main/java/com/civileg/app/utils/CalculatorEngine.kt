@@ -425,7 +425,19 @@ class CalculatorEngine @Inject constructor(
             is SteelSectionType.TSection -> section.webDepth + section.flangeThickness
             else -> 100.0
             }
-        val slenderness = (inputs.unbracedLength / (depth * 0.28).coerceAtLeast(10.0))
+        // Calculate actual radius of gyration (r = sqrt(Ix/A)) for weak axis buckling
+        val r = if (area > 0) sqrt(section.ix / area) else depth * 0.28
+        val slenderness = (inputs.unbracedLength / r.coerceAtLeast(10.0))
+
+        // AISC 360-16 E3: Calculate Fcr based on slenderness ratio
+        val E = 210000.0 // MPa
+        val fe = (PI.pow(2) * E) / slenderness.pow(2) // Euler buckling stress
+        val lambdaC = (slenderness / PI) * sqrt(fy / E)
+        val criticalStress = if (lambdaC <= 1.5) {
+            (0.658.pow(lambdaC.pow(2))) * fy // Inelastic buckling
+        } else {
+            0.877 * fe // Elastic buckling
+        }
 
         return SteelMemberResult(
             sectionType = section,
@@ -438,10 +450,10 @@ class CalculatorEngine @Inject constructor(
             connectionDesign = null,
             bucklingCheck = BucklingCheckResult(
                 slendernessRatio = slenderness,
-                criticalStress = fy * 0.6,
+                criticalStress = criticalStress,
                 bucklingMode = BucklingMode.FLEXURAL,
-                isSafe = slenderness <= 180.0,
-                codeReference = "AISC-E3 / ECP-4.2"
+                isSafe = slenderness <= 200.0,
+                codeReference = "AISC 360-16 E3"
             ),
             weight = weight,
             cost = weight * (settingsManager.steelPrice / 1000.0) * 1.2, // 20% fabrication markup
@@ -629,7 +641,7 @@ class CalculatorEngine @Inject constructor(
                 val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
                 capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
                 
-                val r = if (isCircular) 0.25 * width else min(width, depth) * 0.3
+                val r = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
                 val slenderness = (1.0 * clearHeight) / r
                 safetyChecks.add(DesignSafetyCheck("SBC Slenderness (kl/r)", slenderness, 22.0, "", slenderness <= 22.0))
             }
@@ -642,7 +654,7 @@ class CalculatorEngine @Inject constructor(
                 val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
                 capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
                 
-                val r = if (isCircular) 0.25 * width else min(width, depth) * 0.3
+                val r = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
                 val slenderness = (1.0 * clearHeight) / r
                 safetyChecks.add(DesignSafetyCheck("ACI Slenderness Ratio", slenderness, 22.0, "", slenderness <= 22.0))
             }
@@ -777,7 +789,11 @@ class CalculatorEngine @Inject constructor(
         
         // Recalculate Capacity
         momentCapacity = when(code) {
-            DesignCode.EGYPTIAN -> (actualAs * (fy/1.15) * (d - 0.5 * (actualAs * (fy/1.15) / (0.45 * fcu * width)))) / 1e6
+            DesignCode.EGYPTIAN -> {
+                // ECP 203: Mn = As*fy/γs * (d - a/2), where a = As*fy/γs / (0.67*fcu*b)
+                val a = actualAs * (fy / 1.15) / (0.67 * fcu * width)
+                (actualAs * (fy / 1.15) * (d - a / 2.0)) / 1e6
+            }
             else -> (0.9 * actualAs * fy * (d - (actualAs * fy / (2 * 0.85 * fcu * 0.8 * width)))) / 1e6
             }
 
@@ -791,14 +807,21 @@ class CalculatorEngine @Inject constructor(
         var stirrupSpacing = 200.0
         var stirrupDia = 8
         if (v_stress > vc) {
-            val vs = v_stress - (vc / 2.0) // Simplified
+            val vs = v_stress - vc // Vs = Vu - Vc (ECP 203 Eq. 4-25)
             val stirrupArea = 2 * (PI * 8.0.pow(2) / 4.0) // 2 branches of 8mm
-            stirrupSpacing = (stirrupArea * (fy / 1.15) * d) / (vs * width)
+            // ECP 203: s = Av * fy/(γs * vs * bw) — ACI: s = Av*fy*d/(vs*bw) with Φ factor
+            stirrupSpacing = when(code) {
+                DesignCode.EGYPTIAN -> (stirrupArea * (fy / 1.15)) / (vs * width)
+                else -> (stirrupArea * (fy / 1.15) * d) / (vs * width * 0.75) // ACI with Φ=0.75 for shear
+            }
             stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
             if (stirrupSpacing < 100.0) {
                 stirrupDia = 10
                 val area10 = 2 * (PI * 10.0.pow(2) / 4.0)
-                stirrupSpacing = (area10 * (fy / 1.15) * d) / (vs * width)
+                stirrupSpacing = when(code) {
+                    DesignCode.EGYPTIAN -> (area10 * (fy / 1.15)) / (vs * width)
+                    else -> (area10 * (fy / 1.15) * d) / (vs * width * 0.75)
+                }
                 stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
                 }
             }
@@ -820,13 +843,22 @@ class CalculatorEngine @Inject constructor(
         val totalSteelWeight = (bottomSteel + topSteel + stirrupSteel) * 1.10 // 10% for laps/anchorage
         
         safetyChecks.add(DesignSafetyCheck("Flexural Strength", momentCapacity, mu, "kN.m", momentCapacity >= mu))
-        safetyChecks.add(DesignSafetyCheck("Shear Stress", v_stress, 0.7 * sqrt(fcu), "MPa", v_stress <= 0.7 * sqrt(fcu))) // Max limit check
+        // Max shear stress limit depends on design code
+        val maxShearLimit = when(code) {
+            DesignCode.EGYPTIAN -> 0.7 * sqrt(fcu) // ECP 203 Art. 4-2-2-3
+            DesignCode.ACI -> 0.75 * 2.5 * sqrt(fcu * 0.8) // ACI 318-19: Φ*2*√fc'
+            DesignCode.SAUDI -> 0.75 * 2.5 * sqrt(fcu * 0.8) // SBC 304 similar to ACI
+        }
+        safetyChecks.add(DesignSafetyCheck("Shear Stress", v_stress, maxShearLimit, "MPa", v_stress <= maxShearLimit))
 
         val e_concrete = when(code) {
             DesignCode.EGYPTIAN -> 4400 * sqrt(fcu)
             else -> 4700 * sqrt(fcu * 0.8)
             }
-        val deflection = (5 * totalLoad * (span * 1000).pow(4)) / (384 * e_concrete * (width * height.pow(3) / 12))
+        // Deflection must use SERVICE loads (unfactored), not factored loads
+        val serviceLoad = deadLoad + liveLoad
+        val I_gross = width * height.pow(3) / 12.0
+        val deflection = (5 * serviceLoad * (span * 1000).pow(4)) / (384 * e_concrete * I_gross)
         val allowableDeflection = (span * 1000) / 250.0
         
         val utilizationRatio = maxOf(mu / momentCapacity, deflection / allowableDeflection).coerceIn(0.0, 1.2)
@@ -838,7 +870,7 @@ class CalculatorEngine @Inject constructor(
             reinforcementBottom = ReinforcementBar(numBars, preferredDiameter), 
             reinforcementTop = ReinforcementBar(max(2, numBars/3), topDia), 
             stirrups = StirrupReinforcement(stirrupDia, stirrupSpacing), 
-            safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= 0.7 * sqrt(fcu), 
+            safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= maxShearLimit, 
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
             code = code, appliedMoment = mu, appliedShear = vu, 
@@ -886,9 +918,10 @@ class CalculatorEngine @Inject constructor(
         
         when (type) {
             SlabType.WAFFLE -> {
-                // Two-way ribbed behavior (reduced from simply supported due to two-way action)
-                mx = wu * lx.pow(2) / 12.0
-                my = wu * ly.pow(2) / 12.0
+                // Waffle slab: two-way ribbed, typically simply supported
+                // Using 1/10 for continuous or 1/8 for simply supported (use 1/10 as conservative mid-value)
+                mx = wu * lx.pow(2) / 10.0
+                my = wu * ly.pow(2) / 10.0
                 minTs = lx * 1000 / 30.0
                 voidRatio = 0.60  // 40% void reduction for waffle
                 }
@@ -902,7 +935,7 @@ class CalculatorEngine @Inject constructor(
                 }
             SlabType.POST_TENSION -> {
                 // PT Slab: improved drape and loss calculations
-                val sag = lx * 1000 / 25.0  // L/25 typical drape in mm
+                val sag = (ts - 2 * 25.0) / 2.0  // Drape = (total thickness - 2 covers) / 2
                 val effectiveP = prestressForce * 0.80  // 20% total losses
                 val balancedLoad = (8 * effectiveP * sag / 1000) / (lx * ly)
                 val netWu = max(0.0, wu - balancedLoad)
@@ -922,7 +955,10 @@ class CalculatorEngine @Inject constructor(
                 mx = wu * shortSpan.pow(2) / 8.0
                 my = wu * longSpan.pow(2) / 24.0
                 minTs = shortSpan * 1000 / 25.0
-                d = ts - 25.0 - (ts * 0.55) / 2.0  // ribs extend below blocks
+                // Effective depth for ribbed slab: rib depth minus cover
+                val toppingThickness = ts * 0.35  // ~35% is topping, 65% is rib zone
+                val ribDepth = ts - toppingThickness
+                d = ribDepth - 25.0  // cover within the rib
                 voidRatio = 0.55  // hollow block void ratio
                 }
             else -> {
@@ -941,9 +977,13 @@ class CalculatorEngine @Inject constructor(
         val asReqX = calculateAs(mx, fcu, fy, d, width = 1000.0, code = code)
         val asReqY = calculateAs(my, fcu, fy, d, width = 1000.0, code = code)
         
+        // Minimum reinforcement ratio per code
         val asMin = when(type) {
             SlabType.POST_TENSION -> 0.0012 * 1000.0 * ts
-            else -> 0.0018 * 1000.0 * ts
+            else -> when(code) {
+                DesignCode.EGYPTIAN -> max(0.26 * sqrt(fcu) / fy, 0.0013) * 1000.0 * ts
+                else -> max(0.0018 * (420.0 / fy), 0.0014) * 1000.0 * ts // ACI: 0.0018*(420/fy) for fy≠420
+            }
             }
         
         val finalAsX = max(asReqX, asMin)
@@ -1008,9 +1048,10 @@ class CalculatorEngine @Inject constructor(
     private fun calculateAs(mu: Double, fcu: Double, fy: Double, d: Double, width: Double, code: DesignCode): Double {
         return when(code) {
             DesignCode.EGYPTIAN -> {
+                // ECP 203: R = Mu / (fcu/γc * b * d²), ω = 0.85*(1 - √(1 - 2.353*R))
                 val R = (mu * 1e6) / ((fcu / 1.5) * width * d.pow(2))
                 if (R > 0.2) return (mu * 1e6) / (0.8 * fy * d) // High moment fallback
-                val omega = 1.25 * (1 - sqrt(1 - 2.25 * R))
+                val omega = 0.85 * (1 - sqrt(max(0.0, 1.0 - 2.353 * R)))
                 (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
                 }
             else -> { // ACI/SBC
@@ -1102,7 +1143,11 @@ class CalculatorEngine @Inject constructor(
         
         val asReqL = calculateAs(muL / 1e3, fcu, fy, d, 1000.0, code)
         val asReqW = calculateAs(muW / 1e3, fcu, fy, d, 1000.0, code)
-        val asMin = 0.0015 * 1000.0 * thickness
+        // Minimum reinforcement per code (using effective depth d)
+        val asMin = when(code) {
+            DesignCode.EGYPTIAN -> max(0.0015, 0.26 * sqrt(fcu) / fy) * 1000.0 * d
+            else -> max(0.0018, 0.25 * sqrt(fcu * 0.8) / fy) * 1000.0 * d
+        }
         
         val finalAsL = max(asReqL, asMin)
         val finalAsW = max(asReqW, asMin)
@@ -1550,7 +1595,7 @@ class CalculatorEngine @Inject constructor(
             DesignCode.SAUDI -> 1.15
         }
         val gammaW_factor = when(code) {
-            DesignCode.EGYPTIAN -> 1.6  // ECP 203 variable load factor for water
+            DesignCode.EGYPTIAN -> 1.4  // ECP 203 water retaining structures use 1.4 (not general 1.6)
             DesignCode.ACI -> 1.4   // ACI 318-19
             DesignCode.SAUDI -> 1.4   // SBC 304
         }
@@ -1827,7 +1872,8 @@ class CalculatorEngine @Inject constructor(
         val eccentricity = (baseW / 2.0) - (netMoment / totalVerticalWeight.coerceAtLeast(0.01))
         val maxBearingPressure = (totalVerticalWeight / baseW) * (1.0 + 6.0 * eccentricity / baseW)
         val minBearingPressure = (totalVerticalWeight / baseW) * (1.0 - 6.0 * eccentricity / baseW)
-        val bearingLimit = 1.0
+        // Bearing capacity safety factor must be >= 2.0 per ECP/ACI for service loads
+        val bearingLimit = 2.0
         val bearingFS = if (maxBearingPressure > 0) bearingCapacity / maxBearingPressure else 0.0
 
         val utilizationRatio = max(otLimit / fsOverturning, slideLimit / fsSliding)

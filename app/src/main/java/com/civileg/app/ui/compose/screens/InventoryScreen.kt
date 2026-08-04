@@ -87,7 +87,12 @@ fun InventoryScreen(
                                         // Open share intent
                                         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                             type = "application/pdf"
-                                            putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.fromFile(pdfFile))
+                                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                pdfFile
+                                            )
+                                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
                                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
                                         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share PDF"))

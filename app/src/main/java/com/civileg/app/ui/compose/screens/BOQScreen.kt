@@ -161,10 +161,15 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                 val f = floors.toIntOrNull() ?: 1
                 val lp = landPrice.toDoubleOrNull() ?: 0.0
                 val sp = sellingPrice.toDoubleOrNull() ?: 0.0
-                viewModel.estimateFullProject(projectType, a, f, hasBasement, factoryType, lp, sp, selectedCurrency)
-                
-                // تشغيل المحرك التجريبي وتخزين النتائج للعرض
-                trialRunLog = TrialRunManager.runFullProjectSimulation()
+                when (category) {
+                    EstimationEngine.ProjectCategory.FULL_PROJECT,
+                    EstimationEngine.ProjectCategory.INVESTMENT_STUDY ->
+                        viewModel.estimateFullProject(projectType, a, f, hasBasement, factoryType, lp, sp, selectedCurrency)
+                    EstimationEngine.ProjectCategory.APARTMENT_FINISHING ->
+                        viewModel.estimateApartmentFinishing(a, selectedCurrency)
+                    EstimationEngine.ProjectCategory.SPECIFIC_ITEM ->
+                        viewModel.estimateSpecificItem("Item", a, 1.0, selectedCurrency)
+                }
             }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 else Text(stringResource(R.string.boq_generate_report), fontWeight = FontWeight.Bold)

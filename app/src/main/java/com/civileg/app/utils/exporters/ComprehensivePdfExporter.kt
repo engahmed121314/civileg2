@@ -875,8 +875,8 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
-                t("حديد القاع X", "Bottom Steel X") to "${result.barsX} \u03C6${result.barDiameter} @ 200mm",
-                t("حديد القاع Y", "Bottom Steel Y") to "${result.barsY} \u03C6${result.barDiameter} @ 200mm",
+                t("حديد القاع X", "Bottom Steel X") to "${result.barsX} \u03C6${result.barDiameter} @ ${result.reinforcementBottom.spacing.toInt()}mm",
+                t("حديد القاع Y", "Bottom Steel Y") to "${result.barsY} \u03C6${result.barDiameter} @ ${result.reinforcementBottom.spacing.toInt()}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP",
@@ -955,8 +955,8 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
-                t("تسليح الحائط", "Wall Reinforcement") to "${result.wallReinforcement.numBars}\u03C6${result.wallReinforcement.diameter} @ ${result.wallReinforcement.spacing}mm",
-                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.numBars}\u03C6${result.baseReinforcement.diameter} @ ${result.baseReinforcement.spacing}mm",
+                t("تسليح الحائط", "Wall Reinforcement") to "${result.wallReinforcement.barString} @ ${result.wallReinforcement.spacing.toInt()}mm",
+                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.barString} @ ${result.baseReinforcement.spacing.toInt()}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP",
@@ -1035,7 +1035,7 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
-                t("التسليح الرئيسي", "Main Reinforcement") to "${result.reinforcement.numBars}\u03C6${result.reinforcement.diameter} @ ${result.reinforcement.spacing}mm",
+                t("التسليح الرئيسي", "Main Reinforcement") to "${result.reinforcement.barString} @ ${result.reinforcement.spacing.toInt()}mm",
                 t("تسليح التوزيع", "Distribution Reinforcement") to "${result.distributionReinforcement.numBars}\u03C6${result.distributionReinforcement.diameter} @ ${result.distributionReinforcement.spacing}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
@@ -1105,9 +1105,9 @@ class ComprehensivePdfExporter(private val context: Context) {
                 t("سمك الجذع", "Stem Thickness") to "${result.stemThickness.format(0)} mm",
                 t("عرض القاعدة", "Base Width") to "${result.baseWidth.format(0)} mm",
                 t("كثافة التربة", "Soil Density") to "${result.soilDensity.format(1)} kN/m\u00B3",
-                t("زاوية الاحتكاك الداخلي", "Internal Friction Angle") to "${Math.toDegrees(Math.atan(result.ka.toDouble())).format(1)}\u00B0",
+                t("زاوية الاحتكاك الداخلي", "Internal Friction Angle") to "${Math.toDegrees(Math.asin((1.0 - result.ka.toDouble()) / (1.0 + result.ka.toDouble()))).format(1)}\u00B0",
                 t("معامل الضغط النشط", "Active Pressure Coeff.") to "Ka = ${result.ka.format(3)}",
-                t("ضغط التربة النشط", "Active Earth Pressure") to "${result.pa.format(1)} kN/m\u00B2",
+                t("قوة التربة النشطة", "Active Earth Force") to "${result.pa.format(1)} kN/m",
                 t("مقاومة الخرسانة", "Concrete Strength") to "f'c = ${result.fcu.format(0)} MPa",
                 t("مقاومة الحديد", "Steel Strength") to "fy = ${result.fy.format(0)} MPa"
             ), font)
@@ -1123,7 +1123,7 @@ class ComprehensivePdfExporter(private val context: Context) {
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
                 t("تسليح الجذع", "Stem Reinforcement") to "${result.stemReinforcement.numBars}\u03C6${result.stemReinforcement.diameter} @ ${result.stemReinforcement.spacing}mm",
-                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.numBars}\u03C6${result.baseReinforcement.diameter} @ ${result.baseReinforcement.spacing}mm",
+                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.barString} @ ${result.baseReinforcement.spacing.toInt()}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP"

@@ -195,9 +195,9 @@ class SteelViewModel @Inject constructor(
                 // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
                 // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when (stored.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
-                    else -> "ECP 203"
+                    CalculatorEngine.DesignCode.ACI -> "AISC 360-16"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 306"
+                    else -> "ECP 205-2007"
                 }
 
                 val inputsMap = mapOf(
@@ -210,7 +210,7 @@ class SteelViewModel @Inject constructor(
                         com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> "Girder"
                     },
                     "Design Code" to codeName,
-                    "Length" to "${stored.inputs.length} m",
+                    "Length" to "${stored.inputs.length / 1000.0} m",
                     "Axial Load" to "${stored.inputs.axialLoad} kN",
                     "Moment" to "${stored.inputs.moment} kN.m",
                     "Shear Force" to "${stored.inputs.shear} kN"
