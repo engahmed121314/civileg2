@@ -176,6 +176,50 @@ fun SlabScreen(
                 }
             }
 
+            // --- Advanced Inputs Section ---
+            if (selectedType == CalculatorEngine.SlabType.FLAT || selectedType == CalculatorEngine.SlabType.POST_TENSION) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Advanced Detailing (Pro)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            if (selectedType == CalculatorEngine.SlabType.FLAT) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = dropPanelThickness,
+                                        onValueChange = { dropPanelThickness = it },
+                                        label = { Text("Drop Thick (mm)") },
+                                        modifier = Modifier.weight(1f),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    OutlinedTextField(
+                                        value = columnSize,
+                                        onValueChange = { columnSize = it },
+                                        label = { Text("Col Width (mm)") },
+                                        modifier = Modifier.weight(1f),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                            }
+                            if (selectedType == CalculatorEngine.SlabType.POST_TENSION) {
+                                OutlinedTextField(
+                                    value = prestressForce,
+                                    onValueChange = { prestressForce = it },
+                                    label = { Text("Prestress Force (kN)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             item { SectionHeader(stringResource(R.string.slab_dimensions_loading), R.drawable.ic_slab) }
 
             item {

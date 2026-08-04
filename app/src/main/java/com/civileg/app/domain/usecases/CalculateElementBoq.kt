@@ -115,6 +115,14 @@ class CalculateElementBoq @Inject constructor() {
         val concreteVolume = lxMm * lyMm * thickness / 1e9
         items += concreteItem("SLAB_CONC_001", "Solid slab ${spanX}m × ${spanY}m × ${thickness.toInt()}mm", concreteVolume, prices.concretePerM3, "V = Lx × Ly × t")
 
+        // 1.1 Drop Panels (if any)
+        // [PROFESSIONAL]: Assuming 1 drop panel per 25m2 if not specified
+        val numDrops = (lxMm * lyMm / 25e6).toInt()
+        val dropVol = numDrops * (2.0 * 2.0 * 0.10) // 2x2m, 10cm thick placeholder
+        if (numDrops > 0) {
+            items += concreteItem("SLAB_DROP_001", "Drop Panels ($numDrops pcs)", dropVol, prices.concretePerM3, "V = n × w × l × t_drop")
+        }
+
         // 2. حديد التسليح الرئيسي (اتجاه Lx — البحر القصير)
         val wasteFactor = 1.05 // Slabs typically have lower waste (5%)
         val mainBarsCount = (lyMm / mainSpacing).toInt() + 1

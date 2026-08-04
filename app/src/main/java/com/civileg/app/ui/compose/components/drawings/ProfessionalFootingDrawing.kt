@@ -343,6 +343,7 @@ fun ProfessionalFootingDrawing(
         val sTop = secTop + (sectionH - thickPx) / 2f + 8f
         val sBottom = sTop + thickPx
         val sCenterX = sLeft + secSpanPx / 2f
+        val colWpx = (safeColW * secScale).toFloat()
 
         // Soil below footing (hatched area) using DrawingUtils
         val soilBottom = min(sBottom + 20f, h * 0.60f)
@@ -358,14 +359,24 @@ fun ProfessionalFootingDrawing(
         )
 
         // Footing concrete
-        drawRect(
-            color = concreteFill,
-            topLeft = Offset(sLeft, sTop),
-            size = Size(secSpanPx, thickPx)
-        )
+        if (footingType == "Hybrid (REB)") {
+            // Main raft slab
+            val raftH = thickPx * 0.4f
+            drawRect(color = concreteFill, topLeft = Offset(sLeft, sBottom - raftH), size = Size(secSpanPx, raftH))
+            // Thickened Pedestals under column
+            val pedW = colWpx * 2.5f
+            val pedH = thickPx
+            drawRect(color = concreteFill, topLeft = Offset(sCenterX - pedW / 2f, sBottom - pedH), size = Size(pedW, pedH))
+            drawRect(color = concreteStroke, topLeft = Offset(sCenterX - pedW / 2f, sBottom - pedH), size = Size(pedW, pedH), style = Stroke(1.5f))
+        } else {
+            drawRect(
+                color = concreteFill,
+                topLeft = Offset(sLeft, sTop),
+                size = Size(secSpanPx, thickPx)
+            )
+        }
 
         // Column above
-        val colWpx = (safeColW * secScale).toFloat()
         val colHpx = 40f
         val colLeft = sCenterX - colWpx / 2f
         drawRect(

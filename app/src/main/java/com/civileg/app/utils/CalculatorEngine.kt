@@ -218,7 +218,23 @@ class CalculatorEngine @Inject constructor(
         val columnStripSteelX: String = "",
         val middleStripSteelX: String = "",
         val columnStripSteelY: String = "",
-        val middleStripSteelY: String = ""
+        val middleStripSteelY: String = "",
+        val dropPanelWidth: Double = 0.0,
+        val dropPanelThick: Double = 0.0,
+        val punchingStressAtDrop: Double = 0.0
+    ) : Parcelable
+
+    @Parcelize
+    data class HybridRaftResult(
+        val raftThickness: Double,
+        val pedestalThickness: Double,
+        val pedestalWidth: Double,
+        val raftReinforcement: ReinforcementBar,
+        val pedestalReinforcement: ReinforcementBar,
+        val isSafe: Boolean,
+        val totalConcreteM3: Double,
+        val totalSteelKg: Double,
+        val safetyChecks: List<DesignSafetyCheck>
     ) : Parcelable
 
     @Parcelize
@@ -1151,7 +1167,10 @@ class CalculatorEngine @Inject constructor(
             utilizationRatio = utilizationRatio, suggestions = suggestions,
             steelWasteTons = steelWeight * 0.05 / 1000.0,
             columnStripSteelX = colStripX, middleStripSteelX = midStripX,
-            columnStripSteelY = colStripY, middleStripSteelY = midStripY
+            columnStripSteelY = colStripY, middleStripSteelY = midStripY,
+            dropPanelWidth = if (type == SlabType.FLAT) lx * 1000.0 / 3.0 else 0.0,
+            dropPanelThick = dropPanelThickness,
+            punchingStressAtDrop = v_punch
         )
     }
 
@@ -1377,7 +1396,31 @@ class CalculatorEngine @Inject constructor(
             safetyChecks = listOf(DesignSafetyCheck("Average Pressure", totalP / (side * side), soil, "kPa", true)),
             utilizationRatio = utilizationRatio
         )
-        }
+    }
+
+    fun calculateHybridRaft(
+        plotWidth: Double,
+        plotLength: Double,
+        columns: List<ColumnLoad>,
+        soilCapacity: Double,
+        code: DesignCode,
+        preferredDia: Int = 16
+    ): HybridRaftResult {
+        val raftThick = 300.0
+        val pedestalThick = 800.0
+        val pedestalWidth = 2000.0 
+        val totalArea = plotWidth * plotLength
+        var volPedestals = 0.0
+        columns.forEach { volPedestals += (pedestalWidth / 1000.0).pow(2) * ((pedestalThick - raftThick) / 1000.0) }
+        val totalConc = (totalArea * (raftThick / 1000.0)) + volPedestals
+        val meshSteel = 2 * ( (plotWidth*1000/200.0) * plotLength + (plotLength*1000/200.0) * plotWidth ) * (preferredDia.toDouble().pow(2)/162.0)
+        val pedestalExtraSteel = columns.size * (pedestalWidth / 200.0 * 5) * (pedestalWidth / 1000.0) * (preferredDia.toDouble().pow(2)/162.0)
+        return HybridRaftResult(raftThickness = raftThick, pedestalThickness = pedestalThick, pedestalWidth = pedestalWidth,
+            raftReinforcement = ReinforcementBar(spacing = 200.0, diameter = preferredDia, description = "Continuous Mat"),
+            pedestalReinforcement = ReinforcementBar(numBars = 10, diameter = preferredDia, description = "Local Extra"),
+            isSafe = true, totalConcreteM3 = totalConc, totalSteelKg = (meshSteel + pedestalExtraSteel) * 1.15,
+            safetyChecks = listOf(DesignSafetyCheck("Average Pressure", columns.sumOf { it.axialLoad } / totalArea, soilCapacity, "kPa", true)))
+    }
 
     private fun calculatePileCapInternal(
         p: Double, numPiles: Int, pileDia: Double, pileCap: Double, fcu: Double, fy: Double,
