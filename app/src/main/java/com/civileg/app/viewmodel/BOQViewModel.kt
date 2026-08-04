@@ -111,22 +111,85 @@ class BOQViewModel @Inject constructor(
 
     /**
      * تقدير مساحة الشدة بناءً على نوع العنصر والقيم المخزنة
+     * [FIX] Improved estimation factors based on actual element geometry
+     * instead of crude multiplier × volume approach.
      */
     private fun estimateFormwork(design: Design): Double {
-        // تقدير تقريبي: مساحة الشدة ≈ 2-6 × حجم الخرسانة (حسب العنصر)
+        // Try to extract dimensions from inputData for accurate estimation
+        val inputJson = try { JSONObject(design.inputData) } catch (_: Exception) { null }
+        
+        if (inputJson != null && inputJson.length() > 2) {
+            val formArea = calculateFormworkFromInput(design.type, inputJson)
+            if (formArea > 0) return formArea
+        }
+        
+        // Fallback: use improved estimation based on element type
         val factor = when (design.type) {
-            com.civileg.app.db.DesignType.SLAB -> 1.0 / 0.15  // مساحة = حجم / سماكة تقريبية
-            com.civileg.app.db.DesignType.COLUMN -> 4.0 * (design.concreteVolume / 0.3).coerceAtLeast(1.0)
-            com.civileg.app.db.DesignType.BEAM -> 3.0 * (design.concreteVolume / 0.25).coerceAtLeast(1.0)
-            com.civileg.app.db.DesignType.FOOTING -> 5.0 * (design.concreteVolume / 0.5).coerceAtLeast(1.0)
-            com.civileg.app.db.DesignType.STAIRCASE -> 2.5 * (design.concreteVolume / 0.15).coerceAtLeast(1.0)
-            com.civileg.app.db.DesignType.WATER_TANK -> 4.0 * (design.concreteVolume / 0.3).coerceAtLeast(1.0)
-            com.civileg.app.db.DesignType.RETAINING_WALL -> 3.0 * (design.concreteVolume / 0.3).coerceAtLeast(1.0)
+            com.civileg.app.db.DesignType.SLAB -> 1.0 / 0.15  // area = volume / avg thickness
+            com.civileg.app.db.DesignType.COLUMN -> {
+                // Estimate perimeter × height from volume
+                // Assume roughly square column: V = b² × h, formwork ≈ 4b × h = 4V^(2/3)
+                if (design.concreteVolume > 0) 4.0 * design.concreteVolume.pow(2.0 / 3.0) * 1000.0 else 0.0
+            }
+            com.civileg.app.db.DesignType.BEAM -> {
+                // Formwork = (2d + b) × L ≈ 3 × V / (b×d) × sqrt(b×d) approximately
+                if (design.concreteVolume > 0) 3.5 * design.concreteVolume.pow(2.0 / 3.0) * 800.0 else 0.0
+            }
+            com.civileg.app.db.DesignType.FOOTING -> {
+                // 5 sides: perimeter × thickness + bottom area
+                if (design.concreteVolume > 0) 5.0 * design.concreteVolume.pow(2.0 / 3.0) * 600.0 else 0.0
+            }
+            com.civileg.app.db.DesignType.STAIRCASE -> {
+                if (design.concreteVolume > 0) 2.5 * design.concreteVolume.pow(2.0 / 3.0) * 700.0 else 0.0
+            }
+            com.civileg.app.db.DesignType.WATER_TANK -> {
+                if (design.concreteVolume > 0) 4.0 * design.concreteVolume.pow(2.0 / 3.0) * 500.0 else 0.0
+            }
+            com.civileg.app.db.DesignType.RETAINING_WALL -> {
+                if (design.concreteVolume > 0) 3.0 * design.concreteVolume.pow(2.0 / 3.0) * 500.0 else 0.0
+            }
             else -> 3.0
         }
         return if (design.concreteVolume > 0) {
-            (design.concreteVolume * factor).coerceIn(0.1, 10000.0)
+            factor.coerceIn(0.1, 10000.0)
         } else 0.0
+    }
+
+    /**
+     * [NEW] Calculate formwork area from detailed input data
+     */
+    private fun calculateFormworkFromInput(
+        type: com.civileg.app.db.DesignType,
+        input: JSONObject
+    ): Double {
+        return try {
+            when (type) {
+                com.civileg.app.db.DesignType.SLAB -> {
+                    val lx = input.optDouble("spanX", input.optDouble("lx", 0.0))
+                    val ly = input.optDouble("spanY", input.optDouble("ly", 0.0))
+                    if (lx > 0 && ly > 0) lx * ly else 0.0  // soffit only
+                }
+                com.civileg.app.db.DesignType.COLUMN -> {
+                    val w = input.optDouble("width", input.optDouble("b", 0.0))
+                    val d = input.optDouble("depth", input.optDouble("h", 0.0))
+                    val h = input.optDouble("height", input.optDouble("L", 0.0)) / 1000.0  // mm → m
+                    if (w > 0 && h > 0) 2.0 * (w + d) * h / 1e6 else 0.0
+                }
+                com.civileg.app.db.DesignType.BEAM -> {
+                    val w = input.optDouble("width", input.optDouble("b", 0.0))
+                    val d = input.optDouble("depth", input.optDouble("h", 0.0))
+                    val span = input.optDouble("span", input.optDouble("L", 0.0))
+                    if (w > 0 && d > 0 && span > 0) (2.0 * d + w) * span / 1e6 else 0.0
+                }
+                com.civileg.app.db.DesignType.FOOTING -> {
+                    val l = input.optDouble("length", input.optDouble("L", 0.0))
+                    val w = input.optDouble("width", input.optDouble("B", 0.0))
+                    val t = input.optDouble("thickness", input.optDouble("t", 0.0))
+                    if (l > 0 && w > 0 && t > 0) (2.0 * (l + w) * t + l * w) / 1e6 else 0.0
+                }
+                else -> 0.0
+            }
+        } catch (_: Exception) { 0.0 }
     }
 
     /**

@@ -461,7 +461,8 @@ class CalculatorEngine @Inject constructor(
         val slenderness = (inputs.unbracedLength / r.coerceAtLeast(10.0))
 
         // AISC 360-16 E3: Calculate Fcr based on slenderness ratio
-        val E = 210000.0 // MPa
+        // [FIX] Use E = 200,000 MPa to match all design engines (AISC/ECP/SBC)
+        val E = 200000.0 // MPa
         val fe = (PI.pow(2) * E) / slenderness.pow(2) // Euler buckling stress
         val lambdaC = (slenderness / PI) * sqrt(fy / E)
         val criticalStress = if (lambdaC <= 1.5) {

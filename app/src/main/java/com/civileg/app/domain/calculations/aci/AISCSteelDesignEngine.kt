@@ -249,8 +249,8 @@ class AISCSteelDesignEngine {
             val t = section.thickness
             val hw = (h - 2 * t).coerceAtLeast(0.001)
             val bw = (w - 2 * t).coerceAtLeast(0.001)
-            // J for hollow section = 2*t₁*t₂*(b-t₂)²*(h-t₁)² / (b*t₁ + h*t₂ - 2*t₁*t₂)
-            2.0 * t * t * bw * bw * hw * hw / (w * t + h * t - 2.0 * t * t)
+            // [FIX] Bredt-Batho: J = 2t·bw²·hw² / (bw + hw) where bw=b-2t, hw=h-2t
+            2.0 * t * t * bw * bw * hw * hw / (bw + hw)
         }
         is SteelSectionType.CHS -> {
             val D = section.outerDiameter

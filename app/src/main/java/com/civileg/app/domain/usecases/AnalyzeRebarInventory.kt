@@ -467,6 +467,79 @@ class AnalyzeRebarInventory @Inject constructor() {
         return availableStockLengths.filter { it >= maxLength }.minOrNull() ?: availableStockLengths.last()
     }
 
+    /**
+     * [NEW] Multi-stock-length optimization: tries ALL available stock lengths and picks
+     * the combination that yields the best overall utilization.
+     * This handles the real-world case where mixing 12m and 15m bars gives better results
+     * than using only one length.
+     *
+     * Returns the cutting plan with the minimum number of bars, breaking ties by utilization.
+     */
+    fun optimizeMultiStock(
+        requiredLengths: List<Double>,
+        stockLengths: List<Double> = STANDARD_STOCK_LENGTHS,
+        kerfMm: Double = KERF_MM
+    ): List<CuttingPlan> {
+        if (requiredLengths.isEmpty()) return emptyList()
+        val maxLength = requiredLengths.maxOrNull() ?: return emptyList()
+
+        // Filter to stocks that can fit the longest piece
+        val usableStocks = stockLengths.filter { it >= maxLength }.sorted()
+        if (usableStocks.isEmpty()) {
+            // Piece too long for any stock — must splice. Use longest stock.
+            return optimizeCuttingMultiLength(stockLengths.last(), requiredLengths, kerfMm)
+        }
+
+        var bestPlan = emptyList<CuttingPlan>()
+        var bestBarCount = Int.MAX_VALUE
+        var bestUtilization = 0.0
+
+        for (stockLen in usableStocks) {
+            val plan = optimizeCuttingMultiLength(stockLen, requiredLengths, kerfMm)
+            val barCount = plan.size
+            val util = if (plan.isNotEmpty()) plan.sumOf { it.utilizationPercentage } / plan.size else 0.0
+
+            if (barCount < bestBarCount || (barCount == bestBarCount && util > bestUtilization)) {
+                bestPlan = plan
+                bestBarCount = barCount
+                bestUtilization = util
+            }
+        }
+
+        // Also try mixed-stock: use shorter stock for shorter pieces, longer for longer
+        if (usableStocks.size >= 2) {
+            val sortedPieces = requiredLengths.sortedDescending()
+            val medianPiece = sortedPieces[sortedPieces.size / 2]
+
+            // Split: long pieces → long stock, short pieces → short stock
+            val longPieces = sortedPieces.filter { it > medianPiece }
+            val shortPieces = sortedPieces.filter { it <= medianPiece }
+
+            val longStock = usableStocks.last() // longest
+            val shortStock = usableStocks.first() // shortest that fits
+
+            val longPlan = if (longPieces.isNotEmpty()) optimizeCuttingMultiLength(longStock, longPieces, kerfMm) else emptyList()
+            val shortPlan = if (shortPieces.isNotEmpty()) {
+                // Try to find the best short stock for these pieces
+                val shortMax = shortPieces.maxOrNull() ?: 0.0
+                val bestShortStock = usableStocks.filter { it >= shortMax }.minOrNull() ?: shortStock
+                optimizeCuttingMultiLength(bestShortStock, shortPieces, kerfMm)
+            } else emptyList()
+
+            val mixedPlan = longPlan + shortPlan
+            val mixedCount = mixedPlan.size
+            val mixedUtil = if (mixedPlan.isNotEmpty()) mixedPlan.sumOf { it.utilizationPercentage } / mixedPlan.size else 0.0
+
+            if (mixedCount < bestBarCount || (mixedCount == bestBarCount && mixedUtil > bestUtilization)) {
+                bestPlan = mixedPlan
+                bestBarCount = mixedCount
+                bestUtilization = mixedUtil
+            }
+        }
+
+        return bestPlan
+    }
+
     fun calculateTotalWeight(rebarList: List<Pair<Double, Int>>): Double {
         // [PRECISION]: Calculate total weight in tons based on diameter (mm) and length (m)
         return rebarList.sumOf { (diameter, totalLength) ->

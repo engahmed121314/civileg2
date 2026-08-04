@@ -281,7 +281,7 @@ class ExportViewModel @Inject constructor(
             val distBars = result.reinforcementLayout.distributionBars
             
             PdfDrawingGenerator.generateSlabDrawing(
-                spanX = lx * 1000, spanY = ly * 1000, thickness = thickness,
+                spanX = lx, spanY = ly, thickness = thickness,
                 mainDia = bottomBars.diameter, mainSpacing = bottomBars.spacing,
                 distDia = distBars?.diameter ?: 12.0, distSpacing = distBars?.spacing ?: 200.0
             )

@@ -2116,12 +2116,38 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                         
                         if (section.area > 0) {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                            // [FIX] section.ix/sx are in mm⁴/mm³ — convert to cm⁴/cm³ for display
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    PropertyLine("Inertia Ix", "%.0f cm⁴".format(section.ix))
+                                    PropertyLine("Inertia Ix", "%.0f cm⁴".format(section.ix / 1e4))
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
-                                    PropertyLine("Modulus Sx", "%.1f cm³".format(section.sx))
+                                    PropertyLine("Modulus Sx", "%.1f cm³".format(section.sx / 1e3))
+                                }
+                            }
+                            // [FIX] Show additional critical properties (Iy, Sy, Zx, Zy, rx, ry)
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Inertia Iy", "%.0f cm⁴".format(section.iy / 1e4))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Modulus Sy", "%.1f cm³".format(section.sy / 1e3))
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Zx (plastic)", "%.0f cm³".format(section.zx / 1e3))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Zy (plastic)", "%.0f cm³".format(section.zy / 1e3))
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("rx", "%.2f cm".format(section.rx / 10.0))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("ry", "%.2f cm".format(section.ry / 10.0))
                                 }
                             }
                         }
