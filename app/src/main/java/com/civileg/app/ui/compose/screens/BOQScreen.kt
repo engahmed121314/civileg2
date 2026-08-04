@@ -5,6 +5,8 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.calculations.ecp.TrialRunManager
+import com.civileg.app.domain.entities.BoqCategory
 import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.BOQViewModel
@@ -199,11 +202,18 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
 }
 
 @Composable
-fun DesignsBOQContent(viewModel: ProjectViewModel) {
+fun DesignsBOQContent(
+    projectViewModel: ProjectViewModel,
+    boqViewModel: BOQViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
-    val designs by viewModel.allDesigns.observeAsState(emptyList())
-    val projects by viewModel.allProjects.observeAsState(emptyList())
+    val designs by projectViewModel.allDesigns.observeAsState(emptyList())
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    var selectedDesignId by remember { mutableLongStateOf(-1L) }
+    val elementBoqItems by boqViewModel.elementBoqItems.observeAsState(emptyList())
+    val elementBoqTotal by boqViewModel.elementBoqTotal.observeAsState(0.0)
+    val isLoading by boqViewModel.isLoading.observeAsState(false)
 
     LaunchedEffect(projects) { if (selectedProjectId == -1L && projects.isNotEmpty()) selectedProjectId = projects.first().id }
 
@@ -211,26 +221,75 @@ fun DesignsBOQContent(viewModel: ProjectViewModel) {
         if (selectedProjectId == -1L) emptyList() else designs.filter { it.projectId == selectedProjectId }
     }
 
+    val selectedDesign = remember(designs, selectedDesignId) {
+        designs.find { it.id == selectedDesignId }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (projects.isNotEmpty()) {
             item {
                 val selectedIndex = projects.indexOfFirst { it.id == selectedProjectId }.coerceAtLeast(0)
                 ScrollableTabRow(selectedTabIndex = selectedIndex, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                    projects.forEach { project -> Tab(selected = project.id == selectedProjectId, onClick = { selectedProjectId = project.id }, text = { Text(project.name) }) }
+                    projects.forEach { project -> Tab(selected = project.id == selectedProjectId, onClick = { selectedProjectId = project.id; selectedDesignId = -1L; boqViewModel.clearResult() }, text = { Text(project.name) }) }
                 }
             }
             item { TotalCostCard(projectDesigns.sumOf { it.totalCost }) }
             item {
-                Button(onClick = {
-                    val p = projects.find { it.id == selectedProjectId }
-                    if (p != null) exportProjectBOQPdf(context, p.name, projectDesigns)
-                }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
-                    Icon(Icons.Default.PictureAsPdf, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.boq_export_pdf))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        val p = projects.find { it.id == selectedProjectId }
+                        if (p != null) exportProjectBOQPdf(context, p.name, projectDesigns)
+                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
+                        Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.boq_export_pdf))
+                    }
+                    if (elementBoqItems.isNotEmpty()) {
+                        Button(onClick = {
+                            val items = elementBoqItems
+                            val file = PdfGenerator.generateBOQReport(context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal, items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity }, items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity }, items.map { it.description to it.total })
+                            sharePdf(context, file)
+                        }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
+                            Icon(Icons.Default.Description, null); Spacer(Modifier.width(8.dp)); Text("Export BOQ")
+                        }
+                    }
                 }
             }
-            items(projectDesigns) { design -> DesignBOQCard(design) }
+            items(projectDesigns) { design ->
+                val isSelected = design.id == selectedDesignId
+                DesignBOQCard(design, isSelected = isSelected, onClick = {
+                    selectedDesignId = if (isSelected) -1L else design.id
+                    if (!isSelected) boqViewModel.calculateDesignBoq(design) else boqViewModel.clearResult()
+                })
+            }
+            // Show detailed BOQ items when a design is selected
+            if (selectedDesignId > 0) {
+                if (isLoading) {
+                    item { Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
+                } else if (elementBoqItems.isNotEmpty()) {
+                    item {
+                        Text("${selectedDesign?.name ?: "Design"} — Detailed BOQ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                    }
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                elementBoqItems.forEach { item ->
+                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(item.description, style = MaterialTheme.typography.bodySmall)
+                                            Text("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                        }
+                                        Text(String.format(Locale.US, "%,.0f EGP", item.total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Total", fontWeight = FontWeight.Bold)
+                                    Text(String.format(Locale.US, "%,.0f EGP", elementBoqTotal), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } else {
             item { EmptyStateView() }
         }
@@ -342,10 +401,18 @@ fun InvestmentSmallCard(label: String, value: String) {
 }
 
 @Composable
-fun DesignBOQCard(design: com.civileg.app.db.Design) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+fun DesignBOQCard(design: com.civileg.app.db.Design, isSelected: Boolean = false, onClick: () -> Unit = {}) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surface
+        ),
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary)
+            Icon(if (isSelected) Icons.Default.FolderOpen else Icons.Default.Description, null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(design.name, fontWeight = FontWeight.Bold)

@@ -7,8 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.CalculateElementBoq
 import com.civileg.app.utils.EstimationEngine
+import com.civileg.app.db.Design
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,6 +31,171 @@ class BOQViewModel @Inject constructor(
 
     private val _elementBoqTotal = MutableLiveData<Double>(0.0)
     val elementBoqTotal: LiveData<Double> = _elementBoqTotal
+
+    /**
+     * حساب كميات من كيان التصميم المحفوظ في قاعدة البيانات
+     * يستخدم القيم المجمعة المخزنة (concreteVolume, steelWeight) إذا لم يتوفر inputData تفصيلي،
+     * أو يحلل inputData JSON لاستخراج المعلمات التفصيلية إذا توفر.
+     */
+    fun calculateDesignBoq(design: Design, prices: MaterialPrices = MaterialPrices()) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val items = generateBoqFromDesign(design, prices)
+                _elementBoqItems.value = items
+                _elementBoqTotal.value = items.sumOf { it.total }
+            } catch (e: Exception) {
+                _elementBoqItems.value = emptyList()
+                _elementBoqTotal.value = 0.0
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * توليد عناصر BOQ من كيان التصميم
+     * يحاول أولاً تحليل inputData JSON، وإذا كان فارغاً يعتمد على القيم المجمعة.
+     */
+    private fun generateBoqFromDesign(design: Design, prices: MaterialPrices): List<BoqItem> {
+        val items = mutableListOf<BoqItem>()
+        val typeLabel = design.type.name
+
+        // محاولة تحليل inputData التفصيلي
+        val inputJson = try { JSONObject(design.inputData) } catch (_: Exception) { null }
+        val resultsJson = try { JSONObject(design.results) } catch (_: Exception) { null }
+
+        // إذا توفرت بيانات تفصيلية، استخدم CalculateElementBoq
+        if (inputJson != null && inputJson.length() > 2) {
+            val detailedItems = calculateFromDetailedInput(design.type, inputJson, resultsJson, prices)
+            if (detailedItems.isNotEmpty()) return detailedItems
+        }
+
+        // خطة بديلة: استخدم القيم المجمعة المخزنة
+        if (design.concreteVolume > 0) {
+            items += BoqItem(
+                itemId = "${typeLabel}_CONC_001",
+                description = "${design.name} — Concrete",
+                category = BoqCategory.CONCRETE,
+                unit = "m³",
+                quantity = design.concreteVolume,
+                unitPrice = prices.concretePerM3
+            )
+        }
+        if (design.steelWeight > 0) {
+            items += BoqItem(
+                itemId = "${typeLabel}_REINF_001",
+                description = "${design.name} — Reinforcement Steel",
+                category = BoqCategory.REINFORCEMENT,
+                unit = "ton",
+                quantity = design.steelWeight,
+                unitPrice = prices.steelPerTon
+            )
+        }
+
+        // تقدير الشدة (Formwork) بناءً على نوع العنصر
+        val formworkArea = estimateFormwork(design)
+        if (formworkArea > 0) {
+            items += BoqItem(
+                itemId = "${typeLabel}_FORM_001",
+                description = "${design.name} — Formwork",
+                category = BoqCategory.FORMWORK,
+                unit = "m²",
+                quantity = formworkArea,
+                unitPrice = prices.formworkPerM2
+            )
+        }
+
+        return items
+    }
+
+    /**
+     * تقدير مساحة الشدة بناءً على نوع العنصر والقيم المخزنة
+     */
+    private fun estimateFormwork(design: Design): Double {
+        // تقدير تقريبي: مساحة الشدة ≈ 2-6 × حجم الخرسانة (حسب العنصر)
+        val factor = when (design.type) {
+            com.civileg.app.db.DesignType.SLAB -> 1.0 / 0.15  // مساحة = حجم / سماكة تقريبية
+            com.civileg.app.db.DesignType.COLUMN -> 4.0 * (design.concreteVolume / 0.3).coerceAtLeast(1.0)
+            com.civileg.app.db.DesignType.BEAM -> 3.0 * (design.concreteVolume / 0.25).coerceAtLeast(1.0)
+            com.civileg.app.db.DesignType.FOOTING -> 5.0 * (design.concreteVolume / 0.5).coerceAtLeast(1.0)
+            com.civileg.app.db.DesignType.STAIRCASE -> 2.5 * (design.concreteVolume / 0.15).coerceAtLeast(1.0)
+            com.civileg.app.db.DesignType.WATER_TANK -> 4.0 * (design.concreteVolume / 0.3).coerceAtLeast(1.0)
+            com.civileg.app.db.DesignType.RETAINING_WALL -> 3.0 * (design.concreteVolume / 0.3).coerceAtLeast(1.0)
+            else -> 3.0
+        }
+        return if (design.concreteVolume > 0) {
+            (design.concreteVolume * factor).coerceIn(0.1, 10000.0)
+        } else 0.0
+    }
+
+    /**
+     * محاولة حساب BOQ تفصيلي من inputData JSON
+     */
+    private fun calculateFromDetailedInput(
+        type: com.civileg.app.db.DesignType,
+        input: JSONObject,
+        results: JSONObject?,
+        prices: MaterialPrices
+    ): List<BoqItem> {
+        return try {
+            when (type) {
+                com.civileg.app.db.DesignType.SLAB -> {
+                    val spanX = input.optDouble("spanX", input.optDouble("lx", 0.0))
+                    val spanY = input.optDouble("spanY", input.optDouble("ly", 0.0))
+                    val thickness = input.optDouble("thickness", input.optDouble("h", 0.0))
+                    val mainDia = input.optDouble("mainDia", input.optDouble("d1", 0.0))
+                    val mainSpacing = input.optDouble("mainSpacing", input.optDouble("s1", 0.0))
+                    val distDia = input.optDouble("distDia", input.optDouble("d2", 12.0))
+                    val distSpacing = input.optDouble("distSpacing", input.optDouble("s2", 200.0))
+                    if (spanX > 0 && spanY > 0 && thickness > 0 && mainDia > 0) {
+                        calculateElementBoq.calculateSlabBoq(
+                            spanX, spanY, thickness, mainDia, mainSpacing,
+                            distDia, distSpacing, 25.0, prices
+                        )
+                    } else emptyList()
+                }
+                com.civileg.app.db.DesignType.BEAM -> {
+                    val w = input.optDouble("width", input.optDouble("b", 0.0))
+                    val d = input.optDouble("depth", input.optDouble("h", 0.0))
+                    val span = input.optDouble("span", input.optDouble("L", 0.0))
+                    val mainDia = input.optDouble("mainDia", input.optDouble("d1", 0.0))
+                    val mainBars = input.optInt("mainBars", input.optInt("n1", 0))
+                    val ast = input.optDouble("ast", 0.0)
+                    val stirDia = input.optDouble("stirrupDia", input.optDouble("d2", 8.0))
+                    val stirSp = input.optDouble("stirrupSpacing", input.optDouble("s2", 200.0))
+                    if (w > 0 && d > 0 && span > 0 && mainDia > 0) {
+                        calculateElementBoq.calculateBeamBoq(
+                            w, d, span,
+                            ReinforcementResult(mainDia, mainBars, ast, ast, 0.0, 8.0, 0.0, 0),
+                            ShearReinforcementResult(stirDia, stirSp, 0.0, 0.0, 0.0, 0.0),
+                            prices
+                        )
+                    } else emptyList()
+                }
+                com.civileg.app.db.DesignType.COLUMN -> {
+                    val w = input.optDouble("width", input.optDouble("b", 0.0))
+                    val d = input.optDouble("depth", input.optDouble("h", 0.0))
+                    val h = input.optDouble("height", input.optDouble("L", 0.0))
+                    val mainDia = input.optDouble("mainDia", input.optDouble("d1", 0.0))
+                    val mainBars = input.optInt("mainBars", input.optInt("n1", 0))
+                    val ast = input.optDouble("ast", 0.0)
+                    val tieDia = input.optDouble("tiesDiameter", input.optDouble("d2", 8.0))
+                    val tieSp = input.optDouble("tiesSpacing", input.optDouble("s2", 200.0))
+                    if (w > 0 && d > 0 && h > 0 && mainDia > 0) {
+                        calculateElementBoq.calculateColumnBoq(
+                            w, d, h,
+                            ReinforcementResult(mainDia, mainBars, ast, ast, 0.0, tieDia, tieSp, 0),
+                            prices
+                        )
+                    } else emptyList()
+                }
+                else -> emptyList() // Footing, Stair, Tank, RW — under detailed input
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
     /**
      * حساب كميات عمود من نتائج التصميم

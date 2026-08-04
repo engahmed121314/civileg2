@@ -118,7 +118,7 @@ object SteelDictionary {
         "W 14x38" to SectionInfo("W14×38", "h=360mm, bf=170mm, tw=6.3mm, tf=8.0mm", 56.5, "عريض امريكي"),
         "W 14x53" to SectionInfo("W14×53", "h=350mm, bf=203mm, tw=7.7mm, tf=10.8mm", 78.8, "عريض امريكي"),
         "W 14x74" to SectionInfo("W14×74", "h=360mm, bf=205mm, tw=9.0mm, tf=13.8mm", 110.1, "عريض امريكي"),
-        "W 16x26" to SectionInfo("W16×26", "h=400mm, bf=140mm, tv=4.4mm, tf=5.6mm", 38.7, "عريض امريكي"),
+        "W 16x26" to SectionInfo("W16×26", "h=403mm, bf=140mm, tw=6.4mm, tf=7.9mm", 38.7, "عريض امريكي"),
         "W 16x31" to SectionInfo("W16×31", "h=400mm, bf=155mm, tw=5.0mm, tf=6.2mm", 46.1, "عريض امريكي"),
         "W 16x40" to SectionInfo("W16×40", "h=403mm, bf=177mm, tw=5.5mm, tf=7.5mm", 59.5, "عريض امريكي"),
         "W 16x50" to SectionInfo("W16×50", "h=410mm, bf=179mm, tw=6.2mm, tf=9.0mm", 74.4, "عريض امريكي"),
@@ -135,7 +135,7 @@ object SteelDictionary {
         "M 12x11.8" to SectionInfo("M12×11.8", "h=301mm, bf=96mm, tw=3.2mm, tf=4.3mm", 17.5, "متوسط"),
         
         // S-Shapes (Standard)
-        "S 6x12.5" to SectionInfo("S6×12.5", "h=152mm, fb=56mm, tw=5.1mm, tf=6.1mm", 18.6, "قياسي"),
+        "S 6x12.5" to SectionInfo("S6×12.5", "h=152mm, bf=56mm, tw=5.1mm, tf=6.1mm", 18.6, "قياسي"),
         "S 8x18.4" to SectionInfo("S8×18.4", "h=203mm, bf=70mm, tw=5.8mm, tf=7.7mm", 27.4, "قياسي"),
         
         // Channels (C)

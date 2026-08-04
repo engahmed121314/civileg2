@@ -5,27 +5,21 @@ import javax.inject.Inject
 import kotlin.math.*
 
 /**
- * تحليل مخزون حديد التسليح — مع خوارزمية قص محسّنة
+ * Rebar inventory analysis with optimized cutting algorithm.
  *
- * التحسينات على النسخة السابقة:
- * - خوارزمية First-Fit Decreasing (FFD) مع تحسينات متعددة
- * - دعم Kerf (سماحة القص) لتقليل الهالك الفعلي
- * - إعادة استخدام البواقي (leftovers) مع مطابقة ذكية
- * - خوارزمية Best-Fit لتحسين الاستفادة من الأسياخ المفتوحة
- * - تجميع الأطوال المتشابهة لتقليل عدد الخطط المختلفة
- * - حساب أدق للهالك والاستفادة مع مراعاة Kerf
- * - دعم أطوال مخزون متعددة (أطوال قياسية مختلفة)
+ * v2 improvements over v1:
+ * - Analytical solution for uniform-length pieces (common case: all bars same length)
+ *   avoids O(n^2) FFD overhead when not needed
+ * - Actual waste from cutting plan (not percentage-based estimate)
+ * - Stock length recommendation considers all standard market lengths
+ * - Post-optimization with multi-piece swaps (not just smallest-piece)
+ * - Grouped leftover usage in optimizeWithLeftovers
  */
 class AnalyzeRebarInventory @Inject constructor() {
 
     companion object {
-        /** Kerf allowance per cut (mm) — السماحة لسمك blade القص */
         const val KERF_MM = 3.0
-
-        /** Minimum usable leftover length (m) — أقل طول باقي قابل للاستخدام */
         const val MIN_LEFTOVER_LENGTH = 0.3
-
-        /** Standard stock lengths (m) — الأطوال القياسية المتاحة في السوق */
         val STANDARD_STOCK_LENGTHS = listOf(12.0, 13.0, 14.0, 15.0, 18.0)
     }
 
@@ -40,20 +34,13 @@ class AnalyzeRebarInventory @Inject constructor() {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // حساب عدد الأسياخ المطلوبة من المساحة
         val preferredStock = inventory.availableBars.find { it.isPreferred }
             ?: inventory.availableBars.maxByOrNull { it.availableQuantity }
-            ?: RebarStock(
-                diameter = 16.0,
-                availableLength = 12.0,
-                availableQuantity = 0,
-                grade = RebarGrade.GRADE_420
-            )
+            ?: RebarStock(diameter = 16.0, availableLength = 12.0, availableQuantity = 0, grade = RebarGrade.GRADE_420)
 
         val barArea = PI * preferredStock.diameter * preferredStock.diameter / 4
         val requiredBars = ceil(requiredArea / barArea).toInt()
 
-        // حساب الطول الفعلي لكل سيخ (مع التراكب إذا لزم)
         val effectiveBarLength = if (elementLength > preferredStock.availableLength) {
             val numberOfSplices = ceil(elementLength / preferredStock.availableLength).toInt() - 1
             elementLength + numberOfSplices * inventory.lapSpliceLength * preferredStock.diameter / 1000
@@ -61,48 +48,44 @@ class AnalyzeRebarInventory @Inject constructor() {
             elementLength
         }
 
-        // الطول الكلي المطلوب
         val totalLengthRequired = requiredBars * effectiveBarLength
-
-        // الكمية المتوفرة
         val availableBarsCount = preferredStock.availableQuantity
         val availableLength = availableBarsCount * preferredStock.availableLength
-
-        // الكمية الإضافية المطلوبة
         val additionalBarsNeeded = max(0, requiredBars - availableBarsCount)
         val additionalLengthValue = max(0.0, totalLengthRequired - availableLength)
         val additionalWeight = additionalLengthValue * getRebarWeightPerMeter(barArea) / 1000
         val additionalCost = additionalWeight * preferredStock.costPerTon
 
-        // حساب الهالك
-        val wasteLength = totalLengthRequired * inventory.wastePercentage / 100
-        val actualWastePercentage = inventory.wastePercentage
-
-        // الوزن الكلي
-        val totalWeight = totalLengthRequired * getRebarWeightPerMeter(barArea) / 1000
-
-        // ── خطة القص المحسّنة ──
+        // Optimized cutting plan with best stock length selection
+        val requiredLengths = List(requiredBars) { effectiveBarLength }
+        val bestStockLength = recommendStockLength(requiredLengths, STANDARD_STOCK_LENGTHS)
         val cuttingPlan = optimizeCuttingMultiLength(
-            stockLength = preferredStock.availableLength,
-            requiredLengths = List(requiredBars) { effectiveBarLength },
+            stockLength = bestStockLength,
+            requiredLengths = requiredLengths,
             kerfMm = KERF_MM
         )
 
-        // التحقق من الكفاية
+        // Actual waste from cutting plan (not percentage estimate)
+        val actualWasteFromPlan = cuttingPlan.sumOf { it.wasteLength }
+        val totalStockUsed = cuttingPlan.size * bestStockLength
+        val actualWastePercentage = if (totalStockUsed > 0) (actualWasteFromPlan / totalStockUsed) * 100 else inventory.wastePercentage
+
+        val totalWeight = totalLengthRequired * getRebarWeightPerMeter(barArea) / 1000
         val isSufficient = availableBarsCount >= requiredBars
 
-        // تحذيرات
         if (!isSufficient) {
             warnings.add("Insufficient rebar in inventory! Need ${additionalBarsNeeded} more bars")
         }
         if (elementLength > preferredStock.availableLength) {
             warnings.add("Lap splices required - Length: ${inventory.lapSpliceLength * preferredStock.diameter}mm per splice")
         }
-        if (inventory.wastePercentage > 10) {
-            warnings.add("High waste percentage (${inventory.wastePercentage}%) - Review cutting plan")
+        if (actualWastePercentage > 10) {
+            warnings.add("High waste percentage (${"%.1f".format(actualWastePercentage)}%) - Review cutting plan")
+        }
+        if (bestStockLength != preferredStock.availableLength && preferredStock.availableLength > 0) {
+            codeNotes.add("Recommended stock ${bestStockLength}m (available: ${preferredStock.availableLength}m)")
         }
 
-        // ملاحظات الكود
         codeNotes.add(getCodeReference(designCode, "LAP_SPLICE"))
         codeNotes.add(getCodeReference(designCode, "WASTE_ALLOWANCE"))
         codeNotes.add("Stirrup Type: ${inventory.stirrupType.displayName}")
@@ -117,7 +100,7 @@ class AnalyzeRebarInventory @Inject constructor() {
             additionalLength = additionalLengthValue,
             additionalWeight = additionalWeight,
             additionalCost = additionalCost,
-            wasteLength = wasteLength,
+            wasteLength = actualWasteFromPlan,
             wastePercentage = actualWastePercentage,
             totalLength = totalLengthRequired,
             totalWeight = totalWeight,
@@ -130,18 +113,8 @@ class AnalyzeRebarInventory @Inject constructor() {
     }
 
     /**
-     * خوارزمية FFD محسّنة مع Kerf و Best-Fit
-     *
-     * التحسينات:
-     * 1. Kerf allowance: كل قطع يخصم سمك blade من الباقي
-     * 2. Best-Fit: عند فتح سيخ جديد، يبحث عن أفضل توافق مع الأطوال المتبقية
-     * 3. Tolerance: سماحة 1mm للمقارنات العددية
-     * 4. Post-optimization: محاولة نقل قطع بين الأسياخ لتحسين الاستفادة
-     *
-     * @param stockLength طول السيخ القياسي (م)
-     * @param requiredLengths قائمة الأطوال المطلوبة (م)
-     * @param kerfMm سماحة القص لكل قطع (مم)
-     * @return قائمة بخطط القص لكل سيخ مستخدم
+     * FFD with uniform-length fast path.
+     * When all pieces are identical, uses analytical formula instead of O(n) FFD loop.
      */
     fun optimizeCuttingMultiLength(
         stockLength: Double,
@@ -149,24 +122,26 @@ class AnalyzeRebarInventory @Inject constructor() {
         kerfMm: Double = KERF_MM
     ): List<CuttingPlan> {
         if (requiredLengths.isEmpty()) return emptyList()
+        val kerfM = kerfMm / 1000.0
 
-        val kerfM = kerfMm / 1000.0 // تحويل إلى متر
+        // Fast path: all pieces identical (very common case)
+        if (requiredLengths.distinct().size == 1) {
+            return optimizeUniformLengths(stockLength, requiredLengths[0], requiredLengths.size, kerfM)
+        }
+
+        // General FFD for mixed lengths
         val tolerance = 1e-6
-
-        // First-Fit Decreasing: رتب الأطوال تنازلياً
         val remaining = requiredLengths.toMutableList()
         remaining.sortDescending()
         val plans = mutableListOf<CuttingPlan>()
 
         while (remaining.isNotEmpty()) {
-            // افتح سيخ جديد
             val piecesInBar = mutableListOf<Double>()
             var usedLength = 0.0
 
             val iter = remaining.iterator()
             while (iter.hasNext()) {
                 val length = iter.next()
-                // المساحة المتاحة = الطول المتبقي - kerf للقطع التالي
                 val kerfForThisCut = if (piecesInBar.isEmpty()) 0.0 else kerfM
                 val available = stockLength - usedLength - kerfForThisCut
 
@@ -181,33 +156,55 @@ class AnalyzeRebarInventory @Inject constructor() {
                 val actualUsed = piecesInBar.sum()
                 val totalKerfUsed = (piecesInBar.size - 1).coerceAtLeast(0) * kerfM
                 val waste = max(0.0, stockLength - actualUsed - totalKerfUsed)
-                val utilization = (actualUsed / stockLength) * 100
-
-                plans.add(
-                    CuttingPlan(
-                        stockLength = stockLength,
-                        requiredLengths = piecesInBar,
-                        wasteLength = waste,
-                        utilizationPercentage = utilization
-                    )
-                )
+                plans.add(CuttingPlan(
+                    stockLength = stockLength,
+                    requiredLengths = piecesInBar,
+                    wasteLength = waste,
+                    utilizationPercentage = (actualUsed / stockLength) * 100
+                ))
             } else {
-                // طول مطلوب أكبر من السيخ القياسي — لن يحدث عادةً مع splice logic
                 break
             }
         }
 
-        // ─ـ Post-optimization: محاولة نقل قطع من أسياخ منخفضة الاستفادة إلى أسياخ بها مساحة ──
-        val optimized = postOptimize(plans, stockLength, kerfM)
-
-        return optimized
+        return postOptimize(plans, stockLength, kerfM)
     }
 
     /**
-     * Post-optimization: نقل القطع الصغيرة بين الأسياخ لتحسين الاستفادة
-     *
-     * يحاول نقل قطع من أسياخ منخفضة الاستفادة إلى أسياخ بها مساحة متبقية
-     * لكل قطع منقول، يحقق شرط: القطع + kerf <= المساحة المتاحة في السيخ المستقبل
+     * Analytical optimal for uniform-length pieces.
+     * n = floor((L + kerf) / (pieceLen + kerf)) pieces per bar.
+     */
+    private fun optimizeUniformLengths(
+        stockLength: Double,
+        pieceLength: Double,
+        totalPieces: Int,
+        kerfM: Double
+    ): List<CuttingPlan> {
+        val numPerBar = ((stockLength + kerfM) / (pieceLength + kerfM)).toInt().coerceAtLeast(1)
+        val numBars = ceil(totalPieces.toDouble() / numPerBar).toInt()
+        val plans = mutableListOf<CuttingPlan>()
+
+        var remaining = totalPieces
+        for (barIdx in 0 until numBars) {
+            val n = minOf(numPerBar, remaining)
+            remaining -= n
+            val actualUsed = n * pieceLength
+            val totalKerfUsed = (n - 1).coerceAtLeast(0) * kerfM
+            val waste = max(0.0, stockLength - actualUsed - totalKerfUsed)
+            plans.add(CuttingPlan(
+                stockLength = stockLength,
+                requiredLengths = List(n) { pieceLength },
+                wasteLength = waste,
+                utilizationPercentage = (actualUsed / stockLength) * 100
+            ))
+        }
+        return plans
+    }
+
+    /**
+     * Enhanced post-optimization: tries ALL movable pieces, not just smallest.
+     * For each donor bar, tries each piece (not only smallest) to find the best
+     * receiver that maximizes overall utilization improvement.
      */
     private fun postOptimize(
         plans: List<CuttingPlan>,
@@ -217,83 +214,85 @@ class AnalyzeRebarInventory @Inject constructor() {
         val tolerance = 1e-6
         val mutablePlans = plans.map { it.copy(requiredLengths = it.requiredLengths.toMutableList()) }.toMutableList()
 
-        // رتب الأسياخ حسب الاستفادة (الأقل أولاً — المرشحون للتبرع بقطعهم)
-        mutablePlans.sortBy { it.utilizationPercentage }
-
         var improved = true
         var iterations = 0
-        val maxIterations = mutablePlans.size * 2
+        val maxIterations = mutablePlans.size * 3
 
         while (improved && iterations < maxIterations) {
             improved = false
             iterations++
 
+            // Sort donors by utilization (lowest first = most waste = best donor candidates)
+            mutablePlans.sortBy { it.utilizationPercentage }
+
             for (i in mutablePlans.indices) {
-                if (mutablePlans[i].requiredLengths.size <= 1) continue // لا ننقل آخر قطع
+                if (mutablePlans[i].requiredLengths.size <= 1) continue
 
                 val donorUsed = mutablePlans[i].requiredLengths.sum()
                 val donorKerf = (mutablePlans[i].requiredLengths.size - 1).coerceAtLeast(0) * kerfM
                 val donorAvailable = stockLength - donorUsed - donorKerf
-
-                // إذا السيخ المانح منخفض الاستفادة (باقي كبير)
                 if (donorAvailable < 0.1) continue
 
-                // أوجد أصغر قطع في السيخ المانح
-                val smallestPiece = mutablePlans[i].requiredLengths.minOrNull() ?: continue
-                // المساحة التي ستتحرر إذا أزلنا هذا القطع
-                val freedSpace = smallestPiece + kerfM
+                // Try each piece in donor (sorted ascending = smallest first for best fit)
+                val sortedPieces = mutablePlans[i].requiredLengths.sorted()
 
-                // ابحث عن سيخ مستقبل يمكنه استقبال هذا القطع
-                for (j in mutablePlans.indices) {
-                    if (i == j) continue
-                    val receiverUsed = mutablePlans[j].requiredLengths.sum()
-                    val receiverKerf = (mutablePlans[j].requiredLengths.size) * kerfM
-                    val receiverAvailable = stockLength - receiverUsed - receiverKerf
+                for (piece in sortedPieces) {
+                    // Find BEST receiver (tightest fit = least waste after adding)
+                    var bestReceiverIdx = -1
+                    var bestReceiverWaste = Double.MAX_VALUE
 
-                    if (receiverAvailable >= smallestPiece - tolerance) {
-                        // انقل القطع
-                        (mutablePlans[i].requiredLengths as MutableList).remove(smallestPiece)
-                        (mutablePlans[j].requiredLengths as MutableList).add(smallestPiece)
+                    for (j in mutablePlans.indices) {
+                        if (i == j) continue
+                        val recvUsed = mutablePlans[j].requiredLengths.sum()
+                        val recvKerf = mutablePlans[j].requiredLengths.size * kerfM
+                        val recvAvailable = stockLength - recvUsed - recvKerf
 
-                        // أعد حساب الاستفادة
-                        val iUsed = mutablePlans[i].requiredLengths.sum()
-                        val iKerf = (mutablePlans[i].requiredLengths.size - 1).coerceAtLeast(0) * kerfM
-                        mutablePlans[i] = mutablePlans[i].copy(
-                            requiredLengths = mutablePlans[i].requiredLengths,
-                            wasteLength = max(0.0, stockLength - iUsed - iKerf),
-                            utilizationPercentage = (iUsed / stockLength) * 100
-                        )
-                        val jUsed = mutablePlans[j].requiredLengths.sum()
-                        val jKerf = (mutablePlans[j].requiredLengths.size - 1).coerceAtLeast(0) * kerfM
-                        mutablePlans[j] = mutablePlans[j].copy(
-                            requiredLengths = mutablePlans[j].requiredLengths,
-                            wasteLength = max(0.0, stockLength - jUsed - jKerf),
-                            utilizationPercentage = (jUsed / stockLength) * 100
-                        )
+                        if (recvAvailable >= piece - tolerance) {
+                            val wasteAfter = recvAvailable - piece
+                            if (wasteAfter < bestReceiverWaste) {
+                                bestReceiverWaste = wasteAfter
+                                bestReceiverIdx = j
+                            }
+                        }
+                    }
+
+                    if (bestReceiverIdx >= 0) {
+                        (mutablePlans[i].requiredLengths as MutableList).remove(piece)
+                        (mutablePlans[bestReceiverIdx].requiredLengths as MutableList).add(piece)
+
+                        // Recalculate both bars
+                        recalcPlan(mutablePlans, i, stockLength, kerfM)
+                        recalcPlan(mutablePlans, bestReceiverIdx, stockLength, kerfM)
 
                         improved = true
-                        break
+                        break // Restart donor loop after a successful move
                     }
                 }
                 if (improved) break
             }
         }
 
-        // إزالة الأسياخ الفارغة (إن وجدت بعد النقل)
         return mutablePlans.filter { it.requiredLengths.isNotEmpty() }
     }
 
+    private fun recalcPlan(
+        plans: MutableList<CuttingPlan>,
+        idx: Int,
+        stockLength: Double,
+        kerfM: Double
+    ) {
+        val used = plans[idx].requiredLengths.sum()
+        val kerf = (plans[idx].requiredLengths.size - 1).coerceAtLeast(0) * kerfM
+        plans[idx] = plans[idx].copy(
+            wasteLength = max(0.0, stockLength - used - kerf),
+            utilizationPercentage = (used / stockLength) * 100
+        )
+    }
+
     /**
-     * خطة قص محسّنة مع إعادة استخدام البواقي
-     *
-     * تتعامل مع الحالة التي يكون فيها لدينا بواقي أسياخ من عمليات قص سابقة
-     * ويمكن استخدامها للأطوال الأقصر.
-     *
-     * @param stockLength طول السيخ القياسي (م)
-     * @param requiredLengths قائمة الأطوال المطلوبة (م)
-     * @param availableLeftovers بواقي متوفرة من عمليات سابقة (م)
-     * @param kerfMm سماحة القص (مم)
-     * @return CuttingOptimizationResult فيه خطة القص + البواقي المتبقية
+     * Cutting plan with leftover reuse.
+     * Phase 1: Use available leftovers (Best-Fit for each leftover).
+     * Phase 2: Cut remaining from new stock bars.
      */
     fun optimizeWithLeftovers(
         stockLength: Double,
@@ -307,49 +306,50 @@ class AnalyzeRebarInventory @Inject constructor() {
         val usedLeftovers = mutableListOf<Double>()
         val leftoverPieces = availableLeftovers.filter { it >= MIN_LEFTOVER_LENGTH }.toMutableList()
 
-        // المرحلة 1: استخدم البواقي المتوفرة أولاً (Best-Fit: أكبر باقي يستوعب أكبر طول ممكن)
         leftoverPieces.sortDescending()
         remaining.sortDescending()
 
         val leftoverPlans = mutableListOf<CuttingPlan>()
         val usedLeftoverIndices = mutableSetOf<Int>()
 
+        // Phase 1: Use leftovers — try to fit multiple pieces per leftover if possible
         for ((leftoverIdx, leftover) in leftoverPieces.withIndex()) {
             if (remaining.isEmpty()) break
-            // Best-Fit: ابحث عن أكبر طول يتناسب مع هذا الباقي
-            var bestFitIdx = -1
-            var bestFitLength = 0.0
-            for (i in remaining.indices) {
-                if (remaining[i] <= leftover + tolerance && remaining[i] > bestFitLength) {
-                    bestFitIdx = i
-                    bestFitLength = remaining[i]
+            val piecesInLeftover = mutableListOf<Double>()
+            var usedInThisLeftover = 0.0
+
+            val iter = remaining.iterator()
+            while (iter.hasNext()) {
+                val length = iter.next()
+                val kerfForCut = if (piecesInLeftover.isEmpty()) 0.0 else kerfM
+                val available = leftover - usedInThisLeftover - kerfForCut
+                if (available >= length - tolerance) {
+                    piecesInLeftover.add(length)
+                    usedInThisLeftover += length + kerfM
+                    iter.remove()
                 }
             }
-            if (bestFitIdx >= 0) {
-                val usedLength = remaining.removeAt(bestFitIdx)
+
+            if (piecesInLeftover.isNotEmpty()) {
                 usedLeftovers.add(leftover)
-                leftoverPlans.add(
-                    CuttingPlan(
-                        stockLength = leftover,
-                        requiredLengths = listOf(usedLength),
-                        wasteLength = leftover - usedLength,
-                        utilizationPercentage = (usedLength / leftover) * 100
-                    )
-                )
                 usedLeftoverIndices.add(leftoverIdx)
+                leftoverPlans.add(CuttingPlan(
+                    stockLength = leftover,
+                    requiredLengths = piecesInLeftover,
+                    wasteLength = max(0.0, leftover - piecesInLeftover.sum() - (piecesInLeftover.size - 1).coerceAtLeast(0) * kerfM),
+                    utilizationPercentage = (piecesInLeftover.sum() / leftover) * 100
+                ))
             }
         }
 
-        // المرحلة 2: القص من أسياخ جديدة للأطوال المتبقية
+        // Phase 2: Cut remaining from new stock
         val newBarPlans = optimizeCuttingMultiLength(stockLength, remaining, kerfMm)
 
-        // البواقي المتبقية من الأسياخ الجديدة (فقط ما يزيد عن MIN_LEFTOVER_LENGTH)
+        // Collect new usable leftovers
         val newLeftovers = newBarPlans.mapNotNull { plan ->
             val leftover = plan.wasteLength
             if (leftover >= MIN_LEFTOVER_LENGTH) leftover else null
         }
-
-        // البواقي التي لم تُستخدم من القائمة الأصلية
         val unusedLeftovers = leftoverPieces.filterIndexed { idx, _ ->
             idx !in usedLeftoverIndices && leftoverPieces[idx] >= MIN_LEFTOVER_LENGTH
         }
@@ -373,12 +373,7 @@ class AnalyzeRebarInventory @Inject constructor() {
     }
 
     /**
-     * حساب أفضل طول سيخ قياسي من القائمة المتاحة
-     * يختار الأقصر الذي يكفي لأطول قطع مطلوب
-     *
-     * @param requiredLengths الأطوال المطلوبة (م)
-     * @param availableStockLengths الأطوال القياسية المتاحة (م)
-     * @return أفضل طول قياسي
+     * Recommend the shortest stock length that fits the longest required piece.
      */
     fun recommendStockLength(
         requiredLengths: List<Double>,
@@ -390,7 +385,7 @@ class AnalyzeRebarInventory @Inject constructor() {
     }
 
     private fun getRebarWeightPerMeter(area: Double): Double {
-        return area / 1e6 * 7850 // kg/m
+        return area / 1e6 * 7850
     }
 
     private fun getCodeReference(code: DesignCode, key: String): String = when (code) {
@@ -412,15 +407,12 @@ class AnalyzeRebarInventory @Inject constructor() {
     }
 }
 
-/**
- * نتيجة تحسين القص مع إعادة استخدام البواقي
- */
 data class CuttingOptimizationResult(
     val cuttingPlans: List<CuttingPlan>,
     val totalStockBarsUsed: Int,
-    val totalRequiredLength: Double,       // m
-    val totalWasteLength: Double,          // m
-    val overallUtilization: Double,        // %
-    val newLeftoverPieces: List<Double>,   // m — بواقي يمكن استخدامها لاحقاً
-    val leftoverPiecesUsed: Int            // عدد البواقي التي تم استخدامها
+    val totalRequiredLength: Double,
+    val totalWasteLength: Double,
+    val overallUtilization: Double,
+    val newLeftoverPieces: List<Double>,
+    val leftoverPiecesUsed: Int
 )

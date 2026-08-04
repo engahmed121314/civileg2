@@ -586,29 +586,29 @@ object PdfDrawingGenerator {
         // Concrete hatch pattern
         canvas.drawHatch(planL, planT, planW, planH, 18f)
 
-        // Main bars (short span Lx) run ALONG Lx → they span the X axis on plan → VERTICAL lines
-        // Lx = spanX (horizontal dimension), main bars cross this direction → vertical lines
+        // Main bars (short span Lx) run ALONG Lx → HORIZONTAL lines on plan
+        // In plan view: X-axis = horizontal (spanX=Lx), main bars span along X → drawn as horizontal lines
         val mainP = createPaint(REBAR_BLUE, 2.5f)
         val scaledMainSpacing = mainSpacing.toFloat() * scale
         val visibleMainSpacing = maxOf(scaledMainSpacing, 15f) // minimum visible spacing
-        var mx_main = planL + visibleMainSpacing / 2f
+        var my_main = planT + visibleMainSpacing / 2f
         var mainBarCount = 0
-        while (mx_main < planL + planW - visibleMainSpacing / 2f && mainBarCount < 40) {
-            canvas.drawLine(mx_main, planT + 8f, mx_main, planT + planH - 8f, mainP)
-            mx_main += visibleMainSpacing
+        while (my_main < planT + planH - visibleMainSpacing / 2f && mainBarCount < 40) {
+            canvas.drawLine(planL + 8f, my_main, planL + planW - 8f, my_main, mainP)
+            my_main += visibleMainSpacing
             mainBarCount++
         }
 
-        // Distribution bars (long span Ly) run ALONG Ly → they span the Y axis on plan → HORIZONTAL lines
-        // Ly = spanY (vertical dimension), distribution bars cross this direction → horizontal lines
+        // Distribution bars (long span Ly) run ALONG Ly → VERTICAL lines on plan
+        // In plan view: Y-axis = vertical (spanY=Ly), dist bars span along Y → drawn as vertical lines
         val distP = createPaint(STIRRUP, 2f)
         val scaledDistSpacing = distSpacing.toFloat() * scale
         val visibleDistSpacing = maxOf(scaledDistSpacing, 15f)
-        var my_dist = planT + visibleDistSpacing / 2f
+        var mx_dist = planL + visibleDistSpacing / 2f
         var distBarCount = 0
-        while (my_dist < planT + planH - visibleDistSpacing / 2f && distBarCount < 40) {
-            canvas.drawLine(planL + 8f, my_dist, planL + planW - 8f, my_dist, distP)
-            my_dist += visibleDistSpacing
+        while (mx_dist < planL + planW - visibleDistSpacing / 2f && distBarCount < 40) {
+            canvas.drawLine(mx_dist, planT + 8f, mx_dist, planT + planH - 8f, distP)
+            mx_dist += visibleDistSpacing
             distBarCount++
         }
 
@@ -809,26 +809,26 @@ object PdfDrawingGenerator {
             canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, outlineP)
         }
 
-        // Main bars (X-direction, vertical lines)
+        // Main bars (X-direction, horizontal lines on plan)
         val mainP = createPaint(REBAR_BLUE, 2f)
         val scaledMainSpacing = mainSpacing.toFloat() * scale
         val visMainSp = maxOf(scaledMainSpacing, 15f)
-        var mx = planL + visMainSp / 2f
+        var my = planT + visMainSp / 2f
         var mainBarCount = 0
-        while (mx < planL + planW - visMainSp / 2f && mainBarCount < 40) {
-            canvas.drawLine(mx, planT + 8f, mx, planT + planH - 8f, mainP)
-            mx += visMainSp; mainBarCount++
+        while (my < planT + planH - visMainSp / 2f && mainBarCount < 40) {
+            canvas.drawLine(planL + 8f, my, planL + planW - 8f, my, mainP)
+            my += visMainSp; mainBarCount++
         }
 
-        // Distribution bars (Y-direction, horizontal lines)
+        // Distribution bars (Y-direction, vertical lines on plan)
         val distP = createPaint(STIRRUP, 2f)
         val scaledDistSp = distSpacing.toFloat() * scale
         val visDistSp = maxOf(scaledDistSp, 15f)
-        var dy = planT + visDistSp / 2f
+        var dx = planL + visDistSp / 2f
         var distBarCount = 0
-        while (dy < planT + planH - visDistSp / 2f && distBarCount < 40) {
-            canvas.drawLine(planL + 8f, dy, planL + planW - 8f, dy, distP)
-            dy += visDistSp; distBarCount++
+        while (dx < planL + planW - visDistSp / 2f && distBarCount < 40) {
+            canvas.drawLine(dx, planT + 8f, dx, planT + planH - 8f, distP)
+            dx += visDistSp; distBarCount++
         }
 
         // Dimensions
