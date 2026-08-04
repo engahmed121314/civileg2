@@ -579,27 +579,29 @@ object PdfDrawingGenerator {
         // Concrete hatch pattern
         canvas.drawHatch(planL, planT, planW, planH, 18f)
 
-        // Main bars (short span - along Lx direction, drawn as vertical lines)
+        // Main bars (short span - along Lx direction, drawn as horizontal lines)
+        // Lx runs horizontally on the plan → main bars are horizontal lines
         val mainP = createPaint(REBAR_BLUE, 2.5f)
         val scaledMainSpacing = mainSpacing.toFloat() * scale
         val visibleMainSpacing = maxOf(scaledMainSpacing, 15f) // minimum visible spacing
-        var mx = planL + visibleMainSpacing / 2f
+        var my = planT + visibleMainSpacing / 2f
         var mainBarCount = 0
-        while (mx < planL + planW - visibleMainSpacing / 2f && mainBarCount < 40) {
-            canvas.drawLine(mx, planT + 8f, mx, planT + planH - 8f, mainP)
-            mx += visibleMainSpacing
+        while (my < planT + planH - visibleMainSpacing / 2f && mainBarCount < 40) {
+            canvas.drawLine(planL + 8f, my, planL + planW - 8f, my, mainP)
+            my += visibleMainSpacing
             mainBarCount++
         }
 
-        // Distribution bars (long span - along Ly direction, drawn as horizontal lines)
+        // Distribution bars (long span - along Ly direction, drawn as vertical lines)
+        // Ly runs vertically on the plan → distribution bars are vertical lines
         val distP = createPaint(STIRRUP, 2f)
         val scaledDistSpacing = distSpacing.toFloat() * scale
         val visibleDistSpacing = maxOf(scaledDistSpacing, 15f)
-        var dy = planT + visibleDistSpacing / 2f
+        var mx = planL + visibleDistSpacing / 2f
         var distBarCount = 0
-        while (dy < planT + planH - visibleDistSpacing / 2f && distBarCount < 40) {
-            canvas.drawLine(planL + 8f, dy, planL + planW - 8f, dy, distP)
-            dy += visibleDistSpacing
+        while (mx < planL + planW - visibleDistSpacing / 2f && distBarCount < 40) {
+            canvas.drawLine(mx, planT + 8f, mx, planT + planH - 8f, distP)
+            mx += visibleDistSpacing
             distBarCount++
         }
 

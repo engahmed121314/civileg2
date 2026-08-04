@@ -309,50 +309,81 @@ class CalculatorEngine @Inject constructor(
     // --- Steel Dictionary & Design ---
 
     fun getSteelSectionLibrary(): Map<String, List<SteelSectionType>> {
-        val iSections = mutableListOf<SteelSectionType>()
-        // IPE Standard Sections
-        val ipeSizes = listOf(80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400, 450, 500, 550, 600)
-        ipeSizes.forEach { h ->
-            val bf = when {
-                h <= 100 -> 55.0; h <= 140 -> 73.0; h <= 200 -> 100.0; h <= 300 -> 150.0; else -> 200.0
-                }
-            val tf = 7.0 + (h/100.0)*2.0
-            val tw = 4.0 + (h/100.0)*1.5
-            iSections.add(SteelSectionType.ISection(h.toDouble(), bf, tf, tw, SteelGrade.ST37, "IPE $h"))
-            }
+        // ─────────────────────────────────────────────────────────
+        // Use accurate catalog data from SteelTables instead of
+        // approximate formulas.  This guarantees that Ix, Sx, Zx,
+        // weight, etc. match published European section tables.
+        // ─────────────────────────────────────────────────────────
 
-        val hebSections = mutableListOf<SteelSectionType>()
-        // HEB Standard Sections
-        val hebSizes = listOf(100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300)
-        hebSizes.forEach { h ->
-            hebSections.add(SteelSectionType.ISection(h.toDouble(), h.toDouble(), 10.0 + (h/50.0)*2.0, 6.0 + (h/50.0)*1.5, SteelGrade.ST37, "HEB $h"))
-            }
+        // IPE — from SteelTables.ipeSections (accurate catalog values)
+        val iSections = SteelTables.ipeSections.map { s ->
+            SteelSectionType.ISection(
+                h = s.depth, bf = s.width,
+                tf = s.tf, tw = s.tw,
+                grade = SteelGrade.ST37,
+                customName = s.name
+            )
+        }
 
-        val angles = mutableListOf<SteelSectionType>()
-        // L-Angles Standard (Equal Legs)
-        listOf(40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 120.0).forEach { size ->
-            angles.add(SteelSectionType.LSection(size, size, size/10.0, SteelGrade.ST37, "L ${size.toInt()}x${size.toInt()}"))
-            }
+        // HEB — from SteelTables.hebSections
+        val hebSections = SteelTables.hebSections.map { s ->
+            SteelSectionType.ISection(
+                h = s.depth, bf = s.width,
+                tf = s.tf, tw = s.tw,
+                grade = SteelGrade.ST37,
+                customName = s.name
+            )
+        }
 
-        val channels = mutableListOf<SteelSectionType>()
-        // UPE/UPN Standard
-        listOf(80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300).forEach { h ->
-            channels.add(SteelSectionType.CSection(h.toDouble(), h/2.0, 8.0 + h/100.0*2.0, 5.0 + h/100.0*1.5, SteelGrade.ST37, "UPN $h"))
-            }
+        // HEA — from SteelTables.heaSections (real catalog, not derived from HEB)
+        val heaSections = SteelTables.heaSections.map { s ->
+            SteelSectionType.ISection(
+                h = s.depth, bf = s.width,
+                tf = s.tf, tw = s.tw,
+                grade = SteelGrade.ST37,
+                customName = s.name
+            )
+        }
 
+        // UPN Channels — from SteelTables.upnSections
+        val channels = SteelTables.upnSections.map { s ->
+            SteelSectionType.CSection(
+                h = s.depth, bf = s.width,
+                tf = s.tf, tw = s.tw,
+                grade = SteelGrade.ST37,
+                customName = s.name
+            )
+        }
+
+        // Equal-leg Angles — from SteelTables.angleSections
+        val angles = SteelTables.angleSections.map { s ->
+            SteelSectionType.LSection(
+                legA = s.depth, legB = s.width,
+                thickness = s.tw, // angle uses tw as leg thickness
+                grade = SteelGrade.ST37,
+                customName = s.name
+            )
+        }
+
+        // RHS — kept as generated (SteelTables has no RHS data)
         val rhs = mutableListOf<SteelSectionType>()
-        // Rectangular Hollow Sections
-        listOf(50.0, 80.0, 100.0, 120.0, 150.0, 200.0).forEach { h ->
-            rhs.add(SteelSectionType.RHS(h, h/2.0, 4.0 + h/50.0, SteelGrade.S275, "RHS ${h.toInt()}x${(h/2).toInt()}"))
-            }
+        listOf(
+            Triple(50.0, 25.0, 3.0), Triple(50.0, 30.0, 3.2),
+            Triple(80.0, 40.0, 3.6), Triple(100.0, 50.0, 4.0),
+            Triple(120.0, 60.0, 4.0), Triple(120.0, 80.0, 5.0),
+            Triple(150.0, 75.0, 5.0), Triple(150.0, 100.0, 5.0),
+            Triple(200.0, 100.0, 6.3), Triple(200.0, 150.0, 6.3),
+            Triple(250.0, 150.0, 6.3), Triple(300.0, 150.0, 8.0),
+            Triple(300.0, 200.0, 10.0), Triple(400.0, 200.0, 10.0),
+            Triple(400.0, 300.0, 12.5)
+        ).forEach { (h, w, t) ->
+            rhs.add(SteelSectionType.RHS(w, h, t, SteelGrade.S275, "RHS ${w.toInt()}x${h.toInt()}x${t.toInt()}"))
+        }
 
         return mapOf(
             "IPE (European I-Beams)" to iSections,
             "HEB (European Wide Flange)" to hebSections,
-            "HEA (European Light Wide Flange)" to hebSections.map { 
-                val s = it as SteelSectionType.ISection
-                s.copy(tf = s.tf * 0.7, tw = s.tw * 0.8, customName = s.customName?.replace("HEB", "HEA")) 
-            },
+            "HEA (European Light Wide Flange)" to heaSections,
             "L-Angles (Equal)" to angles,
             "UPN Channels" to channels,
             "RHS (Hollow Sections)" to rhs
