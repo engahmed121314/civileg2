@@ -1912,11 +1912,26 @@ class CalculatorEngine @Inject constructor(
         val fsOverturning = resistingMoment / drivingMoment.coerceAtLeast(0.01)
         val fsSliding = (frictionCoeff * totalVerticalWeight) / (pa + ps).coerceAtLeast(0.01)
 
-        // Bearing pressure calculation
+        // [AUDIT: PRECISION] Bearing pressure with Kern check (eccentricity)
         val netMoment = resistingMoment - drivingMoment
-        val eccentricity = (baseW / 2.0) - (netMoment / totalVerticalWeight.coerceAtLeast(0.01))
-        val maxBearingPressure = (totalVerticalWeight / baseW) * (1.0 + 6.0 * eccentricity / baseW)
-        val minBearingPressure = (totalVerticalWeight / baseW) * (1.0 - 6.0 * eccentricity / baseW)
+        val dist_from_toe = netMoment / totalVerticalWeight.coerceAtLeast(0.01)
+        val eccentricity = abs(baseW / 2.0 - dist_from_toe)
+        
+        val maxBearingPressure: Double
+        val minBearingPressure: Double
+        
+        if (eccentricity <= baseW / 6.0) {
+            // Standard linear distribution
+            maxBearingPressure = (totalVerticalWeight / baseW) * (1.0 + 6.0 * eccentricity / baseW)
+            minBearingPressure = (totalVerticalWeight / baseW) * (1.0 - 6.0 * eccentricity / baseW)
+        } else {
+            // Eccentricity outside Kern (loss of contact at heel)
+            // q_max = 2*Rv / (3*a) where a = dist from toe to resultant
+            maxBearingPressure = (2.0 * totalVerticalWeight) / (3.0 * dist_from_toe * 1.0)
+            minBearingPressure = 0.0
+            suggestions.add(t("تنبيه: المحصلة خارج الثلث الأوسط (e > B/6). قد يحدث انفصال للقاعدة عن التربة.", 
+                "Warning: Resultant is outside the middle third (e > B/6). Partial loss of soil contact."))
+        }
         // Bearing capacity safety factor must be >= 2.0 per ECP/ACI for service loads
         val bearingLimit = 2.0
         val bearingFS = if (maxBearingPressure > 0) bearingCapacity / maxBearingPressure else 0.0

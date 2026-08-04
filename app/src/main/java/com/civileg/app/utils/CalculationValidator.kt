@@ -119,22 +119,29 @@ object CalculationValidator {
     }
 
     /**
-     * Validates a Retaining Wall calculation result.
+     * Validates a Retaining Wall calculation result with focus on soil-structure interaction.
      */
     fun validateRetainingWall(result: RetainingWallResult): ValidationReport {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
+        // 1. Overturning & Sliding Stability Audit
         if (result.factorOfSafetyOverturning < 1.5) {
-            if (result.isSafe) errors.add("Inconsistency: Wall marked SAFE but FS Overturning (${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetyOverturning)}) < 1.5")
+            if (result.isSafe) errors.add("CRITICAL: Wall fails overturning check (FS=${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetyOverturning)} < 1.5)")
         }
 
         if (result.factorOfSafetySliding < 1.5) {
-            if (result.isSafe) errors.add("Inconsistency: Wall marked SAFE but FS Sliding (${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetySliding)}) < 1.5")
+            if (result.isSafe) errors.add("CRITICAL: Wall fails sliding check (FS=${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetySliding)} < 1.5)")
         }
 
-        if (result.bearingFS < 2.0) {
-            warnings.add("Logic Warning: Bearing capacity safety factor is low (${String.format(java.util.Locale.US, "%.2f", result.bearingFS)}). Recommended minimum is 2.0-3.0.")
+        // 2. Bearing Capacity
+        if (result.bearingFS < 2.5) {
+            warnings.add("Logic: Bearing safety factor (${String.format(java.util.Locale.US, "%.2f", result.bearingFS)}) is below standard 2.5-3.0 range.")
+        }
+        
+        // 3. Geometrical consistency
+        if (result.baseWidth < result.height * 0.4) {
+            warnings.add("Logic: Base width is very narrow compared to wall height (< 0.4H).")
         }
 
         return ValidationReport(errors.isEmpty(), errors, warnings)

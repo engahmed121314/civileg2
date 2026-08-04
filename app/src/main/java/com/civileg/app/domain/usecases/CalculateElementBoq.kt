@@ -154,15 +154,22 @@ class CalculateElementBoq @Inject constructor() {
     ): List<BoqItem> {
         val items = mutableListOf<BoqItem>()
 
-        // 1. الحفر
+        // 1. الحفر (Excavation)
+        // [AUDIT: PRECISION] Add 0.5m offset on each side for worker access (shoring/formwork space)
+        val workingSpace = 0.5 
         if (excavationDepth > 0) {
-            val excVolume = (length / 1000.0) * (width / 1000.0) * excavationDepth
-            items += excavationItem("FTG_EXCAV_001", "Footing excavation ${length.toInt()}×${width.toInt()}mm", excVolume, prices.excavationPerM3)
+            val excVolume = (length / 1000.0 + 2 * workingSpace) * (width / 1000.0 + 2 * workingSpace) * excavationDepth
+            items += excavationItem("FTG_EXCAV_001", "Footing excavation with 0.5m offset for access", excVolume, prices.excavationPerM3)
         }
 
-        // 2. الخرسانة
+        // 2. الخرسانة العادية (P.C.) - Placeholder for Lean Concrete
+        val pcThickness = 0.10 // 10cm P.C.
+        val pcVolume = (length / 1000.0 + 0.2) * (width / 1000.0 + 0.2) * pcThickness
+        items += BoqItem("FTG_PC_001", "Plain concrete (P.C.) layer 10cm", BoqCategory.CONCRETE, "m³", pcVolume, prices.concretePerM3 * 0.8)
+
+        // 3. الخرسانة المسلحة (R.C.)
         val concVolume = length * width * thickness / 1e9
-        items += concreteItem("FTG_CONC_001", "Footing concrete ${length.toInt()}×${width.toInt()}×${thickness.toInt()}mm", concVolume, prices.concretePerM3, "V = L × B × t")
+        items += concreteItem("FTG_CONC_001", "Footing R.C. concrete", concVolume, prices.concretePerM3, "V = L × B × t")
 
         // 3. حديد سفلي اتجاه X (البحر الطولي)
         val wasteFactor = 1.08 // Footings have ~8% waste due to hooks and chair bars
@@ -346,7 +353,8 @@ class CalculateElementBoq @Inject constructor() {
     // Helper factories
     // ==============================================================
     private fun concreteItem(id: String, desc: String, qty: Double, price: Double, codeRef: String) =
-        BoqItem(id, desc, BoqCategory.CONCRETE, "m³", qty, price, codeReference = codeRef)
+        // [AUDIT: WASTE FACTOR] Standard 3% concrete spillage/bulging factor for site orders
+        BoqItem(id, "$desc (Incl. 3% waste)", BoqCategory.CONCRETE, "m³", qty * 1.03, price, codeReference = codeRef)
 
     private fun steelItem(id: String, desc: String, qty: Double, price: Double) =
         BoqItem(id, desc, BoqCategory.REINFORCEMENT, "ton", qty, price)

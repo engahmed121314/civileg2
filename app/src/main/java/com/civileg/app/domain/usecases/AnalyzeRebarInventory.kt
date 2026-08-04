@@ -384,6 +384,14 @@ class AnalyzeRebarInventory @Inject constructor() {
         return availableStockLengths.filter { it >= maxLength }.minOrNull() ?: availableStockLengths.last()
     }
 
+    fun calculateTotalWeight(rebarList: List<Pair<Double, Int>>): Double {
+        // [PRECISION]: Calculate total weight in tons based on diameter (mm) and length (m)
+        return rebarList.sumOf { (diameter, totalLength) ->
+             val weightPerMeter = diameter * diameter / 162.2 // Standard formula kg/m
+             (weightPerMeter * totalLength) / 1000.0 // Convert to tons
+        }
+    }
+
     private fun getRebarWeightPerMeter(area: Double): Double {
         return area / 1e6 * 7850
     }

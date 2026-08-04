@@ -383,6 +383,10 @@ object PdfDrawingGenerator {
 
         // Title block
         drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Beam Detail")
+        
+        // [AUDIT: PRECISION LABELS] Add structural design summary
+        val infoP = textPaint(Color.WHITE, 12f)
+        canvas.drawText("Rebar Ratio: ${String.format(java.util.Locale.US, "%.2f", (mainRebarCount * PI * mainRebarDia * mainRebarDia / 4.0) / (beamWidth * beamDepth) * 100)}%", 80f, H - 20f, infoP)
 
         return bitmap
     }
@@ -638,6 +642,10 @@ object PdfDrawingGenerator {
 
         // Plan title (bilingual)
         canvas.drawTextCentered(t("مسقط تسليح البلاطة", "SLAB REINFORCEMENT PLAN"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+        
+        // [AUDIT: PRECISION] Show thickness in plan
+        val fadedWhite = Color.argb(128, 255, 255, 255)
+        canvas.drawTextCentered("t = ${thickness.toInt()} mm", planL + planW / 2f, planT + planH / 2f, textPaint(fadedWhite, 18f, true))
 
         // Legend in plan area (bilingual)
         val legX = planL + 10f; val legY = planT + planH - 55f
@@ -1426,6 +1434,10 @@ object PdfDrawingGenerator {
 
         val titleP = textPaint(Color.WHITE, 22f, true)
         canvas.drawTextCentered("STAIRCASE ELEVATION", elevL + drawL / 2f, elevT - 25f, titleP)
+        
+        // [AUDIT: PRECISION] Add slope label
+        val slopeText = "Slope: 1:${String.format(java.util.Locale.US, "%.1f", treadWidth / riserHeight)}"
+        canvas.drawText(slopeText, elevL + drawL * 0.7f, elevT + 20f, textPaint(Color.YELLOW, 14f, true))
 
         // Section (right side)
         val secL = W * 0.55f; val secT = 100f
@@ -1808,6 +1820,10 @@ object PdfDrawingGenerator {
         canvas.drawVDim(wallTopY, wallTopY + whPx, wallTopRight + 25f, "ts=${wallTopThickness.toInt()}")
 
         canvas.drawTextCentered(t("مقطع جدار استنادي", "RETAINING WALL SECTION"), (baseLeft + baseRight) / 2f, marginT - 25f, titleP)
+        
+        // [AUDIT: PRECISION] Add soil friction angle label
+        val soilP = textPaint(Color.WHITE, 13f, true)
+        canvas.drawText("Soil: \u03D5=${(backfillAngle * 180.0 / PI).toInt()}\u00B0", baseRight + 20f, marginT + 30f, soilP)
 
         // Rebar table
         drawRebarTable(canvas,
