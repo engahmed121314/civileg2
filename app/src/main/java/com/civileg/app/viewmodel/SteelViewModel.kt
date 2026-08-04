@@ -161,16 +161,34 @@ class SteelViewModel @Inject constructor(
                 val file = java.io.File(directory, fileName)
 
                 // Generate steel drawing bitmap using actual section properties
+                // 2026-08-04 v3: Pass all section properties to match ProfessionalSteelDrawing
                 val drawingBitmap = try {
                     PdfDrawingGenerator.generateSteelDrawing(
-                        sectionName = stored.section.displayName,
+                        sectionName = stored.section.sectionName,
                         sectionHeight = stored.section.depth,
                         flangeWidth = stored.section.width,
                         webThickness = stored.section.webThickness,
                         flangeThickness = stored.section.flangeThickness,
                         memberLength = stored.inputs.length,
                         isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio * 100
+                        utilizationRatio = res.utilizationRatio * 100,
+                        // New parameters matching on-screen ProfessionalSteelDrawing
+                        sectionType = stored.section.displayName,
+                        radius = stored.section.rootRadius,
+                        area = stored.section.area,
+                        ix = stored.section.ix,
+                        sx = stored.section.sx,
+                        zx = stored.section.zx,
+                        weightPerMeter = stored.section.weight,
+                        // Connection defaults (user can configure these in the screen)
+                        boltDia = 20.0,
+                        boltCount = 4,
+                        boltGauge = 90.0,
+                        boltPitch = 75.0,
+                        endPlateThickness = 12.0,
+                        hasStiffener = false,
+                        weldSize = 6.0,
+                        isColumn = stored.memberType == com.civileg.app.domain.entities.SteelMemberType.COLUMN
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 

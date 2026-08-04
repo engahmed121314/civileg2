@@ -188,14 +188,29 @@ class ExportViewModel @Inject constructor(
                 val outputFile = File(outputDir, fileName)
                 
                 val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateSteelDrawing(
-                    sectionName = sectionType.displayName,
+                    sectionName = sectionType.sectionName,
                     sectionHeight = sectionType.depth,
                     flangeWidth = sectionType.width,
                     webThickness = sectionType.webThickness,
                     flangeThickness = sectionType.flangeThickness,
                     memberLength = inputs.length,
                     isSafe = result.isSafe,
-                    utilizationRatio = result.utilizationRatio * 100
+                    utilizationRatio = result.utilizationRatio * 100,
+                    sectionType = sectionType.displayName,
+                    radius = sectionType.rootRadius,
+                    area = sectionType.area,
+                    ix = sectionType.ix,
+                    sx = sectionType.sx,
+                    zx = sectionType.zx,
+                    weightPerMeter = sectionType.weight,
+                    boltDia = 20.0,
+                    boltCount = 4,
+                    boltGauge = 90.0,
+                    boltPitch = 75.0,
+                    endPlateThickness = 12.0,
+                    hasStiffener = false,
+                    weldSize = 6.0,
+                    isColumn = memberType == SteelMemberType.COLUMN
                 )
                 
                 val file = pdfExporter.exportSteelReport(

@@ -1812,117 +1812,279 @@ object PdfDrawingGenerator {
         return bitmap
     }
 
-    // ========== GENERATE STEEL DRAWING ==========
+    // ========== GENERATE STEEL MEMBER DRAWING ===========
+    // 2026-08-04 v3 — Fully rewritten to match ProfessionalSteelDrawing (Compose Canvas)
+    // 4-zone layout: Elevation (top) | Cross-Section (bottom-left) | Connection (bottom-right) | Properties Table (bottom strip)
+    // Supports: I-Beam, HSS/RHS, Channel, Angle section types
     fun generateSteelDrawing(
         sectionName: String,
         sectionHeight: Double, flangeWidth: Double,
         webThickness: Double, flangeThickness: Double,
         memberLength: Double,
         isSafe: Boolean,
-        utilizationRatio: Double = 0.0
+        utilizationRatio: Double = 0.0,
+        // New parameters to match on-screen drawing
+        sectionType: String = "I-BEAM",
+        radius: Double = 0.0,
+        area: Double = 0.0,
+        ix: Double = 0.0,
+        sx: Double = 0.0,
+        zx: Double = 0.0,
+        weightPerMeter: Double = 0.0,
+        boltDia: Double = 20.0,
+        boltCount: Int = 4,
+        boltGauge: Double = 90.0,
+        boltPitch: Double = 75.0,
+        endPlateThickness: Double = 12.0,
+        hasStiffener: Boolean = false,
+        weldSize: Double = 6.0,
+        isColumn: Boolean = false
     ): Bitmap {
-        val W = 1200; val H = 700
+        val W = 1400; val H = 900
         val (bitmap, canvas) = createCanvas(W, H)
-        val outlineP = createPaint(Color.WHITE, 1.5f)
-        val titleP = textPaint(Color.WHITE, 22f, true)
 
-        // === LEFT SIDE: Elevation View of I-beam ===
-        val elevLeft = 80f; val elevTop = 80f
-        val elevScale = min(450f / memberLength.toFloat(), 350f / sectionHeight.toFloat()) * 0.7f
-        val mL = memberLength.toFloat() * elevScale
-        val mH = sectionHeight.toFloat() * elevScale
-        val mFW = flangeWidth.toFloat() * elevScale
-        val mFT = flangeThickness.toFloat() * elevScale * 2f
-        val mWT = webThickness.toFloat() * elevScale * 2f
+        // Steel color palette (matching ProfessionalSteelDrawing.kt)
+        val steelGray = Color.parseColor("#7F8C8D")
+        val steelDarkGray = Color.parseColor("#2C3E50")
+        val sectionFill = Color.parseColor("#3D3D3D")
+        val boltOrange = Color.parseColor("#F39C12")
+        val weldRed = Color.parseColor("#E74C3C")
+        val plateGray = Color.parseColor("#95A5A6")
+        val dimWhite = Color.WHITE
+        val extGray = Color.parseColor("#AAAAAA")
+        val tblHeaderBg = Color.parseColor("#33FFFFFF")
+        val tblRowAlt = Color.parseColor("#1AFFFFFF")
 
-        val webLeft = elevLeft + (mFW - mWT) / 2f
-        val webRight = webLeft + mWT
+        val outlineP = createPaint(dimWhite, 1.2f)
+        val thinP = createPaint(extGray, 0.8f)
+        val dimP = createPaint(extGray, 1f)
+        val titleP = textPaint(dimWhite, 22f, true)
+        val labelP = textPaint(dimWhite, 16f, true)
+        val smallP = textPaint(extGray, 14f)
+        val tinyP = textPaint(extGray, 12f)
 
-        // Top flange
-        canvas.drawRect(elevLeft, elevTop, elevLeft + mL, elevTop + mFT, fillPaint(REBAR_BLUE))
-        canvas.drawRect(elevLeft, elevTop, elevLeft + mL, elevTop + mFT, outlineP)
+        // Section type detection
+        val isIBeam = sectionType.contains("I-BEAM", true) || sectionType.contains("W-SECTION", true) ||
+            sectionType.contains("IPE", true) || sectionType.contains("HEA", true) || sectionType.contains("HEB", true) ||
+            sectionType.contains("I/H", true) || sectionType.contains("Plate Girder", true)
+        val isHSS = sectionType.contains("HSS", true) || sectionType.contains("RHS", true) ||
+            sectionType.contains("SHS", true) || sectionType.contains("Circular Hollow", true) ||
+            sectionType.contains("Pipe", true)
+        val isChannel = sectionType.contains("CHANNEL", true) || sectionType.contains("UPN", true) || sectionType.contains("C Channel", true)
+        val isAngle = sectionType.contains("ANGLE", true) || sectionType.contains("L ", true) || sectionType.contains("L Angle", true)
 
-        // Bottom flange
-        canvas.drawRect(elevLeft, elevTop + mH - mFT, elevLeft + mL, elevTop + mH, fillPaint(REBAR_BLUE))
-        canvas.drawRect(elevLeft, elevTop + mH - mFT, elevLeft + mL, elevTop + mH, outlineP)
+        // ── Layout zones (matching ProfessionalSteelDrawing) ──
+        val margin = 40f
+        val tableHeight = 110f
+        val tableTop = H - tableHeight - margin
 
-        // Web
-        canvas.drawRect(webLeft, elevTop + mFT, webRight, elevTop + mH - mFT, fillPaint(REBAR_BLUE))
-        canvas.drawRect(webLeft, elevTop + mFT, webRight, elevTop + mH - mFT, outlineP)
+        // Elevation view (top half)
+        val elevLeft = margin + 60f
+        val elevRight = W - margin - 60f
+        val elevTop = margin + 50f
+        val elevBottom = H * 0.42f
 
-        // Elevation dimensions
-        canvas.drawHDim(elevLeft, elevLeft + mL, elevTop + mH + 20f, "${memberLength.toInt()} mm")
-        canvas.drawVDim(elevTop, elevTop + mH, elevLeft + mL + 15f, "${sectionHeight.toInt()} mm")
-        canvas.drawHDim(elevLeft, elevLeft + mL, elevTop - 20f, "bf = ${flangeWidth.toInt()} mm", 20f, outlineP)
+        // Cross-section (bottom-left)
+        val sectLeft = margin + 30f
+        val sectRight = W * 0.46f
+        val sectTop = elevBottom + 50f
+        val sectBottom = tableTop - 15f
 
-        // Status indicator
-        if (isSafe) {
-            canvas.drawText("\u2713", elevLeft + mL + 50f, elevTop + mH / 2f + 10f, textPaint(Color.parseColor("#2ECC71"), 36f, true))
-            canvas.drawText("SAFE", elevLeft + mL + 50f, elevTop + mH / 2f + 35f, textPaint(Color.parseColor("#2ECC71"), 18f, true))
-        } else {
-            canvas.drawText("\u2717", elevLeft + mL + 50f, elevTop + mH / 2f + 10f, textPaint(SECONDARY_RED, 36f, true))
-            canvas.drawText("UNSAFE", elevLeft + mL + 50f, elevTop + mH / 2f + 35f, textPaint(SECONDARY_RED, 18f, true))
+        // Connection detail (bottom-right)
+        val connLeft = W * 0.54f
+        val connRight = W - margin - 30f
+        val connTop = sectTop
+        val connBottom = sectBottom
+
+        // ════════════════════════════════════════════════════════
+        //  1. ELEVATION VIEW
+        // ════════════════════════════════════════════════════════
+        val viewW = elevRight - elevLeft
+        val viewH = elevBottom - elevTop
+        val scaleX = viewW / memberLength.toFloat()
+        val scaleY = (viewH * 0.4f) / sectionHeight.toFloat()
+        val scale = minOf(scaleX, scaleY)
+
+        val sLen = memberLength.toFloat() * scale
+        val sDep = sectionHeight.toFloat() * scale
+        val sTf = flangeThickness.toFloat() * scale
+        val sEp = endPlateThickness.toFloat() * scale * 3f  // Slightly exaggerated for visibility
+
+        val cx = (elevLeft + elevRight) / 2f
+        val cy = (elevTop + elevBottom) / 2f
+        val mLeft = cx - sLen / 2f
+        val mRight = cx + sLen / 2f
+        val mTop = cy - sDep / 2f
+        val mBot = cy + sDep / 2f
+
+        // Main body rectangle
+        canvas.drawRect(mLeft, mTop, mRight, mBot, fillPaint(steelGray))
+        canvas.drawRect(mLeft, mTop, mRight, mBot, createPaint(Color.argb(128, 255, 255, 255), 1.2f))
+
+        // Flange lines for I-Beam / Channel
+        if (isIBeam || isChannel) {
+            canvas.drawLine(mLeft, mTop + sTf, mRight, mTop + sTf, createPaint(steelDarkGray, 1f))
+            canvas.drawLine(mLeft, mBot - sTf, mRight, mBot - sTf, createPaint(steelDarkGray, 1f))
         }
 
-        canvas.drawTextCentered("STEEL MEMBER - $sectionName", elevLeft + mL / 2f, elevTop - 40f, titleP)
+        // End plates (left and right)
+        canvas.drawRect(mLeft - sEp, mTop - 8f, mLeft, mBot + 8f, fillPaint(plateGray))
+        canvas.drawRect(mLeft - sEp, mTop - 8f, mLeft, mBot + 8f, outlineP)
+        canvas.drawRect(mRight, mTop - 8f, mRight + sEp, mBot + 8f, fillPaint(plateGray))
+        canvas.drawRect(mRight, mTop - 8f, mRight + sEp, mBot + 8f, outlineP)
 
-        // === RIGHT SIDE: Cross-Section View ===
-        val secCx = W * 0.72f; val secCy = H * 0.35f
-        val secScale = min(250f / flangeWidth.toFloat(), 300f / sectionHeight.toFloat()) * 0.8f
+        // Dimensions
+        canvas.drawHDim(mLeft, mRight, mBot + 10f, "${memberLength.toInt()} mm")
+        canvas.drawVDim(mTop, mBot, mRight + sEp + 15f, "d=${sectionHeight.toInt()}")
+
+        // Section name label
+        canvas.drawTextCentered(sectionName, cx, mTop - 12f, textPaint(Color.parseColor("#00BCD4"), 16f, true))
+
+        // ELEVATION label
+        canvas.drawTextCentered("ELEVATION", (elevLeft + elevRight) / 2f, elevTop - 20f, labelP)
+
+        // ════════════════════════════════════════════════════════
+        //  2. CROSS-SECTION VIEW (Section A-A)
+        // ════════════════════════════════════════════════════════
+        val secCx = (sectLeft + sectRight) / 2f
+        val secCy = (sectTop + sectBottom) / 2f
+        val secScale = minOf((sectRight - sectLeft) * 0.6f / flangeWidth.toFloat(), (sectBottom - sectTop) * 0.6f / sectionHeight.toFloat())
+        val sW = flangeWidth.toFloat() * secScale
         val sH = sectionHeight.toFloat() * secScale
-        val sFW = flangeWidth.toFloat() * secScale
-        val sFT = flangeThickness.toFloat() * secScale * 2f
-        val sWT = webThickness.toFloat() * secScale * 2f
+        val sFT = flangeThickness.toFloat() * secScale
+        val sWT = webThickness.toFloat() * secScale
 
-        val secLeft = secCx - sFW / 2f
-        val secTop = secCy - sH / 2f
-        val secWebLeft = secCx - sWT / 2f
-        val secWebRight = secCx + sWT / 2f
+        val scx = secCx - sW / 2f
+        val scy = secCy - sH / 2f
 
-        // Top flange
-        canvas.drawRect(secLeft, secTop, secLeft + sFW, secTop + sFT, fillPaint(REBAR_BLUE))
-        canvas.drawRect(secLeft, secTop, secLeft + sFW, secTop + sFT, outlineP)
+        // Outer rectangle (filled)
+        canvas.drawRect(scx, scy, scx + sW, scy + sH, fillPaint(sectionFill))
+        canvas.drawRect(scx, scy, scx + sW, scy + sH, createPaint(steelGray, 1.5f))
 
-        // Bottom flange
-        canvas.drawRect(secLeft, secTop + sH - sFT, secLeft + sFW, secTop + sH, fillPaint(REBAR_BLUE))
-        canvas.drawRect(secLeft, secTop + sH - sFT, secLeft + sFW, secTop + sH, outlineP)
-
-        // Web
-        canvas.drawRect(secWebLeft, secTop + sFT, secWebRight, secTop + sH - sFT, fillPaint(REBAR_BLUE))
-        canvas.drawRect(secWebLeft, secTop + sFT, secWebRight, secTop + sH - sFT, outlineP)
-
-        // Center lines (dashed)
-        val centerP = createPaint(DIM_LINE, 0.8f).apply {
-            pathEffect = DashPathEffect(floatArrayOf(8f, 4f), 0f)
+        // I-beam internal web lines
+        if (isIBeam) {
+            val halfTw = sWT / 2f
+            canvas.drawLine(secCx - halfTw, scy + sFT, secCx - halfTw, scy + sH - sFT, createPaint(steelGray, 1f))
+            canvas.drawLine(secCx + halfTw, scy + sFT, secCx + halfTw, scy + sH - sFT, createPaint(steelGray, 1f))
         }
-        canvas.drawLine(secCx, secTop - 20f, secCx, secTop + sH + 20f, centerP)
-        canvas.drawLine(secLeft - 20f, secCy, secLeft + sFW + 20f, secCy, centerP)
+
+        // Channel: web lines offset to one side
+        if (isChannel) {
+            val halfTw = sWT / 2f
+            canvas.drawLine(scx + sW * 0.3f - halfTw, scy + sFT, scx + sW * 0.3f - halfTw, scy + sH - sFT, createPaint(steelGray, 1f))
+            canvas.drawLine(scx + sW * 0.3f + halfTw, scy + sFT, scx + sW * 0.3f + halfTw, scy + sH - sFT, createPaint(steelGray, 1f))
+        }
+
+        // HSS/Pipe: inner rectangle (hollow section)
+        if (isHSS) {
+            val innerW = sW - 2 * sWT
+            val innerH = sH - 2 * sWT
+            if (innerW > 0 && innerH > 0) {
+                canvas.drawRect(scx + sWT, scy + sWT, scx + sWT + innerW, scy + sWT + innerH, createPaint(BG_COLOR, 0.5f))
+                canvas.drawRect(scx + sWT, scy + sWT, scx + sWT + innerW, scy + sWT + innerH, thinP)
+            }
+        }
 
         // Cross-section dimensions
-        canvas.drawHDim(secLeft, secLeft + sFW, secTop + sH + 15f, "bf=${flangeWidth.toInt()}")
-        canvas.drawVDim(secTop, secTop + sH, secLeft + sFW + 15f, "h=${sectionHeight.toInt()}")
-        canvas.drawText("tw=${webThickness.toInt()}", secWebRight + 20f, secCy + 5f, textPaint(DIM_TEXT, 16f))
-        canvas.drawText("tf=${flangeThickness.toInt()}", secLeft + sFW + 20f, secTop + sFT / 2f + 5f, textPaint(DIM_TEXT, 16f))
+        canvas.drawTextCentered("b=$flangeWidth", secCx, scy + sH + 18f, smallP)
+        // Vertical label "d=xxx" drawn rotated via text
+        canvas.drawText("d=$sectionHeight", scx - 18f, secCy + 5f, smallP)
 
-        canvas.drawTextCentered("SECTION A-A", secCx, secTop - 30f, textPaint(DIM_TEXT, 18f, true))
+        // SECTION A-A label
+        canvas.drawTextCentered("SECTION A-A", secCx, sectTop - 20f, labelP)
 
-        // === Properties Table ===
-        drawRebarTable(canvas,
-            x = 80f, y = H * 0.55f,
-            data = listOf(
-                listOf("Property", "Value"),
-                listOf("Section", sectionName),
-                listOf("Height", "${sectionHeight.toInt()} mm"),
-                listOf("Flange Width", "${flangeWidth.toInt()} mm"),
-                listOf("Web Thickness", "${webThickness.toInt()} mm"),
-                listOf("Flange Thickness", "${flangeThickness.toInt()} mm"),
-                listOf("Length", "${memberLength.toInt()} mm"),
-                listOf("Utilization", "${"%.1f".format(utilizationRatio)}%"),
-                listOf("Status", if (isSafe) "SAFE" else "UNSAFE")
-            )
-        )
+        // ════════════════════════════════════════════════════════
+        //  3. CONNECTION DETAIL (Bolts on End Plate)
+        // ════════════════════════════════════════════════════════
+        val connCx = (connLeft + connRight) / 2f
+        val connCy = (connTop + connBottom) / 2f
+        val connScale = minOf((connRight - connLeft) * 0.7f / flangeWidth.toFloat(), (connBottom - connTop) * 0.7f / sectionHeight.toFloat())
+        val cW = flangeWidth.toFloat() * connScale
+        val cH = sectionHeight.toFloat() * connScale
 
-        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Steel Detail")
+        val epx = connCx - cW / 2f
+        val epy = connCy - cH / 2f
+
+        // End plate rectangle (transparent fill)
+        canvas.drawRect(epx, epy, epx + cW, epy + cH, fillPaint(Color.argb(80, 149, 165, 166)))
+        canvas.drawRect(epx, epy, epx + cW, epy + cH, createPaint(plateGray, 1.2f))
+
+        // Center lines (dashed)
+        val dashP = createPaint(extGray, 0.8f).apply {
+            pathEffect = DashPathEffect(floatArrayOf(8f, 4f), 0f)
+        }
+        canvas.drawLine(connCx, epy - 15f, connCx, epy + cH + 15f, dashP)
+        canvas.drawLine(epx - 15f, connCy, epx + cW + 15f, connCy, dashP)
+
+        // Bolts (2 per row, arranged vertically)
+        val boltR = 6f
+        val safeBoltCount = maxOf(boltCount, 1)
+        for (i in 0 until safeBoltCount) {
+            val by = epy + 20f + i * (cH - 40f) / maxOf(safeBoltCount - 1, 1)
+            // Left bolt
+            canvas.drawCircle(connCx - cW * 0.25f, by, boltR, fillPaint(boltOrange))
+            canvas.drawCircle(connCx - cW * 0.25f, by, boltR, createPaint(Color.argb(180, 255, 255, 255), 1f))
+            // Right bolt
+            canvas.drawCircle(connCx + cW * 0.25f, by, boltR, fillPaint(boltOrange))
+            canvas.drawCircle(connCx + cW * 0.25f, by, boltR, createPaint(Color.argb(180, 255, 255, 255), 1f))
+        }
+
+        // Weld symbol (if weldSize > 0)
+        if (weldSize > 0) {
+            val weldLabel = "weld=${weldSize.toInt()}mm"
+            canvas.drawTextCentered(weldLabel, connCx, epy + cH + 20f, tinyP)
+        }
+
+        // Bolt label
+        if (boltCount > 0) {
+            val boltLabel = "${boltCount}x\u00D8${boltDia.toInt()}"
+            canvas.drawTextCentered(boltLabel, connCx, epy - 8f, smallP)
+        }
+
+        // CONNECTION label
+        canvas.drawTextCentered("CONNECTION", connCx, connTop - 20f, labelP)
+
+        // ════════════════════════════════════════════════════════
+        //  4. PROPERTIES TABLE (bottom strip, matching on-screen)
+        // ════════════════════════════════════════════════════════
+        val tblX = margin
+        val tblW = W - margin * 2f
+
+        // Table header background
+        canvas.drawRect(tblX, tableTop, tblX + tblW, tableTop + 28f, fillPaint(tblHeaderBg))
+        canvas.drawTextCentered("STEEL PROPERTIES: $sectionName", tblX + tblW / 2f, tableTop + 20f, textPaint(dimWhite, 14f, true))
+
+        // Table data rows in 2 columns
+        val rowY1 = tableTop + 48f
+        val rowY2 = tableTop + 70f
+        val colX1 = tblX + 20f
+        val colX2 = tblX + tblW / 2f + 20f
+
+        val areaStr = if (area > 0) "%.1f".format(area) else "--"
+        val ixStr = if (ix > 0) "%.0f".format(ix) else "--"
+        val wStr = if (weightPerMeter > 0) "%.1f".format(weightPerMeter) else "--"
+
+        canvas.drawText("Area: $areaStr cm\u00B2", colX1, rowY1, smallP)
+        canvas.drawText("Inertia Ix: $ixStr cm\u2074", colX2, rowY1, smallP)
+        canvas.drawText("Weight: $wStr kg/m", colX1, rowY2, smallP)
+        canvas.drawText("Length: ${memberLength.toInt()} mm", colX2, rowY2, smallP)
+
+        // Table border
+        canvas.drawRect(tblX, tableTop, tblX + tblW, tableTop + tableHeight, createPaint(Color.argb(50, 170, 170, 170), 1f))
+
+        // ── Title Block ──
+        drawTitleBlock(canvas, W - 300f, H - 55f, 300f, 55f, "Steel Detail")
+
+        // ── SAFE/UNSAFE badge ──
+        val badgeX = W - 150f
+        val badgeY = margin + 10f
+        if (isSafe) {
+            canvas.drawText("\u2713", badgeX, badgeY + 20f, textPaint(Color.parseColor("#2ECC71"), 36f, true))
+            canvas.drawText("SAFE", badgeX + 30f, badgeY + 20f, textPaint(Color.parseColor("#2ECC71"), 18f, true))
+        } else {
+            canvas.drawText("\u2717", badgeX, badgeY + 20f, textPaint(SECONDARY_RED, 36f, true))
+            canvas.drawText("UNSAFE", badgeX + 30f, badgeY + 20f, textPaint(SECONDARY_RED, 18f, true))
+        }
 
         return bitmap
     }
