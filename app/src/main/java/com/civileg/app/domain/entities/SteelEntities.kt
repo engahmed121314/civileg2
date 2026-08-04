@@ -380,6 +380,13 @@ val SteelSectionType.flangeSlope: Double
         else -> 0.0
     }
 
+/** حساب عزم القصور حول X لقطاع I - mm⁴ */
+private fun calculateIxISection(h: Double, b: Double, tw: Double, tf: Double): Double {
+    // Ix = (b*h³ - (b-tw)*(h-2tf)³) / 12
+    val hw = h - 2 * tf
+    return (b * h.pow(3) - (b - tw) * hw.pow(3)) / 12.0
+}
+
 /** حساب عزم القصور حول X لقطاع C-Channel - mm⁴ */
 private fun calculateIxCSection(h: Double, b: Double, tw: Double, tf: Double): Double {
     // Same geometry as I-section for Ix (bending about strong axis)

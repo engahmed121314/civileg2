@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
+import kotlin.math.pow
 
 @HiltViewModel
 class BOQViewModel @Inject constructor(
