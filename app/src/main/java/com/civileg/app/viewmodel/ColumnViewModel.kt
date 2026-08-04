@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,7 +33,8 @@ data class ColumnUiState(
     val result: CalculatorEngine.ColumnResult? = null,
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
-    val errors: List<String> = emptyList()
+    val errors: List<String> = emptyList(),
+    val validationReport: CalculationValidator.ValidationReport? = null
 )
 
 @HiltViewModel
@@ -168,7 +170,11 @@ class ColumnViewModel @Inject constructor(
                     autoOptimize = state.autoOptimize,
                     manualNumBars = manualBars
                 )
-                _uiState.update { it.copy(result = res, errors = emptyList()) }
+                
+                // Validate consistency
+                val report = CalculationValidator.validateColumn(res)
+                
+                _uiState.update { it.copy(result = res, validationReport = report, errors = emptyList()) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
             }

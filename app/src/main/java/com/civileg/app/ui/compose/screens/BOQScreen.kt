@@ -190,6 +190,8 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
             }
         }
 
+        item { EstimationLogicInfo() }
+
         estimationResult?.let { res ->
             item { ProfessionalEstimationCard(res) { exportEstimationPdf(context, res) } }
         }
@@ -256,6 +258,36 @@ private fun sharePdf(context: Context, file: File) {
 }
 
 @Composable
+fun EstimationLogicInfo() {
+    var expanded by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f)),
+        onClick = { expanded = !expanded }
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Insights, null, tint = MaterialTheme.colorScheme.secondary)
+                Spacer(Modifier.width(8.dp))
+                Text("How are these values calculated?", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.weight(1f))
+                Icon(if(expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+            }
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "• Structural quantities are estimated based on 'Built-up Area' and statistical ratios (e.g., 0.45m³ concrete per m² for Residential).\n" +
+                    "• Steel weight is calculated as ~100kg per m³ of concrete.\n" +
+                    "• Finishing costs use regional averages for 'Super Lux' levels.\n" +
+                    "• Investment ROI includes appreciation (15%) and estimated construction time.",
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column(modifier = Modifier.padding(24.dp)) {
@@ -264,7 +296,10 @@ fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport:
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             res.items.forEach { item ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(item.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(item.name, style = MaterialTheme.typography.bodyMedium)
+                        Text("${String.format(Locale.US, "%.1f", item.quantity)} ${item.unit}", fontSize = 10.sp, color = Color.Gray)
+                    }
                     Text(String.format(Locale.US, "%,.0f", item.totalPrice), fontWeight = FontWeight.Bold)
                 }
             }

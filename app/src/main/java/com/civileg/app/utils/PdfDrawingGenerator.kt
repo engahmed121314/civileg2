@@ -332,13 +332,13 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(bLeft, bRight, bBottom + supportSize + 20f, "${span.toInt()} mm")
-        canvas.drawVDim(bTop, bBottom, bLeft - 20f, "${beamDepth.toInt()} mm")
-        canvas.drawVDim(bTop, bTop + cover.toFloat() * scale, bRight + 20f, "cover=${cover.toInt()}")
+        canvas.drawHDim(bLeft, bRight, bBottom + supportSize + 20f, "${span.toInt()} mm (L)")
+        canvas.drawVDim(bTop, bBottom, bLeft - 20f, "${beamDepth.toInt()} mm (h)")
+        canvas.drawVDim(bTop, bTop + cover.toFloat() * scale, bRight + 20f, "c=${cover.toInt()}")
 
         // Title
         val titleP = textPaint(Color.WHITE, 24f, true)
-        canvas.drawTextCentered("BEAM SECTION & ELEVATION", W / 2f, 30f, titleP)
+        canvas.drawTextCentered(t("تفاصيل وتفريد حديد الكمرات", "BEAM SECTION & ELEVATION"), W / 2f, 30f, titleP)
 
         // Cross-section inset (bottom-left)
         val csX = 80f; val csY = H * 0.60f; val csScale = 0.4f
@@ -366,6 +366,9 @@ object PdfDrawingGenerator {
 
         // Section label
         canvas.drawTextCentered("Section A-A", csX + csW / 2f, csY - 8f, textPaint(DIM_TEXT, 16f))
+        
+        // Add width dimension to section
+        canvas.drawHDim(csX, csX + csW, csY + csH + 15f, "b=${beamWidth.toInt()}", 10f)
 
         // Reinforcement table (bottom-right)
         drawRebarTable(canvas, 
@@ -444,7 +447,11 @@ object PdfDrawingGenerator {
         canvas.drawRect(elevLeft - 60f, elevTop + elevH, elevLeft + elevW + depth3D + 60f, elevTop + elevH + 15f, fillPaint(CONCRETE_TOP))
         canvas.drawRect(elevLeft - 60f, elevTop + elevH, elevLeft + elevW + depth3D + 60f, elevTop + elevH + 15f, outlineP)
 
-        canvas.drawTextCentered("COLUMN ELEVATION", elevLeft + elevW / 2f, elevTop - 30f, titleP)
+        // Elevation dimensions
+        canvas.drawVDim(elevTop, elevTop + elevH, elevLeft - 25f, "H=${columnHeight.toInt()} mm")
+        canvas.drawHDim(elevLeft, elevLeft + elevW, elevTop + elevH + 30f, "b=${columnWidth.toInt()}")
+
+        canvas.drawTextCentered(t("قطاع طولي للعمود", "COLUMN ELEVATION"), elevLeft + elevW / 2f, elevTop - 30f, titleP)
 
         // Cross-section (right side)
         val csCx = W * 0.65f; val csCy = H * 0.35f
@@ -480,7 +487,7 @@ object PdfDrawingGenerator {
 
             // Section dimensions
             canvas.drawHDim(csCx - csRadius, csCx + csRadius, csCy + csRadius + 15f, "Ø${columnWidth.toInt()} mm", 20f)
-            canvas.drawTextCentered("SECTION A-A", csCx, csCy - csRadius - 20f, titleP)
+            canvas.drawTextCentered(t("قطاع عرضي A-A", "SECTION A-A"), csCx, csCy - csRadius - 20f, titleP)
         } else {
             // ── Rectangular cross-section (original logic) ──
             val csW2 = columnWidth.toFloat() * 0.8f
@@ -529,9 +536,9 @@ object PdfDrawingGenerator {
             }
 
             // Section dimensions
-            canvas.drawHDim(csLeft, csLeft + csW2, csTop2 + csH2 + 15f, "${columnWidth.toInt()} mm", 20f)
-            canvas.drawVDim(csTop2, csTop2 + csH2, csLeft + csW2 + 15f, "${columnDepth.toInt()} mm", 20f)
-            canvas.drawTextCentered("SECTION A-A", csCx, csTop2 - 20f, titleP)
+            canvas.drawHDim(csLeft, csLeft + csW2, csTop2 + csH2 + 15f, "${columnWidth.toInt()} mm (b)", 20f)
+            canvas.drawVDim(csTop2, csTop2 + csH2, csLeft + csW2 + 15f, "${columnDepth.toInt()} mm (d)", 20f)
+            canvas.drawTextCentered(t("قطاع عرضي A-A", "SECTION A-A"), csCx, csTop2 - 20f, titleP)
         }
 
         // Rebar table
