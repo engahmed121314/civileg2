@@ -36,19 +36,23 @@ class CalculateElementBoq @Inject constructor() {
         items += concreteItem("COL_CONC_001", "Column ${width.toInt()}×${depth.toInt()}mm, h=${height.toInt()}mm", concreteVolume, prices.concretePerM3, "V = b × d × h")
 
         // 2. حديد التسليح الرئيسي: W = As × L × 7850 / 1e12  (tons)
-        //    As(mm²) × L(mm) = mm³ → /1e9 = m³ → × 7850 kg/m³ → /1000 = tons
-        val steelWeight = reinforcementResult.astProvided * height * 7850.0 / 1e12
+        // [PRECISION]: Include standard 7% lap & waste factor for professional site estimates
+        val wasteFactor = 1.07
+        val steelWeight = reinforcementResult.astProvided * height * 7850.0 / 1e12 * wasteFactor
         if (reinforcementResult.numberOfBars > 0) {
-            items += steelItem("COL_REINF_001", "Main rebar ${reinforcementResult.numberOfBars}Ø${reinforcementResult.barDiameter.toInt()}mm", steelWeight, prices.steelPerTon)
+            items += steelItem("COL_REINF_001", "Column rebar ${reinforcementResult.numberOfBars}Ø${reinforcementResult.barDiameter.toInt()}mm (Incl. 7% lap/waste)", steelWeight, prices.steelPerTon)
         }
 
         // 3. الكانات
-        val tiesWeight = calculateTiesWeight(width, depth, height, reinforcementResult.tiesDiameter, reinforcementResult.tiesSpacing)
+        val tiesWeight = calculateTiesWeight(width, depth, height, reinforcementResult.tiesDiameter, reinforcementResult.tiesSpacing) * wasteFactor
         items += steelItem("COL_TIES_001", "Ties Ø${reinforcementResult.tiesDiameter.toInt()}mm @ ${reinforcementResult.tiesSpacing.toInt()}mm c/c", tiesWeight, prices.steelPerTon)
 
         // 4. الشدة الخشبية (2 × عرض + 2 × عمق) × ارتفاع
         val formworkArea = 2.0 * (width + depth) * height / 1e6
         items += formworkItem("COL_FORM_001", "Column formwork ${width.toInt()}×${depth.toInt()}mm", formworkArea, prices.formworkPerM2)
+        
+        // 5. [NEW] Curing and Maintenance (m2)
+        items += BoqItem("COL_CUR_001", "Concrete curing and protection", BoqCategory.FORMWORK, "m²", formworkArea, 10.0)
 
         return items
     }
@@ -72,18 +76,19 @@ class CalculateElementBoq @Inject constructor() {
         items += concreteItem("BEAM_CONC_001", "Beam ${width.toInt()}×${depth.toInt()}mm, L=${span}m", concreteVolume, prices.concretePerM3, "V = b × h × L")
 
         // 2. الحديد الرئيسي (السفلي + العلوي إن وجد)
-        val mainSteelWeight = flexureResult.astProvided * spanMm * 7850.0 / 1e12
+        val wasteFactor = 1.10 // Beams typically have higher lap waste (10%)
+        val mainSteelWeight = flexureResult.astProvided * spanMm * 7850.0 / 1e12 * wasteFactor
         if (flexureResult.numberOfBars > 0) {
-            items += steelItem("BEAM_REINF_001", "Main ${flexureResult.numberOfBars}Ø${flexureResult.barDiameter.toInt()}mm, L=${span}m", mainSteelWeight, prices.steelPerTon)
+            items += steelItem("BEAM_REINF_001", "Main bars Ø${flexureResult.barDiameter.toInt()}mm (Incl. 10% lap/waste)", mainSteelWeight, prices.steelPerTon)
         }
 
         // 3. الكانات
-        val stirrupsWeight = calculateStirrupsWeight(width, depth, spanMm, shearResult.stirrupDiameter, shearResult.stirrupSpacing)
+        val stirrupsWeight = calculateStirrupsWeight(width, depth, spanMm, shearResult.stirrupDiameter, shearResult.stirrupSpacing) * wasteFactor
         items += steelItem("BEAM_STIR_001", "Stirrups Ø${shearResult.stirrupDiameter.toInt()}mm @ ${shearResult.stirrupSpacing.toInt()}mm", stirrupsWeight, prices.steelPerTon)
 
         // 4. الشدة الخشبية (3 وجوه: جانبين + سفل)
         val formworkArea = (2.0 * depth + width) * spanMm / 1e6
-        items += formworkItem("BEAM_FORM_001", "Beam formwork 3 sides, L=${span}m", formworkArea, prices.formworkPerM2)
+        items += formworkItem("BEAM_FORM_001", "Beam formwork (3 sides), L=${span}m", formworkArea, prices.formworkPerM2)
 
         return items
     }
@@ -111,16 +116,17 @@ class CalculateElementBoq @Inject constructor() {
         items += concreteItem("SLAB_CONC_001", "Solid slab ${spanX}m × ${spanY}m × ${thickness.toInt()}mm", concreteVolume, prices.concretePerM3, "V = Lx × Ly × t")
 
         // 2. حديد التسليح الرئيسي (اتجاه Lx — البحر القصير)
+        val wasteFactor = 1.05 // Slabs typically have lower waste (5%)
         val mainBarsCount = (lyMm / mainSpacing).toInt() + 1
         val mainBarArea = PI * mainDia * mainDia / 4.0
-        val mainWeight = mainBarsCount * mainBarArea * lxMm * 7850.0 / 1e12
-        items += steelItem("SLAB_MAIN_001", "Main Ø${mainDia.toInt()}mm @ ${mainSpacing.toInt()}mm (Lx=${spanX}m)", mainWeight, prices.steelPerTon)
+        val mainWeight = mainBarsCount * mainBarArea * lxMm * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("SLAB_MAIN_001", "Slab main Ø${mainDia.toInt()}mm @ ${mainSpacing.toInt()}mm (Incl. 5% waste)", mainWeight, prices.steelPerTon)
 
         // 3. حديد التوزيع (اتجاه Ly — البحر الطويل)
         val distBarsCount = (lxMm / distSpacing).toInt() + 1
         val distBarArea = PI * distDia * distDia / 4.0
-        val distWeight = distBarsCount * distBarArea * lyMm * 7850.0 / 1e12
-        items += steelItem("SLAB_DIST_001", "Dist Ø${distDia.toInt()}mm @ ${distSpacing.toInt()}mm (Ly=${spanY}m)", distWeight, prices.steelPerTon)
+        val distWeight = distBarsCount * distBarArea * lyMm * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("SLAB_DIST_001", "Slab dist Ø${distDia.toInt()}mm @ ${distSpacing.toInt()}mm", distWeight, prices.steelPerTon)
 
         // 4. الشدة الخشبية (سفل فقط للبلاطة)
         val formworkArea = lxMm * lyMm / 1e6
@@ -159,15 +165,16 @@ class CalculateElementBoq @Inject constructor() {
         items += concreteItem("FTG_CONC_001", "Footing concrete ${length.toInt()}×${width.toInt()}×${thickness.toInt()}mm", concVolume, prices.concretePerM3, "V = L × B × t")
 
         // 3. حديد سفلي اتجاه X (البحر الطولي)
+        val wasteFactor = 1.08 // Footings have ~8% waste due to hooks and chair bars
         val bottomBarsX = (width / rebarSpacingX).toInt() + 1
         val barArea = PI * rebarDia * rebarDia / 4.0
-        val bottomWeightX = bottomBarsX * barArea * length * 7850.0 / 1e12
-        items += steelItem("FTG_REINF_X_001", "Bottom Ø${rebarDia.toInt()}mm @ ${rebarSpacingX.toInt()}mm (X-dir)", bottomWeightX, prices.steelPerTon)
+        val bottomWeightX = bottomBarsX * barArea * length * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("FTG_REINF_X_001", "Footing bars Ø${rebarDia.toInt()}mm @ ${rebarSpacingX.toInt()}mm (X-dir, Incl. 8% waste)", bottomWeightX, prices.steelPerTon)
 
         // 4. حديد سفلي اتجاه Y (البحر العرضي)
         val bottomBarsY = (length / rebarSpacingY).toInt() + 1
-        val bottomWeightY = bottomBarsY * barArea * width * 7850.0 / 1e12
-        items += steelItem("FTG_REINF_Y_001", "Bottom Ø${rebarDia.toInt()}mm @ ${rebarSpacingY.toInt()}mm (Y-dir)", bottomWeightY, prices.steelPerTon)
+        val bottomWeightY = bottomBarsY * barArea * width * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("FTG_REINF_Y_001", "Footing bars Ø${rebarDia.toInt()}mm @ ${rebarSpacingY.toInt()}mm (Y-dir)", bottomWeightY, prices.steelPerTon)
 
         // 5. الشدة الخشبية (الجوانب + السفل = 5 وجوه للقاعدة المكشوفة)
         val formArea = (2 * (length + width) * thickness + length * width) / 1e6

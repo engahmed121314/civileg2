@@ -168,13 +168,16 @@ class ColumnViewModel @Inject constructor(
                     clearHeight = h * 1000.0,
                     preferredDiameter = dia,
                     autoOptimize = state.autoOptimize,
-                    manualNumBars = manualBars
+                    manualNumBars = manualBars,
+                    autoIncludeSelfWeight = true
                 )
                 
-                // Validate consistency
+                // Validate consistency & Dead Load (Axial logic)
                 val report = CalculationValidator.validateColumn(res)
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to w, "depth" to d, "height" to h), load)
                 
-                _uiState.update { it.copy(result = res, validationReport = report, errors = emptyList()) }
+                val combinedWarnings = report.warnings + dlReport.warnings
+                _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList()) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
             }

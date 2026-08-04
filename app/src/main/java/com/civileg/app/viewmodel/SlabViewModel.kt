@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
@@ -29,6 +30,9 @@ class SlabViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
@@ -74,6 +78,14 @@ class SlabViewModel @Inject constructor(
                     code = code, type = type, prestressForce = prestressForce,
                     dropPanelThickness = dropPanelThickness, columnSize = columnSize
                 )
+                
+                // Validate consistency & Dead Load logic
+                val report = CalculationValidator.validateSlab(res)
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("SLAB", mapOf("thickness" to ts), deadLoad)
+                
+                val combinedWarnings = report.warnings + dlReport.warnings
+                _validationReport.value = report.copy(warnings = combinedWarnings)
+                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {

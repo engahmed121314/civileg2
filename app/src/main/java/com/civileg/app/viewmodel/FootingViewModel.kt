@@ -9,6 +9,7 @@ import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,6 +35,9 @@ class FootingViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+    
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
@@ -74,6 +78,11 @@ class FootingViewModel @Inject constructor(
                     maxLeft = maxLeft,
                     maxRight = maxRight
                 )
+                
+                // Validate Footing
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to colB, "depth" to colT), p)
+                _validationReport.value = dlReport
+                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {

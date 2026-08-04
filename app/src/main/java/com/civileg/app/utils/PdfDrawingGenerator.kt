@@ -338,7 +338,7 @@ object PdfDrawingGenerator {
 
         // Title
         val titleP = textPaint(Color.WHITE, 24f, true)
-        canvas.drawTextCentered(t("تفاصيل وتفريد حديد الكمرات", "BEAM SECTION & ELEVATION"), W / 2f, 30f, titleP)
+        canvas.drawTextCentered(t("تفاصيل وتسليح الكمرات", "BEAM REINFORCEMENT DETAIL"), W / 2f, 30f, titleP)
 
         // Cross-section inset (bottom-left)
         val csX = 80f; val csY = H * 0.60f; val csScale = 0.4f
@@ -367,8 +367,9 @@ object PdfDrawingGenerator {
         // Section label
         canvas.drawTextCentered("Section A-A", csX + csW / 2f, csY - 8f, textPaint(DIM_TEXT, 16f))
         
-        // Add width dimension to section
-        canvas.drawHDim(csX, csX + csW, csY + csH + 15f, "b=${beamWidth.toInt()}", 10f)
+        // [AUDIT: DIMENSIONS] Added dimensions for professional cross-section
+        canvas.drawHDim(csX, csX + csW, csY + csH + 15f, "b=${beamWidth.toInt()}")
+        canvas.drawVDim(csY, csY + csH, csX - 15f, "h=${beamDepth.toInt()}")
 
         // Reinforcement table (bottom-right)
         drawRebarTable(canvas, 
@@ -631,6 +632,9 @@ object PdfDrawingGenerator {
         // Plan dimensions (bilingual labels)
         canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
         canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        
+        // Add reinforcing bar labels in plan
+        canvas.drawTextCentered("Lx: ${(spanX*1000).toInt()}", planL + planW/2f, planT + planH + 60f, textPaint(DIM_TEXT, 14f))
 
         // Plan title (bilingual)
         canvas.drawTextCentered(t("مسقط تسليح البلاطة", "SLAB REINFORCEMENT PLAN"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
@@ -1605,12 +1609,12 @@ object PdfDrawingGenerator {
         }
 
         // Cross-section dimensions
-        canvas.drawHDim(csLeft, csLeft + drawW, baseBottom + 15f, "${totalW.toInt()} mm")
-        canvas.drawVDim(wallTop, baseBottom, csLeft - 30f, "${totalH.toInt()} mm")
-        canvas.drawHDim(csLeft, leftWallRight, wallTop - 15f, "${wallThickness.toInt()}", 20f)
-        canvas.drawVDim(baseTop, baseBottom, csLeft + drawW + 15f, "${baseThickness.toInt()} mm", 20f)
+        canvas.drawHDim(csLeft, csLeft + drawW, baseBottom + 15f, "${totalW.toInt()} mm (B)")
+        canvas.drawVDim(wallTop, baseBottom, csLeft - 30f, "${totalH.toInt()} mm (H)")
+        canvas.drawHDim(csLeft, leftWallRight, wallTop - 15f, "tw=${wallThickness.toInt()}", 20f)
+        canvas.drawVDim(baseTop, baseBottom, csLeft + drawW + 15f, "tb=${baseThickness.toInt()}", 20f)
 
-        canvas.drawTextCentered("TANK CROSS-SECTION", csLeft + drawW / 2f, csTop - 25f, titleP)
+        canvas.drawTextCentered(t("قطاع عرضي للخزان", "TANK CROSS-SECTION"), csLeft + drawW / 2f, csTop - 25f, titleP)
 
         // === RIGHT SIDE: Plan View ===
         val planLeft = W * 0.52f; val planTop = 80f
@@ -1797,13 +1801,13 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawVDim(wallTopY, baseBottom, wallTopLeft - 35f, "${totalH.toInt()} mm")
-        canvas.drawHDim(baseLeft, baseRight, baseBottom + 20f, "${baseWidth.toInt()} mm")
-        canvas.drawHDim(baseLeft, baseLeft + toePx, baseBottom + 50f, "Toe: ${toeLength.toInt()}", 20f)
-        canvas.drawHDim(baseRight - heelPx, baseRight, baseBottom + 50f, "Heel: ${heelLength.toInt()}", 20f)
-        canvas.drawVDim(wallTopY, wallTopY + whPx, wallTopRight + 25f, "t=${wallTopThickness.toInt()}", 15f)
+        canvas.drawVDim(wallTopY, baseBottom, wallTopLeft - 35f, "H=${totalH.toInt()} mm")
+        canvas.drawHDim(baseLeft, baseRight, baseBottom + 20f, "B=${baseWidth.toInt()} mm")
+        canvas.drawHDim(baseLeft, baseLeft + toePx, baseBottom + 50f, "Toe: ${toeLength.toInt()}")
+        canvas.drawHDim(baseRight - heelPx, baseRight, baseBottom + 50f, "Heel: ${heelLength.toInt()}")
+        canvas.drawVDim(wallTopY, wallTopY + whPx, wallTopRight + 25f, "ts=${wallTopThickness.toInt()}")
 
-        canvas.drawTextCentered("RETAINING WALL SECTION", (baseLeft + baseRight) / 2f, marginT - 25f, titleP)
+        canvas.drawTextCentered(t("مقطع جدار استنادي", "RETAINING WALL SECTION"), (baseLeft + baseRight) / 2f, marginT - 25f, titleP)
 
         // Rebar table
         drawRebarTable(canvas,

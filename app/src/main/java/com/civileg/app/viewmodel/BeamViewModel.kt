@@ -82,12 +82,16 @@ class BeamViewModel @Inject constructor(
                     liveLoad = liveLoad,
                     preferredDiameter = preferredDiameter,
                     code = code,
-                    supportType = supportType
+                    supportType = supportType,
+                    autoIncludeSelfWeight = true
                 )
                 
-                // Validate results for consistency
+                // Validate results for consistency & dead load logic
                 val report = CalculationValidator.validateBeam(res)
-                _validationReport.value = report
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("BEAM", mapOf("width" to width, "depth" to height), deadLoad)
+                
+                val combinedWarnings = report.warnings + dlReport.warnings
+                _validationReport.value = report.copy(warnings = combinedWarnings)
                 
                 _result.value = res
                 lastSpan = span
