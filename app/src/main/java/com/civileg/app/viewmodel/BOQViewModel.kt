@@ -175,7 +175,8 @@ class BOQViewModel @Inject constructor(
                                 numberOfBars = mainBars,
                                 tiesDiameter = 8.0,
                                 tiesSpacing = 200.0,
-                                isSafe = true
+                                isSafe = true,
+                                utilizationRatio = 0.5
                             ),
                             ShearReinforcementResult(
                                 stirrupDiameter = stirDia,
@@ -205,7 +206,8 @@ class BOQViewModel @Inject constructor(
                                 numberOfBars = mainBars,
                                 tiesDiameter = tieDia,
                                 tiesSpacing = tieSp,
-                                isSafe = true
+                                isSafe = true,
+                                utilizationRatio = 0.5
                             ),
                             prices
                         )

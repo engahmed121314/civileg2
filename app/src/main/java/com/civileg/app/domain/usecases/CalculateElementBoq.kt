@@ -263,11 +263,11 @@ class CalculateElementBoq @Inject constructor() {
 
         // 2. خرسانة القاعدة
         val baseConc = lMm * wMm * baseThickness / 1e9
-        items += concreteItem("TNK_BASE_001", "Tank base ${tankLength}×${tankWidth}m, t=${baseThickness.toInt()}mm", baseConc, prices.concretePerM3)
+        items += concreteItem("TNK_BASE_001", "Tank base ${tankLength}×${tankWidth}m, t=${baseThickness.toInt()}mm", baseConc, prices.concretePerM3, "V = L × B × t_base")
 
         // 3. خرسانة الجدران (4 جدران تقريباً)
         val wallConc = 2.0 * (lMm + wMm) * hMm * wallThickness / 1e9
-        items += concreteItem("TNK_WALL_001", "Tank walls, t=${wallThickness.toInt()}mm", wallConc, prices.concretePerM3)
+        items += concreteItem("TNK_WALL_001", "Tank walls, t=${wallThickness.toInt()}mm", wallConc, prices.concretePerM3, "V = Perimeter × H × t_wall")
 
         // 4. حديد القاعدة
         val baseBarsX = (wMm / baseRebarSpacing).toInt() + 1
@@ -324,11 +324,11 @@ class CalculateElementBoq @Inject constructor() {
 
         // 2. خرسانة القاعدة
         val baseConc = lMm * (baseWidth * 1000.0) * baseThickness / 1e9
-        items += concreteItem("RW_BASE_001", "RW base ${wallLength}m × ${baseWidth}m, t=${baseThickness.toInt()}mm", baseConc, prices.concretePerM3)
+        items += concreteItem("RW_BASE_001", "RW base ${wallLength}m × ${baseWidth}m, t=${baseThickness.toInt()}mm", baseConc, prices.concretePerM3, "V = L × B_base × t_base")
 
         // 3. خرسانة الحائط (شريطي متغير السماكة — نستخدم المتوسط)
         val stemConc = lMm * hMm * avgStemT / 1e9
-        items += concreteItem("RW_STEM_001", "RW stem ${wallLength}m × ${totalHeight}m, avg t=${avgStemT.toInt()}mm", stemConc, prices.concretePerM3)
+        items += concreteItem("RW_STEM_001", "RW stem ${wallLength}m × ${totalHeight}m, avg t=${avgStemT.toInt()}mm", stemConc, prices.concretePerM3, "V = L × H × t_avg")
 
         // 4. حديد التسليح الرئيسي (عمودي — جانب الأرض)
         val mainBarArea = PI * mainRebarDia * mainRebarDia / 4.0
@@ -404,10 +404,3 @@ class CalculateElementBoq @Inject constructor() {
         return weightKg / 1000.0 // tons
     }
 }
-
-data class MaterialPrices(
-    val concretePerM3: Double = 1200.0,    // EGP per m³
-    val steelPerTon: Double = 18000.0,     // EGP per ton
-    val formworkPerM2: Double = 150.0,     // EGP per m²
-    val excavationPerM3: Double = 50.0     // EGP per m³
-)

@@ -169,7 +169,7 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                     EstimationEngine.ProjectCategory.INVESTMENT_STUDY ->
                         viewModel.estimateFullProject(projectType, a, f, hasBasement, factoryType, lp, sp, selectedCurrency)
                     EstimationEngine.ProjectCategory.APARTMENT_FINISHING ->
-                        viewModel.estimateApartmentFinishing(a, selectedCurrency)
+                        viewModel.estimateApartmentFinishingPro(a, selectedCurrency)
                     EstimationEngine.ProjectCategory.SPECIFIC_ITEM ->
                         viewModel.estimateSpecificItem("Item", a, 1.0, selectedCurrency)
                 }
