@@ -147,6 +147,8 @@ android {
         disable += "VectorPath"
         disable += "HardcodedText"
         disable += "RtlHardcoded"
+        // Backup rules exclude path lint is overly strict
+        disable += "FullBackupContent"
     }
 }
 

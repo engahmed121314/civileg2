@@ -35,8 +35,8 @@ class FrameAnalysisViewModel @Inject constructor(
     val settings: LiveData<FrameAnalysisSettings> get() = _settings
 
     // === Results ===
-    private val _result = MutableLiveData<FrameAnalysisResult>()
-    val result: LiveData<FrameAnalysisResult> get() = _result
+    private val _result = MutableLiveData<FrameAnalysisResult?>()
+    val result: LiveData<FrameAnalysisResult?> get() = _result
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> get() = _isLoading
