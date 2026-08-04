@@ -213,7 +213,91 @@ class BOQViewModel @Inject constructor(
                         )
                     } else emptyList()
                 }
-                else -> emptyList() // Footing, Stair, Tank, RW — under detailed input
+                com.civileg.app.db.DesignType.FOOTING -> {
+                    val length = input.optDouble("length", input.optDouble("L", 0.0))
+                    val width = input.optDouble("width", input.optDouble("B", 0.0))
+                    val thickness = input.optDouble("thickness", input.optDouble("t", 0.0))
+                    val fcu = input.optDouble("fcu", input.optDouble("concreteGrade", 25.0))
+                    val astX = input.optDouble("astBottomX", input.optDouble("astX", 0.0))
+                    val astY = input.optDouble("astBottomY", input.optDouble("astY", 0.0))
+                    val rebarDia = input.optDouble("rebarDia", input.optDouble("d1", 12.0))
+                    val spacingX = input.optDouble("rebarSpacingX", input.optDouble("s1", 200.0))
+                    val spacingY = input.optDouble("rebarSpacingY", input.optDouble("s2", 200.0))
+                    val excDepth = input.optDouble("excavationDepth", input.optDouble("excDepth", 0.0))
+                    val cover = input.optDouble("cover", 75.0)
+                    if (length > 0 && width > 0 && thickness > 0) {
+                        calculateElementBoq.calculateFootingBoq(
+                            length, width, thickness, fcu,
+                            if (astX > 0) astX else 100.0,
+                            if (astY > 0) astY else 100.0,
+                            rebarDia, spacingX, spacingY,
+                            prices, excDepth, cover
+                        )
+                    } else emptyList()
+                }
+                com.civileg.app.db.DesignType.STAIRCASE -> {
+                    val stairWidth = input.optDouble("stairWidth", input.optDouble("width", 0.0))
+                    val totalHeight = input.optDouble("totalHeight", input.optDouble("H", 0.0))
+                    val stairLength = input.optDouble("stairLength", input.optDouble("L", 0.0))
+                    val slabThickness = input.optDouble("slabThickness", input.optDouble("ts", 0.0))
+                    val waistThickness = input.optDouble("waistThickness", input.optDouble("tw", 0.0))
+                    val riserHeight = input.optDouble("riserHeight", input.optDouble("R", 0.0))
+                    val treadWidth = input.optDouble("treadWidth", input.optDouble("T", 0.0))
+                    val mainArea = input.optDouble("astRequired", input.optDouble("ast", 0.0))
+                    val mainDia = input.optDouble("mainDia", input.optDouble("d1", 12.0))
+                    val numBars = input.optInt("mainBars", input.optInt("n1", 3))
+                    val stirDia = input.optDouble("stirrupDia", input.optDouble("d2", 8.0))
+                    val stirSp = input.optDouble("stirrupSpacing", input.optDouble("s2", 200.0))
+                    if (stairWidth > 0 && totalHeight > 0 && stairLength > 0 && waistThickness > 0) {
+                        calculateElementBoq.calculateStairBoq(
+                            stairWidth, totalHeight, stairLength, slabThickness, waistThickness,
+                            riserHeight, treadWidth, mainArea, mainDia, numBars,
+                            stirDia, stirSp, prices
+                        )
+                    } else emptyList()
+                }
+                com.civileg.app.db.DesignType.WATER_TANK -> {
+                    val tankL = input.optDouble("tankLength", input.optDouble("length", 0.0))
+                    val tankW = input.optDouble("tankWidth", input.optDouble("width", 0.0))
+                    val tankH = input.optDouble("tankHeight", input.optDouble("height", 0.0))
+                    val wallT = input.optDouble("wallThickness", input.optDouble("tw", 0.0))
+                    val baseT = input.optDouble("baseThickness", input.optDouble("tb", 0.0))
+                    val wallDia = input.optDouble("wallRebarDia", input.optDouble("d1", 12.0))
+                    val wallSpH = input.optDouble("wallRebarSpacingH", input.optDouble("s1", 200.0))
+                    val wallSpV = input.optDouble("wallRebarSpacingV", input.optDouble("s2", 200.0))
+                    val baseDia = input.optDouble("baseRebarDia", input.optDouble("d2", 12.0))
+                    val baseSp = input.optDouble("baseRebarSpacing", input.optDouble("s3", 200.0))
+                    val excDepth = input.optDouble("excavationDepth", 0.5)
+                    if (tankL > 0 && tankW > 0 && tankH > 0 && wallT > 0 && baseT > 0) {
+                        calculateElementBoq.calculateTankBoq(
+                            tankL, tankW, tankH, wallT, baseT,
+                            wallDia, wallSpH, wallSpV,
+                            baseDia, baseSp, prices, excDepth
+                        )
+                    } else emptyList()
+                }
+                com.civileg.app.db.DesignType.RETAINING_WALL -> {
+                    val wallLength = input.optDouble("wallLength", input.optDouble("L", 0.0))
+                    val totalHeight = input.optDouble("totalHeight", input.optDouble("H", 0.0))
+                    val baseWidth = input.optDouble("baseWidth", input.optDouble("B", 0.0))
+                    val baseThickness = input.optDouble("baseThickness", input.optDouble("tb", 0.0))
+                    val stemTopT = input.optDouble("stemTopThickness", input.optDouble("tt", 0.0))
+                    val stemBotT = input.optDouble("stemBottomThickness", input.optDouble("tb2", 0.0))
+                    val mainDia = input.optDouble("mainRebarDia", input.optDouble("d1", 16.0))
+                    val vertSp = input.optDouble("verticalRebarSpacing", input.optDouble("s1", 200.0))
+                    val horDia = input.optDouble("horizontalRebarDia", input.optDouble("d2", 12.0))
+                    val horSp = input.optDouble("horizontalRebarSpacing", input.optDouble("s2", 200.0))
+                    val excDepth = input.optDouble("excavationDepth", 0.0)
+                    val backfillLen = input.optDouble("backfillLength", input.optDouble("bfl", 0.0))
+                    if (wallLength > 0 && totalHeight > 0 && baseWidth > 0 && baseThickness > 0) {
+                        calculateElementBoq.calculateRetainingWallBoq(
+                            wallLength, totalHeight, baseWidth, baseThickness,
+                            stemTopT, stemBotT, mainDia, vertSp,
+                            horDia, horSp, prices, excDepth, backfillLen
+                        )
+                    } else emptyList()
+                }
+                else -> emptyList() // FRAME_ANALYSIS and other types without BOQ
             }
         } catch (e: Exception) {
             emptyList()

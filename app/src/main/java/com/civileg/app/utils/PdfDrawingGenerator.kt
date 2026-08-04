@@ -687,15 +687,17 @@ object PdfDrawingGenerator {
             canvas.drawRebar(bx, secT + actualSecH - visCover - barR, barR, REBAR_BLUE)
         }
 
-        // Top distribution bars in section (smaller circles)
+        // Distribution bars ABOVE main bars at bottom (both layers at bottom per engineering practice)
+        // [FIX: Distribution bars were incorrectly drawn at TOP — moved to bottom, above main bars]
         val distBarR = maxOf(distDia.toFloat() * 0.35f, 3f)
         val numDistBars = minOf((spanX * 1000 / distSpacing).toInt(), 8)
         val distStartX = secL + visCover + distBarR
         val distEndX = secL + secViewW - visCover - distBarR
+        val distY = secT + actualSecH - visCover - barR - distBarR - 2f  // just above main bars
         for (i in 0 until numDistBars) {
             val dx = if (numDistBars <= 1) secL + secViewW / 2f
                       else distStartX + i * (distEndX - distStartX) / (numDistBars - 1)
-            canvas.drawRebar(dx, secT + visCover + distBarR, distBarR, TOP_REBAR)
+            canvas.drawRebar(dx, distY, distBarR, STIRRUP)
         }
 
         // Section dimensions
@@ -708,6 +710,22 @@ object PdfDrawingGenerator {
         canvas.drawLine(coverDimX - 5f, secT + visCover, coverDimX + 5f, secT + visCover, dimP)
         canvas.drawBilingualText("cover=${cover.toInt()}", coverDimX + 8f, secT + visCover / 2f + 5f, DIM_TEXT, 14f)
 
+        // Top support bars (negative moment reinforcement at supports — NOT distribution bars)
+        // [FIX: Added proper top steel for continuous slabs, matching Compose drawing behavior]
+        val topBarR = maxOf(mainDia.toFloat() * 0.35f, 3f)
+        val topBarCount = minOf((spanX * 1000 / mainSpacing).toInt(), 6)
+        if (topBarCount > 1) {
+            val topBarStep = (secViewW * 0.3f) / (topBarCount - 1)
+            for (i in 0 until topBarCount) {
+                // Left support top bars
+                val bx1 = secL + 10f + i * topBarStep
+                canvas.drawRebar(bx1, secT + visCover + topBarR, topBarR, TOP_REBAR)
+                // Right support top bars
+                val bx2 = secL + secViewW - 10f - i * topBarStep
+                canvas.drawRebar(bx2, secT + visCover + topBarR, topBarR, TOP_REBAR)
+            }
+        }
+
         // Section title (bilingual)
         canvas.drawTextCentered(t("قطاع B-B", "SECTION B-B"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -717,7 +735,8 @@ object PdfDrawingGenerator {
             data = listOf(
                 listOf(t("الرمز", "Mark"), t("القطر", "Dia (mm)"), t("الاتجاه", "Direction"), t("التباعد", "Spacing (mm)"), t("الطبقة", "Layer"), t("الطول", "Length (mm)")),
                 listOf("M1", "${mainDia.toInt()}", t("البحر القصير (Lx)", "Short span (Lx)"), "@ ${mainSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanX * 1000).toInt()}"),
-                listOf("D1", "${distDia.toInt()}", t("البحر الطويل (Ly)", "Long span (Ly)"), "@ ${distSpacing.toInt()} c/c", t("علوي", "Top"), "${(spanY * 1000).toInt()}")
+                listOf("D1", "${distDia.toInt()}", t("البحر الطويل (Ly)", "Long span (Ly)"), "@ ${distSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanY * 1000).toInt()}"),
+                listOf("T1", "${mainDia.toInt()}", t("حديد سالب (الكمريات)", "Top support (neg. moment)"), "@ ${mainSpacing.toInt()} c/c", t("علوي", "Top"), "—")
             )
         )
 
