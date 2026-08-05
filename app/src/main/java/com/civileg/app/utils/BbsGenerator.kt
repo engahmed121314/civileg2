@@ -63,11 +63,65 @@ object BbsGenerator {
         return entries
     }
 
-    /**
-     * BS 8666 Shape Code Definitions (Simplified)
-     * 00: Straight
-     * 11: 90 degree bend
-     * 21: L-Bar (A + B)
-     * 51: Rectangular Link / Stirrup
-     */
+    fun generateColumnBbs(mark: String, result: ColumnResult): List<BbsEntry> {
+        val entries = mutableListOf<BbsEntry>()
+        val h = 3000.0 // placeholder height
+        
+        // Longitudinal Bars
+        val mainLen = h + 60 * result.reinforcement.diameter // incl. laps
+        entries.add(BbsEntry(
+            memberMark = mark, barMark = "01",
+            diameter = result.reinforcement.diameter,
+            shapeCode = 0, count = result.reinforcement.numBars,
+            lengthA = mainLen, totalLengthPerBar = mainLen,
+            totalWeightKg = result.reinforcement.numBars * mainLen / 1000.0 * (result.reinforcement.diameter.toDouble().pow(2)/162.0)
+        ))
+
+        // Ties
+        val a = result.width - 80.0
+        val b = result.depth - 80.0
+        val tieLen = 2 * (a + b) + 200.0
+        var tieCount = 0
+        result.stirrups.zones.forEach { zone ->
+            tieCount += ((zone.endLocation - zone.startLocation) / zone.spacing).toInt() + 1
+        }
+        entries.add(BbsEntry(
+            memberMark = mark, barMark = "02",
+            diameter = result.stirrups.diameter,
+            shapeCode = 51, count = tieCount,
+            lengthA = a, lengthB = b, totalLengthPerBar = tieLen,
+            totalWeightKg = tieCount * tieLen / 1000.0 * (result.stirrups.diameter.toDouble().pow(2)/162.0)
+        ))
+        return entries
+    }
+
+    fun generateFootingBbs(mark: String, result: FootingResult): List<BbsEntry> {
+        val entries = mutableListOf<BbsEntry>()
+        val lx = result.length
+        val ly = result.width
+        val t = result.thickness
+        
+        // Bottom X (Shape Code 21 - L bar)
+        val lenX = lx - 100.0 + 2 * (t - 100.0) // simplified
+        entries.add(BbsEntry(
+            memberMark = mark, barMark = "01",
+            diameter = result.barDiameter,
+            shapeCode = 21, count = result.barsX,
+            lengthA = lx - 100.0, lengthB = t - 100.0,
+            totalLengthPerBar = lenX,
+            totalWeightKg = result.barsX * lenX / 1000.0 * (result.barDiameter.toDouble().pow(2)/162.0)
+        ))
+
+        // Bottom Y
+        val lenY = ly - 100.0 + 2 * (t - 100.0)
+        entries.add(BbsEntry(
+            memberMark = mark, barMark = "02",
+            diameter = result.barDiameter,
+            shapeCode = 21, count = result.barsY,
+            lengthA = ly - 100.0, lengthB = t - 100.0,
+            totalLengthPerBar = lenY,
+            totalWeightKg = result.barsY * lenY / 1000.0 * (result.barDiameter.toDouble().pow(2)/162.0)
+        ))
+        return entries
+    }
 }

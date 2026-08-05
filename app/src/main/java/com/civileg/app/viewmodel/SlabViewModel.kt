@@ -45,7 +45,8 @@ class SlabViewModel @Inject constructor(
         val lx: Double, val ly: Double, val deadLoad: Double, val liveLoad: Double,
         val fcu: Double, val fy: Double, val ts: Double, val preferredDiameter: Int,
         val code: CalculatorEngine.DesignCode, val type: CalculatorEngine.SlabType,
-        val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double
+        val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double,
+        val openingWidth: Double = 0.0, val openingLength: Double = 0.0
     )
 
     fun calculateSlabPro(
@@ -61,7 +62,9 @@ class SlabViewModel @Inject constructor(
         type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
         prestressForce: Double = 0.0,
         dropPanelThickness: Double = 0.0,
-        columnSize: Double = 400.0
+        columnSize: Double = 400.0,
+        openingWidth: Double = 0.0,
+        openingLength: Double = 0.0
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -69,14 +72,16 @@ class SlabViewModel @Inject constructor(
                 // Store inputs for PDF export
                 lastInputs = SlabStoredInputs(
                     lx, ly, deadLoad, liveLoad, fcu, fy, ts, preferredDiameter,
-                    code, type, prestressForce, dropPanelThickness, columnSize
+                    code, type, prestressForce, dropPanelThickness, columnSize,
+                    openingWidth, openingLength
                 )
 
                 val res = calculatorEngine.designSlab(
                     lx = lx, ly = ly, deadLoad = deadLoad, liveLoad = liveLoad,
                     fcu = fcu, fy = fy, ts = ts, preferredDiameter = preferredDiameter,
                     code = code, type = type, prestressForce = prestressForce,
-                    dropPanelThickness = dropPanelThickness, columnSize = columnSize
+                    dropPanelThickness = dropPanelThickness, columnSize = columnSize,
+                    openingWidth = openingWidth, openingLength = openingLength
                 )
                 
                 // Validate consistency & Dead Load logic

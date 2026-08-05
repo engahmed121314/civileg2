@@ -159,7 +159,7 @@ fun ColumnScreen(
                         stringResource(R.string.column_axial_load_pu),
                         { viewModel.updateInputs(axialLoad = it) },
                         Modifier.weight(1f),
-                        validate = { v -> v.isEmpty() || (v.toDoubleOrNull()?.let { it > 0 } ?: false) }
+                        validate = { v -> v.isEmpty() || (v.toDoubleOrNull()?.let { it >= 0 } ?: false) }
                     )
                     ColumnInputField(
                         uiState.height,
@@ -168,6 +168,45 @@ fun ColumnScreen(
                         Modifier.weight(1f),
                         validate = { v -> v.toDoubleOrNull()?.let { it in 1.0..15.0 } ?: true }
                     )
+                }
+            }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ColumnInputField(
+                        uiState.mx,
+                        "Moment Mx (kN.m)",
+                        { viewModel.updateInputs(mx = it) },
+                        Modifier.weight(1f)
+                    )
+                    ColumnInputField(
+                        uiState.my,
+                        "Moment My (kN.m)",
+                        { viewModel.updateInputs(my = it) },
+                        Modifier.weight(1f)
+                    )
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Seismic Confinement", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("Enable special detailing for earthquake zones", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Switch(
+                            checked = uiState.isSeismic,
+                            onCheckedChange = { viewModel.updateInputs(isSeismic = it) }
+                        )
+                    }
                 }
             }
 
@@ -513,6 +552,10 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
+            ResultDataRow("Applied Pu", "${String.format("%.1f", result.appliedAxial)} kN")
+            if (result.mx != 0.0 || result.my != 0.0) {
+                ResultDataRow("Applied Mx / My", "${result.mx} / ${result.my} kN.m")
+            }
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
             
             if (result.stirrups.zones.isNotEmpty()) {

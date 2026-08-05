@@ -153,10 +153,12 @@ class CalculatorEngine @Inject constructor(
     @Parcelize
     data class ColumnResult(
         val width: Double, val depth: Double, val pu: Double,
+        val mx: Double = 0.0, val my: Double = 0.0,
         val reinforcement: ReinforcementBar, val stirrups: StirrupReinforcement,
         val safetyChecks: List<DesignSafetyCheck> = emptyList(), val isSafe: Boolean,
         val concreteVolume: Double, val steelWeight: Double, val cost: Double, val code: DesignCode,
         val axialCapacity: Double = 0.0, val appliedAxial: Double = 0.0,
+        val mxCapacity: Double = 0.0, val myCapacity: Double = 0.0,
         val slenderness: Double = 0.0, val isSlender: Boolean = false,
         val punchingSafe: Boolean = true,
         val columnType: String = "RECTANGULAR",
@@ -167,7 +169,9 @@ class CalculatorEngine @Inject constructor(
         val steelWasteKg: Double = 0.0,
         val rebarAlternatives: List<ReinforcementBar> = emptyList(),
         val momentCapacity: Double = 0.0,
-        val utilizationRatio: Double = 0.0
+        val utilizationRatio: Double = 0.0,
+        val isDuctile: Boolean = true,
+        val confinementLength: Double = 0.0
     ) : Parcelable
 
     enum class FootingType(val displayNameAr: String, val displayNameEn: String) {
@@ -221,7 +225,8 @@ class CalculatorEngine @Inject constructor(
         val middleStripSteelY: String = "",
         val dropPanelWidth: Double = 0.0,
         val dropPanelThick: Double = 0.0,
-        val punchingStressAtDrop: Double = 0.0
+        val punchingStressAtDrop: Double = 0.0,
+        val trimmerReinforcement: String = ""
     ) : Parcelable
 
     @Parcelize
@@ -653,6 +658,8 @@ class CalculatorEngine @Inject constructor(
         width: Double,
         depth: Double,
         pu: Double,
+        mx: Double = 0.0, // kN.m
+        my: Double = 0.0, // kN.m
         fcu: Double,
         fy: Double,
         code: DesignCode,
@@ -663,100 +670,90 @@ class CalculatorEngine @Inject constructor(
         preferredDiameter: Int = 16,
         autoOptimize: Boolean = true,
         manualNumBars: Int? = null,
-        autoIncludeSelfWeight: Boolean = true
+        autoIncludeSelfWeight: Boolean = true,
+        isSeismic: Boolean = false
     ): ColumnResult {
         val ag = if (isCircular) PI * width.pow(2.0) / 4.0 else width * depth
         
-        // [AUDIT: DEAD LOAD] Add column self-weight factor if axial load is just service load
+        // [AUDIT: DEAD LOAD] Add column self-weight factor
         val selfWeight = if (autoIncludeSelfWeight) (ag / 1e6) * (clearHeight / 1000.0) * 25.0 else 0.0
         val effectivePu = pu + (if (code == DesignCode.EGYPTIAN) 1.4 else 1.2) * selfWeight
 
         // --- Code Specific Factors & Constants ---
-        val fcPrime = if (code == DesignCode.EGYPTIAN) fcu else fcu * 0.8 // Approximate f'c from fcu
-        var capacity = 0.0
+        val fcPrime = if (code == DesignCode.EGYPTIAN) fcu else fcu * 0.8 
+        var axialCapacity = 0.0
         var asMin = 0.008 * ag
         var asMax = 0.04 * ag
         val safetyChecks = mutableListOf<DesignSafetyCheck>()
 
         when (code) {
             DesignCode.EGYPTIAN -> {
-                // ECP 203 (Art. 4-2-1-1): Pu = 0.35*fcu*Ac + 0.67*fy*Asc
-                // This formula is for short columns with minimum eccentricity.
                 val i = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
                 val lambda = (1.0 * clearHeight) / i
-                val lambdaLimit = if (isCircular) 12.0 else 15.0  // ECP 203 Sec. 4-2-7
+                val lambdaLimit = if (isCircular) 12.0 else 15.0  
                 val isSlender = lambda > lambdaLimit
                 
-                asMin = 0.008 * ag // ECP Min reinforcement 0.8%
-                val asReq = max(asMin, (pu * 1000.0 - 0.35 * fcu * ag) / (0.67 * fy))
-                capacity = (0.35 * fcu * (ag - asReq) + 0.67 * fy * asReq) / 1000.0
+                asMin = 0.008 * ag 
+                val asReq = max(asMin, (effectivePu * 1000.0 - 0.35 * fcu * ag) / (0.67 * fy))
+                axialCapacity = (0.35 * fcu * (ag - asReq) + 0.67 * fy * asReq) / 1000.0
                 
                 safetyChecks.add(DesignSafetyCheck("Slenderness λ (ECP)", lambda, lambdaLimit, "", lambda <= lambdaLimit))
-                if (isSlender) {
-                    // Approximate reduction for slenderness if not using delta method
-                    capacity *= 0.8 
-                }
+                if (isSlender) axialCapacity *= 0.8 
             }
-            DesignCode.SAUDI -> {
-                // SBC 304 (Art. 10.3.6.2): ΦPn,max = 0.80 * Φ * [0.85*fc'*(Ag - Ast) + fy*Ast]
-                // Tied columns: Φ = 0.65, α = 0.80. Spiral: Φ = 0.75, α = 0.85
+            DesignCode.SAUDI, DesignCode.ACI -> {
                 val phi = if (isCircular) 0.75 else 0.65
                 val alpha = if (isCircular) 0.85 else 0.80
-                
-                asMin = 0.01 * ag // SBC Min 1%
+                asMin = 0.01 * ag 
                 asMax = 0.08 * ag
-                
-                val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
-                capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
+                val asReq = max(asMin, (effectivePu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
+                axialCapacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
                 
                 val r = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
                 val slenderness = (1.0 * clearHeight) / r
-                safetyChecks.add(DesignSafetyCheck("SBC Slenderness (kl/r)", slenderness, 22.0, "", slenderness <= 22.0))
+                safetyChecks.add(DesignSafetyCheck("Slenderness Ratio (kl/r)", slenderness, 22.0, "", slenderness <= 22.0))
             }
-            DesignCode.ACI -> {
-                // ACI 318-19 (Table 22.4.2.1): Same as SBC
-                val phi = 0.65
-                val alpha = 0.80
-                asMin = 0.01 * ag
-                asMax = 0.08 * ag
-                val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
-                capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
-                
-                val r = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
-                val slenderness = (1.0 * clearHeight) / r
-                safetyChecks.add(DesignSafetyCheck("ACI Slenderness Ratio", slenderness, 22.0, "", slenderness <= 22.0))
-            }
-            }
+        }
 
         val barDia = preferredDiameter.toDouble()
         val areaOneBar = PI * barDia.pow(2.0) / 4.0
-        val asReqTotal = max(asMin, (effectivePu * 1000.0 * 1.1) / fy)
         
-        // --- Reinforcement Optimization / Manual Logic ---
+        // --- Biaxial Bending (Simplified Equivalent Load Method) ---
+        // P_equiv = Pu + Mx*(8/b) + My*(8/h) for rectangular columns
+        val pEquiv = if (isCircular) {
+            val mResultant = sqrt(mx.pow(2) + my.pow(2))
+            effectivePu + (mResultant * 1000.0 * 8.0 / width)
+        } else {
+            effectivePu + (abs(mx) * 1000.0 * 8.0 / depth) + (abs(my) * 1000.0 * 8.0 / width)
+        }
+        
+        val asReqBiaxial = max(asMin, (pEquiv * 1000.0 * 1.1 / fy))
+        
         val finalNumBars = if (autoOptimize) {
-            ceil(asReqTotal / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
+            ceil(asReqBiaxial / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
         } else {
             manualNumBars ?: ceil(asMin / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
         }
 
         val finalAsProvided = finalNumBars * areaOneBar
-        
         val rho = (finalAsProvided / ag) * 100.0
         val vol = (ag * clearHeight) / 1e9
         
-        // Accurate Steel Weight Calculation
         val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
         val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
         
-        // --- Detailed Tie Zoning (Confinement) ---
-        val confinementLength = maxOf(width, depth, clearHeight / 6.0, 450.0)
-        val s_confinement = minOf(8 * preferredDiameter.toDouble(), 24 * 8.0, min(width, depth) / 2.0, 200.0)
+        // --- Detailed Tie Zoning (Confinement / Seismic) ---
+        val lo = if (isSeismic) maxOf(width, depth, clearHeight / 6.0, 450.0) else maxOf(width, depth, 450.0)
+        val s_confinement = if (isSeismic) {
+            minOf(8 * preferredDiameter.toDouble(), 24 * 8.0, min(width, depth) / 4.0, 100.0)
+        } else {
+            minOf(8 * preferredDiameter.toDouble(), 24 * 8.0, min(width, depth) / 2.0, 200.0)
+        }
         val s_normal = min(200.0, min(width, depth))
         
         val columnZones = mutableListOf<StirrupZone>()
-        columnZones.add(StirrupZone("Confinement (Bottom)", 0.0, confinementLength, s_confinement, 2, 8, "${(1000/s_confinement).toInt()}Ø8/m'"))
-        columnZones.add(StirrupZone("Mid-Height Zone", confinementLength, clearHeight - confinementLength, s_normal, 2, 8, "${(1000/s_normal).toInt()}Ø8/m'"))
-        columnZones.add(StirrupZone("Confinement (Top)", clearHeight - confinementLength, clearHeight, s_confinement, 2, 8, "${(1000/s_confinement).toInt()}Ø8/m'"))
+        columnZones.add(StirrupZone("Confinement (Bottom)", 0.0, lo, s_confinement, 2, 8, "${(1000/s_confinement).toInt()}Ø8/m'"))
+        columnZones.add(StirrupZone("Mid-Height Zone", lo, clearHeight - lo, s_normal, 2, 8, "${(1000/s_normal).toInt()}Ø8/m'"))
+        columnZones.add(StirrupZone("Confinement (Top)", clearHeight - lo, clearHeight, s_confinement, 2, 8, "${(1000/s_confinement).toInt()}Ø8/m'"))
 
         var totalTieWeight = 0.0
         val tiePerimeter = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
@@ -767,35 +764,31 @@ class CalculatorEngine @Inject constructor(
         
         val stirrupResult = StirrupReinforcement(8, s_normal, "${(1000/s_normal).toInt()}Ø8/m'", zones = columnZones)
         val totalSteelWeight = (mainSteelWeight + totalTieWeight) * 1.05
-        val steelWasteKg = totalSteelWeight * 0.05
         
-        val utilizationRatio = (effectivePu / capacity).coerceIn(0.0, 1.2)
+        val utilizationRatio = (pEquiv / axialCapacity).coerceIn(0.0, 1.2)
         
-        safetyChecks.add(DesignSafetyCheck("Axial Capacity", effectivePu, capacity, "kN", capacity >= effectivePu))
+        safetyChecks.add(DesignSafetyCheck("Biaxial Utilization", pEquiv, axialCapacity, "kN (Eq)", utilizationRatio <= 1.0))
         safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, (asMin/ag)*100.0, "%", finalAsProvided >= asMin))
 
         return ColumnResult(
-            width = width, depth = depth, pu = effectivePu, 
+            width = width, depth = depth, pu = effectivePu, mx = mx, my = my,
             reinforcement = ReinforcementBar(finalNumBars, preferredDiameter), 
             stirrups = stirrupResult, 
             safetyChecks = safetyChecks, isSafe = safetyChecks.all { it.isSafe } && rho <= (asMax/ag)*100.0,
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
-            code = code,
-            axialCapacity = capacity, appliedAxial = pu, 
-            reinforcementArea = finalAsProvided,
-            minReinforcementArea = asMin,
-            maxReinforcementArea = asMax,
-            reinforcementRatio = rho,
-            steelWasteKg = steelWasteKg,
+            code = code, axialCapacity = axialCapacity, appliedAxial = pu, 
+            reinforcementArea = finalAsProvided, minReinforcementArea = asMin, maxReinforcementArea = asMax,
+            reinforcementRatio = rho, steelWasteKg = totalSteelWeight * 0.05,
             rebarAlternatives = listOf(12, 14, 16, 18, 20, 25).map { dia ->
                 val areaOne = PI * dia.toDouble().pow(2) / 4.0
-                ReinforcementBar(ceil(asReqTotal/areaOne).toInt().coerceAtLeast(if(isCircular) 6 else 4), dia)
+                ReinforcementBar(ceil(asReqBiaxial/areaOne).toInt().coerceAtLeast(if(isCircular) 6 else 4), dia)
             },
             utilizationRatio = utilizationRatio,
-            columnType = if (isCircular) "CIRCULAR" else "RECTANGULAR"
+            columnType = if (isCircular) "CIRCULAR" else "RECTANGULAR",
+            isDuctile = isSeismic, confinementLength = lo
         )
-        }
+    }
 
     fun designBeam(
         width: Double,
@@ -1018,7 +1011,9 @@ class CalculatorEngine @Inject constructor(
         type: SlabType = SlabType.SOLID,
         prestressForce: Double = 0.0,
         dropPanelThickness: Double = 0.0,
-        columnSize: Double = 400.0
+        columnSize: Double = 400.0,
+        openingWidth: Double = 0.0,
+        openingLength: Double = 0.0
     ): SlabResult {
         val domainCode = when(code) {
             DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
@@ -1026,6 +1021,10 @@ class CalculatorEngine @Inject constructor(
             DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
         }
         val wu = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
+        
+        // [EXPERT]: Slab Opening Trimmers
+        val trimmerX = if (openingWidth > 0) "2Ø${preferredDiameter} Top & Bot" else ""
+        val trimmerY = if (openingLength > 0) "2Ø${preferredDiameter} Top & Bot" else ""
         
         val shortSpan = min(lx, ly)
         val longSpan = max(lx, ly)
@@ -1170,7 +1169,8 @@ class CalculatorEngine @Inject constructor(
             columnStripSteelY = colStripY, middleStripSteelY = midStripY,
             dropPanelWidth = if (type == SlabType.FLAT) lx * 1000.0 / 3.0 else 0.0,
             dropPanelThick = dropPanelThickness,
-            punchingStressAtDrop = v_punch
+            punchingStressAtDrop = v_punch,
+            trimmerReinforcement = if (openingWidth > 0) "Trimmers: 2Ø$preferredDiameter Around Opening" else ""
         )
     }
 

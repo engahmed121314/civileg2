@@ -6,10 +6,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,16 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.ColumnLoad
-import com.civileg.app.utils.LayoutOptimizer
-import com.civileg.app.utils.LayoutRecommendation
+import com.civileg.app.utils.*
+import java.io.File
 
 @Composable
 fun SiteLayoutScreen() {
+    val context = LocalContext.current
     var plotWidth by remember { mutableStateOf("20") }
     var plotLength by remember { mutableStateOf("30") }
     var soilCapacity by remember { mutableStateOf("200") }
@@ -82,6 +81,24 @@ fun SiteLayoutScreen() {
 
         recommendation?.let { rec ->
             RecommendationCard(rec)
+            
+            Button(
+                onClick = {
+                    val file = DxfExporter.exportSiteLayout(
+                        columns,
+                        plotWidth.toDoubleOrNull() ?: 20.0,
+                        plotLength.toDoubleOrNull() ?: 30.0,
+                        File(context.cacheDir, "Site_Layout.dxf").absolutePath
+                    )
+                    ExportUtils.openFile(context, file, "application/dxf")
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.FileDownload, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Export AutoCAD (DXF)")
+            }
         }
     }
 }
@@ -97,7 +114,7 @@ fun RecommendationCard(rec: LayoutRecommendation) {
             Text(rec.suggestedType, style = MaterialTheme.typography.headlineSmall)
             Text(rec.description, style = MaterialTheme.typography.bodyMedium)
             
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             
             Text("Coverage: ${(rec.coverageRatio * 100).toInt()}% | Overlaps: ${rec.overlapsFound}", style = MaterialTheme.typography.labelLarge)
             
@@ -105,7 +122,6 @@ fun RecommendationCard(rec: LayoutRecommendation) {
             
             Box(modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.White).border(1.dp, Color.Gray)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    // Draw Axes
                     rec.axesX.forEach { x ->
                         drawLine(Color.Red, Offset(x.toFloat() * 0.01f, 0f), Offset(x.toFloat() * 0.01f, size.height), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
                     }

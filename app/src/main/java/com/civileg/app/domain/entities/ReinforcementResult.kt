@@ -14,6 +14,8 @@ data class ReinforcementResult(
     val numLegs: Int = 2,           // عدد الفروع
     val zones: List<StirrupZone> = emptyList(), // مناطق التوزيع
     val isSafe: Boolean,            // هل التصميم آمن؟
+    val isSeismic: Boolean = false, // تصميم زلزالي
+    val lo: Double = 0.0,           // طول منطقة التكثيف
     val utilizationRatio: Double,   // نسبة الاستغلال
     val warnings: List<String> = emptyList(), // تحذيرات إن وجدت
     val codeNotes: List<String> = emptyList(), // ملاحظات خاصة بالكود

@@ -58,6 +58,9 @@ fun SlabScreen(
     var prestressForce by remember { mutableStateOf("0.0") }
     var dropPanelThickness by remember { mutableStateOf("0.0") }
     var columnSize by remember { mutableStateOf("400") }
+    
+    var openingWidth by remember { mutableStateOf("0.0") }
+    var openingLength by remember { mutableStateOf("0.0") }
 
     var ribWidth by remember { mutableStateOf("100") }
     var ribSpacing by remember { mutableStateOf("500") }
@@ -215,6 +218,27 @@ fun SlabScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 )
                             }
+
+                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            Text("Slab Openings (Shafts)", style = MaterialTheme.typography.labelSmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = openingWidth,
+                                    onValueChange = { openingWidth = it },
+                                    label = { Text("Open. Width (mm)") },
+                                    modifier = Modifier.weight(1f),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                OutlinedTextField(
+                                    value = openingLength,
+                                    onValueChange = { openingLength = it },
+                                    label = { Text("Open. Length (mm)") },
+                                    modifier = Modifier.weight(1f),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -330,20 +354,22 @@ fun SlabScreen(
                             return@Button
                         }
                         inputError = null
-                        viewModel.calculateSlab(
-                            spanX = lxVal,
-                            spanY = lyVal,
+                        viewModel.calculateSlabPro(
+                            lx = lxVal,
+                            ly = lyVal,
                             deadLoad = dlVal,
                             liveLoad = llVal,
                             fcu = fcuVal,
                             fy = fyVal,
-                            thickness = tVal,
+                            ts = tVal,
                             preferredDiameter = preferredDiameter.toIntOrNull() ?: 12,
                             type = selectedType,
                             code = selectedCode,
                             prestressForce = prestressForce.toDoubleOrNull() ?: 0.0,
                             dropPanelThickness = dropPanelThickness.toDoubleOrNull() ?: 0.0,
-                            columnSize = columnSize.toDoubleOrNull() ?: 400.0
+                            columnSize = columnSize.toDoubleOrNull() ?: 400.0,
+                            openingWidth = openingWidth.toDoubleOrNull() ?: 0.0,
+                            openingLength = openingLength.toDoubleOrNull() ?: 0.0
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -659,6 +685,12 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ResultItem(stringResource(R.string.slab_thickness_label2), "${res.thickness} mm")
                 ResultItem(stringResource(R.string.slab_moment_mx), "${"%.1f".format(res.momentX)} kN.m")
+            }
+
+            if (res.trimmerReinforcement.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Slab Opening Support", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
+                Text(res.trimmerReinforcement, fontWeight = FontWeight.Bold)
             }
             
             Spacer(Modifier.height(8.dp))

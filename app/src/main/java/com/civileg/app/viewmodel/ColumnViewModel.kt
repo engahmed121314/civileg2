@@ -25,6 +25,9 @@ data class ColumnUiState(
     val fcu: String = "25",
     val fy: String = "400",
     val axialLoad: String = "1000",
+    val mx: String = "0",
+    val my: String = "0",
+    val isSeismic: Boolean = false,
     val designCode: DesignCode = DesignCode.ECP,
     val loadCombination: LoadCombination = LoadCombination.DEAD_LIVE,
     val preferredDiameter: String = "16",
@@ -66,6 +69,9 @@ class ColumnViewModel @Inject constructor(
         fcu: String? = null,
         fy: String? = null,
         axialLoad: String? = null,
+        mx: String? = null,
+        my: String? = null,
+        isSeismic: Boolean? = null,
         preferredDiameter: String? = null,
         manualNumBars: String? = null
     ) {
@@ -83,6 +89,9 @@ class ColumnViewModel @Inject constructor(
                 fcu = fcu ?: state.fcu,
                 fy = fy ?: state.fy,
                 axialLoad = axialLoad ?: state.axialLoad,
+                mx = mx ?: state.mx,
+                my = my ?: state.my,
+                isSeismic = isSeismic ?: state.isSeismic,
                 preferredDiameter = newPreferredDiameter,
                 manualNumBars = newManualNumBars,
                 autoOptimize = if (shouldDisableAuto) false else state.autoOptimize
@@ -153,6 +162,8 @@ class ColumnViewModel @Inject constructor(
         val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
         val fyVal = state.fy.toDoubleOrNull() ?: 400.0
         val load = state.axialLoad.toDoubleOrNull() ?: 0.0
+        val mxVal = state.mx.toDoubleOrNull() ?: 0.0
+        val myVal = state.my.toDoubleOrNull() ?: 0.0
         val dia = state.preferredDiameter.toIntOrNull() ?: 16
         val manualBars = state.manualNumBars.toIntOrNull()
 
@@ -162,6 +173,8 @@ class ColumnViewModel @Inject constructor(
                     width = w,
                     depth = d,
                     pu = load * state.loadCombination.getFactorForCode(state.designCode),
+                    mx = mxVal,
+                    my = myVal,
                     fcu = fcuVal,
                     fy = fyVal,
                     code = mapDesignCode(state.designCode),
@@ -169,7 +182,8 @@ class ColumnViewModel @Inject constructor(
                     preferredDiameter = dia,
                     autoOptimize = state.autoOptimize,
                     manualNumBars = manualBars,
-                    autoIncludeSelfWeight = true
+                    autoIncludeSelfWeight = true,
+                    isSeismic = state.isSeismic
                 )
                 
                 // Validate consistency & Dead Load (Axial logic)
