@@ -156,3 +156,16 @@ enum class CoatingType : Parcelable {
     EPOXY_COATED, 
     GALVANIZED 
 }
+
+/**
+ * ملخص المشروع (Project Summary)
+ */
+@Parcelize
+data class ProjectSummary(
+    val totalConcrete: Double = 0.0,
+    val totalSteel: Double = 0.0,
+    val totalCost: Double = 0.0,
+    val designCount: Int = 0,
+    val costEfficiencyIndex: Double = 1.0,
+    val costBreakdown: Map<String, Double> = emptyMap()
+) : Parcelable

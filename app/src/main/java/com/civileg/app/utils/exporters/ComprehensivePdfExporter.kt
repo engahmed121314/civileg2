@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.civileg.app.R
+import com.civileg.app.db.Design
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
 import com.civileg.app.utils.CalculatorEngine
@@ -1308,6 +1309,55 @@ class ComprehensivePdfExporter(private val context: Context) {
         return if (v.isNaN() || v.isInfinite()) "—"
         else if (v == v.toLong().toDouble()) v.toLong().toString()
         else String.format(Locale.US, "%.2f", v)
+    }
+
+    fun exportProjectBatchReport(
+        projectName: String,
+        designs: List<Design>,
+        summary: ProjectSummary,
+        outputPath: String
+    ): File? {
+        return try {
+            val outputFile = File(outputPath)
+            outputFile.parentFile?.mkdirs()
+            val (_, document, font) = createDocument(outputPath)
+
+            addReportHeader(document, t("تقرير مجمع للمشروع", "Project Batch Report"), "Project Batch Report", projectName, font)
+            
+            addSectionTitle(document, t("ملخص المشروع", "Project Executive Summary"), "Project Executive Summary")
+            addInfoTable(document, listOf(
+                t("إجمالي التكلفة", "Total Est. Cost") to "${summary.totalCost.format(0)} EGP",
+                t("إجمالي الخرسانة", "Total Concrete") to "${summary.totalConcrete.format(1)} m\u00B3",
+                t("إجمالي الحديد", "Total Steel") to "${summary.totalSteel.format(0)} kg",
+                t("عدد العناصر", "Elements Count") to "${summary.designCount}"
+            ), font)
+
+            addSectionTitle(document, t("جدول العناصر المصممة", "Elements Schedule"), "Elements Schedule")
+            val table = Table(UnitValue.createPercentArray(floatArrayOf(30f, 25f, 25f, 20f))).useAllAvailableWidth()
+            table.addHeaderCell(headerCell(t("اسم العنصر", "Element Name")))
+            table.addHeaderCell(headerCell(t("النوع", "Type")))
+            table.addHeaderCell(headerCell(t("التكلفة", "Cost")))
+            table.addHeaderCell(headerCell(t("الحالة", "Status")))
+            
+            designs.forEachIndexed { i, d ->
+                val bg = if (i % 2 == 0) null else ROW_ALT
+                table.addCell(tableCell(d.name, bg = bg, align = TextAlignment.LEFT))
+                table.addCell(tableCell(d.type.name, bg = bg))
+                table.addCell(tableCell(d.totalCost.format(0), bg = bg))
+                table.addCell(tableCell(
+                    if (d.isSafe) "SAFE \u2714" else "UNSAFE \u2718",
+                    color = if (d.isSafe) SUCCESS else ERROR, bg = bg
+                ))
+            }
+            document.add(table)
+
+            addFooter(document)
+            document.close()
+            outputFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     // ==================== Helpers ====================

@@ -2101,6 +2101,26 @@ class CalculatorEngine @Inject constructor(
         return (phi * 0.5 * grade.fu * area * count) / 1000.0 // kN
     }
 
+    /**
+     * تصميم وصلة الكمرة بالعمود (Beam-Column Joint)
+     */
+    fun designJoint(beamMu: Double, colPu: Double, fcu: Double, fy: Double, barDia: Int, code: DesignCode): String {
+        // [EXPERT]: Anchorage length Ld per ECP/ACI
+        val alpha = if (code == DesignCode.EGYPTIAN) 1.0 else 1.25 // development factor
+        val ld = (0.25 * fy * barDia) / (sqrt(fcu) * alpha)
+        return "Anchorage: ${ld.toInt()}mm (${(ld/barDia).toInt()}Ø) required into column core."
+    }
+
+    /**
+     * تصميم أشار الأعمدة (Column-Footing Dowels)
+     */
+    fun designDowels(colLoad: Double, fcu: Double, fy: Double, colArea: Double, code: DesignCode): ReinforcementBar {
+        // Min area of dowels = 0.005 * Ag
+        val asMin = 0.005 * colArea
+        val numBars = maxOf(4, ceil(asMin / (PI * 16.0.pow(2) / 4.0)).toInt())
+        return ReinforcementBar(numBars = numBars, diameter = 16, description = "Dowels: Min 0.5% Ag")
+    }
+
     private fun t(ar: String, en: String): String = if (LocaleHelper.isArabic()) ar else en
 
 }

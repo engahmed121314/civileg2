@@ -124,4 +124,39 @@ object BbsGenerator {
         ))
         return entries
     }
+
+    /**
+     * AI Waste Minimization (Bin Packing Algorithm)
+     */
+    fun optimizeCutting(entries: List<BbsEntry>, stockLength: Double = 12000.0): String {
+        val sortedBars = entries.flatMap { entry -> List(entry.count) { entry.totalLengthPerBar } }
+            .filter { it <= stockLength }
+            .sortedDescending()
+        
+        if (sortedBars.isEmpty()) return "No valid bars to optimize."
+
+        var stocksCount = 0
+        val bins = mutableListOf<Double>()
+
+        sortedBars.forEach { barLen ->
+            var placed = false
+            for (i in bins.indices) {
+                if (bins[i] >= barLen) {
+                    bins[i] -= barLen
+                    placed = true
+                    break
+                }
+            }
+            if (!placed) {
+                stocksCount++
+                bins.add(stockLength - barLen)
+            }
+        }
+
+        val totalUsed = sortedBars.sum()
+        val totalBought = stocksCount * stockLength
+        val efficiency = (totalUsed / totalBought) * 100.0
+        
+        return "Optimization Results: Use $stocksCount stock bars (12m). Site Efficiency: ${String.format(java.util.Locale.US, "%.1f", efficiency)}% (Waste: ${String.format(java.util.Locale.US, "%.1f", 100 - efficiency)}%)"
+    }
 }

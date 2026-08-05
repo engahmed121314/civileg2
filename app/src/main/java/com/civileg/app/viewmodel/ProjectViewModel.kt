@@ -6,6 +6,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.entities.ProjectSummary
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -63,6 +64,25 @@ class ProjectViewModel @Inject constructor(
 
     fun getDesignsForProject(projectId: Long): LiveData<List<Design>> {
         return designDao.getDesignsForProject(projectId)
+    }
+
+    fun getProjectSummary(projectId: Long): Flow<ProjectSummary> {
+        return designDao.getDesignsForProjectFlow(projectId).map { designs ->
+            val totalConcrete = designs.sumOf { it.concreteVolume }
+            val totalSteel = designs.sumOf { it.steelWeight }
+            val totalCost = designs.sumOf { it.totalCost }
+            val breakdown = designs.groupBy { it.type.name }
+                .mapValues { entry -> entry.value.sumOf { it.totalCost } }
+            
+            ProjectSummary(
+                totalConcrete = totalConcrete,
+                totalSteel = totalSteel,
+                totalCost = totalCost,
+                designCount = designs.size,
+                costEfficiencyIndex = 1.0, // Placeholder
+                costBreakdown = breakdown
+            )
+        }
     }
 
     // --- Material Methods ---

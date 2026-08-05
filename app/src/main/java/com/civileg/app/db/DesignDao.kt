@@ -12,6 +12,9 @@ interface DesignDao {
     @Query("SELECT * FROM designs WHERE projectId = :projectId ORDER BY createdAt DESC")
     fun getDesignsForProject(projectId: Long): LiveData<List<Design>>
 
+    @Query("SELECT * FROM designs WHERE projectId = :projectId ORDER BY createdAt DESC")
+    fun getDesignsForProjectFlow(projectId: Long): Flow<List<Design>>
+
     @Query("SELECT * FROM designs ORDER BY createdAt DESC")
     fun getAllDesigns(): LiveData<List<Design>>
 
