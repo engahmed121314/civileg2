@@ -8,7 +8,6 @@ import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.CalculationValidator
 import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -60,11 +59,6 @@ class TankViewModel @Inject constructor(
                 _validationReport.value = report
                 
                 _result.value = res
-
-                // Validate result for engineering consistency
-                val report = CalculationValidator.validateTank(res)
-                _validationReport.value = report
-
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
