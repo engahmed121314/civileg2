@@ -183,6 +183,7 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> stringResource(R.string.design_type_steel_member)
                 DesignType.PILE -> stringResource(R.string.design_type_pile)
                 DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
+                DesignType.FRAME_ANALYSIS -> "Frame Analysis"
             }
             val icon = when (design.type) {
                 DesignType.BEAM -> Icons.Default.AccountBalance

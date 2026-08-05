@@ -97,8 +97,8 @@ class ExportViewModel @Inject constructor(
                         beamWidth = inputs.width,
                         beamDepth = inputs.totalDepth,
                         span = inputs.span,
-                        mainRebarDia = 20.0, // default, should come from result
-                        mainRebarCount = 4,
+                        mainRebarDia = result.flexureResult.barDiameter,
+                        mainRebarCount = result.flexureResult.numberOfBars,
                         stirrupDia = 8.0,
                         stirrupSpacing = 200.0,
                         momentPoints = diagrams.momentPoints,
@@ -281,7 +281,7 @@ class ExportViewModel @Inject constructor(
             val distBars = result.reinforcementLayout.distributionBars
             
             PdfDrawingGenerator.generateSlabDrawing(
-                spanX = lx * 1000, spanY = ly * 1000, thickness = thickness,
+                spanX = lx, spanY = ly, thickness = thickness,
                 mainDia = bottomBars.diameter, mainSpacing = bottomBars.spacing,
                 distDia = distBars?.diameter ?: 12.0, distSpacing = distBars?.spacing ?: 200.0
             )

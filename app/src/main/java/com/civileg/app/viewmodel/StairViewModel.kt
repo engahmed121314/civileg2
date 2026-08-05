@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
@@ -71,6 +72,11 @@ class StairViewModel @Inject constructor(
                 _validationReport.value = report
                 
                 _result.value = res
+
+                // Validate result for engineering consistency
+                val report = CalculationValidator.validateStair(res)
+                _validationReport.value = report
+
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"

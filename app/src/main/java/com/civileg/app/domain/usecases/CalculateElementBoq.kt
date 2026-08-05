@@ -359,6 +359,114 @@ class CalculateElementBoq @Inject constructor() {
     }
 
     // ==============================================================
+    // القاعدة المشتركة (Combined Footing)
+    // Similar to isolated footing but with rectangular base.
+    // ==============================================================
+    fun calculateCombinedFootingBoq(
+        length: Double,      // mm (البحر الطولي)
+        width: Double,       // mm (البحر العرضي)
+        thickness: Double,   // mm (السماكة)
+        concreteGrade: Double,
+        astBottomX: Double,  // mm² (حديد سفلي اتجاه X — البحر الطولي)
+        astBottomY: Double,  // mm² (حديد سفلي اتجاه Y — البحر العرضي)
+        rebarDia: Double,    // mm
+        rebarSpacingX: Double, // mm
+        rebarSpacingY: Double, // mm
+        prices: MaterialPrices,
+        excavationDepth: Double = 0.0, // m
+        concreteCover: Double = 75.0 // mm
+    ): List<BoqItem> {
+        val items = mutableListOf<BoqItem>()
+
+        // 1. الحفر (Excavation)
+        val workingSpace = 0.5
+        if (excavationDepth > 0) {
+            val excVolume = (length / 1000.0 + 2 * workingSpace) * (width / 1000.0 + 2 * workingSpace) * excavationDepth
+            items += excavationItem("CFTG_EXCAV_001", "Combined footing excavation with 0.5m offset for access", excVolume, prices.excavationPerM3)
+        }
+
+        // 2. الخرسانة العادية (P.C. blinding)
+        val pcThickness = 0.10 // 10cm P.C.
+        val pcArea = (length / 1000.0 + 0.2) * (width / 1000.0 + 0.2)
+        items += BoqItem("CFTG_PC_001", "Plain concrete (P.C.) blinding 10cm", BoqCategory.CONCRETE, "m²", pcArea, prices.concretePerM3 * 0.8)
+
+        // 3. الخرسانة المسلحة (R.C.)
+        val concVolume = length * width * thickness / 1e9
+        items += concreteItem("CFTG_CONC_001", "Combined footing R.C. concrete", concVolume, prices.concretePerM3, "V = L × B × t")
+
+        // 4. حديد سفلي اتجاه X (البحر الطولي)
+        val wasteFactor = 1.08 // ~8% waste due to hooks and chair bars
+        val bottomBarsX = (width / rebarSpacingX).toInt() + 1
+        val barArea = PI * rebarDia * rebarDia / 4.0
+        val bottomWeightX = bottomBarsX * barArea * length * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("CFTG_REINF_X_001", "Combined footing bars Ø${rebarDia.toInt()}mm @ ${rebarSpacingX.toInt()}mm (X-dir, Incl. 8% waste)", bottomWeightX, prices.steelPerTon)
+
+        // 5. حديد سفلي اتجاه Y (البحر العرضي)
+        val bottomBarsY = (length / rebarSpacingY).toInt() + 1
+        val bottomWeightY = bottomBarsY * barArea * width * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("CFTG_REINF_Y_001", "Combined footing bars Ø${rebarDia.toInt()}mm @ ${rebarSpacingY.toInt()}mm (Y-dir)", bottomWeightY, prices.steelPerTon)
+
+        // 6. الشدة الخشبية (الجوانب + السفل = 5 وجوه)
+        val formArea = (2 * (length + width) * thickness + length * width) / 1e6
+        items += formworkItem("CFTG_FORM_001", "Combined footing formwork (5 sides)", formArea, prices.formworkPerM2)
+
+        return items
+    }
+
+    // ==============================================================
+    // كرسينة الخرسانة (Pile Cap)
+    // ==============================================================
+    fun calculatePileCapBoq(
+        length: Double,      // mm (البحر الطولي)
+        width: Double,       // mm (البحر العرضي)
+        thickness: Double,   // mm (سماكة الكرسينة)
+        concreteGrade: Double,
+        astBottomX: Double,  // mm² (حديد سفلي اتجاه X)
+        astBottomY: Double,  // mm² (حديد سفلي اتجاه Y)
+        rebarDia: Double,    // mm
+        rebarSpacingX: Double, // mm
+        rebarSpacingY: Double, // mm
+        prices: MaterialPrices,
+        excavationDepth: Double = 0.0 // m
+    ): List<BoqItem> {
+        val items = mutableListOf<BoqItem>()
+
+        // 1. الحفر (Excavation)
+        val workingSpace = 0.5
+        if (excavationDepth > 0) {
+            val excVolume = (length / 1000.0 + 2 * workingSpace) * (width / 1000.0 + 2 * workingSpace) * excavationDepth
+            items += excavationItem("PCAP_EXCAV_001", "Pile cap excavation with 0.5m offset for access", excVolume, prices.excavationPerM3)
+        }
+
+        // 2. P.C. blinding (m²)
+        val pcThickness = 0.10
+        val pcArea = (length / 1000.0 + 0.2) * (width / 1000.0 + 0.2)
+        items += BoqItem("PCAP_PC_001", "Plain concrete (P.C.) blinding 10cm", BoqCategory.CONCRETE, "m²", pcArea, prices.concretePerM3 * 0.8)
+
+        // 3. الخرسانة المسلحة (R.C.)
+        val concVolume = length * width * thickness / 1e9
+        items += concreteItem("PCAP_CONC_001", "Pile cap R.C. concrete", concVolume, prices.concretePerM3, "V = L × B × t")
+
+        // 4. حديد سفلي اتجاه X
+        val wasteFactor = 1.08
+        val bottomBarsX = (width / rebarSpacingX).toInt() + 1
+        val barArea = PI * rebarDia * rebarDia / 4.0
+        val bottomWeightX = bottomBarsX * barArea * length * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("PCAP_REINF_X_001", "Pile cap bars Ø${rebarDia.toInt()}mm @ ${rebarSpacingX.toInt()}mm (X-dir, Incl. 8% waste)", bottomWeightX, prices.steelPerTon)
+
+        // 5. حديد سفلي اتجاه Y
+        val bottomBarsY = (length / rebarSpacingY).toInt() + 1
+        val bottomWeightY = bottomBarsY * barArea * width * 7850.0 / 1e12 * wasteFactor
+        items += steelItem("PCAP_REINF_Y_001", "Pile cap bars Ø${rebarDia.toInt()}mm @ ${rebarSpacingY.toInt()}mm (Y-dir)", bottomWeightY, prices.steelPerTon)
+
+        // 6. الشدة الخشبية (الجوانب + السفل = 5 وجوه)
+        val formArea = (2 * (length + width) * thickness + length * width) / 1e6
+        items += formworkItem("PCAP_FORM_001", "Pile cap formwork (5 sides)", formArea, prices.formworkPerM2)
+
+        return items
+    }
+
+    // ==============================================================
     // Helper factories
     // ==============================================================
     private fun concreteItem(id: String, desc: String, qty: Double, price: Double, codeRef: String) =

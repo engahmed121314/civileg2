@@ -35,6 +35,13 @@ data class ColumnComposeUiState(
     val validationIssues: List<ValidationIssue> = emptyList()
 )
 
+/**
+ * ViewModel for column design using Compose-driven state.
+ * @deprecated Superseded by [ColumnViewModel], which is the active ViewModel
+ *   used by ColumnScreen. This class is retained only for reference; do not
+ *   instantiate in new code.
+ */
+@Deprecated("Superseded by ColumnViewModel. ColumnScreen uses ColumnViewModel directly.")
 @HiltViewModel
 class ColumnComposeViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context

@@ -43,6 +43,10 @@ class FootingViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    // Store actual inputs for save
+    private var lastFcu: Double = 25.0
+    private var lastFy: Double = 360.0
+
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
         p: Double,
@@ -62,6 +66,9 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                lastFcu = fcu
+                lastFy = fy
+
                 val res = calculatorEngine.calculateFooting(
                     type = type,
                     p = p,
@@ -81,7 +88,7 @@ class FootingViewModel @Inject constructor(
                 
                 // Validate Footing
                 val report = CalculationValidator.validate(res)
-                val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to colB, "depth" to colT), p)
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("FOOTING", mapOf("width" to colB, "depth" to colT), p)
                 
                 val combinedWarnings = report.warnings + dlReport.warnings
                 _validationReport.value = report.copy(warnings = combinedWarnings)
@@ -98,7 +105,7 @@ class FootingViewModel @Inject constructor(
 
     fun saveFooting(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
         viewModelScope.launch {
-            repository.saveFootingDesign(projectId, name, result)
+            repository.saveFootingDesign(projectId, name, result, lastFcu, lastFy)
         }
     }
 

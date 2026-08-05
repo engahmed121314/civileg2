@@ -1,3 +1,1 @@
-package com.civileg.app.adapter
-
-// Duplicate file - Use com.civileg.app.ui.gallery.GalleryAdapter instead
+// File removed - duplicate of com.civileg.app.ui.gallery.GalleryAdapter

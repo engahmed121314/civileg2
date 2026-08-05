@@ -11,6 +11,7 @@ import kotlin.math.min
  * Interactive Beam Cross-Section View with detailed visualization
  * Shows concrete section, reinforcement bars, stirrups, and stress distribution
  */
+@Deprecated("Use ProfessionalBeamDrawing Compose component")
 class BeamSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

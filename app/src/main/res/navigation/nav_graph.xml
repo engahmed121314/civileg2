@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ======================================================================
+     LEGACY NAV GRAPH — UNUSED
+     This XML navigation graph is NOT used by the app. The app uses
+     Jetpack Compose navigation defined in MainActivity. Kept only for
+     reference / backwards compatibility with XML-based fragments.
+     ====================================================================== -->
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -34,9 +40,7 @@
         <action
             android:id="@+id/action_home_to_converter"
             app:destination="@id/nav_converter" />
-        <action
-            android:id="@+id/action_home_to_gallery"
-            app:destination="@id/nav_gallery" />
+        <!-- action_home_to_gallery removed: GalleryFragment does not exist -->
         <action
             android:id="@+id/action_home_to_settings"
             app:destination="@id/nav_settings" />
@@ -213,11 +217,7 @@
         android:label="@string/unit_converter"
         tools:layout="@layout/fragment_unit_converter" />
 
-    <fragment
-        android:id="@+id/nav_gallery"
-        android:name="com.civileg.app.ui.gallery.GalleryFragment"
-        android:label="@string/gallery"
-        tools:layout="@layout/fragment_gallery" />
+    <!-- nav_gallery removed: com.civileg.app.ui.gallery.GalleryFragment does not exist -->
 
     <fragment
         android:id="@+id/nav_settings"

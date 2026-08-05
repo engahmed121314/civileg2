@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.View
 import com.civileg.app.utils.ContinuousBeamAnalysis
 
+@Deprecated("Use FrameDrawingCanvas Compose component")
 class AnalysisDiagramView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

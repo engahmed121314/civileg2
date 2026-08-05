@@ -36,25 +36,25 @@ data class BarInfo(
 // ─── Color palette — delegates to shared DrawingColors ───────────────────
 
 private object C {
-    val Concrete = DrawingColors.ConcreteTopGray
+    val Concrete = DrawingColorDefaults.ConcreteTopGray
     val ConcreteLight = Color(0xFFA0A0A0)
-    val ConcreteDark = DrawingColors.ConcreteSideGray
-    val Bar = DrawingColors.RebarBlue
-    val CornerBar = DrawingColors.TopRebarBlue
-    val Tie = DrawingColors.StirrupPurple
+    val ConcreteDark = DrawingColorDefaults.ConcreteSideGray
+    val Bar = DrawingColorDefaults.RebarBlue
+    val CornerBar = DrawingColorDefaults.TopRebarBlue
+    val Tie = DrawingColorDefaults.StirrupPurple
     val TieLight = Color(0xFFB07CC8)
-    val White = DrawingColors.DimensionWhite
-    val DimLine = DrawingColors.ExtensionGray
-    val Safe = DrawingColors.SafeGreen
-    val Unsafe = DrawingColors.UnsafeRed
-    val Center = DrawingColors.CenterLine
-    val Hatch = DrawingColors.HatchColor
-    val TblBorder = DrawingColors.ExtensionGray
+    val White = DrawingColorDefaults.DimensionWhite
+    val DimLine = DrawingColorDefaults.ExtensionGray
+    val Safe = DrawingColorDefaults.SafeGreen
+    val Unsafe = DrawingColorDefaults.UnsafeRed
+    val Center = DrawingColorDefaults.CenterLine
+    val Hatch = DrawingColorDefaults.HatchColor
+    val TblBorder = DrawingColorDefaults.ExtensionGray
     val TblHeader = Color(0xFF3A3A3A)
-    val TblBg = DrawingColors.ConcreteFill
-    val Slab = DrawingColors.ConcreteSideGray
-    val Grid = DrawingColors.GridLine
-    val BgDark = DrawingColors.ConcreteFill
+    val TblBg = DrawingColorDefaults.ConcreteFill
+    val Slab = DrawingColorDefaults.ConcreteSideGray
+    val Grid = DrawingColorDefaults.GridLine
+    val BgDark = DrawingColorDefaults.ConcreteFill
     val BgDarker = Color(0xFF333333)
 }
 

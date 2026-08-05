@@ -10,6 +10,7 @@ import kotlin.math.min
  * Professional Footing Plan View
  * Features: Dimension lines, realistic hatching, rebar representation, and safety status.
  */
+@Deprecated("Use ProfessionalFootingDrawing")
 class FootingPlanView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
