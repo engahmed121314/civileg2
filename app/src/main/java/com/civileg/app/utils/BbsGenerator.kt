@@ -159,4 +159,19 @@ object BbsGenerator {
         
         return "Optimization Results: Use $stocksCount stock bars (12m). Site Efficiency: ${String.format(java.util.Locale.US, "%.1f", efficiency)}% (Waste: ${String.format(java.util.Locale.US, "%.1f", 100 - efficiency)}%)"
     }
+
+    /**
+     * Combines multiple elements into a single project-level BBS.
+     */
+    fun combineProjectBbs(allElements: List<List<BbsEntry>>): List<BbsEntry> {
+        return allElements.flatten()
+            .groupBy { "${it.diameter}-${it.shapeCode}-${it.lengthA}-${it.lengthB}" }
+            .map { entry ->
+                val first = entry.value.first()
+                first.copy(
+                    count = entry.value.sumOf { it.count },
+                    totalWeightKg = entry.value.sumOf { it.totalWeightKg }
+                )
+            }
+    }
 }

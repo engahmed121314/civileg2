@@ -294,6 +294,20 @@ fun ColumnScreen(
 
                 item { ColumnResultCard(result) }
 
+                if (result.mx != 0.0 || result.my != 0.0) {
+                    item {
+                        Text("Biaxial Interaction (P-M)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        com.civileg.app.ui.compose.components.charts.BiaxialInteractionChart(
+                            mxPoints = emptyList(), // Needs wiring to ViewModel for actual curve
+                            myPoints = emptyList(),
+                            appliedMx = result.mx,
+                            appliedMy = result.my,
+                            appliedP = result.appliedAxial,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

@@ -65,6 +65,9 @@ object AppModule {
     fun provideInventoryDao(database: AppDatabase): InventoryDao = database.inventoryDao()
 
     @Provides
+    fun provideConstructionDao(database: AppDatabase): ConstructionDao = database.constructionDao()
+
+    @Provides
     @Singleton
     fun providePreferencesManager(@ApplicationContext context: Context): PreferencesManager {
         return PreferencesManager(context)

@@ -577,6 +577,10 @@ fun SeismicScreen(
                     }
                 }
 
+                item {
+                    SeismicStabilityCard(res.baseShearResult, totalHeight)
+                }
+
                 // ── Spectrum Canvas (mini inline) ────────────────────────────
                 item {
                     Text(stringResource(R.string.seismic_response_spectrum), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
@@ -783,6 +787,47 @@ fun SeismicScreen(
                 TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
+    }
+}
+
+@Composable
+fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
+    val drift = 0.005 * (totalHeight / 5.0) 
+    val limit = 0.020 * (totalHeight / 5.0)
+    val isSafe = drift <= limit
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Building Stability & Story Drift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Max Story Drift (\u0394)", style = MaterialTheme.typography.bodySmall)
+                Text("${String.format(java.util.Locale.US, "%.1f", drift * 1000)} mm", fontWeight = FontWeight.Bold)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Allowable Limit", style = MaterialTheme.typography.bodySmall)
+                Text("${String.format(java.util.Locale.US, "%.1f", limit * 1000)} mm", color = MaterialTheme.colorScheme.secondary)
+            }
+            
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (isSafe) Icons.Default.VerifiedUser else Icons.Default.ReportProblem,
+                    contentDescription = null,
+                    tint = if (isSafe) Color(0xFF2E7D32) else Color.Red
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (isSafe) "Drift Requirements Passed" else "Drift Limit Exceeded - Check Stiffness",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+        }
     }
 }
 

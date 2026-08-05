@@ -26,4 +26,8 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object Calculator : AppScreen("calculator", R.string.home_calculator, R.drawable.ic_calculator)
     object SteelTables : AppScreen("steel_tables", R.string.home_steel_tables, R.drawable.ic_steel)
     object WaterLevel : AppScreen("water_level", R.string.home_water_level, R.drawable.ic_water)
+    object SiteLayout : AppScreen("site_layout", R.string.home_section_tools_title, R.drawable.ic_footing)
+    object ProjectSummary : AppScreen("project_summary/{projectId}", R.string.results_summary, R.drawable.ic_calculator)
+    object ExecutionLog : AppScreen("execution_log/{projectId}", R.string.nav_inventory, R.drawable.ic_costing)
+    object MasterBbs : AppScreen("master_bbs/{projectId}", R.string.nav_inventory, R.drawable.ic_steel)
 }

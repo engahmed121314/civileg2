@@ -47,6 +47,9 @@ import java.util.Locale
 fun BOQScreen(
     projectViewModel: ProjectViewModel = hiltViewModel(),
     boqViewModel: BOQViewModel = hiltViewModel(),
+    onNavigateToSummary: (Long) -> Unit = {},
+    onNavigateToExecution: (Long) -> Unit = {},
+    onNavigateToMasterBbs: (Long) -> Unit = {},
     onNavigateBack: () -> Unit = {}
 ) {
     var selectedMainTab by remember { mutableIntStateOf(1) }
@@ -76,7 +79,12 @@ fun BOQScreen(
             }
 
             when (selectedMainTab) {
-                0 -> DesignsBOQContent(projectViewModel)
+                0 -> DesignsBOQContent(
+                    projectViewModel, 
+                    onNavigateToSummary = onNavigateToSummary,
+                    onNavigateToExecution = onNavigateToExecution,
+                    onNavigateToMasterBbs = onNavigateToMasterBbs
+                )
                 1 -> SmartEstimatorProContent(boqViewModel)
             }
         }
@@ -204,7 +212,10 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
 @Composable
 fun DesignsBOQContent(
     projectViewModel: ProjectViewModel,
-    boqViewModel: BOQViewModel = hiltViewModel()
+    boqViewModel: BOQViewModel = hiltViewModel(),
+    onNavigateToSummary: (Long) -> Unit = {},
+    onNavigateToExecution: (Long) -> Unit = {},
+    onNavigateToMasterBbs: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     val designs by projectViewModel.allDesigns.observeAsState(emptyList())
@@ -249,6 +260,25 @@ fun DesignsBOQContent(
                             sharePdf(context, file)
                         }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                             Icon(Icons.Default.Description, null); Spacer(Modifier.width(8.dp)); Text("Export BOQ")
+                        }
+                    }
+                    
+                    Button(onClick = { onNavigateToSummary(selectedProjectId) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)) {
+                        Icon(Icons.Default.Analytics, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Executive Dashboard")
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { onNavigateToExecution(selectedProjectId) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                            Icon(Icons.Default.Construction, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Execution Logs", color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 12.sp)
+                        }
+                        Button(onClick = { onNavigateToMasterBbs(selectedProjectId) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                            Icon(Icons.Default.GridOn, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Master BBS", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp)
                         }
                     }
                 }

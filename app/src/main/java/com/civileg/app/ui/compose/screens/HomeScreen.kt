@@ -144,6 +144,7 @@ private val quickTools = listOf(
     QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
     QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
     QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+    QuickTool(R.string.home_section_tools_title, R.string.home_footing_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
     QuickTool(R.string.home_inventory,     R.string.home_inventory_sub,     Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
 )
 

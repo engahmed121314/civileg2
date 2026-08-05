@@ -18,9 +18,11 @@ import androidx.room.TypeConverters
         Stair::class,
         RetainingWall::class,
         Tank::class,
-        InventoryItem::class
+        InventoryItem::class,
+        PourLog::class,
+        SiteInspection::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -37,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun retainingWallDao(): RetainingWallDao
     abstract fun tankDao(): TankDao
     abstract fun inventoryDao(): InventoryDao
+    abstract fun constructionDao(): ConstructionDao
     
     companion object {
         @Volatile

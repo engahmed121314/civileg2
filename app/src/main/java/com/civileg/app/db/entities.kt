@@ -200,3 +200,34 @@ data class InventoryItem(
 enum class InventoryType {
     EQUIPMENT, TOOLS, RAW_MATERIAL, ACCESSORIES
 }
+
+@Entity(tableName = "pour_logs")
+data class PourLog(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectId: Long,
+    val elementId: String, // e.g., "BEAM-01"
+    val date: Date = Date(),
+    val volumeM3: Double,
+    val slumpMm: Double,
+    val truckId: String = "",
+    val sampleId: String = "",
+    val strength7Days: Double = 0.0,
+    val strength28Days: Double = 0.0,
+    val status: String = "PENDING"
+)
+
+@Entity(tableName = "site_inspections")
+data class SiteInspection(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectId: Long,
+    val designId: Long,
+    val inspectorName: String,
+    val date: Date = Date(),
+    val formworkSafe: Boolean = false,
+    val rebarMatchesDesign: Boolean = false,
+    val coverAdequate: Boolean = false,
+    val cleanlinessPassed: Boolean = false,
+    val comments: String = ""
+)

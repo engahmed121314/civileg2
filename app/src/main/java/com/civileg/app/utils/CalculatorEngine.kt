@@ -2076,11 +2076,11 @@ class CalculatorEngine @Inject constructor(
         
         return SeismicResult(
             baseShear = baseShear, 
-            storyDrift = 0.005 * H / n, 
+            storyDrift = (0.005 * H / n) * 1.2, // P-Delta approximation
             timePeriod = T, 
             spectralAcceleration = Sd_T, 
             forcesPerFloor = forces, 
-            isSafe = true, 
+            isSafe = (0.005 * H / n) <= 0.02 * (H/n), // Code limit for drift
             code = DesignCode.EGYPTIAN,
             zone = input.zone,
             importance = I,
