@@ -7,6 +7,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.civileg.app.domain.calculations.ConcreteFrameDesign
 import com.civileg.app.domain.calculations.FrameAnalysisEngine
 import com.civileg.app.domain.calculations.SteelFrameDesign
@@ -202,51 +206,59 @@ class FrameAnalysisViewModel @Inject constructor(
         _isLoading.value = true
         _errorMessage.value = null
 
-        try {
-            val nodes = _nodes.value ?: emptyList()
-            val members = _members.value ?: emptyList()
-            val nodalLoads = _nodalLoads.value ?: emptyList()
-            val memberLoads = _memberLoads.value ?: emptyList()
-            val settings = _settings.value ?: FrameAnalysisSettings()
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                val nodes = _nodes.value ?: emptyList()
+                val members = _members.value ?: emptyList()
+                val nodalLoads = _nodalLoads.value ?: emptyList()
+                val memberLoads = _memberLoads.value ?: emptyList()
+                val settings = _settings.value ?: FrameAnalysisSettings()
 
-            // Run analysis
-            val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
+                // Run analysis
+                val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
 
-            if (!analysisResult.isSolved) {
-                _errorMessage.value = analysisResult.errorMessage
-                _result.value = analysisResult
-                _isLoading.value = false
-                return
+                if (!analysisResult.isSolved) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = analysisResult.errorMessage
+                        _result.value = analysisResult
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
+                // Run concrete design
+                val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
+                val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
+                    ConcreteFrameDesign.designAllConcreteMembers(
+                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
+                    )
+                } else emptyList()
+
+                // Run steel design
+                val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
+                val steelDesignResults = if (steelMembers.isNotEmpty()) {
+                    SteelFrameDesign.designAllSteelMembers(
+                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
+                        settings.designCode, _steelFy.value ?: 355.0
+                    )
+                } else emptyList()
+
+                withContext(Dispatchers.Main) {
+                    _result.value = analysisResult.copy(
+                        concreteDesignResults = concreteDesignResults,
+                        steelDesignResults = steelDesignResults
+                    )
+                    _concreteResults.value = concreteDesignResults
+                    _steelResults.value = steelDesignResults
+                    _isLoading.value = false
+                }
+
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Frame analysis error: ${e.message ?: "Unknown error"}"
+                    _isLoading.value = false
+                }
             }
-
-            // Run concrete design
-            val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
-            val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
-                ConcreteFrameDesign.designAllConcreteMembers(
-                    members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
-                )
-            } else emptyList()
-
-            // Run steel design
-            val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
-            val steelDesignResults = if (steelMembers.isNotEmpty()) {
-                SteelFrameDesign.designAllSteelMembers(
-                    members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
-                    settings.designCode, _steelFy.value ?: 355.0
-                )
-            } else emptyList()
-
-            _result.value = analysisResult.copy(
-                concreteDesignResults = concreteDesignResults,
-                steelDesignResults = steelDesignResults
-            )
-            _concreteResults.value = concreteDesignResults
-            _steelResults.value = steelDesignResults
-
-        } catch (e: Exception) {
-            _errorMessage.value = "Frame analysis error: ${e.message ?: ""}"
-        } finally {
-            _isLoading.value = false
         }
     }
 
