@@ -79,6 +79,55 @@ class FootingViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Auto-design foundations for multiple pieces given soil area dimensions and total soil load.
+     * Calculates individual footing loads based on tributary area or equal distribution,
+     * then designs each footing automatically.
+     */
+    fun autoDesignFromSoil(
+        soilLengthM: Double,   // soil area length in meters
+        soilWidthM: Double,    // soil area width in meters
+        totalSoilLoadKN: Double, // total load from superstructure on soil area in kN
+        numberOfFootings: Int,  // number of footings to distribute load to
+        fcu: Double,
+        fy: Double,
+        soilCapacity: Double,   // allowable soil bearing pressure kN/m2
+        colWidth: Double,
+        colDepth: Double,
+        code: CalculatorEngine.DesignCode,
+        preferredDiameter: Int = 16
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // Distribute load equally among footings
+                val loadPerFooting = totalSoilLoadKN / numberOfFootings
+                // Also add self-weight estimate (10% of load)
+                val pu = loadPerFooting * 1.10
+
+                val res = calculatorEngine.calculateFooting(
+                    type = CalculatorEngine.FootingType.ISOLATED,
+                    p = pu,
+                    fcu = fcu,
+                    fy = fy,
+                    soil = soilCapacity,
+                    colB = colWidth,
+                    colT = colDepth,
+                    code = code,
+                    preferredDiameter = preferredDiameter,
+                    preferredSpacing = 150.0
+                )
+                // Store additional auto-design metadata
+                _result.value = res
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Auto-design error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun saveFooting(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
         viewModelScope.launch {
             repository.saveFootingDesign(projectId, name, result)

@@ -427,6 +427,15 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             ResultRow(stringResource(R.string.beam_bottom_reinforcement), result.reinforcementBottom.barString)
             ResultRow(stringResource(R.string.beam_top_reinforcement), result.reinforcementTop.barString)
             ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
+            // Code-based stirrup zoning
+            if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
+                ResultRow("Stirrups (support zone)", "Ø${result.stirrups.diameter} @ ${result.stirrups.spacingAtSupport.toInt()}mm c/c")
+                ResultRow("Stirrups (midspan)", "Ø${result.stirrups.diameter} @ ${result.stirrups.spacingAtMidspan.toInt()}mm c/c")
+                ResultRow("Condensation Zone", "${result.stirrups.condensationZoneLength.toInt()}mm from supports")
+                if (result.stirrups.codeNotes.isNotEmpty()) {
+                    ResultRow("Code Ref", result.stirrups.codeNotes)
+                }
+            }
             ResultRow(stringResource(R.string.beam_max_moment), "${"%.1f".format(result.appliedMoment)} kN.m")
             ResultRow(stringResource(R.string.beam_max_shear), "${"%.1f".format(result.appliedShear)} kN")
             

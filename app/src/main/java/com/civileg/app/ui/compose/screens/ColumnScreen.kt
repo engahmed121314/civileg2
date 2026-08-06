@@ -449,6 +449,15 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
             ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
+            // Code-based stirrup detailing
+            if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
+                ResultDataRow("Tie Spacing (ends)", "@${result.stirrups.spacingAtSupport.toInt()}mm c/c")
+                ResultDataRow("Tie Spacing (mid)", "@${result.stirrups.spacingAtMidspan.toInt()}mm c/c")
+                ResultDataRow("Condensation Zone", "${result.stirrups.condensationZoneLength.toInt()}mm from each end")
+                if (result.stirrups.codeNotes.isNotEmpty()) {
+                    ResultDataRow("Code Ref", result.stirrups.codeNotes)
+                }
+            }
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))

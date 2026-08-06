@@ -53,9 +53,7 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _selectedMemberId = MutableLiveData<Int?>(null)
     val selectedMemberId: LiveData<Int?> get() = _selectedMemberId
 
-    // FIX: Persist drawing view mode across tab switches (was previously local to DrawingTab,
-    // causing it to reset to Frame view every time user navigated away and back).
-    private val _drawingViewMode = MutableLiveData(0)  // 0=Frame, 1=Long.Section, 2=Cross Section, 3=Plan
+    private val _drawingViewMode = MutableLiveData(0)
     val drawingViewMode: LiveData<Int> get() = _drawingViewMode
 
     fun setDrawingViewMode(mode: Int) {
@@ -65,14 +63,13 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> get() = _errorMessage
 
-    // === Design Results (combined) ===
+    // === Design Results ===
     private val _concreteResults = MutableLiveData<List<ConcreteMemberDesignResult>>()
     val concreteResults: LiveData<List<ConcreteMemberDesignResult>> get() = _concreteResults
 
     private val _steelResults = MutableLiveData<List<SteelMemberDesignResult>>()
     val steelResults: LiveData<List<SteelMemberDesignResult>> get() = _steelResults
 
-    // Computed: has any concrete members?
     val hasConcreteMembers: MediatorLiveData<Boolean> = MediatorLiveData<Boolean>().apply {
         addSource(_members) { value = it.any { m -> m.materialType == FrameMaterialType.Concrete } }
     }
@@ -103,7 +100,6 @@ class FrameAnalysisViewModel @Inject constructor(
 
     fun removeNode(nodeId: Int) {
         _nodes.value = _nodes.value?.filter { it.id != nodeId }
-        // Remove connected members and loads
         _members.value = _members.value?.filter { it.nodeI != nodeId && it.nodeJ != nodeId }
         _nodalLoads.value = _nodalLoads.value?.filter { it.nodeId != nodeId }
     }
@@ -201,7 +197,7 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     // ========================================================================
-    // Solve & Design
+    // Solve & Design (runs on Dispatchers.Default — NOT main thread)
     // ========================================================================
 
     fun solveFrame() {
@@ -216,8 +212,9 @@ class FrameAnalysisViewModel @Inject constructor(
                 val memberLoads = _memberLoads.value ?: emptyList()
                 val settings = _settings.value ?: FrameAnalysisSettings()
 
-                Log.d(TAG, "solveFrame: nodes=${nodes.size}, members=${members.size}, nodalLoads=${nodalLoads.size}, memberLoads=${memberLoads.size}")
+                Log.d(TAG, "solveFrame: nodes=${nodes.size}, members=${members.size}")
 
+                // Input validation
                 if (nodes.isEmpty() || members.isEmpty()) {
                     withContext(Dispatchers.Main) {
                         _errorMessage.value = "Add at least 2 nodes and 1 member"
@@ -226,7 +223,6 @@ class FrameAnalysisViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Validate: all member node references must exist
                 val nodeIds = nodes.map { it.id }.toSet()
                 for (m in members) {
                     if (m.nodeI !in nodeIds || m.nodeJ !in nodeIds) {
@@ -238,16 +234,15 @@ class FrameAnalysisViewModel @Inject constructor(
                     }
                 }
 
-                // Validate: at least one support must exist
                 if (nodes.none { it.support != SupportType.Free }) {
                     withContext(Dispatchers.Main) {
-                        _errorMessage.value = "Structure must have at least one support (Fixed/Pin/Roller)"
+                        _errorMessage.value = "Structure must have at least one support"
                         _isLoading.value = false
                     }
                     return@launch
                 }
 
-                // Run analysis
+                // Run analysis off main thread
                 val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
 
                 if (!analysisResult.isSolved) {
@@ -260,14 +255,14 @@ class FrameAnalysisViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Validate results for NaN/Infinity
+                // Validate results for NaN
                 val hasNaN = analysisResult.nodeResults.any { nr ->
                     isnan(nr.dx) || isnan(nr.dy) || isnan(nr.rz)
                 }
                 if (hasNaN) {
-                    Log.e(TAG, "NaN detected in node results - structure may be unstable")
+                    Log.e(TAG, "NaN detected in results")
                     withContext(Dispatchers.Main) {
-                        _errorMessage.value = "Analysis produced invalid results (NaN). Check supports and loads."
+                        _errorMessage.value = "Analysis produced invalid results. Check supports and loads."
                         _isLoading.value = false
                     }
                     return@launch

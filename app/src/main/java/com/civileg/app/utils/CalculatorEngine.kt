@@ -89,7 +89,12 @@ class CalculatorEngine @Inject constructor(
         val spacing: Double = 200.0, 
         val description: String = "5Ø8/m'", 
         val weightKg: Double = 0.0,
-        val numLegs: Int = 2
+        val numLegs: Int = 2,
+        // Code-based stirrup detailing per ECP 203 / ACI 318 / SBC 304
+        val spacingAtSupport: Double = 0.0,  // dense spacing near supports (condensation zone)
+        val spacingAtMidspan: Double = 0.0, // normal spacing at midspan
+        val condensationZoneLength: Double = 0.0, // length of dense zone from face of support (mm)
+        val codeNotes: String = ""
     ) : Parcelable {
         val area: Double get() = numLegs * (PI * diameter.toDouble().pow(2.0) / 4.0)
     }
@@ -655,23 +660,59 @@ class CalculatorEngine @Inject constructor(
         val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
         val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
         
-        // Stirrups Weight (8mm @ 200mm or code min)
-        val stirrupLength = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
-        val numStirrups = (clearHeight / 200.0) + 1
-        val stirrupWeight = numStirrups * stirrupLength * (8.0.pow(2.0) / 162.0)
-        
         val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05
         val steelWasteKg = totalSteelWeight * 0.05
-        
+
         val utilizationRatio = (pu / capacity).coerceIn(0.0, 1.2)
         
         safetyChecks.add(DesignSafetyCheck("Axial Capacity", pu, capacity, "kN", capacity >= pu))
         safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, (asMin/ag)*100.0, "%", finalAsProvided >= asMin))
 
+        // --- Code-based Tie/Stirrup Spacing ---
+        val db = preferredDiameter.toDouble() // main bar diameter
+        val dtie = 8.0 // tie diameter mm
+        val tieArea = PI * dtie.pow(2.0) / 4.0
+        // ECP 203: s = min(200, 16*db, 48*dtie, min(b,d)/2)
+        // ACI 318: s = min(16*db, 48*dtie, min(b,d)) — no 200 cap
+        val sMaxECP = minOf(200.0, 16.0 * db, 48.0 * dtie, min(width, depth) / 2.0)
+        val sMaxACI = minOf(16.0 * db, 48.0 * dtie, min(width, depth))
+        val sMax = when (code) {
+            DesignCode.ACI -> sMaxACI
+            DesignCode.SAUDI -> minOf(200.0, sMaxACI) // SBC similar to ACI with 200 cap
+            else -> sMaxECP
+        }
+        // Denser spacing near column ends (condensation zone = max(b,d) from each end)
+        val condensationLen = max(width, depth)
+        val sDense = (sMax * 0.5).coerceIn(75.0, sMax) // half spacing in condensation zone
+        // Description with code-based detailing
+        val stirrupDesc = if (condensationLen >= clearHeight * 0.4) {
+            val n = ceil(clearHeight / sMax).toInt()
+            "${n}Ø${dtie.toInt()} @ ${sMax.toInt()}mm c/c"
+        } else {
+            val nDense = ceil(condensationLen / sDense).toInt()
+            val nNormal = ceil((clearHeight - 2 * condensationLen) / sMax).toInt()
+            "Ø${dtie.toInt()}: ${nDense}x${sDense.toInt()}mm (ends) + ${nNormal}x${sMax.toInt()}mm (mid)"
+        }
+        val stirrupLength = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
+        val numStirrupsDense = 2 * ceil(condensationLen / sDense).toInt()
+        val numStirrupsNormal = ceil(max(0.0, clearHeight - 2 * condensationLen) / sMax).toInt()
+        val numStirrups = numStirrupsDense + numStirrupsNormal
+        val stirrupWeight = numStirrups * stirrupLength * (dtie.pow(2.0) / 162.0)
+
         return ColumnResult(
             width = width, depth = depth, pu = pu, 
             reinforcement = ReinforcementBar(finalNumBars, preferredDiameter), 
-            stirrups = StirrupReinforcement(8, 200.0), 
+            stirrups = StirrupReinforcement(
+                diameter = dtie.toInt(),
+                spacing = sMax,
+                description = stirrupDesc,
+                weightKg = stirrupWeight,
+                numLegs = 2,
+                spacingAtSupport = sDense,
+                spacingAtMidspan = sMax,
+                condensationZoneLength = condensationLen,
+                codeNotes = when(code) { DesignCode.ACI -> "ACI 318 §25.7"; DesignCode.SAUDI -> "SBC 304 §7-9"; else -> "ECP 203 §7-9" }
+            ), 
             safetyChecks = safetyChecks, isSafe = safetyChecks.all { it.isSafe } && rho <= (asMax/ag)*100.0,
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
@@ -824,7 +865,17 @@ class CalculatorEngine @Inject constructor(
             width = width, depth = height, mu = mu, vu = vu, 
             reinforcementBottom = ReinforcementBar(numBars, preferredDiameter), 
             reinforcementTop = ReinforcementBar(max(2, numBars/3), topDia), 
-            stirrups = StirrupReinforcement(stirrupDia, stirrupSpacing), 
+            stirrups = StirrupReinforcement(
+                diameter = stirrupDia,
+                spacing = stirrupSpacing,
+                description = "${ceil((span/1000.0) / (stirrupSpacing/1000.0)).toInt()}Ø${stirrupDia} @ ${stirrupSpacing.toInt()}mm c/c",
+                weightKg = stirrupSteel,
+                numLegs = 2,
+                spacingAtSupport = max(75.0, stirrupSpacing * 0.5),
+                spacingAtMidspan = stirrupSpacing,
+                condensationZoneLength = min(height, span / 4.0),
+                codeNotes = when(code) { DesignCode.ACI -> "ACI 318 §25.5"; DesignCode.SAUDI -> "SBC 304"; else -> "ECP 203 §7-6" }
+            ), 
             safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= vc * 2.5, 
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
