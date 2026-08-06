@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.AndroidViewModel
@@ -18,6 +19,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlin.math.isnan
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
@@ -214,10 +216,42 @@ class FrameAnalysisViewModel @Inject constructor(
                 val memberLoads = _memberLoads.value ?: emptyList()
                 val settings = _settings.value ?: FrameAnalysisSettings()
 
+                Log.d(TAG, "solveFrame: nodes=${nodes.size}, members=${members.size}, nodalLoads=${nodalLoads.size}, memberLoads=${memberLoads.size}")
+
+                if (nodes.isEmpty() || members.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Add at least 2 nodes and 1 member"
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
+                // Validate: all member node references must exist
+                val nodeIds = nodes.map { it.id }.toSet()
+                for (m in members) {
+                    if (m.nodeI !in nodeIds || m.nodeJ !in nodeIds) {
+                        withContext(Dispatchers.Main) {
+                            _errorMessage.value = "Member #${m.id} references non-existent node(s)"
+                            _isLoading.value = false
+                        }
+                        return@launch
+                    }
+                }
+
+                // Validate: at least one support must exist
+                if (nodes.none { it.support != SupportType.Free }) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Structure must have at least one support (Fixed/Pin/Roller)"
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
                 // Run analysis
                 val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
 
                 if (!analysisResult.isSolved) {
+                    Log.w(TAG, "Analysis failed: ${analysisResult.errorMessage}")
                     withContext(Dispatchers.Main) {
                         _errorMessage.value = analysisResult.errorMessage
                         _result.value = analysisResult
@@ -226,22 +260,45 @@ class FrameAnalysisViewModel @Inject constructor(
                     return@launch
                 }
 
+                // Validate results for NaN/Infinity
+                val hasNaN = analysisResult.nodeResults.any { nr ->
+                    isnan(nr.dx) || isnan(nr.dy) || isnan(nr.rz)
+                }
+                if (hasNaN) {
+                    Log.e(TAG, "NaN detected in node results - structure may be unstable")
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Analysis produced invalid results (NaN). Check supports and loads."
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
                 // Run concrete design
-                val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
-                val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
-                    ConcreteFrameDesign.designAllConcreteMembers(
-                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
-                    )
-                } else emptyList()
+                val concreteDesignResults = try {
+                    val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
+                    if (concreteMembers.isNotEmpty()) {
+                        ConcreteFrameDesign.designAllConcreteMembers(
+                            members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
+                        )
+                    } else emptyList()
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Concrete design error", e)
+                    emptyList()
+                }
 
                 // Run steel design
-                val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
-                val steelDesignResults = if (steelMembers.isNotEmpty()) {
-                    SteelFrameDesign.designAllSteelMembers(
-                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
-                        settings.designCode, _steelFy.value ?: 355.0
-                    )
-                } else emptyList()
+                val steelDesignResults = try {
+                    val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
+                    if (steelMembers.isNotEmpty()) {
+                        SteelFrameDesign.designAllSteelMembers(
+                            members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
+                            settings.designCode, _steelFy.value ?: 355.0
+                        )
+                    } else emptyList()
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Steel design error", e)
+                    emptyList()
+                }
 
                 withContext(Dispatchers.Main) {
                     _result.value = analysisResult.copy(
@@ -251,15 +308,21 @@ class FrameAnalysisViewModel @Inject constructor(
                     _concreteResults.value = concreteDesignResults
                     _steelResults.value = steelDesignResults
                     _isLoading.value = false
+                    Log.d(TAG, "solveFrame completed successfully")
                 }
 
             } catch (e: Throwable) {
+                Log.e(TAG, "solveFrame crashed", e)
                 withContext(Dispatchers.Main) {
                     _errorMessage.value = "Frame analysis error: ${e.message ?: "Unknown error"}"
                     _isLoading.value = false
                 }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "FrameAnalysisVM"
     }
 
     // ========================================================================

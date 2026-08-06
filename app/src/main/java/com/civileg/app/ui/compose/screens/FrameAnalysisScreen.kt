@@ -215,6 +215,38 @@ fun FrameAnalysisScreen(
                     3 -> LoadsTab(nodes, members, nodalLoads, memberLoads, viewModel)
                     4 -> ResultsTab(result, concreteResults, steelResults, selectedMemberId, viewModel)
                 }
+
+                // Loading overlay
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = Color(0xFF1565C0),
+                                    strokeWidth = 4.dp
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text("Solving...", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0))
+                                Spacer(Modifier.height(4.dp))
+                                Text("Analyzing frame structure", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -291,7 +323,7 @@ private fun DrawingTab(
             )
 
             // Solve button (FAB)
-            if (nodes.size >= 2 && members.isNotEmpty()) {
+            if (nodes.size >= 2 && members.isNotEmpty() && !isLoading) {
                 FloatingActionButton(
                     onClick = { viewModel.solveFrame() },
                     modifier = Modifier
