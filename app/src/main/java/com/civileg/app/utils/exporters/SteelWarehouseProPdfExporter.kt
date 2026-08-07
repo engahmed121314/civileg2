@@ -432,9 +432,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 25f, 30f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("#"))
-        table.addHeaderCell(ar("البند") + " | ITEM")
-        table.addHeaderCell(ar("الكمية") + " | QUANTITY")
-        table.addHeaderCell(ar("ملاحظات") + " | NOTES")
+        table.addHeaderCell(headerCell(ar("البند") + " | ITEM"))
+        table.addHeaderCell(headerCell(ar("الكمية") + " | QUANTITY"))
+        table.addHeaderCell(headerCell(ar("ملاحظات") + " | NOTES"))
 
         var idx = 1
         result.materialTakeoff.forEach { (key, value) ->

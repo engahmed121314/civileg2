@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
-import kotlin.math.sqrt
 
 @HiltViewModel
 class FootingViewModel @Inject constructor(
@@ -25,6 +24,19 @@ class FootingViewModel @Inject constructor(
 
     private val _result = MutableLiveData<CalculatorEngine.FootingResult?>()
     val result: LiveData<CalculatorEngine.FootingResult?> = _result
+
+    // Auto-design: per-footing results
+    data class AutoDesignSummary(
+        val footingResults: List<CalculatorEngine.FootingResult>,
+        val totalConcreteVolume: Double,
+        val totalSteelWeight: Double,
+        val soilAreaUtilization: Double, // percentage of soil area used by footings
+        val soilAreaM2: Double,
+        val totalFootingAreaM2: Double
+    )
+
+    private val _autoResults = MutableLiveData<AutoDesignSummary?>()
+    val autoResults: LiveData<AutoDesignSummary?> = _autoResults
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -82,7 +94,8 @@ class FootingViewModel @Inject constructor(
 
     /**
      * Auto-design foundations for multiple pieces given soil area dimensions and total soil load.
-     * Enhanced: computes grid layout, tributary areas, per-footing loads, and expansion.
+     * Calculates individual footing loads based on equal distribution,
+     * designs each footing, and verifies soil area utilization.
      */
     fun autoDesignFromSoil(
         soilLengthM: Double,
@@ -95,45 +108,25 @@ class FootingViewModel @Inject constructor(
         colWidth: Double,
         colDepth: Double,
         code: CalculatorEngine.DesignCode,
-        preferredDiameter: Int = 16
+        preferredDiameter: Int = 16,
+        preferredSpacing: Double = 150.0
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val soilArea = soilLengthM * soilWidthM
-                if (soilArea <= 0 || numberOfFootings <= 0) {
-                    _error.value = "Invalid soil area or footing count"
-                    _isLoading.value = false
-                    return@launch
-                }
+                val soilAreaM2 = soilLengthM * soilWidthM
+                val loadPerFooting = totalSoilLoadKN / numberOfFootings
+                val pu = loadPerFooting * 1.10 // +10% self-weight
 
-                // ── Compute grid layout ──
-                val aspectRatio = soilLengthM / soilWidthM.coerceAtLeast(0.1)
-                val gridCols = kotlin.math.ceil(sqrt(numberOfFootings.toDouble() * aspectRatio)).toInt().coerceIn(1, numberOfFootings)
-                val gridRows = kotlin.math.ceil(numberOfFootings.toDouble() / gridCols).toInt().coerceIn(1, numberOfFootings)
+                val footingResults = mutableListOf<CalculatorEngine.FootingResult>()
+                var totalConcrete = 0.0
+                var totalSteel = 0.0
+                var totalFootingArea = 0.0
 
-                // ── Distribute loads with tributary factors ──
-                // Interior footings carry more than corner/edge footings
-                val results = mutableListOf<CalculatorEngine.FootingResult>()
-                for (i in 0 until numberOfFootings) {
-                    val row = i / gridCols
-                    val col = i % gridCols
-                    val isEdge = (row == 0 || row == gridRows - 1 || col == 0 || col == gridCols - 1)
-                    val isCorner = (row == 0 || row == gridRows - 1) && (col == 0 || col == gridCols - 1)
-
-                    // Tributary factor: interior=1.0, edge=0.85, corner=0.65
-                    val tributaryFactor = when {
-                        isCorner -> 0.65
-                        isEdge -> 0.85
-                        else -> 1.0
-                    }
-
-                    // Load per footing with self-weight estimate (10%)
-                    val loadPerFooting = (totalSoilLoadKN / numberOfFootings) * tributaryFactor * 1.10
-
+                for (i in 1..numberOfFootings) {
                     val res = calculatorEngine.calculateFooting(
                         type = CalculatorEngine.FootingType.ISOLATED,
-                        p = loadPerFooting,
+                        p = pu,
                         fcu = fcu,
                         fy = fy,
                         soil = soilCapacity,
@@ -141,15 +134,29 @@ class FootingViewModel @Inject constructor(
                         colT = colDepth,
                         code = code,
                         preferredDiameter = preferredDiameter,
-                        preferredSpacing = 150.0
+                        preferredSpacing = preferredSpacing
                     )
-                    results.add(res)
+                    footingResults.add(res)
+                    totalConcrete += res.concreteVolume
+                    totalSteel += res.steelWeight
+                    totalFootingArea += (res.width / 1000.0) * (res.length / 1000.0)
                 }
 
-                // Return the largest (most critical) footing result
-                val criticalResult = results.maxByOrNull { it.width * it.length } ?: results.first()
-                _result.value = criticalResult
-                _error.value = null
+                val soilUtilization = (totalFootingArea / soilAreaM2) * 100.0
+
+                _autoResults.value = AutoDesignSummary(
+                    footingResults = footingResults,
+                    totalConcreteVolume = totalConcrete,
+                    totalSteelWeight = totalSteel,
+                    soilAreaUtilization = soilUtilization,
+                    soilAreaM2 = soilAreaM2,
+                    totalFootingAreaM2 = totalFootingArea
+                )
+                // Also store first result for single-result consumers
+                _result.value = footingResults.firstOrNull()
+                _error.value = if (soilUtilization > 90.0) {
+                    "Warning: Soil area utilization is ${"%.0f".format(soilUtilization)}%. Consider increasing soil area or using raft foundation."
+                } else null
             } catch (e: Exception) {
                 _error.value = "Auto-design error: ${e.message}"
             } finally {

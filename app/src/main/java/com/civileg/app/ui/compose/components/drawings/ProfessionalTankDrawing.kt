@@ -16,37 +16,32 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 // ============================================================================
-// COLOR PALETTE — Engineering Drawing Style (white background)
+// COLOR PALETTE
 // ============================================================================
 
 private val WaterBlue = Color(0x604A90D9)
-private val WaterStroke = Color(0xFF1976D2)
-private val ConcreteFill = Color(0xFFD6D6D6)
-private val ConcreteStroke = Color(0xFF424242)
-private val ConcreteHatch = Color(0xFF999999)
-private val SoilBrown = Color(0xFF8B6914)
-private val SoilFill = Color(0x55A0794D)
-private val RebarColor = Color(0xFF1565C0)
-private val StirrupColor = Color(0xFFE65100)
-private val DimColor = Color(0xFF333333)
-private val DimExtColor = Color(0xFF666666)
-private val PressurePink = Color(0x55E91E63)
-private val GroundLine = Color(0xFF5D4037)
-private val HoopGreen = Color(0xFF2E7D32)
-private val TextColor = Color(0xFF212121)
-private val TableHeaderBg = Color(0xFF1565C0)
-private val TableHeaderText = Color(0xFFFFFFFF)
-private val TableRowAlt = Color(0xFFF5F5F5)
-private val White = Color(0xFFFFFFFF)
-private val TopSlabFill = Color(0xFFBDBDBD)
+private val WaterStroke = Color(0xFF4A90D9)
+private val ConcreteFill = Color(0xFFB0B0B0)
+private val ConcreteDark = Color(0xFF808080)
+private val ConcreteLight = Color(0xFFD0D0D0)
+private val SoilBrown = Color(0xFF8B4513)
+private val SoilFill = Color(0x558B4513)
+private val RebarBlue = Color(0xFF2255CC)
+private val RebarLightBlue = Color(0xFF5599DD)
+private val DimColor = Color(0xFFDDDDDD)
+private val AccentOrange = Color(0xFFFF9800)
+private val PressurePink = Color(0xFFE91E8C)
+private val GroundColor = Color(0xFFA0522D)
+private val HoopGreen = Color(0xFF4CAF50)
+private val TextColor = Color(0xFFEEEEEE)
+private val PanelBg = Color(0x33000000)
+private val TableHeaderBg = Color(0x44FFFFFF)
+private val TableRowAlt = Color(0x1AFFFFFF)
 
 // ============================================================================
 // COMPOSABLE ENTRY POINT
@@ -71,311 +66,274 @@ fun ProfessionalTankDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1.3f)
+            .aspectRatio(1.4f)
     ) {
         val cw = size.width
         val ch = size.height
 
-        val isCircular = tankType.contains("Circular", ignoreCase = true)
-        val isElevated = tankType.contains("Elevated", ignoreCase = true)
+        val isCircular = tankType.contains("Circular")
+        val isElevated = tankType.contains("Elevated")
         val isUnderground = foundationDepth > 0
 
+        // ── Layout: 70% elevation, 30% table ──
+        val margin = 40f
+        val tableBottom = ch
+        val tableTop = ch * 0.72f
+        val elevBottom = tableTop - 10f
+        val elevTop = 50f
+        val elevLeft = 80f
+        val elevRight = cw * 0.62f  // leave room for pressure diagram
+
+        // ── Scaling ──
+        val totalH = height + baseThickness / 1000.0 + (if (isUnderground) foundationDepth else 0.0)
+        val scaleX = (elevRight - elevLeft) / length.toFloat()
+        val scaleY = (elevBottom - elevTop) / totalH.toFloat()
+        val scale = min(scaleX, scaleY) * 0.82f
+
+        val drawL = length.toFloat() * scale
+        val drawH = height.toFloat() * scale
+        val drawWT = max((wallThickness / 1000.0 * scale).toFloat(), 22f)  // MIN 22px for visibility
+        val drawBT = max((baseThickness / 1000.0 * scale).toFloat(), 16f)
+        val drawWL = waterLevel.toFloat() * scale
+        val drawFD = foundationDepth.toFloat() * scale
+        val cover = max(50f * scale, 6f)
+
+        // Center tank in elevation area
+        val tankLeft = elevLeft + (elevRight - elevLeft - drawL) / 2f
+        val tankTop = elevTop + (elevBottom - elevTop - drawH - drawBT - (if (isUnderground) drawFD else 0f)) / 2f + (if (isUnderground) drawFD else 0f)
+        val tankRight = tankLeft + drawL
+        val tankBottom = tankTop + drawH
+        val baseBottom = tankBottom + drawBT
+
         // ── Background ──
-        drawRect(Color(0xFFFAFAFA))
+        drawRoundRect(
+            color = Color(0xFF1A1A2E),
+            topLeft = Offset.Zero,
+            size = Size(cw, ch),
+            cornerRadius = CornerRadius(12f, 12f)
+        )
 
-        // ── Layout: 65% drawing, 35% table ──
-        val drawAreaBottom = ch * 0.65f
-        val tableTop = ch * 0.66f
+        // ── Title ──
+        val paint = android.graphics.Paint().apply {
+            color = Color.White.toArgb()
+            textSize = 18f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        drawContext.canvas.nativeCanvas.drawText(
+            "WATER TANK - CROSS SECTION", cw / 2f, 30f, paint
+        )
 
-        // ── Drawing area margins ──
-        val leftMargin = 60f
-        val rightMargin = cw * 0.68f  // room for pressure diagram
-        val topMargin = 30f
-
-        // ── Ground level ──
-        val groundY = if (isUnderground) {
-            drawAreaBottom * 0.45f
-        } else if (isElevated) {
-            drawAreaBottom * 0.82f
-        } else {
-            drawAreaBottom * 0.82f
+        // ── Underground soil ──
+        if (isUnderground && drawFD > 0) {
+            drawSoilRegion(tankLeft - 60f, tankTop - drawFD, drawL + 120f, drawFD + 30f)
+            // GL line
+            val glY = tankTop - drawFD
+            drawLine(
+                color = GroundColor,
+                start = Offset(tankLeft - 80f, glY),
+                end = Offset(tankRight + 80f, glY),
+                strokeWidth = 2f,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 6f), 0f)
+            )
+            drawTextAnnotated("GL +/-0.00", tankLeft - 100f, glY - 6f, GroundColor, 14f)
         }
 
-        // ── Scale calculation ──
-        val totalHeight = height + baseThickness / 1000.0 + (if (isUnderground) foundationDepth else 0.0)
-        val drawWidth = rightMargin - leftMargin
-        val drawHeight = groundY - topMargin
-        val scaleX = drawWidth / maxOf(length, width, 0.5).toFloat()
-        val scaleY = drawHeight / max(totalHeight, 0.5).toFloat()
-        val scale = min(scaleX, scaleY) * 0.85f
-
-        // ── Tank body pixel dimensions ──
-        val twt = maxOf(wallThickness.toFloat() / 1000f * scale, 8f)  // wall thickness in px
-        val tbt = maxOf(baseThickness.toFloat() / 1000f * scale, 6f)  // base thickness in px
-        val tankH = height.toFloat() * scale
-        val tankW = length.toFloat() * scale
-        val tankD = width.toFloat() * scale  // depth for plan
-        val wlPx = waterLevel.toFloat() * scale  // water level in px
-        val fdPx = foundationDepth.toFloat() * scale
-
-        // ── Tank position (bottom-left of base outer face) ──
-        val baseOuterLeft = (cw - tankW) / 2f - 40f
-        val baseOuterRight = baseOuterLeft + tankW
-        val baseOuterTop = groundY - tbt
-        val baseOuterBottom = groundY
-
-        val wallOuterLeft = baseOuterLeft
-        val wallOuterRight = baseOuterRight
-        val wallInnerLeft = wallOuterLeft + twt
-        val wallInnerRight = wallOuterRight - twt
-        val wallTop = baseOuterTop - tankH
-        val wallBottom = baseOuterTop
-
-        val topSlabH = max(twt * 0.6f, 5f)
-
-        // ── 1. Draw ground line ──
-        drawGroundLine(groundY, cw, isUnderground, fdPx, baseOuterBottom)
-
-        // ── 2. Draw elevated columns ──
+        // ── Elevated supports ──
         if (isElevated) {
-            drawElevatedColumns(baseOuterLeft, baseOuterRight, baseOuterBottom, groundY, tankW)
+            drawElevatedColumns(tankLeft, tankRight, baseBottom, ch * 0.72f)
         }
 
-        // ── 3. Draw tank body (U-shape cross section) ──
+        // ── Draw Tank Body ──
         if (isCircular) {
-            drawCircularTankCrossSection(
-                centerX = (baseOuterLeft + baseOuterRight) / 2f,
-                baseTop = baseOuterTop,
-                radius = tankW / 2f,
-                wallT = twt,
-                baseT = tbt,
-                tankH = tankH,
-                topSlabH = topSlabH
-            )
+            drawCircularTankBody(tankLeft, tankTop, drawL, drawH, drawWT, drawBT)
         } else {
-            drawRectangularTankBody(
-                wallOuterLeft, wallOuterRight, wallInnerLeft, wallInnerRight,
-                wallTop, wallBottom, baseOuterTop, baseOuterBottom,
-                topSlabH, twt
-            )
+            drawRectangularTankBody(tankLeft, tankTop, drawL, drawH, drawWT, drawBT)
         }
 
-        // ── 4. Draw water fill ──
-        val waterTop = wallBottom - wlPx
-        if (waterLevel > 0) {
-            drawWaterFill(wallInnerLeft, wallInnerRight, waterTop, wallBottom, isCircular,
-                centerX = (baseOuterLeft + baseOuterRight) / 2f,
-                innerRadius = tankW / 2f - twt
-            )
+        // ── Water Fill ──
+        if (drawWL > 2f) {
+            drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, isCircular)
         }
 
-        // ── 5. Draw soil (underground) ──
-        if (isUnderground) {
-            drawSoilRegion(wallOuterLeft, wallOuterRight, wallBottom, wallBottom + fdPx, cw)
-        }
-
-        // ── 6. Draw reinforcement ──
+        // ── Reinforcement ──
         drawReinforcement(
-            isCircular,
-            wallOuterLeft, wallOuterRight, wallInnerLeft, wallInnerRight,
-            wallTop, wallBottom, baseOuterTop, baseOuterBottom,
-            twt, tbt, topSlabH,
+            tankLeft, tankTop, tankRight, tankBottom, baseBottom,
+            drawWT, drawBT, drawWL, cover, scale,
             verticalRebarDia, verticalRebarSpacing,
             horizontalRebarDia, horizontalRebarSpacing,
-            centerX = (baseOuterLeft + baseOuterRight) / 2f,
-            radius = tankW / 2f,
-            innerRadius = tankW / 2f - twt
+            isCircular
         )
 
-        // ── 7. Draw dimensions ──
-        drawDimensions(
-            isCircular, isElevated, isUnderground,
-            wallOuterLeft, wallOuterRight, wallInnerLeft, wallInnerRight,
-            wallTop, wallBottom, baseOuterBottom,
-            twt, tbt, tankW, tankH, fdPx,
-            centerX = (baseOuterLeft + baseOuterRight) / 2f,
-            radius = tankW / 2f
-        )
+        // ── Dimensions ──
+        drawDimensions(tankLeft, tankTop, tankRight, tankBottom, baseBottom,
+            drawWT, drawBT, drawL, drawH, isCircular, length, height, wallThickness, baseThickness)
 
-        // ── 8. Draw pressure diagram ──
-        drawPressureDiagram(
-            isElevated, waterLevel,
-            wallOuterRight + 15f, wallTop, wallBottom,
-            scale
-        )
+        // ── Pressure Diagram ──
+        if (drawWL > 2f) {
+            drawPressureDiagram(tankRight + 50f, tankTop, drawH, drawWL, waterLevel, isElevated, elevBottom)
+        }
 
-        // ── 9. Draw plan view (top-right inset) ──
-        drawPlanView(
-            isCircular,
-            cw - 130f, 30f, 100f, 100f,
-            tankW, tankD, twt
-        )
+        // ── Plan View ──
+        drawPlanView(cw, tankType, length, width, isCircular, tableTop)
 
-        // ── 10. Draw title block ──
-        drawTitleBlock(tankType, isCircular, cw, ch, length, width, height)
-
-        // ── 11. Draw reinforcement table ──
-        drawRebarTable(
-            tableTop, cw, ch,
+        // ── Reinforcement Table ──
+        drawRebarTable(cw, tableTop, ch, tankType,
             verticalRebarDia, verticalRebarSpacing,
-            horizontalRebarDia, horizontalRebarSpacing,
-            wallThickness, baseThickness, isCircular
-        )
+            horizontalRebarDia, horizontalRebarSpacing, height, length)
     }
 }
 
 // ============================================================================
-// RECTANGULAR TANK BODY — Proper U-shape with top slab
+// RECTANGULAR TANK BODY — clear U-shape vessel
 // ============================================================================
 
 private fun DrawScope.drawRectangularTankBody(
-    outerL: Float, outerR: Float, innerL: Float, innerR: Float,
-    top: Float, bottom: Float, baseTop: Float, baseBottom: Float,
-    topSlabH: Float, wallT: Float
+    left: Float, top: Float, l: Float, h: Float, wt: Float, bt: Float
 ) {
-    // ── Left wall ──
-    val leftWallPath = Path().apply {
-        moveTo(outerL, bottom)
-        lineTo(outerL, top)
-        lineTo(innerL, top)
-        lineTo(innerL, bottom)
-        close()
-    }
-    drawPath(leftWallPath, ConcreteFill)
-    drawPath(leftWallPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
-    drawConcreteHatching(outerL, top, wallT, bottom - top)
-
-    // ── Right wall ──
-    val rightWallPath = Path().apply {
-        moveTo(innerR, bottom)
-        lineTo(innerR, top)
-        lineTo(outerR, top)
-        lineTo(outerR, bottom)
-        close()
-    }
-    drawPath(rightWallPath, ConcreteFill)
-    drawPath(rightWallPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
-    drawConcreteHatching(innerR, top, wallT, bottom - top)
-
-    // ── Base slab ──
-    val basePath = Path().apply {
-        moveTo(outerL, bottom)
-        lineTo(outerR, bottom)
-        lineTo(outerR, baseBottom)
-        lineTo(outerL, baseBottom)
-        close()
-    }
-    drawPath(basePath, ConcreteFill)
-    drawPath(basePath, color = ConcreteStroke, style = Stroke(width = 1.5f))
-    drawConcreteHatching(outerL, bottom, outerR - outerL, baseBottom - bottom)
-
-    // ── Top slab / cover ──
-    val topSlabPath = Path().apply {
-        moveTo(outerL, top)
-        lineTo(outerR, top)
-        lineTo(outerR, top - topSlabH)
-        lineTo(outerL, top - topSlabH)
-        close()
-    }
-    drawPath(topSlabPath, TopSlabFill)
-    drawPath(topSlabPath, color = ConcreteStroke, style = Stroke(width = 1f))
-
-    // ── Joint lines (wall-base connections) ──
-    drawLine(ConcreteStroke, Offset(outerL, bottom), Offset(innerL, bottom), strokeWidth = 1f)
-    drawLine(ConcreteStroke, Offset(innerR, bottom), Offset(outerR, bottom), strokeWidth = 1f)
-
-    // ── Waterproofing indication (inner face dashes) ──
-    val wpPath = PathEffect.dashPathEffect(floatArrayOf(4f, 3f))
-    drawLine(
-        Color(0xFF42A5F5), Offset(innerL + 2f, top), Offset(innerL + 2f, bottom),
-        strokeWidth = 1f, pathEffect = wpPath
+    // Left wall - solid concrete
+    drawRect(
+        color = ConcreteFill,
+        topLeft = Offset(left, top),
+        size = Size(wt, h + bt)
     )
+    // Left wall 3D effect
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+            colors = listOf(ConcreteLight, ConcreteFill, ConcreteDark)
+        ),
+        topLeft = Offset(left, top),
+        size = Size(wt, h + bt)
+    )
+
+    // Right wall
+    drawRect(
+        color = ConcreteFill,
+        topLeft = Offset(left + l - wt, top),
+        size = Size(wt, h + bt)
+    )
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+            colors = listOf(ConcreteDark, ConcreteFill, ConcreteLight)
+        ),
+        topLeft = Offset(left + l - wt, top),
+        size = Size(wt, h + bt)
+    )
+
+    // Base slab - full width
+    drawRect(
+        color = ConcreteFill,
+        topLeft = Offset(left, top + h),
+        size = Size(l, bt)
+    )
+    // Base 3D effect
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+            colors = listOf(ConcreteLight, ConcreteFill, ConcreteDark)
+        ),
+        topLeft = Offset(left, top + h),
+        size = Size(l, bt)
+    )
+
+    // Interior void (dark background to show hollow interior)
+    drawRect(
+        color = Color(0xFF0D1117),
+        topLeft = Offset(left + wt, top),
+        size = Size(l - 2 * wt, h)
+    )
+
+    // Clean border - outer
+    drawRect(
+        color = Color.White.copy(alpha = 0.7f),
+        topLeft = Offset(left, top),
+        size = Size(l, h + bt),
+        style = Stroke(width = 2f)
+    )
+
+    // Inner cutout border (open top = no top line)
+    val innerPath = Path().apply {
+        // Left inner edge (top to bottom)
+        moveTo(left + wt, top)
+        lineTo(left + wt, top + h)
+        // Bottom inner edge
+        lineTo(left + l - wt, top + h)
+        // Right inner edge (bottom to top)
+        lineTo(left + l - wt, top)
+    }
+    drawPath(innerPath, color = Color.White.copy(alpha = 0.5f), style = Stroke(width = 1.5f))
+
+    // Hatching on walls
+    drawConcreteHatching(left, top, wt, h + bt)
+    drawConcreteHatching(left + l - wt, top, wt, h + bt)
+    drawConcreteHatching(left, top + h, l, bt)
+
+    // Wall-base joint emphasis
     drawLine(
-        Color(0xFF42A5F5), Offset(innerR - 2f, top), Offset(innerR - 2f, bottom),
-        strokeWidth = 1f, pathEffect = wpPath
+        color = Color.White.copy(alpha = 0.3f),
+        start = Offset(left, top + h),
+        end = Offset(left + l, top + h),
+        strokeWidth = 1f
     )
 }
 
 // ============================================================================
-// CIRCULAR TANK CROSS SECTION — Arc-based U-shape
+// CIRCULAR TANK BODY — correct U-shape cross section through diameter
 // ============================================================================
 
-private fun DrawScope.drawCircularTankCrossSection(
-    centerX: Float, baseTop: Float,
-    radius: Float, wallT: Float, baseT: Float,
-    tankH: Float, topSlabH: Float
+private fun DrawScope.drawCircularTankBody(
+    left: Float, top: Float, l: Float, h: Float, wt: Float, bt: Float
 ) {
-    val outerR = radius
-    val innerR = radius - wallT
-    val top = baseTop - tankH
-    val bottom = baseTop
+    val cx = left + l / 2f
+    val r = l / 2f
+    val wallR = r + wt
 
-    // ── Outer wall arc (half circle, opening up) ──
-    val wallPath = Path().apply {
-        moveTo(centerX - outerR, bottom)
-        arcTo(
-            rect = androidx.compose.ui.geometry.Rect(
-                centerX - outerR, top - outerR,
-                centerX + outerR, bottom + outerR
-            ),
-            startAngleDegrees = 180f, sweepAngleDegrees = 180f, forceMoveTo = false
-        )
-        lineTo(centerX + innerR, bottom)
-        arcTo(
-            rect = androidx.compose.ui.geometry.Rect(
-                centerX - innerR, top - innerR,
-                centerX + innerR, bottom + innerR
-            ),
-            startAngleDegrees = 0f, sweepAngleDegrees = -180f, forceMoveTo = false
-        )
-        close()
+    // Draw as rectangular cross-section through diameter (what you actually see in a section)
+    // Same as rectangular but with curved inner wall edges
+    // Left wall
+    drawRect(color = ConcreteFill, topLeft = Offset(left, top), size = Size(wt, h + bt))
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(ConcreteLight, ConcreteFill, ConcreteDark)),
+        topLeft = Offset(left, top), size = Size(wt, h + bt)
+    )
+    // Right wall
+    drawRect(color = ConcreteFill, topLeft = Offset(left + l - wt, top), size = Size(wt, h + bt))
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(ConcreteDark, ConcreteFill, ConcreteLight)),
+        topLeft = Offset(left + l - wt, top), size = Size(wt, h + bt)
+    )
+    // Base slab
+    drawRect(color = ConcreteFill, topLeft = Offset(left, top + h), size = Size(l, bt))
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(ConcreteLight, ConcreteFill, ConcreteDark)),
+        topLeft = Offset(left, top + h), size = Size(l, bt)
+    )
+
+    // Interior
+    drawRect(color = Color(0xFF0D1117), topLeft = Offset(left + wt, top), size = Size(l - 2 * wt, h))
+
+    // Borders
+    drawRect(
+        color = Color.White.copy(alpha = 0.7f),
+        topLeft = Offset(left, top), size = Size(l, h + bt), style = Stroke(2f)
+    )
+    val innerPath = Path().apply {
+        moveTo(left + wt, top); lineTo(left + wt, top + h)
+        lineTo(left + l - wt, top + h); lineTo(left + l - wt, top)
     }
-    drawPath(wallPath, ConcreteFill)
-    drawPath(wallPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
+    drawPath(innerPath, color = Color.White.copy(alpha = 0.5f), style = Stroke(1.5f))
 
-    // ── Hatching on walls ──
-    val hatchStep = 6f
-    for (angle in -180..0 step 15) {
-        val rad = (angle.toDouble() * kotlin.math.PI) / 180.0
-        val ox = centerX + outerR * cos(rad).toFloat()
-        val oy = (top + outerR) + outerR * sin(rad).toFloat()
-        val ix = centerX + innerR * cos(rad).toFloat()
-        val iy = (top + innerR) + innerR * sin(rad).toFloat()
-        drawLine(ConcreteHatch, Offset(ix, iy), Offset(ox, oy), strokeWidth = 0.5f)
-    }
+    drawConcreteHatching(left, top, wt, h + bt)
+    drawConcreteHatching(left + l - wt, top, wt, h + bt)
+    drawConcreteHatching(left, top + h, l, bt)
 
-    // ── Base slab ──
-    val baseLeft = centerX - outerR - wallT * 0.5f
-    val baseRight = centerX + outerR + wallT * 0.5f
-    val basePath = Path().apply {
-        moveTo(centerX - outerR, bottom)
-        lineTo(centerX + outerR, bottom)
-        lineTo(baseRight, bottom + baseT)
-        lineTo(baseLeft, bottom + baseT)
-        close()
-    }
-    drawPath(basePath, ConcreteFill)
-    drawPath(basePath, color = ConcreteStroke, style = Stroke(width = 1.5f))
-    drawConcreteHatching(baseLeft, bottom, baseRight - baseLeft, baseT)
-
-    // ── Top slab ──
-    val topSlabPath = Path().apply {
-        moveTo(centerX - outerR, top)
-        lineTo(centerX + outerR, top)
-        lineTo(centerX + outerR, top - topSlabH)
-        lineTo(centerX - outerR, top - topSlabH)
-        close()
-    }
-    drawPath(topSlabPath, TopSlabFill)
-    drawPath(topSlabPath, color = ConcreteStroke, style = Stroke(width = 1f))
-
-    // ── Center line (dashed) ──
-    val clPath = PathEffect.dashPathEffect(floatArrayOf(10f, 5f))
-    drawLine(Color(0xFF9E9E9E), Offset(centerX, top - topSlabH - 10f), Offset(centerX, bottom + baseT + 5f),
-        strokeWidth = 0.5f, pathEffect = clPath)
-
-    // ── Label ──
-    drawNativeText("O", centerX - 4f, top - topSlabH - 12f, 9f, Color(0xFF9E9E9E))
+    // Circular indicator arcs at top of walls
+    drawPath(
+        Path().apply {
+            addOval(androidx.compose.ui.geometry.Rect(left, top - 8f, left + l, top + 8f))
+        },
+        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+    )
+    drawTextAnnotated("(circular section)", cx - 40f, top - 14f, HoopGreen.copy(alpha = 0.6f), 11f)
 }
 
 // ============================================================================
@@ -383,143 +341,99 @@ private fun DrawScope.drawCircularTankCrossSection(
 // ============================================================================
 
 private fun DrawScope.drawWaterFill(
-    innerL: Float, innerR: Float, waterTop: Float, waterBottom: Float,
-    isCircular: Boolean, centerX: Float, innerRadius: Float
+    left: Float, top: Float, l: Float, h: Float,
+    wt: Float, wl: Float, isCircular: Boolean
 ) {
-    if (isCircular) {
-        // Clip water to circular inner shape
-        val waterPath = Path().apply {
-            moveTo(centerX - innerRadius, waterBottom)
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(
-                    centerX - innerRadius, waterBottom - innerRadius * 2,
-                    centerX + innerRadius, waterBottom
-                ),
-                startAngleDegrees = 180f, sweepAngleDegrees = 180f, forceMoveTo = false
+    val waterTop = top + h - wl
+    val wLeft = left + wt + 2f
+    val wRight = left + l - wt - 2f
+    val wTop = max(waterTop, top + 2f)
+    val wH = top + h - 2f - wTop
+
+    if (wH <= 0) return
+
+    // Water gradient fill
+    drawRect(
+        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+            colors = listOf(
+                WaterBlue.copy(alpha = 0.3f),
+                WaterBlue.copy(alpha = 0.6f)
             )
-            lineTo(centerX + innerRadius, waterTop)
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(
-                    centerX - innerRadius, waterTop - innerRadius * 2,
-                    centerX + innerRadius, waterTop
-                ),
-                startAngleDegrees = 0f, sweepAngleDegrees = -180f, forceMoveTo = false
-            )
-            close()
-        }
-        drawPath(waterPath, WaterBlue)
-        drawPath(waterPath, color = WaterStroke, style = Stroke(width = 1f))
-    } else {
-        val waterPath = Path().apply {
-            moveTo(innerL, waterBottom)
-            lineTo(innerL, waterTop)
-            lineTo(innerR, waterTop)
-            lineTo(innerR, waterBottom)
-            close()
-        }
-        drawPath(waterPath, WaterBlue)
-        drawPath(waterPath, color = WaterStroke, style = Stroke(width = 1f))
+        ),
+        topLeft = Offset(wLeft, wTop),
+        size = Size(wRight - wLeft, wH)
+    )
+
+    // Water surface line
+    drawLine(
+        color = WaterStroke,
+        start = Offset(wLeft, waterTop),
+        end = Offset(wRight, waterTop),
+        strokeWidth = 2.5f
+    )
+
+    // Wave marks
+    val waveY = waterTop + 5f
+    repeat(5) { i ->
+        val wx = wLeft + 15f + i * (wRight - wLeft - 30f) / 4f
+        drawLine(
+            color = WaterStroke.copy(alpha = 0.5f),
+            start = Offset(wx, waveY),
+            end = Offset(wx + 10f, waveY - 4f),
+            strokeWidth = 1.2f
+        )
     }
 
-    // ── Water surface wave ──
-    val waveY = waterTop
-    val wavePath = Path().apply {
-        val startX = if (isCircular) centerX - innerRadius else innerL
-        val endX = if (isCircular) centerX + innerRadius else innerR
-        moveTo(startX, waveY)
-        var x = startX
-        while (x < endX) {
-            val cpx = x + 4f
-            val cpy = waveY - 2f
-            val endX2 = x + 8f
-            lineTo(endX2, waveY)
-            x = endX2
-        }
-    }
-    drawPath(wavePath, color = WaterStroke, style = Stroke(width = 1f))
-
-    // ── WL label ──
-    val labelX = (if (isCircular) centerX + innerRadius else innerR) + 8f
-    drawNativeText("WL", labelX, waveY + 4f, 10f, WaterStroke)
+    // WL label
+    drawTextAnnotated("WL", wRight + 6f, waterTop + 4f, WaterStroke, 13f)
 }
 
 // ============================================================================
-// GROUND LINE & SOIL
+// SOIL REGION
 // ============================================================================
 
-private fun DrawScope.drawGroundLine(groundY: Float, canvasW: Float, isUnderground: Boolean, fdPx: Float, baseBottom: Float) {
-    // Ground line
-    drawLine(GroundLine, Offset(20f, groundY), Offset(canvasW - 20f, groundY), strokeWidth = 2f)
-
-    // Ground hatching (below line)
-    var gx = 25f
-    while (gx < canvasW - 20f) {
-        drawLine(GroundLine, Offset(gx, groundY), Offset(gx - 6f, groundY + 8f), strokeWidth = 0.8f)
-        gx += 12f
+private fun DrawScope.drawSoilRegion(left: Float, top: Float, w: Float, h: Float) {
+    drawRect(color = SoilFill, topLeft = Offset(left, top), size = Size(w, h))
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
+    nc.clipRect(left, top, left + w, top + h)
+    var hx = left - h
+    while (hx < left + w + h) {
+        nc.drawLine(hx, top, hx + h, top + h,
+            android.graphics.Paint().apply { color = SoilBrown.toArgb(); strokeWidth = 1f })
+        hx += 16f
     }
-
-    // GL label
-    drawNativeText("GL ±0.00", canvasW - 80f, groundY - 6f, 9f, GroundLine)
-}
-
-private fun DrawScope.drawSoilRegion(left: Float, right: Float, top: Float, bottom: Float, canvasW: Float) {
-    val soilPath = Path().apply {
-        moveTo(left - 20f, top)
-        lineTo(right + 20f, top)
-        lineTo(canvasW, bottom + 30f)
-        lineTo(0f, bottom + 30f)
-        close()
-    }
-    drawPath(soilPath, SoilFill)
-
-    // Soil hatching
-    for (x in (left - 20f).toInt()..(right + 20).toInt() step 10) {
-        drawLine(SoilBrown, Offset(x.toFloat(), top), Offset(x.toFloat() - 8f, top + 12f), strokeWidth = 0.5f)
-    }
+    nc.restore()
 }
 
 // ============================================================================
 // ELEVATED COLUMNS
 // ============================================================================
 
-private fun DrawScope.drawElevatedColumns(baseL: Float, baseR: Float, baseBottom: Float, groundY: Float, tankW: Float) {
-    val colW = max(tankW * 0.08f, 10f)
-    val colPositions = listOf(baseL + colW, baseR - colW * 2f)
-
-    for (cx in colPositions) {
-        // Column body
+private fun DrawScope.drawElevatedColumns(left: Float, right: Float, baseBottom: Float, groundY: Float) {
+    val colW = 20f
+    val groundLine = groundY - 10f
+    listOf(left + 40f, right - 40f - colW).forEach { cx ->
         drawRect(
-            ConcreteFill,
+            color = ConcreteDark,
             topLeft = Offset(cx, baseBottom),
-            size = Size(colW, groundY - baseBottom)
+            size = Size(colW, groundLine - baseBottom)
         )
         drawRect(
-            color = ConcreteStroke,
+            color = Color.White.copy(alpha = 0.3f),
             topLeft = Offset(cx, baseBottom),
-            size = Size(colW, groundY - baseBottom),
-            style = Stroke(width = 1.5f)
-        )
-
-        // Column hatching
-        drawConcreteHatching(cx, baseBottom, colW, groundY - baseBottom)
-    }
-
-    // Foundation pedestals
-    for (cx in colPositions) {
-        val pedW = colW * 1.8f
-        val pedH = max(8f, colW * 0.4f)
-        drawRect(
-            ConcreteFill,
-            topLeft = Offset(cx - (pedW - colW) / 2f, groundY),
-            size = Size(pedW, pedH)
-        )
-        drawRect(
-            ConcreteStroke,
-            topLeft = Offset(cx - (pedW - colW) / 2f, groundY),
-            size = Size(pedW, pedH),
-            style = Stroke(width = 1.5f)
+            size = Size(colW, groundLine - baseBottom),
+            style = Stroke(1f)
         )
     }
+    // Ground line
+    drawLine(
+        color = GroundColor,
+        start = Offset(left - 40f, groundLine),
+        end = Offset(right + 40f, groundLine),
+        strokeWidth = 2f
+    )
+    drawTextAnnotated("GL +/-0.00", left - 40f, groundLine + 14f, GroundColor, 12f)
 }
 
 // ============================================================================
@@ -527,94 +441,96 @@ private fun DrawScope.drawElevatedColumns(baseL: Float, baseR: Float, baseBottom
 // ============================================================================
 
 private fun DrawScope.drawReinforcement(
-    isCircular: Boolean,
-    outerL: Float, outerR: Float, innerL: Float, innerR: Float,
-    top: Float, bottom: Float, baseTop: Float, baseBottom: Float,
-    wallT: Float, baseT: Float, topSlabH: Float,
-    vDia: Double, vSpacing: Double,
-    hDia: Double, hSpacing: Double,
-    centerX: Float, radius: Float, innerRadius: Float
+    tankLeft: Float, tankTop: Float, tankRight: Float, tankBottom: Float,
+    baseBottom: Float, wt: Float, bt: Float, wl: Float, cover: Float, scale: Float,
+    vDia: Double, vSpacing: Double, hDia: Double, hSpacing: Double,
+    isCircular: Boolean
 ) {
-    val vBarR = maxOf(vDia.toFloat() / 2f, 1.5f)
-    val hBarR = maxOf(hDia.toFloat() / 2f, 1.2f)
-    val vSpPx = max(vSpacing.toFloat() * 0.3f, 15f)  // scaled spacing
-    val hSpPx = max(hSpacing.toFloat() * 0.3f, 15f)
+    val hSpacingPx = max(hSpacing.toFloat() * scale, 20f)
+    val vSpacingPx = max(vSpacing.toFloat() * scale, 18f)
+    val barW = max(vDia.toFloat() * 0.4f, 2f)
 
     if (isCircular) {
-        // ── Circular: Hoops (rings) + vertical bars ──
-        // Hoop reinforcement (green rings at spacing intervals)
-        val numHoops = ((bottom - top - topSlabH) / hSpPx).toInt().coerceAtLeast(2)
-        for (i in 0..numHoops) {
-            val y = top + topSlabH + i * (bottom - top - topSlabH) / numHoops
-            val hoopR = radius - wallT / 2f
-            drawCircle(
-                color = HoopGreen, radius = hoopR,
-                center = Offset(centerX, y),
-                style = Stroke(width = max(hBarR, 1f))
-            )
+        // Hoop reinforcement markers
+        var hy = tankTop + cover + 10f
+        while (hy < tankBottom - cover) {
+            drawCircle(color = HoopGreen, radius = 3.5f, center = Offset(tankLeft + wt / 2f, hy))
+            drawCircle(color = HoopGreen, radius = 3.5f, center = Offset(tankRight - wt / 2f, hy))
+            hy += hSpacingPx
         }
-
-        // Vertical bars (blue dots on inner and outer face)
-        val numVertBars = max((2 * kotlin.math.PI * innerRadius / vSpPx).toInt(), 4)
-        for (i in 0 until numVertBars) {
-            val angle = 2 * kotlin.math.PI * i / numVertBars
-            // Outer face bars
-            val ox = centerX + radius * cos(angle).toFloat() - wallT / 2f
-            val oy = (top + radius) + radius * sin(angle).toFloat()
-            drawCircle(RebarColor, vBarR, center = Offset(ox, oy))
-            // Inner face bars
-            val ix = centerX + innerRadius * cos(angle).toFloat() + wallT / 2f
-            val iy = (top + innerRadius) + innerRadius * sin(angle).toFloat()
-            drawCircle(RebarColor, vBarR, center = Offset(ix, iy))
+        // Vertical bars
+        var vx = tankLeft + cover
+        while (vx < tankLeft + wt) {
+            drawLine(color = RebarBlue, start = Offset(vx, tankTop + cover), end = Offset(vx, baseBottom - cover), strokeWidth = barW)
+            vx += max(vDia.toFloat() * 1.5f, 8f)
+        }
+        vx = tankRight - cover
+        while (vx > tankRight - wt) {
+            drawLine(color = RebarBlue, start = Offset(vx, tankTop + cover), end = Offset(vx, baseBottom - cover), strokeWidth = barW)
+            vx -= max(vDia.toFloat() * 1.5f, 8f)
         }
     } else {
-        // ── Rectangular: Vertical bars + Horizontal stirrups ──
-
-        // Vertical bars on left wall (outer + inner face)
-        val wallH = bottom - top - topSlabH
-        val numVertBars = max((wallH / vSpPx).toInt(), 2)
-        for (i in 0..numVertBars) {
-            val y = top + topSlabH + i * wallH / numVertBars
-            // Left wall - outer face
-            drawCircle(RebarColor, vBarR, center = Offset(outerL + wallT * 0.3f, y))
-            // Left wall - inner face
-            drawCircle(RebarColor, vBarR, center = Offset(innerL - wallT * 0.3f, y))
-            // Right wall - inner face
-            drawCircle(RebarColor, vBarR, center = Offset(innerR + wallT * 0.3f, y))
-            // Right wall - outer face
-            drawCircle(RebarColor, vBarR, center = Offset(outerR - wallT * 0.3f, y))
+        // Vertical bars on inner face of left wall
+        var vy = tankTop + cover
+        while (vy < tankBottom) {
+            drawLine(
+                color = RebarBlue,
+                start = Offset(tankLeft + cover, vy),
+                end = Offset(tankLeft + cover, vy + min(vSpacingPx * 0.7f, tankBottom - vy)),
+                strokeWidth = 2.5f
+            )
+            // Outer face bars
+            drawLine(
+                color = RebarBlue,
+                start = Offset(tankLeft + wt - cover, vy),
+                end = Offset(tankLeft + wt - cover, vy + min(vSpacingPx * 0.7f, tankBottom - vy)),
+                strokeWidth = 2.5f
+            )
+            // Right wall inner
+            drawLine(
+                color = RebarBlue,
+                start = Offset(tankRight - cover, vy),
+                end = Offset(tankRight - cover, vy + min(vSpacingPx * 0.7f, tankBottom - vy)),
+                strokeWidth = 2.5f
+            )
+            drawLine(
+                color = RebarBlue,
+                start = Offset(tankRight - wt + cover, vy),
+                end = Offset(tankRight - wt + cover, vy + min(vSpacingPx * 0.7f, tankBottom - vy)),
+                strokeWidth = 2.5f
+            )
+            vy += vSpacingPx
         }
 
-        // Horizontal stirrups (rectangular ties in each wall)
-        val numStirrups = max((wallH / hSpPx).toInt(), 2)
-        val stirrupInset = wallT * 0.25f
-        for (i in 1 until numStirrups) {
-            val y = top + topSlabH + i * wallH / numStirrups
-            // Left wall stirrup
-            drawRect(
-                color = StirrupColor,
-                topLeft = Offset(outerL + stirrupInset, y - hSpPx * 0.3f),
-                size = Size(wallT - 2 * stirrupInset, hSpPx * 0.6f),
-                style = Stroke(width = max(hBarR * 0.8f, 0.8f))
-            )
-            // Right wall stirrup
-            drawRect(
-                color = StirrupColor,
-                topLeft = Offset(innerR + stirrupInset, y - hSpPx * 0.3f),
-                size = Size(wallT - 2 * stirrupInset, hSpPx * 0.6f),
-                style = Stroke(width = max(hBarR * 0.8f, 0.8f))
-            )
+        // Horizontal bars (stirrups) on walls
+        var hx = tankTop + cover
+        while (hx < tankBottom) {
+            drawLine(color = RebarLightBlue, start = Offset(tankLeft + 4f, hx), end = Offset(tankLeft + wt - 4f, hx), strokeWidth = 1.5f)
+            drawLine(color = RebarLightBlue, start = Offset(tankRight - wt + 4f, hx), end = Offset(tankRight - 4f, hx), strokeWidth = 1.5f)
+            hx += hSpacingPx
         }
 
-        // Base reinforcement (top and bottom mats)
-        val baseW = outerR - outerL
-        val numBaseBars = max((baseW / vSpPx).toInt(), 3)
-        for (i in 0..numBaseBars) {
-            val x = outerL + i * baseW / numBaseBars
-            // Bottom mat
-            drawCircle(RebarColor, vBarR, center = Offset(x, baseBottom - baseT * 0.25f))
-            // Top mat
-            drawCircle(RebarColor, vBarR, center = Offset(x, baseTop + baseT * 0.25f))
+        // Base bottom rebar
+        var bx = tankLeft + cover
+        while (bx < tankRight - cover) {
+            drawLine(
+                color = RebarBlue,
+                start = Offset(bx, baseBottom - cover),
+                end = Offset(bx + min(vSpacingPx * 0.6f, tankRight - cover - bx), baseBottom - cover),
+                strokeWidth = 2.5f
+            )
+            bx += vSpacingPx
+        }
+        // Base top rebar (lighter)
+        bx = tankLeft + cover
+        while (bx < tankRight - cover) {
+            drawLine(
+                color = RebarLightBlue,
+                start = Offset(bx, tankBottom + cover),
+                end = Offset(bx + min(vSpacingPx * 0.6f, tankRight - cover - bx), tankBottom + cover),
+                strokeWidth = 1.5f
+            )
+            bx += vSpacingPx
         }
     }
 }
@@ -624,37 +540,21 @@ private fun DrawScope.drawReinforcement(
 // ============================================================================
 
 private fun DrawScope.drawDimensions(
-    isCircular: Boolean, isElevated: Boolean, isUnderground: Boolean,
-    outerL: Float, outerR: Float, innerL: Float, innerR: Float,
-    top: Float, bottom: Float, baseBottom: Float,
-    wallT: Float, baseT: Float, tankW: Float, tankH: Float, fdPx: Float,
-    centerX: Float, radius: Float
+    left: Float, top: Float, right: Float, bottom: Float,
+    baseBottom: Float, wt: Float, bt: Float, l: Float, h: Float,
+    isCircular: Boolean, lengthM: Double, heightM: Double,
+    wallThickM: Double, baseThickM: Double
 ) {
-    val extLen = 8f
-    val dimOff = 25f
-
-    // ── Overall height (left side) ──
-    val hTop = top - 5f
-    val hBot = if (isUnderground) baseBottom + fdPx else baseBottom
-    drawDimLine(outerL - dimOff, hTop, outerL - dimOff, hBot, extLen, DimColor)
-    drawNativeText("H=${tankH / (tankH / (hBot - hTop))}m", outerL - dimOff - 5f, (hTop + hBot) / 2f, 9f, DimColor)
-
-    // ── Length / Diameter (top) ──
-    if (isCircular) {
-        drawDimLine(centerX - radius, top - 20f - extLen, centerX + radius, top - 20f - extLen, extLen, DimColor)
-        drawNativeText("D=${radius * 2}m", centerX - 15f, top - 20f - extLen - 10f, 9f, DimColor)
-    } else {
-        drawDimLine(outerL, top - 20f - extLen, outerR, top - 20f - extLen, extLen, DimColor)
-        drawNativeText("L", (outerL + outerR) / 2f - 3f, top - 20f - extLen - 10f, 9f, DimColor)
-    }
-
-    // ── Wall thickness (detail callout) ──
-    if (!isCircular) {
-        drawNativeText("t=${wallT.toInt()}mm", outerL + 2f, (top + bottom) / 2f - 4f, 8f, Color(0xFF666666))
-    }
-
-    // ── Base thickness ──
-    drawNativeText("tb=${baseT.toInt()}mm", outerR + 5f, (bottom + baseBottom) / 2f, 8f, Color(0xFF666666))
+    val ext = 30f
+    // Height - left side
+    drawDimLine(left - ext, top, left - ext, bottom, "H=${(heightM * 1000).toInt()}mm", true)
+    // Length - top
+    val lengthLabel = if (isCircular) "D=${(lengthM * 1000).toInt()}mm" else "L=${(lengthM * 1000).toInt()}mm"
+    drawDimLine(left, top - ext, right, top - ext, lengthLabel, false)
+    // Wall thickness
+    drawDimLine(left - ext - 30f, top + 15f, left, top + 15f, "t=${wallThickM.toInt()}mm", false)
+    // Base thickness - right side
+    drawDimLine(right + ext, bottom, right + ext, baseBottom, "tb=${baseThickM.toInt()}mm", true)
 }
 
 // ============================================================================
@@ -662,105 +562,75 @@ private fun DrawScope.drawDimensions(
 // ============================================================================
 
 private fun DrawScope.drawPressureDiagram(
-    isElevated: Boolean, waterLevel: Double,
-    startX: Float, top: Float, bottom: Float, scale: Float
+    x: Float, tankTop: Float, drawH: Float, drawWL: Float,
+    waterLevelM: Double, isElevated: Boolean, elevBottom: Float
 ) {
-    val pH = waterLevel.toFloat() * scale
-    val maxW = 30f
+    val waterTop = tankTop + drawH - drawWL
+    val diagW = 55f
+    val gammaW = 9.81
+    val maxP = waterLevelM * gammaW
+    val tankBottom = tankTop + drawH
 
-    val pressurePath = Path().apply {
-        moveTo(startX, bottom)
-        lineTo(startX, bottom - pH)
-        lineTo(startX + maxW, bottom)
+    // Triangular pressure
+    val pPath = Path().apply {
+        moveTo(x, waterTop)
+        lineTo(x + diagW, tankBottom)
+        lineTo(x, tankBottom)
         close()
     }
-    drawPath(pressurePath, PressurePink)
-    drawPath(pressurePath, color = Color(0xFFE91E63), style = Stroke(width = 1f))
+    drawPath(pPath, color = PressurePink.copy(alpha = 0.25f))
+    drawPath(pPath, color = PressurePink, style = Stroke(1.5f))
 
-    // Labels
-    drawNativeText("0", startX + maxW + 3f, bottom - 3f, 8f, Color(0xFFE91E63))
-    drawNativeText("wh", startX + maxW + 3f, bottom - pH - 3f, 8f, Color(0xFFE91E63))
-    drawNativeText(if (isElevated) "+ seismic" else "hydrostatic", startX, bottom + 14f, 8f, Color(0xFFE91E63))
+    drawTextAnnotated("Pw", x + diagW + 5f, tankBottom - 8f, PressurePink, 14f)
+    drawTextAnnotated("q = gw x h = ${"%.1f".format(maxP)} kN/m2", x - 10f, tankBottom + 16f, PressurePink, 11f)
+    drawTextAnnotated("0", x - 12f, waterTop + 4f, PressurePink.copy(alpha = 0.6f), 11f)
+    drawLine(color = PressurePink.copy(alpha = 0.5f), start = Offset(x - 4f, waterTop), end = Offset(x + 6f, waterTop), strokeWidth = 1f)
+
+    if (isElevated) {
+        drawTextAnnotated("(+ seismic)", x - 10f, tankBottom + 30f, PressurePink.copy(alpha = 0.5f), 10f)
+    }
 }
 
 // ============================================================================
-// PLAN VIEW (inset)
+// PLAN VIEW
 // ============================================================================
 
 private fun DrawScope.drawPlanView(
-    isCircular: Boolean,
-    cx: Float, cy: Float, w: Float, h: Float,
-    tankW: Float, tankD: Float, wallT: Float
+    cw: Float, tankType: String, lengthM: Double, widthM: Double,
+    isCircular: Boolean, tableTop: Float
 ) {
-    // Border
-    drawRect(Color.White, topLeft = Offset(cx - 5f, cy - 5f), size = Size(w + 10f, h + 10f))
-    drawRect(Color(0xFFEEEEEE), topLeft = Offset(cx, cy), size = Size(w, h))
-    drawRect(ConcreteStroke, topLeft = Offset(cx, cy), size = Size(w, h), style = Stroke(width = 1f))
+    val insetSize = min(100f, cw * 0.15f)
+    val insetLeft = cw - insetSize - 20f
+    val insetTop = tableTop - insetSize - 40f
 
-    // Label
-    drawNativeText("PLAN", cx + w / 2f - 12f, cy - 3f, 8f, DimColor)
+    drawRoundRect(color = PanelBg, topLeft = Offset(insetLeft - 8f, insetTop - 22f),
+        size = Size(insetSize + 16f, insetSize + 34f), cornerRadius = CornerRadius(6f))
+    drawTextAnnotated("PLAN", insetLeft, insetTop - 6f, TextColor, 13f)
 
-    val pw = w * 0.7f
-    val ph = h * 0.7f
-    val px = cx + (w - pw) / 2f
-    val py = cy + (h - ph) / 2f + 5f
+    val cx = insetLeft + insetSize / 2f
+    val cy = insetTop + 12f + insetSize / 2f
 
     if (isCircular) {
-        // Circle plan
-        val r = min(pw, ph) / 2f
-        drawCircle(ConcreteFill, r, center = Offset(px + pw / 2f, py + ph / 2f))
-        drawCircle(ConcreteStroke, r, center = Offset(px + pw / 2f, py + ph / 2f), style = Stroke(width = 1.5f))
-        // Inner circle
-        drawCircle(Color.White, r - wallT, center = Offset(px + pw / 2f, py + ph / 2f))
-        drawCircle(ConcreteStroke, r - wallT, center = Offset(px + pw / 2f, py + ph / 2f), style = Stroke(width = 1f))
-        // Hoop indicator dots
-        val numDots = 8
-        for (i in 0 until numDots) {
-            val angle = 2 * kotlin.math.PI * i / numDots
-            val dx = (px + pw / 2f) + (r - wallT / 2f) * cos(angle).toFloat()
-            val dy = (py + ph / 2f) + (r - wallT / 2f) * sin(angle).toFloat()
-            drawCircle(HoopGreen, 2f, center = Offset(dx, dy))
+        val r = insetSize / 2f - 6f
+        drawCircle(color = ConcreteFill, radius = r, center = Offset(cx, cy))
+        drawCircle(color = Color.White.copy(alpha = 0.5f), radius = r, center = Offset(cx, cy), style = Stroke(1.5f))
+        // Hoop indicators
+        for (i in 0..7) {
+            val a = Math.toRadians(i * 45.0)
+            drawCircle(color = HoopGreen, radius = 2f, center = Offset(cx + (r - 4f) * Math.cos(a).toFloat(), cy + (r - 4f) * Math.sin(a).toFloat()))
         }
+        drawTextAnnotated("D=${lengthM.toInt()}m", cx - 18f, cy + r + 14f, TextColor, 11f)
     } else {
-        // Rectangle plan
-        val planPath = Path().apply {
-            moveTo(px, py + ph)
-            lineTo(px, py)
-            lineTo(px + pw, py)
-            lineTo(px + pw, py + ph)
-            close()
-        }
-        val innerPath = Path().apply {
-            moveTo(px + wallT, py + ph)
-            lineTo(px + wallT, py + wallT)
-            lineTo(px + pw - wallT, py + wallT)
-            lineTo(px + pw - wallT, py + ph)
-            close()
-        }
-        drawPath(planPath, ConcreteFill)
-        drawPath(planPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
-        drawPath(innerPath, Color.White)
-        drawPath(innerPath, color = ConcreteStroke, style = Stroke(width = 1f))
-
-        // Rebar dots in walls
-        for (i in 1..3) {
-            val fy = py + wallT + i * (ph - wallT) / 4f
-            drawCircle(RebarColor, 1.5f, center = Offset(px + wallT / 2f, fy))
-            drawCircle(RebarColor, 1.5f, center = Offset(px + pw - wallT / 2f, fy))
-        }
+        val rw = insetSize - 12f
+        val rh = (widthM / lengthM).toFloat() * rw
+        val rl = cx - rw / 2f
+        val rt = cy - rh / 2f
+        drawRect(color = ConcreteFill, topLeft = Offset(rl, rt), size = Size(rw, rh))
+        drawRect(color = Color.White.copy(alpha = 0.5f), topLeft = Offset(rl, rt), size = Size(rw, rh), style = Stroke(1.5f))
+        drawLine(color = RebarBlue, start = Offset(rl + 4f, rt + 4f), end = Offset(rl + 4f, rt + rh - 4f), strokeWidth = 1.5f)
+        drawLine(color = RebarLightBlue, start = Offset(rl + 4f, cy), end = Offset(rl + rw - 4f, cy), strokeWidth = 1f)
+        drawTextAnnotated("${lengthM.toInt()}x${widthM.toInt()}", cx - 20f, rt + rh + 14f, TextColor, 11f)
     }
-}
-
-// ============================================================================
-// TITLE BLOCK
-// ============================================================================
-
-private fun DrawScope.drawTitleBlock(tankType: String, isCircular: Boolean, cw: Float, ch: Float, length: Double, width: Double, height: Double) {
-    // Small title block at top-left
-    drawRect(Color(0xFFE3F2FD), topLeft = Offset(5f, 2f), size = Size(200f, 22f), alpha = 0.8f)
-    val label = if (isCircular) "CIRCULAR TANK" else "RECTANGULAR TANK"
-    drawNativeText(label, 10f, 15f, 10f, Color(0xFF1565C0))
-    drawNativeText("${length}x${width}x${height}m", 120f, 15f, 9f, DimColor)
 }
 
 // ============================================================================
@@ -768,60 +638,87 @@ private fun DrawScope.drawTitleBlock(tankType: String, isCircular: Boolean, cw: 
 // ============================================================================
 
 private fun DrawScope.drawRebarTable(
-    tableTop: Float, cw: Float, ch: Float,
+    cw: Float, tableTop: Float, ch: Float, tankType: String,
     vDia: Double, vSpacing: Double,
     hDia: Double, hSpacing: Double,
-    wallT: Double, baseT: Double, isCircular: Boolean
+    height: Double, length: Double
 ) {
-    val left = 30f
-    val right = cw - 30f
-    val tableW = right - left
+    val tableLeft = 16f
+    val tableW = cw - 32f
     val rowH = 22f
     val headerH = 26f
-    val cols = floatArrayOf(tableW * 0.28f, tableW * 0.18f, tableW * 0.18f, tableW * 0.18f, tableW * 0.18f)
-    var x = left
+    val isCircular = tankType.contains("Circular")
 
-    // ── Header ──
-    drawRect(TableHeaderBg, topLeft = Offset(left, tableTop), size = Size(tableW, headerH))
-    val headers = if (isCircular)
-        listOf("Direction", "Location", "Dia(mm)", "Spacing(mm)", "As(mm\u00B2/m)")
-    else
-        listOf("Direction", "Location", "Dia(mm)", "Spacing(mm)", "As(mm\u00B2/m)")
+    drawRoundRect(
+        color = Color(0x22FFFFFF),
+        topLeft = Offset(tableLeft - 4f, tableTop - 22f),
+        size = Size(tableW + 8f, headerH + rowH * 3 + 26f),
+        cornerRadius = CornerRadius(6f)
+    )
 
-    for ((i, header) in headers.withIndex()) {
-        drawRect(Color(0xFF0D47A1), topLeft = Offset(x, tableTop), size = Size(cols[i], headerH), style = Stroke(width = 0.5f))
-        drawNativeText(header, x + 4f, tableTop + 16f, 9f, TableHeaderText)
-        x += cols[i]
+    drawTextAnnotated("REINFORCEMENT SCHEDULE", tableLeft, tableTop - 6f, TextColor, 16f, bold = true)
+
+    val headers = arrayOf("Direction", "Location", "Dia.", "Spacing", "As Provided")
+    val colWidths = floatArrayOf(tableW * 0.22f, tableW * 0.20f, tableW * 0.16f, tableW * 0.22f, tableW * 0.20f)
+
+    // Header row
+    drawRect(color = TableHeaderBg, topLeft = Offset(tableLeft, tableTop), size = Size(tableW, headerH))
+    var cx = tableLeft
+    for (i in headers.indices) {
+        drawTextAnnotated(headers[i], cx + 6f, tableTop + headerH / 2f + 5f, TextColor, 13f, bold = true)
+        cx += colWidths[i]
     }
 
-    // ── Data rows ──
-    val rows = if (isCircular) {
-        listOf(
-            listOf("Vertical", "Outer face", "\u03C6$vDia", "$vSpacing", "${(785.4 * vDia * vDia / vSpacing).formatNum()}"),
-            listOf("Vertical", "Inner face", "\u03C6$vDia", "$vSpacing", "${(785.4 * vDia * vDia / vSpacing).formatNum()}"),
-            listOf("Hoop", "Wall", "\u03C6$hDia", "$hSpacing", "${(785.4 * hDia * hDia / hSpacing).formatNum()}")
+    val rows = listOf(
+        arrayOf(
+            if (isCircular) "Hoop" else "Vertical",
+            "Wall (both faces)",
+            "O${vDia.toInt()}",
+            "@${vSpacing.toInt()}mm",
+            if (isCircular) "Hoop" else "T&S"
+        ),
+        arrayOf(
+            if (isCircular) "Vertical" else "Horizontal",
+            "Wall",
+            "O${hDia.toInt()}",
+            "@${hSpacing.toInt()}mm",
+            "Distribution"
+        ),
+        arrayOf(
+            "Both", "Base Slab",
+            "O${vDia.toInt()}",
+            "@${hSpacing.toInt()}mm",
+            "Top & Bottom"
         )
-    } else {
-        listOf(
-            listOf("Vertical", "Wall outer", "\u03C6$vDia", "$vSpacing", "${(785.4 * vDia * vDia / vSpacing).formatNum()}"),
-            listOf("Vertical", "Wall inner", "\u03C6$vDia", "$vSpacing", "${(785.4 * vDia * vDia / vSpacing).formatNum()}"),
-            listOf("Stirrup", "Wall", "\u03C6$hDia", "$hSpacing", "${(785.4 * hDia * hDia / hSpacing).formatNum()}"),
-            listOf("Bottom", "Base mat", "\u03C6$vDia", "$vSpacing", "${(785.4 * vDia * vDia / vSpacing).formatNum()}"),
-            listOf("Top", "Base mat", "\u03C6$vDia", "$vSpacing", "${(785.4 * vDia * vDia / vSpacing).formatNum()}")
-        )
-    }
+    )
 
-    for ((ri, row) in rows.withIndex()) {
-        val y = tableTop + headerH + ri * rowH
-        x = left
-        val bg = if (ri % 2 == 0) White else TableRowAlt
-        drawRect(bg, topLeft = Offset(left, y), size = Size(tableW, rowH))
-
-        for ((ci, cell) in row.withIndex()) {
-            drawRect(Color(0xFFE0E0E0), topLeft = Offset(x, y), size = Size(cols[ci], rowH), style = Stroke(width = 0.5f))
-            drawNativeText(cell, x + 4f, y + 14f, 9f, TextColor)
-            x += cols[ci]
+    rows.forEachIndexed { idx, row ->
+        val rY = tableTop + headerH + idx * rowH
+        if (idx % 2 == 0) {
+            drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, rY), size = Size(tableW, rowH))
         }
+        cx = tableLeft
+        val barColor = if (idx == 0) RebarBlue else if (idx == 1) RebarLightBlue else RebarBlue.copy(alpha = 0.7f)
+        for (i in row.indices) {
+            drawTextAnnotated(row[i], cx + 6f, rY + rowH / 2f + 4f, barColor, 12f)
+            cx += colWidths[i]
+        }
+    }
+
+    // Table border
+    drawRect(
+        color = Color.White.copy(alpha = 0.3f),
+        topLeft = Offset(tableLeft, tableTop),
+        size = Size(tableW, headerH + rowH * 3),
+        style = Stroke(width = 1f)
+    )
+
+    // Column separators
+    var sepX = tableLeft
+    for (i in 0 until colWidths.size - 1) {
+        sepX += colWidths[i]
+        drawLine(color = Color.White.copy(alpha = 0.15f),
+            start = Offset(sepX, tableTop), end = Offset(sepX, tableTop + headerH + rowH * 3), strokeWidth = 0.5f)
     }
 }
 
@@ -829,49 +726,70 @@ private fun DrawScope.drawRebarTable(
 // HELPERS
 // ============================================================================
 
-private fun DrawScope.drawConcreteHatching(x: Float, y: Float, w: Float, h: Float) {
-    val step = 8f
-    val clipPath = Path().apply {
-        addRect(androidx.compose.ui.geometry.Rect(x, y, x + w, y + h))
+private fun DrawScope.drawConcreteHatching(left: Float, top: Float, w: Float, h: Float) {
+    val nc = drawContext.canvas.nativeCanvas
+    nc.save()
+    nc.clipRect(left, top, left + w, top + h)
+    var i = left - h
+    while (i < left + w + h) {
+        nc.drawLine(i, top, i + h, top + h,
+            android.graphics.Paint().apply { color = Color(0x44AAAAAA).toArgb(); strokeWidth = 0.6f })
+        i += 16f
     }
-    var d = -w.toInt()
-    while (d <= (w + h).toInt()) {
-        val x1 = x + d.toFloat()
-        val x2 = x + d.toFloat() + h
-        val cx1 = x1.coerceIn(x, x + w)
-        val cx2 = x2.coerceIn(x, x + w)
-        val cy1 = y + (cx1 - x1).coerceAtLeast(0f)
-        val cy2 = y + h - (x2 - cx2).coerceAtLeast(0f)
-        if (cx1 < cx2 || (cx1 == cx2 && cy1 < cy2)) {
-            drawLine(ConcreteHatch, Offset(cx1, cy1), Offset(cx2, cy2), strokeWidth = 0.5f)
-        }
-        d += step.toInt()
+    nc.restore()
+}
+
+private fun DrawScope.drawTextAnnotated(
+    text: String, x: Float, y: Float, color: Color, size: Float, bold: Boolean = false
+) {
+    val p = android.graphics.Paint().apply {
+        this.color = color.toArgb()
+        textSize = size
+        isFakeBoldText = bold
+        textAlign = android.graphics.Paint.Align.LEFT
+    }
+    drawContext.canvas.nativeCanvas.drawText(text, x, y, p)
+}
+
+private fun DrawScope.drawDimLine(
+    x1: Float, y1: Float, x2: Float, y2: Float,
+    text: String, vertical: Boolean
+) {
+    val tick = 6f
+    if (vertical) {
+        drawLine(color = DimColor, start = Offset(x1, y1), end = Offset(x1, y2), strokeWidth = 1f)
+        drawLine(color = DimColor, start = Offset(x1 - tick, y1), end = Offset(x1 + tick, y1), strokeWidth = 1f)
+        drawLine(color = DimColor, start = Offset(x1 - tick, y2), end = Offset(x1 + tick, y2), strokeWidth = 1f)
+        // Arrows
+        drawArrowHead(x1, y1, 1f, DimColor, true)
+        drawArrowHead(x1, y2, -1f, DimColor, true)
+        val midY = (y1 + y2) / 2f
+        drawTextAnnotated(text, x1 - 50f, midY + 4f, DimColor, 12f)
+    } else {
+        drawLine(color = DimColor, start = Offset(x1, y1), end = Offset(x2, y1), strokeWidth = 1f)
+        drawLine(color = DimColor, start = Offset(x1, y1 - tick), end = Offset(x1, y1 + tick), strokeWidth = 1f)
+        drawLine(color = DimColor, start = Offset(x2, y1 - tick), end = Offset(x2, y1 + tick), strokeWidth = 1f)
+        drawArrowHead(x1, y1, 1f, DimColor, false)
+        drawArrowHead(x2, y1, -1f, DimColor, false)
+        val midX = (x1 + x2) / 2f
+        drawTextAnnotated(text, midX - 30f, y1 - 8f, DimColor, 12f)
     }
 }
 
-private fun DrawScope.drawNativeText(text: String, x: Float, y: Float, size: Float, color: Color) {
-    drawContext.canvas.nativeCanvas.apply {
-        val paint = android.graphics.Paint().apply {
-            this.color = color.toArgb()
-            textSize = size
-            isAntiAlias = true
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        }
-        drawText(text, x, y, paint)
+private fun DrawScope.drawArrowHead(
+    x: Float, y: Float, dir: Float, color: Color, vertical: Boolean
+) {
+    val s = 5f
+    val path = Path()
+    if (vertical) {
+        path.moveTo(x, y)
+        path.lineTo(x - s * 0.5f, y - dir * s)
+        path.lineTo(x + s * 0.5f, y - dir * s)
+    } else {
+        path.moveTo(x, y)
+        path.lineTo(x - dir * s, y - s * 0.5f)
+        path.lineTo(x - dir * s, y + s * 0.5f)
     }
+    path.close()
+    drawPath(path, color = color)
 }
-
-private fun DrawScope.drawDimLine(x1: Float, y1: Float, x2: Float, y2: Float, ext: Float, color: Color) {
-    // Extension lines
-    drawLine(DimExtColor, Offset(x1, y1 - ext), Offset(x1, y1 + ext), strokeWidth = 0.5f)
-    drawLine(DimExtColor, Offset(x2, y2 - ext), Offset(x2, y2 + ext), strokeWidth = 0.5f)
-    // Dimension line
-    drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 1f)
-    // Tick marks
-    drawLine(color, Offset(x1 - 3f, y1 - 3f), Offset(x1, y1), strokeWidth = 1f)
-    drawLine(color, Offset(x1 + 3f, y1 - 3f), Offset(x1, y1), strokeWidth = 1f)
-    drawLine(color, Offset(x2 - 3f, y2 - 3f), Offset(x2, y2), strokeWidth = 1f)
-    drawLine(color, Offset(x2 + 3f, y2 - 3f), Offset(x2, y2), strokeWidth = 1f)
-}
-
-private fun Double.formatNum(): String = if (this >= 100) "%.0f".format(this) else "%.1f".format(this)

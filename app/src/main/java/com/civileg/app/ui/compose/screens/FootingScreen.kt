@@ -252,7 +252,9 @@ fun FootingScreen(
                                         soilCapacity = soilCapacity.toDouble()!!,
                                         colWidth = colWidth.toDouble()!!,
                                         colDepth = colLength.toDouble()!!,
-                                        code = selectedCode
+                                        code = selectedCode,
+                                        preferredDiameter = barDiameter.toInt()!!,
+                                        preferredSpacing = barSpacing.toDouble()!!
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
