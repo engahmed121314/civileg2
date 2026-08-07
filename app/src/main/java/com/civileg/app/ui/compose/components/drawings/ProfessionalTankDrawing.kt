@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -104,13 +105,13 @@ fun ProfessionalTankDrawing(
         val totalHeight = height + baseThickness / 1000.0 + (if (isUnderground) foundationDepth else 0.0)
         val drawWidth = rightMargin - leftMargin
         val drawHeight = groundY - topMargin
-        val scaleX = drawWidth / max(length, width, 0.5).toFloat()
+        val scaleX = drawWidth / maxOf(length, width, 0.5).toFloat()
         val scaleY = drawHeight / max(totalHeight, 0.5).toFloat()
         val scale = min(scaleX, scaleY) * 0.85f
 
         // ── Tank body pixel dimensions ──
-        val twt = max(wallThickness / 1000.0 * scale, 8f)  // wall thickness in px
-        val tbt = max(baseThickness / 1000.0 * scale, 6f)  // base thickness in px
+        val twt = maxOf(wallThickness.toFloat() / 1000f * scale, 8f)  // wall thickness in px
+        val tbt = maxOf(baseThickness.toFloat() / 1000f * scale, 6f)  // base thickness in px
         val tankH = height.toFloat() * scale
         val tankW = length.toFloat() * scale
         val tankD = width.toFloat() * scale  // depth for plan
@@ -241,7 +242,7 @@ private fun DrawScope.drawRectangularTankBody(
         close()
     }
     drawPath(leftWallPath, ConcreteFill)
-    drawPath(leftWallPath, Stroke(width = 1.5f, color = ConcreteStroke))
+    drawPath(leftWallPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
     drawConcreteHatching(outerL, top, wallT, bottom - top)
 
     // ── Right wall ──
@@ -253,7 +254,7 @@ private fun DrawScope.drawRectangularTankBody(
         close()
     }
     drawPath(rightWallPath, ConcreteFill)
-    drawPath(rightWallPath, Stroke(width = 1.5f, color = ConcreteStroke))
+    drawPath(rightWallPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
     drawConcreteHatching(innerR, top, wallT, bottom - top)
 
     // ── Base slab ──
@@ -265,7 +266,7 @@ private fun DrawScope.drawRectangularTankBody(
         close()
     }
     drawPath(basePath, ConcreteFill)
-    drawPath(basePath, Stroke(width = 1.5f, color = ConcreteStroke))
+    drawPath(basePath, color = ConcreteStroke, style = Stroke(width = 1.5f))
     drawConcreteHatching(outerL, bottom, outerR - outerL, baseBottom - bottom)
 
     // ── Top slab / cover ──
@@ -277,7 +278,7 @@ private fun DrawScope.drawRectangularTankBody(
         close()
     }
     drawPath(topSlabPath, TopSlabFill)
-    drawPath(topSlabPath, Stroke(width = 1f, color = ConcreteStroke))
+    drawPath(topSlabPath, color = ConcreteStroke, style = Stroke(width = 1f))
 
     // ── Joint lines (wall-base connections) ──
     drawLine(ConcreteStroke, Offset(outerL, bottom), Offset(innerL, bottom), strokeWidth = 1f)
@@ -330,12 +331,12 @@ private fun DrawScope.drawCircularTankCrossSection(
         close()
     }
     drawPath(wallPath, ConcreteFill)
-    drawPath(wallPath, Stroke(width = 1.5f, color = ConcreteStroke))
+    drawPath(wallPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
 
     // ── Hatching on walls ──
     val hatchStep = 6f
     for (angle in -180..0 step 15) {
-        val rad = kotlin.math.toRadians(angle.toDouble())
+        val rad = (angle.toDouble() * kotlin.math.PI) / 180.0
         val ox = centerX + outerR * cos(rad).toFloat()
         val oy = (top + outerR) + outerR * sin(rad).toFloat()
         val ix = centerX + innerR * cos(rad).toFloat()
@@ -354,7 +355,7 @@ private fun DrawScope.drawCircularTankCrossSection(
         close()
     }
     drawPath(basePath, ConcreteFill)
-    drawPath(basePath, Stroke(width = 1.5f, color = ConcreteStroke))
+    drawPath(basePath, color = ConcreteStroke, style = Stroke(width = 1.5f))
     drawConcreteHatching(baseLeft, bottom, baseRight - baseLeft, baseT)
 
     // ── Top slab ──
@@ -366,7 +367,7 @@ private fun DrawScope.drawCircularTankCrossSection(
         close()
     }
     drawPath(topSlabPath, TopSlabFill)
-    drawPath(topSlabPath, Stroke(width = 1f, color = ConcreteStroke))
+    drawPath(topSlabPath, color = ConcreteStroke, style = Stroke(width = 1f))
 
     // ── Center line (dashed) ──
     val clPath = PathEffect.dashPathEffect(floatArrayOf(10f, 5f))
@@ -407,7 +408,7 @@ private fun DrawScope.drawWaterFill(
             close()
         }
         drawPath(waterPath, WaterBlue)
-        drawPath(waterPath, Stroke(width = 1f, color = WaterStroke))
+        drawPath(waterPath, color = WaterStroke, style = Stroke(width = 1f))
     } else {
         val waterPath = Path().apply {
             moveTo(innerL, waterBottom)
@@ -417,7 +418,7 @@ private fun DrawScope.drawWaterFill(
             close()
         }
         drawPath(waterPath, WaterBlue)
-        drawPath(waterPath, Stroke(width = 1f, color = WaterStroke))
+        drawPath(waterPath, color = WaterStroke, style = Stroke(width = 1f))
     }
 
     // ── Water surface wave ──
@@ -431,11 +432,11 @@ private fun DrawScope.drawWaterFill(
             val cpx = x + 4f
             val cpy = waveY - 2f
             val endX2 = x + 8f
-            quadraticBezierTo(Offset(cpx, cpy), Offset(endX2, waveY))
+            lineTo(endX2, waveY)
             x = endX2
         }
     }
-    drawPath(wavePath, Stroke(width = 1f, color = WaterStroke))
+    drawPath(wavePath, color = WaterStroke, style = Stroke(width = 1f))
 
     // ── WL label ──
     val labelX = (if (isCircular) centerX + innerRadius else innerR) + 8f
@@ -451,8 +452,10 @@ private fun DrawScope.drawGroundLine(groundY: Float, canvasW: Float, isUndergrou
     drawLine(GroundLine, Offset(20f, groundY), Offset(canvasW - 20f, groundY), strokeWidth = 2f)
 
     // Ground hatching (below line)
-    for (x in 25f..canvasW - 20f step 12f) {
-        drawLine(GroundLine, Offset(x, groundY), Offset(x - 6f, groundY + 8f), strokeWidth = 0.8f)
+    var gx = 25f
+    while (gx < canvasW - 20f) {
+        drawLine(GroundLine, Offset(gx, groundY), Offset(gx - 6f, groundY + 8f), strokeWidth = 0.8f)
+        gx += 12f
     }
 
     // GL label
@@ -532,8 +535,8 @@ private fun DrawScope.drawReinforcement(
     hDia: Double, hSpacing: Double,
     centerX: Float, radius: Float, innerRadius: Float
 ) {
-    val vBarR = max(vDia / 2f, 1.5f)
-    val hBarR = max(hDia / 2f, 1.2f)
+    val vBarR = maxOf(vDia.toFloat() / 2f, 1.5f)
+    val hBarR = maxOf(hDia.toFloat() / 2f, 1.2f)
     val vSpPx = max(vSpacing.toFloat() * 0.3f, 15f)  // scaled spacing
     val hSpPx = max(hSpacing.toFloat() * 0.3f, 15f)
 
@@ -672,7 +675,7 @@ private fun DrawScope.drawPressureDiagram(
         close()
     }
     drawPath(pressurePath, PressurePink)
-    drawPath(pressurePath, Stroke(width = 1f, color = Color(0xFFE91E63)))
+    drawPath(pressurePath, color = Color(0xFFE91E63), style = Stroke(width = 1f))
 
     // Labels
     drawNativeText("0", startX + maxW + 3f, bottom - 3f, 8f, Color(0xFFE91E63))
@@ -735,9 +738,9 @@ private fun DrawScope.drawPlanView(
             close()
         }
         drawPath(planPath, ConcreteFill)
-        drawPath(planPath, Stroke(width = 1.5f, color = ConcreteStroke))
+        drawPath(planPath, color = ConcreteStroke, style = Stroke(width = 1.5f))
         drawPath(innerPath, Color.White)
-        drawPath(innerPath, Stroke(width = 1f, color = ConcreteStroke))
+        drawPath(innerPath, color = ConcreteStroke, style = Stroke(width = 1f))
 
         // Rebar dots in walls
         for (i in 1..3) {
@@ -831,19 +834,18 @@ private fun DrawScope.drawConcreteHatching(x: Float, y: Float, w: Float, h: Floa
     val clipPath = Path().apply {
         addRect(androidx.compose.ui.geometry.Rect(x, y, x + w, y + h))
     }
-    for (d in -w.toInt()..(w + h).toInt() step step) {
+    var d = -w.toInt()
+    while (d <= (w + h).toInt()) {
         val x1 = x + d.toFloat()
-        val y1 = y
         val x2 = x + d.toFloat() + h
-        val y2 = y + h
-        // Clip to rect
         val cx1 = x1.coerceIn(x, x + w)
+        val cx2 = x2.coerceIn(x, x + w)
         val cy1 = y + (cx1 - x1).coerceAtLeast(0f)
-        val cx2 = (x2).coerceIn(x, x + w)
         val cy2 = y + h - (x2 - cx2).coerceAtLeast(0f)
         if (cx1 < cx2 || (cx1 == cx2 && cy1 < cy2)) {
             drawLine(ConcreteHatch, Offset(cx1, cy1), Offset(cx2, cy2), strokeWidth = 0.5f)
         }
+        d += step.toInt()
     }
 }
 

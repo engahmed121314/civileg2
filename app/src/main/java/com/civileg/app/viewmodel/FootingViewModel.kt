@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
+import kotlin.math.sqrt
 
 @HiltViewModel
 class FootingViewModel @Inject constructor(

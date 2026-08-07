@@ -19,7 +19,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlin.math.isnan
+import kotlin.math.*
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
@@ -257,7 +257,7 @@ class FrameAnalysisViewModel @Inject constructor(
 
                 // Validate results for NaN
                 val hasNaN = analysisResult.nodeResults.any { nr ->
-                    isnan(nr.dx) || isnan(nr.dy) || isnan(nr.rz)
+                    nr.dx.isNaN() || nr.dy.isNaN() || nr.rz.isNaN()
                 }
                 if (hasNaN) {
                     Log.e(TAG, "NaN detected in results")

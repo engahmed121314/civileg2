@@ -203,7 +203,7 @@ class ACIBeam : BeamDesign {
 
         // ── Condensation zone detailing per ACI 318 §21.5.3 / §9.7.6.2 ──
         val minSpacingCode = 75.0  // ACI: max(25mm, 1.5*db_agg) ≈ 75mm practical
-        val maxSpacingCode = maxSpacing  // already computed per ACI tiers
+        val maxSpacingCode = maxSpacing1  // already computed per ACI tiers
         val condensationZoneLength = minOf(effectiveDepth, 500.0)  // ACI: d from support face
         val spacingAtSupport = (stirrupSpacing * 0.5).coerceIn(minSpacingCode, stirrupSpacing)
         val spacingAtMidspan = stirrupSpacing.coerceAtMost(maxSpacingCode)
