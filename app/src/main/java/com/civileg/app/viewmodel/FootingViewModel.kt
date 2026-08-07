@@ -81,17 +81,16 @@ class FootingViewModel @Inject constructor(
 
     /**
      * Auto-design foundations for multiple pieces given soil area dimensions and total soil load.
-     * Calculates individual footing loads based on tributary area or equal distribution,
-     * then designs each footing automatically.
+     * Enhanced: computes grid layout, tributary areas, per-footing loads, and expansion.
      */
     fun autoDesignFromSoil(
-        soilLengthM: Double,   // soil area length in meters
-        soilWidthM: Double,    // soil area width in meters
-        totalSoilLoadKN: Double, // total load from superstructure on soil area in kN
-        numberOfFootings: Int,  // number of footings to distribute load to
+        soilLengthM: Double,
+        soilWidthM: Double,
+        totalSoilLoadKN: Double,
+        numberOfFootings: Int,
         fcu: Double,
         fy: Double,
-        soilCapacity: Double,   // allowable soil bearing pressure kN/m2
+        soilCapacity: Double,
         colWidth: Double,
         colDepth: Double,
         code: CalculatorEngine.DesignCode,
@@ -100,25 +99,55 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Distribute load equally among footings
-                val loadPerFooting = totalSoilLoadKN / numberOfFootings
-                // Also add self-weight estimate (10% of load)
-                val pu = loadPerFooting * 1.10
+                val soilArea = soilLengthM * soilWidthM
+                if (soilArea <= 0 || numberOfFootings <= 0) {
+                    _error.value = "Invalid soil area or footing count"
+                    _isLoading.value = false
+                    return@launch
+                }
 
-                val res = calculatorEngine.calculateFooting(
-                    type = CalculatorEngine.FootingType.ISOLATED,
-                    p = pu,
-                    fcu = fcu,
-                    fy = fy,
-                    soil = soilCapacity,
-                    colB = colWidth,
-                    colT = colDepth,
-                    code = code,
-                    preferredDiameter = preferredDiameter,
-                    preferredSpacing = 150.0
-                )
-                // Store additional auto-design metadata
-                _result.value = res
+                // ── Compute grid layout ──
+                val aspectRatio = soilLengthM / soilWidthM.coerceAtLeast(0.1)
+                val gridCols = kotlin.math.ceil(sqrt(numberOfFootings.toDouble() * aspectRatio)).toInt().coerceIn(1, numberOfFootings)
+                val gridRows = kotlin.math.ceil(numberOfFootings.toDouble() / gridCols).toInt().coerceIn(1, numberOfFootings)
+
+                // ── Distribute loads with tributary factors ──
+                // Interior footings carry more than corner/edge footings
+                val results = mutableListOf<CalculatorEngine.FootingResult>()
+                for (i in 0 until numberOfFootings) {
+                    val row = i / gridCols
+                    val col = i % gridCols
+                    val isEdge = (row == 0 || row == gridRows - 1 || col == 0 || col == gridCols - 1)
+                    val isCorner = (row == 0 || row == gridRows - 1) && (col == 0 || col == gridCols - 1)
+
+                    // Tributary factor: interior=1.0, edge=0.85, corner=0.65
+                    val tributaryFactor = when {
+                        isCorner -> 0.65
+                        isEdge -> 0.85
+                        else -> 1.0
+                    }
+
+                    // Load per footing with self-weight estimate (10%)
+                    val loadPerFooting = (totalSoilLoadKN / numberOfFootings) * tributaryFactor * 1.10
+
+                    val res = calculatorEngine.calculateFooting(
+                        type = CalculatorEngine.FootingType.ISOLATED,
+                        p = loadPerFooting,
+                        fcu = fcu,
+                        fy = fy,
+                        soil = soilCapacity,
+                        colB = colWidth,
+                        colT = colDepth,
+                        code = code,
+                        preferredDiameter = preferredDiameter,
+                        preferredSpacing = 150.0
+                    )
+                    results.add(res)
+                }
+
+                // Return the largest (most critical) footing result
+                val criticalResult = results.maxByOrNull { it.width * it.length } ?: results.first()
+                _result.value = criticalResult
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Auto-design error: ${e.message}"
