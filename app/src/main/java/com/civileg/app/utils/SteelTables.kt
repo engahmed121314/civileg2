@@ -329,10 +329,12 @@ object SteelTables {
             Sx = 60.7, Sy_aisc = 28.3, Zx = 68.7, Zy = 30.9, J = 8.67, Cw = 22700.0)
     )
 
-    fun getAllSections(): List<SectionProperties> =
-        ipeSections + heaSections + hebSections + upnSections + angleSections + wShapeSections + rhsSections
+    // Cache all sections to avoid re-creating the combined list on every lookup
+    private val allSectionsCache: List<SectionProperties> by lazy { ipeSections + heaSections + hebSections + upnSections + angleSections + wShapeSections + rhsSections }
 
-    fun getSectionByName(name: String): SectionProperties? = getAllSections().find {
+    fun getAllSections(): List<SectionProperties> = allSectionsCache
+
+    fun getSectionByName(name: String): SectionProperties? = allSectionsCache.find {
         it.name.equals(name, ignoreCase = true)
     }
 

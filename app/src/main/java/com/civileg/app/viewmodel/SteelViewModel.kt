@@ -171,8 +171,10 @@ class SteelViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
-                // CRITICAL FIX (2026-07-27 v2): Use NativePdfExporter with StaticLayout
-                // for proper Arabic BIDI + HarfBuzz shaping.
+                // ProfessionalEnglishPdfReporter uses Helvetica only (no Arabic support).
+                // Always pass English keys to avoid garbled text in PDF.
+                fun tEn(ar: String, en: String) = en
+
                 val fileName = "Steel_Report_${System.currentTimeMillis()}.pdf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
                     ?: context.cacheDir
@@ -180,7 +182,6 @@ class SteelViewModel @Inject constructor(
                 val file = java.io.File(directory, fileName)
 
                 // Generate steel drawing bitmap using actual section properties
-                // 2026-08-04 v3: Pass all section properties to match ProfessionalSteelDrawing
                 val drawingBitmap = try {
                     PdfDrawingGenerator.generateSteelDrawing(
                         sectionName = stored.section.sectionName,
@@ -191,7 +192,6 @@ class SteelViewModel @Inject constructor(
                         memberLength = stored.inputs.length,
                         isSafe = res.isSafe,
                         utilizationRatio = res.utilizationRatio * 100,
-                        // New parameters matching on-screen ProfessionalSteelDrawing
                         sectionType = stored.section.displayName,
                         radius = stored.section.rootRadius,
                         area = stored.section.area,
@@ -199,7 +199,6 @@ class SteelViewModel @Inject constructor(
                         sx = stored.section.sx,
                         zx = stored.section.zx,
                         weightPerMeter = stored.section.weight,
-                        // Connection parameters — use configurable defaults (set from connection design if available)
                         boltDia = defaultBoltDia,
                         boltCount = defaultBoltCount,
                         boltGauge = defaultBoltGauge,
@@ -211,8 +210,6 @@ class SteelViewModel @Inject constructor(
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 
-                // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
-                // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when (stored.code) {
                     CalculatorEngine.DesignCode.ACI -> "AISC 360-16"
                     CalculatorEngine.DesignCode.SAUDI -> "SBC 306"
@@ -220,38 +217,38 @@ class SteelViewModel @Inject constructor(
                 }
 
                 val inputsMap = mapOf(
-                    "Section Type" to stored.section.displayName,
-                    "Member Type" to when (stored.memberType) {
-                        com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
-                        com.civileg.app.domain.entities.SteelMemberType.BEAM -> "Beam"
-                        com.civileg.app.domain.entities.SteelMemberType.BRACING -> "Bracing"
-                        com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> "Truss"
-                        com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> "Girder"
+                    tEn("نوع القطاع", "Section Type") to stored.section.displayName,
+                    tEn("نوع العنصر", "Member Type") to when (stored.memberType) {
+                        com.civileg.app.domain.entities.SteelMemberType.COLUMN -> tEn("عمود", "Column")
+                        com.civileg.app.domain.entities.SteelMemberType.BEAM -> tEn("كمر", "Beam")
+                        com.civileg.app.domain.entities.SteelMemberType.BRACING -> tEn("ربط", "Bracing")
+                        com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> tEn("عنصر كمرة", "Truss")
+                        com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> tEn("كمر رئيسي", "Girder")
                     },
-                    "Design Code" to codeName,
-                    "Length" to "${stored.inputs.length / 1000.0} m",
-                    "Axial Load" to "${stored.inputs.axialLoad} kN",
-                    "Moment" to "${stored.inputs.moment} kN.m",
-                    "Shear Force" to "${stored.inputs.shear} kN"
+                    tEn("كود التصميم", "Design Code") to codeName,
+                    tEn("الطول", "Length") to "${stored.inputs.length / 1000.0} m",
+                    tEn("الحمل المحوري", "Axial Load") to "${stored.inputs.axialLoad} kN",
+                    tEn("العزم", "Moment") to "${stored.inputs.moment} kN.m",
+                    tEn("قوة القص", "Shear Force") to "${stored.inputs.shear} kN"
                 )
                 val resultsMap = mapOf(
-                    "Axial Capacity" to "${String.format("%.2f", res.axialCapacity)} kN",
-                    "Moment Capacity" to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
-                    "Shear Capacity" to "${String.format("%.2f", res.shearCapacity)} kN",
-                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Status" to if (res.isSafe) "SAFE" else "UNSAFE"
+                    tEn("السعة المحورية", "Axial Capacity") to "${String.format("%.2f", res.axialCapacity)} kN",
+                    tEn("سعة العزم", "Moment Capacity") to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
+                    tEn("سعة القص", "Shear Capacity") to "${String.format("%.2f", res.shearCapacity)} kN",
+                    tEn("نسبة الاستغلال", "Utilization") to "${(res.utilizationRatio * 100).toInt()}%",
+                    tEn("الحالة", "Status") to if (res.isSafe) tEn("آمن", "SAFE") else tEn("غير آمن", "UNSAFE")
                 )
                 val memberTypeLabel = when (stored.memberType) {
-                    com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
-                    com.civileg.app.domain.entities.SteelMemberType.BEAM -> "Beam"
-                    com.civileg.app.domain.entities.SteelMemberType.BRACING -> "Bracing"
-                    com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> "Truss"
-                    com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> "Girder"
+                    com.civileg.app.domain.entities.SteelMemberType.COLUMN -> tEn("عمود", "Column")
+                    com.civileg.app.domain.entities.SteelMemberType.BEAM -> tEn("كمر", "Beam")
+                    com.civileg.app.domain.entities.SteelMemberType.BRACING -> tEn("ربط", "Bracing")
+                    com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> tEn("عنصر كمرة", "Truss")
+                    com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> tEn("كمر رئيسي", "Girder")
                 }
                 val safetyChecks = mutableListOf<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck>()
                 if (stored.inputs.axialLoad > 0) {
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Axial Capacity",
+                        name = tEn("السعة المحورية", "Axial Capacity"),
                         calculated = stored.inputs.axialLoad,
                         limit = res.axialCapacity,
                         unit = "kN",
@@ -260,7 +257,7 @@ class SteelViewModel @Inject constructor(
                 }
                 if (stored.inputs.moment > 0) {
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Flexural Capacity",
+                        name = tEn("سعة العزم", "Flexural Capacity"),
                         calculated = stored.inputs.moment,
                         limit = res.flexuralCapacity,
                         unit = "kN.m",
@@ -269,7 +266,7 @@ class SteelViewModel @Inject constructor(
                 }
                 if (stored.inputs.shear > 0) {
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Shear Capacity",
+                        name = tEn("سعة القص", "Shear Capacity"),
                         calculated = stored.inputs.shear,
                         limit = res.shearCapacity,
                         unit = "kN",
@@ -278,7 +275,7 @@ class SteelViewModel @Inject constructor(
                 }
                 res.bucklingCheck?.let { buckling ->
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Buckling Check",
+                        name = tEn("الانبعاج", "Buckling Check"),
                         calculated = buckling.slendernessRatio,
                         limit = 200.0,
                         unit = "-",
@@ -287,7 +284,7 @@ class SteelViewModel @Inject constructor(
                 }
                 res.deflectionCheck?.let { defl ->
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Deflection Check",
+                        name = tEn("الترخيم", "Deflection Check"),
                         calculated = defl.calculatedDeflection,
                         limit = defl.allowableDeflection,
                         unit = "mm",
@@ -296,7 +293,7 @@ class SteelViewModel @Inject constructor(
                 }
 
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم قطاع معدني - ${stored.section.displayName}",
+                    titleAr = "Steel Member Design Report - ${stored.section.displayName}",
                     titleEn = "Steel Member Design Report — ${stored.section.displayName}",
                     subtitle = "Code: $codeName  •  $memberTypeLabel",
                     designType = "Steel — ${stored.section.displayName}",

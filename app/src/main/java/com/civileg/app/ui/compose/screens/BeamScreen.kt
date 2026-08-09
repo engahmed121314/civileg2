@@ -495,6 +495,7 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             Spacer(modifier = Modifier.height(8.dp))
             ResultRow(stringResource(R.string.beam_bottom_reinforcement), result.reinforcementBottom.barString)
             ResultRow(stringResource(R.string.beam_top_reinforcement), result.reinforcementTop.barString)
+<<<<<<< HEAD
             
             if (result.stirrups.zones.isNotEmpty()) {
                 Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
@@ -505,6 +506,17 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
                 ResultRow(stringResource(R.string.stirrups) + " Legs", "${result.stirrups.numLegs} Branches")
             } else {
                 ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
+=======
+            ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
+            // Code-based stirrup zoning
+            if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
+                ResultRow("Stirrups (support zone)", "Ø${result.stirrups.diameter} @ ${result.stirrups.spacingAtSupport.toInt()}mm c/c")
+                ResultRow("Stirrups (midspan)", "Ø${result.stirrups.diameter} @ ${result.stirrups.spacingAtMidspan.toInt()}mm c/c")
+                ResultRow("Condensation Zone", "${result.stirrups.condensationZoneLength.toInt()}mm from supports")
+                if (result.stirrups.codeNotes.isNotEmpty()) {
+                    ResultRow("Code Ref", result.stirrups.codeNotes)
+                }
+>>>>>>> github/master
             }
             ResultRow(stringResource(R.string.beam_max_moment), "${"%.1f".format(result.appliedMoment)} kN.m")
             ResultRow(stringResource(R.string.beam_max_shear), "${"%.1f".format(result.appliedShear)} kN")

@@ -147,13 +147,12 @@ class ComprehensivePdfExporter(private val context: Context) {
 
     private fun rtlCell(text: String, fontSize: Float = 9f, bold: Boolean = false, bg: DeviceRgb? = null): Cell {
         val cell = Cell().setPadding(4f).setTextAlignment(TextAlignment.RIGHT)
-        // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-        val p = Paragraph().setFontSize(fontSize)
+        // FIX: Use PdfTextSegmenter for mixed text (values like "IPE 300" in Arabic tables)
         val font = if (bold) arabicBoldFont() else arabicFont()
-        val shapedText = ArabicShaper.shapeIfArabic(text)
-        val textRun = com.itextpdf.layout.element.Text(shapedText).setFont(font).setFontSize(fontSize)
-        if (bold) textRun.setBold()
-        p.add(textRun)
+        val latin = helveticaFont(bold)
+        val p = PdfTextSegmenter.buildMixedParagraph(
+            text = text, arabicFont = font, latinFont = latin, fontSize = fontSize
+        )
         if (isArabic(text)) {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
@@ -167,15 +166,14 @@ class ComprehensivePdfExporter(private val context: Context) {
             .setPadding(6f)
             .setBackgroundColor(HEADER_BG)
             .setTextAlignment(TextAlignment.CENTER)
-        // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-        val shapedText = ArabicShaper.shapeIfArabic(text)
-        val p = Paragraph().setFontSize(9f)
-        val textRun = com.itextpdf.layout.element.Text(shapedText)
-            .setFont(arabicBoldFont())
-            .setFontSize(9f)
-            .setBold()
-            .setFontColor(WHITE)
-        p.add(textRun)
+        // FIX: Use PdfTextSegmenter for mixed Arabic/Latin headers (e.g., "IPE 300\u0646\u062a\u0627\u0626\u062c")
+        val p = PdfTextSegmenter.buildMixedParagraph(
+            text = text,
+            arabicFont = arabicBoldFont(),
+            latinFont = helveticaFont(true),
+            fontSize = 9f,
+            color = WHITE
+        )
         if (isArabic(text)) {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
@@ -284,27 +282,29 @@ class ComprehensivePdfExporter(private val context: Context) {
             val labelAr = isArabic(label)
             val valueAr = isArabic(value)
 
+            // FIX: Use PdfTextSegmenter for proper mixed Arabic/Latin rendering
+            // Previously used Arabic font for ALL text, causing Latin chars (IPE, S355, etc.) to render as tofu
+            val labelP = PdfTextSegmenter.buildMixedParagraph(
+                text = label,
+                arabicFont = arabicBoldFont(),
+                latinFont = helveticaFont(true),
+                fontSize = 9f
+            )
             val labelCell = Cell().setPadding(4f)
-            if (labelAr) labelCell.setTextAlignment(TextAlignment.RIGHT)
-            val lp = Paragraph().setFontSize(9f)
-            // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-            val shapedLabel = ArabicShaper.shapeIfArabic(label)
-            val lRun = com.itextpdf.layout.element.Text(shapedLabel).setFont(arabicBoldFont()).setFontSize(9f).setBold()
-            lp.add(lRun)
-            if (labelAr) lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            labelCell.add(lp)
+            if (labelAr) { labelCell.setTextAlignment(TextAlignment.RIGHT); labelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT) }
+            labelCell.add(labelP)
             bg?.let { labelCell.setBackgroundColor(it) }
             table.addCell(labelCell)
 
+            val valueP = PdfTextSegmenter.buildMixedParagraph(
+                text = value,
+                arabicFont = arabicFont(),
+                latinFont = helveticaFont(false),
+                fontSize = 9f
+            )
             val valueCell = Cell().setPadding(4f)
-            if (valueAr) valueCell.setTextAlignment(TextAlignment.RIGHT)
-            val vp = Paragraph().setFontSize(9f)
-            // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
-            val shapedValue = ArabicShaper.shapeIfArabic(value)
-            val vRun = com.itextpdf.layout.element.Text(shapedValue).setFont(arabicFont()).setFontSize(9f)
-            vp.add(vRun)
-            if (valueAr) vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
-            valueCell.add(vp)
+            if (valueAr) { valueCell.setTextAlignment(TextAlignment.RIGHT); valueP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT) }
+            valueCell.add(valueP)
             bg?.let { valueCell.setBackgroundColor(it) }
             table.addCell(valueCell)
 

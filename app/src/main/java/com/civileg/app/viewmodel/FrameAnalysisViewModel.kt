@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -21,6 +22,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.*
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
@@ -55,9 +57,7 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _selectedMemberId = MutableLiveData<Int?>(null)
     val selectedMemberId: LiveData<Int?> get() = _selectedMemberId
 
-    // FIX: Persist drawing view mode across tab switches (was previously local to DrawingTab,
-    // causing it to reset to Frame view every time user navigated away and back).
-    private val _drawingViewMode = MutableLiveData(0)  // 0=Frame, 1=Long.Section, 2=Cross Section, 3=Plan
+    private val _drawingViewMode = MutableLiveData(0)
     val drawingViewMode: LiveData<Int> get() = _drawingViewMode
 
     fun setDrawingViewMode(mode: Int) {
@@ -67,14 +67,13 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> get() = _errorMessage
 
-    // === Design Results (combined) ===
+    // === Design Results ===
     private val _concreteResults = MutableLiveData<List<ConcreteMemberDesignResult>>()
     val concreteResults: LiveData<List<ConcreteMemberDesignResult>> get() = _concreteResults
 
     private val _steelResults = MutableLiveData<List<SteelMemberDesignResult>>()
     val steelResults: LiveData<List<SteelMemberDesignResult>> get() = _steelResults
 
-    // Computed: has any concrete members?
     val hasConcreteMembers: MediatorLiveData<Boolean> = MediatorLiveData<Boolean>().apply {
         addSource(_members) { value = it.any { m -> m.materialType == FrameMaterialType.Concrete } }
     }
@@ -105,7 +104,6 @@ class FrameAnalysisViewModel @Inject constructor(
 
     fun removeNode(nodeId: Int) {
         _nodes.value = _nodes.value?.filter { it.id != nodeId }
-        // Remove connected members and loads
         _members.value = _members.value?.filter { it.nodeI != nodeId && it.nodeJ != nodeId }
         _nodalLoads.value = _nodalLoads.value?.filter { it.nodeId != nodeId }
     }
@@ -203,14 +201,14 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     // ========================================================================
-    // Solve & Design
+    // Solve & Design (runs on Dispatchers.Default — NOT main thread)
     // ========================================================================
 
     fun solveFrame() {
         _isLoading.value = true
         _errorMessage.value = null
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 val nodes = _nodes.value ?: emptyList()
                 val members = _members.value ?: emptyList()
@@ -218,53 +216,112 @@ class FrameAnalysisViewModel @Inject constructor(
                 val memberLoads = _memberLoads.value ?: emptyList()
                 val settings = _settings.value ?: FrameAnalysisSettings()
 
-                // Run analysis on background thread
-                val analysisResult = withContext(Dispatchers.Default) {
-                    FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
-                }
+                Log.d(TAG, "solveFrame: nodes=${nodes.size}, members=${members.size}")
 
-                if (!analysisResult.isSolved) {
-                    _errorMessage.value = analysisResult.errorMessage
-                    _result.value = analysisResult
-                    _isLoading.value = false
+                // Input validation
+                if (nodes.isEmpty() || members.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Add at least 2 nodes and 1 member"
+                        _isLoading.value = false
+                    }
                     return@launch
                 }
 
-                // Run design on background thread
-                val designResults = withContext(Dispatchers.Default) {
+                val nodeIds = nodes.map { it.id }.toSet()
+                for (m in members) {
+                    if (m.nodeI !in nodeIds || m.nodeJ !in nodeIds) {
+                        withContext(Dispatchers.Main) {
+                            _errorMessage.value = "Member #${m.id} references non-existent node(s)"
+                            _isLoading.value = false
+                        }
+                        return@launch
+                    }
+                }
+
+                if (nodes.none { it.support != SupportType.Free }) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Structure must have at least one support"
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
+                // Run analysis off main thread
+                val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
+
+                if (!analysisResult.isSolved) {
+                    Log.w(TAG, "Analysis failed: ${analysisResult.errorMessage}")
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = analysisResult.errorMessage
+                        _result.value = analysisResult
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
+                // Validate results for NaN
+                val hasNaN = analysisResult.nodeResults.any { nr ->
+                    nr.dx.isNaN() || nr.dy.isNaN() || nr.rz.isNaN()
+                }
+                if (hasNaN) {
+                    Log.e(TAG, "NaN detected in results")
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Analysis produced invalid results. Check supports and loads."
+                        _isLoading.value = false
+                    }
+                    return@launch
+                }
+
+                // Run concrete design
+                val concreteDesignResults = try {
                     val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
-                    val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
+                    if (concreteMembers.isNotEmpty()) {
                         ConcreteFrameDesign.designAllConcreteMembers(
                             members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
                         )
                     } else emptyList()
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Concrete design error", e)
+                    emptyList()
+                }
 
+                // Run steel design
+                val steelDesignResults = try {
                     val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
-                    val steelDesignResults = if (steelMembers.isNotEmpty()) {
+                    if (steelMembers.isNotEmpty()) {
                         SteelFrameDesign.designAllSteelMembers(
                             members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
                             settings.designCode, _steelFy.value ?: 355.0
                         )
                     } else emptyList()
-                    
-                    concreteDesignResults to steelDesignResults
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Steel design error", e)
+                    emptyList()
                 }
 
-                val (concreteDesignResults, steelDesignResults) = designResults
+                withContext(Dispatchers.Main) {
+                    _result.value = analysisResult.copy(
+                        concreteDesignResults = concreteDesignResults,
+                        steelDesignResults = steelDesignResults
+                    )
+                    _concreteResults.value = concreteDesignResults
+                    _steelResults.value = steelDesignResults
+                    _isLoading.value = false
+                    Log.d(TAG, "solveFrame completed successfully")
+                }
 
-                _result.value = analysisResult.copy(
-                    concreteDesignResults = concreteDesignResults,
-                    steelDesignResults = steelDesignResults
-                )
-                _concreteResults.value = concreteDesignResults
-                _steelResults.value = steelDesignResults
-
-            } catch (e: Exception) {
-                _errorMessage.value = "Frame analysis error: ${e.message ?: ""}"
-            } finally {
-                _isLoading.value = false
+            } catch (e: Throwable) {
+                Log.e(TAG, "solveFrame crashed", e)
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Frame analysis error: ${e.message ?: "Unknown error"}"
+                    _isLoading.value = false
+                }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "FrameAnalysisVM"
     }
 
     // ========================================================================
@@ -458,7 +515,7 @@ class FrameAnalysisViewModel @Inject constructor(
 
                 val isAllSafe = (concreteRes.all { it.isSafe } && steelRes.all { it.isSafe })
 
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                     titleAr = "تقرير تحليل إطار",
                     titleEn = "Frame Analysis Report",
                     subtitle = "${st.designCode.displayName}  •  ${ns.size} nodes, ${ms.size} members",

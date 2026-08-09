@@ -81,6 +81,13 @@ fun FootingScreen(
     var maxRight by remember { mutableStateOf("") }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
+    // Auto-design from soil parameters
+    var showAutoDesign by remember { mutableStateOf(false) }
+    var soilLengthM by remember { mutableStateOf("10.0") }
+    var soilWidthM by remember { mutableStateOf("8.0") }
+    var totalSoilLoad by remember { mutableStateOf("5000") }
+    var numberOfFootings by remember { mutableStateOf("4") }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -189,6 +196,95 @@ fun FootingScreen(
                     selectedCode = selectedCode,
                     onCodeSelected = { selectedCode = it }
                 )
+            }
+
+            // ── Auto-Design from Soil Parameters ──
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Auto-Design from Soil", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            }
+                            IconButton(onClick = { showAutoDesign = !showAutoDesign }) {
+                                Icon(
+                                    if (showAutoDesign) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle"
+                                )
+                            }
+                        }
+
+                        if (showAutoDesign) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Enter soil area dimensions and total load to auto-design foundations",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                FootingInputField(soilLengthM, "Soil Length (m)", { soilLengthM = it }, Modifier.weight(1f))
+                                FootingInputField(soilWidthM, "Soil Width (m)", { soilWidthM = it }, Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                FootingInputField(totalSoilLoad, "Total Load (kN)", { totalSoilLoad = it }, Modifier.weight(1f))
+                                FootingInputField(numberOfFootings, "No. of Footings", { numberOfFootings = it }, Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(12.dp))
+
+                            val autoValid = soilLengthM.toDoubleOrNull()?.let { it > 0 } == true
+                                    && soilWidthM.toDoubleOrNull()?.let { it > 0 } == true
+                                    && totalSoilLoad.toDoubleOrNull()?.let { it > 0 } == true
+                                    && numberOfFootings.toIntOrNull()?.let { it > 0 } == true
+                                    && fcu.toDoubleOrNull()?.let { it > 0 } == true
+                                    && fy.toDoubleOrNull()?.let { it > 0 } == true
+                                    && soilCapacity.toDoubleOrNull()?.let { it > 0 } == true
+
+                            Button(
+                                onClick = {
+                                    if (!autoValid) return@Button
+                                    viewModel.autoDesignFromSoil(
+                                        soilLengthM = soilLengthM.toDouble()!!,
+                                        soilWidthM = soilWidthM.toDouble()!!,
+                                        totalSoilLoadKN = totalSoilLoad.toDouble()!!,
+                                        numberOfFootings = numberOfFootings.toInt()!!,
+                                        fcu = fcu.toDouble()!!,
+                                        fy = fy.toDouble()!!,
+                                        soilCapacity = soilCapacity.toDouble()!!,
+                                        colWidth = colWidth.toDouble()!!,
+                                        colDepth = colLength.toDouble()!!,
+                                        code = selectedCode,
+                                        preferredDiameter = barDiameter.toInt()!!,
+                                        preferredSpacing = barSpacing.toDouble()!!
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                enabled = !isLoading && autoValid,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onTertiary)
+                                } else {
+                                    Icon(Icons.Default.AutoFixHigh, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Auto-Design All Footings")
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             item {

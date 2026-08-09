@@ -178,7 +178,19 @@ class ECPBeam : BeamDesign {
         
         codeNotes.add(CodeReference.ECP.BEAM_SHEAR)
         codeNotes.add("qcu = ${String.format("%.3f", qcu)} MPa")
-        
+
+        // ── Condensation zone detailing per ECP 203 §7-9 ──
+        // Denser stirrups near supports (within d or L/4 from face)
+        val minSpacingCode = 100.0  // ECP 203: min 100mm or db_tie
+        val maxSpacingCode = minOf(effectiveDepth / 2, 200.0)  // ECP 203: s_max = min(d/2, 200)
+        val condensationZoneLength = minOf(effectiveDepth, 500.0)  // ECP: min(d, L/4)
+        val spacingAtSupport = (stirrupSpacing * 0.5).coerceIn(minSpacingCode, stirrupSpacing)
+        val spacingAtMidspan = stirrupSpacing.coerceAtMost(maxSpacingCode)
+
+        codeNotes.add("ECP 203 §7-9: Condensation zone = ${condensationZoneLength.toInt()}mm")
+        codeNotes.add("Dense spacing near supports: ${spacingAtSupport.toInt()}mm")
+        codeNotes.add("Normal spacing at midspan: ${spacingAtMidspan.toInt()}mm")
+
         return ShearReinforcementResult(
             concreteShearCapacity = concreteShearCapacity,
             requiredShearReinforcement = requiredStirrups,
@@ -188,7 +200,12 @@ class ECPBeam : BeamDesign {
             isSafe = isSafe,
             utilizationRatio = if (maxShearCapacity > 0) (Vu / 1000) / maxShearCapacity else 2.0,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            spacingAtSupport = spacingAtSupport,
+            spacingAtMidspan = spacingAtMidspan,
+            condensationZoneLength = condensationZoneLength,
+            minSpacingPerCode = minSpacingCode,
+            maxSpacingPerCode = maxSpacingCode
         )
     }
 

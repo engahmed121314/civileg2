@@ -226,7 +226,13 @@ fun SiteLayoutScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("${col.id}: (${col.x.toInt()}, ${col.y.toInt()})", fontSize = 11.sp)
+                        Column {
+                            Text("${col.id}: (${col.x.toInt()}, ${col.y.toInt()})", fontSize = 11.sp)
+                            val fb = recommendation?.footingBounds?.find { it.id == col.id }
+                            if ((fb?.numPiles ?: 0) > 0) {
+                                Text("Piles: ${fb?.numPiles}", fontSize = 9.sp, color = Color.Cyan, fontWeight = FontWeight.Bold)
+                            }
+                        }
                         IconButton(onClick = { viewModel.removeColumn(col.id) }, modifier = Modifier.size(24.dp)) {
                             Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(14.dp))
                         }

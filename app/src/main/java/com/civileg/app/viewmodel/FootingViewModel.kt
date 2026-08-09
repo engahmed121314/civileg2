@@ -27,6 +27,19 @@ class FootingViewModel @Inject constructor(
     private val _result = MutableLiveData<CalculatorEngine.FootingResult?>()
     val result: LiveData<CalculatorEngine.FootingResult?> = _result
 
+    // Auto-design: per-footing results
+    data class AutoDesignSummary(
+        val footingResults: List<CalculatorEngine.FootingResult>,
+        val totalConcreteVolume: Double,
+        val totalSteelWeight: Double,
+        val soilAreaUtilization: Double, // percentage of soil area used by footings
+        val soilAreaM2: Double,
+        val totalFootingAreaM2: Double
+    )
+
+    private val _autoResults = MutableLiveData<AutoDesignSummary?>()
+    val autoResults: LiveData<AutoDesignSummary?> = _autoResults
+
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
@@ -97,6 +110,79 @@ class FootingViewModel @Inject constructor(
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Auto-design foundations for multiple pieces given soil area dimensions and total soil load.
+     * Calculates individual footing loads based on equal distribution,
+     * designs each footing, and verifies soil area utilization.
+     */
+    fun autoDesignFromSoil(
+        soilLengthM: Double,
+        soilWidthM: Double,
+        totalSoilLoadKN: Double,
+        numberOfFootings: Int,
+        fcu: Double,
+        fy: Double,
+        soilCapacity: Double,
+        colWidth: Double,
+        colDepth: Double,
+        code: CalculatorEngine.DesignCode,
+        preferredDiameter: Int = 16,
+        preferredSpacing: Double = 150.0
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val soilAreaM2 = soilLengthM * soilWidthM
+                val loadPerFooting = totalSoilLoadKN / numberOfFootings
+                val pu = loadPerFooting * 1.10 // +10% self-weight
+
+                val footingResults = mutableListOf<CalculatorEngine.FootingResult>()
+                var totalConcrete = 0.0
+                var totalSteel = 0.0
+                var totalFootingArea = 0.0
+
+                for (i in 1..numberOfFootings) {
+                    val res = calculatorEngine.calculateFooting(
+                        type = CalculatorEngine.FootingType.ISOLATED,
+                        p = pu,
+                        fcu = fcu,
+                        fy = fy,
+                        soil = soilCapacity,
+                        colB = colWidth,
+                        colT = colDepth,
+                        code = code,
+                        preferredDiameter = preferredDiameter,
+                        preferredSpacing = preferredSpacing
+                    )
+                    footingResults.add(res)
+                    totalConcrete += res.concreteVolume
+                    totalSteel += res.steelWeight
+                    totalFootingArea += (res.width / 1000.0) * (res.length / 1000.0)
+                }
+
+                val soilUtilization = (totalFootingArea / soilAreaM2) * 100.0
+
+                _autoResults.value = AutoDesignSummary(
+                    footingResults = footingResults,
+                    totalConcreteVolume = totalConcrete,
+                    totalSteelWeight = totalSteel,
+                    soilAreaUtilization = soilUtilization,
+                    soilAreaM2 = soilAreaM2,
+                    totalFootingAreaM2 = totalFootingArea
+                )
+                // Also store first result for single-result consumers
+                _result.value = footingResults.firstOrNull()
+                _error.value = if (soilUtilization > 90.0) {
+                    "Warning: Soil area utilization is ${"%.0f".format(soilUtilization)}%. Consider increasing soil area or using raft foundation."
+                } else null
+            } catch (e: Exception) {
+                _error.value = "Auto-design error: ${e.message}"
             } finally {
                 _isLoading.value = false
             }

@@ -61,8 +61,25 @@ data class ShearReinforcementResult(
     val isSafe: Boolean = true,
     val utilizationRatio: Double = 0.0,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
-) : Parcelable
+    val codeNotes: List<String> = emptyList(),
+    // ── Condensation zone detailing (2026-08-07) ──
+    val spacingAtSupport: Double = 0.0,       // dense spacing near supports (mm)
+    val spacingAtMidspan: Double = 0.0,       // normal spacing at midspan (mm)
+    val condensationZoneLength: Double = 0.0,  // length of dense zone from support face (mm)
+    val minSpacingPerCode: Double = 0.0,      // minimum spacing allowed by code (mm)
+    val maxSpacingPerCode: Double = 0.0       // maximum spacing allowed by code (mm)
+) : Parcelable {
+    /** Human-readable stirrup schedule string */
+    val stirrupSchedule: String get() = buildString {
+        append("Ø${stirrupDiameter.toInt()}")
+        if (spacingAtSupport > 0 && condensationZoneLength > 0) {
+            append(" @ ${spacingAtSupport.toInt()}mm c/c (ends, L=${condensationZoneLength.toInt()}mm)")
+            append(" + @ ${spacingAtMidspan.toInt()}mm c/c (mid)")
+        } else {
+            append(" @ ${stirrupSpacing.toInt()}mm c/c")
+        }
+    }
+}
 
 /**
  * نتائج التحقق من عرض الشروخ (Crack Width)
