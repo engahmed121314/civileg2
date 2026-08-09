@@ -110,6 +110,12 @@ fun ProfessionalFootingDrawing(
         val tblTop = if (hasPressure && viewMode == 0) pressureBottom + h * 0.02f
                      else secBottom + h * 0.02f
 
+        // ── Drawing Backdrop ──
+        drawRect(color = Color(0xFF1A1A2E), size = size) // Professional engineering background
+
+        // ── Title & Annotations ──
+        drawTextAnnotated("MASTER STRUCTURAL DRAWING - FOUNDATION", 20f, 30f, Color.Cyan, 20f, bold = true)
+
         val planLeft = margin + 50f
         val planRight = w - margin
         val planW = planRight - planLeft

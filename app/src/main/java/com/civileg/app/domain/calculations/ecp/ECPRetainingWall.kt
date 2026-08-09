@@ -132,30 +132,37 @@ class ECPRetainingWall : RetainingWallDesign {
         val heelBars = RetainingWallDesign.selectBars(heelAsFinal)
         val heelRebarStr = "${heelBars.first}\u03A6${heelBars.second}"
 
+        val formulas = mutableListOf<String>()
+        formulas.add("Lateral Pressure Ka = tan\u00B2(45-\u03D5/2) = tan\u00B2(45-$phi/2) = ${Ka.format(3)}")
+        formulas.add("Resisting Moment Mr = \u03A3(W_i \u00D7 X_i) = ${momentResisting.format(1)} kN.m")
+        formulas.add("Overturning Moment Mo = ${momentOverturning.format(1)} kN.m")
+        formulas.add("Soil Pressure q_max = (W/B)(1+6e/B) = ${maxBearing.format(1)} kN/m\u00B2")
+
         val checks = listOf(
-            WallSafetyCheck("OT FS", overturningFS >= OT_FS_LIMIT, overturningFS, OT_FS_LIMIT,
-                "Overturning: ${"%.2f".format(overturningFS)} >= ${OT_FS_LIMIT}"),
-            WallSafetyCheck("Sliding FS", slidingFS >= SLIDE_FS_LIMIT, slidingFS, SLIDE_FS_LIMIT,
-                "Sliding: ${"%.2f".format(slidingFS)} >= ${SLIDE_FS_LIMIT}"),
-            WallSafetyCheck("Bearing", bearingFS >= 1.0, bearingFS, input.soilBearingCapacity,
-                "Max: ${"%.1f".format(maxBearing)} kN/m\u00B2 <= ${"%.1f".format(input.soilBearingCapacity)}"),
-            WallSafetyCheck("Stem Flexure", AsProvided >= AsReq, AsProvided, AsReq,
-                "As=${"%.0f".format(AsProvided)} >= Req=${"%.0f".format(AsReq)} mm\u00B2/m"),
-            WallSafetyCheck("Shear", !needStirrups, qu, 0.67 * qcu,
-                "qu=${"%.2f".format(qu)} <= ${"%.2f".format(0.67 * qcu)}")
+            WallSafetyCheck("Overturning", overturningFS >= OT_FS_LIMIT, overturningFS, OT_FS_LIMIT, "-", "FS = Mr/Mo",
+                "Stability: ${overturningFS.format(2)} >= $OT_FS_LIMIT"),
+            WallSafetyCheck("Sliding", slidingFS >= SLIDE_FS_LIMIT, slidingFS, SLIDE_FS_LIMIT, "-", "FS = (\u03BC.W + Pp)/Pa",
+                "Stability: ${slidingFS.format(2)} >= $SLIDE_FS_LIMIT"),
+            WallSafetyCheck("Bearing Pressure", maxBearing <= input.soilBearingCapacity, maxBearing, input.soilBearingCapacity, "kPa", "q \u2264 q_all",
+                "Pressure: ${maxBearing.format(1)} <= ${input.soilBearingCapacity}"),
+            WallSafetyCheck("Reinforcement", AsProvided >= AsReq, AsProvided, AsReq, "mm\u00B2", "As \u2265 As_min",
+                "Stem steel check"),
+            WallSafetyCheck("Concrete Shear", qu <= 0.67 * qcu, qu, 0.67 * qcu, "MPa", "qu \u2264 qcu",
+                "Against diagonal tension")
         )
 
         val isSafe = checks.all { it.isSafe }
         val notes = mutableListOf(
-            "ECP 203: \u03B3c=${GAMMA_C}, \u03B3s=${GAMMA_S}",
-            "Ka = ${"%.3f".format(Ka)} (Rankine)",
-            "Cover = ${COVER_EARTH}mm (earth contact)",
-            "Min steel = ${"%.4f".format(MIN_STEEL_RATIO)} (${MIN_STEEL_RATIO * 100}%)"
+            "ECP 203-2020: \u03B3c=1.5, \u03B3s=1.15",
+            "Ka = ${Ka.format(3)} (Rankine Method)",
+            "Min Steel = 0.25% for vertical wall faces",
+            "Water table considered at ${zwt}m depth"
         )
-        if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
 
         return RetainingWallResult(
-            isSafe = isSafe, designCode = DesignCode.ECP,
+            isSafe = isSafe, designCode = DesignCode.ECP, designCodeName = "ECP 203-2020",
+            stemThickness = tBase,
+            baseWidth = B,
             overturningFS = overturningFS, slidingFS = slidingFS, bearingFS = bearingFS,
             maxBearingPressure = maxBearing, minBearingPressure = minBearing,
             stemMoment = Mu, stemShear = Vu,
@@ -163,7 +170,9 @@ class ECPRetainingWall : RetainingWallDesign {
             stemDistributionRebar = distBars,
             toeMoment = toeMoment * LOAD_FACTOR_DEAD, toeShear = toeShear, toeRebar = toeRebarStr,
             heelMoment = heelMoment, heelShear = heelShear, heelRebar = heelRebarStr,
-            safetyChecks = checks, codeNotes = notes
+            safetyChecks = checks, formulas = formulas, codeNotes = notes
         )
     }
+
+    private fun Double.format(n: Int) = String.format("%.${n}f", this)
 }

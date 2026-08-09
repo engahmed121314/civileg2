@@ -204,7 +204,16 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
         item { EstimationLogicInfo() }
 
         estimationResult?.let { res ->
-            item { ProfessionalEstimationCard(res) { exportEstimationPdf(context, res) } }
+            item { 
+                ProfessionalEstimationCard(
+                    res, 
+                    onExport = { exportEstimationPdf(context, res) },
+                    onExportExcel = {
+                        val file = com.civileg.app.utils.ExcelExporter.exportEstimationToCsv(context, res)
+                        file?.let { shareCsv(context, it) }
+                    }
+                ) 
+            }
         }
     }
 }
@@ -340,6 +349,16 @@ private fun exportProjectBOQPdf(context: Context, name: String, designs: List<co
     } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.boq_export_failed_title), Toast.LENGTH_SHORT).show() }
 }
 
+private fun shareCsv(context: Context, file: File) {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/csv"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share Excel File"))
+}
+
 private fun sharePdf(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
     val intent = Intent(Intent.ACTION_VIEW).apply { setDataAndType(uri, "application/pdf"); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -377,7 +396,11 @@ fun EstimationLogicInfo() {
 }
 
 @Composable
-fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport: () -> Unit) {
+fun ProfessionalEstimationCard(
+    res: EstimationEngine.EstimationResult,
+    onExport: () -> Unit,
+    onExportExcel: () -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column(modifier = Modifier.padding(24.dp)) {
             Text(stringResource(R.string.boq_integrated_estimate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -407,8 +430,13 @@ fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport:
                     }
                 }
             }
-            Button(onClick = onExport, modifier = Modifier.fillMaxWidth().padding(top = 16.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
-                Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.boq_export_report_pdf))
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onExport, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary), shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.pdf_report))
+                }
+                Button(onClick = onExportExcel, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)), shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Default.TableChart, null); Spacer(Modifier.width(8.dp)); Text("Excel")
+                }
             }
         }
     }

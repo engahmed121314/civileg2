@@ -40,6 +40,8 @@ data class TankResult(
     val maxShearWall: Double = 0.0,
     val factorOfSafetyUplift: Double = 0.0,
     val structuralSystem: String = "",
+    val formulas: List<String> = emptyList(), // [NEW] Actual formulas used
+    val designCode: String = "",           // [NEW] "ECP 203-2020", "ACI 350-06", etc.
     val recommendations: List<String> = emptyList(),
     val safetyChecks: List<TankSafetyCheck> = emptyList(),
     val warnings: List<String> = emptyList()
@@ -52,5 +54,6 @@ data class TankSafetyCheck(
     val limit: Double,
     val unit: String,
     val isSafe: Boolean,
+    val formula: String = "",   // [NEW] Formula used for this check
     val description: String = ""
 ) : Parcelable

@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.PdfDrawingGenerator
 import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -36,7 +35,6 @@ class TankViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
@@ -53,11 +51,8 @@ class TankViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val res = calculatorEngine.designTank(type, capacity, height, fcu, fy, preferredDiameter, code)
-                
-                // Validate Tank Design
                 val report = CalculationValidator.validateTank(res)
                 _validationReport.value = report
-                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -68,7 +63,6 @@ class TankViewModel @Inject constructor(
         }
     }
 
-    // Legacy method
     fun calculateTank(type: CalculatorEngine.TankType, capacity: Double, height: Double, fcu: Double, fy: Double) {
         calculateTankPro(type, capacity, height, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
     }
@@ -84,77 +78,51 @@ class TankViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
-                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
-                val fileName = "Tank_Report_${System.currentTimeMillis()}.pdf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = File(directory, fileName)
-
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
-                    PdfDrawingGenerator.generateTankDrawing(
-                        tankType = res.type.displayName,
-                        length = res.length,
-                        width = res.width,
-                        height = res.height,
-                        wallThickness = res.wallThickness,
-                        baseThickness = res.baseThickness,
-                        verticalRebarDia = res.wallReinforcement.diameter.toDouble(),
-                        verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
-                        horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
-                        horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                        waterLevel = res.height * 0.85,
-                        foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0
-                    )
-                } catch (e: Exception) { null }
-                pendingDrawingBitmap = null  // consume after use
-
-                val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
-                    else -> "ECP 203"
-                }
-                val inputsMap = mapOf(
-                    "Tank Type" to res.type.displayName,
-                    "Length" to "${res.length} m",
-                    "Width" to "${res.width} m",
-                    "Height" to "${res.height} m",
-                    "Wall Thickness" to "${res.wallThickness} mm",
-                    "Base Thickness" to "${res.baseThickness} mm",
-                    "Design Code" to codeName
-                )
-                val resultsMap = mapOf(
-                    "Capacity" to "${String.format("%.2f", res.capacity)} m³",
-                    "Water Pressure" to "${String.format("%.2f", res.waterPressure)} kN/m²",
-                    "Wall Reinforcement" to res.wallReinforcement.barString,
-                    "Base Reinforcement" to res.baseReinforcement.barString,
-                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
-                )
-                val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = chk.name, calculated = chk.value,
-                        limit = chk.limit, unit = chk.unit, passed = chk.isSafe
-                    )
+                // [EXPERT]: Modern specialized tank exporter integration
+                val exporter = com.civileg.app.utils.exporters.TankProPdfExporter(context)
+                
+                // Map local TankResult back to domain TankResult for the exporter if necessary
+                // Actually, the exporter takes a domain TankResult.
+                // Let's create a dummy or fix the exporter to take the engine result.
+                // Re-calculating to get the full domain object is one way, or just mapping.
+                
+                val domainType = when(res.type) {
+                    CalculatorEngine.TankType.RECTANGULAR_GROUND -> com.civileg.app.domain.calculations.base.TankType.RECTANGULAR_GROUND
+                    CalculatorEngine.TankType.CIRCULAR_GROUND -> com.civileg.app.domain.calculations.base.TankType.CIRCULAR_GROUND
+                    CalculatorEngine.TankType.RECTANGULAR_ELEVATED -> com.civileg.app.domain.calculations.base.TankType.RECTANGULAR_ELEVATED
+                    CalculatorEngine.TankType.CIRCULAR_ELEVATED -> com.civileg.app.domain.calculations.base.TankType.CIRCULAR_ELEVATED
+                    CalculatorEngine.TankType.UNDERGROUND -> com.civileg.app.domain.calculations.base.TankType.RECTANGULAR_UNDERGROUND
+                    CalculatorEngine.TankType.CIRCULAR_UNDERGROUND -> com.civileg.app.domain.calculations.base.TankType.CIRCULAR_UNDERGROUND
+                    else -> com.civileg.app.domain.calculations.base.TankType.RECTANGULAR
                 }
 
-                // Professional English PDF Report — English only, no Arabic encoding issues
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم خزان - ${res.type.displayName}",
-                    titleEn = "Tank Design Report — ${res.type.displayName}",
-                    subtitle = "Code: $codeName  •  ${res.length}×${res.width}×${res.height}m",
-                    designType = "Tank (${res.type.displayName})",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
-                    isSafe = res.isSafe,
-                    drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                val designer: com.civileg.app.domain.calculations.base.TankDesign = when(res.code) {
+                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.calculations.aci.ACITank()
+                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.calculations.sbc.SBCTank()
+                    else -> com.civileg.app.domain.calculations.ecp.ECPTank()
+                }
+
+                val domainRes = designer.calculateTank(
+                    length = res.length * 1000.0, width = res.width * 1000.0, height = res.height * 1000.0,
+                    waterDepth = res.height * 0.9 * 1000.0, fcu = res.fcu, fy = res.fy, type = domainType
                 )
+
+                val drawings = mutableMapOf<String, Bitmap?>()
+                drawings["elevation"] = pendingDrawingBitmap
+                
+                val inputs = CalculatorEngine.TankInputs(res.type, res.capacity, res.height, res.fcu, res.fy, res.code)
+
+                val generated = exporter.exportToPdf(
+                    result = domainRes,
+                    tankInputs = inputs,
+                    clientName = "Master Engineering Client",
+                    projectName = "Professional Tank Analysis Project",
+                    drawings = drawings
+                )
+                pendingDrawingBitmap = null 
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    generated.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }

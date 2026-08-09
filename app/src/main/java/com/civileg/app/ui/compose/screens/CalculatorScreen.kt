@@ -2,6 +2,7 @@ package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,170 +49,181 @@ fun CalculatorScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(12.dp)
         ) {
-            // Display Area
-            Card(
+            // Top area (Display + History) - Scrollable
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    // Expression
-                    Text(
-                        text = expression,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 16.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    // Result
-                    Text(
-                        text = result,
-                        color = Color.White,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            // History
-            if (history.isNotEmpty()) {
+                // Display Area
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
                         Text(
-                            stringResource(R.string.calc_history),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = expression,
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 16.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        history.takeLast(3).reversed().forEach { h ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = result,
+                            color = Color.White,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // History
+                if (history.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                             Text(
-                                h,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(vertical = 1.dp)
+                                stringResource(R.string.calc_history),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            history.takeLast(10).reversed().forEach { h ->
+                                Text(
+                                    h,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(vertical = 1.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Scientific functions scrollable row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ScientificFuncButton("sin") { appendFunc("sin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("cos") { appendFunc("cos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("tan") { appendFunc("tan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("log") { appendFunc("log", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("ln") { appendFunc("ln", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("√") { appendFunc("√", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("x²") { expression += "^2"; isNewCalculation = false }
-                ScientificFuncButton("π") { appendNumber("π", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("e") { appendNumber("e", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("n!") { expression += "!"; isNewCalculation = false }
-                ScientificFuncButton("1/x") { appendFunc("1/", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("|x|") { appendFunc("abs", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("(") { expression += "("; isNewCalculation = false }
-                ScientificFuncButton(")") { expression += ")"; isNewCalculation = false }
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Main keypad - 5 rows x 4 columns
+            // Bottom area (Keypad) - Fixed
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Row 1: C, (, ), ÷
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("C", Modifier.weight(1f), Color(0xFFD32F2F)) {
-                        expression = ""; result = "0"; isNewCalculation = true
-                    }
-                    CalcButton("⌫", Modifier.weight(1f), Color(0xFFD32F2F)) {
-                        if (expression.isNotEmpty()) expression = expression.dropLast(1)
-                    }
-                    CalcButton("^", Modifier.weight(1f), Color(0xFF1565C0)) {
-                        expression += "^"; isNewCalculation = false
-                    }
-                    CalcButton("÷", Modifier.weight(1f), Color(0xFF1565C0)) {
-                        expression += "÷"; isNewCalculation = false
-                    }
+                // Scientific functions scrollable row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ScientificFuncButton("sin") { appendFunc("sin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("cos") { appendFunc("cos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("tan") { appendFunc("tan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("log") { appendFunc("log", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("ln") { appendFunc("ln", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("√") { appendFunc("√", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("x²") { expression += "^2"; isNewCalculation = false }
+                    ScientificFuncButton("π") { appendNumber("π", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("e") { appendNumber("e", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("n!") { expression += "!"; isNewCalculation = false }
+                    ScientificFuncButton("1/x") { appendFunc("1/", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("|x|") { appendFunc("abs", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                    ScientificFuncButton("(") { expression += "("; isNewCalculation = false }
+                    ScientificFuncButton(")") { expression += ")"; isNewCalculation = false }
                 }
-                // Row 2: 7, 8, 9, ×
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("7", Modifier.weight(1f)) { appendNumber("7", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("8", Modifier.weight(1f)) { appendNumber("8", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("9", Modifier.weight(1f)) { appendNumber("9", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("×", Modifier.weight(1f), Color(0xFF1565C0)) {
-                        expression += "×"; isNewCalculation = false
-                    }
-                }
-                // Row 3: 4, 5, 6, -
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("4", Modifier.weight(1f)) { appendNumber("4", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("5", Modifier.weight(1f)) { appendNumber("5", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("6", Modifier.weight(1f)) { appendNumber("6", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("-", Modifier.weight(1f), Color(0xFF1565C0)) {
-                        expression += "-"; isNewCalculation = false
-                    }
-                }
-                // Row 4: 1, 2, 3, +
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("1", Modifier.weight(1f)) { appendNumber("1", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("2", Modifier.weight(1f)) { appendNumber("2", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("3", Modifier.weight(1f)) { appendNumber("3", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton("+", Modifier.weight(1f), Color(0xFF1565C0)) {
-                        expression += "+"; isNewCalculation = false
-                    }
-                }
-                // Row 5: ±, 0, ., =
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CalcButton("±", Modifier.weight(1f)) {
-                        if (expression.isNotEmpty()) {
-                            if (expression.startsWith("-")) expression = expression.drop(1)
-                            else expression = "-$expression"
+
+                // Main keypad - 5 rows
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Row 1: C, ⌫, ^, ÷
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CalcButton("C", Modifier.weight(1f), Color(0xFFD32F2F)) {
+                            expression = ""; result = "0"; isNewCalculation = true
+                        }
+                        CalcButton("⌫", Modifier.weight(1f), Color(0xFFD32F2F)) {
+                            if (expression.isNotEmpty()) expression = expression.dropLast(1)
+                        }
+                        CalcButton("^", Modifier.weight(1f), Color(0xFF1565C0)) {
+                            expression += "^"; isNewCalculation = false
+                        }
+                        CalcButton("÷", Modifier.weight(1f), Color(0xFF1565C0)) {
+                            expression += "÷"; isNewCalculation = false
                         }
                     }
-                    CalcButton("0", Modifier.weight(1f)) { appendNumber("0", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                    CalcButton(".", Modifier.weight(1f)) { expression += "."; isNewCalculation = false }
-                    val calcErrorMsg = stringResource(R.string.error)
-                    CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
-                        try {
-                            val evalResult = evaluateExpression(expression)
-                            val formatted = formatResult(evalResult, calcErrorMsg)
-                            history = history + "$expression = $formatted"
-                            result = formatted
-                            expression = formatted
-                            isNewCalculation = true
-                        } catch (e: Exception) {
-                            result = calcErrorMsg
+                    // Row 2: 7, 8, 9, ×
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CalcButton("7", Modifier.weight(1f)) { appendNumber("7", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("8", Modifier.weight(1f)) { appendNumber("8", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("9", Modifier.weight(1f)) { appendNumber("9", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("×", Modifier.weight(1f), Color(0xFF1565C0)) {
+                            expression += "×"; isNewCalculation = false
+                        }
+                    }
+                    // Row 3: 4, 5, 6, -
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CalcButton("4", Modifier.weight(1f)) { appendNumber("4", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("5", Modifier.weight(1f)) { appendNumber("5", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("6", Modifier.weight(1f)) { appendNumber("6", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("-", Modifier.weight(1f), Color(0xFF1565C0)) {
+                            expression += "-"; isNewCalculation = false
+                        }
+                    }
+                    // Row 4: 1, 2, 3, +
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CalcButton("1", Modifier.weight(1f)) { appendNumber("1", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("2", Modifier.weight(1f)) { appendNumber("2", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("3", Modifier.weight(1f)) { appendNumber("3", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton("+", Modifier.weight(1f), Color(0xFF1565C0)) {
+                            expression += "+"; isNewCalculation = false
+                        }
+                    }
+                    // Row 5: ±, 0, ., =
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CalcButton("±", Modifier.weight(1f)) {
+                            if (expression.isNotEmpty()) {
+                                if (expression.startsWith("-")) expression = expression.drop(1)
+                                else expression = "-$expression"
+                            }
+                        }
+                        CalcButton("0", Modifier.weight(1f)) { appendNumber("0", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                        CalcButton(".", Modifier.weight(1f)) { expression += "."; isNewCalculation = false }
+                        val calcErrorMsg = stringResource(R.string.error)
+                        CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
+                            try {
+                                val evalResult = evaluateExpression(expression)
+                                val formatted = formatResult(evalResult, calcErrorMsg)
+                                history = history + "$expression = $formatted"
+                                result = formatted
+                                expression = formatted
+                                isNewCalculation = true
+                            } catch (e: Exception) {
+                                result = calcErrorMsg
+                            }
                         }
                     }
                 }

@@ -891,9 +891,19 @@ private fun ResultsTab(
         if (steelResults.isNotEmpty()) add(stringResource(R.string.frame_result_steel_design))
     }
 
-    TabRow(selectedTabIndex = resultSubTab) {
+    ScrollableTabRow(
+        selectedTabIndex = resultSubTab,
+        edgePadding = 12.dp,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.primary,
+        divider = {}
+    ) {
         for ((i, title) in subTabs.withIndex()) {
-            Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
+            Tab(
+                selected = resultSubTab == i,
+                onClick = { resultSubTab = i },
+                text = { Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            )
         }
     }
 

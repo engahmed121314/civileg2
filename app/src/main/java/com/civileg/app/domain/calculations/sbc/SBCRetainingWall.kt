@@ -55,6 +55,7 @@ class SBCRetainingWall : RetainingWallDesign {
         return aciResult.copy(
             isSafe = isSafe,
             designCode = DesignCode.SBC,
+            designCodeName = "SBC 304-2018",
             safetyChecks = sbcChecks,
             codeNotes = notes
         )

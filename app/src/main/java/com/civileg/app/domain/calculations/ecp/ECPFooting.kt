@@ -157,16 +157,21 @@ class ECPFooting : FootingDesign {
         // 14. التسليح الرئيسي = الأكبر
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
+        val formulas = mutableListOf<String>()
+        formulas.add("Req Area A = P / (SBC - \u03B3c \u00D7 t) = ${P_service.format(1)} / ${netSBC.format(1)} = ${A_req.format(2)} m\u00B2")
+        formulas.add("Actual Area A_act = B \u00D7 L = ${A_actual.format(2)} m\u00B2")
+        formulas.add("Max Pressure q_max = (P/A)(1+6e/B) = ${q_max.format(1)} kPa")
+        formulas.add("Bending Moment Mu = q \u00D7 cant\u00B2 / 2 = ${Mu_x.format(1)} kN.m")
+
+        val checks = mutableListOf<WallSafetyCheck>()
+        checks.add(WallSafetyCheck("Bearing Pressure", q_max <= soilBearingCapacity, q_max, soilBearingCapacity, "kPa", "q \u2264 q_all", "Soil capacity check"))
+        checks.add(WallSafetyCheck("Punching Shear", punchingCheck.isSafe, punchingCheck.appliedShear, punchingCheck.shearCapacity, "MPa", "qp \u2264 qcu", "Against punching failure"))
+        checks.add(WallSafetyCheck("Flexural Rebar", mainReinf.astProvided >= mainReinf.astRequired, mainReinf.astProvided, mainReinf.astRequired, "mm\u00B2", "As \u2265 As_min", "Structural integrity"))
+
         codeNotes.add("ECP 203-2020: Isolated Footing Design")
         codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
-        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
-        codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
+        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f kPa", q_avg, q_max))
         codeNotes.add(String.format("Main: %s", mainReinf.barString))
-        if (distBarsPerMeter > 0) {
-            codeNotes.add(String.format("Distribution: %d dia %d @ %dmm", 
-                distBarsPerMeter, distBar.toInt(), distSpacing.toInt()
-            ))
-        }
         codeNotes.add(String.format("One-way shear capacity: %.2f MPa", qcu))
 
         return FootingDesignResult(
@@ -177,15 +182,16 @@ class ECPFooting : FootingDesign {
             maxSoilPressure = q_max,
             reinforcement = mainReinf,
             punchingShearCheck = punchingCheck,
-            isSafe = q_max <= soilBearingCapacity
-                && q_min >= 0
-                && Vu_x <= Vc_x
-                && Vu_y <= Vc_y
-                && punchingCheck.isSafe,
+            isSafe = checks.all { it.isSafe },
+            designCodeName = "ECP 203-2020",
+            formulas = formulas,
+            safetyChecks = checks,
             warnings = warnings,
             codeNotes = codeNotes
         )
     }
+
+    private fun Double.format(n: Int) = String.format("%.${n}f", this)
 
     // ===================== التحقق من قص الاختراق =====================
     override fun checkPunchingShear(
@@ -281,9 +287,9 @@ class ECPFooting : FootingDesign {
         val asProvided = actualBars * barArea
 
         // 7. نسبة التسليح
-        val rho = asProvided / (b * d)
-        if (rho > 0.04) {
-            warnings.add(String.format("نسبة التسليح %.1f%% تتجاوز الحد الأقصى", rho * 100))
+        val rhoAct = asProvided / (b * d)
+        if (rhoAct > 0.04) {
+            warnings.add(String.format("نسبة التسليح %.1f%% تتجاوز الحد الأقصى", rhoAct * 100))
         }
 
         val utilization = asRequired / asProvided

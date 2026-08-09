@@ -117,6 +117,11 @@ data class FootingDesignResult(
     val reinforcement: ReinforcementResult,
     val punchingShearCheck: ShearCheckResult,
     val isSafe: Boolean,
+    val concreteVolume: Double = 0.0,   // [NEW] m³
+    val steelWeight: Double = 0.0,      // [NEW] kg
+    val designCodeName: String = "",    // [NEW] e.g. "ECP 203-2020"
+    val formulas: List<String> = emptyList(), // [NEW] Actual formulas used
+    val safetyChecks: List<com.civileg.app.domain.calculations.base.WallSafetyCheck> = emptyList(), // [NEW] Reuse safety check entity
     val warnings: List<String> = emptyList(),
     val codeNotes: List<String> = emptyList()
 )

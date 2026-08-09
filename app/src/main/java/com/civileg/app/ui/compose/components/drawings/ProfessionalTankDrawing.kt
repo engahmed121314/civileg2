@@ -103,12 +103,16 @@ fun ProfessionalTankDrawing(
         val cover = 50f * scale
 
         val tankLeft = mainLeft + (mainRight - mainLeft - drawL) / 2f
-        val tankTop = mainTop + 20f + (if (isUnderground) drawFD else 0f)
+        val tankTop = mainTop + 35f + (if (isUnderground) drawFD else 0f)
         val tankRight = tankLeft + drawL
         val tankBottom = tankTop + drawH
         val baseBottom = tankBottom + drawBT
 
-        // ── Draw layers ──
+        // ── Drawing Backdrop ──
+        drawRect(color = Color(0xFF1A1A2E), size = size) // Professional engineering background
+
+        // ── Title & Annotations ──
+        drawTextAnnotated("MASTER STRUCTURAL DRAWING - $tankType", 20f, 30f, Color.Cyan, 20f, bold = true)
         // Zone 1: Elevation / Perspective (viewMode 0 or 1)
         if (viewMode == 0 || viewMode == 1) {
             if (isUnderground) {
@@ -803,5 +807,17 @@ private fun DrawScope.drawArrowHead(
         path.close()
     }
     drawPath(path = path, color = color)
+}
+
+private fun DrawScope.drawTextAnnotated(
+    text: String, x: Float, y: Float, color: Color, size: Float, bold: Boolean = false
+) {
+    val paint = android.graphics.Paint().apply {
+        this.color = color.toArgb()
+        this.textSize = size
+        this.isFakeBoldText = bold
+        this.isAntiAlias = true
+    }
+    drawContext.canvas.nativeCanvas.drawText(text, x, y, paint)
 }
 

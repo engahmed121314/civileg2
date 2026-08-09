@@ -11,7 +11,20 @@ data class ColumnLoad(
     val y: Double, // mm from origin
     val axialLoad: Double, // kN (working)
     val width: Double = 400.0, // mm
-    val depth: Double = 400.0  // mm
+    val depth: Double = 400.0,  // mm
+    val isNeighbor: Boolean = false // [NEW] If true, column is on plot boundary
+) : Parcelable
+
+@Parcelize
+data class FootingBound(
+    val id: String,
+    val centerX: Double,
+    val centerY: Double,
+    val width: Double,
+    val length: Double,
+    val type: String, // Isolated, Combined, Boundary, Strap, PileCap
+    val numPiles: Int = 0, // [NEW] for deep foundations
+    val pileLayout: String = "" // [NEW] e.g. "2x2", "Circular"
 ) : Parcelable
 
 @Parcelize
@@ -21,85 +34,137 @@ data class LayoutRecommendation(
     val plotArea: Double,
     val coverageRatio: Double,
     val overlapsFound: Int,
-    val axesX: List<Double>,
-    val axesY: List<Double>,
-    val description: String
+    val axesX: List<AxisInfo>,
+    val axesY: List<AxisInfo>,
+    val footingBounds: List<FootingBound>,
+    val description: String,
+    val totalConcreteEst: Double = 0.0, // [NEW] For Phase 3
+    val totalSteelEst: Double = 0.0     // [NEW] For Phase 3
+) : Parcelable
+
+@Parcelize
+data class AxisInfo(
+    val coordinate: Double,
+    val label: String
 ) : Parcelable
 
 object LayoutOptimizer {
 
-    /**
-     * Analyzes a site layout and recommends the most economical foundation system.
-     */
     fun analyzeLayout(
-        plotWidth: Double, // m
-        plotLength: Double, // m
+        plotWidth: Double,
+        plotLength: Double,
         columns: List<ColumnLoad>,
-        soilCapacity: Double, // kPa
+        soilCapacity: Double,
         designCode: CalculatorEngine.DesignCode
     ): LayoutRecommendation {
         val plotArea = plotWidth * plotLength
         var totalAreaNeeded = 0.0
-        val axesX = columns.map { it.x }.distinct().sorted()
-        val axesY = columns.map { it.y }.distinct().sorted()
-
-        // Calculate needed area for each column as isolated
-        val footingBounds = mutableListOf<RectF>()
+        val footingBounds = mutableListOf<FootingBound>()
+        
         columns.forEach { col ->
-            val areaReq = (col.axialLoad * 1.1) / soilCapacity
-            val side = sqrt(areaReq)
-            val halfSide = side * 1000.0 / 2.0
-            totalAreaNeeded += areaReq
+            var areaReq = (col.axialLoad * 1.15) / soilCapacity
+            var type = "Isolated"
+            var numPiles = 0
             
-            // Create a virtual rectangle for overlap detection
-            footingBounds.add(RectF(
-                (col.x - halfSide).toFloat(),
-                (col.y - halfSide).toFloat(),
-                (col.x + halfSide).toFloat(),
-                (col.y + halfSide).toFloat()
-            ))
+            // [PHASE 2]: Deep Foundation Trigger
+            // If load > 4000kN or soil capacity < 100kPa, suggest Piles
+            if (col.axialLoad > 4000 || soilCapacity < 80) {
+                type = "PileCap"
+                val pileCapacity = soilCapacity * 2.5 // Rough estimation
+                numPiles = ceil(col.axialLoad / pileCapacity).toInt().coerceAtLeast(2)
+                areaReq = numPiles * 0.6 * 0.6 * 2.5 // Cap size estimate
+            }
+            
+            val side = sqrt(areaReq)
+            val ratio = col.depth / col.width
+            var L = side * sqrt(ratio)
+            var B = side / sqrt(ratio)
+            
+            var cx = col.x
+            var cy = col.y
+
+            // Boundary Logic
+            if (type != "PileCap" && (col.isNeighbor || cx - B*500 < 0 || cx + B*500 > plotWidth*1000 || 
+                cy - L*500 < 0 || cy + L*500 > plotLength*1000)) {
+                type = "Boundary"
+                if (cx - B * 500 < 0) cx = B * 500
+                if (cx + B * 500 > plotWidth * 1000) cx = plotWidth * 1000 - B * 500
+                if (cy - L * 500 < 0) cy = L * 500
+                if (cy + L * 500 > plotLength * 1000) cy = plotLength * 1000 - L * 500
+            }
+            
+            footingBounds.add(FootingBound(col.id, cx, cy, B * 1000.0, L * 1000.0, type, numPiles))
+            totalAreaNeeded += areaReq
         }
 
-        val coverageRatio = totalAreaNeeded / plotArea
-        var overlapCount = 0
+        val overlaps = mutableListOf<Pair<Int, Int>>()
         for (i in 0 until footingBounds.size) {
             for (j in i + 1 until footingBounds.size) {
-                if (intersects(footingBounds[i], footingBounds[j])) {
-                    overlapCount++
-                }
+                if (checkOverlap(footingBounds[i], footingBounds[j])) overlaps.add(i to j)
             }
         }
 
+        val coverageRatio = totalAreaNeeded / plotArea
         val suggestion = when {
-            coverageRatio > 0.65 -> "Raft Foundation (Full Mat)"
-            coverageRatio > 0.45 || overlapCount > columns.size * 0.3 -> "American Hybrid Raft (REB)"
-            overlapCount > 0 -> "Combined Footings & Isolated Mix"
+            columns.any { it.axialLoad > 4500 } || soilCapacity < 100 -> "Deep Foundation (Piles)"
+            coverageRatio > 0.60 -> "Raft Foundation (Full Mat)"
+            coverageRatio > 0.40 -> "Strip/Grid Foundation (REB)"
+            overlaps.size > columns.size * 0.2 -> "Combined Footings (Mix)"
             else -> "Isolated Footings"
         }
 
         val desc = when (suggestion) {
-            "Raft Foundation (Full Mat)" -> "Footing area covers ${ (coverageRatio * 100).toInt() }% of plot. A full raft is mandatory."
-            "American Hybrid Raft (REB)" -> "High density or varying loads detected. REB (Thickened Raft) provides stiffness with less concrete."
-            else -> "Standard isolated footings are suitable for this soil capacity."
+            "Deep Foundation (Piles)" -> "Massive loads or weak soil detected. Piles required to reach stable strata."
+            "Raft Foundation (Full Mat)" -> "High coverage (${(coverageRatio*100).toInt()}%). Uniform raft required."
+            "Strip/Grid Foundation (REB)" -> "Ribbed raft suggested to manage dense column layout."
+            else -> "Isolated footings are economical. Boundary columns require strap beams."
         }
+
+        // [PHASE 3]: Financial / Quantity Estimation
+        val totalConcrete = totalAreaNeeded * 0.7 // Average 70cm thickness
+        val totalSteel = totalConcrete * 110.0  // 110kg/m3 average
+
+        // Professional Axis Clustering with Labels
+        val axesX = clusterAxes(columns.map { it.x }).mapIndexed { i, coord -> AxisInfo(coord, (i + 1).toString()) }
+        val axesY = clusterAxes(columns.map { it.y }).mapIndexed { i, coord -> AxisInfo(coord, ('A'.code + i).toChar().toString()) }
 
         return LayoutRecommendation(
             suggestedType = suggestion,
             totalFootingArea = totalAreaNeeded,
             plotArea = plotArea,
             coverageRatio = coverageRatio,
-            overlapsFound = overlapCount,
+            overlapsFound = overlaps.size,
             axesX = axesX,
             axesY = axesY,
+            footingBounds = footingBounds,
+            totalConcreteEst = totalConcrete,
+            totalSteelEst = totalSteel,
             description = desc
         )
     }
 
-    private fun intersects(r1: RectF, r2: RectF): Boolean {
-        return r1.left < r2.right && r2.left < r1.right && r1.top < r2.bottom && r2.top < r1.bottom
+    private fun checkOverlap(f1: FootingBound, f2: FootingBound): Boolean {
+        val dx = abs(f1.centerX - f2.centerX)
+        val dy = abs(f1.centerY - f2.centerY)
+        return dx < (f1.width + f2.width) / 2.0 && dy < (f1.length + f2.length) / 2.0
     }
 
-    // Simplified RectF to avoid Android dependency in pure logic if possible, 
-    // but we use it here for clarity.
-    data class RectF(val left: Float, val top: Float, val right: Float, val bottom: Float)
+    private fun clusterAxes(coords: List<Double>): List<Double> {
+        if (coords.isEmpty()) return emptyList()
+        val sorted = coords.sorted()
+        val result = mutableListOf<Double>()
+        var currentCluster = mutableListOf(sorted[0])
+        val tolerance = 700.0 // mm
+        
+        for (i in 1 until sorted.size) {
+            if (sorted[i] - currentCluster.last() <= tolerance) {
+                currentCluster.add(sorted[i])
+            } else {
+                result.add(currentCluster.average())
+                currentCluster = mutableListOf(sorted[i])
+            }
+        }
+        result.add(currentCluster.average())
+        return result
+    }
 }

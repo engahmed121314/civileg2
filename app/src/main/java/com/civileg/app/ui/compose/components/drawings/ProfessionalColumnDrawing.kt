@@ -284,6 +284,24 @@ private fun DrawScope.draw3DElevation(
             val zStep = (zone.spacing.toFloat() / colH.toFloat()) * h
             
             var ty = zEndScreen
+            val midYZone = (zStartScreen + zEndScreen) / 2f
+            
+            // Draw dimension line for zone
+            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(ox - 25f, zStartScreen), Offset(ox - 25f, zEndScreen), 1f)
+            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(ox - 30f, zStartScreen), Offset(ox - 20f, zStartScreen), 1f)
+            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(ox - 30f, zEndScreen), Offset(ox - 20f, zEndScreen), 1f)
+            
+            // Label for zone spacing
+            drawContext.canvas.nativeCanvas.apply {
+                val p = android.graphics.Paint().apply {
+                    color = C.White.toArgb(); textSize = 11f
+                    textAlign = android.graphics.Paint.Align.RIGHT
+                }
+                drawText("${zone.spacing.toInt()}mm", ox - 32f, midYZone + 4f, p)
+                p.textSize = 9f; p.color = C.DimLine.toArgb()
+                drawText(zone.name, ox - 32f, midYZone + 16f, p)
+            }
+
             while (ty > zStartScreen + 1f) {
                 if (ty in oy..(oy + h)) {
                     drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),

@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -284,11 +285,6 @@ fun TankScreen(
                                             color = ecoColor
                                         )
                                     }
-                                    Text(
-                                        stringResource(R.string.consultant_ratio),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
 
                                 Box(contentAlignment = Alignment.Center) {
@@ -303,11 +299,32 @@ fun TankScreen(
                                         color = ecoColor,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
-                                        "${(res.utilizationRatio * 100).toInt()}%",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
+                                    Text("${(res.utilizationRatio * 100).toInt()}%", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // [NEW]: Professional Design Equations & Analysis Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+                        border = BorderStroke(1.dp, Color(0xFF81C784))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Functions, contentDescription = null, tint = Color(0xFF2E7D32))
+                                Spacer(Modifier.width(8.dp))
+                                Text("DESIGN ANALYSIS & FORMULAS", fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20), fontSize = 14.sp)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            res.suggestions.filter { it.contains("=") }.forEach { formula ->
+                                Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(6.dp).background(Color(0xFF2E7D32), RoundedCornerShape(2.dp)))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(formula, style = MaterialTheme.typography.bodySmall, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                                 }
                             }
                         }
@@ -320,10 +337,14 @@ fun TankScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            ResultRow("Dimensions (Internal)", "${res.length} x ${res.width} x ${res.height} m")
                             ResultRow(stringResource(R.string.tank_wall_thickness), "${res.wallThickness.toInt()} mm")
                             ResultRow(stringResource(R.string.tank_base_thickness), "${res.baseThickness.toInt()} mm")
                             ResultRow(stringResource(R.string.tank_max_water_pressure), "${"%.1f".format(res.waterPressure)} kN/m²")
-                            ResultRow(stringResource(R.string.tank_wall_reinforcement), res.wallReinforcement.barString)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                            Text("REINFORCEMENT (Main/Hoop)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            ResultRow("Wall Reinforcement", res.wallReinforcement.barString)
+                            ResultRow("Base Reinforcement", res.baseReinforcement.barString)
                         }
                     }
                 }

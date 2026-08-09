@@ -2,6 +2,7 @@ package com.civileg.app.ui.compose.screens
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -264,6 +266,36 @@ fun RetainingWallScreen(
                             ResultRow(stringResource(R.string.rw_base_width), "${"%.2f".format(res.baseWidth / 1000.0)} m")
                             ResultRow(stringResource(R.string.rw_stem_reinforcement), res.stemReinforcement.barString)
                             ResultRow(stringResource(R.string.rw_base_reinforcement), res.baseReinforcement.barString)
+                        }
+                    }
+                }
+
+                // [NEW]: Professional Design Equations Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        border = BorderStroke(1.dp, Color(0xFF4CAF50))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Verified, contentDescription = null, tint = Color(0xFF2E7D32))
+                                Spacer(Modifier.width(8.dp))
+                                Text("DESIGN EQUATIONS & CALCULATIONS", fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20), fontSize = 14.sp)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            // Placeholder/Calculated formulas from Result
+                            listOf(
+                                "Ka = tan\u00B2(45-\u03D5/2) = ${"%.3f".format(tan(Math.PI / 4 - Math.toRadians(res.backfillAngle / 2.0)).pow(2.0))}",
+                                "Driving Moment Mo = Pa \u00D7 H/3 = ${"%.1f".format(res.pa * res.height / 3.0)} kN.m",
+                                "Resisting Moment Mr = \u03A3(W \u00D7 x) = ${"%.1f".format(res.factorOfSafetyOverturning * (res.pa * res.height / 3.0))} kN.m"
+                            ).forEach { formula ->
+                                Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(6.dp).background(Color(0xFF2E7D32), RoundedCornerShape(2.dp)))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(formula, style = MaterialTheme.typography.bodySmall, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                                }
+                            }
                         }
                     }
                 }

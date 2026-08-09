@@ -210,7 +210,7 @@ class FrameAnalysisViewModel @Inject constructor(
         _isLoading.value = true
         _errorMessage.value = null
 
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch {
             try {
                 val nodes = _nodes.value ?: emptyList()
                 val members = _members.value ?: emptyList()
@@ -218,8 +218,10 @@ class FrameAnalysisViewModel @Inject constructor(
                 val memberLoads = _memberLoads.value ?: emptyList()
                 val settings = _settings.value ?: FrameAnalysisSettings()
 
-                // Run analysis
-                val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
+                // Run analysis on background thread
+                val analysisResult = withContext(Dispatchers.Default) {
+                    FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
+                }
 
                 if (!analysisResult.isSolved) {
                     _errorMessage.value = analysisResult.errorMessage
@@ -228,22 +230,27 @@ class FrameAnalysisViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Run concrete design
-                val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
-                val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
-                    ConcreteFrameDesign.designAllConcreteMembers(
-                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
-                    )
-                } else emptyList()
+                // Run design on background thread
+                val designResults = withContext(Dispatchers.Default) {
+                    val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
+                    val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
+                        ConcreteFrameDesign.designAllConcreteMembers(
+                            members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
+                        )
+                    } else emptyList()
 
-                // Run steel design
-                val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
-                val steelDesignResults = if (steelMembers.isNotEmpty()) {
-                    SteelFrameDesign.designAllSteelMembers(
-                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
-                        settings.designCode, _steelFy.value ?: 355.0
-                    )
-                } else emptyList()
+                    val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
+                    val steelDesignResults = if (steelMembers.isNotEmpty()) {
+                        SteelFrameDesign.designAllSteelMembers(
+                            members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
+                            settings.designCode, _steelFy.value ?: 355.0
+                        )
+                    } else emptyList()
+                    
+                    concreteDesignResults to steelDesignResults
+                }
+
+                val (concreteDesignResults, steelDesignResults) = designResults
 
                 _result.value = analysisResult.copy(
                     concreteDesignResults = concreteDesignResults,

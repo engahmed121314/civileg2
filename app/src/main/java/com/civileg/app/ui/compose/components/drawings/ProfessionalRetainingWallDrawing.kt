@@ -107,6 +107,12 @@ fun ProfessionalRetainingWallDrawing(
         val baseTop = stemTop + drawH
         val baseBottom = baseTop + drawBaseT
 
+        // ── Drawing Backdrop ──
+        drawRect(color = Color(0xFF1A1A2E), size = size) // Professional engineering background
+
+        // ── Title & Annotations ──
+        drawTextAnnotated("MASTER STRUCTURAL DRAWING - RETAINING WALL", 20f, 30f, Color.Cyan, 20f, bold = true)
+
         // ── Draw layers ──
         // Zone 1: Wall Section (viewMode 0 or 1)
         if (viewMode == 0 || viewMode == 1) {

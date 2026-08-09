@@ -114,81 +114,39 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
-                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
-                val fileName = "Footing_Report_${System.currentTimeMillis()}.pdf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = File(directory, fileName)
-
-                // Generate drawing for PDF
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
-                    PdfDrawingGenerator.generateFootingDrawing(
-                        footingLX = res.length,
-                        footingLY = res.width,
-                        footingThickness = res.thickness,
-                        colW = res.column1Size.second,
-                        colD = res.column1Size.first,
-                        rebarXCount = res.barsX,
-                        rebarXDia = res.barDiameter.toDouble(),
-                        rebarXSpacing = res.reinforcementBottom.spacing,
-                        rebarYCount = res.barsY,
-                        rebarYDia = res.barDiameter.toDouble(),
-                        rebarYSpatial = res.reinforcementBottom.spacing,
-                        footingType = res.type.displayName,
-                        cover = 70.0,
-                        soilPressureMax = res.soilPressure,
-                        soilPressureMin = res.soilPressure
-                    )
-                } catch (e: Exception) { e.printStackTrace(); null }
-                pendingDrawingBitmap = null  // consume after use
-
-                val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
-                    else -> "ECP 203"
+                // [EXPERT]: Modern specialized Footing exporter
+                val exporter = com.civileg.app.utils.exporters.FootingProPdfExporter(context)
+                
+                val designer: com.civileg.app.domain.calculations.base.FootingDesign = when(res.code) {
+                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.calculations.aci.ACIFooting()
+                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.calculations.sbc.SBCFooting()
+                    else -> com.civileg.app.domain.calculations.ecp.ECPFooting()
                 }
-                val inputsMap = mapOf(
-                    "Footing Type" to res.type.displayName,
-                    "Width" to "${res.width} mm",
-                    "Length" to "${res.length} mm",
-                    "Thickness" to "${res.thickness} mm",
-                    "Column Size" to "${res.column1Size.first}×${res.column1Size.second} mm",
-                    "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
-                    "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
-                    "Design Code" to codeName,
-                    "Applied Load" to "${String.format("%.1f", res.soilPressure * res.width * res.length / 1e6)} kN"
+
+                // Re-calculate to get full professional metadata (formulas, etc)
+                val fullDomainResult = designer.designIsolatedFooting(
+                    fcu = lastFcu, fy = lastFy,
+                    columnWidth = res.column1Size.second, columnDepth = res.column1Size.first,
+                    axialLoad = res.soilPressure * res.width * res.length / 1e6 * 1.5, // Approx ultimate
+                    momentX = 0.0, momentY = 0.0,
+                    soilBearingCapacity = res.allowablePressure,
+                    footingDepth = res.thickness,
+                    loadCombination = com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE
                 )
-                val resultsMap = mapOf(
-                    "Reinforcement" to res.reinforcementBottom.barString,
-                    "Bars X" to "${res.barsX} Ø${res.barDiameter}",
-                    "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
-                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg",
-                    "Efficiency" to "${String.format("%.0f", res.efficiencyScore)}%",
-                    "Optimal" to if (res.isOptimal) "Yes" else "No"
+
+                val drawings = mutableMapOf<String, Bitmap?>()
+                drawings["section"] = pendingDrawingBitmap
+
+                val generated = exporter.exportToPdf(
+                    result = fullDomainResult,
+                    clientName = "Master Engineering Client",
+                    projectName = "Professional Foundation Analysis",
+                    drawings = drawings
                 )
-                // Professional English PDF Report — English only, no Arabic encoding issues
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
-                    titleEn = "Footing Design Report — ${res.type.displayName}",
-                    subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
-                    designType = "Footing (${res.type.displayName})",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = res.safetyChecks.map {
-                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                            it.name, it.value, it.limit, it.unit, it.isSafe
-                        )
-                    },
-                    isSafe = res.isSafe,
-                    drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
-                )
+                pendingDrawingBitmap = null 
 
                 withContext(Dispatchers.Main) {
-                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    generated.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }

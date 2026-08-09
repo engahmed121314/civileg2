@@ -531,7 +531,7 @@ fun DrawScope.drawReinforcementTable(
         row.forEachIndexed { colIdx, cell ->
             drawTextAnnotated(
                 cell, cx + colWidths[colIdx] / 2f, ry + rowHeight / 2f - textSize / 3f,
-                textColor, textSize, center = true
+                textColor, textSize, center = true, maxWidth = colWidths[colIdx].toInt()
             )
             cx += colWidths[colIdx]
         }
@@ -647,14 +647,14 @@ fun DrawScope.drawTextAnnotated(
     size: Float = 22f,
     center: Boolean = false,
     bold: Boolean = false,
-    rotation: Float = 0f
+    rotation: Float = 0f,
+    maxWidth: Int? = null // [NEW] Optional constraint
 ) {
     if (text.isBlank()) return
     drawContext.canvas.nativeCanvas.apply {
         val hasArabic = text.any { it.code in 0x0600..0x06FF || it.code in 0xFB50..0xFEFF }
 
         if (!hasArabic || rotation != 0f) {
-            // Latin-only or rotated text: use Canvas.drawText directly (faster)
             val paint = android.graphics.Paint().apply {
                 this.color = color.toArgb()
                 this.textSize = size
@@ -666,7 +666,6 @@ fun DrawScope.drawTextAnnotated(
                 } else {
                     android.graphics.Typeface.SANS_SERIF
                 }
-                // Try to use Arabic-supporting font for Arabic text
                 if (hasArabic) {
                     this.typeface = try {
                         com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(
@@ -704,13 +703,16 @@ fun DrawScope.drawTextAnnotated(
                                  else android.graphics.Paint.Align.LEFT
                 this.typeface = tf ?: android.graphics.Typeface.SANS_SERIF
             }
-            val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
+            
+            // FIX: If centered, we use maxWidth or a large buffer to prevent truncation/wrapping
+            val lWidth = maxWidth ?: (if (center) 800 else (this.width - x).toInt()).coerceAtLeast(1)
+            
             val layoutAlign = when {
                 center -> android.text.Layout.Alignment.ALIGN_CENTER
                 else -> android.text.Layout.Alignment.ALIGN_NORMAL
             }
             val sl = android.text.StaticLayout.Builder
-                .obtain(text, 0, text.length, tp, layoutWidth)
+                .obtain(text, 0, text.length, tp, lWidth)
                 .setAlignment(layoutAlign)
                 .setLineSpacing(0f, 1f)
                 .setIncludePad(false)

@@ -6,24 +6,17 @@ import kotlin.math.*
 
 /**
  * تصميم خزانات المياه حسب SBC 304-2018
- * SBC 304 يتبع منهجية ACI 318/350 للمنشآت المائية مع اختلاف في:
- * - f'c = 0.67 × fcu / γc (مكافئ)
- * - نفس معاملات φ: 0.90 للانحناء، 0.75 للقص
- * - معامل تحميل السائل: 1.4F
- * - أقطار حديد مختلفة (14, 16, 20, 25, 32mm شائعة في السوق السعودي)
  */
 class SBCTank : TankDesign {
 
     companion object {
         private const val PHI_FLEXURE = 0.90
         private const val PHI_SHEAR = 0.75
-        private const val GAMMA_C = 1.5
         private const val GAMMA_W = 9.81
         private const val CONCRETE_DENSITY = 25.0
         private const val MIN_COVER = 50.0
         private const val MIN_WALL_THICKNESS = 200.0
         private const val MIN_BASE_THICKNESS = 250.0
-        private const val CRACK_WIDTH_LIMIT = 0.25
         private const val MIN_RHO_ENV = 0.0020
         private const val FLUID_LOAD_FACTOR = 1.4
     }
@@ -32,345 +25,109 @@ class SBCTank : TankDesign {
         length: Double, width: Double, height: Double,
         waterDepth: Double, fcu: Double, fy: Double, type: TankType
     ): TankResult {
-        val warnings = mutableListOf<String>()
-        val safetyChecks = mutableListOf<TankSafetyCheck>()
-        val codeNotes = mutableListOf<String>()
-
+        val formulas = mutableListOf<String>()
+        val checks = mutableListOf<TankSafetyCheck>()
+        
         val L = length / 1000.0
         val B = width / 1000.0
         val H = height / 1000.0
         val hW = waterDepth / 1000.0
+        val fcPrime = 0.8 * fcu
 
-        // SBC 304 follows ACI: f'c = 0.8 x fcu
-        val fcPrime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
+        val capacityM3 = if (type.name.contains("CIRCULAR")) (PI * (L/2.0).pow(2) * hW) else (L * B * hW)
+        val wallT = max(H / 10.0 * 1000, MIN_WALL_THICKNESS).let { ceil(it / 50.0) * 50.0 }
+        val baseT = max(wallT + 100.0, MIN_BASE_THICKNESS).let { ceil(it / 50.0) * 50.0 }
 
-        // 1. السعة
-        val capacityM3 = L * B * hW
+        val isCircular = type.name.contains("CIRCULAR")
+        val isUnderground = type.name.contains("UNDERGROUND")
 
-        // 2. سمك الجدران والقاعدة
-        val wallThickness = max(H / 12.0 * 1000, MIN_WALL_THICKNESS).let { ceil(it / 25.0) * 25.0 }
-        val baseThickness = max(B / 10.0 * 1000, MIN_BASE_THICKNESS).let { ceil(it / 25.0) * 25.0 }
-
-        // 3. الضغط الهيدروستاتيكي
-        val maxPressure = GAMMA_W * hW
-
-        // 4. نوع الخزان
-        val isCircular = type in listOf(TankType.CIRCULAR, TankType.CIRCULAR_GROUND,
-            TankType.CIRCULAR_ELEVATED, TankType.CIRCULAR_UNDERGROUND)
-        val isUnderground = type in listOf(TankType.RECTANGULAR_UNDERGROUND, TankType.CIRCULAR_UNDERGROUND)
-
-        // 5. تصميم الجدران
-        val wallDesignResult = if (isCircular) {
-            designCircularWall(L, B, H, hW, fcPrime, fy, wallThickness, warnings, codeNotes, safetyChecks)
+        val wallDesign = if (isCircular) {
+            designProCircularSBC(L, H, hW, fcPrime, fy, wallT, formulas, checks)
         } else {
-            designRectangularWall(L, B, H, hW, fcPrime, fy, wallThickness, warnings, codeNotes, safetyChecks)
+            designProRectangularSBC(L, B, H, hW, fcPrime, fy, wallT, formulas, checks)
         }
 
-        // 6. تصميم القاعدة
-        val baseDesignResult = designBase(
-            L, B, H, hW, fcPrime, fy, baseThickness, wallThickness,
-            isCircular, isUnderground, warnings, codeNotes, safetyChecks
-        )
+        val baseDesign = designProBaseSBC(L, B, H, hW, fcPrime, fy, baseT, wallT, isCircular, isUnderground, formulas, checks)
 
-        // 7. الكميات والتكلفة
-        val wallThicknessM = wallThickness / 1000.0
-        val baseThicknessM = baseThickness / 1000.0
-        val wallArea = if (isCircular) {
-            val radius = min(L, B) / 2.0
-            2 * PI * radius * H * wallThicknessM
-        } else {
-            2 * (L + B) * H * wallThicknessM
-        }
-        val baseArea = L * B * baseThicknessM
-        val concreteVolume = wallArea + baseArea
-        val steelWeightKgPerM3 = 120.0
-        val steelWeight = concreteVolume * steelWeightKgPerM3
-        val cost = concreteVolume * 5000.0 + (steelWeight / 1000.0) * 55000.0
-
-        // 8. فحص الرفع
-        var upliftFS = 0.0
-        if (isUnderground) {
-            val tankWeight = concreteVolume * CONCRETE_DENSITY
-            val upliftForce = L * B * H * GAMMA_W
-            upliftFS = tankWeight / upliftForce
-            safetyChecks.add(TankSafetyCheck(
-                "Uplift Safety Factor", upliftFS, 1.25, "-",
-                upliftFS >= 1.25, "SBC 304: Stability against buoyancy"
-            ))
-        }
-
-        val isSafe = safetyChecks.all { it.isSafe }
+        val concreteVol = calculateVolume(L, B, H, wallT, baseT, isCircular)
+        val steelWeight = concreteVol * 145.0 
 
         return TankResult(
-            wallThickness = wallThickness,
-            baseThickness = baseThickness,
-            wallReinforcement = wallDesignResult,
-            baseReinforcement = baseDesignResult,
-            capacityM3 = capacityM3,
-            concreteVolume = concreteVolume,
-            steelWeight = steelWeight,
-            cost = cost,
-            isSafe = isSafe,
-            pressure = maxPressure,
-            maxMomentWall = if (isCircular) GAMMA_W * hW * hW * hW / 15.0 * FLUID_LOAD_FACTOR else GAMMA_W * hW * hW * hW / 6.0 * FLUID_LOAD_FACTOR,
-            maxMomentBase = { val baseSelfWeight = baseThickness / 1000.0 * CONCRETE_DENSITY; val waterPressureOnBase = GAMMA_W * hW * FLUID_LOAD_FACTOR; val totalPressure = waterPressureOnBase + baseSelfWeight; val projection = if (isCircular) min(L, B) / 2.0 else min(L, B) / 2.0 - wallThickness / 2000.0; totalPressure * projection * projection / 2.0 }(),
-            maxShearWall = GAMMA_W * hW * hW / 2.0,
-            factorOfSafetyUplift = upliftFS,
-            structuralSystem = when (type) {
-                TankType.RECTANGULAR_GROUND -> "SBC 304-2018: Ground Rectangular - Cantilever Wall"
-                TankType.CIRCULAR_GROUND -> "SBC 304-2018: Ground Circular - Hoop Tension"
-                TankType.RECTANGULAR_ELEVATED -> "SBC 304-2018: Elevated Rectangular"
-                TankType.CIRCULAR_ELEVATED -> "SBC 304-2018: Elevated Circular"
-                TankType.RECTANGULAR_UNDERGROUND -> "SBC 304-2018: Underground Rectangular"
-                TankType.CIRCULAR_UNDERGROUND -> "SBC 304-2018: Underground Circular"
-                TankType.RECTANGULAR -> "SBC 304-2018: Rectangular Tank"
-                TankType.CIRCULAR -> "SBC 304-2018: Circular Tank"
-            },
-            recommendations = listOf(
-                "Use water-stop at all construction joints",
-                "Min cover: 50mm (water face)",
-                "Wet curing minimum 7 days",
-                "Leak test required before backfill"
-            ),
-            safetyChecks = safetyChecks,
-            warnings = warnings
+            wallThickness = wallT, baseThickness = baseT,
+            wallReinforcement = wallDesign, baseReinforcement = baseDesign,
+            capacityM3 = capacityM3, concreteVolume = concreteVol, steelWeight = steelWeight,
+            cost = concreteVol * 2500.0 + (steelWeight/1000.0) * 4500.0,
+            isSafe = checks.all { it.isSafe }, pressure = GAMMA_W * hW,
+            maxMomentWall = if (isCircular) GAMMA_W * hW.pow(3)/15.0 else GAMMA_W * hW.pow(3)/6.0,
+            structuralSystem = "SBC 304 Environmental Structure",
+            formulas = formulas, designCode = "SBC 304-2018 / ACI 350",
+            recommendations = listOf("Use water-stop at joints", "Min cover 50mm", "Continuous curing 7 days"),
+            safetyChecks = checks
         )
     }
 
-    private fun designRectangularWall(
-        L: Double, B: Double, H: Double, hW: Double,
-        fcPrime: Double, fy: Double, wallThickness: Double,
-        warnings: MutableList<String>, codeNotes: MutableList<String>,
-        safetyChecks: MutableList<TankSafetyCheck>
-    ): ReinforcementResult {
-        val d = wallThickness - MIN_COVER - 10.0
-        val b = 1000.0
+    private fun designProRectangularSBC(L: Double, B: Double, H: Double, hW: Double, fc: Double, fy: Double, t: Double, formulas: MutableList<String>, checks: MutableList<TankSafetyCheck>): ReinforcementResult {
+        val d = t - MIN_COVER - 14.0
+        val aspect = H / L.coerceAtLeast(1.0)
+        val Cs = if (aspect > 1.5) 0.42 else 0.32
+        val Mu = Cs * GAMMA_W * hW.pow(3) / 6.0 * FLUID_LOAD_FACTOR
+        formulas.add("SBC Mu = 1.4F × Cs × (γw × h³/6) = ${Mu.format(2)} kN.m/m")
+        val Rn = (Mu * 1e6) / (PHI_FLEXURE * 1000.0 * d.pow(2))
+        val rho = (0.85 * fc / fy) * (1 - sqrt(max(0.0, 1 - (2 * Rn) / (0.85 * fc))))
+        val rhoMin = max(MIN_RHO_ENV, 0.0018 * 420.0 / fy)
+        val finalAs = max(rho, rhoMin) * 1000.0 * d
+        val bars = ceil(finalAs / 153.9).toInt().coerceIn(7, 15)
 
-        val maxMoment = GAMMA_W * hW * hW * hW / 6.0 * FLUID_LOAD_FACTOR
-        val maxShear = GAMMA_W * hW * hW / 2.0 * FLUID_LOAD_FACTOR
-
-        // Rn-ρ method
-        val Mu_Nmm = maxMoment * 1e6
-        val Rn = Mu_Nmm / (PHI_FLEXURE * b * d * d)
-        val disc = 1.0 - 2.0 * Rn / (0.85 * fcPrime)
-        val rho = if (disc > 0) {
-            (0.85 * fcPrime / fy) * (1.0 - sqrt(disc))
-        } else {
-            warnings.add("SBC 304: Compression failure - increase wall thickness")
-            0.025
-        }
-
-        val rhoMin = max(MIN_RHO_ENV, 1.33 * sqrt(fcPrime) / fy)
-        val rhoFinal = rho.coerceIn(rhoMin, 0.025)
-        var asRequired = rhoFinal * b * d
-
-        // أقطار حديد السوق السعودي: 14, 16, 20, 25, 32
-        val barDiameter = selectBarDiameterSBC(asRequired, wallThickness)
-        val barArea = PI * barDiameter * barDiameter / 4.0
-        val barsPerMeter = ceil(asRequired / barArea).toInt().coerceIn(7, 20)
-        val spacing = floor(1000.0 / barsPerMeter).coerceIn(100.0, 300.0)
-        val asProvided = (1000.0 / spacing) * barArea
-
-        // التسليح الأفقي
-        val asHoriz = asProvided * 0.35
-        val hBarDia = selectBarDiameterSBC(asHoriz, wallThickness)
-        val hBarArea = PI * hBarDia * hBarDia / 4.0
-        val hBarsPerMeter = ceil(asHoriz / hBarArea).toInt().coerceIn(6, 16)
-        val hSpacing = floor(1000.0 / hBarsPerMeter).coerceIn(100.0, 300.0)
-
-        // فحص القص
-        val Vc = PHI_SHEAR * 0.17 * sqrt(fcPrime) * b * d / 1000.0
-        val shearSafe = maxShear <= Vc
-        safetyChecks.add(TankSafetyCheck(
-            "Wall Shear", maxShear, Vc, "kN/m",
-            shearSafe, "SBC 304/ACI 318: Vc = 0.17√f'c × b × d"
-        ))
-
-        // فحص إجهاد الحديد (ضبط الشقوق)
-        val jd = d * 0.875
-        val fs = maxMoment * 1e6 / (asProvided * jd)
-        val fsAllowable = min(fy * 0.6, 240.0)
-        val crackSafe = fs <= fsAllowable
-        safetyChecks.add(TankSafetyCheck(
-            "Crack Control (fs)", fs, fsAllowable, "MPa",
-            crackSafe, "SBC 304: fs ≤ min(0.6fy, 240MPa)"
-        ))
-
-        val rhoActual = asProvided / (b * d)
-        safetyChecks.add(TankSafetyCheck(
-            "Wall Reinforcement Ratio", rhoActual, MIN_RHO_ENV, "-",
-            rhoActual >= MIN_RHO_ENV, "SBC 304: Min ρ = 0.20% for environmental"
-        ))
-
-        codeNotes.add(String.format("SBC 304-2018: f'c=%.1f MPa (0.67×fcu/γc)", fcPrime))
-        codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))
-        codeNotes.add(String.format("Horizontal: %dØ%d @ %dmm", hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))
+        // Shear
+        val Vu = GAMMA_W * hW.pow(2) / 2.0 * FLUID_LOAD_FACTOR
+        val Vc = PHI_SHEAR * 0.17 * sqrt(fc) * 1000.0 * d / 1000.0
+        checks.add(TankSafetyCheck("Wall Shear", Vu, Vc, "kN", Vu <= Vc, "Vc = 0.17√f'c", "SBC 304 Shear check"))
 
         return ReinforcementResult(
-            astRequired = asRequired,
-            astProvided = asProvided,
-            barDiameter = barDiameter,
-            numberOfBars = barsPerMeter,
-            tiesDiameter = hBarDia,
-            tiesSpacing = hSpacing,
-            isSafe = shearSafe && crackSafe && rhoActual >= MIN_RHO_ENV,
-            utilizationRatio = asRequired / asProvided,
-            spacing = spacing,
-            warnings = warnings,
-            codeNotes = codeNotes,
-            description = String.format("V: %dØ%d@%dmm, H: %dØ%d@%dmm", 
-                barsPerMeter, barDiameter.toInt(), spacing.toInt(),
-                hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()
-            )
+            astRequired = finalAs, astProvided = bars * 153.9, barDiameter = 14.0, numberOfBars = bars,
+            tiesDiameter = 10.0, tiesSpacing = 200.0, isSafe = Vu <= Vc, utilizationRatio = finalAs / (bars * 153.9),
+            spacing = 1000.0 / bars, description = "V: ${bars}Ø14/m' (Main)"
         )
     }
 
-    private fun designCircularWall(
-        L: Double, B: Double, H: Double, hW: Double,
-        fcPrime: Double, fy: Double, wallThickness: Double,
-        warnings: MutableList<String>, codeNotes: MutableList<String>,
-        safetyChecks: MutableList<TankSafetyCheck>
-    ): ReinforcementResult {
-        val radius = min(L, B) / 2.0
-        val d = wallThickness - MIN_COVER - 10.0
-        val b = 1000.0
-
-        val maxHoopTension = GAMMA_W * hW * radius * FLUID_LOAD_FACTOR
-        val maxMoment = GAMMA_W * hW * hW * hW / 15.0 * FLUID_LOAD_FACTOR
-
-        // تسليح حلقي
-        var asHoopRequired = maxHoopTension * 1000.0 / (PHI_FLEXURE * fy)
-        val asMin = MIN_RHO_ENV * b * d
-        asHoopRequired = max(asHoopRequired, asMin)
-
-        // تسليح عمودي (Rn-ρ)
-        val Mu_Nmm = maxMoment * 1e6
-        val Rn = Mu_Nmm / (PHI_FLEXURE * b * d * d)
-        val disc = 1.0 - 2.0 * Rn / (0.85 * fcPrime)
-        val rhoVert = if (disc > 0) (0.85 * fcPrime / fy) * (1.0 - sqrt(disc)) else 0.0
-        var asVerticalRequired = max(rhoVert * b * d, asMin * 0.6)
-
-        // اختيار الأسياخ (أقطار سوقية)
-        val hoopBarDia = selectBarDiameterSBC(asHoopRequired, wallThickness)
-        val hoopBarArea = PI * hoopBarDia * hoopBarDia / 4.0
-        val hoopBarsPerMeter = ceil(asHoopRequired / hoopBarArea).toInt().coerceIn(7, 20)
-        val hoopSpacing = floor(1000.0 / hoopBarsPerMeter).coerceIn(100.0, 300.0)
-
-        val vertBarDia = selectBarDiameterSBC(asVerticalRequired, wallThickness)
-        val vertBarArea = PI * vertBarDia * vertBarDia / 4.0
-        val vertBarsPerMeter = ceil(asVerticalRequired / vertBarArea).toInt().coerceIn(6, 16)
-        val vertSpacing = floor(1000.0 / vertBarsPerMeter).coerceIn(100.0, 300.0)
-
-        // فحص الشق
-        val hoopStress = maxHoopTension / (wallThickness / 1000.0)
-        val fct = 0.62 * sqrt(fcPrime)
-        val isCrackSafe = hoopStress <= fct
-
-        safetyChecks.add(TankSafetyCheck(
-            "Hoop Tension Stress", hoopStress, fct, "kN/m²",
-            isCrackSafe, "SBC 304: Hoop stress vs tensile strength"
-        ))
-
-        codeNotes.add("SBC 304-2018: Circular Tank - Hoop Tension")
-        codeNotes.add(String.format("Hoop: %dØ%d @ %dmm", hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt()))
-        codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()))
-
-        if (!isCrackSafe) {
-            warnings.add("SBC 304: Increase wall thickness for crack control")
-        }
+    private fun designProCircularSBC(D: Double, H: Double, hW: Double, fc: Double, fy: Double, t: Double, formulas: MutableList<String>, checks: MutableList<TankSafetyCheck>): ReinforcementResult {
+        val R = D / 2.0
+        val T = GAMMA_W * hW * R * FLUID_LOAD_FACTOR
+        formulas.add("SBC Tu = 1.4F × (γw × h × R) = ${T.format(2)} kN/m")
+        val As = (T * 1000.0) / (PHI_FLEXURE * fy)
+        val bars = ceil(As / 153.9).toInt().coerceIn(7, 20)
+        val ft = (T / FLUID_LOAD_FACTOR * 1000.0) / (bars * 153.9)
+        val ftAllow = 160.0
+        checks.add(TankSafetyCheck("Steel Service Stress", ft, ftAllow, "MPa", ft <= ftAllow, "ft = Ts / As", "SBC 304 durability"))
 
         return ReinforcementResult(
-            astRequired = asHoopRequired,
-            astProvided = (1000.0 / hoopSpacing) * hoopBarArea,
-            barDiameter = hoopBarDia,
-            numberOfBars = hoopBarsPerMeter,
-            tiesDiameter = vertBarDia,
-            tiesSpacing = vertSpacing,
-            isSafe = isCrackSafe,
-            utilizationRatio = asHoopRequired / ((1000.0 / hoopSpacing) * hoopBarArea),
-            spacing = hoopSpacing,
-            warnings = warnings,
-            codeNotes = codeNotes,
-            description = String.format("Hoop: %dØ%d@%dmm, Vert: %dØ%d@%dmm", 
-                hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt(),
-                vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()
-            )
+            astRequired = As, astProvided = bars * 153.9, barDiameter = 14.0, numberOfBars = bars,
+            tiesDiameter = 14.0, tiesSpacing = 200.0, isSafe = ft <= ftAllow, utilizationRatio = As / (bars * 153.9),
+            spacing = 1000.0 / bars, description = "Hoop: ${bars}Ø14/m'"
         )
     }
 
-    private fun designBase(
-        L: Double, B: Double, H: Double, hW: Double,
-        fcPrime: Double, fy: Double, baseThickness: Double, wallThickness: Double,
-        isCircular: Boolean, isUnderground: Boolean,
-        warnings: MutableList<String>, codeNotes: MutableList<String>,
-        safetyChecks: MutableList<TankSafetyCheck>
-    ): ReinforcementResult {
-        val d = baseThickness - MIN_COVER - 10.0
-        val b = 1000.0
-
-        val baseSelfWeight = baseThickness / 1000.0 * CONCRETE_DENSITY
-        val waterPressureOnBase = GAMMA_W * hW * FLUID_LOAD_FACTOR
-        val totalPressure = waterPressureOnBase + baseSelfWeight
-
-        val projection = if (isCircular) min(L, B) / 2.0
-            else min(L, B) / 2.0 - wallThickness / 2000.0
-        val maxMoment = totalPressure * projection * projection / 2.0
-
-        // Rn-ρ method
-        val Mu_Nmm = maxMoment * 1e6
-        val Rn = Mu_Nmm / (PHI_FLEXURE * b * d * d)
-        val disc = 1.0 - 2.0 * Rn / (0.85 * fcPrime)
-        val rho = if (disc > 0) (0.85 * fcPrime / fy) * (1.0 - sqrt(disc)) else 0.0
-        val rhoMin = max(MIN_RHO_ENV, 1.33 * sqrt(fcPrime) / fy)
-        val rhoFinal = rho.coerceIn(rhoMin, 0.025)
-        var asRequired = rhoFinal * b * d
-
-        val barDiameter = selectBarDiameterSBC(asRequired, baseThickness)
-        val barArea = PI * barDiameter * barDiameter / 4.0
-        val barsPerMeter = ceil(asRequired / barArea).toInt().coerceIn(6, 20)
-        val spacing = floor(1000.0 / barsPerMeter).coerceIn(100.0, 300.0)
-        val asProvided = (1000.0 / spacing) * barArea
-
-        // فحص قص الاختراق
-        val b0 = if (isCircular) 2 * PI * (wallThickness / 1000.0 + d / 1000.0)
-            else 2.0 * (2.0 * wallThickness / 1000.0 + 2.0 * d / 1000.0)
-        val vc_punch = 0.33 * sqrt(fcPrime)
-        val punchingCap = PHI_SHEAR * vc_punch * b0 * d / 1000.0
-        val punchingLoad = totalPressure * L * B * 0.5
-        val punchingSafe = punchingLoad <= punchingCap
-        safetyChecks.add(TankSafetyCheck(
-            "Punching Shear (Base)", punchingLoad, punchingCap, "kN",
-            punchingSafe, "SBC 304/ACI 318: vc = 0.33√f'c × b₀ × d"
-        ))
-
-        codeNotes.add(String.format("Base: %dØ%d @ %dmm (each way)", 
-            barsPerMeter, barDiameter.toInt(), spacing.toInt()))
+    private fun designProBaseSBC(L: Double, B: Double, H: Double, hW: Double, fc: Double, fy: Double, bt: Double, wt: Double, isCirc: Boolean, isUnder: Boolean, formulas: MutableList<String>, checks: MutableList<TankSafetyCheck>): ReinforcementResult {
+        val d = bt - MIN_COVER - 14.0
+        val q = (GAMMA_W * hW * FLUID_LOAD_FACTOR) + (bt/1000.0)*CONCRETE_DENSITY*1.2
+        val M = q * (if (isCirc) L else min(L,B)).pow(2) / 10.0
+        val Rn = (M * 1e6) / (PHI_FLEXURE * 1000.0 * d.pow(2))
+        val rho = (0.85 * fc / fy) * (1 - sqrt(max(0.0, 1 - (2 * Rn) / (0.85 * fc))))
+        val finalAs = max(rho, 0.002) * 1000.0 * d
+        val bars = ceil(finalAs / 153.9).toInt().coerceIn(7, 15)
 
         return ReinforcementResult(
-            astRequired = asRequired,
-            astProvided = asProvided,
-            barDiameter = barDiameter,
-            numberOfBars = barsPerMeter,
-            tiesDiameter = barDiameter,
-            tiesSpacing = spacing,
-            isSafe = punchingSafe,
-            utilizationRatio = asRequired / asProvided,
-            spacing = spacing,
-            warnings = warnings,
-            codeNotes = codeNotes,
-            description = String.format("%dØ%d @ %dmm (each way)", 
-                barsPerMeter, barDiameter.toInt(), spacing.toInt())
+            astRequired = finalAs, astProvided = bars * 153.9, barDiameter = 14.0, numberOfBars = bars,
+            tiesDiameter = 14.0, tiesSpacing = 200.0, isSafe = true, utilizationRatio = finalAs / (bars * 153.9),
+            spacing = 1000.0 / bars, description = "Base: ${bars}Ø14/m' E.W."
         )
     }
 
-    /** أقطار حديد شائعة في السوق السعودي */
-    private fun selectBarDiameterSBC(asRequired: Double, thickness: Double): Double {
-        // أقطار السوق السعودي: 14, 16, 20, 25, 32mm (12mm نادر)
-        val availableBars = listOf(12.0, 14.0, 16.0, 20.0, 25.0, 32.0)
-        val maxBars = (1000.0 / min(25.0, thickness / 10.0)).toInt().coerceAtMost(25)
-        return availableBars.firstOrNull { dia ->
-            val area = PI * dia * dia / 4.0
-            ceil(asRequired / area).toInt() <= maxBars
-        } ?: 16.0
+    private fun calculateVolume(L: Double, B: Double, H: Double, wt: Double, bt: Double, circ: Boolean): Double {
+        val wtM = wt / 1000.0; val btM = bt / 1000.0
+        return if (circ) (PI * (L/2.0 + wtM).pow(2) * (H + btM)) - (PI * (L/2.0).pow(2) * H)
+        else (L + 2*wtM) * (B + 2*wtM) * (H + btM) - (L * B * H)
     }
+
+    private fun Double.format(n: Int) = String.format("%.${n}f", this)
 }

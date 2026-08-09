@@ -25,6 +25,9 @@ data class RetainingWallInput(
 data class RetainingWallResult(
     val isSafe: Boolean,
     val designCode: DesignCode,
+    val designCodeName: String = "",
+    val stemThickness: Double = 0.0, // [NEW]
+    val baseWidth: Double = 0.0,
     val overturningFS: Double,
     val slidingFS: Double,
     val bearingFS: Double,
@@ -42,6 +45,7 @@ data class RetainingWallResult(
     val heelShear: Double,
     val heelRebar: String,
     val safetyChecks: List<WallSafetyCheck>,
+    val formulas: List<String> = emptyList(), // [NEW] Actual formulas used
     val codeNotes: List<String>
 )
 
@@ -50,6 +54,8 @@ data class WallSafetyCheck(
     val isSafe: Boolean,
     val value: Double,
     val limit: Double,
+    val unit: String = "",       // [NEW] e.g. "kN.m"
+    val formula: String = "",    // [NEW] e.g. "M = qL²/2"
     val description: String
 )
 

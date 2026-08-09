@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -301,6 +302,31 @@ fun FootingScreen(
                             ResultRow(stringResource(R.string.footing_thickness_label2), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.column_concrete_vol), "${"%.2f".format(res.concreteVolume)} m³")
                             ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
+                        }
+                    }
+                }
+
+                // [NEW]: Professional Design Equations Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+                        border = BorderStroke(1.dp, Color(0xFF81C784))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Functions, contentDescription = null, tint = Color(0xFF2E7D32))
+                                Spacer(Modifier.width(8.dp))
+                                Text("DESIGN ANALYSIS & FORMULAS", fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20), fontSize = 14.sp)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            res.formulas.forEach { formula ->
+                                Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(6.dp).background(Color(0xFF2E7D32), RoundedCornerShape(2.dp)))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(formula, style = MaterialTheme.typography.bodySmall, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                                }
+                            }
                         }
                     }
                 }

@@ -278,6 +278,9 @@ fun AppNavigation(
                 composable(AppScreen.SiteLayout.route) {
                     SiteLayoutScreen()
                 }
+                composable(AppScreen.QuickFooting.route) {
+                    QuickFootingScreen(onNavigateBack = { navController.popBackStack() })
+                }
                 
                 composable(AppScreen.ProjectSummary.route) { backStackEntry ->
                     val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull() ?: 0L

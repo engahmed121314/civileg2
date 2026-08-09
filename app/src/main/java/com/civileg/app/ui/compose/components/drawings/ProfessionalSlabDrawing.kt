@@ -602,9 +602,14 @@ fun ProfessionalSlabDrawing(
                 .coerceAtMost(38f * density)
 
             val colWidths = floatArrayOf(
-                tblWidth * 0.06f, tblWidth * 0.22f, tblWidth * 0.07f,
-                tblWidth * 0.10f, tblWidth * 0.11f, tblWidth * 0.13f,
-                tblWidth * 0.13f, tblWidth * 0.18f
+                tblWidth * 0.05f,  // Mark
+                tblWidth * 0.23f,  // Direction
+                tblWidth * 0.06f,  // Dia
+                tblWidth * 0.09f,  // Spacing
+                tblWidth * 0.10f,  // Length
+                tblWidth * 0.14f,  // As Req
+                tblWidth * 0.14f,  // As Prov
+                tblWidth * 0.19f   // Weight
             )
             var rowY = tblTop
 
