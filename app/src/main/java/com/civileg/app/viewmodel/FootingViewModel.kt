@@ -96,7 +96,12 @@ class FootingViewModel @Inject constructor(
                     p2 = p2,
                     distance = distance,
                     maxLeft = maxLeft,
-                    maxRight = maxRight
+                    maxRight = maxRight,
+                    maxTop = null,
+                    maxBottom = null,
+                    numPiles = 4,
+                    pileDia = 500.0,
+                    pileCapacity = 500.0
                 )
                 
                 // Validate Footing
@@ -158,7 +163,16 @@ class FootingViewModel @Inject constructor(
                         colT = colDepth,
                         code = code,
                         preferredDiameter = preferredDiameter,
-                        preferredSpacing = preferredSpacing
+                        preferredSpacing = preferredSpacing,
+                        p2 = 0.0,
+                        distance = 0.0,
+                        maxLeft = null,
+                        maxRight = null,
+                        maxTop = null,
+                        maxBottom = null,
+                        numPiles = 4,
+                        pileDia = 500.0,
+                        pileCapacity = 500.0
                     )
                     footingResults.add(res)
                     totalConcrete += res.concreteVolume

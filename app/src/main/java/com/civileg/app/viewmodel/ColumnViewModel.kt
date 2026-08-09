@@ -181,9 +181,7 @@ class ColumnViewModel @Inject constructor(
                     clearHeight = h * 1000.0,
                     preferredDiameter = dia,
                     autoOptimize = state.autoOptimize,
-                    manualNumBars = manualBars,
-                    autoIncludeSelfWeight = true,
-                    isSeismic = state.isSeismic
+                    manualNumBars = manualBars
                 )
                 
                 // Validate consistency & Dead Load (Axial logic)

@@ -571,26 +571,20 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 ResultDataRow("Applied Mx / My", "${result.mx} / ${result.my} kN.m")
             }
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
-<<<<<<< HEAD
-            
             if (result.stirrups.zones.isNotEmpty()) {
                  Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                  result.stirrups.zones.forEach { zone ->
                      ResultDataRow("${zone.name} (${String.format(java.util.Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
                  }
-            } else {
-                ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
-=======
-            ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
-            // Code-based stirrup detailing
-            if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
+            } else if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
                 ResultDataRow("Tie Spacing (ends)", "@${result.stirrups.spacingAtSupport.toInt()}mm c/c")
                 ResultDataRow("Tie Spacing (mid)", "@${result.stirrups.spacingAtMidspan.toInt()}mm c/c")
                 ResultDataRow("Condensation Zone", "${result.stirrups.condensationZoneLength.toInt()}mm from each end")
                 if (result.stirrups.codeNotes.isNotEmpty()) {
                     ResultDataRow("Code Ref", result.stirrups.codeNotes)
                 }
->>>>>>> github/master
+            } else {
+                ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
             }
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
             

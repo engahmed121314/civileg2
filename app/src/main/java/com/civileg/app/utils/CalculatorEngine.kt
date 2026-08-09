@@ -509,6 +509,110 @@ class CalculatorEngine @Inject constructor(
         return mapOf("HEA" to listOf(com.civileg.app.domain.entities.SteelSectionType.ISection(h = 190.0, bf = 200.0, tf = 10.0, tw = 6.5, grade = com.civileg.app.domain.entities.SteelGrade.ST37, customName = "HEA 200")))
     }
 
+    fun calculateFooting(
+        type: FootingType,
+        p: Double,
+        fcu: Double,
+        fy: Double,
+        soil: Double,
+        colB: Double,
+        colT: Double,
+        code: DesignCode,
+        preferredDiameter: Int = 16,
+        preferredSpacing: Double = 150.0,
+        p2: Double = 0.0,
+        distance: Double = 0.0,
+        maxLeft: Double? = null,
+        maxRight: Double? = null,
+        maxTop: Double? = null,
+        maxBottom: Double? = null,
+        numPiles: Int = 4,
+        pileDia: Double = 500.0,
+        pileCapacity: Double = 500.0
+    ): FootingResult {
+        return when (type) {
+            FootingType.COMBINED -> calculateCombinedFootingInternal(p, p2, distance, fcu, fy, soil, colB, colT, code, preferredDiameter)
+            FootingType.STRIP -> calculateStripFootingInternal(p, fcu, fy, soil, colB, code, preferredDiameter)
+            FootingType.RAFT -> calculateRaftInternal(p, fcu, fy, soil, code, preferredDiameter)
+            FootingType.PILE_CAP -> calculatePileCapInternal(p, numPiles, pileDia, pileCapacity, fcu, fy, colB, colT, code, preferredDiameter)
+            else -> calculateIsolatedFootingInternal(p, fcu, fy, soil, colB, colT, code, preferredDiameter, maxLeft, maxRight, maxTop, maxBottom)
+            }
+        }
+
+    private fun calculateIsolatedFootingInternal(
+        p: Double, fcu: Double, fy: Double, soil: Double, colB: Double, colT: Double,
+        code: DesignCode, preferredDiameter: Int,
+        maxLeft: Double?, maxRight: Double?, maxTop: Double?, maxBottom: Double?
+    ): FootingResult {
+        val areaReq = (p * 1.15) / soil
+        var fL = sqrt(areaReq) 
+        var fW = fL
+        val diff = (colT - colB) / 1000.0
+        fL = sqrt(areaReq) + diff / 2.0
+        fW = areaReq / fL
+
+        maxLeft?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW } }
+        maxRight?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW } }
+
+        fL = ceil(fL * 20.0) / 20.0 
+        fW = ceil(fW * 20.0) / 20.0
+        val fLmm = fL * 1000.0
+        val fWmm = fW * 1000.0
+        val pu = if (code == DesignCode.EGYPTIAN) p * 1.5 else p * 1.4 
+        val qu = pu / (fL * fW)
+        val projectionL = (fLmm - colT) / 2.0 
+        val projectionW = (fWmm - colB) / 2.0
+        val muL = (qu / 1000.0) * (projectionL.pow(2) / 2.0)
+        
+        var thickness = 500.0
+        var d = thickness - 70.0
+        val punchingLimit = if (code == DesignCode.EGYPTIAN) 0.316 * sqrt(fcu / 1.5) else 0.33 * 0.75 * sqrt(fcu * 0.8)
+        
+        do {
+            d = thickness - 70.0
+            val punchingForce = pu * 1000.0 * (1 - (colB + d)*(colT + d)/(fLmm*fWmm))
+            val b0 = 2 * (colB + d + colT + d)
+            if (punchingForce / (b0 * d) > punchingLimit) thickness += 50.0
+        } while (thickness < 2000.0 && (pu * 1000.0 * (1 - (colB + d)*(colT + d)/(fLmm*fWmm)) / (2 * (colB + d + colT + d) * d)) > punchingLimit)
+        
+        val vol = (fL * fW * thickness / 1000.0)
+        val steelWeight = vol * 110.0 // kg estimation
+        
+        return FootingResult(
+            type = FootingType.ISOLATED, width = fWmm, length = fLmm, thickness = thickness,
+            soilPressure = (p * 1.1) / (fL * fW), allowablePressure = soil,
+            reinforcementBottom = ReinforcementBar(spacing = 150.0, diameter = preferredDiameter, description = "Bottom Mesh"),
+            isSafe = true, code = code, concreteVolume = vol, steelWeight = steelWeight, 
+            cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+            utilizationRatio = ((p * 1.1) / (fL * fW) / soil).coerceIn(0.0, 1.2)
+        )
+    }
+
+    private fun calculateStripFootingInternal(p: Double, fcu: Double, fy: Double, soil: Double, colB: Double, code: DesignCode, preferredDiameter: Int): FootingResult {
+        val w = (p * 1.1) / soil
+        val vol = w * 1.0 * 0.5 // per m
+        return FootingResult(FootingType.STRIP, w*1000, 1000.0, 500.0, soil, soil, ReinforcementBar(spacing=150.0, diameter=preferredDiameter), true, code, vol, vol*100, vol*5000)
+    }
+
+    private fun calculateRaftInternal(p: Double, fcu: Double, fy: Double, soil: Double, code: DesignCode, preferredDiameter: Int): FootingResult {
+        val area = (p * 1.1) / soil
+        val side = sqrt(area)
+        val vol = area * 1.0
+        return FootingResult(FootingType.RAFT, side*1000, side*1000, 1000.0, soil, soil, ReinforcementBar(spacing=150.0, diameter=preferredDiameter), true, code, vol, vol*120, vol*5000)
+    }
+
+    private fun calculatePileCapInternal(p: Double, numPiles: Int, pileDia: Double, pileCap: Double, fcu: Double, fy: Double, colB: Double, colT: Double, code: DesignCode, preferredDiameter: Int): FootingResult {
+        val vol = numPiles * 0.6 * 0.6 * 1.2
+        return FootingResult(FootingType.PILE_CAP, 2000.0, 2000.0, 1200.0, pileCap, pileCap, ReinforcementBar(numBars=8, diameter=20), true, code, vol, vol*150, vol*6000)
+    }
+
+    private fun calculateCombinedFootingInternal(p1: Double, p2: Double, dist: Double, fcu: Double, fy: Double, soil: Double, colB: Double, colT: Double, code: DesignCode, preferredDiameter: Int): FootingResult {
+        val area = (p1 + p2) * 1.15 / soil
+        val length = dist * 1.5 * 1000.0
+        val width = area * 1e6 / length
+        return FootingResult(FootingType.COMBINED, width, length, 800.0, soil, soil, ReinforcementBar(spacing=150.0, diameter=preferredDiameter), true, code, area*0.8, area*140, area*5500)
+    }
+
     fun calculateSteelMember(section: com.civileg.app.domain.entities.SteelSectionType, memberType: com.civileg.app.domain.entities.SteelMemberType, inputs: com.civileg.app.domain.entities.SteelInputs, code: DesignCode): com.civileg.app.domain.entities.SteelMemberResult {
         return com.civileg.app.domain.entities.SteelMemberResult(
             sectionType = section, memberType = memberType, axialCapacity = 1000.0, flexuralCapacity = 200.0, shearCapacity = 150.0,

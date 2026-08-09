@@ -82,8 +82,7 @@ class BeamViewModel @Inject constructor(
                     liveLoad = liveLoad,
                     preferredDiameter = preferredDiameter,
                     code = code,
-                    supportType = supportType,
-                    autoIncludeSelfWeight = true
+                    supportType = supportType
                 )
                 
                 // Validate results for consistency & dead load logic
