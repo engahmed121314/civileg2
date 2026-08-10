@@ -130,7 +130,7 @@ fun QuickFootingScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ResultItem("Footing Dimensions", "${res.width.toInt()} x ${res.length.toInt()} mm")
+                            ResultItem("Footing Dimensions", "${res.width.toInt()} × ${res.length.toInt()} mm")
                             ResultItem("Thickness", "${res.thickness.toInt()} mm")
                             ResultItem("Reinforcement", res.reinforcementBottom.barString)
                             ResultItem("Concrete Volume", "${"%.2f".format(res.concreteVolume)} m³")

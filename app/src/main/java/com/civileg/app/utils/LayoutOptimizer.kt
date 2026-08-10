@@ -104,12 +104,24 @@ object LayoutOptimizer {
             }
         }
 
+        // --- Strap Beam / Combined Logic Expansion ---
+        val finalFootingList = footingBounds.toMutableList()
+        val combinedIndices = mutableSetOf<Int>()
+        
+        // Simple combination logic for overlapping footings
+        overlaps.forEach { (i, j) ->
+            if (i !in combinedIndices && j !in combinedIndices) {
+                // Potential for combined footing
+                combinedIndices.add(i); combinedIndices.add(j)
+            }
+        }
+
         val coverageRatio = totalAreaNeeded / plotArea
         val suggestion = when {
             columns.any { it.axialLoad > 4500 } || soilCapacity < 100 -> "Deep Foundation (Piles)"
             coverageRatio > 0.60 -> "Raft Foundation (Full Mat)"
             coverageRatio > 0.40 -> "Strip/Grid Foundation (REB)"
-            overlaps.size > columns.size * 0.2 -> "Combined Footings (Mix)"
+            combinedIndices.isNotEmpty() -> "Combined & Isolated Mix (Strap Beams Req.)"
             else -> "Isolated Footings"
         }
 
@@ -117,7 +129,8 @@ object LayoutOptimizer {
             "Deep Foundation (Piles)" -> "Massive loads or weak soil detected. Piles required to reach stable strata."
             "Raft Foundation (Full Mat)" -> "High coverage (${(coverageRatio*100).toInt()}%). Uniform raft required."
             "Strip/Grid Foundation (REB)" -> "Ribbed raft suggested to manage dense column layout."
-            else -> "Isolated footings are economical. Boundary columns require strap beams."
+            "Combined & Isolated Mix (Strap Beams Req.)" -> "Adjacent footings too close. Combined footings or isolated with Strap Beams are required for stability."
+            else -> "Isolated footings are economical. Boundary columns require strap beams to आंतरिक columns."
         }
 
         // [PHASE 3]: Financial / Quantity Estimation

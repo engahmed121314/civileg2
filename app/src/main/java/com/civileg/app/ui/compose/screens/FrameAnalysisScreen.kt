@@ -162,25 +162,23 @@ fun FrameAnalysisScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.Center
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         for (type in DiagramType.entries) {
                             val isSelected = diagramType == type
-                            FilterChip(
-                                selected = isSelected,
+                            Button(
                                 onClick = { viewModel.setDiagramType(type) },
-                                label = { Text(type.displayNameAr, fontSize = 13.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = when (type) {
-                                        DiagramType.BMD -> Color(0xFF2196F3)
-                                        DiagramType.SFD -> Color(0xFF4CAF50)
-                                        DiagramType.AFD -> Color(0xFFFF9800)
-                                    },
-                                    selectedLabelColor = Color.White
+                                modifier = Modifier.weight(1f).height(40.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) Color(0xFF1565C0) else Color(0xFFE3F2FD),
+                                    contentColor = if (isSelected) Color.White else Color(0xFF1565C0)
                                 ),
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(type.displayNameAr, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

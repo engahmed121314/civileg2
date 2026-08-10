@@ -613,8 +613,25 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
+    private fun addMaterialProperties(document: Document, materialType: String, props: Map<String, String>) {
+        document.add(sectionTitle("4. Material Specifications"))
+        document.add(separator())
+        document.add(paragraph("Type: $materialType", 10f, bold = true, color = SECONDARY))
+        
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(45f, 55f))).useAllAvailableWidth()
+        var ri = 0
+        for ((k, v) in props) {
+            val bg = if (ri % 2 == 0) null else ROW_ALT
+            table.addCell(labelCell(k, bg))
+            table.addCell(valueCell(v, bg))
+            ri++
+        }
+        document.add(table)
+        document.add(emptyLine())
+    }
+
     private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean) {
-        document.add(sectionTitle("4. Safety Verification"))
+        document.add(sectionTitle("5. Safety Verification"))
         document.add(separator())
 
         // Status Banner
@@ -734,6 +751,8 @@ object ProfessionalEnglishPdfReporter {
         isSafe: Boolean,
         drawingBitmap: Bitmap? = null,
         calculationSteps: List<CalculationStep> = emptyList(),
+        materialProps: Map<String, String>? = null,
+        materialType: String = "S355 Structural Steel",
         config: ReportConfig = ReportConfig(),
         outputPath: String
     ): File? {
@@ -756,16 +775,19 @@ object ProfessionalEnglishPdfReporter {
             // 4. Results
             addResultsSection(document, results)
 
-            // 5. Safety Checks
+            // 5. Material Specifications (NEW)
+            materialProps?.let { addMaterialProperties(document, materialType, it) }
+
+            // 6. Safety Checks
             addSafetyChecks(document, safetyChecks, isSafe)
 
-            // 6. Engineering Drawing
+            // 7. Engineering Drawing
             if (drawingBitmap != null) {
                 document.add(AreaBreak())
             }
             addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
 
-            // 7. Footer
+            // 8. Footer
             addFooter(document, config)
 
             document.close()

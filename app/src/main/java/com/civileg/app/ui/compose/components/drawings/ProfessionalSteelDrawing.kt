@@ -59,6 +59,7 @@ fun ProfessionalSteelDrawing(
     hasStiffener: Boolean = false,
     weldSize: Double = 6.0,
     isColumn: Boolean = false,
+    steelGrade: String = "S355 / St-52",
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -132,7 +133,7 @@ fun ProfessionalSteelDrawing(
         // ════════════════════════════════════════════════════════════════════
         drawPropertiesTable(
             margin, tableTop, cw - margin * 2f, tableHeight,
-            sectionName, sectionType, area, ix, sx, zx, weightPerMeter, memberLength
+            sectionName, sectionType, area, ix, sx, zx, weightPerMeter, memberLength, steelGrade
         )
 
         // Labels
@@ -268,7 +269,8 @@ private fun DrawScope.drawConnectionDetail(
 
 private fun DrawScope.drawPropertiesTable(
     x: Float, y: Float, width: Float, height: Float,
-    name: String, type: String, area: Double, ix: Double, sx: Double, zx: Double, w: Double, len: Double
+    name: String, type: String, area: Double, ix: Double, sx: Double, zx: Double, w: Double, len: Double,
+    grade: String
 ) {
     drawRect(TblHeaderBg, Offset(x, y), Size(width, 25f))
     drawTextAnnotated("STEEL PROPERTIES: $name", x + 10f, y + 18f, DimWhite, 12f, bold = true)
@@ -276,6 +278,7 @@ private fun DrawScope.drawPropertiesTable(
     val rows = listOf(
         "Area: ${"%.1f".format(area / 100.0)} cm²",
         "Inertia Ix: ${"%.0f".format(ix / 1e8)} cm⁴",
+        "Material: $grade",
         "Weight: ${"%.1f".format(w)} kg/m",
         "Length: ${"%.0f".format(len)} mm"
     )

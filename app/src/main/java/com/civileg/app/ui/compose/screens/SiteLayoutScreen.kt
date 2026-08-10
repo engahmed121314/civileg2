@@ -188,18 +188,45 @@ fun SiteLayoutScreen(
                     uri?.let { viewModel.importPointsFromCsv(context, it) }
                 }
 
-                Button(
-                    onClick = { csvPickerLauncher.launch("text/comma-separated-values") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Icon(Icons.Default.FileUpload, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Import Survey Points (CSV)")
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { csvPickerLauncher.launch("text/comma-separated-values") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.Default.FileUpload, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Import CSV", fontSize = 11.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            // Automatic Column Generation (Auto-Staking)
+                            viewModel.clear()
+                            val spacing = 5.0 // 5m typical bay
+                            var x = 0.0
+                            while (x <= plotW) {
+                                var y = 0.0
+                                while (y <= plotL) {
+                                    val isBoundary = x == 0.0 || x == plotW || y == 0.0 || y == plotL
+                                    viewModel.addColumn(x * 1000.0, y * 1000.0, isNeighbor = isBoundary)
+                                    y += spacing
+                                }
+                                x += spacing
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF673AB7))
+                    ) {
+                        Icon(Icons.Default.AutoFixHigh, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Auto-Layout", fontSize = 11.sp)
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 Button(
                     onClick = {

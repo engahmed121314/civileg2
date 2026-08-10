@@ -53,6 +53,9 @@ class SteelViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
+    @Volatile
+    var pendingDrawingBitmap: android.graphics.Bitmap? = null
+
     val sectionLibrary: Map<String, List<SteelSectionType>> = calculatorEngine.getSteelSectionLibrary()
 
     // Configurable connection design defaults (mm). Override via constructor or
