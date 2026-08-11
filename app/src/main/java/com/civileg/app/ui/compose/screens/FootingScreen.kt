@@ -35,8 +35,12 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
+import com.civileg.app.utils.ColumnLoad
+import com.civileg.app.utils.DxfExporter
+import com.civileg.app.utils.ExportUtils
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -506,6 +510,28 @@ fun FootingScreen(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }
+                    }
+                }
+
+                item {
+                    Button(
+                        onClick = {
+                            val res = result ?: return@Button
+                            // Export single footing to AutoCAD
+                            val col = ColumnLoad("COL", 0.0, 0.0, axialLoad.toDoubleOrNull() ?: 1000.0, colWidth.toDoubleOrNull() ?: 300.0, colLength.toDoubleOrNull() ?: 600.0)
+                            val file = DxfExporter.exportSiteLayout(
+                                listOf(col), 5.0, 5.0, soilCapacity.toDoubleOrNull() ?: 200.0,
+                                File(context.cacheDir, "Single_Footing_CAD.dxf").absolutePath
+                            )
+                            ExportUtils.openFile(context, file, "application/dxf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                    ) {
+                        Icon(Icons.Default.AutoFixHigh, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Export to AutoCAD (DXF)")
                     }
                 }
 

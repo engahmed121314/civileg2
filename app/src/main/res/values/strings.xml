@@ -98,6 +98,8 @@
     <string name="steel_strength_label">fy (MPa):</string>
     <string name="dead_load_label">Dead Load:</string>
     <string name="live_load_label">Live Load:</string>
+    <string name="site_layout_title">Site Layout &amp; CAD</string>
+    <string name="site_layout_sub">Survey Points, Axes, and Advanced AutoCAD Export</string>
     <string name="axial_load_label">Axial Load (Pu):</string>
     <string name="moment_x_label">Moment X:</string>
     <string name="moment_y_label">Moment Y:</string>

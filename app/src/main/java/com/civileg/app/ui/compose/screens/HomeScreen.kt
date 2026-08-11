@@ -131,6 +131,7 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
     DesignModuleItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI"),        CardAccentSlab,    Icons.Default.ViewWeek),
     DesignModuleItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI"),        CardAccentFooting, Icons.Default.Layers),
+    DesignModuleItem(AppScreen.SiteLayout,     R.string.site_layout_title, R.string.site_layout_sub, listOf("CAD", "DXF"), StatCardGreen, Icons.Default.AutoFixHigh),
     DesignModuleItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.home_tank_sub,     listOf("ECP", "ACI"),        CardAccentTank,    Icons.Default.WaterDrop),
     DesignModuleItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI"), CardAccentWall, Icons.Default.SensorDoor),
     DesignModuleItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
