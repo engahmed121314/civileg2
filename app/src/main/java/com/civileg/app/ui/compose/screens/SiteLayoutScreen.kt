@@ -395,17 +395,29 @@ fun SiteInteractiveCanvas(
                         size = Size(fw, fl),
                         style = Stroke(1.5f)
                     )
+
+                    // [NEW] Visual Label for Footing Type and Size in App Canvas
+                    drawTextAnnotated(
+                        "${fb.type}\n${fb.width.toInt()}x${fb.length.toInt()}",
+                        fx, fy, Color.White.copy(alpha = 0.9f), 7f * density, center = true
+                    )
                 }
 
                 rec.axesX.forEach { axis ->
                     val sx = ox + axis.coordinate.toFloat() * scale / 1000.0f
                     drawLine(Color(0xFFE91E63).copy(alpha = 0.7f), Offset(sx, oy - 20f), Offset(sx, oy + dl + 20f), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
-                    drawTextAnnotated(axis.label, sx, oy - 25f, Color(0xFFE91E63), 10f * density, center = true)
+                    
+                    // [NEW] Axis Bubble (Circle) in App Canvas
+                    drawCircle(Color(0xFFE91E63), radius = 12f * density, center = Offset(sx, oy - 35f), style = Stroke(1.5f))
+                    drawTextAnnotated(axis.label, sx, oy - 35f, Color(0xFFE91E63), 10f * density, center = true, bold = true)
                 }
                 rec.axesY.forEach { axis ->
                     val sy = oy + axis.coordinate.toFloat() * scale / 1000.0f
                     drawLine(Color(0xFFE91E63).copy(alpha = 0.7f), Offset(ox - 20f, sy), Offset(ox + dw + 20f, sy), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
-                    drawTextAnnotated(axis.label, ox - 30f, sy, Color(0xFFE91E63), 10f * density, center = true)
+                    
+                    // [NEW] Axis Bubble (Circle) in App Canvas
+                    drawCircle(Color(0xFFE91E63), radius = 12f * density, center = Offset(ox - 45f, sy), style = Stroke(1.5f))
+                    drawTextAnnotated(axis.label, ox - 45f, sy, Color(0xFFE91E63), 10f * density, center = true, bold = true)
                 }
             }
 
