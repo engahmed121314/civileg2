@@ -39,7 +39,7 @@ private val designHubItems = listOf(
     DesignHubItem(AppScreen.BeamDesign,     R.string.home_beam,     R.string.home_beam_sub,     listOf("ECP", "ACI", "SBC"), Color(0xFF1976D2), Icons.Default.AccountBalance),
     DesignHubItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewColumn),
     DesignHubItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI"),        Color(0xFF00838F), Icons.Default.ViewWeek),
-    DesignHubItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI"),        Color(0xFF4E342E), Icons.Default.Layers),
+    DesignHubItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI", "CAD"), Color(0xFF4E342E), Icons.Default.Layers),
     DesignHubItem(AppScreen.SiteLayout,     R.string.site_layout_title, R.string.site_layout_sub, listOf("CAD", "DXF"), Color(0xFF2E7D32), Icons.Default.AutoFixHigh),
     DesignHubItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.hub_design_tank_sub, listOf("ECP", "ACI"),       Color(0xFF0277BD), Icons.Default.WaterDrop),
     DesignHubItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI"), Color(0xFF558B2F), Icons.Default.SensorDoor),

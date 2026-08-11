@@ -517,11 +517,12 @@ fun FootingScreen(
                     Button(
                         onClick = {
                             val res = result ?: return@Button
-                            // Export single footing to AutoCAD
-                            val col = ColumnLoad("COL", 0.0, 0.0, axialLoad.toDoubleOrNull() ?: 1000.0, colWidth.toDoubleOrNull() ?: 300.0, colLength.toDoubleOrNull() ?: 600.0)
-                            val file = DxfExporter.exportSiteLayout(
-                                listOf(col), 5.0, 5.0, soilCapacity.toDoubleOrNull() ?: 200.0,
-                                File(context.cacheDir, "Single_Footing_CAD.dxf").absolutePath
+                            // [Expert Fix]: Use new detailed exporter for workshop drawings
+                            val file = DxfExporter.exportFootingDetailed(
+                                result = res,
+                                colWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                                colDepth = colLength.toDoubleOrNull() ?: 600.0,
+                                outputPath = File(context.cacheDir, "Footing_Workshop_Detail.dxf").absolutePath
                             )
                             ExportUtils.openFile(context, file, "application/dxf")
                         },
@@ -529,9 +530,9 @@ fun FootingScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                     ) {
-                        Icon(Icons.Default.AutoFixHigh, null)
+                        Icon(Icons.Default.Architecture, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Export to AutoCAD (DXF)")
+                        Text("Export Detailed AutoCAD (DXF)")
                     }
                 }
 

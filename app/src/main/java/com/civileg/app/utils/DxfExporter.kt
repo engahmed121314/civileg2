@@ -78,8 +78,94 @@ object DxfExporter {
             drawText(sb, -2500.0, axis.coordinate, axis.label, "AXES", 250.0, 1)
         }
 
-        // 6. Draw Professional Bill of Quantities Table on Drawing
-        drawBOQTable(sb, (plotWidth * 1000.0 + 2000.0).toFloat(), (plotLength * 1000.0).toFloat(), rec)
+        // 6. Draw Professional Bill of Quantities Table on Drawing (shifted right to avoid overlap)
+        drawBOQTable(sb, (plotWidth * 1000.0 + 5000.0).toFloat(), (plotLength * 1000.0).toFloat(), rec)
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
+    /**
+     * Exports a detailed footing element (workshop drawing) to DXF.
+     */
+    fun exportFootingDetailed(
+        result: CalculatorEngine.FootingResult,
+        colWidth: Double,
+        colDepth: Double,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n") // White
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")    // Red
+        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n") // Blue
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")      // Green
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        // 1. FOOTING PLAN VIEW
+        val planX = 0.0
+        val planY = 0.0
+        val fl = result.length
+        val fw = result.width
+        
+        // Outline
+        drawRect(sb, planX, planY, fl, fw, "CONCRETE")
+        
+        // Column
+        val cx = planX + (fl - colDepth) / 2.0
+        val cy = planY + (fw - colWidth) / 2.0
+        drawRect(sb, cx, cy, colDepth, colWidth, "CONCRETE", 4)
+        
+        // Bottom Reinforcement X-Dir (Longitudinal)
+        val cover = 70.0
+        val barSpacing = result.reinforcementBottom.spacing.coerceAtLeast(100.0)
+        var curY = planY + cover
+        while (curY <= planY + fw - cover + 0.1) {
+            drawLine(sb, planX + cover, curY, planX + fl - cover, curY, "REBAR")
+            curY += barSpacing
+        }
+        
+        // Bottom Reinforcement Y-Dir (Cross)
+        var curX = planX + cover
+        while (curX <= planX + fl - cover + 0.1) {
+            drawLine(sb, curX, planY + cover, curX, planY + fw - cover, "REBAR")
+            curX += barSpacing
+        }
+
+        // Labels Plan
+        drawText(sb, planX + fl/2, planY - 300.0, "FOOTING PLAN VIEW", "TEXT", 150.0)
+        drawText(sb, planX + fl/2, planY + fw + 300.0, "${result.type.displayNameEn} Footing: ${fl.toInt()}x${fw.toInt()}x${result.thickness.toInt()}mm", "TEXT", 100.0)
+
+        // 2. FOOTING SECTION VIEW
+        val secX = 0.0
+        val secY = fw + 2000.0
+        val thk = result.thickness
+        
+        // Concrete outline section
+        drawRect(sb, secX, secY, fl, thk, "CONCRETE")
+        
+        // Column starter
+        drawRect(sb, cx, secY + thk, colDepth, 800.0, "CONCRETE", 4)
+        
+        // Reinforcement in section
+        drawLine(sb, secX + cover, secY + cover, secX + fl - cover, secY + cover, "REBAR") // Bottom bar
+        
+        // Dimension lines
+        drawLine(sb, secX, secY - 400.0, secX + fl, secY - 400.0, "DIMENSIONS") // Length dim
+        drawText(sb, secX + fl/2, secY - 600.0, "L = ${fl.toInt()}mm", "DIMENSIONS", 80.0)
+        
+        drawLine(sb, secX - 400.0, secY, secX - 400.0, secY + thk, "DIMENSIONS") // Height dim
+        drawText(sb, secX - 800.0, secY + thk/2, "t=${thk.toInt()}", "DIMENSIONS", 80.0)
+
+        drawText(sb, secX + fl/2, secY - 1000.0, "FOOTING SECTION VIEW", "TEXT", 150.0)
 
         sb.append("0\nENDSEC\n0\nEOF\n")
 
