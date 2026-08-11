@@ -35,7 +35,9 @@ object DxfExporter {
 
         // 1. Draw Plot Boundary
         drawRect(sb, 0.0, 0.0, plotWidth * 1000.0, plotLength * 1000.0, "0", 7) // White
-        drawText(sb, plotWidth * 500.0, plotLength * 1000.0 + 300.0, "PROJECT PLOT BOUNDARY", "0", 200.0, 7)
+        drawText(sb, plotWidth * 500.0, plotLength * 1000.0 + 500.0, "PROJECT PLOT BOUNDARY", "0", 300.0, 7)
+        drawHorizontalDimension(sb, 0.0, plotWidth * 1000.0, -1000.0, "${plotWidth.toInt()} m")
+        drawVerticalDimension(sb, 0.0, plotLength * 1000.0, -1000.0, "${plotLength.toInt()} m")
 
         // 2. Draw Axes
         val axesX = columns.map { it.x }.distinct().sorted()
@@ -145,30 +147,36 @@ object DxfExporter {
         }
 
         // Labels & Dims Plan
-        drawText(sb, planX + fl/2, planY - 400.0, "FOOTING PLAN VIEW", "TEXT", 150.0)
-        drawHorizontalDimension(sb, planX, planX + fl, planY - 250.0, "${fl.toInt()} mm")
-        drawVerticalDimension(sb, planY, planY + fw, planX - 250.0, "${fw.toInt()} mm")
+        drawText(sb, planX + fl/2, planY - 600.0, "FOOTING PLAN VIEW", "TEXT", 200.0)
+        drawHorizontalDimension(sb, planX, planX + fl, planY - 300.0, "${fl.toInt()} mm")
+        drawVerticalDimension(sb, planY, planY + fw, planX - 300.0, "${fw.toInt()} mm")
 
         // 2. FOOTING SECTION VIEW
         val secX = 0.0
-        val secY = fw + 2500.0
+        val secY = fw + 3000.0
         drawRect(sb, secX, secY, fl, thk, "CONCRETE")
-        drawRect(sb, cx, secY + thk, colDepth, 1000.0, "CONCRETE", 4) // Column starter
+        drawRect(sb, cx, secY + thk, colDepth, 1200.0, "CONCRETE", 4) // Column starter
         
         // Rebar in section
         drawLine(sb, secX + cover, secY + cover, secX + fl - cover, secY + cover, "REBAR")
+        // Vertical bars
+        drawLine(sb, cx + 50, secY + cover, cx + 50, secY + thk + 1000, "REBAR")
+        drawLine(sb, cx + colDepth - 50, secY + cover, cx + colDepth - 50, secY + thk + 1000, "REBAR")
         
         // Labels & Dims Section
-        drawText(sb, secX + fl/2, secY - 400.0, "FOOTING SECTION VIEW", "TEXT", 150.0)
-        drawVerticalDimension(sb, secY, secY + thk, secX - 250.0, "t=${thk.toInt()}")
+        drawText(sb, secX + fl/2, secY - 600.0, "FOOTING SECTION VIEW", "TEXT", 200.0)
+        drawVerticalDimension(sb, secY, secY + thk, secX - 300.0, "t=${thk.toInt()}")
+        drawHorizontalDimension(sb, secX, secX + fl, secY - 300.0, "L=${fl.toInt()}")
 
         // 3. REINFORCEMENT TABLE
-        drawResultTable(sb, fl + 1500.0, secY + 1000.0, "REINFORCEMENT DATA", listOf(
+        drawResultTable(sb, fl + 3000.0, secY + 1000.0, "REINFORCEMENT DATA", listOf(
             "Type" to result.type.displayNameEn,
             "Concrete" to "${"%.2f".format(result.concreteVolume)} m3",
             "Steel" to "${"%.1f".format(result.steelWeight)} kg",
             "Bottom X" to "${result.barsX} %%c ${result.barDiameter}",
-            "Bottom Y" to "${result.barsY} %%c ${result.barDiameter}"
+            "Bottom Y" to "${result.barsY} %%c ${result.barDiameter}",
+            "Soil Pressure" to "${"%.2f".format(result.soilPressure)} kN/m2",
+            "Code" to result.designCodeName
         ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
@@ -210,36 +218,44 @@ object DxfExporter {
         val elevY = 0.0
         val sMm = span * 1000.0
         
-        // Concrete outline
+        // Concrete outline with hatching for section cuts
         drawRect(sb, elevX, elevY, sMm, height, "CONCRETE")
         
-        // Main bottom reinforcement
-        drawLine(sb, elevX + cover, elevY + cover, elevX + sMm - cover, elevY + cover, "REBAR_MAIN")
-        drawText(sb, elevX + sMm/2, elevY + cover - 100, "${result.reinforcementBottom.numBars}%%c${result.reinforcementBottom.diameter} Bottom", "TEXT", 80.0)
+        // Main bottom reinforcement with hooks (schematic)
+        val mbY = elevY + cover
+        drawLine(sb, elevX + cover, mbY, elevX + sMm - cover, mbY, "REBAR_MAIN")
+        drawLine(sb, elevX + cover, mbY, elevX + cover, mbY + 100, "REBAR_MAIN") // hook
+        drawLine(sb, elevX + sMm - cover, mbY, elevX + sMm - cover, mbY + 100, "REBAR_MAIN") // hook
+        drawText(sb, elevX + sMm/2, mbY - 120, "${result.reinforcementBottom.numBars}%%c${result.reinforcementBottom.diameter} Bottom (L=${(sMm + 200).toInt()})", "TEXT", 100.0)
         
         // Main top reinforcement
-        drawLine(sb, elevX + cover, elevY + height - cover, elevX + sMm - cover, elevY + height - cover, "REBAR_MAIN")
-        drawText(sb, elevX + sMm/2, elevY + height - cover + 50, "${result.reinforcementTop.numBars}%%c${result.reinforcementTop.diameter} Top", "TEXT", 80.0)
+        val mtY = elevY + height - cover
+        drawLine(sb, elevX + cover, mtY, elevX + sMm - cover, mtY, "REBAR_MAIN")
+        drawText(sb, elevX + sMm/2, mtY + 100, "${result.reinforcementTop.numBars}%%c${result.reinforcementTop.diameter} Top", "TEXT", 100.0)
 
-        // Stirrup Zones (Detailed)
-        result.stirrups.zones.forEach { zone ->
-            val zStart = elevX + zone.startLocation
-            val zEnd = elevX + zone.endLocation
-            var curX = zStart
-            while (curX < zEnd - 1.0) {
-                drawLine(sb, curX, elevY + cover, curX, elevY + height - cover, "STIRRUPS")
-                curX += zone.spacing
+        // Stirrup Zones (Professional Confinement Detailing)
+        if (result.stirrups.zones.isNotEmpty()) {
+            result.stirrups.zones.forEach { zone ->
+                val zStart = elevX + zone.startLocation
+                val zEnd = elevX + zone.endLocation
+                var curX = zStart
+                while (curX < zEnd - 1.0) {
+                    drawLine(sb, curX, elevY + cover, curX, elevY + height - cover, "STIRRUPS")
+                    curX += zone.spacing
+                }
+                // Zone label bubble
+                drawCircle(sb, (zStart+zEnd)/2.0, elevY + height + 600.0, 150.0, "TEXT")
+                drawText(sb, (zStart + zEnd) / 2.0, elevY + height + 600.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 100.0)
             }
-            drawText(sb, (zStart + zEnd) / 2.0, elevY + height + 200.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 80.0)
         }
         
         // Labels & Dims Elevation
-        drawText(sb, elevX + sMm/2, elevY - 400.0, "BEAM ELEVATION VIEW", "TEXT", 150.0)
-        drawHorizontalDimension(sb, elevX, elevX + sMm, elevY - 250.0, "Span = ${span}m")
-        drawVerticalDimension(sb, elevY, elevY + height, elevX - 250.0, "h=${height.toInt()}")
+        drawText(sb, elevX + sMm/2, elevY - 600.0, "REINFORCED BEAM ELEVATION VIEW", "TEXT", 250.0)
+        drawHorizontalDimension(sb, elevX, elevX + sMm, elevY - 400.0, "Span = ${span}m")
+        drawVerticalDimension(sb, elevY, elevY + height, elevX - 400.0, "h=${height.toInt()}")
 
-        // 2. BEAM CROSS SECTION
-        val secX = sMm + 1500.0
+        // 2. BEAM CROSS SECTIONS (Typical & Support)
+        val secX = sMm + 2000.0
         val secY = 0.0
         drawRect(sb, secX, secY, width, height, "CONCRETE")
         drawRect(sb, secX + cover, secY + cover, width - 2*cover, height - 2*cover, "STIRRUPS")
@@ -248,20 +264,28 @@ object DxfExporter {
         val bCount = result.reinforcementBottom.numBars
         val bSpace = (width - 2 * cover) / (bCount - 1).coerceAtLeast(1)
         for (i in 0 until bCount) {
-            drawCircle(sb, secX + cover + i * bSpace, secY + cover, 10.0, "REBAR_MAIN", 1)
+            drawCircle(sb, secX + cover + i * bSpace, secY + cover, 12.0, "REBAR_MAIN", 1)
+        }
+        // Top bars
+        val tCount = result.reinforcementTop.numBars
+        val tSpace = (width - 2 * cover) / (tCount - 1).coerceAtLeast(1)
+        for (i in 0 until tCount) {
+            drawCircle(sb, secX + cover + i * tSpace, secY + height - cover, 10.0, "REBAR_MAIN", 1)
         }
         
-        drawText(sb, secX + width/2, secY - 400.0, "CROSS SECTION", "TEXT", 150.0)
-        drawVerticalDimension(sb, secY, secY + height, secX + width + 250.0, "h=${height.toInt()}")
-        drawHorizontalDimension(sb, secX, secX + width, secY + height + 250.0, "b=${width.toInt()}")
+        drawText(sb, secX + width/2, secY - 600.0, "TYPICAL CROSS SECTION", "TEXT", 200.0)
+        drawVerticalDimension(sb, secY, secY + height, secX + width + 400.0, "h=${height.toInt()}")
+        drawHorizontalDimension(sb, secX, secX + width, secY + height + 400.0, "b=${width.toInt()}")
 
-        // 3. TABLE
-        drawResultTable(sb, sMm + 4000.0, 3000.0, "BEAM DESIGN DATA", listOf(
-            "Moment Mu" to "${result.mu.toInt()} kN.m",
-            "Shear Vu" to "${result.vu.toInt()} kN",
-            "Bottom" to "${result.reinforcementBottom.numBars} %%c ${result.reinforcementBottom.diameter}",
-            "Top" to "${result.reinforcementTop.numBars} %%c ${result.reinforcementTop.diameter}",
-            "Stirrups" to "%%c ${result.stirrups.diameter} @ ${result.stirrups.spacing.toInt()}"
+        // 3. PROJECT DATA & BOQ TABLE
+        drawResultTable(sb, sMm + 6000.0, 4000.0, "BEAM ENGINEERING DATA", listOf(
+            "Design Code" to result.designCodeName,
+            "Moment Mu" to "${"%.1f".format(result.appliedMoment)} kN.m",
+            "Shear Vu" to "${"%.1f".format(result.appliedShear)} kN",
+            "Deflection" to "${"%.2f".format(result.deflection)} mm",
+            "Status" to if(result.isSafe) "SAFE" else "UNSAFE",
+            "Concrete Vol" to "${"%.2f".format(result.concreteVolume)} m3",
+            "Steel Weight" to "${"%.1f".format(result.steelWeight)} kg"
         ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
@@ -371,8 +395,9 @@ object DxfExporter {
         // Layers
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR_X\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nREBAR_Y\n70\n0\n62\n2\n")
+        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nREBAR_DIST\n70\n0\n62\n2\n")
+        sb.append("0\nLAYER\n2\nREBAR_TOP\n70\n0\n62\n6\n") // Magenta
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
 
@@ -381,28 +406,46 @@ object DxfExporter {
         val lxMm = lx * 1000.0
         val lyMm = ly * 1000.0
         
-        // 1. SLAB PLAN
+        // 1. SLAB REINFORCEMENT PLAN
         drawRect(sb, 0.0, 0.0, lxMm, lyMm, "CONCRETE")
         
-        // Rebar mesh (simplified for DXF)
-        val spacing = 200.0
-        var x = spacing
-        while (x < lxMm) {
-            drawLine(sb, x, 0.0, x, lyMm, "REBAR_X")
-            x += spacing * 5 // Draw every 5th bar for clarity in CAD
+        // Main bottom reinforcement (X-Dir)
+        val mSp = result.reinforcementMain.spacing
+        var curY = mSp / 2
+        while (curY < lyMm) {
+            drawLine(sb, 100.0, curY, lxMm - 100.0, curY, "REBAR_MAIN")
+            curY += mSp * 5 // Plot subset for clarity
         }
-        var y = spacing
-        while (y < lyMm) {
-            drawLine(sb, 0.0, y, lxMm, y, "REBAR_Y")
-            y += spacing * 5
+        
+        // Dist bottom reinforcement (Y-Dir)
+        val dSp = result.reinforcementSecondary.spacing
+        var curX = dSp / 2
+        while (curX < lxMm) {
+            drawLine(sb, curX, 100.0, curX, lyMm - 100.0, "REBAR_DIST")
+            curX += dSp * 5
         }
 
-        drawText(sb, lxMm/2, -500.0, "SLAB REINFORCEMENT PLAN", "TEXT", 300.0)
-        drawText(sb, lxMm/2, -900.0, "Type: ${result.type.displayNameEn}, t=${result.thickness}mm", "TEXT", 200.0)
-        drawText(sb, lxMm/2, -1200.0, "Main: ${result.reinforcementMain.barString}", "TEXT", 150.0)
+        // Top reinforcement over supports (schematic)
+        val topLen = lxMm * 0.25
+        drawLine(sb, 0.0, lyMm/2, topLen, lyMm/2, "REBAR_TOP")
+        drawLine(sb, lxMm - topLen, lyMm/2, lxMm, lyMm/2, "REBAR_TOP")
+
+        drawText(sb, lxMm/2, -800.0, "SLAB REINFORCEMENT PLAN (WORKSHOP DRAWING)", "TEXT", 300.0)
+        drawHorizontalDimension(sb, 0.0, lxMm, -400.0, "Lx = ${lxMm.toInt()} mm")
+        drawVerticalDimension(sb, 0.0, lyMm, -400.0, "Ly = ${lyMm.toInt()} mm")
+
+        // 2. DESIGN DATA TABLE
+        drawResultTable(sb, lxMm + 3000.0, lyMm / 2.0, "SLAB DESIGN DATA", listOf(
+            "Slab Type" to result.type.displayNameEn,
+            "Thickness" to "${result.thickness.toInt()} mm",
+            "Main Rebar" to result.reinforcementMain.barString,
+            "Dist Rebar" to result.reinforcementSecondary.barString,
+            "Concrete Vol" to "${"%.2f".format(result.concreteVolume)} m3",
+            "Steel Weight" to "${"%.1f".format(result.steelWeight)} kg",
+            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+        ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
-
         val file = File(outputPath)
         FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
         return file
@@ -514,27 +557,45 @@ object DxfExporter {
         val ox = 0.0; val oy = 0.0
         // Base
         drawRect(sb, ox, oy, bw, thk, "CONCRETE")
-        // Stem (centered/offset)
+        // Stem (tapered schematic)
         val toeW = bw / 3.0
-        drawRect(sb, ox + toeW, oy + thk, tw, h, "CONCRETE")
+        drawLine(sb, ox + toeW, oy + thk, ox + toeW, oy + thk + h, "CONCRETE") // Back face
+        drawLine(sb, ox + toeW + tw, oy + thk, ox + toeW + tw * 0.6, oy + thk + h, "CONCRETE") // Front face tapered
+        drawLine(sb, ox + toeW, oy + thk + h, ox + toeW + tw * 0.6, oy + thk + h, "CONCRETE") // Top face
         
         // Reinforcement
+        val mainDia = result.stemReinforcement.diameter
+        val mainSp = result.stemReinforcement.spacing
         drawLine(sb, ox + toeW + tw - cover, oy + thk, ox + toeW + tw - cover, oy + thk + h - cover, "REBAR") // Main vertical
         drawLine(sb, ox + cover, oy + cover, ox + bw - cover, oy + cover, "REBAR") // Main bottom
         
-        // Labels & Dims
-        drawText(sb, ox + bw/2, oy - 400.0, "RETAINING WALL SECTION", "TEXT", 150.0)
-        drawVerticalDimension(sb, oy, oy + thk + h, ox - 300.0, "H=${(h+thk).toInt()}")
-        drawHorizontalDimension(sb, ox, ox + bw, oy - 250.0, "B=${bw.toInt()}")
+        // Shear Key (schematic)
+        drawRect(sb, ox + toeW + tw/4, oy - 300.0, tw/2, 300.0, "CONCRETE")
 
-        // 2. DATA TABLE
-        drawResultTable(sb, bw + 2000.0, h / 2.0, "DESIGN RESULTS", listOf(
-            "Height" to "${result.height} m",
-            "Ka" to "%.3f".format(result.ka),
-            "Pa" to "%.1f kN".format(result.pa),
+        // Labels & Dims
+        drawText(sb, ox + bw/2, oy - 600.0, "RETAINING WALL SECTION", "TEXT", 200.0)
+        drawVerticalDimension(sb, oy, oy + thk + h, ox - 500.0, "H_tot=${(h+thk).toInt()}")
+        drawHorizontalDimension(sb, ox, ox + bw, oy - 350.0, "B=${bw.toInt()}")
+
+        // 2. SOIL PRESSURE DIAGRAM
+        val pX = -2000.0
+        val pY = 0.0
+        drawLine(sb, pX, pY, pX - 800.0, pY, "LOADS") // Max pressure at toe
+        drawLine(sb, pX, pY + bw, pX - 200.0, pY + bw, "LOADS") // Min pressure at heel
+        drawLine(sb, pX - 800.0, pY, pX - 200.0, pY + bw, "LOADS")
+        drawText(sb, pX - 1000.0, pY, "q_max", "TEXT", 80.0)
+        drawText(sb, pX - 400.0, pY + bw, "q_min", "TEXT", 80.0)
+
+        // 3. DATA TABLE
+        drawResultTable(sb, bw + 3000.0, h / 2.0, "RETAINING WALL DESIGN DATA", listOf(
+            "Wall Height" to "${result.height} m",
+            "Stem Thickness" to "${result.stemThickness.toInt()} mm",
+            "Base Width" to "${result.baseWidth.toInt()} mm",
+            "Active Ka" to "%.3f".format(result.ka),
             "F.S. Overturning" to "%.2f".format(result.factorOfSafetyOverturning),
             "F.S. Sliding" to "%.2f".format(result.factorOfSafetySliding),
-            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+            "Stem Rebar" to result.stemReinforcement.barString,
+            "Base Rebar" to result.baseReinforcement.barString
         ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
@@ -573,12 +634,13 @@ object DxfExporter {
         val ox = 0.0; val oy = 0.0
         var curX = ox; var curY = oy
         
-        // Profile
+        // Concrete Profile
         for (i in 0 until numSteps) {
             drawLine(sb, curX, curY, curX, curY + r, "CONCRETE") // Riser
             drawLine(sb, curX, curY + r, curX + t, curY + r, "CONCRETE") // Tread
             curX += t; curY += r
         }
+        
         // Soffit
         val angle = atan2(r, t)
         val dx = thk * sin(angle)
@@ -587,18 +649,34 @@ object DxfExporter {
         drawLine(sb, ox, oy, ox + dx, oy - dy, "CONCRETE")
         drawLine(sb, curX, curY, curX + dx, curY - dy, "CONCRETE")
 
-        // Main Rebar
-        drawLine(sb, ox + dx - cover*sin(angle), oy - dy + cover*cos(angle), curX + dx - cover*sin(angle), curY - dy + cover*cos(angle), "REBAR")
+        // Main Longitudinal Rebar
+        val mbStartX = ox + dx - cover * sin(angle)
+        val mbStartY = oy - dy + cover * cos(angle)
+        val mbEndX = curX + dx - cover * sin(angle)
+        val mbEndY = curY - dy + cover * cos(angle)
+        drawLine(sb, mbStartX, mbStartY, mbEndX, mbEndY, "REBAR")
+        
+        // Transverse bars (circles in elevation)
+        val numTrans = 10
+        for (i in 0..numTrans) {
+            val tx = mbStartX + (i.toDouble() / numTrans) * (mbEndX - mbStartX)
+            val ty = mbStartY + (i.toDouble() / numTrans) * (mbEndY - mbStartY)
+            drawCircle(sb, tx, ty, 10.0, "REBAR")
+        }
 
-        drawText(sb, ox + s/2, oy - 1000.0, "STAIR ELEVATION", "TEXT", 200.0)
+        // Labels & Dims
+        drawText(sb, ox + s/2, oy - 1200.0, "STAIRCASE REINFORCEMENT DETAIL", "TEXT", 250.0)
+        drawHorizontalDimension(sb, ox, curX, oy - 600.0, "Total Span = ${result.span} m")
+        drawVerticalDimension(sb, oy, curY, ox - 600.0, "Total Height = ${(numSteps*r).toInt()} mm")
 
-        // 2. DESIGN TABLE
-        drawResultTable(sb, s + 2000.0, curY / 2.0, "STAIR DESIGN DATA", listOf(
+        // 2. DESIGN DATA TABLE
+        drawResultTable(sb, s + 3000.0, curY / 2.0, "STAIRCASE DESIGN DATA", listOf(
             "Type" to result.type.displayNameEn,
-            "Span" to "${result.span} m",
+            "Riser x Tread" to "${r.toInt()} x ${t.toInt()} mm",
             "Waist Thick" to "${result.thickness.toInt()} mm",
-            "Reinforcement" to result.reinforcement.barString,
-            "Concrete" to "${"%.2f".format(result.concreteVolume)} m3",
+            "Main Rebar" to result.reinforcement.barString,
+            "Dist. Rebar" to result.distributionReinforcement.barString,
+            "Concrete Vol" to "${"%.2f".format(result.concreteVolume)} m3",
             "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
         ))
 
@@ -700,8 +778,15 @@ object DxfExporter {
         drawText(sb, 0.0, -1000.0, "FRAME ANALYSIS: GEOMETRY & BENDING MOMENT DIAGRAM", "TEXT", 150.0)
 
         // 3. REACTIONS TABLE
-        drawResultTable(sb, scale * 10.0, 0.0, "NODAL REACTIONS", result.nodeResults.filter { it.reactionFy != 0.0 }.map { 
-            "Node ${it.nodeId}" to "Ry=${it.reactionFy.toInt()} kN" 
+        val rtX = 2000.0 * scale
+        val rtY = 0.0
+        drawResultTable(sb, rtX, rtY, "NODAL REACTIONS", result.nodeResults.filter { abs(it.reactionFy) > 0.1 }.map { 
+            "Node ${it.nodeId}" to "Ry=${String.format(Locale.US, "%.1f", it.reactionFy)} kN" 
+        })
+        
+        // 4. NODAL DISPLACEMENTS TABLE
+        drawResultTable(sb, rtX + 7000.0, rtY, "MAX DISPLACEMENTS (mm)", result.nodeResults.take(10).map {
+            "Node ${it.nodeId}" to "dy=${String.format(Locale.US, "%.3f", it.dy * 1000.0)}"
         })
 
         sb.append("0\nENDSEC\n0\nEOF\n")
@@ -760,27 +845,46 @@ object DxfExporter {
         drawRect(sb, ox, oy + tb, tw, h, "CONCRETE")
         drawRect(sb, ox + l + tw, oy + tb, tw, h, "CONCRETE")
         
-        // Water line
+        // Water line (dynamic)
         val wl = h * 0.9
         drawLine(sb, ox + tw + 100, oy + tb + wl, ox + tw + l - 100, oy + tb + wl, "WATER")
-        drawText(sb, ox + tw + l/2, oy + tb + wl + 100, "W.L.", "WATER", 50.0)
+        drawText(sb, ox + tw + l/2, oy + tb + wl + 150, "MAX WATER LEVEL", "WATER", 80.0)
         
-        // Reinforcement (Schematic)
+        // Internal pressure schematic
+        val numArr = 5
+        for (i in 1..numArr) {
+            val y = oy + tb + (i.toDouble() / numArr) * wl
+            val arrowLen = (i.toDouble() / numArr) * 400.0
+            drawLine(sb, ox + tw, y, ox + tw + arrowLen, y, "LOADS")
+            drawLine(sb, ox + tw + l, y, ox + tw + l - arrowLen, y, "LOADS")
+        }
+        
+        // Reinforcement
         drawLine(sb, ox + tw - cover, oy + tb, ox + tw - cover, oy + tb + h, "REBAR")
         drawLine(sb, ox + tw + l + cover, oy + tb, ox + tw + l + cover, oy + tb + h, "REBAR")
         
         // Labels & Dims
-        drawText(sb, ox + l/2, oy - 400.0, "TANK SECTION VIEW", "TEXT", 150.0)
-        drawVerticalDimension(sb, oy, oy + h + tb, ox - 300.0, "H_tot=${(h+tb).toInt()}")
+        drawText(sb, ox + l/2 + tw, oy - 600.0, "TANK CROSS SECTION", "TEXT", 200.0)
+        drawVerticalDimension(sb, oy, oy + h + tb, ox - 500.0, "H_tot=${(h+tb).toInt()}")
+        drawHorizontalDimension(sb, ox, ox + l + 2*tw, oy - 350.0, "B_tot=${(l+2*tw).toInt()}")
 
-        // 2. DESIGN DATA TABLE
-        drawResultTable(sb, l + 2000.0, h / 2.0, "TANK DESIGN RESULTS", listOf(
-            "Type" to result.type.displayNameEn,
+        // 2. TANK PLAN VIEW
+        val planX = 0.0
+        val planY = h + 4000.0
+        drawRect(sb, planX, planY, l + 2*tw, w + 2*tw, "CONCRETE") // Outer
+        drawRect(sb, planX + tw, planY + tw, l, w, "CONCRETE") // Inner
+        drawText(sb, planX + l/2 + tw, planY - 600.0, "TANK PLAN VIEW", "TEXT", 200.0)
+
+        // 3. DESIGN DATA TABLE
+        drawResultTable(sb, l + 4000.0, h / 2.0, "WATER TANK DESIGN DATA", listOf(
+            "Location" to result.type.displayNameEn,
             "Capacity" to "${"%.1f".format(result.capacityM3)} m3",
+            "Height" to "${result.height} m",
             "Wall Thick" to "${result.wallThickness.toInt()} mm",
             "Base Thick" to "${result.baseThickness.toInt()} mm",
             "Wall Rebar" to result.wallReinforcement.barString,
-            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+            "Base Rebar" to result.baseReinforcement.barString,
+            "Max Pressure" to "${"%.1f".format(result.waterPressure)} kN/m2"
         ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
