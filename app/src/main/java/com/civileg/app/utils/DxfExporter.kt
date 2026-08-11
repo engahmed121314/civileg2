@@ -113,13 +113,14 @@ object DxfExporter {
 
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
+        val fl = result.length
+        val fw = result.width
+        val thk = result.thickness
+        val cover = 70.0
+
         // 1. FOOTING PLAN VIEW
         val planX = 0.0
         val planY = 0.0
-        val fl = result.length
-        val fw = result.width
-        
-        // Outline
         drawRect(sb, planX, planY, fl, fw, "CONCRETE")
         
         // Column
@@ -127,48 +128,48 @@ object DxfExporter {
         val cy = planY + (fw - colWidth) / 2.0
         drawRect(sb, cx, cy, colDepth, colWidth, "CONCRETE", 4)
         
-        // Bottom Reinforcement X-Dir (Longitudinal)
-        val cover = 70.0
-        val barSpacing = result.reinforcementBottom.spacing.coerceAtLeast(100.0)
-        var curY = planY + cover
-        while (curY <= planY + fw - cover + 0.1) {
-            drawLine(sb, planX + cover, curY, planX + fl - cover, curY, "REBAR")
-            curY += barSpacing
+        // Reinforcement X (Longitudinal)
+        val numX = result.barsX
+        val spX = (fw - 2 * cover) / (numX - 1).coerceAtLeast(1)
+        for (i in 0 until numX) {
+            val y = planY + cover + i * spX
+            drawLine(sb, planX + cover, y, planX + fl - cover, y, "REBAR")
         }
         
-        // Bottom Reinforcement Y-Dir (Cross)
-        var curX = planX + cover
-        while (curX <= planX + fl - cover + 0.1) {
-            drawLine(sb, curX, planY + cover, curX, planY + fw - cover, "REBAR")
-            curX += barSpacing
+        // Reinforcement Y (Cross)
+        val numY = result.barsY
+        val spY = (fl - 2 * cover) / (numY - 1).coerceAtLeast(1)
+        for (i in 0 until numY) {
+            val x = planX + cover + i * spY
+            drawLine(sb, x, planY + cover, x, planY + fw - cover, "REBAR")
         }
 
-        // Labels Plan
-        drawText(sb, planX + fl/2, planY - 300.0, "FOOTING PLAN VIEW", "TEXT", 150.0)
-        drawText(sb, planX + fl/2, planY + fw + 300.0, "${result.type.displayNameEn} Footing: ${fl.toInt()}x${fw.toInt()}x${result.thickness.toInt()}mm", "TEXT", 100.0)
+        // Labels & Dims Plan
+        drawText(sb, planX + fl/2, planY - 400.0, "FOOTING PLAN VIEW", "TEXT", 150.0)
+        drawHorizontalDimension(sb, planX, planX + fl, planY - 250.0, "${fl.toInt()} mm")
+        drawVerticalDimension(sb, planY, planY + fw, planX - 250.0, "${fw.toInt()} mm")
 
         // 2. FOOTING SECTION VIEW
         val secX = 0.0
-        val secY = fw + 2000.0
-        val thk = result.thickness
-        
-        // Concrete outline section
+        val secY = fw + 2500.0
         drawRect(sb, secX, secY, fl, thk, "CONCRETE")
+        drawRect(sb, cx, secY + thk, colDepth, 1000.0, "CONCRETE", 4) // Column starter
         
-        // Column starter
-        drawRect(sb, cx, secY + thk, colDepth, 800.0, "CONCRETE", 4)
+        // Rebar in section
+        drawLine(sb, secX + cover, secY + cover, secX + fl - cover, secY + cover, "REBAR")
         
-        // Reinforcement in section
-        drawLine(sb, secX + cover, secY + cover, secX + fl - cover, secY + cover, "REBAR") // Bottom bar
-        
-        // Dimension lines
-        drawLine(sb, secX, secY - 400.0, secX + fl, secY - 400.0, "DIMENSIONS") // Length dim
-        drawText(sb, secX + fl/2, secY - 600.0, "L = ${fl.toInt()}mm", "DIMENSIONS", 80.0)
-        
-        drawLine(sb, secX - 400.0, secY, secX - 400.0, secY + thk, "DIMENSIONS") // Height dim
-        drawText(sb, secX - 800.0, secY + thk/2, "t=${thk.toInt()}", "DIMENSIONS", 80.0)
+        // Labels & Dims Section
+        drawText(sb, secX + fl/2, secY - 400.0, "FOOTING SECTION VIEW", "TEXT", 150.0)
+        drawVerticalDimension(sb, secY, secY + thk, secX - 250.0, "t=${thk.toInt()}")
 
-        drawText(sb, secX + fl/2, secY - 1000.0, "FOOTING SECTION VIEW", "TEXT", 150.0)
+        // 3. REINFORCEMENT TABLE
+        drawResultTable(sb, fl + 1500.0, secY + 1000.0, "REINFORCEMENT DATA", listOf(
+            "Type" to result.type.displayNameEn,
+            "Concrete" to "${"%.2f".format(result.concreteVolume)} m3",
+            "Steel" to "${"%.1f".format(result.steelWeight)} kg",
+            "Bottom X" to "${result.barsX} %%c ${result.barDiameter}",
+            "Bottom Y" to "${result.barsY} %%c ${result.barDiameter}"
+        ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
 
@@ -220,41 +221,48 @@ object DxfExporter {
         drawLine(sb, elevX + cover, elevY + height - cover, elevX + sMm - cover, elevY + height - cover, "REBAR_MAIN")
         drawText(sb, elevX + sMm/2, elevY + height - cover + 50, "${result.reinforcementTop.numBars}%%c${result.reinforcementTop.diameter} Top", "TEXT", 80.0)
 
-        // Stirrups in elevation
-        val stirrupSpacing = result.stirrups.spacing
-        var curX = elevX + cover + 50.0
-        while (curX <= elevX + sMm - cover - 50.0) {
-            drawLine(sb, curX, elevY + cover, curX, elevY + height - cover, "STIRRUPS")
-            curX += stirrupSpacing
+        // Stirrup Zones (Detailed)
+        result.stirrups.zones.forEach { zone ->
+            val zStart = elevX + zone.startLocation
+            val zEnd = elevX + zone.endLocation
+            var curX = zStart
+            while (curX < zEnd - 1.0) {
+                drawLine(sb, curX, elevY + cover, curX, elevY + height - cover, "STIRRUPS")
+                curX += zone.spacing
+            }
+            drawText(sb, (zStart + zEnd) / 2.0, elevY + height + 200.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 80.0)
         }
         
-        // Labels Elevation
+        // Labels & Dims Elevation
         drawText(sb, elevX + sMm/2, elevY - 400.0, "BEAM ELEVATION VIEW", "TEXT", 150.0)
-        drawText(sb, elevX + sMm/2, elevY - 600.0, "Span = ${span}m, Section: ${width.toInt()}x${height.toInt()}mm", "TEXT", 100.0)
+        drawHorizontalDimension(sb, elevX, elevX + sMm, elevY - 250.0, "Span = ${span}m")
+        drawVerticalDimension(sb, elevY, elevY + height, elevX - 250.0, "h=${height.toInt()}")
 
         // 2. BEAM CROSS SECTION
-        val secX = sMm + 1000.0
+        val secX = sMm + 1500.0
         val secY = 0.0
         drawRect(sb, secX, secY, width, height, "CONCRETE")
+        drawRect(sb, secX + cover, secY + cover, width - 2*cover, height - 2*cover, "STIRRUPS")
         
-        // Bottom bars in section (circles)
+        // Bottom bars in section
         val bCount = result.reinforcementBottom.numBars
         val bSpace = (width - 2 * cover) / (bCount - 1).coerceAtLeast(1)
         for (i in 0 until bCount) {
             drawCircle(sb, secX + cover + i * bSpace, secY + cover, 10.0, "REBAR_MAIN", 1)
         }
         
-        // Top bars in section
-        val tCount = result.reinforcementTop.numBars
-        val tSpace = (width - 2 * cover) / (tCount - 1).coerceAtLeast(1)
-        for (i in 0 until tCount) {
-            drawCircle(sb, secX + cover + i * tSpace, secY + height - cover, 10.0, "REBAR_MAIN", 1)
-        }
-        
-        // Closed stirrup in section
-        drawRect(sb, secX + cover, secY + cover, width - 2*cover, height - 2*cover, "STIRRUPS")
-
         drawText(sb, secX + width/2, secY - 400.0, "CROSS SECTION", "TEXT", 150.0)
+        drawVerticalDimension(sb, secY, secY + height, secX + width + 250.0, "h=${height.toInt()}")
+        drawHorizontalDimension(sb, secX, secX + width, secY + height + 250.0, "b=${width.toInt()}")
+
+        // 3. TABLE
+        drawResultTable(sb, sMm + 4000.0, 3000.0, "BEAM DESIGN DATA", listOf(
+            "Moment Mu" to "${result.mu.toInt()} kN.m",
+            "Shear Vu" to "${result.vu.toInt()} kN",
+            "Bottom" to "${result.reinforcementBottom.numBars} %%c ${result.reinforcementBottom.diameter}",
+            "Top" to "${result.reinforcementTop.numBars} %%c ${result.reinforcementTop.diameter}",
+            "Stirrups" to "%%c ${result.stirrups.diameter} @ ${result.stirrups.spacing.toInt()}"
+        ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
 
@@ -288,33 +296,40 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         val cover = 40.0
-        val hMm = height * 1.0 // Height is already in mm usually in inputs but let's be safe
+        val hMm = height
         
         // 1. COLUMN ELEVATION
         val elevX = 0.0
         val elevY = 0.0
         drawRect(sb, elevX, elevY, width, hMm, "CONCRETE")
         
-        // Main vertical bars
-        drawLine(sb, elevX + cover, elevY, elevX + cover, elevY + hMm, "REBAR_MAIN")
-        drawLine(sb, elevX + width - cover, elevY, elevX + width - cover, elevY + hMm, "REBAR_MAIN")
+        // All vertical bars based on count (simplified distribution)
+        val numBars = result.reinforcement.numBars
+        val barsPerFace = (numBars / 4) + 1
+        val spFace = (width - 2 * cover) / (barsPerFace - 1).coerceAtLeast(1)
+        for (i in 0 until barsPerFace) {
+            val bx = elevX + cover + i * spFace
+            drawLine(sb, bx, elevY, bx, elevY + hMm, "REBAR_MAIN")
+        }
         
-        // Ties (Stirrups) in elevation
-        val tieSpacing = result.stirrups.spacing
-        var curY = elevY + 100.0
-        while (curY <= elevY + hMm - 100.0) {
-            drawLine(sb, elevX + cover, curY, elevX + width - cover, curY, "STIRRUPS")
-            curY += tieSpacing
+        // Confinement Zones (Ties)
+        result.stirrups.zones.forEach { zone ->
+            val zStart = elevY + zone.startLocation
+            val zEnd = elevY + zone.endLocation
+            var curY = zStart
+            while (curY < zEnd - 1.0) {
+                drawLine(sb, elevX + cover, curY, elevX + width - cover, curY, "STIRRUPS")
+                curY += zone.spacing
+            }
+            drawText(sb, elevX - 300.0, (zStart + zEnd) / 2.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 80.0)
         }
 
         drawText(sb, elevX + width/2, elevY - 400.0, "COLUMN ELEVATION", "TEXT", 150.0)
 
         // 2. COLUMN CROSS SECTION
-        val secX = width + 1000.0
+        val secX = width + 2000.0
         val secY = 0.0
         drawRect(sb, secX, secY, width, depth, "CONCRETE")
-        
-        // Closed tie
         drawRect(sb, secX + cover, secY + cover, width - 2*cover, depth - 2*cover, "STIRRUPS")
         
         // Corner bars
@@ -324,7 +339,15 @@ object DxfExporter {
         drawCircle(sb, secX + width - cover, secY + depth - cover, 10.0, "REBAR_MAIN", 1)
 
         drawText(sb, secX + width/2, secY - 400.0, "CROSS SECTION", "TEXT", 150.0)
-        drawText(sb, secX + width/2, secY - 600.0, "${result.reinforcement.numBars}%%c${result.reinforcement.diameter}", "TEXT", 100.0)
+        
+        // 3. TABLE
+        drawResultTable(sb, width + 5000.0, 3000.0, "COLUMN DESIGN DATA", listOf(
+            "Load Pu" to "${result.appliedAxial.toInt()} kN",
+            "Section" to "${width.toInt()}x${depth.toInt()} mm",
+            "Reinforcement" to "${result.reinforcement.numBars} %%c ${result.reinforcement.diameter}",
+            "Stirrups" to "%%c ${result.stirrups.diameter} @ ${result.stirrups.spacing.toInt()}",
+            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+        ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
 
@@ -441,9 +464,18 @@ object DxfExporter {
         drawText(sb, midX, -800.0, "Span = ${inputs.span}m", "DIMENSIONS", 150.0)
 
         // 2. COMPONENT DETAILS (Draw Section Shapes)
-        val detailX = span + 2000.0
+        val detailX = span + 3000.0
         drawSteelSectionShape(sb, detailX, eh, result.mainFrame.columnSection, "Column: ${result.mainFrame.columnSection.sectionName}")
-        drawSteelSectionShape(sb, detailX, eh - 2000.0, result.mainFrame.rafterSection, "Rafter: ${result.mainFrame.rafterSection.sectionName}")
+        drawSteelSectionShape(sb, detailX, eh - 3000.0, result.mainFrame.rafterSection, "Rafter: ${result.mainFrame.rafterSection.sectionName}")
+
+        // 3. LEGEND & LOADS TABLE
+        drawResultTable(sb, span + 8000.0, eh, "STEEL WAREHOUSE DATA", listOf(
+            "Span" to "${inputs.span} m",
+            "Height" to "${inputs.eaveHeight} m",
+            "Dead Load" to "${inputs.deadLoad} kN/m2",
+            "Live Load" to "${inputs.liveLoad} kN/m2",
+            "Total Weight" to "${"%.2f".format(result.totalWeight)} Tons"
+        ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
 
@@ -452,7 +484,7 @@ object DxfExporter {
         return file
     }
 
-    private fun drawSteelSectionShape(sb: StringBuilder, x: Double, y: Double, section: com.civileg.app.domain.entities.SteelSectionType, label: String) {
+    private fun drawSteelSectionShape(sb: StringBuilder, x: Double, y: Double, section: SteelSectionType, label: String) {
         val h = section.depth
         val b = section.width
         val tf = section.flangeThickness
@@ -463,7 +495,15 @@ object DxfExporter {
         drawRect(sb, x - b/2, y - h + tf, b, tf, "MAIN_FRAME") // Bottom flange
         drawRect(sb, x - tw/2, y - h + tf, tw, h - 2*tf, "MAIN_FRAME") // Web
         
-        drawText(sb, x, y - h - 300.0, label, "TEXT", 100.0)
+        // Draw bolt holes (openings) schematically
+        drawCircle(sb, x - b/4, y + tf/2, 20.0, "MAIN_FRAME")
+        drawCircle(sb, x + b/4, y + tf/2, 20.0, "MAIN_FRAME")
+
+        drawText(sb, x, y - h - 300.0, label, "TEXT", 150.0, 4)
+        
+        // Add Dimensions
+        drawVerticalDimension(sb, y - h, y, x + b/2 + 200.0, "h=${h.toInt()}")
+        drawHorizontalDimension(sb, x - b/2, x + b/2, y + 500.0, "b=${b.toInt()}")
     }
 
     /**
@@ -535,11 +575,45 @@ object DxfExporter {
 
         drawText(sb, 0.0, -1000.0, "FRAME ANALYSIS: GEOMETRY & BENDING MOMENT DIAGRAM", "TEXT", 150.0)
 
+        // 3. REACTIONS TABLE
+        drawResultTable(sb, scale * 10.0, 0.0, "NODAL REACTIONS", result.nodeResults.filter { it.reactionFy != 0.0 }.map { 
+            "Node ${it.nodeId}" to "Ry=${it.reactionFy.toInt()} kN" 
+        })
+
         sb.append("0\nENDSEC\n0\nEOF\n")
 
         val file = File(outputPath)
         FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
         return file
+    }
+
+    private fun drawHorizontalDimension(sb: StringBuilder, x1: Double, x2: Double, y: Double, text: String, color: Int = 5) {
+        drawLine(sb, x1, y, x2, y, "DIMENSIONS", color)
+        drawLine(sb, x1, y + 100.0, x1, y - 100.0, "DIMENSIONS", color)
+        drawLine(sb, x2, y + 100.0, x2, y - 100.0, "DIMENSIONS", color)
+        drawText(sb, (x1 + x2) / 2.0, y + 100.0, text, "DIMENSIONS", 100.0, color)
+    }
+
+    private fun drawVerticalDimension(sb: StringBuilder, y1: Double, y2: Double, x: Double, text: String, color: Int = 5) {
+        drawLine(sb, x, y1, x, y2, "DIMENSIONS", color)
+        drawLine(sb, x + 100.0, y1, x - 100.0, y1, "DIMENSIONS", color)
+        drawLine(sb, x + 100.0, y2, x - 100.0, y2, "DIMENSIONS", color)
+        drawText(sb, x - 150.0, (y1 + y2) / 2.0, text, "DIMENSIONS", 100.0, color)
+    }
+
+    private fun drawResultTable(sb: StringBuilder, x: Double, y: Double, title: String, data: List<Pair<String, String>>) {
+        val rowH = 300.0
+        val colW = 3000.0
+        drawText(sb, x, y + rowH, title, "TEXT", 150.0, 2)
+        drawRect(sb, x, y - data.size * rowH, colW * 2, (data.size + 1) * rowH, "TEXT")
+        drawLine(sb, x + colW, y + rowH, x + colW, y - data.size * rowH, "TEXT")
+        
+        data.forEachIndexed { i, (k, v) ->
+            val curY = y - i * rowH
+            drawText(sb, x + 100.0, curY, k, "TEXT", 100.0)
+            drawText(sb, x + colW + 100.0, curY, v, "TEXT", 100.0)
+            drawLine(sb, x, curY - rowH / 2.0, x + colW * 2, curY - rowH / 2.0, "TEXT")
+        }
     }
 
     private fun drawLine(sb: StringBuilder, x1: Double, y1: Double, x2: Double, y2: Double, layer: String, color: Int = -1) {

@@ -258,17 +258,19 @@ private fun DrawScope.draw3DElevation(
     drawRect(color = C.ConcreteDark, topLeft = Offset(ox, oy), size = Size(w, h), style = Stroke(width = 2f))
 
     // ── Longitudinal bars (blue vertical lines) ────────────────────────
-    val visibleBars = bars.filter { it.y <= colD / 2 }.take(6)
-    visibleBars.forEach { bar ->
+    // [EXPERT]: Project ALL bars onto visible faces
+    val frontBars = bars.filter { it.y <= colD * 0.1 }
+    frontBars.forEach { bar ->
         val bx = ox + (bar.x.toFloat() / colW.toFloat()) * w
         drawLine(color = C.Bar, start = Offset(bx, oy + 4f), end = Offset(bx, oy + h - 4f),
             strokeWidth = (bar.diameter.toFloat() * scale * 0.25f).coerceIn(2f, 5f))
     }
-    // Side face bars (projected)
-    bars.filter { it.x >= colW * 0.8 }.take(3).forEach { bar ->
+    // Side face bars
+    val sideBars = bars.filter { it.x >= colW * 0.9 }
+    sideBars.forEach { bar ->
         val yRatio = bar.y.toFloat() / colD.toFloat()
         val xOff = d * cosA * yRatio
-        drawLine(color = C.Bar.copy(alpha = 0.5f),
+        drawLine(color = C.Bar.copy(alpha = 0.6f),
             start = Offset(ox + w + xOff, oy + 4f - d * sinA * yRatio),
             end = Offset(ox + w + xOff, oy + h - 4f - d * sinA * yRatio),
             strokeWidth = (bar.diameter.toFloat() * scale * 0.2f).coerceIn(1.5f, 4f))
@@ -295,23 +297,20 @@ private fun DrawScope.draw3DElevation(
             // Label for zone spacing and type
             drawContext.canvas.nativeCanvas.apply {
                 val p = android.graphics.Paint().apply {
-                    color = C.White.toArgb(); textSize = 11f; isFakeBoldText = true
+                    color = C.White.toArgb(); textSize = 11f * density; isFakeBoldText = true
                     textAlign = android.graphics.Paint.Align.RIGHT
                 }
                 drawText("\u00D8${zone.diameter} @ ${zone.spacing.toInt()}mm", dimX - 8f, midYZone + 4f, p)
                 
-                // [NEW] Added more descriptive labels for confinement
-                p.textSize = 8.5f; p.isFakeBoldText = false; p.color = C.DimLine.toArgb()
+                p.textSize = 8.5f * density; p.isFakeBoldText = false; p.color = C.DimLine.toArgb()
                 val label = when {
-                    zone.name.contains("Confine", true) || zone.name.contains("تكثيف", true) -> "CONFINEMENT ZONE"
-                    zone.name.contains("Middle", true) || zone.name.contains("منتصف", true) -> "MIDDLE ZONE"
+                    zone.name.contains("Confine", true) || zone.name.contains("تكثيف", true) -> "CONFINEMENT"
                     else -> zone.name.uppercase()
                 }
-                drawText(label, dimX - 8f, midYZone + 16f, p)
+                drawText(label, dimX - 8f, midYZone + 16f * density, p)
                 
-                // Show height of zone
                 val zoneH = zone.endLocation - zone.startLocation
-                drawText("H=${zoneH.toInt()}mm", dimX - 8f, midYZone + 28f, p)
+                drawText("H=${zoneH.toInt()}mm", dimX - 8f, midYZone + 28f * density, p)
             }
 
             while (ty > zStartScreen + 1f) {
@@ -840,7 +839,7 @@ private fun DrawScope.drawReinforcementTable(
     if (grouped.isNotEmpty()) {
         val totalAs = bars.sumOf { kotlin.math.PI * (it.diameter / 2.0) * (it.diameter / 2.0) }
         val sumPaint = android.graphics.Paint().apply {
-            color = C.Safe.toArgb(); textSize = 13f
+            color = C.Safe.toArgb(); textSize = 13f * density
             textAlign = android.graphics.Paint.Align.RIGHT; isFakeBoldText = true
         }
         native.drawText("As = ${String.format(java.util.Locale.US, "%.1f", totalAs)} mm\u00B2", left + width - 8f, top + height - 6f, sumPaint)
