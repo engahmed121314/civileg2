@@ -80,13 +80,22 @@ class SiteLayoutViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    private val _soilCapacity = MutableLiveData(200.0)
+    val soilCapacity: LiveData<Double> = _soilCapacity
+
+    fun setSoilCapacity(s: Double) {
+        _soilCapacity.value = s
+        analyze()
+    }
+
     fun analyze() {
         val cols = _columns.value ?: return
         val w = _plotWidth.value ?: 20.0
         val l = _plotLength.value ?: 30.0
+        val s = _soilCapacity.value ?: 200.0
         
         _recommendation.value = LayoutOptimizer.analyzeLayout(
-            w, l, cols, 200.0, CalculatorEngine.DesignCode.EGYPTIAN
+            w, l, cols, s, CalculatorEngine.DesignCode.EGYPTIAN
         )
     }
 

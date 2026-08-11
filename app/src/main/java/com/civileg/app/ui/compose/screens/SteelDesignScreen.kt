@@ -56,9 +56,10 @@ import com.civileg.app.viewmodel.SteelViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
-import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.PI
 import kotlin.math.ceil
@@ -173,6 +174,17 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
         )
     }
 
+    val captureScope = rememberCoroutineScope()
+    val frameAnalysisLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val perspectiveLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    
+    // Hidden layers for each section mark to satisfy SteelEnglishReportExporter
+    val c1Layer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val r1Layer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val p1Layer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val g1Layer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val b1Layer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -233,26 +245,59 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             
             item { 
                 Text(stringResource(R.string.steel_perspective_details), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                SteelWarehouseVisualizer(currentInputs, res)
+                // Capture perspective drawing
+                Box {
+                    SteelWarehouseVisualizer(currentInputs, res)
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                        captureLayer = perspectiveLayer,
+                        widthPx = 1200, heightPx = 900
+                    ) {
+                        SteelWarehouseVisualizer(currentInputs, res)
+                    }
+                }
             }
 
             item {
                 Text(stringResource(R.string.steel_stress_analysis), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                StructuralAnalysisVisualizer(currentInputs, res)
+                // Capture stress analysis/load diagram
+                Box {
+                    StructuralAnalysisVisualizer(currentInputs, res)
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                        captureLayer = frameAnalysisLayer,
+                        widthPx = 1200, heightPx = 800
+                    ) {
+                        StructuralAnalysisVisualizer(currentInputs, res)
+                    }
+                }
             }
 
             item {
-                val clientStr = stringResource(R.string.steel_default_client)
                 val projStr = stringResource(R.string.steel_warehouse_project)
                 Button(
                     onClick = {
-                        viewModel.exportWarehouseProToPdf(
-                            context = context,
-                            clientAr = clientStr,
-                            clientEn = clientStr,
-                            projAr = projStr,
-                            projEn = projStr
-                        ) { /* handled by VM */ }
+                        captureScope.launch {
+                            val drawingsMap = mutableMapOf<String, Bitmap>()
+                            try {
+                                drawingsMap["C1"] = c1Layer.toImageBitmap().asAndroidBitmap()
+                                drawingsMap["R1"] = r1Layer.toImageBitmap().asAndroidBitmap()
+                                drawingsMap["P1"] = p1Layer.toImageBitmap().asAndroidBitmap()
+                                drawingsMap["G1"] = g1Layer.toImageBitmap().asAndroidBitmap()
+                                drawingsMap["B1"] = b1Layer.toImageBitmap().asAndroidBitmap()
+                                
+                                val loadDiagram = frameAnalysisLayer.toImageBitmap().asAndroidBitmap()
+                                
+                                viewModel.exportWarehouseProToPdf(
+                                    context = context,
+                                    clientEn = "Professional Client",
+                                    projEn = projStr,
+                                    sectionDrawings = drawingsMap,
+                                    loadDiagramBitmap = loadDiagram
+                                ) { /* handled by VM */ }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Drawing capture failed. Check ڈیزائن inputs.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -260,6 +305,27 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                     Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.steel_export_pro_report))
+                }
+            }
+
+            // Hidden capture areas for all sections
+            item {
+                Box(Modifier.size(0.dp)) {
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(c1Layer, 600, 600) { 
+                        ProfessionalSteelDrawing(sectionName = res.mainFrame.columnSection.sectionName, sectionType = res.mainFrame.columnSection.displayName, depth = res.mainFrame.columnSection.depth, flangeWidth = res.mainFrame.columnSection.width, isColumn = true)
+                    }
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(r1Layer, 600, 600) {
+                        ProfessionalSteelDrawing(sectionName = res.mainFrame.rafterSection.sectionName, sectionType = res.mainFrame.rafterSection.displayName, depth = res.mainFrame.rafterSection.depth, flangeWidth = res.mainFrame.rafterSection.width, isColumn = false)
+                    }
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(p1Layer, 600, 600) {
+                        ProfessionalSteelDrawing(sectionName = res.secondaryMembers.purlinSection.sectionName, sectionType = res.secondaryMembers.purlinSection.displayName, depth = res.secondaryMembers.purlinSection.depth, flangeWidth = res.secondaryMembers.purlinSection.width)
+                    }
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(g1Layer, 600, 600) {
+                        ProfessionalSteelDrawing(sectionName = res.secondaryMembers.girtSection.sectionName, sectionType = res.secondaryMembers.girtSection.displayName, depth = res.secondaryMembers.girtSection.depth, flangeWidth = res.secondaryMembers.girtSection.width)
+                    }
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(b1Layer, 600, 600) {
+                        ProfessionalSteelDrawing(sectionName = res.secondaryMembers.bracingSection.sectionName, sectionType = res.secondaryMembers.bracingSection.displayName, depth = res.secondaryMembers.bracingSection.depth, flangeWidth = res.secondaryMembers.bracingSection.width)
+                    }
                 }
             }
 
@@ -1925,6 +1991,9 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     var selectedSteelCode by remember { mutableStateOf(steelCodes[0]) }
     var expandedSteelCode by remember { mutableStateOf(false) }
 
+    val sectionCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val sectionScope = rememberCoroutineScope()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -2227,7 +2296,14 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 if (result != null) {
                     Button(
                         onClick = { 
-                            viewModel.exportToPdf(context) { /* Handle completion */ }
+                            sectionScope.launch {
+                                // [PHASE 1]: Capture Snapshot
+                                try {
+                                    viewModel.pendingDrawingBitmap = sectionCaptureLayer.toImageBitmap().asAndroidBitmap()
+                                } catch (_: Exception) {}
+                                
+                                viewModel.exportToPdf(context) { /* Handle completion */ }
+                            }
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -2296,17 +2372,101 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             }
             item { SteelResultCard(res) }
             item {
-                InteractiveDrawingScreen(
-                    title = stringResource(R.string.steel_section_drawing),
-                    subtitle = "Steel Member Detail",
-                    viewModes = listOf(
-                        stringResource(R.string.steel_view_all),
-                        stringResource(R.string.steel_view_longitudinal),
-                        stringResource(R.string.steel_view_cross),
-                        stringResource(R.string.steel_view_connections)
-                    ),
-                    drawingContent = {
-                        // Extract connection parameters from result
+                // [EXPERT]: Wrap InteractiveDrawingScreen with CaptureArea for snapshots
+                val config = LocalConfiguration.current
+                val density = LocalDensity.current
+                val wPx = with(density) { config.screenWidthDp.dp.toPx() }.toInt()
+                val hPx = with(density) { 600.dp.toPx() }.toInt()
+                
+                Box {
+                    InteractiveDrawingScreen(
+                        title = stringResource(R.string.steel_section_drawing),
+                        subtitle = "Steel Member Detail",
+                        viewModes = listOf(
+                            stringResource(R.string.steel_view_all),
+                            stringResource(R.string.steel_view_longitudinal),
+                            stringResource(R.string.steel_view_cross),
+                            stringResource(R.string.steel_view_connections)
+                        ),
+                        drawingContent = {
+                            // Extract connection parameters from result
+                            val conn = res.connectionDesign
+                            var boltDia = 20.0
+                            var boltCount = 4
+                            var boltGauge = 90.0
+                            var boltPitch = 75.0
+                            var endPlateThk = 12.0
+                            var hasStiff = false
+                            var weldSz = 6.0
+                            if (conn != null) {
+                                when (conn.connectionType) {
+                                    is ConnectionType.Bolted -> {
+                                        val bt = conn.connectionType as ConnectionType.Bolted
+                                        boltDia = bt.boltDiameter
+                                        boltCount = bt.numberOfBolts
+                                        boltGauge = when (bt.boltPattern) {
+                                            BoltPattern.DOUBLE_ROW, BoltPattern.STAGGERED, BoltPattern.GRID -> res.sectionType.width * 0.4
+                                            else -> 90.0
+                                        }
+                                        boltPitch = when (bt.boltPattern) {
+                                            BoltPattern.GRID, BoltPattern.STAGGERED -> 75.0
+                                            else -> 0.0
+                                        }
+                                    }
+                                    is ConnectionType.Welded -> {
+                                        val wt = conn.connectionType as ConnectionType.Welded
+                                        weldSz = wt.weldSize
+                                        boltCount = 0
+                                        endPlateThk = 0.0
+                                    }
+                                    is ConnectionType.Hybrid -> {
+                                        val hy = conn.connectionType as ConnectionType.Hybrid
+                                        boltDia = hy.bolted.boltDiameter
+                                        boltCount = hy.bolted.numberOfBolts
+                                        boltGauge = when (hy.bolted.boltPattern) {
+                                            BoltPattern.DOUBLE_ROW, BoltPattern.STAGGERED, BoltPattern.GRID -> res.sectionType.width * 0.4
+                                            else -> 90.0
+                                        }
+                                        weldSz = hy.welded.weldSize
+                                        hasStiff = true
+                                    }
+                                    else -> {}
+                                }
+                            }
+                            ProfessionalSteelDrawing(
+                                sectionType = res.sectionType.displayName,
+                                sectionName = res.sectionType.sectionName,
+                                memberLength = (length.toDoubleOrNull() ?: 6.0) * 1000.0,
+                                depth = res.sectionType.depth,
+                                flangeWidth = res.sectionType.width,
+                                flangeThickness = res.sectionType.flangeThickness,
+                                webThickness = res.sectionType.webThickness,
+                                radius = res.sectionType.rootRadius,
+                                area = res.sectionType.area,
+                                ix = res.sectionType.ix,
+                                sx = res.sectionType.sx,
+                                zx = res.sectionType.zx,
+                                weightPerMeter = res.sectionType.weight,
+                                boltDia = boltDia,
+                                boltCount = boltCount,
+                                boltGauge = boltGauge,
+                                boltPitch = boltPitch,
+                                endPlateThickness = endPlateThk,
+                                hasStiffener = hasStiff,
+                                weldSize = weldSz,
+                                isColumn = res.memberType == SteelMemberType.COLUMN,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    )
+                    
+                    // Capture area for single section
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                        captureLayer = sectionCaptureLayer,
+                        widthPx = wPx,
+                        heightPx = hPx
+                    ) {
+                        // Extract connection parameters from result for accurate capture
                         val conn = res.connectionDesign
                         var boltDia = 20.0
                         var boltCount = 4
@@ -2375,7 +2535,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-                )
+                }
             }
             
             // Economy Indicator

@@ -535,9 +535,9 @@ fun ProfessionalSlabDrawing(
                 safeMainDia.toInt().toString(),
                 safeMainSpacing.toInt().toString(),
                 "${(mainLength * 1000).toInt()}",
-                String.format("%.0f", mainAsReq),
-                String.format("%.0f", mainAsProvided),
-                String.format("%.1f", mainAsProvided * mainLength * 0.00785)
+                String.format(java.util.Locale.US, "%.0f", mainAsReq),
+                String.format(java.util.Locale.US, "%.0f", mainAsProvided),
+                String.format(java.util.Locale.US, "%.1f", mainAsProvided * mainLength * 0.00785)
             ))
             rows.add(listOf(
                 "②",
@@ -545,9 +545,9 @@ fun ProfessionalSlabDrawing(
                 safeDistDia.toInt().toString(),
                 safeDistSpacing.toInt().toString(),
                 "${(distLength * 1000).toInt()}",
-                String.format("%.0f", distAsReq),
-                String.format("%.0f", distAsProvided),
-                String.format("%.1f", distAsProvided * distLength * 0.00785)
+                String.format(java.util.Locale.US, "%.0f", distAsReq),
+                String.format(java.util.Locale.US, "%.0f", distAsProvided),
+                String.format(java.util.Locale.US, "%.1f", distAsProvided * distLength * 0.00785)
             ))
             if (topBarLength > 0) {
                 val topAsProvided = mainAsProvided
@@ -557,9 +557,9 @@ fun ProfessionalSlabDrawing(
                     safeMainDia.toInt().toString(),
                     safeMainSpacing.toInt().toString(),
                     "${(topBarLength * 1000).toInt()}",
-                    String.format("%.0f", topAsReq),
-                    String.format("%.0f", topAsProvided),
-                    String.format("%.1f", topAsProvided * topBarLength * 0.00785)
+                    String.format(java.util.Locale.US, "%.0f", topAsReq),
+                    String.format(java.util.Locale.US, "%.0f", topAsProvided),
+                    String.format(java.util.Locale.US, "%.1f", topAsProvided * topBarLength * 0.00785)
                 ))
             }
             val shrinkageDia = 10.0
@@ -572,9 +572,9 @@ fun ProfessionalSlabDrawing(
                 shrinkageDia.toInt().toString(),
                 shrinkageSpacing.toInt().toString(),
                 "${(distLength * 1000).toInt()}",
-                String.format("%.0f", shrinkageAsReq),
-                String.format("%.0f", shrinkageAsProvided),
-                String.format("%.1f", shrinkageAsProvided * distLength * 0.00785)
+                String.format(java.util.Locale.US, "%.0f", shrinkageAsReq),
+                String.format(java.util.Locale.US, "%.0f", shrinkageAsProvided),
+                String.format(java.util.Locale.US, "%.1f", shrinkageAsProvided * distLength * 0.00785)
             ))
             if (isHordi || isWaffle) {
                 val ribBarLen = (slabThickness * 0.7 * 1000).toInt().toString()
@@ -586,9 +586,9 @@ fun ProfessionalSlabDrawing(
                     safeMainDia.toInt().toString(),
                     safeRibSpacing.toInt().toString(),
                     ribBarLen,
-                    String.format("%.0f", mainAsReq * 0.6),
-                    String.format("%.0f", ribAs),
-                    String.format("%.1f", ribAs * slabThickness * 0.7 * 0.00785)
+                    String.format(java.util.Locale.US, "%.0f", mainAsReq * 0.6),
+                    String.format(java.util.Locale.US, "%.0f", ribAs),
+                    String.format(java.util.Locale.US, "%.1f", ribAs * slabThickness * 0.7 * 0.00785)
                 ))
             }
 
@@ -672,7 +672,7 @@ fun ProfessionalSlabDrawing(
             }
             val slabArea = spanX * spanY
             dt(
-                String.format("%.2f kg / %.1f m²", totalSteelWeight, slabArea),
+                String.format(java.util.Locale.US, "%.2f kg / %.1f m\u00B2", totalSteelWeight, slabArea),
                 totX + colWidths.last() / 2f,
                 rowY + totalsRowH / 2f + 4f * density,
                 palette.totalsGold, 10f, bold = true

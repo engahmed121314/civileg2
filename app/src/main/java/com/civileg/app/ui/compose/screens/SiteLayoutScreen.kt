@@ -48,6 +48,7 @@ fun SiteLayoutScreen(
 
     var widthInput by remember { mutableStateOf(plotW.toString()) }
     var lengthInput by remember { mutableStateOf(plotL.toString()) }
+    var soilInput by remember { mutableStateOf("200") }
 
     Scaffold(
         topBar = {
@@ -69,7 +70,7 @@ fun SiteLayoutScreen(
         Row(modifier = Modifier.padding(padding).fillMaxSize()) {
             // Left Panel: Controls
             Column(modifier = Modifier.weight(0.35f).fillMaxHeight().padding(16.dp).verticalScroll(rememberScrollState())) {
-                Text("Project Parameters", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text("Site Parameters", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 OutlinedTextField(
@@ -90,6 +91,17 @@ fun SiteLayoutScreen(
                     }, 
                     label = { Text("Plot Length (m)") }, 
                     modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = soilInput, 
+                    onValueChange = { 
+                        soilInput = it
+                        it.toDoubleOrNull()?.let { s -> viewModel.setSoilCapacity(s) }
+                    }, 
+                    label = { Text("Soil Capacity (kPa)") }, 
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -232,6 +244,7 @@ fun SiteLayoutScreen(
                     onClick = {
                         val file = DxfExporter.exportSiteLayout(
                             columns, plotW, plotL,
+                            soilInput.toDoubleOrNull() ?: 200.0,
                             File(context.cacheDir, "Site_Layout_Pro.dxf").absolutePath
                         )
                         ExportUtils.openFile(context, file, "application/dxf")

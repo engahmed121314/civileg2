@@ -33,6 +33,109 @@ class BOQViewModel @Inject constructor(
     private val _elementBoqTotal = MutableLiveData<Double>(0.0)
     val elementBoqTotal: LiveData<Double> = _elementBoqTotal
 
+    // ── Detailed Custom BOQ State ──
+    private val _customBoqItems = MutableLiveData<Map<BoqCategory, List<BoqItem>>>(emptyMap())
+    val customBoqItems: LiveData<Map<BoqCategory, List<BoqItem>>> = _customBoqItems
+
+    init {
+        initializeDefaultCustomBoq()
+    }
+
+    private fun initializeDefaultCustomBoq() {
+        val initialMap = mutableMapOf<BoqCategory, List<BoqItem>>()
+        val isAr = com.civileg.app.utils.LocaleHelper.isArabic()
+        
+        // 1. Excavation
+        initialMap[BoqCategory.EXCAVATION] = listOf(
+            BoqItem("EXC_01", if(isAr) "تجهيز وتمهيد الموقع" else "Site Clearing & Preparation", BoqCategory.EXCAVATION, "m\u00B2", 0.0, 15.0),
+            BoqItem("EXC_02", if(isAr) "حفر كلي للتربة" else "Bulk Excavation (Soil)", BoqCategory.EXCAVATION, "m\u00B3", 0.0, 65.0),
+            BoqItem("EXC_03", if(isAr) "حفر في صخر" else "Rock Excavation", BoqCategory.EXCAVATION, "m\u00B3", 0.0, 450.0),
+            BoqItem("EXC_04", if(isAr) "ردم ودمك التربة" else "Backfilling & Compaction", BoqCategory.EXCAVATION, "m\u00B3", 0.0, 90.0)
+        )
+        
+        // 2. Concrete
+        initialMap[BoqCategory.CONCRETE] = listOf(
+            BoqItem("CONC_01", if(isAr) "خرسانة عادية (فرشة نظافة)" else "Plain Concrete (P.C.) Blinding", BoqCategory.CONCRETE, "m\u00B3", 0.0, 2200.0),
+            BoqItem("CONC_02", if(isAr) "خرسانة مسلحة للقواعد" else "Reinforced Concrete (R.C.) Footings", BoqCategory.CONCRETE, "m\u00B3", 0.0, 5500.0),
+            BoqItem("CONC_03", if(isAr) "خرسانة مسلحة للأعمدة والحوائط" else "R.C. Columns & Walls", BoqCategory.CONCRETE, "m\u00B3", 0.0, 7500.0),
+            BoqItem("CONC_04", if(isAr) "خرسانة مسلحة للأسقف والكمرات" else "R.C. Beams & Slabs", BoqCategory.CONCRETE, "m\u00B3", 0.0, 6800.0)
+        )
+        
+        // 3. Masonry
+        initialMap[BoqCategory.MASONRY] = listOf(
+            BoqItem("MAS_01", if(isAr) "مباني طوب أحمر 20سم" else "Brickwork (Red Brick) 20cm", BoqCategory.MASONRY, "1000", 0.0, 1800.0),
+            BoqItem("MAS_02", if(isAr) "مباني طوب أحمر 12سم" else "Brickwork (Red Brick) 12cm", BoqCategory.MASONRY, "1000", 0.0, 1650.0),
+            BoqItem("MAS_03", if(isAr) "حوائط بلوك أسمنتي" else "Concrete Block Walling", BoqCategory.MASONRY, "m\u00B2", 0.0, 45.0)
+        )
+        
+        // 4. Plastering & Interior
+        initialMap[BoqCategory.PLASTERING] = listOf(
+            BoqItem("PLA_01", if(isAr) "بياض محارة داخلي للحوائط" else "Interior Plastering (Walls)", BoqCategory.PLASTERING, "m\u00B2", 0.0, 65.0),
+            BoqItem("PLA_02", if(isAr) "بياض محارة داخلي للأسقف" else "Interior Plastering (Ceilings)", BoqCategory.PLASTERING, "m\u00B2", 0.0, 75.0),
+            BoqItem("PLA_03", if(isAr) "بياض محارة خارجي (واجهات)" else "Exterior Plastering (Scaffolding)", BoqCategory.PLASTERING, "m\u00B2", 0.0, 110.0)
+        )
+        
+        // 5. Tiling & Flooring
+        initialMap[BoqCategory.TILING] = listOf(
+            BoqItem("TIL_01", if(isAr) "أرضيات سيراميك" else "Ceramic Floor Tiling", BoqCategory.TILING, "m\u00B2", 0.0, 120.0),
+            BoqItem("TIL_02", if(isAr) "أرضيات بورسلين" else "Porcelain Floor Tiling", BoqCategory.TILING, "m\u00B2", 0.0, 250.0),
+            BoqItem("TIL_03", if(isAr) "وزرات سيراميك (م.ط)" else "Skirting (Linear Meter)", BoqCategory.TILING, "m", 0.0, 35.0)
+        )
+        
+        // 6. Painting
+        initialMap[BoqCategory.PAINTING] = listOf(
+            BoqItem("PAI_01", if(isAr) "دهانات داخلية (3 أوجه)" else "Interior Painting (3 coats)", BoqCategory.PAINTING, "m\u00B2", 0.0, 45.0),
+            BoqItem("PAI_02", if(isAr) "دهانات خارجية مقاومة للرطوبة" else "Exterior Weather-Proof Paint", BoqCategory.PAINTING, "m\u00B2", 0.0, 65.0)
+        )
+        
+        // 7. MEP
+        initialMap[BoqCategory.ELECTRICAL] = listOf(
+            BoqItem("ELE_01", if(isAr) "نقاط كهرباء (إنارة وبرايز)" else "Electrical Points (Lighting/Power)", BoqCategory.ELECTRICAL, "Point", 0.0, 450.0),
+            BoqItem("ELE_02", if(isAr) "لوحة توزيع رئيسية" else "Main Distribution Board", BoqCategory.ELECTRICAL, "Unit", 0.0, 15000.0)
+        )
+        initialMap[BoqCategory.PLUMBING] = listOf(
+            BoqItem("PLU_01", if(isAr) "شبكة تغذية مياه (PPR)" else "Water Supply Network (PPR)", BoqCategory.PLUMBING, "m", 0.0, 85.0),
+            BoqItem("PLU_02", if(isAr) "صرف صحي (PVC)" else "Sanitary Drainage (PVC)", BoqCategory.PLUMBING, "m", 0.0, 110.0),
+            BoqItem("PLU_03", if(isAr) "تركيب أطقم صحية" else "Fixture Installation", BoqCategory.PLUMBING, "Unit", 0.0, 1200.0)
+        )
+
+        _customBoqItems.value = initialMap
+    }
+
+    fun updateCustomBoqItemQuantity(category: BoqCategory, itemId: String, quantity: Double) {
+        val currentMap = _customBoqItems.value?.toMutableMap() ?: return
+        val currentList = currentMap[category]?.map { 
+            if (it.itemId == itemId) it.copy(quantity = quantity, total = quantity * it.unitPrice) else it
+        } ?: emptyList()
+        currentMap[category] = currentList
+        _customBoqItems.value = currentMap
+    }
+
+    fun updateCustomBoqItemPrice(category: BoqCategory, itemId: String, price: Double) {
+        val currentMap = _customBoqItems.value?.toMutableMap() ?: return
+        val currentList = currentMap[category]?.map { 
+            if (it.itemId == itemId) it.copy(unitPrice = price, total = it.quantity * price) else it
+        } ?: emptyList()
+        currentMap[category] = currentList
+        _customBoqItems.value = currentMap
+    }
+
+    fun addCustomBoqItem(category: BoqCategory, description: String, unit: String, quantity: Double, unitPrice: Double) {
+        val currentMap = _customBoqItems.value?.toMutableMap() ?: mutableMapOf()
+        val currentList = currentMap[category]?.toMutableList() ?: mutableListOf()
+        val id = "${category.name}_${currentList.size + 1}"
+        currentList.add(BoqItem(id, description, category, unit, quantity, unitPrice))
+        currentMap[category] = currentList
+        _customBoqItems.value = currentMap
+    }
+
+    fun removeCustomBoqItem(category: BoqCategory, itemId: String) {
+        val currentMap = _customBoqItems.value?.toMutableMap() ?: return
+        val currentList = currentMap[category]?.filter { it.itemId != itemId } ?: emptyList()
+        currentMap[category] = currentList
+        _customBoqItems.value = currentMap
+    }
+
     /**
      * حساب كميات من كيان التصميم المحفوظ في قاعدة البيانات
      * يستخدم القيم المجمعة المخزنة (concreteVolume, steelWeight) إذا لم يتوفر inputData تفصيلي،

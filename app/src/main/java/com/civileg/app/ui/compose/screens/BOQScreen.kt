@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -53,7 +54,11 @@ fun BOQScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     var selectedMainTab by remember { mutableIntStateOf(1) }
-    val mainTabs = listOf(stringResource(R.string.boq_title), stringResource(R.string.boq_subtitle))
+    val mainTabs = listOf(
+        stringResource(R.string.boq_title), 
+        stringResource(R.string.boq_subtitle),
+        "Detailed BOQ Pro"
+    )
 
     Scaffold(
         topBar = {
@@ -86,6 +91,7 @@ fun BOQScreen(
                     onNavigateToMasterBbs = onNavigateToMasterBbs
                 )
                 1 -> SmartEstimatorProContent(boqViewModel)
+                2 -> DetailedCustomBOQContent(boqViewModel)
             }
         }
     }
@@ -499,4 +505,165 @@ fun EmptyStateView() {
             Text(stringResource(R.string.boq_no_projects_found), color = Color.Gray); Text(stringResource(R.string.boq_add_first_project), fontSize = 12.sp, color = Color.Gray)
         }
     }
+}
+
+@Composable
+fun DetailedCustomBOQContent(viewModel: BOQViewModel) {
+    val context = LocalContext.current
+    val customItems by viewModel.customBoqItems.observeAsState(emptyMap())
+    val categories = BoqCategory.entries
+    var selectedCatIndex by remember { mutableIntStateOf(0) }
+    val selectedCategory = categories[selectedCatIndex]
+    
+    var showAddDialog by remember { mutableStateOf(false) }
+    var desc by remember { mutableStateOf("") }
+    var unit by remember { mutableStateOf("m\u00B3") }
+    var qty by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        ScrollableTabRow(
+            selectedTabIndex = selectedCatIndex,
+            edgePadding = 16.dp,
+            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+        ) {
+            categories.forEachIndexed { index, cat ->
+                Tab(
+                    selected = selectedCatIndex == index,
+                    onClick = { selectedCatIndex = index },
+                    text = { 
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(cat.displayName, fontSize = 11.sp)
+                            val catTotal = customItems[cat]?.sumOf { it.total } ?: 0.0
+                            if (catTotal > 0) {
+                                Text("%,.0f".format(catTotal), fontSize = 9.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            val items = customItems[selectedCategory] ?: emptyList()
+            if (items.isEmpty()) {
+                EmptyStateView()
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    items(items) { item ->
+                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(item.description, fontWeight = FontWeight.Bold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("${item.unit} | ", fontSize = 11.sp, color = Color.Gray)
+                                        EditableQuantityField(item.quantity.toString()) { 
+                                            viewModel.updateCustomBoqItemQuantity(selectedCategory, item.itemId, it.toDoubleOrNull() ?: 0.0) 
+                                        }
+                                        Text(" @ ", fontSize = 11.sp, color = Color.Gray)
+                                        EditablePriceField(item.unitPrice.toString()) {
+                                            viewModel.updateCustomBoqItemPrice(selectedCategory, item.itemId, it.toDoubleOrNull() ?: 0.0)
+                                        }
+                                    }
+                                }
+                                Text("%,.0f".format(item.total), fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp))
+                                IconButton(onClick = { viewModel.removeCustomBoqItem(selectedCategory, item.itemId) }) {
+                                    Icon(Icons.Default.Delete, null, tint = Color.Red, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+                Button(
+                    onClick = {
+                        val allItems = customItems.values.flatten()
+                        val grandTotal = allItems.sumOf { it.total }
+                        val pdfFile = PdfGenerator.generateBOQReport(
+                            context, 
+                            "Project Custom BOQ",
+                            grandTotal,
+                            allItems.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity },
+                            allItems.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity },
+                            allItems.map { it.description to it.total }
+                        )
+                        sharePdf(context, pdfFile)
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export PDF")
+                }
+                
+                FloatingActionButton(
+                    onClick = { showAddDialog = true }
+                ) {
+                    Icon(Icons.Default.Add, null)
+                }
+            }
+        }
+        
+        val total = customItems.values.flatten().sumOf { it.total }
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(0.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)) {
+            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("GRAND TOTAL PROJECT", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("%,.0f EGP".format(total), color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("Add Item to ${selectedCategory.displayName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Item Description") }, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unit") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = qty, onValueChange = { qty = it }, label = { Text("Quantity") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    }
+                    OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Unit Price") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val q = qty.toDoubleOrNull() ?: 0.0
+                    val p = price.toDoubleOrNull() ?: 0.0
+                    if (desc.isNotEmpty()) {
+                        viewModel.addCustomBoqItem(selectedCategory, desc, unit, q, p)
+                        showAddDialog = false; desc = ""; qty = ""; price = ""
+                    }
+                }) { Text("Add") }
+            }
+        )
+    }
+}
+
+@Composable
+fun EditableQuantityField(value: String, onValueChange: (String) -> Unit) {
+    var text by remember { mutableStateOf(value) }
+    BasicTextField(
+        value = text,
+        onValueChange = { text = it; onValueChange(it) },
+        textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold),
+        modifier = Modifier.width(50.dp).background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(4.dp)).padding(2.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
+}
+
+@Composable
+fun EditablePriceField(value: String, onValueChange: (String) -> Unit) {
+    var text by remember { mutableStateOf(value) }
+    BasicTextField(
+        value = text,
+        onValueChange = { text = it; onValueChange(it) },
+        textStyle = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold),
+        modifier = Modifier.width(70.dp).background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(4.dp)).padding(2.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
 }

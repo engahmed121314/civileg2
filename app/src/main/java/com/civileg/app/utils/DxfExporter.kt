@@ -12,6 +12,7 @@ object DxfExporter {
         columns: List<ColumnLoad>,
         plotWidth: Double,
         plotLength: Double,
+        soilCapacity: Double,
         outputPath: String
     ): File {
         val sb = StringBuilder()
@@ -30,7 +31,8 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         // 1. Draw Plot Boundary
-        drawRect(sb, 0.0, 0.0, plotWidth * 1000.0, plotLength * 1000.0, "0")
+        drawRect(sb, 0.0, 0.0, plotWidth * 1000.0, plotLength * 1000.0, "0", 7) // White
+        drawText(sb, plotWidth * 500.0, plotLength * 1000.0 + 300.0, "PROJECT PLOT BOUNDARY", "0", 200.0, 7)
 
         // 2. Draw Axes
         val axesX = columns.map { it.x }.distinct().sorted()
@@ -49,23 +51,31 @@ object DxfExporter {
             drawRect(sb, col.x - col.width/2.0, col.y - col.depth/2.0, col.width, col.depth, "COLUMNS")
             
             // Label with Load
-            drawText(sb, col.x + col.width/2.0, col.y + col.depth/2.0, "${col.id} (${col.axialLoad}kN)", "0", 150.0)
+            drawText(sb, col.x + col.width/2.0 + 50.0, col.y + col.depth/2.0 + 50.0, "${col.id} (P=${col.axialLoad}kN)", "0", 140.0)
         }
         
-        val rec = LayoutOptimizer.analyzeLayout(plotWidth, plotLength, columns, 200.0, CalculatorEngine.DesignCode.EGYPTIAN)
+        val rec = LayoutOptimizer.analyzeLayout(plotWidth, plotLength, columns, soilCapacity, CalculatorEngine.DesignCode.EGYPTIAN)
         
-        // 4. Draw Calculated Footing Boundaries
+        // 4. Draw Calculated Footing Boundaries with Type Labels
         rec.footingBounds.forEach { fb ->
             val color = if(fb.type == "PileCap") 4 else (if(fb.type == "Boundary") 1 else 3)
             drawRect(sb, fb.centerX - fb.width/2.0, fb.centerY - fb.length/2.0, fb.width, fb.length, "FOOTINGS", color)
+            
+            // SIGN FOOTING TYPE AND DIMENSIONS
+            val labelText = "${fb.type} [${fb.width.toInt()}x${fb.length.toInt()}]"
+            drawText(sb, fb.centerX, fb.centerY, labelText, "FOOTINGS", 130.0, color)
         }
 
-        // 5. Draw Axis Labels
+        // 5. Draw Axis Labels with Circles (Bubbles)
         rec.axesX.forEach { axis ->
-            drawText(sb, axis.coordinate, -1500.0, axis.label, "AXES", 250.0)
+            drawLine(sb, axis.coordinate, -1000.0, axis.coordinate, plotLength * 1000.0 + 1000.0, "AXES", 1)
+            drawCircle(sb, axis.coordinate, -1800.0, 300.0, "AXES", 1)
+            drawText(sb, axis.coordinate, -1800.0, axis.label, "AXES", 250.0, 1)
         }
         rec.axesY.forEach { axis ->
-            drawText(sb, -2000.0, axis.coordinate, axis.label, "AXES", 250.0)
+            drawLine(sb, -1000.0, axis.coordinate, plotWidth * 1000.0 + 1000.0, axis.coordinate, "AXES", 1)
+            drawCircle(sb, -2500.0, axis.coordinate, 300.0, "AXES", 1)
+            drawText(sb, -2500.0, axis.coordinate, axis.label, "AXES", 250.0, 1)
         }
 
         // 6. Draw Professional Bill of Quantities Table on Drawing
@@ -97,6 +107,13 @@ object DxfExporter {
         if (color != -1) sb.append("62\n$color\n")
         sb.append("10\n$x\n20\n$y\n30\n0.0\n")
         sb.append("40\n$height\n1\n$text\n")
+    }
+
+    private fun drawCircle(sb: StringBuilder, x: Double, y: Double, radius: Double, layer: String, color: Int = -1) {
+        sb.append("0\nCIRCLE\n8\n$layer\n")
+        if (color != -1) sb.append("62\n$color\n")
+        sb.append("10\n$x\n20\n$y\n30\n0.0\n")
+        sb.append("40\n$radius\n")
     }
 
     private fun drawBOQTable(sb: StringBuilder, x: Float, y: Float, rec: LayoutRecommendation) {

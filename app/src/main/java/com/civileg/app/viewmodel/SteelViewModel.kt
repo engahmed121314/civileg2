@@ -132,7 +132,9 @@ class SteelViewModel @Inject constructor(
 
     fun exportWarehouseProToPdf(
         context: android.content.Context,
-        clientAr: String, clientEn: String, projAr: String, projEn: String,
+        clientEn: String, projEn: String,
+        sectionDrawings: Map<String, android.graphics.Bitmap> = emptyMap(),
+        loadDiagramBitmap: android.graphics.Bitmap? = null,
         onComplete: (java.io.File?) -> Unit
     ) {
         val res = _warehouseResult.value ?: return
@@ -141,11 +143,19 @@ class SteelViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
-                val exporter = com.civileg.app.utils.exporters.SteelWarehouseProPdfExporter(context)
-                val file = exporter.exportToDownload(inputs, res, clientAr, clientEn, projAr, projEn)
+                // [FIX] Use SteelEnglishReportExporter for strictly English report with bitmaps
+                val exporter = com.civileg.app.utils.exporters.SteelEnglishReportExporter(context)
+                val file = exporter.export(
+                    inputs = inputs,
+                    result = res,
+                    projectName = projEn,
+                    clientName = clientEn,
+                    sectionDrawings = sectionDrawings,
+                    loadDiagramBitmap = loadDiagramBitmap
+                )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openPdf(context, file)
+                    file?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(file)
                     _isExporting.value = false
                 }
@@ -184,8 +194,8 @@ class SteelViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate steel drawing bitmap using actual section properties
-                val drawingBitmap = try {
+                // [FIX] Use captured bitmap if available
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateSteelDrawing(
                         sectionName = stored.section.sectionName,
                         sectionHeight = stored.section.depth,
@@ -212,6 +222,7 @@ class SteelViewModel @Inject constructor(
                         isColumn = stored.memberType == com.civileg.app.domain.entities.SteelMemberType.COLUMN
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null // consume after use
 
                 val codeName = when (stored.code) {
                     CalculatorEngine.DesignCode.ACI -> "AISC 360-16"

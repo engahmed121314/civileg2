@@ -286,20 +286,32 @@ private fun DrawScope.draw3DElevation(
             var ty = zEndScreen
             val midYZone = (zStartScreen + zEndScreen) / 2f
             
-            // Draw dimension line for zone
-            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(ox - 25f, zStartScreen), Offset(ox - 25f, zEndScreen), 1f)
-            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(ox - 30f, zStartScreen), Offset(ox - 20f, zStartScreen), 1f)
-            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(ox - 30f, zEndScreen), Offset(ox - 20f, zEndScreen), 1f)
+            // Draw dimension line for zone on the LEFT side
+            val dimX = ox - 35f
+            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(dimX, zStartScreen), Offset(dimX, zEndScreen), 1f)
+            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(dimX - 5f, zStartScreen), Offset(dimX + 5f, zStartScreen), 1f)
+            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(dimX - 5f, zEndScreen), Offset(dimX + 5f, zEndScreen), 1f)
             
-            // Label for zone spacing
+            // Label for zone spacing and type
             drawContext.canvas.nativeCanvas.apply {
                 val p = android.graphics.Paint().apply {
-                    color = C.White.toArgb(); textSize = 11f
+                    color = C.White.toArgb(); textSize = 11f; isFakeBoldText = true
                     textAlign = android.graphics.Paint.Align.RIGHT
                 }
-                drawText("${zone.spacing.toInt()}mm", ox - 32f, midYZone + 4f, p)
-                p.textSize = 9f; p.color = C.DimLine.toArgb()
-                drawText(zone.name, ox - 32f, midYZone + 16f, p)
+                drawText("\u00D8${zone.diameter} @ ${zone.spacing.toInt()}mm", dimX - 8f, midYZone + 4f, p)
+                
+                // [NEW] Added more descriptive labels for confinement
+                p.textSize = 8.5f; p.isFakeBoldText = false; p.color = C.DimLine.toArgb()
+                val label = when {
+                    zone.name.contains("Confine", true) || zone.name.contains("تكثيف", true) -> "CONFINEMENT ZONE"
+                    zone.name.contains("Middle", true) || zone.name.contains("منتصف", true) -> "MIDDLE ZONE"
+                    else -> zone.name.uppercase()
+                }
+                drawText(label, dimX - 8f, midYZone + 16f, p)
+                
+                // Show height of zone
+                val zoneH = zone.endLocation - zone.startLocation
+                drawText("H=${zoneH.toInt()}mm", dimX - 8f, midYZone + 28f, p)
             }
 
             while (ty > zStartScreen + 1f) {
@@ -512,8 +524,9 @@ private fun DrawScope.drawTieDetailInset(
         colW, colD, bars, tieDia, tieSpacing, cover, sectionType)
 
     val spacingLabel = if (isSpiral) "pitch = ${spiralPitch.toInt()} mm" else "s = ${tieSpacing.toInt()} mm"
-    drawLabel(spacingLabel, left + width / 2f, top + height - 8f, 20f, true)
-    drawLabel(if (isSpiral) "SPIRAL DETAIL" else "TIE DETAIL", left + 6f, top + 18f, 20f, false)
+    val diaLabel = "\u00D8${tieDia.toInt()} "
+    drawLabel(diaLabel + spacingLabel, left + width / 2f, top + height - 8f, 20f, true)
+    drawLabel(if (isSpiral) "SPIRAL DETAIL" else "STIRRUP SHAPE & HOOKS (135\u00B0)", left + 6f, top + 18f, 18f, false)
 }
 
 private fun DrawScope.drawTieDetailZoom(
@@ -550,6 +563,9 @@ private fun DrawScope.drawTieDetailZoom(
                 (tieDia.toFloat() * scale * 0.12f).coerceIn(1f, 2.5f))
         }
     }
+    
+    // Label hooks
+    drawTextAnnotated("135\u00B0 HOOKS", ox + dw - covPx + 10f, top + loopSpacing - dh/2f, C.TieLight, 9f * density)
 
     // Vertical bars between ties
     bars.map { it.x.toFloat() / colW.toFloat() }.distinct().take(6).forEach { ratio ->
@@ -802,8 +818,8 @@ private fun DrawScope.drawReinforcementTable(
         if (y > top + height - 4f) return@forEachIndexed
         val mark = if (idx < circledNums.size) circledNums[idx] else (idx + 1).toString()
         val pos = if (barList.any { it.isCorner }) "Corner+Side" else "Side"
-        val tieInfo = if (isSpiral) "\u00D8${tieDia.toInt()} @ ${spiralPitch.roundToInt()} mm"
-            else "\u00D8${tieDia.toInt()} @ ${tieSpacing.roundToInt()} mm"
+        val tieInfo = if (isSpiral) String.format(java.util.Locale.US, "\u00D8${tieDia.toInt()} @ %d mm", spiralPitch.roundToInt())
+            else String.format(java.util.Locale.US, "\u00D8${tieDia.toInt()} @ %d mm", tieSpacing.roundToInt())
         val tieType = if (isSpiral) "Spiral" else "Ties"
         val rowTexts = listOf(mark, "${barList.size}", "\u00D8${dia.toInt()}", pos, tieInfo, tieType)
         xOff = left
@@ -827,7 +843,7 @@ private fun DrawScope.drawReinforcementTable(
             color = C.Safe.toArgb(); textSize = 13f
             textAlign = android.graphics.Paint.Align.RIGHT; isFakeBoldText = true
         }
-        native.drawText("As = ${"%.1f".format(totalAs)} mm²", left + width - 8f, top + height - 6f, sumPaint)
+        native.drawText("As = ${String.format(java.util.Locale.US, "%.1f", totalAs)} mm\u00B2", left + width - 8f, top + height - 6f, sumPaint)
     }
 
     if (grouped.isEmpty()) native.drawText("No reinforcement data", left + width / 2f - 60f, rowY, tp)

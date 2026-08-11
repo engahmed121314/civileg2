@@ -722,7 +722,10 @@ fun DrawScope.drawTextAnnotated(
                 else -> x
             }
             save()
-            translate(drawX, y - tp.ascent() - tp.descent() / 2f)
+            // CRITICAL FIX: Proper vertical centering for StaticLayout
+            // We need to shift by y MINUS the text block's center height.
+            // The block height is sl.height. Center is sl.height/2.
+            translate(drawX, y - sl.height / 2f)
             sl.draw(this)
             restore()
         }
