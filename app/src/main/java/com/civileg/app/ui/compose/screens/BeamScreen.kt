@@ -317,6 +317,29 @@ fun BeamScreen(
                 }
 
                 item {
+                    Button(
+                        onClick = {
+                            val res = result ?: return@Button
+                            val file = com.civileg.app.utils.DxfExporter.exportBeamDetailed(
+                                result = res,
+                                width = width.toDoubleOrNull() ?: 250.0,
+                                height = height.toDoubleOrNull() ?: 600.0,
+                                span = span.toDoubleOrNull() ?: 5.0,
+                                outputPath = java.io.File(context.cacheDir, "Beam_CAD_Detail.dxf").absolutePath
+                            )
+                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                    ) {
+                        Icon(Icons.Default.Architecture, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_cad_drawing))
+                    }
+                }
+
+                item {
                     Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     BeamFormulasCard()
                 }

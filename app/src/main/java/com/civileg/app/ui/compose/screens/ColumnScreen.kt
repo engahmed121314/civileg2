@@ -418,6 +418,29 @@ fun ColumnScreen(
                 }
 
                 item {
+                    Button(
+                        onClick = {
+                            val res = uiState.result ?: return@Button
+                            val file = com.civileg.app.utils.DxfExporter.exportColumnDetailed(
+                                result = res,
+                                width = res.width,
+                                depth = res.depth,
+                                height = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
+                                outputPath = java.io.File(context.cacheDir, "Column_CAD_Detail.dxf").absolutePath
+                            )
+                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                    ) {
+                        Icon(Icons.Default.Architecture, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_cad_drawing))
+                    }
+                }
+
+                item {
                     Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     EngineeringFormulasCard(uiState.designCode)
                 }

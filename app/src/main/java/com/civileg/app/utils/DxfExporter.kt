@@ -2,6 +2,9 @@ package com.civileg.app.utils
 
 import java.io.File
 import java.io.FileOutputStream
+import com.civileg.app.domain.entities.*
+import kotlin.math.*
+import java.util.Locale
 
 object DxfExporter {
 
@@ -166,6 +169,371 @@ object DxfExporter {
         drawText(sb, secX - 800.0, secY + thk/2, "t=${thk.toInt()}", "DIMENSIONS", 80.0)
 
         drawText(sb, secX + fl/2, secY - 1000.0, "FOOTING SECTION VIEW", "TEXT", 150.0)
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
+    /**
+     * Exports a detailed beam element (workshop drawing) to DXF.
+     */
+    fun exportBeamDetailed(
+        result: CalculatorEngine.BeamResult,
+        width: Double,
+        height: Double,
+        span: Double,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n") // White
+        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n") // Red
+        sb.append("0\nLAYER\n2\nSTIRRUPS\n70\n0\n62\n2\n")   // Yellow
+        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n") // Blue
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")      // Green
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val scale = 1.0
+        val cover = 50.0
+        
+        // 1. BEAM ELEVATION (LONGITUDINAL)
+        val elevX = 0.0
+        val elevY = 0.0
+        val sMm = span * 1000.0
+        
+        // Concrete outline
+        drawRect(sb, elevX, elevY, sMm, height, "CONCRETE")
+        
+        // Main bottom reinforcement
+        drawLine(sb, elevX + cover, elevY + cover, elevX + sMm - cover, elevY + cover, "REBAR_MAIN")
+        drawText(sb, elevX + sMm/2, elevY + cover - 100, "${result.reinforcementBottom.numBars}%%c${result.reinforcementBottom.diameter} Bottom", "TEXT", 80.0)
+        
+        // Main top reinforcement
+        drawLine(sb, elevX + cover, elevY + height - cover, elevX + sMm - cover, elevY + height - cover, "REBAR_MAIN")
+        drawText(sb, elevX + sMm/2, elevY + height - cover + 50, "${result.reinforcementTop.numBars}%%c${result.reinforcementTop.diameter} Top", "TEXT", 80.0)
+
+        // Stirrups in elevation
+        val stirrupSpacing = result.stirrups.spacing
+        var curX = elevX + cover + 50.0
+        while (curX <= elevX + sMm - cover - 50.0) {
+            drawLine(sb, curX, elevY + cover, curX, elevY + height - cover, "STIRRUPS")
+            curX += stirrupSpacing
+        }
+        
+        // Labels Elevation
+        drawText(sb, elevX + sMm/2, elevY - 400.0, "BEAM ELEVATION VIEW", "TEXT", 150.0)
+        drawText(sb, elevX + sMm/2, elevY - 600.0, "Span = ${span}m, Section: ${width.toInt()}x${height.toInt()}mm", "TEXT", 100.0)
+
+        // 2. BEAM CROSS SECTION
+        val secX = sMm + 1000.0
+        val secY = 0.0
+        drawRect(sb, secX, secY, width, height, "CONCRETE")
+        
+        // Bottom bars in section (circles)
+        val bCount = result.reinforcementBottom.numBars
+        val bSpace = (width - 2 * cover) / (bCount - 1).coerceAtLeast(1)
+        for (i in 0 until bCount) {
+            drawCircle(sb, secX + cover + i * bSpace, secY + cover, 10.0, "REBAR_MAIN", 1)
+        }
+        
+        // Top bars in section
+        val tCount = result.reinforcementTop.numBars
+        val tSpace = (width - 2 * cover) / (tCount - 1).coerceAtLeast(1)
+        for (i in 0 until tCount) {
+            drawCircle(sb, secX + cover + i * tSpace, secY + height - cover, 10.0, "REBAR_MAIN", 1)
+        }
+        
+        // Closed stirrup in section
+        drawRect(sb, secX + cover, secY + cover, width - 2*cover, height - 2*cover, "STIRRUPS")
+
+        drawText(sb, secX + width/2, secY - 400.0, "CROSS SECTION", "TEXT", 150.0)
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
+    /**
+     * Exports a detailed column element to DXF.
+     */
+    fun exportColumnDetailed(
+        result: CalculatorEngine.ColumnResult,
+        width: Double,
+        depth: Double,
+        height: Double,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nSTIRRUPS\n70\n0\n62\n2\n")
+        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n")
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val cover = 40.0
+        val hMm = height * 1.0 // Height is already in mm usually in inputs but let's be safe
+        
+        // 1. COLUMN ELEVATION
+        val elevX = 0.0
+        val elevY = 0.0
+        drawRect(sb, elevX, elevY, width, hMm, "CONCRETE")
+        
+        // Main vertical bars
+        drawLine(sb, elevX + cover, elevY, elevX + cover, elevY + hMm, "REBAR_MAIN")
+        drawLine(sb, elevX + width - cover, elevY, elevX + width - cover, elevY + hMm, "REBAR_MAIN")
+        
+        // Ties (Stirrups) in elevation
+        val tieSpacing = result.stirrups.spacing
+        var curY = elevY + 100.0
+        while (curY <= elevY + hMm - 100.0) {
+            drawLine(sb, elevX + cover, curY, elevX + width - cover, curY, "STIRRUPS")
+            curY += tieSpacing
+        }
+
+        drawText(sb, elevX + width/2, elevY - 400.0, "COLUMN ELEVATION", "TEXT", 150.0)
+
+        // 2. COLUMN CROSS SECTION
+        val secX = width + 1000.0
+        val secY = 0.0
+        drawRect(sb, secX, secY, width, depth, "CONCRETE")
+        
+        // Closed tie
+        drawRect(sb, secX + cover, secY + cover, width - 2*cover, depth - 2*cover, "STIRRUPS")
+        
+        // Corner bars
+        drawCircle(sb, secX + cover, secY + cover, 10.0, "REBAR_MAIN", 1)
+        drawCircle(sb, secX + width - cover, secY + cover, 10.0, "REBAR_MAIN", 1)
+        drawCircle(sb, secX + cover, secY + depth - cover, 10.0, "REBAR_MAIN", 1)
+        drawCircle(sb, secX + width - cover, secY + depth - cover, 10.0, "REBAR_MAIN", 1)
+
+        drawText(sb, secX + width/2, secY - 400.0, "CROSS SECTION", "TEXT", 150.0)
+        drawText(sb, secX + width/2, secY - 600.0, "${result.reinforcement.numBars}%%c${result.reinforcement.diameter}", "TEXT", 100.0)
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
+    /**
+     * Exports a detailed slab element to DXF.
+     */
+    fun exportSlabDetailed(
+        result: CalculatorEngine.SlabResult,
+        lx: Double,
+        ly: Double,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nREBAR_X\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nREBAR_Y\n70\n0\n62\n2\n")
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val lxMm = lx * 1000.0
+        val lyMm = ly * 1000.0
+        
+        // 1. SLAB PLAN
+        drawRect(sb, 0.0, 0.0, lxMm, lyMm, "CONCRETE")
+        
+        // Rebar mesh (simplified for DXF)
+        val spacing = 200.0
+        var x = spacing
+        while (x < lxMm) {
+            drawLine(sb, x, 0.0, x, lyMm, "REBAR_X")
+            x += spacing * 5 // Draw every 5th bar for clarity in CAD
+        }
+        var y = spacing
+        while (y < lyMm) {
+            drawLine(sb, 0.0, y, lxMm, y, "REBAR_Y")
+            y += spacing * 5
+        }
+
+        drawText(sb, lxMm/2, -500.0, "SLAB REINFORCEMENT PLAN", "TEXT", 300.0)
+        drawText(sb, lxMm/2, -900.0, "Type: ${result.type.displayNameEn}, t=${result.thickness}mm", "TEXT", 200.0)
+        drawText(sb, lxMm/2, -1200.0, "Main: ${result.reinforcementMain.barString}", "TEXT", 150.0)
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+    
+    /**
+     * Exports a detailed steel warehouse portal frame and components to DXF.
+     */
+    fun exportSteelWarehouseDetailed(
+        inputs: com.civileg.app.domain.entities.SteelWarehouseInputs,
+        result: com.civileg.app.domain.entities.SteelWarehouseAnalysisResult,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nMAIN_FRAME\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nPURLINS\n70\n0\n62\n4\n")
+        sb.append("0\nLAYER\n2\nLOADS\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n")
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val span = inputs.span * 1000.0
+        val eh = inputs.eaveHeight * 1000.0
+        val rh = inputs.ridgeHeight * 1000.0
+        val midX = span / 2.0
+        
+        // 1. PORTAL FRAME ELEVATION
+        // Columns
+        drawRect(sb, 0.0, 0.0, 300.0, eh, "MAIN_FRAME") // Left column approx
+        drawRect(sb, span - 300.0, 0.0, 300.0, eh, "MAIN_FRAME") // Right column
+        
+        // Rafters
+        drawLine(sb, 0.0, eh, midX, rh, "MAIN_FRAME")
+        drawLine(sb, span, eh, midX, rh, "MAIN_FRAME")
+        
+        // Purlins
+        val numPurlins = 5
+        for (i in 1..numPurlins) {
+            val t = i.toDouble() / numPurlins
+            val px = t * midX
+            val py = eh + t * (rh - eh)
+            drawCircle(sb, px, py, 50.0, "PURLINS")
+            
+            val px2 = span - t * midX
+            drawCircle(sb, px2, py, 50.0, "PURLINS")
+        }
+
+        // Loads
+        drawText(sb, midX, rh + 500.0, "W = ${inputs.deadLoad + inputs.liveLoad} kN/m2", "LOADS", 200.0)
+
+        // Dimensions
+        drawLine(sb, 0.0, -500.0, span, -500.0, "DIMENSIONS")
+        drawText(sb, midX, -800.0, "Span = ${inputs.span}m", "DIMENSIONS", 150.0)
+
+        // 2. COMPONENT DETAILS (Draw Section Shapes)
+        val detailX = span + 2000.0
+        drawSteelSectionShape(sb, detailX, eh, result.mainFrame.columnSection, "Column: ${result.mainFrame.columnSection.sectionName}")
+        drawSteelSectionShape(sb, detailX, eh - 2000.0, result.mainFrame.rafterSection, "Rafter: ${result.mainFrame.rafterSection.sectionName}")
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
+    private fun drawSteelSectionShape(sb: StringBuilder, x: Double, y: Double, section: com.civileg.app.domain.entities.SteelSectionType, label: String) {
+        val h = section.depth
+        val b = section.width
+        val tf = section.flangeThickness
+        val tw = section.webThickness
+        
+        // I-Section drawing
+        drawRect(sb, x - b/2, y, b, tf, "MAIN_FRAME") // Top flange
+        drawRect(sb, x - b/2, y - h + tf, b, tf, "MAIN_FRAME") // Bottom flange
+        drawRect(sb, x - tw/2, y - h + tf, tw, h - 2*tf, "MAIN_FRAME") // Web
+        
+        drawText(sb, x, y - h - 300.0, label, "TEXT", 100.0)
+    }
+
+    /**
+     * Exports a detailed frame analysis with diagrams to DXF.
+     */
+    fun exportFrameAnalysisDetailed(
+        nodes: List<com.civileg.app.domain.entities.FrameNode>, 
+        members: List<com.civileg.app.domain.entities.FrameMember>,
+        result: com.civileg.app.domain.entities.FrameAnalysisResult,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nGEOMETRY\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nBMD\n70\n0\n62\n1\n") // Red for Moment
+        sb.append("0\nLAYER\n2\nSFD\n70\n0\n62\n4\n") // Cyan for Shear
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val scale = 500.0 // Scale coordinates to units for visibility
+        val diagramScale = 1.0 // Scale for moments/shear
+        
+        // 1. DRAW GEOMETRY
+        members.forEach { member ->
+            val n1 = nodes.find { it.id == member.nodeI } ?: return@forEach
+            val n2 = nodes.find { it.id == member.nodeJ } ?: return@forEach
+            drawLine(sb, n1.x * scale, n1.y * scale, n2.x * scale, n2.y * scale, "GEOMETRY")
+            
+            // Label member ID
+            drawText(sb, (n1.x + n2.x) / 2.0 * scale, (n1.y + n2.y) / 2.0 * scale + 50, "Member ${member.id}", "TEXT", 40.0)
+        }
+
+        // 2. DRAW BENDING MOMENT DIAGRAM (BMD)
+        result.memberEndForces.forEach { forces ->
+            val member = members.find { it.id == forces.memberId } ?: return@forEach
+            val n1 = nodes.find { it.id == member.nodeI } ?: return@forEach
+            val n2 = nodes.find { it.id == member.nodeJ } ?: return@forEach
+            
+            val dx = n2.x - n1.x
+            val dy = n2.y - n1.y
+            val angle = atan2(dy, dx)
+            val perpAngle = angle + PI / 2.0
+            
+            val m1 = forces.mi_z
+            val m2 = -forces.mj_z 
+            
+            val p1_off = Pair(
+                (n1.x * scale + m1 * diagramScale * cos(perpAngle)),
+                (n1.y * scale + m1 * diagramScale * sin(perpAngle))
+            )
+            val p2_off = Pair(
+                (n2.x * scale + m2 * diagramScale * cos(perpAngle)),
+                (n2.y * scale + m2 * diagramScale * sin(perpAngle))
+            )
+            
+            drawLine(sb, n1.x * scale, n1.y * scale, p1_off.first, p1_off.second, "BMD")
+            drawLine(sb, p1_off.first, p1_off.second, p2_off.first, p2_off.second, "BMD")
+            drawLine(sb, p2_off.first, p2_off.second, n2.x * scale, n2.y * scale, "BMD")
+            
+            // Value labels
+            drawText(sb, p1_off.first, p1_off.second, String.format(Locale.US, "%.1f", m1), "TEXT", 30.0)
+            drawText(sb, p2_off.first, p2_off.second, String.format(Locale.US, "%.1f", m2), "TEXT", 30.0)
+        }
+
+        drawText(sb, 0.0, -1000.0, "FRAME ANALYSIS: GEOMETRY & BENDING MOMENT DIAGRAM", "TEXT", 150.0)
 
         sb.append("0\nENDSEC\n0\nEOF\n")
 

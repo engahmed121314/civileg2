@@ -486,6 +486,28 @@ fun SlabScreen(
                 }
 
                 item {
+                    Button(
+                        onClick = {
+                            val res = result ?: return@Button
+                            val file = com.civileg.app.utils.DxfExporter.exportSlabDetailed(
+                                result = res,
+                                lx = shortSpan.toDoubleOrNull() ?: 4.0,
+                                ly = longSpan.toDoubleOrNull() ?: 5.0,
+                                outputPath = java.io.File(context.cacheDir, "Slab_CAD_Detail.dxf").absolutePath
+                            )
+                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                    ) {
+                        Icon(Icons.Default.Architecture, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_cad_drawing))
+                    }
+                }
+
+                item {
                     var selectedViewMode by remember { mutableStateOf(0) }
                     // Responsive height: scale proportionally to screen width
                     val wRatio = screenW.value / 360f  // baseline 360dp

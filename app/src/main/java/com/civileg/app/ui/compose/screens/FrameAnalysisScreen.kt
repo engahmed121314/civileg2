@@ -147,6 +147,20 @@ fun FrameAnalysisScreen(
                                 Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
                             }
                         }
+
+                        IconButton(onClick = {
+                            val inputs = viewModel.getStoredInputs()
+                            val res = result ?: return@IconButton
+                            val file = com.civileg.app.utils.DxfExporter.exportFrameAnalysisDetailed(
+                                nodes = inputs.nodes,
+                                members = inputs.members,
+                                result = res,
+                                outputPath = java.io.File(context.cacheDir, "Frame_Analysis_CAD.dxf").absolutePath
+                            )
+                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
+                        }) {
+                            Icon(Icons.Default.AutoFixHigh, stringResource(R.string.export_cad_drawing), tint = Color.White)
+                        }
                     }
                 }
             )

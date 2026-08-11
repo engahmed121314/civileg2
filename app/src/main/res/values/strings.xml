@@ -50,6 +50,7 @@
     <string name="export_pdf">Export Design Report (PDF)</string>
     <string name="save_to_project">Save to Project Vault</string>
     <string name="save_design">Save Design</string>
+    <string name="export_cad_drawing">Export to AutoCAD (DXF)</string>
     <string name="add_to_boq">Add to BOQ List</string>
     <string name="share">Share Report</string>
     <string name="ok">OK</string>
