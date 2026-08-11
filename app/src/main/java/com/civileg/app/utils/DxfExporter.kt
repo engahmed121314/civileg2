@@ -484,6 +484,130 @@ object DxfExporter {
         return file
     }
 
+    /**
+     * Exports a detailed retaining wall element to DXF.
+     */
+    fun exportRetainingWallDetailed(
+        result: CalculatorEngine.RetainingWallResult,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n")
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val h = result.height * 1000.0
+        val tw = result.stemThickness
+        val bw = result.baseWidth
+        val thk = result.stemThickness // assumed same as stem for base
+        val cover = 50.0
+
+        // 1. WALL SECTION
+        val ox = 0.0; val oy = 0.0
+        // Base
+        drawRect(sb, ox, oy, bw, thk, "CONCRETE")
+        // Stem (centered/offset)
+        val toeW = bw / 3.0
+        drawRect(sb, ox + toeW, oy + thk, tw, h, "CONCRETE")
+        
+        // Reinforcement
+        drawLine(sb, ox + toeW + tw - cover, oy + thk, ox + toeW + tw - cover, oy + thk + h - cover, "REBAR") // Main vertical
+        drawLine(sb, ox + cover, oy + cover, ox + bw - cover, oy + cover, "REBAR") // Main bottom
+        
+        // Labels & Dims
+        drawText(sb, ox + bw/2, oy - 400.0, "RETAINING WALL SECTION", "TEXT", 150.0)
+        drawVerticalDimension(sb, oy, oy + thk + h, ox - 300.0, "H=${(h+thk).toInt()}")
+        drawHorizontalDimension(sb, ox, ox + bw, oy - 250.0, "B=${bw.toInt()}")
+
+        // 2. DATA TABLE
+        drawResultTable(sb, bw + 2000.0, h / 2.0, "DESIGN RESULTS", listOf(
+            "Height" to "${result.height} m",
+            "Ka" to "%.3f".format(result.ka),
+            "Pa" to "%.1f kN".format(result.pa),
+            "F.S. Overturning" to "%.2f".format(result.factorOfSafetyOverturning),
+            "F.S. Sliding" to "%.2f".format(result.factorOfSafetySliding),
+            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+        ))
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
+    /**
+     * Exports a detailed stair element (elevation) to DXF.
+     */
+    fun exportStairDetailed(
+        result: CalculatorEngine.StairResult,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val s = result.span * 1000.0
+        val r = result.riser
+        val t = result.tread
+        val thk = result.thickness
+        val numSteps = (s / t).toInt().coerceIn(1, 25)
+        val cover = 25.0
+
+        // 1. STAIR ELEVATION
+        val ox = 0.0; val oy = 0.0
+        var curX = ox; var curY = oy
+        
+        // Profile
+        for (i in 0 until numSteps) {
+            drawLine(sb, curX, curY, curX, curY + r, "CONCRETE") // Riser
+            drawLine(sb, curX, curY + r, curX + t, curY + r, "CONCRETE") // Tread
+            curX += t; curY += r
+        }
+        // Soffit
+        val angle = atan2(r, t)
+        val dx = thk * sin(angle)
+        val dy = thk * cos(angle)
+        drawLine(sb, ox + dx, oy - dy, curX + dx, curY - dy, "CONCRETE")
+        drawLine(sb, ox, oy, ox + dx, oy - dy, "CONCRETE")
+        drawLine(sb, curX, curY, curX + dx, curY - dy, "CONCRETE")
+
+        // Main Rebar
+        drawLine(sb, ox + dx - cover*sin(angle), oy - dy + cover*cos(angle), curX + dx - cover*sin(angle), curY - dy + cover*cos(angle), "REBAR")
+
+        drawText(sb, ox + s/2, oy - 1000.0, "STAIR ELEVATION", "TEXT", 200.0)
+
+        // 2. DESIGN TABLE
+        drawResultTable(sb, s + 2000.0, curY / 2.0, "STAIR DESIGN DATA", listOf(
+            "Type" to result.type.displayNameEn,
+            "Span" to "${result.span} m",
+            "Waist Thick" to "${result.thickness.toInt()} mm",
+            "Reinforcement" to result.reinforcement.barString,
+            "Concrete" to "${"%.2f".format(result.concreteVolume)} m3",
+            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+        ))
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
+    }
+
     private fun drawSteelSectionShape(sb: StringBuilder, x: Double, y: Double, section: SteelSectionType, label: String) {
         val h = section.depth
         val b = section.width
@@ -599,6 +723,70 @@ object DxfExporter {
         drawLine(sb, x + 100.0, y1, x - 100.0, y1, "DIMENSIONS", color)
         drawLine(sb, x + 100.0, y2, x - 100.0, y2, "DIMENSIONS", color)
         drawText(sb, x - 150.0, (y1 + y2) / 2.0, text, "DIMENSIONS", 100.0, color)
+    }
+
+    /**
+     * Exports a detailed water tank element (section/plan) to DXF.
+     */
+    fun exportTankDetailed(
+        result: CalculatorEngine.TankResult,
+        outputPath: String
+    ): File {
+        val sb = StringBuilder()
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nWATER\n70\n0\n62\n5\n") // Blue
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        val l = result.length * 1000.0
+        val w = result.width * 1000.0
+        val h = result.height * 1000.0
+        val tw = result.wallThickness
+        val tb = result.baseThickness
+        val cover = 50.0
+
+        // 1. TANK SECTION VIEW
+        val ox = 0.0; val oy = 0.0
+        // Base
+        drawRect(sb, ox, oy, l + 2*tw, tb, "CONCRETE")
+        // Walls
+        drawRect(sb, ox, oy + tb, tw, h, "CONCRETE")
+        drawRect(sb, ox + l + tw, oy + tb, tw, h, "CONCRETE")
+        
+        // Water line
+        val wl = h * 0.9
+        drawLine(sb, ox + tw + 100, oy + tb + wl, ox + tw + l - 100, oy + tb + wl, "WATER")
+        drawText(sb, ox + tw + l/2, oy + tb + wl + 100, "W.L.", "WATER", 50.0)
+        
+        // Reinforcement (Schematic)
+        drawLine(sb, ox + tw - cover, oy + tb, ox + tw - cover, oy + tb + h, "REBAR")
+        drawLine(sb, ox + tw + l + cover, oy + tb, ox + tw + l + cover, oy + tb + h, "REBAR")
+        
+        // Labels & Dims
+        drawText(sb, ox + l/2, oy - 400.0, "TANK SECTION VIEW", "TEXT", 150.0)
+        drawVerticalDimension(sb, oy, oy + h + tb, ox - 300.0, "H_tot=${(h+tb).toInt()}")
+
+        // 2. DESIGN DATA TABLE
+        drawResultTable(sb, l + 2000.0, h / 2.0, "TANK DESIGN RESULTS", listOf(
+            "Type" to result.type.displayNameEn,
+            "Capacity" to "${"%.1f".format(result.capacityM3)} m3",
+            "Wall Thick" to "${result.wallThickness.toInt()} mm",
+            "Base Thick" to "${result.baseThickness.toInt()} mm",
+            "Wall Rebar" to result.wallReinforcement.barString,
+            "Status" to if(result.isSafe) "SAFE" else "UNSAFE"
+        ))
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
     }
 
     private fun drawResultTable(sb: StringBuilder, x: Double, y: Double, title: String, data: List<Pair<String, String>>) {

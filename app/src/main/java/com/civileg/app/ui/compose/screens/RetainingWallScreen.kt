@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -382,6 +383,26 @@ fun RetainingWallScreen(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }
+                    }
+                }
+
+                item {
+                    Button(
+                        onClick = {
+                            val res = result ?: return@Button
+                            val file = com.civileg.app.utils.DxfExporter.exportRetainingWallDetailed(
+                                result = res,
+                                outputPath = java.io.File(context.cacheDir, "Retaining_Wall_CAD.dxf").absolutePath
+                            )
+                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                    ) {
+                        Icon(Icons.Default.Architecture, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_cad_drawing))
                     }
                 }
 

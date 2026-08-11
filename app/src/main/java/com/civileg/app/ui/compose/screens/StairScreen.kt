@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -330,6 +331,26 @@ fun StairScreen(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }
+                    }
+                }
+
+                item {
+                    Button(
+                        onClick = {
+                            val res = result ?: return@Button
+                            val file = com.civileg.app.utils.DxfExporter.exportStairDetailed(
+                                result = res,
+                                outputPath = java.io.File(context.cacheDir, "Staircase_CAD_Detail.dxf").absolutePath
+                            )
+                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                    ) {
+                        Icon(Icons.Default.Architecture, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_cad_drawing))
                     }
                 }
 
