@@ -52,40 +52,97 @@ object DxfExporter {
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    fun exportFootingDetailed(result: CalculatorEngine.FootingResult, colWidth: Double, colDepth: Double, outputPath: String): File {
+    /**
+     * Exports a detailed footing element (workshop drawing) to DXF.
+     */
+    fun exportFootingDetailed(
+        result: CalculatorEngine.FootingResult,
+        colWidth: Double,
+        colDepth: Double,
+        outputPath: String
+    ): File {
         val sb = StringBuilder()
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Layers
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
-        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n")
-        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
+        sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n") // White
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")    // Red
+        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n") // Blue
+        sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")      // Green
         sb.append("0\nENDTAB\n0\nENDSEC\n")
+
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
-        val fl = result.length; val fw = result.width; val thk = result.thickness; val cover = 70.0
-        drawRect(sb, 0.0, 0.0, fl, fw, "CONCRETE")
-        val cx = (fl - colDepth) / 2.0; val cy = (fw - colWidth) / 2.0
+        val fl = result.length
+        val fw = result.width
+        val thk = result.thickness
+        val cover = 70.0
+
+        // 1. FOOTING PLAN VIEW
+        val planX = 0.0
+        val planY = 0.0
+        drawRect(sb, planX, planY, fl, fw, "CONCRETE")
+        
+        // Column
+        val cx = planX + (fl - colDepth) / 2.0
+        val cy = planY + (fw - colWidth) / 2.0
         drawRect(sb, cx, cy, colDepth, colWidth, "CONCRETE", 4)
         
-        for (i in 0 until result.barsX) { val y = cover + i * ((fw - 2 * cover) / (result.barsX - 1).coerceAtLeast(1)); drawLine(sb, cover, y, fl - cover, y, "REBAR") }
-        for (i in 0 until result.barsY) { val x = cover + i * ((fl - 2 * cover) / (result.barsY - 1).coerceAtLeast(1)); drawLine(sb, x, cover, x, fw - cover, "REBAR") }
+        // Reinforcement X (Longitudinal)
+        val numX = result.barsX
+        val spX = (fw - 2 * cover) / (numX - 1).coerceAtLeast(1)
+        for (i in 0 until numX) {
+            val y = planY + cover + i * spX
+            drawLine(sb, planX + cover, y, planX + fl - cover, y, "REBAR")
+        }
         
-        drawText(sb, fl/2, -600.0, "FOOTING PLAN", "TEXT", 200.0)
-        drawHorizontalDimension(sb, 0.0, fl, -300.0, "${fl.toInt()} mm")
-        drawVerticalDimension(sb, 0.0, fw, -300.0, "${fw.toInt()} mm")
+        // Reinforcement Y (Cross)
+        val numY = result.barsY
+        val spY = (fl - 2 * cover) / (numY - 1).coerceAtLeast(1)
+        for (i in 0 until numY) {
+            val x = planX + cover + i * spY
+            drawLine(sb, x, planY + cover, x, planY + fw - cover, "REBAR")
+        }
 
+        // Labels & Dims Plan
+        drawText(sb, planX + fl/2, planY - 600.0, "FOOTING PLAN VIEW", "TEXT", 200.0)
+        drawHorizontalDimension(sb, planX, planX + fl, planY - 300.0, "${fl.toInt()} mm")
+        drawVerticalDimension(sb, planY, planY + fw, planX - 300.0, "${fw.toInt()} mm")
+
+        // 2. FOOTING SECTION VIEW
+        val secX = 0.0
         val secY = fw + 3000.0
-        drawRect(sb, 0.0, secY, fl, thk, "CONCRETE"); drawRect(sb, cx, secY + thk, colDepth, 1200.0, "CONCRETE", 4)
-        drawLine(sb, cover, secY + cover, fl - cover, secY + cover, "REBAR")
+        drawRect(sb, secX, secY, fl, thk, "CONCRETE")
+        drawRect(sb, cx, secY + thk, colDepth, 1200.0, "CONCRETE", 4) // Column starter
         
+        // Rebar in section
+        drawLine(sb, secX + cover, secY + cover, secX + fl - cover, secY + cover, "REBAR")
+        // Vertical bars
+        drawLine(sb, cx + 50, secY + cover, cx + 50, secY + thk + 1000, "REBAR")
+        drawLine(sb, cx + colDepth - 50, secY + cover, cx + colDepth - 50, secY + thk + 1000, "REBAR")
+        
+        // Labels & Dims Section
+        drawText(sb, secX + fl/2, secY - 600.0, "FOOTING SECTION VIEW", "TEXT", 200.0)
+        drawVerticalDimension(sb, secY, secY + thk, secX - 300.0, "t=${thk.toInt()}")
+        drawHorizontalDimension(sb, secX, secX + fl, secY - 300.0, "L=${fl.toInt()}")
+
+        // 3. REINFORCEMENT TABLE
         drawResultTable(sb, fl + 3000.0, secY + 1000.0, "REINFORCEMENT DATA", listOf(
-            "Concrete" to "%.2f m3".format(result.concreteVolume), "Steel" to "%.1f kg".format(result.steelWeight),
-            "Bottom X" to "${result.barsX}%%c${result.barDiameter}", "Bottom Y" to "${result.barsY}%%c${result.barDiameter}"
+            "Type" to result.type.displayNameEn,
+            "Concrete" to "${"%.2f".format(result.concreteVolume)} m3",
+            "Steel" to "${"%.1f".format(result.steelWeight)} kg",
+            "Bottom X" to "${result.barsX} %%c ${result.barDiameter}",
+            "Bottom Y" to "${result.barsY} %%c ${result.barDiameter}",
+            "Soil Pressure" to "${"%.2f".format(result.soilPressure)} kN/m2",
+            "Code" to result.designCodeName
         ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")
-        val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
+        return file
     }
 
     fun exportBeamDetailed(result: CalculatorEngine.BeamResult, width: Double, height: Double, span: Double, outputPath: String): File {
@@ -237,46 +294,105 @@ object DxfExporter {
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    private fun drawHorizontalDimension(sb: StringBuilder, x1: Double, x2: Double, y: Double, text: String, color: Int = 5) {
-        drawLine(sb, x1, y, x2, y, "DIMENSIONS", color); drawLine(sb, x1, y+100, x1, y-100, "DIMENSIONS", color); drawLine(sb, x2, y+100, x2, y-100, "DIMENSIONS", color); drawText(sb, (x1+x2)/2, y+100, text, "DIMENSIONS", 100.0, color)
-    }
-
-    private fun drawVerticalDimension(sb: StringBuilder, y1: Double, y2: Double, x: Double, text: String, color: Int = 5) {
-        drawLine(sb, x, y1, x, y2, "DIMENSIONS", color); drawLine(sb, x+100, y1, x-100, y1, "DIMENSIONS", color); drawLine(sb, x+100, y2, x-100, y2, "DIMENSIONS", color); drawText(sb, x-150, (y1+y2)/2, text, "DIMENSIONS", 100.0, color)
-    }
-
-    private fun drawResultTable(sb: StringBuilder, x: Double, y: Double, title: String, data: List<Pair<String, String>>) {
-        val rowH = 300.0; val colW = 3500.0; drawText(sb, x, y + rowH, title, "TEXT", 150.0, 2); drawRect(sb, x, y - data.size * rowH, colW * 2, (data.size + 1) * rowH, "TEXT")
-        drawLine(sb, x + colW, y + rowH, x + colW, y - data.size * rowH, "TEXT")
-        data.forEachIndexed { i, (k, v) -> val curY = y - i * rowH; drawText(sb, x + 100.0, curY, k, "TEXT", 100.0); drawText(sb, x + colW + 100.0, curY, v, "TEXT", 100.0); drawLine(sb, x, curY - rowH / 2.0, x + colW * 2, curY - rowH / 2.0, "TEXT") }
-    }
-
     private fun drawLine(sb: StringBuilder, x1: Double, y1: Double, x2: Double, y2: Double, layer: String, color: Int = -1) {
-        sb.append("0\nLINE\n8\n$layer\n"); if (color != -1) sb.append("62\n$color\n"); sb.append("10\n$x1\n20\n$y1\n30\n0.0\n11\n$x2\n21\n$y2\n31\n0.0\n")
+        sb.append("0\nLINE\n8\n$layer\n")
+        if (color != -1) sb.append("62\n$color\n")
+        sb.append("10\n$x1\n20\n$y1\n30\n0.0\n")
+        sb.append("11\n$x2\n21\n$y2\n31\n0.0\n")
     }
 
     private fun drawRect(sb: StringBuilder, x: Double, y: Double, w: Double, d: Double, layer: String, color: Int = -1) {
-        drawLine(sb, x, y, x + w, y, layer, color); drawLine(sb, x + w, y, x + w, y + d, layer, color); drawLine(sb, x + w, y + d, x, y + d, layer, color); drawLine(sb, x, y + d, x, y, layer, color)
+        drawLine(sb, x, y, x + w, y, layer, color)
+        drawLine(sb, x + w, y, x + w, y + d, layer, color)
+        drawLine(sb, x + w, y + d, x, y + d, layer, color)
+        drawLine(sb, x, y + d, x, y, layer, color)
     }
 
     private fun drawText(sb: StringBuilder, x: Double, y: Double, text: String, layer: String, height: Double, color: Int = -1) {
-        sb.append("0\nTEXT\n8\n$layer\n"); if (color != -1) sb.append("62\n$color\n"); sb.append("10\n$x\n20\n$y\n30\n0.0\n40\n$height\n1\n$text\n")
+        sb.append("0\nTEXT\n8\n$layer\n")
+        if (color != -1) sb.append("62\n$color\n")
+        sb.append("10\n$x\n20\n$y\n30\n0.0\n")
+        sb.append("40\n$height\n1\n$text\n")
     }
 
     private fun drawCircle(sb: StringBuilder, x: Double, y: Double, radius: Double, layer: String, color: Int = -1) {
-        sb.append("0\nCIRCLE\n8\n$layer\n"); if (color != -1) sb.append("62\n$color\n"); sb.append("10\n$x\n20\n$y\n30\n0.0\n40\n$radius\n")
+        sb.append("0\nCIRCLE\n8\n$layer\n")
+        if (color != -1) sb.append("62\n$color\n")
+        sb.append("10\n$x\n20\n$y\n30\n0.0\n")
+        sb.append("40\n$radius\n")
+    }
+
+    private fun drawHorizontalDimension(sb: StringBuilder, x1: Double, x2: Double, y: Double, text: String, color: Int = 5) {
+        drawLine(sb, x1, y, x2, y, "DIMENSIONS", color)
+        // Architectural ticks (45 degree lines)
+        val tick = 100.0
+        drawLine(sb, x1 - tick, y - tick, x1 + tick, y + tick, "DIMENSIONS", color)
+        drawLine(sb, x2 - tick, y - tick, x2 + tick, y + tick, "DIMENSIONS", color)
+        // Extension lines
+        drawLine(sb, x1, y + tick, x1, y + 300.0, "DIMENSIONS", color)
+        drawLine(sb, x2, y + tick, x2, y + 300.0, "DIMENSIONS", color)
+        // Text
+        drawText(sb, (x1 + x2) / 2.0, y + 150.0, text, "DIMENSIONS", 120.0, color)
+    }
+
+    private fun drawVerticalDimension(sb: StringBuilder, y1: Double, y2: Double, x: Double, text: String, color: Int = 5) {
+        drawLine(sb, x, y1, x, y2, "DIMENSIONS", color)
+        val tick = 100.0
+        drawLine(sb, x - tick, y1 - tick, x + tick, y1 + tick, "DIMENSIONS", color)
+        drawLine(sb, x - tick, y2 - tick, x + tick, y2 + tick, "DIMENSIONS", color)
+        drawText(sb, x - 500.0, (y1 + y2) / 2.0, text, "DIMENSIONS", 120.0, color)
+    }
+
+    private fun drawResultTable(sb: StringBuilder, x: Double, y: Double, title: String, data: List<Pair<String, String>>) {
+        val rowH = 350.0
+        val colW = 3500.0
+        // Title
+        drawText(sb, x, y + rowH, title, "TEXT", 180.0, 2) // Yellow-ish
+        // Border
+        drawRect(sb, x, y - data.size * rowH, colW * 2, (data.size + 1) * rowH, "TEXT", 7)
+        // Middle vertical divider
+        drawLine(sb, x + colW, y + rowH, x + colW, y - data.size * rowH, "TEXT", 7)
+        
+        data.forEachIndexed { i, (k, v) ->
+            val curY = y - i * rowH
+            drawText(sb, x + 150.0, curY, k, "TEXT", 110.0, 7)
+            drawText(sb, x + colW + 150.0, curY, v, "TEXT", 110.0, 4) // Cyan for values
+            // Horizontal row divider
+            drawLine(sb, x, curY - rowH / 2.0, x + colW * 2, curY - rowH / 2.0, "TEXT", 7)
+        }
     }
 
     private fun drawSteelSectionShape(sb: StringBuilder, x: Double, y: Double, section: SteelSectionType, label: String) {
-        val h = section.depth; val b = section.width; val tf = section.flangeThickness; val tw = section.webThickness
-        drawRect(sb, x - b/2, y, b, tf, "FRAME"); drawRect(sb, x - b/2, y - h + tf, b, tf, "FRAME"); drawRect(sb, x - tw/2, y - h + tf, tw, h - 2*tf, "FRAME")
-        drawText(sb, x, y - h - 300.0, label, "TEXT", 150.0, 4)
+        val h = section.depth
+        val b = section.width
+        val tf = section.flangeThickness
+        val tw = section.webThickness
+        
+        // I-Section drawing with real thickness
+        drawRect(sb, x - b/2, y, b, tf, "MAIN_FRAME") // Top flange
+        drawRect(sb, x - b/2, y - h + tf, b, tf, "MAIN_FRAME") // Bottom flange
+        drawRect(sb, x - tw/2, y - h + tf, tw, h - 2*tf, "MAIN_FRAME") // Web
+        
+        drawText(sb, x, y - h - 400.0, label, "TEXT", 140.0, 4)
+        drawVerticalDimension(sb, y - h, y, x + b/2 + 250.0, "h=${h.toInt()}")
+        drawHorizontalDimension(sb, x - b/2, x + b/2, y + 600.0, "b=${b.toInt()}")
     }
 
     private fun drawBOQTable(sb: StringBuilder, x: Float, y: Float, rec: LayoutRecommendation) {
         val startX = x.toDouble(); val startY = y.toDouble(); val rowH = 350.0; val colW = 3500.0
-        drawText(sb, startX, startY + rowH, "BILL OF QUANTITIES", "0", 250.0, 2); drawRect(sb, startX, startY - 3000, colW * 2, 4000.0, "0", 7); drawLine(sb, startX + colW, startY + rowH, startX + colW, startY - 3000, "0")
-        var currentY = startY - rowH; fun addRow(l: String, v: String) { drawText(sb, startX + 100, currentY, l, "0", 180.0); drawText(sb, startX + colW + 100, currentY, v, "0", 180.0); drawLine(sb, startX, currentY - 100, startX + colW * 2, currentY - 100, "0"); currentY -= rowH }
-        addRow("Foundation", rec.suggestedType); addRow("Concrete", "%.1f m3".format(rec.totalConcreteEst)); addRow("Steel", "%.2f Tons".format(rec.totalSteelEst / 1000.0))
+        drawText(sb, startX, startY + rowH, "BILL OF QUANTITIES", "0", 250.0, 2)
+        drawRect(sb, startX, startY - 3000, colW * 2, 4000.0, "0", 7)
+        drawLine(sb, startX + colW, startY + rowH, startX + colW, startY - 3000, "0")
+        var currentY = startY - rowH
+        fun addRow(l: String, v: String) { 
+            drawText(sb, startX + 150, currentY, l, "0", 180.0)
+            drawText(sb, startX + colW + 150, currentY, v, "0", 180.0, 4)
+            drawLine(sb, startX, currentY - 100, startX + colW * 2, currentY - 100, "0")
+            currentY -= rowH 
+        }
+        addRow("Foundation", rec.suggestedType)
+        addRow("Concrete", "%.1f m3".format(rec.totalConcreteEst))
+        addRow("Steel", "%.2f Tons".format(rec.totalSteelEst / 1000.0))
+        addRow("Solve Date", java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date()))
     }
 }
