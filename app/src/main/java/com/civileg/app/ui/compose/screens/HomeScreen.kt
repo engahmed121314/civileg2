@@ -131,7 +131,6 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
     DesignModuleItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI"),        CardAccentSlab,    Icons.Default.ViewWeek),
     DesignModuleItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI"),        CardAccentFooting, Icons.Default.Layers),
-    DesignModuleItem(AppScreen.SiteLayout,     R.string.site_layout_title, R.string.site_layout_sub, listOf("CAD", "DXF"), StatCardGreen, Icons.Default.AutoFixHigh),
     DesignModuleItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.home_tank_sub,     listOf("ECP", "ACI"),        CardAccentTank,    Icons.Default.WaterDrop),
     DesignModuleItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI"), CardAccentWall, Icons.Default.SensorDoor),
     DesignModuleItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
@@ -145,7 +144,6 @@ private val quickTools = listOf(
     QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
     QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
     QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
-    QuickTool(R.string.home_footing,       R.string.home_footing_sub,       Icons.Default.Layers,          ToolConvBg,  ToolConvAccent,  AppScreen.QuickFooting.route),
     QuickTool(R.string.home_inventory,     R.string.home_inventory_sub,     Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
 )
 
@@ -185,7 +183,6 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> stringResource(R.string.design_type_steel_member)
                 DesignType.PILE -> stringResource(R.string.design_type_pile)
                 DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
-                DesignType.FRAME_ANALYSIS -> "Frame Analysis"
             }
             val icon = when (design.type) {
                 DesignType.BEAM -> Icons.Default.AccountBalance

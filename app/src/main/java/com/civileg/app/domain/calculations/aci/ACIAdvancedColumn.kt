@@ -1385,7 +1385,7 @@ class ACIAdvancedColumn : ColumnDesign {
         return if (fcPrime <= 28.0) {
             BETA_1_DEFAULT
         } else {
-            val reduction = 0.05 * (fcPrime - 28.0) / 7.0  // ACI 22.2.2.4.1: continuous linear
+            val reduction = 0.05 * floor((fcPrime - 28.0) / 7.0)
             (BETA_1_DEFAULT - reduction).coerceAtLeast(0.65)
         }
     }

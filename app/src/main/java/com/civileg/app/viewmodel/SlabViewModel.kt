@@ -7,10 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,13 +29,6 @@ class SlabViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
-    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
-
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
-    @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
-
     // Store actual inputs for PDF export
     private var lastInputs: SlabStoredInputs? = null
 
@@ -45,8 +36,7 @@ class SlabViewModel @Inject constructor(
         val lx: Double, val ly: Double, val deadLoad: Double, val liveLoad: Double,
         val fcu: Double, val fy: Double, val ts: Double, val preferredDiameter: Int,
         val code: CalculatorEngine.DesignCode, val type: CalculatorEngine.SlabType,
-        val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double,
-        val openingWidth: Double = 0.0, val openingLength: Double = 0.0
+        val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double
     )
 
     fun calculateSlabPro(
@@ -62,9 +52,7 @@ class SlabViewModel @Inject constructor(
         type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
         prestressForce: Double = 0.0,
         dropPanelThickness: Double = 0.0,
-        columnSize: Double = 400.0,
-        openingWidth: Double = 0.0,
-        openingLength: Double = 0.0
+        columnSize: Double = 400.0
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -72,25 +60,15 @@ class SlabViewModel @Inject constructor(
                 // Store inputs for PDF export
                 lastInputs = SlabStoredInputs(
                     lx, ly, deadLoad, liveLoad, fcu, fy, ts, preferredDiameter,
-                    code, type, prestressForce, dropPanelThickness, columnSize,
-                    openingWidth, openingLength
+                    code, type, prestressForce, dropPanelThickness, columnSize
                 )
 
                 val res = calculatorEngine.designSlab(
                     lx = lx, ly = ly, deadLoad = deadLoad, liveLoad = liveLoad,
                     fcu = fcu, fy = fy, ts = ts, preferredDiameter = preferredDiameter,
                     code = code, type = type, prestressForce = prestressForce,
-                    dropPanelThickness = dropPanelThickness, columnSize = columnSize,
-                    openingWidth = openingWidth, openingLength = openingLength
+                    dropPanelThickness = dropPanelThickness, columnSize = columnSize
                 )
-                
-                // Validate consistency & Dead Load logic
-                val report = CalculationValidator.validateSlab(res)
-                val dlReport = CalculationValidator.inspectDeadLoadConsistency("SLAB", mapOf("thickness" to ts), deadLoad)
-                
-                val combinedWarnings = report.warnings + dlReport.warnings
-                _validationReport.value = report.copy(warnings = combinedWarnings)
-                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -119,14 +97,7 @@ class SlabViewModel @Inject constructor(
     }
 
     fun saveSlab(projectId: Long, name: String, result: CalculatorEngine.SlabResult) {
-        viewModelScope.launch {
-            val inputs = lastInputs
-            if (inputs != null) {
-                repository.saveSlabDesign(projectId, name, result, inputs.lx, inputs.ly, inputs.fcu, inputs.fy)
-            } else {
-                repository.saveSlabDesign(projectId, name, result)
-            }
-        }
+        viewModelScope.launch { repository.saveSlabDesign(projectId, name, result) }
     }
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
@@ -145,8 +116,7 @@ class SlabViewModel @Inject constructor(
                 val file = java.io.File(directory, fileName)
 
                 // Generate drawing bitmap (bilingual, type-aware)
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
+                val drawingBitmap = try {
                     com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
                         slabType = inputs.type,
                         spanX = inputs.lx, spanY = inputs.ly, thickness = res.thickness,
@@ -160,36 +130,36 @@ class SlabViewModel @Inject constructor(
                         columnSize = inputs.columnSize
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
-                pendingDrawingBitmap = null  // consume after use
 
-                // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
-                // Always pass English keys — Arabic keys would appear garbled.
+                // Bilingual labels: Arabic descriptions when locale=ar, English for symbols
+                val isAr = com.civileg.app.utils.LocaleHelper.isArabic()
+                fun t(ar: String, en: String) = if (isAr) ar else en
                 val codeName = when(inputs.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"
                     CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(
-                    "Slab Type" to inputs.type.displayName,
-                    "Design Code" to codeName,
-                    "Short Span Lx" to "${inputs.lx} m",
-                    "Long Span Ly" to "${inputs.ly} m",
-                    "Dead Load" to "${inputs.deadLoad} kN/m²",
-                    "Live Load" to "${inputs.liveLoad} kN/m²",
+                    t("نوع البلاطة", "Slab Type") to inputs.type.displayName,
+                    t("كود التصميم", "Design Code") to codeName,
+                    t("البحر القصير Lx", "Short Span Lx") to "${inputs.lx} m",
+                    t("البحر الطويل Ly", "Long Span Ly") to "${inputs.ly} m",
+                    t("الحمل الميت DL", "Dead Load") to "${inputs.deadLoad} kN/m²",
+                    t("الحمل الحي LL", "Live Load") to "${inputs.liveLoad} kN/m²",
                     "f'cu" to "${inputs.fcu} MPa",
                     "fy" to "${inputs.fy} MPa",
-                    "Thickness" to "${res.thickness} mm",
-                    "Bar Diameter" to "${inputs.preferredDiameter} mm"
+                    t("السمك", "Thickness") to "${res.thickness} mm",
+                    t("قطر السيخ", "Bar Diameter") to "${inputs.preferredDiameter} mm"
                 )
                 val resultsMap = mapOf(
-                    "Moment Mx" to "${String.format("%.2f", res.momentX)} kN.m",
-                    "Moment My" to "${String.format("%.2f", res.momentY)} kN.m",
-                    "Main Reinforcement" to res.reinforcementMain.barString,
-                    "Secondary Reinforcement" to res.reinforcementSecondary.barString,
-                    "Min Thickness" to "${String.format("%.0f", res.minThickness)} mm",
-                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Concrete Volume" to "${String.format("%.2f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                    t("عزم Mx", "Moment Mx") to "${String.format("%.2f", res.momentX)} kN.m",
+                    t("عزم My", "Moment My") to "${String.format("%.2f", res.momentY)} kN.m",
+                    t("التسليح الرئيسي", "Main Reinforcement") to res.reinforcementMain.barString,
+                    t("التسليح الثانوي", "Secondary Reinforcement") to res.reinforcementSecondary.barString,
+                    t("أدنى سمك", "Min Thickness") to "${String.format("%.0f", res.minThickness)} mm",
+                    t("نسبة الاستغلال", "Utilization") to "${(res.utilizationRatio * 100).toInt()}%",
+                    t("حجم الخرسانة", "Concrete Volume") to "${String.format("%.2f", res.concreteVolume)} m³",
+                    t("وزن التسليح", "Steel Weight") to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
@@ -201,10 +171,11 @@ class SlabViewModel @Inject constructor(
                     )
                 }
 
+                // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                     titleAr = "تقرير تصميم بلاطة - ${inputs.type.displayName}",
                     titleEn = "Slab Design Report — ${inputs.type.displayName}",
-                    subtitle = "Code: $codeName  •  Lx=${inputs.lx}m, Ly=${inputs.ly}m",
+                    subtitle = "${t("الكود", "Code")}: $codeName  •  Lx=${inputs.lx}m, Ly=${inputs.ly}m",
                     designType = inputs.type.displayName,
                     inputs = inputsMap,
                     results = resultsMap,

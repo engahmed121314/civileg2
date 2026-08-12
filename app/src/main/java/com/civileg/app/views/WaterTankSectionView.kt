@@ -14,7 +14,6 @@ import kotlin.math.min
  * Features: Dimension lines, realistic hatching, interactive reinforcement, and soil/support visualization.
  * Updated to support Light/Dark theme.
  */
-@Deprecated("Use ProfessionalTankDrawing")
 class WaterTankSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

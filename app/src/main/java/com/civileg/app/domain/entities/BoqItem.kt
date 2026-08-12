@@ -18,21 +18,13 @@ data class BoqItem(
     val codeReference: String? = null  // مرجع الكود إن وجد
 ) : Parcelable
 
-enum class BoqCategory(val displayNameEn: String, val displayNameAr: String) {
-    EXCAVATION("Excavation & Earthwork", "أعمال الحفر والردم"),
-    CONCRETE("Concrete Works", "أعمال الخرسانات"),
-    REINFORCEMENT("Reinforcement Steel", "حديد التسليح"),
-    FORMWORK("Formwork & Shuttering", "الشدات الخشبية"),
-    MASONRY("Masonry & Brickwork", "أعمال المباني"),
-    PLASTERING("Plastering & Finishes", "أعمال البياض"),
-    TILING("Tiling & Flooring", "أعمال الأرضيات"),
-    PAINTING("Painting & Decor", "أعمال الدهانات"),
-    ELECTRICAL("Electrical Works", "أعمال الكهرباء"),
-    PLUMBING("Plumbing Works", "أعمال السباكة"),
-    FINISHES("General Finishes", "تشطيبات عامة"),
-    MISCELLANEOUS("Miscellaneous", "أعمال متنوعة");
-
-    val displayName: String get() = if (com.civileg.app.utils.LocaleHelper.isArabic()) displayNameAr else displayNameEn
+enum class BoqCategory(val displayName: String) {
+    CONCRETE("Concrete Works"),
+    REINFORCEMENT("Reinforcement Steel"),
+    FORMWORK("Formwork & Shuttering"),
+    EXCAVATION("Excavation & Earthwork"),
+    FINISHES("Finishes"),
+    MISCELLANEOUS("Miscellaneous")
 }
 
 /**

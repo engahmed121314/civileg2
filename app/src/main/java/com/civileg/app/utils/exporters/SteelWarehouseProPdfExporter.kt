@@ -1,11 +1,7 @@
 package com.civileg.app.utils.exporters
 
 import android.content.Context
-import com.civileg.app.R
 import com.civileg.app.domain.entities.*
-import com.civileg.app.utils.ArabicFontProvider
-import com.civileg.app.utils.ArabicShaper
-import com.civileg.app.utils.PdfTextSegmenter
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb
 import com.itextpdf.kernel.font.PdfFont
@@ -14,7 +10,6 @@ import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
-import com.itextpdf.layout.properties.BaseDirection
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
 import java.io.File
@@ -23,11 +18,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * مصدّر PDF احترافي لمشاريع المزارع الفولاذية
- * Professional PDF Exporter for Steel Warehouse Projects
- *
- * Generates comprehensive bilingual (Arabic/English) warehouse design reports
- * with proper Arabic text shaping using bundled NotoNaskhArabic font.
+ * English-Only PDF Exporter for Steel Warehouse Projects.
+ * All text is in English using Helvetica font.
  */
 class SteelWarehouseProPdfExporter(private val context: Context) {
 
@@ -41,91 +33,14 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private val ROW_ALT = DeviceRgb(248, 249, 250)
     private val WHITE = DeviceRgb(255, 255, 255)
 
-    // CRITICAL: NEVER cache PdfFont objects. iText 8 binds each PdfFont to the FIRST
-    // PdfDocument that uses it; after that document is closed, the cached font
-    // becomes invalid and any subsequent use throws:
-    //   "Pdf indirect object belongs to other PDF document. Copy object to current pdf document."
-    // Each call below returns a FRESH PdfFont. ArabicFontProvider caches the underlying
-    // FontProgram (parsed TTF) so creating fresh PdfFont wrappers is cheap.
-    private fun arabicFont(): PdfFont = ArabicFontProvider.getArabicPdfFont(context, bold = false)
-    private fun arabicBoldFont(): PdfFont = ArabicFontProvider.getArabicPdfFont(context, bold = true)
-    private fun helveticaFont(bold: Boolean = false): PdfFont = try {
+    private fun helvetica(bold: Boolean = false): PdfFont =
         com.itextpdf.kernel.font.PdfFontFactory.createFont(
             if (bold) com.itextpdf.io.font.constants.StandardFonts.HELVETICA_BOLD
             else com.itextpdf.io.font.constants.StandardFonts.HELVETICA
         )
-    } catch (_: Exception) {
-        // Fallback to Arabic font (it has Latin glyphs too)
-        ArabicFontProvider.getArabicPdfFont(context, bold = bold)
-    }
-
-    private fun isArabic(text: String) = ArabicFontProvider.containsArabic(text)
-
-    private fun ar(text: String): String = text
-
-    private fun arParagraph(text: String, fontSize: Float = 10f, bold: Boolean = false, color: DeviceRgb? = null, alignment: TextAlignment? = null): Paragraph {
-        // CRITICAL FIX (2026-07-26): Use PdfTextSegmenter to split mixed Arabic/Latin text.
-        // Previous approach used Arabic font for the whole text when Arabic was detected,
-        // causing Latin chars to render as TOFU (□) because the static Arabic font only
-        // contains 15 Latin chars. Now we use Arabic font for Arabic segments and
-        // Helvetica for Latin segments, letting iText's bidi algorithm order them.
-        val arabicFont = if (bold) arabicBoldFont() else arabicFont()
-        val latinFont = helveticaFont(bold)
-        return PdfTextSegmenter.buildMixedParagraph(
-            text = text,
-            arabicFont = arabicFont,
-            latinFont = latinFont,
-            fontSize = fontSize,
-            color = color,
-            alignment = alignment
-        )
-    }
-
-    private fun headerCell(text: String, colSpan: Int = 1): Cell {
-        val cell = Cell(colSpan, 1).setPadding(5f).setBackgroundColor(HEADER_BG).setTextAlignment(TextAlignment.CENTER)
-        // CRITICAL FIX (2026-07-26): Use segmenter for mixed Arabic/Latin text
-        val arabicFont = arabicBoldFont()
-        val latinFont = helveticaFont(bold = true)
-        val p = PdfTextSegmenter.buildMixedParagraph(
-            text = text,
-            arabicFont = arabicFont,
-            latinFont = latinFont,
-            fontSize = 8f,
-            color = WHITE,
-            alignment = TextAlignment.CENTER
-        )
-        cell.add(p)
-        return cell
-    }
-
-    private fun dataCell(text: String, fontSize: Float = 8f, bold: Boolean = false, bg: DeviceRgb? = null, color: DeviceRgb? = null): Cell {
-        val cell = Cell().setPadding(3f).setTextAlignment(TextAlignment.CENTER)
-        // CRITICAL FIX (2026-07-26): Use segmenter for mixed Arabic/Latin text
-        val arabicFont = if (bold) arabicBoldFont() else arabicFont()
-        val latinFont = helveticaFont(bold = bold)
-        val p = PdfTextSegmenter.buildMixedParagraph(
-            text = text,
-            arabicFont = arabicFont,
-            latinFont = latinFont,
-            fontSize = fontSize,
-            color = color,
-            alignment = TextAlignment.CENTER
-        )
-        if (isArabic(text)) {
-            cell.setTextAlignment(TextAlignment.RIGHT)
-        }
-        cell.add(p)
-        bg?.let { cell.setBackgroundColor(it) }
-        return cell
-    }
 
     private fun Double.fmt(decimals: Int = 2): String = String.format(Locale.US, "%.${decimals}f", this)
 
-    /**
-     * Generate and save a comprehensive steel warehouse PDF report.
-     *
-     * @return The generated PDF file
-     */
     fun exportToDownload(
         inputs: SteelWarehouseInputs,
         result: SteelWarehouseAnalysisResult,
@@ -144,27 +59,22 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val document = Document(pdf)
         document.setMargins(30f, 30f, 30f, 30f)
 
-        // ========== PAGE 1: COVER & GENERAL NOTES ==========
-        addCoverPage(document, inputs, result, clientAr, clientEn, projAr, projEn)
+        addCoverPage(document, inputs, result, clientEn, projEn)
         document.add(AreaBreak())
 
-        // ========== PAGE 2: GENERAL NOTES & PROJECT SUMMARY ==========
         addGeneralNotes(document, inputs)
         addProjectSummary(document, inputs, result)
         document.add(AreaBreak())
 
-        // ========== PAGE 3: STEEL MEMBER SCHEDULE ==========
         addMemberSchedule(document, inputs, result)
         document.add(AreaBreak())
 
-        // ========== PAGE 4: CONNECTIONS & RECOMMENDATIONS ==========
         addConnectionSchedule(document, result)
         addRecommendations(document, result)
         document.add(AreaBreak())
 
-        // ========== PAGE 5: MATERIAL TAKEOFF & COST ==========
         addMaterialTakeoff(document, result)
-        addTitleBlock(document, clientAr, clientEn, projAr, projEn, inputs)
+        addTitleBlock(document, clientEn, projEn, inputs)
 
         document.close()
         return file
@@ -172,13 +82,15 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== COVER PAGE ====================
     private fun addCoverPage(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult,
-                             clientAr: String, clientEn: String, projAr: String, projEn: String) {
-        // Top blue banner
+                             clientEn: String, projEn: String) {
         val banner = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
         val bannerCell = Cell().setPadding(15f).setBackgroundColor(PRIMARY).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
         bannerCell.add(Paragraph("STRUCTURAL DESIGN & ANALYSIS REPORT")
-            .setFontSize(18f).setBold().setFontColor(WHITE).setTextAlignment(TextAlignment.CENTER))
-        bannerCell.add(arParagraph("تقرير التصميم والتحليل الإنشائي", 16f, true, WHITE, TextAlignment.CENTER))
+            .setFontSize(18f).setBold().setFontColor(WHITE).setTextAlignment(TextAlignment.CENTER)
+            .setFont(helvetica(true)))
+        bannerCell.add(Paragraph("Steel Warehouse Project")
+            .setFontSize(14f).setFontColor(DeviceRgb(200, 220, 255)).setTextAlignment(TextAlignment.CENTER)
+            .setFont(helvetica(false)))
         banner.addCell(bannerCell)
         document.add(banner)
 
@@ -190,70 +102,64 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         fun addInfoRow(label: String, value: String, rowIdx: Int) {
             val bg = if (rowIdx % 2 == 0) LIGHT_BLUE else null
             val labelCell = Cell().setPadding(6f)
-            // Use PdfTextSegmenter for proper mixed Arabic/Latin rendering
-            val lp = PdfTextSegmenter.buildMixedParagraph(
-                label, arabicBoldFont(), helveticaFont(bold = true), 9f, null, null
-            )
-            labelCell.add(lp)
-            labelCell.setTextAlignment(TextAlignment.RIGHT)
+            labelCell.add(Paragraph(label).setFontSize(9f).setBold().setFont(helvetica(true)))
+            labelCell.setTextAlignment(TextAlignment.LEFT)
             bg?.let { labelCell.setBackgroundColor(it) }
             infoTable.addCell(labelCell)
 
             val valueCell = Cell().setPadding(6f)
-            val vp = PdfTextSegmenter.buildMixedParagraph(
-                value, arabicFont(), helveticaFont(bold = false), 9f, null, null
-            )
-            valueCell.add(vp)
+            valueCell.add(Paragraph(value).setFontSize(9f).setFont(helvetica(false)))
             bg?.let { valueCell.setBackgroundColor(it) }
             infoTable.addCell(valueCell)
         }
 
         var row = 0
-        addInfoRow("المشروع | Project", "$projAr - $projEn", row++); row++
-        addInfoRow("العميل | Client", "$clientAr - $clientEn", row++); row++
-        addInfoRow("الكود التصميمي | Design Code", inputs.code.version, row++); row++
-        addInfoRow("البحر | Span", "${inputs.span.fmt()} m", row++); row++
-        addInfoRow("الطول | Length", "${inputs.length.fmt()} m", row++); row++
-        addInfoRow("ارتفاع القاعدة | Eave Height", "${inputs.eaveHeight.fmt()} m", row++); row++
-        addInfoRow("ارتفاع القمة | Ridge Height", "${inputs.ridgeHeight.fmt()} m", row++); row++
-        addInfoRow("مسافة البي | Bay Spacing", "${inputs.baySpacing.fmt()} m", row++); row++
-        addInfoRow("ميل السقف | Roof Slope", "${(inputs.slope * 100).fmt(1)}%", row++); row++
-        addInfoRow("تاريخ التصميم | Date", SimpleDateFormat("yyyy/MM/dd", Locale("ar")).format(Date()), row)
+        addInfoRow("Project", projEn, row++); row++
+        addInfoRow("Client", clientEn, row++); row++
+        addInfoRow("Design Code", inputs.code.version, row++); row++
+        addInfoRow("Span", "${inputs.span.fmt()} m", row++); row++
+        addInfoRow("Length", "${inputs.length.fmt()} m", row++); row++
+        addInfoRow("Eave Height", "${inputs.eaveHeight.fmt()} m", row++); row++
+        addInfoRow("Ridge Height", "${inputs.ridgeHeight.fmt()} m", row++); row++
+        addInfoRow("Bay Spacing", "${inputs.baySpacing.fmt()} m", row++); row++
+        addInfoRow("Roof Slope", "${(inputs.slope * 100).fmt(1)}%", row++); row++
+        addInfoRow("Design Date", SimpleDateFormat("yyyy/MM/dd", Locale.US).format(Date()), row)
 
         document.add(infoTable)
         document.add(Paragraph(" "))
 
         // Status Banner
         val statusText = if (result.safetyStatus) {
-            "STRUCTURAL ANALYSIS PASSED | التصميم الإنشائي آمن ومطابق للكود"
+            "STRUCTURAL ANALYSIS PASSED - Design is safe and code-compliant"
         } else {
-            "REVIEW REQUIRED | يحتاج مراجعة إنشائية"
+            "REVIEW REQUIRED - Structural review needed"
         }
-        // Use PdfTextSegmenter for proper mixed Arabic/Latin in status banner
         val statusColor = if (result.safetyStatus) SUCCESS else ERROR
-        val statusP = PdfTextSegmenter.buildMixedParagraph(
-            statusText, arabicBoldFont(), helveticaFont(bold = true), 11f, statusColor, TextAlignment.CENTER
-        ).setPadding(8f)
-            .setBorder(com.itextpdf.layout.borders.SolidBorder(statusColor, 2f))
+        val statusP = Paragraph(statusText)
+            .setFontSize(11f).setBold().setFontColor(statusColor)
+            .setTextAlignment(TextAlignment.CENTER)
+            .setFont(helvetica(true))
+            .setPadding(8f)
         document.add(statusP)
     }
 
     // ==================== GENERAL NOTES ====================
     private fun addGeneralNotes(document: Document, inputs: SteelWarehouseInputs) {
-        document.add(arParagraph("ملاحظات عامة - General Notes", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("General Notes").setFontSize(12f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val notes = listOf(
-            "1. جميع الأبعاد بالمتر ما لم يُذكر غير ذلك.",
-            "2. تصميم الأعضاء الفولاذية طبقاً للكود ${inputs.code.version}.",
-            "3. اللحام طبقاً لمواصفات AWS D1.1 (حد أدنى 6mm).",
-            "4. البراغي عالية الشد ASTM A325 أو ما يعادلها.",
-            "5. ميل السقف 1% - 10% لتصريف المياه حسب التصميم.",
-            "6. درجة المادة: الإطار الرئيسي S355/St-52، الثانوي S235/St-37.",
-            "7. All dimensions are in METERS unless otherwise noted.",
-            "8. Steel members designed per ${inputs.code.version} code.",
-            "9. Welding per AWS D1.1 (6mm minimum fillet weld).",
-            "10. High strength bolts ASTM A325 or equivalent."
+            "1. All dimensions are in METERS unless otherwise noted.",
+            "2. Steel members designed per ${inputs.code.version} code.",
+            "3. Welding per AWS D1.1 specifications (6mm minimum fillet weld).",
+            "4. High strength bolts ASTM A325 or equivalent.",
+            "5. Roof slope 1% - 10% for water drainage as per design.",
+            "6. Material grade: Main frame S355/St-52, Secondary S235/St-37.",
+            "7. All connections shall be designed for the full design forces.",
+            "8. Anti-corrosion protection as per project specifications.",
+            "9. Fabrication and erection tolerances per AISC Code of Practice.",
+            "10. Design based on assumed loading; verify site conditions."
         )
 
         val notesTable = Table(UnitValue.createPercentArray(floatArrayOf(5f, 95f))).useAllAvailableWidth()
@@ -261,10 +167,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             val bg = if (i % 2 == 0) null else ROW_ALT
             notesTable.addCell(dataCell("${i + 1}", bg = bg))
             val noteCell = Cell().setPadding(3f)
-            val np = PdfTextSegmenter.buildMixedParagraph(
-                note, arabicFont(), helveticaFont(bold = false), 7f, null, null
-            )
-            noteCell.add(np)
+            noteCell.add(Paragraph(note).setFontSize(7f).setFont(helvetica(false)))
             bg?.let { noteCell.setBackgroundColor(it) }
             notesTable.addCell(noteCell)
         }
@@ -274,7 +177,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== PROJECT SUMMARY ====================
     private fun addProjectSummary(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
-        document.add(arParagraph("ملخص المشروع والمواد - Project & Material Summary", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("Project & Material Summary").setFontSize(12f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val summary = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
@@ -282,30 +186,24 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         fun addSummaryCell(label: String, value: String, rowIdx: Int) {
             val bg = if (rowIdx % 2 == 0) LIGHT_BLUE else null
             val lc = Cell().setPadding(5f)
-            val lp = PdfTextSegmenter.buildMixedParagraph(
-                label, arabicBoldFont(), helveticaFont(bold = true), 8f, null, null
-            )
-            lc.add(lp)
+            lc.add(Paragraph(label).setFontSize(8f).setBold().setFont(helvetica(true)))
             bg?.let { lc.setBackgroundColor(it) }
             summary.addCell(lc)
 
             val vc = Cell().setPadding(5f)
-            val vp = PdfTextSegmenter.buildMixedParagraph(
-                value, arabicFont(), helveticaFont(bold = false), 9f, null, null
-            )
-            vc.add(vp)
+            vc.add(Paragraph(value).setFontSize(9f).setFont(helvetica(false)))
             bg?.let { vc.setBackgroundColor(it) }
             summary.addCell(vc)
         }
 
         var row = 0
-        addSummaryCell("الوزن الكلي للفولاذ | Total Steel Weight", "${result.totalWeight.fmt(1)} Tons", row++); row++
-        addSummaryCell("الوزن لكل م\u00B2 | Weight per m\u00B2", "${result.weightPerM2.fmt(1)} kg/m\u00B2", row++); row++
-        addSummaryCell("التكلفة لكل م\u00B2 | Cost per m\u00B2", "${result.costPerM2.fmt(0)} EGP/m\u00B2", row++); row++
-        addSummaryCell("التكلفة الإجمالية | Total Estimated Cost", "${result.estimatedTotalCost.fmt(0)} EGP", row++); row++
-        addSummaryCell("صافي الربح | Net Profit", "${result.netProfit.fmt(0)} EGP", row++); row++
-        addSummaryCell("العائد على الاستثمار | ROI", "${result.roi.fmt(1)}%", row++); row++
-        addSummaryCell("مساحة الكسوة | Cladding Area", "${result.totalCladdingArea.fmt(1)} m\u00B2", row)
+        addSummaryCell("Total Steel Weight", "${result.totalWeight.fmt(1)} Tons", row++); row++
+        addSummaryCell("Weight per m2", "${result.weightPerM2.fmt(1)} kg/m2", row++); row++
+        addSummaryCell("Cost per m2", "${result.costPerM2.fmt(0)} EGP/m2", row++); row++
+        addSummaryCell("Total Estimated Cost", "${result.estimatedTotalCost.fmt(0)} EGP", row++); row++
+        addSummaryCell("Net Profit", "${result.netProfit.fmt(0)} EGP", row++); row++
+        addSummaryCell("Return on Investment (ROI)", "${result.roi.fmt(1)}%", row++); row++
+        addSummaryCell("Cladding Area", "${result.totalCladdingArea.fmt(1)} m2", row)
 
         document.add(summary)
         document.add(Paragraph(" "))
@@ -313,7 +211,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== MEMBER SCHEDULE ====================
     private fun addMemberSchedule(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
-        document.add(arParagraph("جدول القطاعات الإنشائية - Steel Member Schedule", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("Steel Member Schedule").setFontSize(12f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 15f, 25f, 18f, 12f, 12f, 10f))).useAllAvailableWidth()
@@ -327,11 +226,11 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         val numBays = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
         val members = listOf(
-            Triple("C1", "أعمدة | Columns", result.mainFrame.columnSection),
-            Triple("R1", "روافع | Rafters", result.mainFrame.rafterSection),
-            Triple("P1", "بورمات | Purlins", result.secondaryMembers.purlinSection),
-            Triple("G1", "جيرتس | Girts", result.secondaryMembers.girtSection),
-            Triple("B1", "تقوية | Bracing", result.secondaryMembers.bracingSection)
+            Triple("C1", "Columns", result.mainFrame.columnSection),
+            Triple("R1", "Rafters", result.mainFrame.rafterSection),
+            Triple("P1", "Purlins", result.secondaryMembers.purlinSection),
+            Triple("G1", "Girts", result.secondaryMembers.girtSection),
+            Triple("B1", "Bracing", result.secondaryMembers.bracingSection)
         )
 
         members.forEachIndexed { i, (mark, member, section) ->
@@ -365,13 +264,14 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // Design Forces Summary
         document.add(Paragraph(" "))
-        document.add(arParagraph("القوى التصميمية - Design Forces Summary", 10f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("Design Forces Summary").setFontSize(10f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
 
         val forces = Table(UnitValue.createPercentArray(floatArrayOf(25f, 25f, 25f, 25f))).useAllAvailableWidth()
         forces.addHeaderCell(headerCell("AXIAL (kN)"))
         forces.addHeaderCell(headerCell("MOMENT (kN.m)"))
         forces.addHeaderCell(headerCell("SHEAR (kN)"))
-        forces.addHeaderCell(headerCell(ar("الحالة") + " | STATUS"))
+        forces.addHeaderCell(headerCell("STATUS"))
         forces.addCell(dataCell("${result.mainFrame.maxAxial.fmt(1)}", bold = true))
         forces.addCell(dataCell("${result.mainFrame.maxMoment.fmt(1)}", bold = true))
         forces.addCell(dataCell("${result.mainFrame.maxShear.fmt(1)}", bold = true))
@@ -384,11 +284,12 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private fun addConnectionSchedule(document: Document, result: SteelWarehouseAnalysisResult) {
         if (result.connections.isEmpty()) return
 
-        document.add(arParagraph("جدول الوصلات - Connection Schedule", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("Connection Schedule").setFontSize(12f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(20f, 20f, 20f, 20f, 20f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell(ar("الوصلة") + " | Connection"))
+        table.addHeaderCell(headerCell("CONNECTION"))
         table.addHeaderCell(headerCell("TYPE"))
         table.addHeaderCell(headerCell("CAPACITY (kN)"))
         table.addHeaderCell(headerCell("DEMAND (kN)"))
@@ -413,28 +314,27 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private fun addRecommendations(document: Document, result: SteelWarehouseAnalysisResult) {
         if (result.recommendations.isEmpty()) return
 
-        document.add(arParagraph("توصيات التصميم - Design Recommendations", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("Design Recommendations").setFontSize(12f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         result.recommendations.forEachIndexed { i, rec ->
-            val p = PdfTextSegmenter.buildMixedParagraph(
-                "${i + 1}. $rec", arabicFont(), helveticaFont(bold = false), 8f, null, null
-            )
-            document.add(p)
+            document.add(Paragraph("${i + 1}. $rec").setFontSize(8f).setFont(helvetica(false)))
         }
         document.add(Paragraph(" "))
     }
 
     // ==================== MATERIAL TAKEOFF ====================
     private fun addMaterialTakeoff(document: Document, result: SteelWarehouseAnalysisResult) {
-        document.add(arParagraph("جدول الكميات والتكلفة - Bill of Quantities", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(Paragraph("Bill of Quantities").setFontSize(12f).setBold().setFontColor(PRIMARY)
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 25f, 30f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("#"))
-        table.addHeaderCell(headerCell(ar("البند") + " | ITEM"))
-        table.addHeaderCell(headerCell(ar("الكمية") + " | QUANTITY"))
-        table.addHeaderCell(headerCell(ar("ملاحظات") + " | NOTES"))
+        table.addHeaderCell(headerCell("ITEM"))
+        table.addHeaderCell(headerCell("QUANTITY"))
+        table.addHeaderCell(headerCell("NOTES"))
 
         var idx = 1
         result.materialTakeoff.forEach { (key, value) ->
@@ -446,82 +346,71 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             idx++
         }
 
-        // Add cost rows
         val bg = if (idx % 2 == 0) ROW_ALT else null
         table.addCell(dataCell("", bg = bg))
-        table.addCell(dataCell(ar("التكلفة الإجمالية") + " | TOTAL COST", bold = true, bg = LIGHT_BLUE))
+        table.addCell(dataCell("TOTAL COST", bold = true, bg = LIGHT_BLUE))
         table.addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", bold = true, bg = LIGHT_BLUE))
-        table.addCell(dataCell(ar("شامل الضريبة") + " | Incl. Tax", bg = LIGHT_BLUE))
+        table.addCell(dataCell("Incl. Tax", bg = LIGHT_BLUE))
 
         document.add(table)
         document.add(Paragraph(" "))
     }
 
     // ==================== TITLE BLOCK ====================
-    private fun addTitleBlock(document: Document, clientAr: String, clientEn: String, projAr: String, projEn: String, inputs: SteelWarehouseInputs) {
+    private fun addTitleBlock(document: Document, clientEn: String, projEn: String, inputs: SteelWarehouseInputs) {
         document.add(Paragraph(" "))
 
         val titleBlock = Table(UnitValue.createPercentArray(floatArrayOf(30f, 20f, 25f, 25f))).useAllAvailableWidth()
         titleBlock.setBorder(com.itextpdf.layout.borders.SolidBorder(2f))
 
-        // Project cell — use PdfTextSegmenter for mixed Arabic/Latin
+        // Project cell
         val projCell = Cell(1, 1).setPadding(5f)
-        val projLabelP = PdfTextSegmenter.buildMixedParagraph(
-            "PROJECT / المشروع", arabicBoldFont(), helveticaFont(bold = true), 6f, DeviceRgb(128, 128, 128), null
-        )
-        projCell.add(projLabelP)
-        val projText = PdfTextSegmenter.buildMixedParagraph(
-            projEn, arabicFont(), helveticaFont(bold = true), 8f, null, null
-        )
-        projCell.add(projText)
-        val projArP = PdfTextSegmenter.buildMixedParagraph(
-            projAr, arabicFont(), helveticaFont(bold = false), 7f, null, null
-        )
-        projCell.add(projArP)
+        projCell.add(Paragraph("PROJECT").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY).setFont(helvetica(true)))
+        projCell.add(Paragraph(projEn).setFontSize(8f).setBold().setFont(helvetica(true)))
         titleBlock.addCell(projCell)
 
         // Client cell
         val clientCell = Cell(1, 1).setPadding(5f)
-        val clientLabelP = PdfTextSegmenter.buildMixedParagraph(
-            "CLIENT / العميل", arabicBoldFont(), helveticaFont(bold = true), 6f, DeviceRgb(128, 128, 128), null
-        )
-        clientCell.add(clientLabelP)
-        val clientText = PdfTextSegmenter.buildMixedParagraph(
-            clientEn, arabicFont(), helveticaFont(bold = true), 8f, null, null
-        )
-        clientCell.add(clientText)
-        val clientArP = PdfTextSegmenter.buildMixedParagraph(
-            clientAr, arabicFont(), helveticaFont(bold = false), 7f, null, null
-        )
-        clientCell.add(clientArP)
+        clientCell.add(Paragraph("CLIENT").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY).setFont(helvetica(true)))
+        clientCell.add(Paragraph(clientEn).setFontSize(8f).setBold().setFont(helvetica(true)))
         titleBlock.addCell(clientCell)
 
         // Designer cell
         val designCell = Cell(1, 1).setPadding(5f)
-        val dlP = Paragraph().add(com.itextpdf.layout.element.Text("DESIGNED BY").setFont(helveticaFont()).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
-        designCell.add(dlP)
-        val dtP = Paragraph().add(com.itextpdf.layout.element.Text("Civil EG Pro Engine").setFont(helveticaFont()).setFontSize(8f).setBold())
-        designCell.add(dtP)
+        designCell.add(Paragraph("DESIGNED BY").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY).setFont(helvetica(true)))
+        designCell.add(Paragraph("Civil EG Pro Engine").setFontSize(8f).setBold().setFont(helvetica(true)))
         titleBlock.addCell(designCell)
 
         // Date & Code cell
         val dateCell = Cell(1, 1).setPadding(5f)
-        val dlcP = Paragraph().add(com.itextpdf.layout.element.Text("DATE / CODE").setFont(helveticaFont()).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY))
-        dateCell.add(dlcP)
-        val dcP = Paragraph().add(com.itextpdf.layout.element.Text("${SimpleDateFormat("MMM yyyy", Locale.US).format(Date())} | ${inputs.code.version}").setFont(helveticaFont()).setFontSize(8f).setBold())
-        dateCell.add(dcP)
-        val shP = Paragraph().add(com.itextpdf.layout.element.Text("SHEET: S-01 Rev.0").setFont(helveticaFont()).setFontSize(7f))
-        dateCell.add(shP)
+        dateCell.add(Paragraph("DATE / CODE").setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY).setFont(helvetica(true)))
+        dateCell.add(Paragraph("${SimpleDateFormat("MMM yyyy", Locale.US).format(Date())} | ${inputs.code.version}").setFontSize(8f).setBold().setFont(helvetica(true)))
+        dateCell.add(Paragraph("SHEET: S-01 Rev.0").setFontSize(7f).setFont(helvetica(false)))
         titleBlock.addCell(dateCell)
 
         document.add(titleBlock)
 
-        // Footer disclaimer — use PdfTextSegmenter for proper mixed rendering
+        // Footer disclaimer
         document.add(Paragraph(" "))
-        val footerRaw = "Generated by Civil EG Pro | ${ar("هذا التقرير لأغراض مرجعية فقط - يجب مراجعته بواسطة مهندس مؤهل")}"
-        val footer = PdfTextSegmenter.buildMixedParagraph(
-            footerRaw, arabicFont(), helveticaFont(bold = false), 7f, DeviceRgb(211, 211, 211), TextAlignment.CENTER
-        )
-        document.add(footer)
+        document.add(Paragraph("Generated by Civil EG Pro | This report is for reference only - must be reviewed by a qualified engineer.")
+            .setFontSize(7f).setFontColor(DeviceRgb(211, 211, 211))
+            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(false)))
+    }
+
+    // ==================== HELPERS ====================
+    private fun headerCell(text: String, colSpan: Int = 1): Cell {
+        val cell = Cell(colSpan, 1).setPadding(5f).setBackgroundColor(HEADER_BG).setTextAlignment(TextAlignment.CENTER)
+        cell.add(Paragraph(text).setFontSize(8f).setBold().setFontColor(WHITE).setFont(helvetica(true)))
+        return cell
+    }
+
+    private fun dataCell(text: String, fontSize: Float = 8f, bold: Boolean = false, bg: DeviceRgb? = null, color: DeviceRgb? = null): Cell {
+        val cell = Cell().setPadding(3f).setTextAlignment(TextAlignment.CENTER)
+        val p = Paragraph(text).setFontSize(fontSize).setFont(helvetica(bold))
+        if (bold) p.setBold()
+        color?.let { p.setFontColor(it) }
+        cell.add(p)
+        bg?.let { cell.setBackgroundColor(it) }
+        return cell
     }
 }

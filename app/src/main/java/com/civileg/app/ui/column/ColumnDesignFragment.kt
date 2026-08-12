@@ -226,13 +226,8 @@ class ColumnDesignFragment : Fragment() {
         
         binding.etLongitudinalBars.setText(getString(R.string.reinforcement_format, result.reinforcement.numBars, result.reinforcement.diameter))
         
-        val summary = if (result.stirrups.zones.isNotEmpty()) {
-            val zonesText = result.stirrups.zones.joinToString(" | ") { "${it.name}: ${it.description}" }
-            String.format(Locale.US, "Cap: %.1f kN | Ratio: %.2f%% | %s", result.axialCapacity, result.reinforcementRatio, zonesText)
-        } else {
-            String.format(Locale.US, "Cap: %.1f kN | Ratio: %.2f%% | Conc: %.2f m³ | Steel: %.1f kg | Waste: %.1f kg", 
-                result.axialCapacity, result.reinforcementRatio, result.concreteVolume, result.steelWeight - result.steelWasteKg, result.steelWasteKg)
-        }
+        val summary = String.format(Locale.US, "Cap: %.1f kN | Ratio: %.2f%% | Conc: %.2f m³ | Steel: %.1f kg | Waste: %.1f kg", 
+            result.axialCapacity, result.reinforcementRatio, result.concreteVolume, result.steelWeight - result.steelWasteKg, result.steelWasteKg)
         binding.etCapacity.setText(summary)
         
         binding.columnSectionView.updateFromCalculation(

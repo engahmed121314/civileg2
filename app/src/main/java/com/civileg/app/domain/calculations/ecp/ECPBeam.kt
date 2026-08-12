@@ -9,7 +9,7 @@ class ECPBeam : BeamDesign {
     companion object {
         private const val GAMMA_C = 1.5      // معامل أمان الخرسانة
         private const val GAMMA_S = 1.15     // معامل أمان الحديد
-        private const val BETA_1 = 0.9       // ECP 203 K-method factor (consistent with K_bal derivation)
+        private const val BETA_1 = 0.8       // عامل كتلة الإجهاد
         // Ec = 4400 * sqrt(fcu) per ECP 203 (MPa, fcu in MPa)
         private fun ec(fcu: Double) = 4400.0 * sqrt(fcu)
         private const val E_S = 200000.0     // معامل مرونة الحديد
@@ -42,11 +42,9 @@ class ECPBeam : BeamDesign {
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
         }
         
-        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/0.893)) حسب ECP 203 K-method
-        // 0.893 = γc/(2×0.67) = 1.5/1.34 — the mathematically correct divisor
-        val K_DIVISOR = 0.893
-        val leverArm = if (0.25 - K / K_DIVISOR > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / K_DIVISOR))
+        // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/0.9)) حسب ECP 203
+        val leverArm = if (0.25 - K / 0.9 > 0) {
+            effectiveDepth * (0.5 + sqrt(0.25 - K / 0.9))
         } else {
             effectiveDepth * 0.7 // Fallback for over-reinforced
         }
@@ -141,8 +139,8 @@ class ECPBeam : BeamDesign {
         val Vu = designShear * 1000  // N (القوة القصية التصميمية)
         
         // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu/γc) — ECP 203 §4-3-1-2
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        // qcu = 0.24 × √(fcu) ثم يُقسم على γc عند حساب القدرة
+        val qcu = 0.24 * sqrt(fcu) / GAMMA_C  // MPa
         val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
         
         // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
@@ -168,7 +166,7 @@ class ECPBeam : BeamDesign {
         stirrupSpacing = stirrupSpacing.coerceIn(50.0, getMaxShearSpacing())
         
         // الحد الأقصى لإجهاد القص: qcu_max = 0.7 × √(fcu/γc) (ECP 203)
-        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C)  // MPa
         val maxShearCapacity = maxShearStress * width * effectiveDepth / 1000  // kN
         val isSafe = (Vu / 1000) <= maxShearCapacity
         
@@ -178,19 +176,7 @@ class ECPBeam : BeamDesign {
         
         codeNotes.add(CodeReference.ECP.BEAM_SHEAR)
         codeNotes.add("qcu = ${String.format("%.3f", qcu)} MPa")
-
-        // ── Condensation zone detailing per ECP 203 §7-9 ──
-        // Denser stirrups near supports (within d or L/4 from face)
-        val minSpacingCode = 100.0  // ECP 203: min 100mm or db_tie
-        val maxSpacingCode = minOf(effectiveDepth / 2, 200.0)  // ECP 203: s_max = min(d/2, 200)
-        val condensationZoneLength = minOf(effectiveDepth, 500.0)  // ECP: min(d, L/4)
-        val spacingAtSupport = (stirrupSpacing * 0.5).coerceIn(minSpacingCode, stirrupSpacing)
-        val spacingAtMidspan = stirrupSpacing.coerceAtMost(maxSpacingCode)
-
-        codeNotes.add("ECP 203 §7-9: Condensation zone = ${condensationZoneLength.toInt()}mm")
-        codeNotes.add("Dense spacing near supports: ${spacingAtSupport.toInt()}mm")
-        codeNotes.add("Normal spacing at midspan: ${spacingAtMidspan.toInt()}mm")
-
+        
         return ShearReinforcementResult(
             concreteShearCapacity = concreteShearCapacity,
             requiredShearReinforcement = requiredStirrups,
@@ -200,12 +186,7 @@ class ECPBeam : BeamDesign {
             isSafe = isSafe,
             utilizationRatio = if (maxShearCapacity > 0) (Vu / 1000) / maxShearCapacity else 2.0,
             warnings = warnings,
-            codeNotes = codeNotes,
-            spacingAtSupport = spacingAtSupport,
-            spacingAtMidspan = spacingAtMidspan,
-            condensationZoneLength = condensationZoneLength,
-            minSpacingPerCode = minSpacingCode,
-            maxSpacingPerCode = maxSpacingCode
+            codeNotes = codeNotes
         )
     }
 
@@ -229,8 +210,7 @@ class ECPBeam : BeamDesign {
         // النسخة المبسطة المعتمدة: MF = 0.55 + 0.0075 × fs / (ρ × fy) 
         // حيث fs = 0.58 × fy → MF = 0.55 + 0.0075 / ρ
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        val fy = 360.0  // ECP 203 default steel yield
-        val modificationFactor = 0.55 + 477.0 / (fy * rhoPercent)
+        val modificationFactor = 0.55 + 0.45 / rhoPercent
         val allowableRatio = basicRatio * modificationFactor
         
         val actualRatio = (span * 1000) / totalDepth  // تحويل span إلى مم
@@ -266,19 +246,18 @@ class ECPBeam : BeamDesign {
         // حسب الكود المصري: Ld = (fy/γs) * φ / (4 * fb)
         // حيث fb = إجهاد التماسك
         
-        // ECP 203 §5-2-2: fbd = 0.6 × √(fcu) for deformed bars (good bond)
-        // Note: 0.3 is for plain bars; 0.6 is for deformed (high bond) bars
-        val fbd = 0.6 * sqrt(fcu)  // MPa (deformed bars)
-        
         val fs = fy / GAMMA_S
+        // fbd = 0.3 × √(fcu) per ECP 203 §5-2-2
+        val fbd = 0.3 * sqrt(fcu)  // MPa
+        
         var Ld = fs * barDiameter / (4 * fbd.coerceAtLeast(0.1))
         
         // عوامل التعديل
         if (barLocation == BarLocation.TOP) Ld *= 1.3  // حديد علوي
         if (coating == CoatingType.EPOXY_COATED) Ld *= 1.2
         
-        // حد أدنى حسب ECP 203: max(10φ, 100 مم)
-        Ld = maxOf(Ld, 10.0 * barDiameter, 100.0)
+        // حد أدنى
+        Ld = max(Ld, 350.0)  // 350 مم كحد أدنى
         
         // تقريب لأعلى لأقرب 50 مم
         return ceil(Ld / 50) * 50
@@ -316,7 +295,7 @@ class ECPBeam : BeamDesign {
     private fun calculateKBal(fcu: Double, fy: Double): Double {
         val Es = 200000.0  // معامل مرونة الحديد MPa
         val epsilonCu = 0.003  // إجهاد الخرسانة الأقصى عند التوازن
-        val beta = BETA_1  // معامل الكتلة الفعال في طريقة K (ECP 203)
+        val beta = 0.9  // معامل الكتلة الفعال في طريقة K (ECP 203)
         
         // إجهاد خضوع التصميم
         val epsilonY = fy / (Es * GAMMA_S)
@@ -391,7 +370,7 @@ class ECPBeam : BeamDesign {
         
         // إذا كان K ≤ K_bal: المقطع لا يحتاج حديد ضغط
         if (K <= kBal) {
-            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
+            val leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.9)))
             val fs = fy / GAMMA_S
             val asReq = Mu / (fs * leverArm)
             
@@ -423,8 +402,8 @@ class ECPBeam : BeamDesign {
         
         // Mu1 = العزم المتوازن (الذي يتحمله المقطع بالتسليح الأحادي)
         val Mu1 = kBal * fcu * b * d * d
-        // ذراع العزم للجزء المتوازن (0.893 = γc/(2×0.67))
-        val z1 = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
+        // ذراع العزم للجزء المتوازن
+        val z1 = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 1.25)))
         // As1 = حديد الشد للعزم المتوازن
         val As1 = Mu1 / (fs * z1)
         
@@ -447,7 +426,7 @@ class ECPBeam : BeamDesign {
         val AsTotal = As1 + As2
         
         // تطبيق الحد الأدنى
-        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
+        val minSteel = max(0.26 * (fcu / fy), 0.0013) * b * d
         val asFinal = max(AsTotal, minSteel)
         
         // اختيار الأسياخ

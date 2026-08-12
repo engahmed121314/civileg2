@@ -109,11 +109,11 @@ class SBCStaircase : StaircaseDesign {
         val stirrupEstimate = 10.0
         val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
 
-        // SBC 304 follows ACI 318: f'c = 0.8 × fcu (cube-to-cylinder conversion)
-        val fc = 0.8 * input.fcu
+        // SBC 304: f'c = 0.67 × fcu / 1.5 (SBC conversion - more conservative than ACI's 0.8)
+        val fc = 0.67 * input.fcu / 1.5
         val beta1 = calculateBeta1(fc)
 
-        codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC/ACI conversion)")
+        codeNotes.add("f'c = 0.67 × fcu / 1.5 = ${String.format("%.1f", fc)} MPa (SBC conversion)")
         codeNotes.add("β₁ = ${String.format("%.2f", beta1)}")
         codeNotes.add("SBC cover = ${cover.toInt()}mm (interior, exceeds ACI for hot climate)")
 

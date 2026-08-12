@@ -32,10 +32,6 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
-import com.civileg.app.utils.ComposeDrawingCaptureUtil
-import com.civileg.app.utils.captureToAndroidBitmap
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,9 +54,6 @@ fun SlabScreen(
     var prestressForce by remember { mutableStateOf("0.0") }
     var dropPanelThickness by remember { mutableStateOf("0.0") }
     var columnSize by remember { mutableStateOf("400") }
-    
-    var openingWidth by remember { mutableStateOf("0.0") }
-    var openingLength by remember { mutableStateOf("0.0") }
 
     var ribWidth by remember { mutableStateOf("100") }
     var ribSpacing by remember { mutableStateOf("500") }
@@ -75,11 +68,6 @@ fun SlabScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
-    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var pdfError by remember { mutableStateOf<String?>(null) }
@@ -89,10 +77,6 @@ fun SlabScreen(
     var inputError by remember { mutableStateOf<String?>(null) }
     val configuration = LocalConfiguration.current
     val screenW = configuration.screenWidthDp.dp
-
-    // Validation messages (captured in composable scope for use in onClick)
-    val slabInvalidMsg = stringResource(R.string.slab_err_invalid_values)
-    val slabRangeMsg = stringResource(R.string.slab_err_range_check)
 
     Scaffold(
         topBar = {
@@ -113,10 +97,10 @@ fun SlabScreen(
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -159,7 +143,7 @@ fun SlabScreen(
                             value = selectedCode.displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.slab_code_label)) },
+                            label = { Text(stringResource(R.string.seismic_pdf_code)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp)
@@ -172,71 +156,6 @@ fun SlabScreen(
                                         selectedCode = code
                                         expandedCode = false
                                     }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // --- Advanced Inputs Section ---
-            if (selectedType == CalculatorEngine.SlabType.FLAT || selectedType == CalculatorEngine.SlabType.POST_TENSION) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Advanced Detailing (Pro)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            if (selectedType == CalculatorEngine.SlabType.FLAT) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedTextField(
-                                        value = dropPanelThickness,
-                                        onValueChange = { dropPanelThickness = it },
-                                        label = { Text("Drop Thick (mm)") },
-                                        modifier = Modifier.weight(1f),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    OutlinedTextField(
-                                        value = columnSize,
-                                        onValueChange = { columnSize = it },
-                                        label = { Text("Col Width (mm)") },
-                                        modifier = Modifier.weight(1f),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                }
-                            }
-                            if (selectedType == CalculatorEngine.SlabType.POST_TENSION) {
-                                OutlinedTextField(
-                                    value = prestressForce,
-                                    onValueChange = { prestressForce = it },
-                                    label = { Text("Prestress Force (kN)") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
-
-                            Divider(modifier = Modifier.padding(vertical = 4.dp))
-                            Text("Slab Openings (Shafts)", style = MaterialTheme.typography.labelSmall)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(
-                                    value = openingWidth,
-                                    onValueChange = { openingWidth = it },
-                                    label = { Text("Open. Width (mm)") },
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                OutlinedTextField(
-                                    value = openingLength,
-                                    onValueChange = { openingLength = it },
-                                    label = { Text("Open. Length (mm)") },
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    shape = RoundedCornerShape(12.dp)
                                 )
                             }
                         }
@@ -344,32 +263,30 @@ fun SlabScreen(
 
                         if (lxVal == null || lyVal == null || dlVal == null || llVal == null ||
                             fcuVal == null || fyVal == null || tVal == null) {
-                            inputError = slabInvalidMsg
+                            inputError = "Please enter valid values for all fields"
                             return@Button
                         }
                         if (lxVal <= 0 || lyVal <= 0 || dlVal < 0 || llVal < 0 ||
                             fcuVal < 15 || fcuVal > 60 || fyVal < 200 || fyVal > 700 ||
                             tVal < 50 || tVal > 500) {
-                            inputError = slabRangeMsg
+                            inputError = "Check value ranges: fcu 15-60, fy 200-700, thickness 50-500"
                             return@Button
                         }
                         inputError = null
-                        viewModel.calculateSlabPro(
-                            lx = lxVal,
-                            ly = lyVal,
+                        viewModel.calculateSlab(
+                            spanX = lxVal,
+                            spanY = lyVal,
                             deadLoad = dlVal,
                             liveLoad = llVal,
                             fcu = fcuVal,
                             fy = fyVal,
-                            ts = tVal,
+                            thickness = tVal,
                             preferredDiameter = preferredDiameter.toIntOrNull() ?: 12,
                             type = selectedType,
                             code = selectedCode,
                             prestressForce = prestressForce.toDoubleOrNull() ?: 0.0,
                             dropPanelThickness = dropPanelThickness.toDoubleOrNull() ?: 0.0,
-                            columnSize = columnSize.toDoubleOrNull() ?: 400.0,
-                            openingWidth = openingWidth.toDoubleOrNull() ?: 0.0,
-                            openingLength = openingLength.toDoubleOrNull() ?: 0.0
+                            columnSize = columnSize.toDoubleOrNull() ?: 400.0
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -440,74 +357,6 @@ fun SlabScreen(
                 }
 
                 item {
-                    val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    val captureBitmap = try {
-                                        pdfCaptureLayer.captureToAndroidBitmap()
-                                    } catch (_: Exception) { null }
-                                    viewModel.pendingDrawingBitmap = captureBitmap
-                                    viewModel.exportToPdf(context) { file ->
-                                        if (file == null) {
-                                            pdfError = pdfErrorMsg
-                                        } else {
-                                            pdfError = null
-                                        }
-                                    }
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
-
-                        Button(
-                            onClick = { showSaveDialog = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
-                    }
-                }
-
-                item {
-                    Button(
-                        onClick = {
-                            val res = result ?: return@Button
-                            val file = com.civileg.app.utils.DxfExporter.exportSlabDetailed(
-                                result = res,
-                                lx = shortSpan.toDoubleOrNull() ?: 4.0,
-                                ly = longSpan.toDoubleOrNull() ?: 5.0,
-                                outputPath = java.io.File(context.cacheDir, "Slab_CAD_Detail.dxf").absolutePath
-                            )
-                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                    ) {
-                        Icon(Icons.Default.Architecture, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.export_cad_drawing))
-                    }
-                }
-
-                item {
                     var selectedViewMode by remember { mutableStateOf(0) }
                     // Responsive height: scale proportionally to screen width
                     val wRatio = screenW.value / 360f  // baseline 360dp
@@ -552,42 +401,47 @@ fun SlabScreen(
                         }
                     )
                 }
-            }
-        }
-        // PDF drawing capture area (invisible, renders at viewMode=0)
-        result?.let { res ->
-            ComposeDrawingCaptureUtil.DrawingCaptureArea(
-                captureLayer = pdfCaptureLayer,
-                widthPx = screenWidthPx,
-                heightPx = screenHeightPx
-            ) {
-                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    ProfessionalSlabDrawing(
-                        slabType = selectedType.displayName,
-                        slabThickness = res.thickness.toDouble(),
-                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
-                        mainRebarDia = res.reinforcementMain.diameter.toDouble(),
-                        mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
-                        distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
-                        distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
-                        cover = 25.0,
-                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                        ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
-                        ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
-                        viewMode = 0,
-                        modifier = Modifier.fillMaxWidth(),
-                        momentX = res.momentX,
-                        momentY = res.momentY,
-                        factoredLoad = res.totalLoad,
-                        fcu = fcu.toDoubleOrNull() ?: 25.0,
-                        fy = fy.toDoubleOrNull() ?: 360.0,
-                        isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio
-                    )
+                
+                item {
+                    val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                viewModel.exportToPdf(context) { file ->
+                                    if (file == null) {
+                                        pdfError = pdfErrorMsg
+                                    } else {
+                                        pdfError = null
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
+                        }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.save_in_project))
+                        }
+                    }
                 }
             }
-        }
         }
     }
 
@@ -707,12 +561,6 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ResultItem(stringResource(R.string.slab_thickness_label2), "${res.thickness} mm")
                 ResultItem(stringResource(R.string.slab_moment_mx), "${"%.1f".format(res.momentX)} kN.m")
-            }
-
-            if (res.trimmerReinforcement.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text("Slab Opening Support", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
-                Text(res.trimmerReinforcement, fontWeight = FontWeight.Bold)
             }
             
             Spacer(Modifier.height(8.dp))

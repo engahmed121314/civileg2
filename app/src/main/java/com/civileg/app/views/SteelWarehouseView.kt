@@ -7,7 +7,6 @@ import android.view.View
 import androidx.core.graphics.toColorInt
 import com.civileg.app.utils.CalculatorEngine
 
-@Deprecated("Use ProfessionalSteelDrawing")
 class SteelWarehouseView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     private var result: CalculatorEngine.SteelWarehouseResult? = null

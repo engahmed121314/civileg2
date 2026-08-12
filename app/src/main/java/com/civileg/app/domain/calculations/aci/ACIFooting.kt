@@ -146,19 +146,17 @@ class ACIFooting : FootingDesign {
             200.0
         }
 
-        val formulas = mutableListOf<String>()
-        formulas.add("Req Area A = P_service / q_net = ${P_service.format(1)} / ${netSBC.format(1)} = ${requiredArea.format(2)} m\u00B2")
-        formulas.add("Max Soil Pressure q_max = (P/A)(1+6e/B) = ${q_max.format(1)} kPa")
-        formulas.add("Design Moment Mu = 1.6 \u00D7 q \u00D7 cant\u00B2 / 2 = ${(Mu_x * 1.6).format(1)} kN.m")
-
-        val checks = mutableListOf<WallSafetyCheck>()
-        checks.add(WallSafetyCheck("Soil Bearing", q_max <= soilBearingCapacity, q_max, soilBearingCapacity, "kPa", "q \u2264 q_all", "ACI 318 foundation check"))
-        checks.add(WallSafetyCheck("Punching Shear", punchingCheck.isSafe, punchingCheck.appliedShear, punchingCheck.shearCapacity, "MPa", "\u03BDu \u2264 \u03C6\u03BDc", "Against two-way shear failure"))
-        checks.add(WallSafetyCheck("Flexural Rebar", mainReinf.astProvided >= mainReinf.astRequired, mainReinf.astProvided, mainReinf.astRequired, "mm\u00B2", "As \u2265 As_min", "Flexural capacity"))
-
-        codeNotes.add("ACI 318-19 / 350-06: Isolated Footing Design")
-        codeNotes.add(String.format("Actual B=%.0f, L=%.0f, d=%.0f mm", B, L, d))
-        codeNotes.add(String.format("Reinforcement: %s", mainReinf.barString))
+        codeNotes.add("ACI 318-19: Isolated Footing Design")
+        codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
+        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
+        codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
+        codeNotes.add(String.format("Short dir: %s", reinfX.barString))
+        codeNotes.add(String.format("Long dir: %s", reinfY.barString))
+        if (distBarsPerMeter > 0) {
+            codeNotes.add(String.format("Distribution: %dØ%d @ %dmm", 
+                distBarsPerMeter, distBarDia.toInt(), distSpacing.toInt()
+            ))
+        }
 
         return FootingDesignResult(
             requiredWidth = B,
@@ -168,20 +166,13 @@ class ACIFooting : FootingDesign {
             maxSoilPressure = q_max,
             reinforcement = mainReinf,
             punchingShearCheck = punchingCheck,
-            isSafe = checks.all { it.isSafe },
-            designCodeName = "ACI 318-19",
-            formulas = formulas,
-            safetyChecks = checks,
+            isSafe = q_max <= soilBearingCapacity
+                && q_min >= 0
+                && Vu_x <= Vc_x && Vu_y <= Vc_y
+                && punchingCheck.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )
-    }
-
-    private fun Double.format(n: Int) = String.format("%.${n}f", this)
-
-    private fun selectBarDiameter(asRequired: Double): Double {
-        val dias = listOf(12.0, 16.0, 18.0, 20.0, 22.0, 25.0)
-        return dias.firstOrNull { (PI * it * it / 4.0) * 5 >= asRequired } ?: 16.0
     }
 
     override fun checkPunchingShear(
@@ -197,14 +188,12 @@ class ACIFooting : FootingDesign {
         val b0 = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         // ACI يستخدم f'c (اسطوانة) = 0.8 × fcu (مكعب)
         val fc_prime = 0.8 * fcu
-        // ACI 22.6.5.2(b): vc = min(vc1, vc2, vc3) where vc3 = 0.083*(2+αs*d/bo)*λ*√f'c
-        // αs = 40 for interior, 30 for edge, 20 for corner columns
-        val alphaS = 40.0  // default interior column
+        // vn = min(0.33√f'c, 0.17(1+2/β)√f'c, 0.083(2+4d/bo)√f'c)
         val beta = max(columnDepth, columnWidth) / min(columnDepth, columnWidth).coerceAtLeast(1.0)
         val vn = minOf(
             0.33 * sqrt(fc_prime),
             0.17 * (1.0 + 2.0 / beta) * sqrt(fc_prime),
-            0.083 * (2.0 + alphaS * effectiveDepth / b0) * sqrt(fc_prime)
+            0.083 * (2.0 + 4.0 * effectiveDepth / b0) * sqrt(fc_prime)
         )
         val capacity = PHI_SHEAR * vn * b0 * effectiveDepth / 1000.0
         val isSafe = punchingShearForce <= capacity

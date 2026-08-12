@@ -147,20 +147,6 @@ fun FrameAnalysisScreen(
                                 Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
                             }
                         }
-
-                        IconButton(onClick = {
-                            val inputs = viewModel.getStoredInputs()
-                            val res = result ?: return@IconButton
-                            val file = com.civileg.app.utils.DxfExporter.exportFrameAnalysisDetailed(
-                                nodes = inputs.nodes,
-                                members = inputs.members,
-                                result = res,
-                                outputPath = java.io.File(context.cacheDir, "Frame_Analysis_CAD.dxf").absolutePath
-                            )
-                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
-                        }) {
-                            Icon(Icons.Default.AutoFixHigh, stringResource(R.string.export_cad_drawing), tint = Color.White)
-                        }
                     }
                 }
             )
@@ -176,23 +162,25 @@ fun FrameAnalysisScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         for (type in DiagramType.entries) {
                             val isSelected = diagramType == type
-                            Button(
+                            FilterChip(
+                                selected = isSelected,
                                 onClick = { viewModel.setDiagramType(type) },
-                                modifier = Modifier.weight(1f).height(40.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isSelected) Color(0xFF1565C0) else Color(0xFFE3F2FD),
-                                    contentColor = if (isSelected) Color.White else Color(0xFF1565C0)
+                                label = { Text(type.displayNameAr, fontSize = 13.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = when (type) {
+                                        DiagramType.BMD -> Color(0xFF2196F3)
+                                        DiagramType.SFD -> Color(0xFF4CAF50)
+                                        DiagramType.AFD -> Color(0xFFFF9800)
+                                    },
+                                    selectedLabelColor = Color.White
                                 ),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Text(type.displayNameAr, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
                         }
                     }
                 }
@@ -220,7 +208,7 @@ fun FrameAnalysisScreen(
                 when (selectedTab) {
                     0 -> DrawingTab(
                         modifier = Modifier.fillMaxSize(),
-                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel, isLoading
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel
                     )
                     1 -> NodesTab(nodes, members, viewModel)
                     2 -> MembersTab(nodes, members, settings, viewModel)
@@ -277,8 +265,7 @@ private fun DrawingTab(
     result: FrameAnalysisResult?,
     diagramType: DiagramType,
     selectedMemberId: Int?,
-    viewModel: FrameAnalysisViewModel,
-    isLoading: Boolean
+    viewModel: FrameAnalysisViewModel
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
     // FIX: Sync local viewMode with ViewModel so it survives tab switches
@@ -936,19 +923,9 @@ private fun ResultsTab(
         if (steelResults.isNotEmpty()) add(stringResource(R.string.frame_result_steel_design))
     }
 
-    ScrollableTabRow(
-        selectedTabIndex = resultSubTab,
-        edgePadding = 12.dp,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.primary,
-        divider = {}
-    ) {
+    TabRow(selectedTabIndex = resultSubTab) {
         for ((i, title) in subTabs.withIndex()) {
-            Tab(
-                selected = resultSubTab == i,
-                onClick = { resultSubTab = i },
-                text = { Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-            )
+            Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
         }
     }
 

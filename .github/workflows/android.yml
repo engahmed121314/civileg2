@@ -7,7 +7,11 @@
 name: Android CI/CD
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ master, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master ]
 
 concurrency:
   group: android-ci-${{ github.ref }}
@@ -46,17 +50,6 @@ jobs:
 
       - name: Run Android Lint
         run: ./gradlew lintDebug --no-daemon
-        continue-on-error: true
-
-      - name: Check lint severity
-        run: |
-          if [ -f app/build/reports/lint-results-debug.xml ]; then
-            ERRORS=$(grep -c 'severity="error"' app/build/reports/lint-results-debug.xml 2>/dev/null || echo "0")
-            echo "Lint errors found: $ERRORS"
-            if [ "$ERRORS" -gt 0 ]; then
-              echo "::warning::$ERRORS lint error(s) found — non-blocking for now"
-            fi
-          fi
 
       - name: Upload lint report
         if: always()

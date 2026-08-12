@@ -1,6 +1,5 @@
 package com.civileg.app.ui.compose.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,14 +31,6 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
-import com.civileg.app.utils.ComposeDrawingCaptureUtil
-import com.civileg.app.utils.captureToAndroidBitmap
-import com.civileg.app.utils.ColumnLoad
-import com.civileg.app.utils.DxfExporter
-import com.civileg.app.utils.ExportUtils
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.launch
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,12 +44,6 @@ fun FootingScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
-    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -106,10 +90,10 @@ fun FootingScreen(
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -152,7 +136,7 @@ fun FootingScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(colLength, stringResource(R.string.footing_column_length_mm), { colLength = it }, Modifier.weight(1f))
-                    FootingInputField(colWidth, stringResource(R.string.footing_column_width_mm), { colWidth = it }, Modifier.weight(1f))
+                    FootingInputField(colWidth, stringResource(R.string.slab_column_width_mm), { colWidth = it }, Modifier.weight(1f))
                 }
             }
 
@@ -268,9 +252,7 @@ fun FootingScreen(
                                         soilCapacity = soilCapacity.toDouble()!!,
                                         colWidth = colWidth.toDouble()!!,
                                         colDepth = colLength.toDouble()!!,
-                                        code = selectedCode,
-                                        preferredDiameter = barDiameter.toInt()!!,
-                                        preferredSpacing = barSpacing.toDouble()!!
+                                        code = selectedCode
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -406,31 +388,6 @@ fun FootingScreen(
                     }
                 }
 
-                // [NEW]: Professional Design Equations Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
-                        border = BorderStroke(1.dp, Color(0xFF81C784))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Functions, contentDescription = null, tint = Color(0xFF2E7D32))
-                                Spacer(Modifier.width(8.dp))
-                                Text("DESIGN ANALYSIS & FORMULAS", fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20), fontSize = 14.sp)
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            res.formulas.forEach { formula ->
-                                Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(6.dp).background(Color(0xFF2E7D32), RoundedCornerShape(2.dp)))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(formula, style = MaterialTheme.typography.bodySmall, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
-                                }
-                            }
-                        }
-                    }
-                }
-
                 if (res.safetyChecks.isNotEmpty()) {
                     item {
                         Card(
@@ -477,14 +434,8 @@ fun FootingScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = {
-                                scope.launch {
-                                    val captureBitmap = try {
-                                        pdfCaptureLayer.captureToAndroidBitmap()
-                                    } catch (_: Exception) { null }
-                                    viewModel.pendingDrawingBitmap = captureBitmap
-                                    viewModel.exportToPdf(context) { file -> }
-                                }
+                            onClick = { 
+                                viewModel.exportToPdf(context) { file -> }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -492,12 +443,12 @@ fun FootingScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                             } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
+                                Icon(Icons.Default.PictureAsPdf, null)
                             }
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (isExporting) stringResource(R.string.footing_exporting) else stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -514,40 +465,6 @@ fun FootingScreen(
                 }
 
                 item {
-                    Button(
-                        onClick = {
-                            val res = result ?: return@Button
-                            // [Expert Fix]: Use new detailed exporter for workshop drawings
-                            val file = DxfExporter.exportFootingDetailed(
-                                result = res,
-                                colWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                                colDepth = colLength.toDoubleOrNull() ?: 600.0,
-                                outputPath = File(context.cacheDir, "Footing_Workshop_Detail.dxf").absolutePath
-                            )
-                            ExportUtils.openFile(context, file, "application/dxf")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                    ) {
-                        Icon(Icons.Default.Architecture, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Export Detailed AutoCAD (DXF)")
-                    }
-                }
-
-                item {
-                    var selectedViewMode by remember { mutableStateOf(0) }
-                    val configuration = LocalConfiguration.current
-                    val screenW = configuration.screenWidthDp.dp
-                    // Responsive height: scale proportionally to screen width
-                    val wRatio = screenW.value / 360f  // baseline 360dp
-                    val drawingHeight = when (selectedViewMode) {
-                        1 -> (350 * wRatio).toInt().coerceIn(250, 450)
-                        2 -> (320 * wRatio).toInt().coerceIn(220, 420)
-                        3 -> (280 * wRatio).toInt().coerceIn(200, 380)
-                        else -> (700 * wRatio).toInt().coerceIn(500, 900)
-                    }
                     // Map footing type to English name expected by the drawing
                     val footingTypeEnglish = when (selectedType) {
                         CalculatorEngine.FootingType.ISOLATED -> "Isolated"
@@ -570,10 +487,7 @@ fun FootingScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.footing_drawing_title),
                         subtitle = stringResource(R.string.footing_reinforcement_detail),
-                        drawingHeightDp = drawingHeight,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
-                        selectedViewMode = selectedViewMode,
-                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             ProfessionalFootingDrawing(
                                 footingType = footingTypeEnglish,
@@ -586,12 +500,11 @@ fun FootingScreen(
                                 rebarXCount = res.barsX,
                                 rebarYDia = res.barDiameter.toDouble(),
                                 rebarYCount = res.barsY,
-                                cover = 70.0,
+                                cover = 75.0,
                                 col1X = col1XPos,
                                 col2X = col2XPos,
                                 soilPressureMax = res.soilPressure,
                                 soilPressureMin = res.soilPressure,
-                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -599,54 +512,6 @@ fun FootingScreen(
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
-        }
-        // PDF drawing capture area (invisible, renders at viewMode=0)
-        result?.let { res ->
-            val footingTypeEnglish = when (selectedType) {
-                CalculatorEngine.FootingType.ISOLATED -> "Isolated"
-                CalculatorEngine.FootingType.COMBINED -> "Combined"
-                CalculatorEngine.FootingType.RAFT -> "Raft"
-                CalculatorEngine.FootingType.STRIP -> "Isolated"
-                CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
-            }
-            val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
-                val dist = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0
-                val p1 = axialLoad.toDoubleOrNull() ?: 1200.0
-                val p2 = axialLoad2.toDoubleOrNull() ?: 1000.0
-                val xR = (p2 * dist) / (p1 + p2)
-                val s1 = 600.0
-                Pair(s1, s1 + dist)
-            } else {
-                Pair(0.0, 0.0)
-            }
-            ComposeDrawingCaptureUtil.DrawingCaptureArea(
-                captureLayer = pdfCaptureLayer,
-                widthPx = screenWidthPx,
-                heightPx = screenHeightPx
-            ) {
-                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    ProfessionalFootingDrawing(
-                        footingType = footingTypeEnglish,
-                        footingLengthX = res.length.toDouble(),
-                        footingLengthY = res.width.toDouble(),
-                        footingThickness = res.thickness.toDouble(),
-                        columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                        columnDepth = colLength.toDoubleOrNull() ?: 600.0,
-                        rebarXDia = res.barDiameter.toDouble(),
-                        rebarXCount = res.barsX,
-                        rebarYDia = res.barDiameter.toDouble(),
-                        rebarYCount = res.barsY,
-                        cover = 70.0,
-                        col1X = col1XPos,
-                        col2X = col2XPos,
-                        soilPressureMax = res.soilPressure,
-                        soilPressureMin = res.soilPressure,
-                        viewMode = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
         }
     }
 

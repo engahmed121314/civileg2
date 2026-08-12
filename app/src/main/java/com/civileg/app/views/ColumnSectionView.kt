@@ -12,7 +12,6 @@ import kotlin.math.min
  * Interactive Column Cross-Section View
  * Supports both rectangular and circular columns with reinforcement visualization
  */
-@Deprecated("Use ProfessionalColumnDrawing")
 class ColumnSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

@@ -8,14 +8,12 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
-import android.graphics.Bitmap
 import javax.inject.Inject
 
 data class ColumnUiState(
@@ -25,9 +23,6 @@ data class ColumnUiState(
     val fcu: String = "25",
     val fy: String = "400",
     val axialLoad: String = "1000",
-    val mx: String = "0",
-    val my: String = "0",
-    val isSeismic: Boolean = false,
     val designCode: DesignCode = DesignCode.ECP,
     val loadCombination: LoadCombination = LoadCombination.DEAD_LIVE,
     val preferredDiameter: String = "16",
@@ -36,8 +31,7 @@ data class ColumnUiState(
     val result: CalculatorEngine.ColumnResult? = null,
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
-    val errors: List<String> = emptyList(),
-    val validationReport: CalculationValidator.ValidationReport? = null
+    val errors: List<String> = emptyList()
 )
 
 @HiltViewModel
@@ -55,10 +49,6 @@ class ColumnViewModel @Inject constructor(
         _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }
     }
 
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
-    @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
-
     val uiStateLiveData: LiveData<ColumnUiState> = _uiState.asLiveData()
     val result: LiveData<CalculatorEngine.ColumnResult?> = _uiState.map { it.result }.asLiveData()
 
@@ -69,9 +59,6 @@ class ColumnViewModel @Inject constructor(
         fcu: String? = null,
         fy: String? = null,
         axialLoad: String? = null,
-        mx: String? = null,
-        my: String? = null,
-        isSeismic: Boolean? = null,
         preferredDiameter: String? = null,
         manualNumBars: String? = null
     ) {
@@ -89,9 +76,6 @@ class ColumnViewModel @Inject constructor(
                 fcu = fcu ?: state.fcu,
                 fy = fy ?: state.fy,
                 axialLoad = axialLoad ?: state.axialLoad,
-                mx = mx ?: state.mx,
-                my = my ?: state.my,
-                isSeismic = isSeismic ?: state.isSeismic,
                 preferredDiameter = newPreferredDiameter,
                 manualNumBars = newManualNumBars,
                 autoOptimize = if (shouldDisableAuto) false else state.autoOptimize
@@ -162,8 +146,6 @@ class ColumnViewModel @Inject constructor(
         val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
         val fyVal = state.fy.toDoubleOrNull() ?: 400.0
         val load = state.axialLoad.toDoubleOrNull() ?: 0.0
-        val mxVal = state.mx.toDoubleOrNull() ?: 0.0
-        val myVal = state.my.toDoubleOrNull() ?: 0.0
         val dia = state.preferredDiameter.toIntOrNull() ?: 16
         val manualBars = state.manualNumBars.toIntOrNull()
 
@@ -173,8 +155,6 @@ class ColumnViewModel @Inject constructor(
                     width = w,
                     depth = d,
                     pu = load * state.loadCombination.getFactorForCode(state.designCode),
-                    mx = mxVal,
-                    my = myVal,
                     fcu = fcuVal,
                     fy = fyVal,
                     code = mapDesignCode(state.designCode),
@@ -183,13 +163,7 @@ class ColumnViewModel @Inject constructor(
                     autoOptimize = state.autoOptimize,
                     manualNumBars = manualBars
                 )
-                
-                // Validate consistency & Dead Load (Axial logic)
-                val report = CalculationValidator.validateColumn(res)
-                val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to w, "depth" to d, "height" to h), load)
-                
-                val combinedWarnings = report.warnings + dlReport.warnings
-                _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList()) }
+                _uiState.update { it.copy(result = res, errors = emptyList()) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
             }
@@ -214,8 +188,7 @@ class ColumnViewModel @Inject constructor(
                 val fyVal = state.fy.toDoubleOrNull() ?: 400.0
 
                 // Generate drawing for PDF
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
+                val drawingBitmap = try {
                     PdfDrawingGenerator.generateColumnDrawing(
                         columnWidth = res.width,
                         columnDepth = res.depth,
@@ -224,13 +197,9 @@ class ColumnViewModel @Inject constructor(
                         barDia = res.reinforcement.diameter.toDouble(),
                         tieDia = res.stirrups.diameter.toDouble(),
                         tieSpacing = res.stirrups.spacing,
-                        cover = 40.0,
-                        isSpiral = false,
-                        spiralPitch = 0.0,
-                        sectionType = if (res.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular"
+                        cover = 40.0
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
-                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(state.designCode) {
                     com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"
@@ -249,7 +218,7 @@ class ColumnViewModel @Inject constructor(
                     "Design Code" to codeName,
                     "Load Combination" to state.loadCombination.name
                 )
-                val resultsMap = mutableMapOf(
+                val resultsMap = mapOf(
                     "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",
                     "Reinforcement" to res.reinforcement.barString,
                     "Stirrups" to res.stirrups.description,
@@ -259,12 +228,6 @@ class ColumnViewModel @Inject constructor(
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
-                
-                if (res.stirrups.zones.isNotEmpty()) {
-                    res.stirrups.zones.forEachIndexed { i, zone ->
-                        resultsMap["Tie Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
-                    }
-                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
@@ -302,9 +265,7 @@ class ColumnViewModel @Inject constructor(
 
     fun saveColumn(projectId: Long, name: String, result: CalculatorEngine.ColumnResult) {
         viewModelScope.launch {
-            val fcuVal = _uiState.value.fcu.toDoubleOrNull() ?: 25.0
-            val fyVal = _uiState.value.fy.toDoubleOrNull() ?: 400.0
-            repository.saveColumnDesign(projectId, name, result, fcuVal, fyVal)
+            repository.saveColumnDesign(projectId, name, result)
         }
     }
 

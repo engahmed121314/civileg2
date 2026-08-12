@@ -67,27 +67,11 @@ object SteelDictionary {
         "L 80x80x8" to SectionInfo("L 80×80×8", "b=80mm, t=8mm", 9.66, "زاوية متساوية"),
         "L 100x100x10" to SectionInfo("L 100×100×10", "b=100mm, t=10mm", 15.0, "زاوية متساوية"),
         
-        // Plates — weight = b(m) × t(m) × 7850 kg/m³
+        // Plates
         "PL 150x6" to SectionInfo("PL 150×6", "b=150mm, t=6mm", 7.07, "لوح"),
-        "PL 200x6" to SectionInfo("PL 200×6", "b=200mm, t=6mm", 9.42, "لوح"),
-        "PL 200x8" to SectionInfo("PL 200×8", "b=200mm, t=8mm", 12.56, "لوح"),
-        "PL 200x10" to SectionInfo("PL 200×10", "b=200mm, t=10mm", 15.70, "لوح"),
-        "PL 250x8" to SectionInfo("PL 250×8", "b=250mm, t=8mm", 15.70, "لوح"),
+        "PL 200x8" to SectionInfo("PL 200×8", "b=200mm, t=8mm", 12.57, "لوح"),
         "PL 250x10" to SectionInfo("PL 250×10", "b=250mm, t=10mm", 19.63, "لوح"),
-        "PL 250x12" to SectionInfo("PL 250×12", "b=250mm, t=12mm", 23.55, "لوح"),
-        "PL 300x10" to SectionInfo("PL 300×10", "b=300mm, t=10mm", 23.55, "لوح"),
-        "PL 300x12" to SectionInfo("PL 300×12", "b=300mm, t=12mm", 28.26, "لوح"),
-        "PL 300x15" to SectionInfo("PL 300×15", "b=300mm, t=15mm", 35.34, "لوح"),
-        "PL 350x12" to SectionInfo("PL 350×12", "b=350mm, t=12mm", 32.97, "لوح"),
-        "PL 350x15" to SectionInfo("PL 350×15", "b=350mm, t=15mm", 41.21, "لوح"),
-        "PL 400x12" to SectionInfo("PL 400×12", "b=400mm, t=12mm", 37.68, "لوح"),
-        "PL 400x15" to SectionInfo("PL 400×15", "b=400mm, t=15mm", 47.10, "لوح"),
-        "PL 400x20" to SectionInfo("PL 400×20", "b=400mm, t=20mm", 62.80, "لوح"),
-        "PL 450x15" to SectionInfo("PL 450×15", "b=450mm, t=15mm", 52.99, "لوح"),
-        "PL 450x20" to SectionInfo("PL 450×20", "b=450mm, t=20mm", 70.65, "لوح"),
-        "PL 500x15" to SectionInfo("PL 500×15", "b=500mm, t=15mm", 58.88, "لوح"),
-        "PL 500x20" to SectionInfo("PL 500×20", "b=500mm, t=20mm", 78.50, "لوح"),
-        "PL 500x25" to SectionInfo("PL 500×25", "b=500mm, t=25mm", 98.13, "لوح")
+        "PL 300x12" to SectionInfo("PL 300×12", "b=300mm, t=12mm", 28.27, "لوح")
     )
     
     // ============================================================
@@ -118,7 +102,7 @@ object SteelDictionary {
         "W 14x38" to SectionInfo("W14×38", "h=360mm, bf=170mm, tw=6.3mm, tf=8.0mm", 56.5, "عريض امريكي"),
         "W 14x53" to SectionInfo("W14×53", "h=350mm, bf=203mm, tw=7.7mm, tf=10.8mm", 78.8, "عريض امريكي"),
         "W 14x74" to SectionInfo("W14×74", "h=360mm, bf=205mm, tw=9.0mm, tf=13.8mm", 110.1, "عريض امريكي"),
-        "W 16x26" to SectionInfo("W16×26", "h=403mm, bf=140mm, tw=6.4mm, tf=7.9mm", 38.7, "عريض امريكي"),
+        "W 16x26" to SectionInfo("W16×26", "h=400mm, bf=140mm, tv=4.4mm, tf=5.6mm", 38.7, "عريض امريكي"),
         "W 16x31" to SectionInfo("W16×31", "h=400mm, bf=155mm, tw=5.0mm, tf=6.2mm", 46.1, "عريض امريكي"),
         "W 16x40" to SectionInfo("W16×40", "h=403mm, bf=177mm, tw=5.5mm, tf=7.5mm", 59.5, "عريض امريكي"),
         "W 16x50" to SectionInfo("W16×50", "h=410mm, bf=179mm, tw=6.2mm, tf=9.0mm", 74.4, "عريض امريكي"),
@@ -135,7 +119,7 @@ object SteelDictionary {
         "M 12x11.8" to SectionInfo("M12×11.8", "h=301mm, bf=96mm, tw=3.2mm, tf=4.3mm", 17.5, "متوسط"),
         
         // S-Shapes (Standard)
-        "S 6x12.5" to SectionInfo("S6×12.5", "h=152mm, bf=56mm, tw=5.1mm, tf=6.1mm", 18.6, "قياسي"),
+        "S 6x12.5" to SectionInfo("S6×12.5", "h=152mm, fb=56mm, tw=5.1mm, tf=6.1mm", 18.6, "قياسي"),
         "S 8x18.4" to SectionInfo("S8×18.4", "h=203mm, bf=70mm, tw=5.8mm, tf=7.7mm", 27.4, "قياسي"),
         
         // Channels (C)
@@ -207,26 +191,12 @@ object SteelDictionary {
         "HEB 350" to SectionInfo("HEB 350", "h=350mm, b=300mm", 137.0, "عريض"),
         "HEB 400" to SectionInfo("HEB 400", "h=400mm, b=300mm", 155.0, "عريض"),
         
-        // Plates (لوح) — weight = b(m) × t(m) × 7850 kg/m³
+        // Plates (لوح)
         "PL 100x6" to SectionInfo("PL 100×6", "عرض=100مم, سمك=6مم", 4.71, "لوح"),
-        "PL 100x8" to SectionInfo("PL 100×8", "عرض=100مم, سمك=8مم", 6.28, "لوح"),
-        "PL 150x6" to SectionInfo("PL 150×6", "عرض=150مم, سمك=6مم", 7.07, "لوح"),
         "PL 150x8" to SectionInfo("PL 150×8", "عرض=150مم, سمك=8مم", 9.42, "لوح"),
-        "PL 150x10" to SectionInfo("PL 150×10", "عرض=150مم, سمك=10مم", 11.78, "لوح"),
-        "PL 200x8" to SectionInfo("PL 200×8", "عرض=200مم, سمك=8مم", 12.56, "لوح"),
-        "PL 200x10" to SectionInfo("PL 200×10", "عرض=200مم, سمك=10مم", 15.70, "لوح"),
-        "PL 250x10" to SectionInfo("PL 250×10", "عرض=250مم, سمك=10مم", 19.63, "لوح"),
-        "PL 250x12" to SectionInfo("PL 250×12", "عرض=250مم, سمك=12مم", 23.55, "لوح"),
-        "PL 300x10" to SectionInfo("PL 300×10", "عرض=300مم, سمك=10مم", 23.55, "لوح"),
-        "PL 300x12" to SectionInfo("PL 300×12", "عرض=300مم, سمك=12مم", 28.26, "لوح"),
+        "PL 200x10" to SectionInfo("PL 200×10", "عرض=200مم, سمك=10مم", 15.71, "لوح"),
+        "PL 250x12" to SectionInfo("PL 250×12", "عرض=250مم, سمك=12مم", 23.56, "لوح"),
         "PL 300x15" to SectionInfo("PL 300×15", "عرض=300مم, سمك=15مم", 35.34, "لوح"),
-        "PL 350x12" to SectionInfo("PL 350×12", "عرض=350مم, سمك=12مم", 32.97, "لوح"),
-        "PL 350x15" to SectionInfo("PL 350×15", "عرض=350مم, سمك=15مم", 41.21, "لوح"),
-        "PL 400x15" to SectionInfo("PL 400×15", "عرض=400مم, سمك=15مم", 47.10, "لوح"),
-        "PL 400x20" to SectionInfo("PL 400×20", "عرض=400مم, سمك=20مم", 62.80, "لوح"),
-        "PL 450x20" to SectionInfo("PL 450×20", "عرض=450مم, سمك=20مم", 70.65, "لوح"),
-        "PL 500x20" to SectionInfo("PL 500×20", "عرض=500مم, سمك=20مم", 78.50, "لوح"),
-        "PL 500x25" to SectionInfo("PL 500×25", "عرض=500مم, سمك=25مم", 98.13, "لوح"),
         
         // Angles
         "L 50x50x5" to SectionInfo("L 50×50×5", "b=50مم, t=5مم", 3.77, "زاوية"),
@@ -267,7 +237,7 @@ object SteelDictionary {
         ),
         "Stiffener" to mapOf(
             "en" to "A plate welded to the web or flange to prevent local buckling or reinforce connection",
-            "ar" to "لوح ملحوم بالجذع أو الشفة لمنع الانبعاج الموضعي أو تعزيز الوصلة"
+            "ar" to "لوح ملحوم بال alma أو الشفة لمنع الانبعاج الموضعي أو تعزيز الوصلة"
         ),
         "Fillet Weld" to mapOf(
             "en" to "Most common weld type, triangular cross-section connecting two perpendicular surfaces",
@@ -283,7 +253,7 @@ object SteelDictionary {
         ),
         "Block Shear" to mapOf(
             "en" to "Failure mode where a block of material tears out along shear failure paths",
-            "ar" to "نمط الانهيار حيث ينفصل كتلة من المادة على طول مسارات قص"
+            "ar" to "نمط الانهيار حيث ينفصل كتلة من المادة على طول مسارات قص_failure"
         ),
         "Net Section" to mapOf(
             "en" to "Cross-sectional area after deducting holes and openings",
@@ -291,15 +261,15 @@ object SteelDictionary {
         ),
         "Gross Section" to mapOf(
             "en" to "Total cross-sectional area before any deductions",
-            "ar" to "المساحة العرضية الإجمالية قبل أي خصومات"
+            "ar" to "المطقة العرضية الإجمالية قبل أي خصومات"
         ),
         "Effective Length (Le)" to mapOf(
             "en" to "Length used for buckling analysis, based on end conditions",
-            "ar" to "الطول الفعال المستخدم في تحليل الانبعاج، بناءً على حالات نهاية العضو"
+            "ar" to "الطول الفعال المستخدم في تحليل الانبعاج، بناءً على conditions"
         ),
         "Moment Gradient Coefficient (Cb)" to mapOf(
             "en" to "Factor accounting for non-uniform moment distribution along beam",
-            "ar" to "معامل يأخذ في الاعتبار توزيع العزم غير المنتظم على طول العارضة"
+            "ar" to "معامل يأخذ في الاعتبار توزيع العزم غير المت.uniform along beam"
         )
     )
     
@@ -409,10 +379,10 @@ object SteelDictionary {
      * أنواع الوصلات الشائعة
      */
     val connectionTypes = listOf(
-        "Fin Plate Connection (Shear only) — وصلة لوح نهاية (قص فقط)",
-        "End Plate Connection (Moment/Shear) — وصلة لوح نهاية (عزم/قص)",
-        "Splice Connection — وصلة وصل",
-        "Base Plate with Anchor Bolts — قاعدة مع براغي تثبيت",
-        "Gusset Plate for Bracing — لوح رباط للتقوية"
+        "Fin Plate Connection (Shear only)",
+        "End Plate Connection (Moment/Shear)",
+        "Splice Connection",
+        "Base Plate with Anchor Bolts",
+        "Gusset Plate for Bracing"
     )
 }

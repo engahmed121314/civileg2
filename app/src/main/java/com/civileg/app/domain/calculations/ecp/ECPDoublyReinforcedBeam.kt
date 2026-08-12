@@ -9,11 +9,11 @@ import kotlin.math.*
  * compression steel is added to increase the moment capacity.
  *
  * Key equations:
- * - K_bal uses strain compatibility per ECP 203 §4-2-2-1
- * - R = Mu / (fcu/γc × b × d²)
+ * - K_bal = 0.36 * (fcu / (fy * gamma_s)) * (gamma_c / (1 + (fy / (1.15 * 440))))
+ * - R_bal = K_bal * (1 - 0.5 * K_bal)
  * - If R > R_bal -> need compression steel
- * - As' = (Mu - Mu_bal) / (fy/γs × (d - d'))
- * - As = As1 (concrete balanced) + As' (compression steel couple)
+ * - As' = (Mu - R_bal * fcu * b * d^2) / (fy/gamma_s * (d - d'))
+ * - As = (K_bal * fcu * b * d) / (fy/gamma_s) + As'
  *
  * Where:
  * - fcu = concrete compressive strength (MPa)
@@ -71,10 +71,8 @@ class ECPDoublyReinforcedBeam {
      * with the tension steel reaching its yield strain.
      */
     fun calculateKBal(fcu: Double, fy: Double): Double {
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val kBal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
+        val fyGammaS = fy / GAMMA_S
+        val kBal = 0.36 * (fcu / fyGammaS) * (GAMMA_C / (1 + fy / (GAMMA_S * 440)))
         return kBal
     }
 
@@ -89,7 +87,7 @@ class ECPDoublyReinforcedBeam {
     fun calculateKBalStrainCompatibility(fcu: Double, fy: Double): Double {
         val epsilonY = fy / (E_S * GAMMA_S)
         val cOverD = EPSILON_CU / (EPSILON_CU + epsilonY)
-        val beta = 0.9  // Whitney stress block factor per ECP 203
+        val beta = 0.8  // Whitney stress block factor per ECP 203
         val aOverD = beta * cOverD
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
@@ -158,7 +156,7 @@ class ECPDoublyReinforcedBeam {
 
         // ==================== Min/Max Steel ====================
         // ECP 203 Clause 4-2-1-2: As_min = max(0.26*fcu/fy, 0.0013) * b * d
-        val asMinValue = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
+        val asMinValue = max(0.26 * (fcu / fy), 0.0013) * b * d
         // ECP 203: As_max = 0.04 * b * h
         val asMaxValue = 0.04 * b * h
 
@@ -168,9 +166,8 @@ class ECPDoublyReinforcedBeam {
 
         if (!needsCompressionSteel) {
             // ========== SINGLY REINFORCED IS SUFFICIENT ==========
-            // Lever arm: z = d * (0.5 + sqrt(0.25 - K/0.893)) per ECP 203 K-method
-            // 0.893 = γc/(2×0.67) = 1.5/1.34
-            val discriminant = 0.25 - k / 0.893
+            // Lever arm: z = d * (0.5 + sqrt(0.25 - K/1.25)) per ECP 203
+            val discriminant = 0.25 - k / 1.25
             val z = if (discriminant >= 0) {
                 d * (0.5 + sqrt(discriminant))
             } else {
@@ -303,14 +300,13 @@ class ECPDoublyReinforcedBeam {
         // fbd = 0.6 * sqrt(fcu) for deformed bars per ECP 203
         val fbd = 0.6 * sqrt(fcu)
         if (tensionBarDia > 0) {
-            // ECP 203 §5-2-2: La = 0.5 * (fy/γs) * φ / fbd
-            val laTension = 0.5 * (fy / GAMMA_S) * tensionBarDia / fbd.coerceAtLeast(0.1)
+            val laTension = 0.5 * fy * tensionBarDia / fbd.coerceAtLeast(0.1)
             if (laTension > d * 0.8) {
                 warnings.add("Tension development length L_a = ${String.format("%.0f", laTension)} mm may be excessive")
             }
         }
         if (compBarDia > 0 && asCompressionValue > 0) {
-            val laComp = 0.5 * (fy / GAMMA_S) * compBarDia / fbd.coerceAtLeast(0.1)
+            val laComp = 0.5 * fy * compBarDia / fbd.coerceAtLeast(0.1)
             if (laComp > d * 0.6) {
                 warnings.add("Compression development length L_a = ${String.format("%.0f", laComp)} mm - verify anchorage")
             }
@@ -474,7 +470,6 @@ class ECPDoublyReinforcedBeam {
      */
     private fun calculateDevelopmentLength(fy: Double, dia: Double, fcu: Double): Double {
         val fbd = calculateBondStress(fcu)
-        // ECP 203 §5-2-2: La = 0.5 * (fy/γs) * φ / fbd
-        return 0.5 * (fy / GAMMA_S) * dia / fbd.coerceAtLeast(0.1)
+        return 0.5 * fy * dia / fbd.coerceAtLeast(0.1)
     }
 }

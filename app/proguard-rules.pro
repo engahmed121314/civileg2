@@ -91,9 +91,5 @@
 -keep class androidx.** { *; }
 -dontwarn androidx.**
 
-# --- SLF4J (used by some libraries transitively) ---
--dontwarn org.slf4j.**
--keep class org.slf4j.** { *; }
-
 # --- Security: Keep application and model classes ---
 -keep class com.civileg.app.** { *; }

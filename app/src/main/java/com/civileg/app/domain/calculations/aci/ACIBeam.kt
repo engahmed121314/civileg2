@@ -200,17 +200,7 @@ class ACIBeam : BeamDesign {
         
         codeNotes.add(CodeReference.ACI.BEAM_SHEAR)
         codeNotes.add("Vc = ${"%.1f".format(Vc/1000)} kN, φVc = ${"%.1f".format(phiVc)} kN")
-
-        // ── Condensation zone detailing per ACI 318 §21.5.3 / §9.7.6.2 ──
-        val minSpacingCode = 75.0  // ACI: max(25mm, 1.5*db_agg) ≈ 75mm practical
-        val maxSpacingCode = maxSpacing1  // already computed per ACI tiers
-        val condensationZoneLength = minOf(effectiveDepth, 500.0)  // ACI: d from support face
-        val spacingAtSupport = (stirrupSpacing * 0.5).coerceIn(minSpacingCode, stirrupSpacing)
-        val spacingAtMidspan = stirrupSpacing.coerceAtMost(maxSpacingCode)
-
-        codeNotes.add("ACI 318: Condensation zone = ${condensationZoneLength.toInt()}mm")
-        codeNotes.add("Dense spacing near supports: ${spacingAtSupport.toInt()}mm")
-
+        
         return ShearReinforcementResult(
             concreteShearCapacity = Vc / 1000,
             requiredShearReinforcement = requiredStirrups,
@@ -220,12 +210,7 @@ class ACIBeam : BeamDesign {
             isSafe = isSafe,
             utilizationRatio = if (maxShearCapacity > 0) (Vu / 1000) / maxShearCapacity else 2.0,
             warnings = warnings,
-            codeNotes = codeNotes,
-            spacingAtSupport = spacingAtSupport,
-            spacingAtMidspan = spacingAtMidspan,
-            condensationZoneLength = condensationZoneLength,
-            minSpacingPerCode = minSpacingCode,
-            maxSpacingPerCode = maxSpacingCode
+            codeNotes = codeNotes
         )
     }
 

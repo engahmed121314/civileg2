@@ -11,7 +11,6 @@ import kotlin.math.min
  * Professional P-M Interaction Diagram View
  * Features: Grid lines, smooth curve, safety zone visualization, and applied load point.
  */
-@Deprecated("Use InteractionDiagramChart Compose component")
 class InteractionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

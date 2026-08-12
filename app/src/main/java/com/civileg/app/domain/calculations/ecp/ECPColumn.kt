@@ -114,7 +114,7 @@ class ECPColumn : ColumnDesign {
         
         // حساب الكانات
         val tiesDiameter = max(10.0, barDiameter / 4).coerceAtLeast(8.0)
-        val tiesSpacing = calculateTiesSpacing(barDiameter, tiesDiameter, width, depth)
+        val tiesSpacing = calculateTiesSpacing(barDiameter, width, depth)
         
         // حساب نسبة الاستغلال
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
@@ -141,9 +141,9 @@ class ECPColumn : ColumnDesign {
         )
     }
 
-    private fun calculateTiesSpacing(barDiameter: Double, tiesDiameter: Double, width: Double, depth: Double): Double {
-        // حسب الكود المصري ECP 203 البند 4-2-6: أقل من (16×قطر السيخ، 48×قطر الكانة، أقل بعد في المقطع، 300 مم)
-        return minOf(16 * barDiameter, 48 * tiesDiameter, width, depth, 300.0).coerceIn(getMinSpacing(), getMaxSpacing())
+    private fun calculateTiesSpacing(barDiameter: Double, width: Double, depth: Double): Double {
+        // حسب الكود المصري ECP 203 البند 4-2-6: أقل من (16×قطر السيخ، أقل بعد في المقطع، 300 مم)
+        return minOf(16 * barDiameter, width, depth, 300.0).coerceIn(getMinSpacing(), getMaxSpacing())
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
@@ -176,8 +176,8 @@ class ECPColumn : ColumnDesign {
         val d = depth - cover  // effective depth (mm)
         val codeNotes = mutableListOf<String>()
 
-        // Vc = 0.24 × √(fcu/γc) × b × d   (ECP 203 §4-3-1-2)
-        val Vc = 0.24 * sqrt(fcu / GAMMA_C) * b * d / 1000.0  // kN
+        // Vc = 0.24 × √(fcu) × b × d / γc   (γc = 1.5 — ECP 203 §4-2-5)
+        val Vc = 0.24 * sqrt(fcu) * b * d / GAMMA_C / 1000.0  // kN
 
         val needsStirrups = Vu > Vc
 

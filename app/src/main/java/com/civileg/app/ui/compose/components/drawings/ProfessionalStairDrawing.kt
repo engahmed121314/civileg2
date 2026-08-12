@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.components.drawings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -106,7 +107,6 @@ fun ProfessionalStairDrawing(
     distributionSpacing: Double = 0.0, // mm
     cover: Double = 25.0,         // mm
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
-    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -120,7 +120,7 @@ fun ProfessionalStairDrawing(
         // ── Derived values ────────────────────────────────────────────
         val nRisers = if (numberOfRisers > 0) numberOfRisers
             else (totalHeight / riserHeight).toInt().coerceAtLeast(1)
-        val nTreads = max(1, nRisers - 1)  // nTreads = nRisers - 1 by definition
+        val nTreads = nRisers
         val slopeLength = sqrt(
             (totalLength * totalLength + totalHeight * totalHeight).toDouble()
         )
@@ -132,38 +132,20 @@ fun ProfessionalStairDrawing(
         val actualLandingThickness = if (hasLanding && landingThickness > 0.0)
             landingThickness else slabThickness
 
-        // ── Layout zones (viewMode-aware) ────────────────────
+        // ── Layout zones ──────────────────────────────────────────────
         // Left 58%: Elevation view
         // Right 42%: Cross-section (top) + Plan view (bottom)
         // Bottom strip: Reinforcement table
-        val elevZoneRight = when (viewMode) {
-            1 -> cw  // full width for elevation only
-            0 -> cw * 0.58f
-            2 -> 0f  // not visible
-            else -> 0f // not visible
-        }
-        val tableTop = when (viewMode) {
-            3 -> ch * 0.08f  // table near top for reinforcement-only
-            0 -> ch * 0.76f
-            else -> ch * 0.92f // tables near bottom
-        }
-        val rightZoneTop = when (viewMode) {
-            2 -> 28f  // section views start near top
-            0 -> 30f
-            else -> 0f
-        }
-        val rightZoneMid = when (viewMode) {
-            2 -> (rightZoneTop + tableTop) / 2f  // split right zone evenly
-            0 -> (rightZoneTop + tableTop - 20f) / 2f
-            else -> 0f
-        }
+        val elevZoneRight = cw * 0.58f
+        val tableTop = ch * 0.74f
+        val rightZoneTop = 30f
+        val rightZoneMid = (rightZoneTop + tableTop) / 2f
 
-        // ── Draw zones based on viewMode ──────────────────────────
+        // ── Draw all zones ────────────────────────────────────────────
         // 1. Main elevation view (left)
-        if (viewMode == 0 || viewMode == 1) {
         drawElevationView(
             zoneLeft = 60f, zoneTop = 28f,
-            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
+            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 8f,
             cw = cw, ch = ch,
             nRisers = nRisers, nTreads = nTreads,
             riserHeight = riserHeight, treadWidth = treadWidth,
@@ -177,14 +159,11 @@ fun ProfessionalStairDrawing(
             cover = cover,
             slopeAngleRad = slopeAngleRad, cosSlope = cosSlope, sinSlope = sinSlope
         )
-        } // end elevation view
 
-        // 2. Cross-section view A-A (right-top) + 3. Plan view (right-bottom)
-        if (viewMode == 0 || viewMode == 2) {
-        val secZoneLeft = if (viewMode == 2) 60f else elevZoneRight + 10f
+        // 2. Cross-section view A-A (right-top)
         drawCrossSectionView(
-            zoneLeft = secZoneLeft, zoneTop = rightZoneTop,
-            zoneRight = cw - 16f, zoneBottom = rightZoneMid - 6f,
+            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneTop,
+            zoneRight = cw - 16f, zoneBottom = rightZoneMid - 4f,
             slabThickness = slabThickness, stairWidth = stairWidth,
             mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
             topRebarDia = topRebarDia, topRebarSpacing = topRebarSpacing,
@@ -195,18 +174,16 @@ fun ProfessionalStairDrawing(
 
         // 3. Plan view (right-bottom)
         drawPlanView(
-            zoneLeft = secZoneLeft, zoneTop = rightZoneMid + 6f,
-            zoneRight = cw - 16f, zoneBottom = tableTop - 16f,
+            zoneLeft = elevZoneRight + 10f, zoneTop = rightZoneMid + 4f,
+            zoneRight = cw - 16f, zoneBottom = tableTop - 8f,
             totalLength = totalLength, stairWidth = stairWidth,
             nTreads = nTreads, treadWidth = treadWidth,
             hasLanding = hasLanding, landingLength = landingLength,
             mainRebarDia = mainRebarDia, mainRebarSpacing = mainRebarSpacing,
             distributionDia = distributionDia, distributionSpacing = distributionSpacing
         )
-        } // end section/plan views
 
         // 4. Reinforcement schedule table (bottom)
-        if (viewMode == 0 || viewMode == 3) {
         drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
@@ -220,10 +197,9 @@ fun ProfessionalStairDrawing(
             cover = cover, hasLanding = hasLanding,
             landingLength = landingLength, actualLandingThickness = actualLandingThickness
         )
-        } // end reinforcement table
 
-        // 5. Title block (always visible)
-        drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength)
+        // 5. Title block (bottom-right corner)
+        drawTitleBlock(cw, ch, nRisers, riserHeight, treadWidth, totalHeight, totalLength)
     }
 }
 
@@ -253,7 +229,7 @@ private fun DrawScope.drawElevationView(
     // ── Scaling: fit stair geometry into zone ────────────────────────
     val totalDrawLength = if (hasLanding) totalLength + landingLength else totalLength
     val scaleX = (zoneW * 0.82f) / totalDrawLength.toFloat()
-    val scaleY = (zoneH * 0.70f) / (totalHeight + slabThickness + 100).toFloat()
+    val scaleY = (zoneH * 0.70f) / (totalHeight + slabThickness + 80).toFloat()
     val scale = min(scaleX, scaleY)
 
     val stepW = treadWidth.toFloat() * scale
@@ -269,9 +245,8 @@ private fun DrawScope.drawElevationView(
     val dy3D = depth3D * angleY3D
 
     // Origin: bottom-left of stair (where first riser meets floor)
-    // Reserve 62f at bottom for supports + horizontal length dimension
     val originX = zoneLeft + 50f
-    val originY = zoneBottom - 62f
+    val originY = zoneBottom - 40f
 
     // Stair top-right corner (end of last tread at top)
     val stairEndX = originX + nTreads * stepW
@@ -553,10 +528,10 @@ private fun DrawScope.drawElevationView(
             )
         }
 
-        // Distribution label — positioned below soffit with extra clearance
+        // Distribution label
         drawTextWithBackground(
             text = "Ø${distributionDia.toInt()} @ ${distributionSpacing.toInt()}",
-            x = stairEndX - 90f, y = stairEndY + perpOffY + slabT * 0.4f + 22f,
+            x = stairEndX - 80f, y = stairEndY + slabT + 18f,
             textColor = DistributionPurple, bgColor = Color(0xCC1A1A2E),
             textSize = 14f
         )
@@ -639,13 +614,10 @@ private fun DrawScope.drawCrossSectionView(
     )
 
     // ── Scale section to fit zone ────────────────────────────────────
-    // Use asymmetric padding: left side needs cover dim (~36f),
-    // right side needs bar labels + thickness dim (~76f)
-    val padLeft = 36f
-    val padRight = 76f
+    val padding = 36f
     val titleSpace = 28f
-    val availW = zoneW - padLeft - padRight
-    val availH = zoneH - 2 * 36f - titleSpace
+    val availW = zoneW - 2 * padding
+    val availH = zoneH - 2 * padding - titleSpace
     val secScale = min(
         availW / stairWidth.toFloat(),
         availH / (slabThickness + 60).toFloat()
@@ -653,7 +625,7 @@ private fun DrawScope.drawCrossSectionView(
 
     val secW = stairWidth.toFloat() * secScale
     val secT = slabThickness.toFloat() * secScale
-    val secLeft = zoneLeft + padLeft + (availW - secW) / 2f
+    val secLeft = zoneLeft + (zoneW - secW) / 2f
     val secTop = zoneTop + titleSpace + (availH - secT) / 2f + 10f
 
     // ── Concrete section rectangle ───────────────────────────────────
@@ -782,8 +754,7 @@ private fun DrawScope.drawCrossSectionView(
     )
 
     // ── Waist slab thickness dimension (right side) ──────────────────
-    // Placed further right to clear bar diameter labels
-    val tDimX = secLeft + secW + 36f
+    val tDimX = secLeft + secW + 6f
     val dimY1 = secTop
     val dimY2 = secTop + secT
     drawLine(
@@ -800,14 +771,14 @@ private fun DrawScope.drawCrossSectionView(
     }) {
         drawContext.canvas.nativeCanvas.apply {
             val paint = android.graphics.Paint().apply {
-                textSize = 13f
+                textSize = 14f
                 color = android.graphics.Color.WHITE
                 isFakeBoldText = true
                 typeface = android.graphics.Typeface.MONOSPACE
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             this.drawText(
-                "t=${slabThickness.toInt()}",
+                "t=${slabThickness.toInt()} mm",
                 tDimX + 16f,
                 secTop + secT / 2f + 4f,
                 paint
@@ -976,8 +947,7 @@ private fun DrawScope.drawPlanView(
     }
 
     // ── Arrow indicating direction of ascent ─────────────────────────
-    // Placed just inside the plan zone to avoid overlapping cross-section zone above
-    val arrowY = planTop + 2f
+    val arrowY = planTop - 8f
     val arrowX1 = planLeft + stairPlanW * 0.3f
     val arrowX2 = planLeft + stairPlanW * 0.7f
     drawLine(
@@ -1066,15 +1036,14 @@ private fun DrawScope.drawReinforcementScheduleTable(
     // ── Table title ──────────────────────────────────────────────────
     drawTextAnnotated(
         text = "REINFORCEMENT SCHEDULE",
-        x = tableLeft, y = tableTop + 18f,
+        x = tableLeft, y = tableTop - 4f,
         color = DimensionWhite, size = 18f
     )
 
     // ── Header row ───────────────────────────────────────────────────
-    val headerTop = tableTop + 24f
     drawRect(
         color = TableHeaderBg,
-        topLeft = Offset(tableLeft, headerTop),
+        topLeft = Offset(tableLeft, tableTop + 6f),
         size = Size(tableW, headerH)
     )
 
@@ -1084,7 +1053,7 @@ private fun DrawScope.drawReinforcementScheduleTable(
         drawTextAnnotated(
             text = headers[i],
             x = cx + 6f,
-            y = headerTop + headerH / 2f + 5f,
+            y = tableTop + 6f + headerH / 2f + 5f,
             color = DimensionWhite, size = 16f
         )
         cx += colWidths[i]
@@ -1093,13 +1062,13 @@ private fun DrawScope.drawReinforcementScheduleTable(
     // ── Separator ────────────────────────────────────────────────────
     drawLine(
         color = ExtensionGray.copy(alpha = 0.3f),
-        start = Offset(tableLeft, headerTop + headerH),
-        end = Offset(tableLeft + tableW, headerTop + headerH),
+        start = Offset(tableLeft, tableTop + 6f + headerH),
+        end = Offset(tableLeft + tableW, tableTop + 6f + headerH),
         strokeWidth = 0.5.dp.toPx()
     )
 
     // ── Row 1: Main bottom reinforcement ─────────────────────────────
-    val row1Y = headerTop + headerH
+    val row1Y = tableTop + 6f + headerH
     drawRect(
         color = TableRowAlt,
         topLeft = Offset(tableLeft, row1Y),
@@ -1219,7 +1188,7 @@ private fun DrawScope.drawReinforcementScheduleTable(
         sepX += colWidths[i]
         drawLine(
             color = ExtensionGray.copy(alpha = 0.15f),
-            start = Offset(sepX, headerTop),
+            start = Offset(sepX, tableTop + 6f),
             end = Offset(sepX, currentY),
             strokeWidth = 0.5.dp.toPx()
         )
@@ -1228,8 +1197,8 @@ private fun DrawScope.drawReinforcementScheduleTable(
     // ── Table border ─────────────────────────────────────────────────
     drawRect(
         color = ExtensionGray.copy(alpha = 0.4f),
-        topLeft = Offset(tableLeft, headerTop),
-        size = Size(tableW, currentY - headerTop),
+        topLeft = Offset(tableLeft, tableTop + 6f),
+        size = Size(tableW, currentY - tableTop - 6f),
         style = Stroke(width = 1.dp.toPx())
     )
 }
@@ -1240,7 +1209,6 @@ private fun DrawScope.drawReinforcementScheduleTable(
 
 private fun DrawScope.drawTitleBlock(
     cw: Float, ch: Float,
-    tableTop: Float,
     nRisers: Int,
     riserHeight: Double,
     treadWidth: Double,
@@ -1248,10 +1216,9 @@ private fun DrawScope.drawTitleBlock(
     totalLength: Double
 ) {
     val blockW = 200f
-    val blockH = 42f
+    val blockH = 48f
     val blockLeft = cw - blockW - 16f
-    // Position above the reinforcement table to avoid overlap
-    val blockTop = (tableTop - blockH - 6f).coerceAtLeast(4f)
+    val blockTop = ch - blockH - 8f
 
     drawRoundRect(
         color = Color(0x22000000),
@@ -1262,12 +1229,12 @@ private fun DrawScope.drawTitleBlock(
 
     drawTextAnnotated(
         text = "STAIRCASE DETAIL",
-        x = blockLeft + 8f, y = blockTop + 16f,
-        color = DimensionWhite, size = 15f
+        x = blockLeft + 8f, y = blockTop + 18f,
+        color = DimensionWhite, size = 16f
     )
     drawTextAnnotated(
         text = "${nRisers}R × ${treadWidth.toInt()}T  |  H=${totalHeight.toInt()} mm  L=${totalLength.toInt()} mm",
-        x = blockLeft + 8f, y = blockTop + 32f,
+        x = blockLeft + 8f, y = blockTop + 36f,
         color = ExtensionGray, size = 12f
     )
 }
@@ -1421,7 +1388,7 @@ private fun DrawScope.drawElevationDimensions(
 
     // ── Total Horizontal Length dimension (bottom) ───────────────────
     val endX = if (hasLanding) landingEndX else stairEndX
-    val lenY = originY + 42f
+    val lenY = originY + 50f
     drawLine(
         color = DimensionWhite,
         start = Offset(originX, lenY),
@@ -1445,14 +1412,13 @@ private fun DrawScope.drawElevationDimensions(
     )
     drawTextAnnotated(
         text = "L = ${totalLength.toInt()} mm",
-        x = (originX + endX) / 2f - 36f, y = lenY + 14f,
+        x = (originX + endX) / 2f - 36f, y = lenY + 18f,
         color = DimensionWhite, size = 16f
     )
 
     // ── Riser height dimension (first riser, small) ──────────────────
-    // Placed on the riser face to avoid crossing the total-height extension line
     if (nRisers >= 2) {
-        val rX = originX + 6f
+        val rX = originX - 14f
         val rY1 = originY - stepH
         val rY2 = originY
         drawLine(
@@ -1464,7 +1430,7 @@ private fun DrawScope.drawElevationDimensions(
         drawArrowHead(rX, rY1, direction = 1f, color = TopRebarBlue.copy(alpha = 0.8f), vertical = true)
         drawArrowHead(rX, rY2, direction = -1f, color = TopRebarBlue.copy(alpha = 0.8f), vertical = true)
         withTransform({
-            rotate(degrees = -90f, pivot = Offset(rX + 8f, (rY1 + rY2) / 2f))
+            rotate(degrees = -90f, pivot = Offset(rX - 10f, (rY1 + rY2) / 2f))
         }) {
             drawContext.canvas.nativeCanvas.apply {
                 val paint = android.graphics.Paint().apply {
@@ -1475,8 +1441,8 @@ private fun DrawScope.drawElevationDimensions(
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
                 this.drawText(
-                    "R=${riserHeight.toInt()}",
-                    rX + 8f,
+                    "R=${riserHeight.toInt()} mm",
+                    rX - 10f,
                     (rY1 + rY2) / 2f + 3f,
                     paint
                 )
@@ -1485,9 +1451,8 @@ private fun DrawScope.drawElevationDimensions(
     }
 
     // ── Tread width dimension (first tread, small) ───────────────────
-    // Placed above the first tread to avoid overlapping support symbols
     if (nTreads >= 1) {
-        val tY = originY - stepH - 8f
+        val tY = originY - stepH + stepH + 16f
         val tX1 = originX
         val tX2 = originX + stepW
         drawLine(
@@ -1499,8 +1464,8 @@ private fun DrawScope.drawElevationDimensions(
         drawArrowHead(tX1, tY, direction = 1f, color = TopRebarBlue.copy(alpha = 0.8f))
         drawArrowHead(tX2, tY, direction = -1f, color = TopRebarBlue.copy(alpha = 0.8f))
         drawTextAnnotated(
-            text = "T=${treadWidth.toInt()}",
-            x = (tX1 + tX2) / 2f - 14f, y = tY - 4f,
+            text = "T=${treadWidth.toInt()} mm",
+            x = (tX1 + tX2) / 2f - 16f, y = tY + 13f,
             color = TopRebarBlue.copy(alpha = 0.8f), size = 11f
         )
     }

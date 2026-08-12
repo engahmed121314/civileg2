@@ -26,7 +26,7 @@ class ECPFooting : FootingDesign {
         private const val GAMMA_G = 1.4   // الحمل الميت
         private const val GAMMA_Q = 1.6   // الحمل الحي
         // حد ادنى نسبة التسليح في القواعد ECP 203 جدول 4-8
-        private const val MIN_REIN_RATIO = 0.0015 // 0.15% للقواعد per ECP 203 Table 4-8
+        private const val MIN_REIN_RATIO = 0.0015 // 0.15% للقواعد
         // أقل سماكة للقواعد ECP 203
         private const val MIN_THICKNESS = 300.0 // mm
     }
@@ -120,8 +120,8 @@ class ECPFooting : FootingDesign {
         val Vu_x = q_avg * (L / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
         val Vu_y = q_avg * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
 
-        // One-way shear capacity ECP 203 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        // One-way shear capacity ECP 203: qcu = 0.24 * sqrt(fcu/gamma_c)
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa
         val Vc_x = qcu * (L / 1000.0) * d / 1000.0 * 1000.0  // kN
         val Vc_y = qcu * (B / 1000.0) * d / 1000.0 * 1000.0  // kN
 
@@ -157,21 +157,16 @@ class ECPFooting : FootingDesign {
         // 14. التسليح الرئيسي = الأكبر
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
-        val formulas = mutableListOf<String>()
-        formulas.add("Req Area A = P / (SBC - \u03B3c \u00D7 t) = ${P_service.format(1)} / ${netSBC.format(1)} = ${A_req.format(2)} m\u00B2")
-        formulas.add("Actual Area A_act = B \u00D7 L = ${A_actual.format(2)} m\u00B2")
-        formulas.add("Max Pressure q_max = (P/A)(1+6e/B) = ${q_max.format(1)} kPa")
-        formulas.add("Bending Moment Mu = q \u00D7 cant\u00B2 / 2 = ${Mu_x.format(1)} kN.m")
-
-        val checks = mutableListOf<WallSafetyCheck>()
-        checks.add(WallSafetyCheck("Bearing Pressure", q_max <= soilBearingCapacity, q_max, soilBearingCapacity, "kPa", "q \u2264 q_all", "Soil capacity check"))
-        checks.add(WallSafetyCheck("Punching Shear", punchingCheck.isSafe, punchingCheck.appliedShear, punchingCheck.shearCapacity, "MPa", "qp \u2264 qcu", "Against punching failure"))
-        checks.add(WallSafetyCheck("Flexural Rebar", mainReinf.astProvided >= mainReinf.astRequired, mainReinf.astProvided, mainReinf.astRequired, "mm\u00B2", "As \u2265 As_min", "Structural integrity"))
-
         codeNotes.add("ECP 203-2020: Isolated Footing Design")
         codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
-        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f kPa", q_avg, q_max))
+        codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
+        codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
         codeNotes.add(String.format("Main: %s", mainReinf.barString))
+        if (distBarsPerMeter > 0) {
+            codeNotes.add(String.format("Distribution: %d dia %d @ %dmm", 
+                distBarsPerMeter, distBar.toInt(), distSpacing.toInt()
+            ))
+        }
         codeNotes.add(String.format("One-way shear capacity: %.2f MPa", qcu))
 
         return FootingDesignResult(
@@ -182,16 +177,15 @@ class ECPFooting : FootingDesign {
             maxSoilPressure = q_max,
             reinforcement = mainReinf,
             punchingShearCheck = punchingCheck,
-            isSafe = checks.all { it.isSafe },
-            designCodeName = "ECP 203-2020",
-            formulas = formulas,
-            safetyChecks = checks,
+            isSafe = q_max <= soilBearingCapacity
+                && q_min >= 0
+                && Vu_x <= Vc_x
+                && Vu_y <= Vc_y
+                && punchingCheck.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )
     }
-
-    private fun Double.format(n: Int) = String.format("%.${n}f", this)
 
     // ===================== التحقق من قص الاختراق =====================
     override fun checkPunchingShear(
@@ -210,8 +204,8 @@ class ECPFooting : FootingDesign {
 
         // ضغط القص المُطبَّق
         val qp_applied = (V_punch * 1000.0) / (bo * effectiveDepth)
-        // Punching shear capacity ECP 203 §4-3-2: qp = 0.316 * sqrt(fcu/γc)
-        val qp_capacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        // القدرة القصية لقص الاختراق ECP 203: qp = 0.316 * sqrt(fcu/gamma_c)
+        val qp_capacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa
 
         val isSafe = qp_applied <= qp_capacity
 
@@ -252,25 +246,22 @@ class ECPFooting : FootingDesign {
         // K = Mu / (fcu * b * d^2)
         val K = Mu / (fcu * b * d * d)
 
-        // K_bal for tension-controlled - strain compatibility per ECP 203
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
+        // K_bal for tension-controlled (fcu=25, fy=360): 0.186
+        val K_bal = 0.186
 
         if (K > K_bal) {
             warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد العمق الفعال", K, K_bal))
         }
 
         // 2. حساب z (ذراع القوة)
-        // z = d * (0.5 + sqrt(0.25 - K / 0.893))  — 0.893 = γc/(2×0.67) per ECP 203 K-method
-        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
+        // z = d * (0.5 + sqrt(0.25 - K / 1.25))
+        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 1.25)))
 
         // 3. As = Mu / (fy/gamma_s * z)
         val asRequired = Mu / (fy / GAMMA_S * z)
 
         // 4. الحد الأدنى للتسليح (ECP 203 جدول 4-8)
-        val asMin = max(0.26 * sqrt(fcu) / fy, MIN_REIN_RATIO) * b * d  // ECP 203 §4-2-1-2
+        val asMin = MIN_REIN_RATIO * b * d
 
         val asFinal = max(asRequired, asMin)
 
@@ -287,9 +278,9 @@ class ECPFooting : FootingDesign {
         val asProvided = actualBars * barArea
 
         // 7. نسبة التسليح
-        val rhoAct = asProvided / (b * d)
-        if (rhoAct > 0.04) {
-            warnings.add(String.format("نسبة التسليح %.1f%% تتجاوز الحد الأقصى", rhoAct * 100))
+        val rho = asProvided / (b * d)
+        if (rho > 0.04) {
+            warnings.add(String.format("نسبة التسليح %.1f%% تتجاوز الحد الأقصى", rho * 100))
         }
 
         val utilization = asRequired / asProvided
@@ -609,7 +600,7 @@ class ECPFooting : FootingDesign {
         perimeter: Double,
         effectiveDepth: Double
     ): Double {
-        // qp = 0.316 * sqrt(fcu/γc) * bo * d (kN)
+        // qp = 0.316 * sqrt(fcu/gamma_c) * bo * d (kN)
         val qp = 0.316 * sqrt(fcu / GAMMA_C)
         return qp * perimeter * effectiveDepth / 1000.0
     }

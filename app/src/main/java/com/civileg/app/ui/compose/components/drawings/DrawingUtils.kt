@@ -1,7 +1,5 @@
 package com.civileg.app.ui.compose.components.drawings
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -17,11 +15,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 // ============================================================================
-// SHARED COLOR PALETTE (defaults — not theme-aware)
+// SHARED COLOR PALETTE — all professional drawings use these
 // ============================================================================
 
-/** Static color defaults used by non-theme-aware drawings (Beam, Column, etc.). */
-object DrawingColorDefaults {
+object DrawingColors {
     val RebarBlue = Color(0xFF4A90D9)
     val TopRebarBlue = Color(0xFF7EC8E3)
     val StirrupPurple = Color(0xFF9B59B6)
@@ -51,142 +48,6 @@ object DrawingColorDefaults {
 }
 
 // ============================================================================
-// THEME-AWARE DRAWING COLORS (data class with light/dark variants)
-// ============================================================================
-
-/**
- * Theme-aware color palette for professional engineering drawings.
- * Provides light and dark variants for all colors so drawings adapt
- * to the system theme at runtime.
- *
- * Obtain the correct palette via the [drawingColors] composable function.
- */
-data class DrawingColors(
-    // ── Structural element colors (same in both themes for clarity) ──
-    val rebarBlue: Color = Color(0xFF4A90D9),
-    val topRebarBlue: Color = Color(0xFF7EC8E3),
-    val stirrupPurple: Color = Color(0xFF9B59B6),
-    val secondaryRed: Color = Color(0xFFE74C3C),
-    val distBarGreen: Color = Color(0xFF2E7D32),
-    // ── Concrete fills (theme-dependent) ──
-    val concreteFill: Color = Color(0xFFE0E0E0),
-    val concreteStroke: Color = Color(0xFF424242),
-    val concreteGray: Color = Color(0xFF6B6B6B),
-    val concreteTopGray: Color = Color(0xFF8A8A8A),
-    val concreteSideGray: Color = Color(0xFF505050),
-    val ribFill: Color = Color(0xFFBDBDBD),
-    val dropFill: Color = Color(0xFFB0BEC5),
-    val columnFill: Color = Color(0xFF616161),
-    val planBackground: Color = Color(0xFF37474F),
-    // ── Text colors (theme-dependent) ──
-    val textPrimary: Color = Color(0xFF212121),
-    val textSecondary: Color = Color(0xFF757575),
-    val textOnHeader: Color = Color(0xFFFFFFFF),
-    // ── Dimension lines (theme-dependent) ──
-    val dimColor: Color = Color(0xFF6A1B9A),
-    val dimLineColor: Color = Color(0xFF757575),
-    val extensionGray: Color = Color(0xFFAAAAAA),
-    // ── Hatch / pattern colors (theme-dependent) ──
-    val hatchColor: Color = Color(0x60BDBDBD),
-    // ── Table colors (theme-dependent) ──
-    val tableHeaderBg: Color = Color(0xFF1A237E),
-    val tableHeaderText: Color = Color(0xFFFFFFFF),
-    val tableCellText: Color = Color(0xFF212121),
-    val tableRowColor: Color = Color(0xFFFAFAFA),
-    val tableRowAltColor: Color = Color(0xFFF5F5F5),
-    val tableTitleBg: Color = Color(0xFF263238),
-    val tableBorder: Color = Color(0xFF37474F),
-    val tableRowBorder: Color = Color(0xFFBDBDBD),
-    val tableColumnBorder: Color = Color(0xFF90A4AE),
-    // ── Status colors (same in both themes) ──
-    val safeGreen: Color = Color(0xFF2E7D32),
-    val unsafeRed: Color = Color(0xFFC62828),
-    val warningOrange: Color = Color(0xFFF39C12),
-    // ── Utility colors (theme-dependent) ──
-    val stripColor: Color = Color(0xFF757575),
-    val shearPerimColor: Color = Color(0xFFE65100),
-    val coverColor: Color = Color(0xFF2E7D32),
-    val labelGray: Color = Color(0xFF757575),
-    val sectionLineColor: Color = Color(0xFFC62828),
-    val totalsGold: Color = Color(0xFFFFD700),
-    // ── Force diagram / misc (same in both themes) ──
-    val stressPink: Color = Color(0xFFE91E8C),
-    val soilBrown: Color = Color(0xFF8B6914),
-    val waterBlue: Color = Color(0xFF3498DB),
-    val accentCyan: Color = Color(0xFF00BCD4),
-    val centerLine: Color = Color(0x4488FF88),
-    val gridLine: Color = Color(0x33FFFFFF),
-    val sectionLine: Color = Color(0xFFE74C3C),
-    val safeCheckGreen: Color = Color(0x33FFFFFF)
-) {
-    companion object {
-        /** Light theme drawing palette */
-        val Light = DrawingColors(
-            concreteFill = Color(0xFFE0E0E0),
-            concreteStroke = Color(0xFF424242),
-            textPrimary = Color(0xFF212121),
-            textSecondary = Color(0xFF757575),
-            dimLineColor = Color(0xFF6A6A6A),
-            extensionGray = Color(0xFF888888),
-            hatchColor = Color(0x60BDBDBD),
-            tableHeaderBg = Color(0xFF1A237E),
-            tableHeaderText = Color(0xFFFFFFFF),
-            tableCellText = Color(0xFF212121),
-            tableRowColor = Color(0xFFFAFAFA),
-            tableRowAltColor = Color(0xFFF5F5F5),
-            tableTitleBg = Color(0xFF263238),
-            tableBorder = Color(0xFF37474F),
-            tableRowBorder = Color(0xFFBDBDBD),
-            tableColumnBorder = Color(0xFF90A4AE),
-            stripColor = Color(0xFF757575),
-            labelGray = Color(0xFF757575),
-            gridLine = Color(0x22000000),
-            safeCheckGreen = Color(0x22000000),
-            ribFill = Color(0xFFBDBDBD),
-            dropFill = Color(0xFFB0BEC5),
-            columnFill = Color(0xFF616161),
-            planBackground = Color(0xFF37474F)
-        )
-
-        /** Dark theme drawing palette */
-        val Dark = DrawingColors(
-            concreteFill = Color(0xFF2A2A2A),
-            concreteStroke = Color(0xFF9E9E9E),
-            textPrimary = Color(0xFFE0E0E0),
-            textSecondary = Color(0xFFB0B0B0),
-            dimLineColor = Color(0xFFBDBDBD),
-            extensionGray = Color(0xFFAAAAAA),
-            hatchColor = Color(0x50888888),
-            tableHeaderBg = Color(0xFF283593),
-            tableHeaderText = Color(0xFFFFFFFF),
-            tableCellText = Color(0xFFE0E0E0),
-            tableRowColor = Color(0xFF2C2C2C),
-            tableRowAltColor = Color(0xFF333333),
-            tableTitleBg = Color(0xFF37474F),
-            tableBorder = Color(0xFF546E7A),
-            tableRowBorder = Color(0xFF424242),
-            tableColumnBorder = Color(0xFF546E7A),
-            stripColor = Color(0xFF9E9E9E),
-            labelGray = Color(0xFFB0B0B0),
-            gridLine = Color(0x33FFFFFF),
-            safeCheckGreen = Color(0x33FFFFFF),
-            ribFill = Color(0xFF4A4A4A),
-            dropFill = Color(0xFF455A64),
-            columnFill = Color(0xFF424242),
-            planBackground = Color(0xFF1E1E1E)
-        )
-    }
-}
-
-/**
- * Returns the theme-appropriate [DrawingColors] palette.
- * Must be called from a @Composable context so it reacts to theme changes.
- */
-@Composable
-fun drawingColors(): DrawingColors =
-    if (isSystemInDarkTheme()) DrawingColors.Dark else DrawingColors.Light
-
-// ============================================================================
 // SHARED DRAWSCOPE EXTENSIONS
 // ============================================================================
 
@@ -197,7 +58,7 @@ fun drawingColors(): DrawingColors =
 fun DrawScope.drawHorizontalDimension(
     x1: Float, x2: Float, y: Float,
     text: String,
-    color: Color = DrawingColorDefaults.DimensionWhite,
+    color: Color = DrawingColors.DimensionWhite,
     textSize: Float = 22f,
     offset: Float = 20f  // how far below the measured points the dimension line sits
 ) {
@@ -245,7 +106,7 @@ fun DrawScope.drawHorizontalDimension(
 fun DrawScope.drawVerticalDimension(
     y1: Float, y2: Float, x: Float,
     text: String,
-    color: Color = DrawingColorDefaults.DimensionWhite,
+    color: Color = DrawingColors.DimensionWhite,
     textSize: Float = 22f,
     offset: Float = 20f
 ) {
@@ -297,7 +158,7 @@ fun DrawScope.drawHatchPattern(
     x: Float, y: Float, w: Float, h: Float,
     spacing: Float = 12f,
     angleDeg: Float = 45f,
-    color: Color = DrawingColorDefaults.HatchColor
+    color: Color = DrawingColors.HatchColor
 ) {
     val rad = Math.toRadians(angleDeg.toDouble())
     val cosA = cos(rad).toFloat()
@@ -325,9 +186,9 @@ fun DrawScope.drawHatchPattern(
  */
 fun DrawScope.drawRebarCircle(
     x: Float, y: Float, diameter: Float, scale: Float = 1f,
-    color: Color = DrawingColorDefaults.RebarBlue,
+    color: Color = DrawingColors.RebarBlue,
     label: String? = null,
-    labelColor: Color = DrawingColorDefaults.DimensionWhite,
+    labelColor: Color = DrawingColors.DimensionWhite,
     textSize: Float = 18f
 ) {
     val r = (diameter / 2f) * scale
@@ -355,7 +216,7 @@ fun DrawScope.drawRebarCircle(
  */
 fun DrawScope.drawStirrupRect(
     x: Float, y: Float, w: Float, h: Float,
-    color: Color = DrawingColorDefaults.StirrupPurple,
+    color: Color = DrawingColors.StirrupPurple,
     strokeWidth: Float = 1.5f,
     cornerRadius: Float = 6f
 ) {
@@ -373,7 +234,7 @@ fun DrawScope.drawStirrupRect(
  */
 fun DrawScope.drawPinSupport(
     x: Float, y: Float, size: Float = 20f,
-    color: Color = DrawingColorDefaults.SupportColor
+    color: Color = DrawingColors.SupportColor
 ) {
     drawPath(
         path = Path().apply {
@@ -398,7 +259,7 @@ fun DrawScope.drawPinSupport(
  */
 fun DrawScope.drawRollerSupport(
     x: Float, y: Float, size: Float = 20f,
-    color: Color = DrawingColorDefaults.SupportColor
+    color: Color = DrawingColors.SupportColor
 ) {
     // Triangle
     drawPath(
@@ -423,7 +284,7 @@ fun DrawScope.drawRollerSupport(
  */
 fun DrawScope.drawFixedSupport(
     x: Float, y: Float, width: Float = 15f, height: Float = 40f,
-    color: Color = DrawingColorDefaults.SupportColor
+    color: Color = DrawingColors.SupportColor
 ) {
     drawRect(
         color = color.copy(alpha = 0.6f),
@@ -442,7 +303,7 @@ fun DrawScope.drawFixedSupport(
  */
 fun DrawScope.drawCenterLine(
     x1: Float, y1: Float, x2: Float, y2: Float,
-    color: Color = DrawingColorDefaults.CenterLine,
+    color: Color = DrawingColors.CenterLine,
     strokeWidth: Float = 1f
 ) {
     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 4f, 3f, 4f), 0f)
@@ -455,7 +316,7 @@ fun DrawScope.drawCenterLine(
 fun DrawScope.drawSectionCutLine(
     x1: Float, y1: Float, x2: Float, y2: Float,
     label: String = "A",
-    color: Color = DrawingColorDefaults.SectionLine,
+    color: Color = DrawingColors.SectionLine,
     circleRadius: Float = 12f,
     textSize: Float = 20f
 ) {
@@ -492,9 +353,9 @@ fun DrawScope.drawReinforcementTable(
     rows: List<List<String>>,
     rowHeight: Float = 28f,
     headerHeight: Float = 32f,
-    headerBg: Color = DrawingColorDefaults.TableHeaderBg,
-    altRowBg: Color = DrawingColorDefaults.TableRowAlt,
-    textColor: Color = DrawingColorDefaults.DimensionWhite,
+    headerBg: Color = DrawingColors.TableHeaderBg,
+    altRowBg: Color = DrawingColors.TableRowAlt,
+    textColor: Color = DrawingColors.DimensionWhite,
     textSize: Float = 18f
 ) {
     val totalW = colWidths.sum()
@@ -510,7 +371,7 @@ fun DrawScope.drawReinforcementTable(
     var cx = x
     headers.forEachIndexed { i, header ->
         if (i > 0) {
-            drawLine(DrawingColorDefaults.ExtensionGray, Offset(cx, y), Offset(cx, y + totalH), 1f)
+            drawLine(DrawingColors.ExtensionGray, Offset(cx, y), Offset(cx, y + totalH), 1f)
         }
         drawTextAnnotated(
             header, cx + colWidths[i] / 2f, y + headerHeight / 2f - textSize / 3f,
@@ -531,13 +392,13 @@ fun DrawScope.drawReinforcementTable(
         row.forEachIndexed { colIdx, cell ->
             drawTextAnnotated(
                 cell, cx + colWidths[colIdx] / 2f, ry + rowHeight / 2f - textSize / 3f,
-                textColor, textSize, center = true, maxWidth = colWidths[colIdx].toInt()
+                textColor, textSize, center = true
             )
             cx += colWidths[colIdx]
         }
         // Bottom divider
         drawLine(
-            DrawingColorDefaults.ExtensionGray, Offset(x, ry + rowHeight),
+            DrawingColors.ExtensionGray, Offset(x, ry + rowHeight),
             Offset(x + totalW, ry + rowHeight), 0.5f
         )
     }
@@ -563,8 +424,8 @@ fun DrawScope.drawForceDiagram(
     baselineY: Float,
     maxAbsValue: Float,
     positiveUp: Boolean = true,
-    fillColor: Color = DrawingColorDefaults.StressPink.copy(alpha = 0.25f),
-    lineColor: Color = DrawingColorDefaults.StressPink,
+    fillColor: Color = DrawingColors.StressPink.copy(alpha = 0.25f),
+    lineColor: Color = DrawingColors.StressPink,
     strokeWidth: Float = 2f,
     label: String = "M (kN.m)"
 ) {
@@ -598,7 +459,7 @@ fun DrawScope.drawForceDiagram(
 
     // Baseline
     drawLine(
-        DrawingColorDefaults.ExtensionGray,
+        DrawingColors.ExtensionGray,
         Offset(spanStart, baselineY),
         Offset(spanEnd, baselineY),
         1f,
@@ -643,18 +504,18 @@ fun DrawScope.drawTextAnnotated(
     text: String,
     x: Float,
     y: Float,
-    color: Color = DrawingColorDefaults.DimensionWhite,
+    color: Color = DrawingColors.DimensionWhite,
     size: Float = 22f,
     center: Boolean = false,
     bold: Boolean = false,
-    rotation: Float = 0f,
-    maxWidth: Int? = null // [NEW] Optional constraint
+    rotation: Float = 0f
 ) {
     if (text.isBlank()) return
     drawContext.canvas.nativeCanvas.apply {
         val hasArabic = text.any { it.code in 0x0600..0x06FF || it.code in 0xFB50..0xFEFF }
 
         if (!hasArabic || rotation != 0f) {
+            // Latin-only or rotated text: use Canvas.drawText directly (faster)
             val paint = android.graphics.Paint().apply {
                 this.color = color.toArgb()
                 this.textSize = size
@@ -666,6 +527,7 @@ fun DrawScope.drawTextAnnotated(
                 } else {
                     android.graphics.Typeface.SANS_SERIF
                 }
+                // Try to use Arabic-supporting font for Arabic text
                 if (hasArabic) {
                     this.typeface = try {
                         com.civileg.app.utils.ArabicFontProvider.getArabicTypeface(
@@ -703,16 +565,13 @@ fun DrawScope.drawTextAnnotated(
                                  else android.graphics.Paint.Align.LEFT
                 this.typeface = tf ?: android.graphics.Typeface.SANS_SERIF
             }
-            
-            // FIX: If centered, we use maxWidth or a large buffer to prevent truncation/wrapping
-            val lWidth = maxWidth ?: (if (center) 800 else (this.width - x).toInt()).coerceAtLeast(1)
-            
+            val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
             val layoutAlign = when {
                 center -> android.text.Layout.Alignment.ALIGN_CENTER
                 else -> android.text.Layout.Alignment.ALIGN_NORMAL
             }
             val sl = android.text.StaticLayout.Builder
-                .obtain(text, 0, text.length, tp, lWidth)
+                .obtain(text, 0, text.length, tp, layoutWidth)
                 .setAlignment(layoutAlign)
                 .setLineSpacing(0f, 1f)
                 .setIncludePad(false)
@@ -722,10 +581,7 @@ fun DrawScope.drawTextAnnotated(
                 else -> x
             }
             save()
-            // CRITICAL FIX: Proper vertical centering for StaticLayout
-            // We need to shift by y MINUS the text block's center height.
-            // The block height is sl.height. Center is sl.height/2.
-            translate(drawX, y - sl.height / 2f)
+            translate(drawX, y - tp.ascent() - tp.descent() / 2f)
             sl.draw(this)
             restore()
         }
@@ -741,8 +597,8 @@ fun DrawScope.drawTitleBlock(
     drawingTitle: String = "Structural Drawing",
     scale: String = "NTS",
     drawingNo: String = "1",
-    color: Color = DrawingColorDefaults.DimensionWhite,
-    borderColor: Color = DrawingColorDefaults.ExtensionGray
+    color: Color = DrawingColors.DimensionWhite,
+    borderColor: Color = DrawingColors.ExtensionGray
 ) {
     // Background
     drawRect(Color(0x11FFFFFF), Offset(x, y), Size(width, height))
@@ -788,7 +644,7 @@ fun DrawScope.drawTitleBlock(
  */
 fun DrawScope.drawNorthArrow(
     x: Float, y: Float, size: Float = 24f,
-    color: Color = DrawingColorDefaults.DimensionWhite
+    color: Color = DrawingColors.DimensionWhite
 ) {
     // Circle
     drawCircle(

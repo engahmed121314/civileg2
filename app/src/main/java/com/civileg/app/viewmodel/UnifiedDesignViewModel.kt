@@ -16,12 +16,6 @@ data class UnifiedDesignUiState(
     val error: String? = null
 )
 
-/**
- * Trivial ViewModel that just tracks a selected ElementType.
- * @deprecated Unused in the current UI. The navigation graph routes directly
- *   to individual element screens. Retained for potential future use.
- */
-@Deprecated("Unused in current UI. Navigation routes directly to element screens.")
 @HiltViewModel
 class UnifiedDesignViewModel @Inject constructor() : ViewModel() {
 

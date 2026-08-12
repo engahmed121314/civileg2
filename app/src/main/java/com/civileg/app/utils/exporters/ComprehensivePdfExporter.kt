@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.civileg.app.R
-import com.civileg.app.db.Design
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
 import com.civileg.app.utils.CalculatorEngine
@@ -147,12 +146,13 @@ class ComprehensivePdfExporter(private val context: Context) {
 
     private fun rtlCell(text: String, fontSize: Float = 9f, bold: Boolean = false, bg: DeviceRgb? = null): Cell {
         val cell = Cell().setPadding(4f).setTextAlignment(TextAlignment.RIGHT)
-        // FIX: Use PdfTextSegmenter for mixed text (values like "IPE 300" in Arabic tables)
+        // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
+        val p = Paragraph().setFontSize(fontSize)
         val font = if (bold) arabicBoldFont() else arabicFont()
-        val latin = helveticaFont(bold)
-        val p = PdfTextSegmenter.buildMixedParagraph(
-            text = text, arabicFont = font, latinFont = latin, fontSize = fontSize
-        )
+        val shapedText = ArabicShaper.shapeIfArabic(text)
+        val textRun = com.itextpdf.layout.element.Text(shapedText).setFont(font).setFontSize(fontSize)
+        if (bold) textRun.setBold()
+        p.add(textRun)
         if (isArabic(text)) {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
@@ -166,14 +166,15 @@ class ComprehensivePdfExporter(private val context: Context) {
             .setPadding(6f)
             .setBackgroundColor(HEADER_BG)
             .setTextAlignment(TextAlignment.CENTER)
-        // FIX: Use PdfTextSegmenter for mixed Arabic/Latin headers (e.g., "IPE 300\u0646\u062a\u0627\u0626\u062c")
-        val p = PdfTextSegmenter.buildMixedParagraph(
-            text = text,
-            arabicFont = arabicBoldFont(),
-            latinFont = helveticaFont(true),
-            fontSize = 9f,
-            color = WHITE
-        )
+        // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
+        val shapedText = ArabicShaper.shapeIfArabic(text)
+        val p = Paragraph().setFontSize(9f)
+        val textRun = com.itextpdf.layout.element.Text(shapedText)
+            .setFont(arabicBoldFont())
+            .setFontSize(9f)
+            .setBold()
+            .setFontColor(WHITE)
+        p.add(textRun)
         if (isArabic(text)) {
             p.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
         }
@@ -282,29 +283,27 @@ class ComprehensivePdfExporter(private val context: Context) {
             val labelAr = isArabic(label)
             val valueAr = isArabic(value)
 
-            // FIX: Use PdfTextSegmenter for proper mixed Arabic/Latin rendering
-            // Previously used Arabic font for ALL text, causing Latin chars (IPE, S355, etc.) to render as tofu
-            val labelP = PdfTextSegmenter.buildMixedParagraph(
-                text = label,
-                arabicFont = arabicBoldFont(),
-                latinFont = helveticaFont(true),
-                fontSize = 9f
-            )
             val labelCell = Cell().setPadding(4f)
-            if (labelAr) { labelCell.setTextAlignment(TextAlignment.RIGHT); labelP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT) }
-            labelCell.add(labelP)
+            if (labelAr) labelCell.setTextAlignment(TextAlignment.RIGHT)
+            val lp = Paragraph().setFontSize(9f)
+            // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
+            val shapedLabel = ArabicShaper.shapeIfArabic(label)
+            val lRun = com.itextpdf.layout.element.Text(shapedLabel).setFont(arabicBoldFont()).setFontSize(9f).setBold()
+            lp.add(lRun)
+            if (labelAr) lp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            labelCell.add(lp)
             bg?.let { labelCell.setBackgroundColor(it) }
             table.addCell(labelCell)
 
-            val valueP = PdfTextSegmenter.buildMixedParagraph(
-                text = value,
-                arabicFont = arabicFont(),
-                latinFont = helveticaFont(false),
-                fontSize = 9f
-            )
             val valueCell = Cell().setPadding(4f)
-            if (valueAr) { valueCell.setTextAlignment(TextAlignment.RIGHT); valueP.setBaseDirection(BaseDirection.RIGHT_TO_LEFT) }
-            valueCell.add(valueP)
+            if (valueAr) valueCell.setTextAlignment(TextAlignment.RIGHT)
+            val vp = Paragraph().setFontSize(9f)
+            // CRITICAL FIX: Shape Arabic to Presentation Forms before iText rendering.
+            val shapedValue = ArabicShaper.shapeIfArabic(value)
+            val vRun = com.itextpdf.layout.element.Text(shapedValue).setFont(arabicFont()).setFontSize(9f)
+            vp.add(vRun)
+            if (valueAr) vp.setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+            valueCell.add(vp)
             bg?.let { valueCell.setBackgroundColor(it) }
             table.addCell(valueCell)
 
@@ -876,8 +875,8 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
-                t("حديد القاع X", "Bottom Steel X") to "${result.barsX} \u03C6${result.barDiameter} @ ${result.reinforcementBottom.spacing.toInt()}mm",
-                t("حديد القاع Y", "Bottom Steel Y") to "${result.barsY} \u03C6${result.barDiameter} @ ${result.reinforcementBottom.spacing.toInt()}mm",
+                t("حديد القاع X", "Bottom Steel X") to "${result.barsX} \u03C6${result.barDiameter} @ 200mm",
+                t("حديد القاع Y", "Bottom Steel Y") to "${result.barsY} \u03C6${result.barDiameter} @ 200mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP",
@@ -956,8 +955,8 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
-                t("تسليح الحائط", "Wall Reinforcement") to "${result.wallReinforcement.barString} @ ${result.wallReinforcement.spacing.toInt()}mm",
-                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.barString} @ ${result.baseReinforcement.spacing.toInt()}mm",
+                t("تسليح الحائط", "Wall Reinforcement") to "${result.wallReinforcement.numBars}\u03C6${result.wallReinforcement.diameter} @ ${result.wallReinforcement.spacing}mm",
+                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.numBars}\u03C6${result.baseReinforcement.diameter} @ ${result.baseReinforcement.spacing}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP",
@@ -1036,7 +1035,7 @@ class ComprehensivePdfExporter(private val context: Context) {
 
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
-                t("التسليح الرئيسي", "Main Reinforcement") to "${result.reinforcement.barString} @ ${result.reinforcement.spacing.toInt()}mm",
+                t("التسليح الرئيسي", "Main Reinforcement") to "${result.reinforcement.numBars}\u03C6${result.reinforcement.diameter} @ ${result.reinforcement.spacing}mm",
                 t("تسليح التوزيع", "Distribution Reinforcement") to "${result.distributionReinforcement.numBars}\u03C6${result.distributionReinforcement.diameter} @ ${result.distributionReinforcement.spacing}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
@@ -1106,9 +1105,9 @@ class ComprehensivePdfExporter(private val context: Context) {
                 t("سمك الجذع", "Stem Thickness") to "${result.stemThickness.format(0)} mm",
                 t("عرض القاعدة", "Base Width") to "${result.baseWidth.format(0)} mm",
                 t("كثافة التربة", "Soil Density") to "${result.soilDensity.format(1)} kN/m\u00B3",
-                t("زاوية الاحتكاك الداخلي", "Internal Friction Angle") to "${Math.toDegrees(Math.asin((1.0 - result.ka.toDouble()) / (1.0 + result.ka.toDouble()))).format(1)}\u00B0",
+                t("زاوية الاحتكاك الداخلي", "Internal Friction Angle") to "${Math.toDegrees(Math.atan(result.ka.toDouble())).format(1)}\u00B0",
                 t("معامل الضغط النشط", "Active Pressure Coeff.") to "Ka = ${result.ka.format(3)}",
-                t("قوة التربة النشطة", "Active Earth Force") to "${result.pa.format(1)} kN/m",
+                t("ضغط التربة النشط", "Active Earth Pressure") to "${result.pa.format(1)} kN/m\u00B2",
                 t("مقاومة الخرسانة", "Concrete Strength") to "f'c = ${result.fcu.format(0)} MPa",
                 t("مقاومة الحديد", "Steel Strength") to "fy = ${result.fy.format(0)} MPa"
             ), font)
@@ -1124,7 +1123,7 @@ class ComprehensivePdfExporter(private val context: Context) {
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
                 t("تسليح الجذع", "Stem Reinforcement") to "${result.stemReinforcement.numBars}\u03C6${result.stemReinforcement.diameter} @ ${result.stemReinforcement.spacing}mm",
-                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.barString} @ ${result.baseReinforcement.spacing.toInt()}mm",
+                t("تسليح القاعدة", "Base Reinforcement") to "${result.baseReinforcement.numBars}\u03C6${result.baseReinforcement.diameter} @ ${result.baseReinforcement.spacing}mm",
                 t("حجم الخرسانة", "Concrete Volume") to "${result.concreteVolume.format(3)} m\u00B3",
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP"
@@ -1309,55 +1308,6 @@ class ComprehensivePdfExporter(private val context: Context) {
         return if (v.isNaN() || v.isInfinite()) "—"
         else if (v == v.toLong().toDouble()) v.toLong().toString()
         else String.format(Locale.US, "%.2f", v)
-    }
-
-    fun exportProjectBatchReport(
-        projectName: String,
-        designs: List<Design>,
-        summary: ProjectSummary,
-        outputPath: String
-    ): File? {
-        return try {
-            val outputFile = File(outputPath)
-            outputFile.parentFile?.mkdirs()
-            val (_, document, font) = createDocument(outputPath)
-
-            addReportHeader(document, t("تقرير مجمع للمشروع", "Project Batch Report"), "Project Batch Report", projectName, font)
-            
-            addSectionTitle(document, t("ملخص المشروع", "Project Executive Summary"), "Project Executive Summary")
-            addInfoTable(document, listOf(
-                t("إجمالي التكلفة", "Total Est. Cost") to "${summary.totalCost.format(0)} EGP",
-                t("إجمالي الخرسانة", "Total Concrete") to "${summary.totalConcrete.format(1)} m\u00B3",
-                t("إجمالي الحديد", "Total Steel") to "${summary.totalSteel.format(0)} kg",
-                t("عدد العناصر", "Elements Count") to "${summary.designCount}"
-            ), font)
-
-            addSectionTitle(document, t("جدول العناصر المصممة", "Elements Schedule"), "Elements Schedule")
-            val table = Table(UnitValue.createPercentArray(floatArrayOf(30f, 25f, 25f, 20f))).useAllAvailableWidth()
-            table.addHeaderCell(headerCell(t("اسم العنصر", "Element Name")))
-            table.addHeaderCell(headerCell(t("النوع", "Type")))
-            table.addHeaderCell(headerCell(t("التكلفة", "Cost")))
-            table.addHeaderCell(headerCell(t("الحالة", "Status")))
-            
-            designs.forEachIndexed { i, d ->
-                val bg = if (i % 2 == 0) null else ROW_ALT
-                table.addCell(tableCell(d.name, bg = bg, align = TextAlignment.LEFT))
-                table.addCell(tableCell(d.type.name, bg = bg))
-                table.addCell(tableCell(d.totalCost.format(0), bg = bg))
-                table.addCell(tableCell(
-                    if (d.isSafe) "SAFE \u2714" else "UNSAFE \u2718",
-                    color = if (d.isSafe) SUCCESS else ERROR, bg = bg
-                ))
-            }
-            document.add(table)
-
-            addFooter(document)
-            document.close()
-            outputFile
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
     }
 
     // ==================== Helpers ====================

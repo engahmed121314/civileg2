@@ -104,10 +104,8 @@ android {
             isDebuggable = true
             isMinifyEnabled = false
             isShrinkResources = false
-            if (!project.hasProperty("noDebugSuffix")) {
-                applicationIdSuffix = ".debug"
-                versionNameSuffix = "-debug"
-            }
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
 
@@ -140,15 +138,6 @@ android {
         disable += "TypographyQuotes"
         // Allow missing translation for now
         disable += "MissingTranslation"
-        // Suppress pre-existing resource issues
-        disable += "MissingDefaultResource"
-        disable += "UnusedResources"
-        disable += "IconDuplicatesConfig"
-        disable += "VectorPath"
-        disable += "HardcodedText"
-        disable += "RtlHardcoded"
-        // Backup rules exclude path lint is overly strict
-        disable += "FullBackupContent"
     }
 }
 

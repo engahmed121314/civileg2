@@ -76,11 +76,3 @@ data class MomentShearDiagrams(
     val shearPoints: List<Pair<Double, Double>>,
     val normalPoints: List<Pair<Double, Double>> = emptyList()
 ) : Parcelable
-
-@Parcelize
-data class MaterialPrices(
-    val concretePerM3: Double = 1200.0,    // EGP per m³
-    val steelPerTon: Double = 18000.0,     // EGP per ton
-    val formworkPerM2: Double = 150.0,     // EGP per m²
-    val excavationPerM3: Double = 50.0     // EGP per m³
-) : Parcelable

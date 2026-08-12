@@ -198,26 +198,12 @@ val SteelSectionType.weight: Double get() = area * 7.85e-3 // kg/m (mm2 * 7.85e-
 val SteelSectionType.ix: Double
     get() = when (this) {
         is SteelSectionType.ISection -> calculateIxISection(h, bf, tw, tf)
-        is SteelSectionType.CSection -> calculateIxCSection(h, bf, tw, tf)
+        is SteelSectionType.CSection -> calculateIxISection(h, bf, tw, tf) * 0.85  // تقريبي للقناة
         is SteelSectionType.RHS -> calculateIxRHS(width, height, thickness)
         is SteelSectionType.CHS -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * thickness).pow(4))
         is SteelSectionType.LSection -> calculateIxAngle(legA, legB, thickness)
         is SteelSectionType.TSection -> calculateIxTSection(flangeWidth, flangeThickness, webDepth, webThickness)
         is SteelSectionType.PlateGirder -> calculateIxPlateGirder(h, bfTop, bfBot, tfTop, tfBot, tw)
-        is SteelSectionType.Pipe -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * wallThickness).pow(4))
-        is SteelSectionType.BuiltUp -> 0.0
-    }
-
-/** عزم القصور حول المحور الضعيف (Y) - mm⁴ */
-val SteelSectionType.iy: Double
-    get() = when (this) {
-        is SteelSectionType.ISection -> calculateIyISection(h, bf, tw, tf)
-        is SteelSectionType.CSection -> calculateIyCSection(h, bf, tw, tf)
-        is SteelSectionType.RHS -> calculateIyRHS(width, height, thickness)
-        is SteelSectionType.CHS -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * thickness).pow(4))
-        is SteelSectionType.LSection -> calculateIyAngle(legA, legB, thickness)
-        is SteelSectionType.TSection -> calculateIyTSection(flangeWidth, flangeThickness, webDepth, webThickness)
-        is SteelSectionType.PlateGirder -> calculateIyPlateGirder(h, bfTop, bfBot, tfTop, tfBot, tw)
         is SteelSectionType.Pipe -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * wallThickness).pow(4))
         is SteelSectionType.BuiltUp -> 0.0
     }
@@ -230,48 +216,9 @@ val SteelSectionType.sx: Double
         is SteelSectionType.RHS -> ix / (height / 2.0)
         is SteelSectionType.CHS -> ix / (outerDiameter / 2.0)
         is SteelSectionType.LSection -> ix / (legA / 2.0)
-        is SteelSectionType.TSection -> {
-            // Neutral axis from bottom of T-section
-            val totalH = webDepth + flangeThickness
-            val Atotal = flangeWidth * flangeThickness + webDepth * webThickness
-            val yBar = if (Atotal > 0) {
-                (flangeWidth * flangeThickness * (totalH - flangeThickness / 2.0) + webDepth * webThickness * (webDepth / 2.0)) / Atotal
-            } else totalH / 2.0
-            // Sx = max(Ix/yBar_from_bottom, Ix/(totalH - yBar_from_bottom))
-            val yn = yBar
-            val yt = totalH - yBar
-            maxOf(ix / yn, ix / yt)
-        }
-        is SteelSectionType.PlateGirder -> ix / (h / 2.0)
+        is SteelSectionType.TSection -> ix / (webDepth + flangeThickness) * 2.0
+        is SteelSectionType.PlateGirder -> ix / (h / 2.0)  // approximate using max depth
         is SteelSectionType.Pipe -> ix / (outerDiameter / 2.0)
-        is SteelSectionType.BuiltUp -> 0.0
-    }
-
-/** معامل المقطع المرن حول Y - mm³ */
-val SteelSectionType.sy: Double
-    get() = when (this) {
-        is SteelSectionType.ISection -> iy / (bf / 2.0)
-        is SteelSectionType.CSection -> {
-            // Channel: shear center is offset; for Sx use full flange width
-            // Sy = Iy / x_max (from centroid to extreme fiber in Y direction)
-            val xMax = bf / 2.0
-            if (xMax > 0) iy / xMax else 0.0
-        }
-        is SteelSectionType.RHS -> iy / (width / 2.0)
-        is SteelSectionType.CHS -> iy / (outerDiameter / 2.0)
-        is SteelSectionType.LSection -> {
-            val A = (legA + legB - thickness) * thickness
-            val xBar = ((legA - thickness / 2.0) * (legA - thickness / 2.0) / 2.0 + (legB - thickness / 2.0) * (legB - thickness / 2.0) / 2.0 * thickness) / A
-            val xMax = maxOf(xBar, legA - xBar)
-            if (xMax > 0) iy / xMax else 0.0
-        }
-        is SteelSectionType.TSection -> {
-            // For symmetric T: Sy = Iy / (bf/2)
-            val xMax = flangeWidth / 2.0
-            if (xMax > 0) iy / xMax else 0.0
-        }
-        is SteelSectionType.PlateGirder -> iy / (maxOf(bfTop, bfBot) / 2.0)
-        is SteelSectionType.Pipe -> iy / (outerDiameter / 2.0)
         is SteelSectionType.BuiltUp -> 0.0
     }
 
@@ -279,91 +226,18 @@ val SteelSectionType.sy: Double
 val SteelSectionType.rx: Double
     get() = if (getArea() > 0) sqrt(ix / getArea()) else 0.0
 
-/** نصف القطر الدوراني حول Y - mm */
-val SteelSectionType.ry: Double
-    get() = if (getArea() > 0) sqrt(iy / getArea()) else 0.0
-
 /** معامل المقطع اللدن حول X - mm³ (تقريبي: 1.12 × Sx للمقاطع المدمجة) */
 val SteelSectionType.zx: Double
     get() = when (this) {
-        is SteelSectionType.ISection -> sx * 1.12
+        is SteelSectionType.ISection -> sx * 1.12  // تقريبي للمقاطع المدرفلة
         is SteelSectionType.CSection -> sx * 1.10
         is SteelSectionType.RHS -> sx * 1.08
         is SteelSectionType.CHS -> sx * 1.12
         is SteelSectionType.LSection -> sx * 1.05
         is SteelSectionType.TSection -> sx * 1.05
-        is SteelSectionType.PlateGirder -> sx * 1.12
+        is SteelSectionType.PlateGirder -> sx * 1.12  // welded I-section shape factor
         is SteelSectionType.Pipe -> sx * 1.12
         is SteelSectionType.BuiltUp -> 0.0
-    }
-
-/** معامل المقطع اللدن حول Y - mm³ */
-val SteelSectionType.zy: Double
-    get() = when (this) {
-        is SteelSectionType.ISection -> sy * 1.12
-        is SteelSectionType.CSection -> sy * 1.10
-        is SteelSectionType.RHS -> sy * 1.08
-        is SteelSectionType.CHS -> sy * 1.12
-        is SteelSectionType.LSection -> sy * 1.05
-        is SteelSectionType.TSection -> sy * 1.05
-        is SteelSectionType.PlateGirder -> sy * 1.12
-        is SteelSectionType.Pipe -> sy * 1.12
-        is SteelSectionType.BuiltUp -> 0.0
-    }
-
-/** ثابت الشد (Torsional constant J) - mm⁴ */
-val SteelSectionType.j: Double
-    get() = when (this) {
-        is SteelSectionType.ISection -> {
-            // AISC: J = (2*bf*tf³ + (h-2tf)*tw³) / 3
-            (2.0 * bf * tf.pow(3) + (h - 2 * tf) * tw.pow(3)) / 3.0
-        }
-        is SteelSectionType.CSection -> {
-            (2.0 * bf * tf.pow(3) + (h - 2 * tf) * tw.pow(3)) / 3.0
-        }
-        is SteelSectionType.RHS -> {
-            // Closed section: J = 4*A²*t / Σ(s/t) where A is enclosed area
-            val hw = height - 2 * thickness
-            val bw = width - 2 * thickness
-            val A = hw * bw // enclosed area
-            val peri = 2.0 * (hw + bw)
-            if (peri > 0 && thickness > 0) 4.0 * A * A * thickness / peri else 0.0
-        }
-        is SteelSectionType.CHS -> {
-            // J = 2π * r³ * t  where r = mean radius
-            val r = (outerDiameter - thickness) / 2.0
-            2.0 * PI * r.pow(3) * thickness
-        }
-        is SteelSectionType.LSection -> {
-            // AISC approximate: J = (a+b-t)*t³/3
-            (legA + legB - thickness) * thickness.pow(3) / 3.0
-        }
-        is SteelSectionType.TSection -> {
-            (flangeWidth * flangeThickness.pow(3) + webDepth * webThickness.pow(3)) / 3.0
-        }
-        is SteelSectionType.PlateGirder -> {
-            (bfTop * tfTop.pow(3) + bfBot * tfBot.pow(3) + (h - tfTop - tfBot) * tw.pow(3)) / 3.0
-        }
-        is SteelSectionType.Pipe -> {
-            val r = (outerDiameter - wallThickness) / 2.0
-            2.0 * PI * r.pow(3) * wallThickness
-        }
-        is SteelSectionType.BuiltUp -> 0.0
-    }
-
-/** ثابت الانحناء (Warping constant Cw) - mm⁶ */
-val SteelSectionType.cw: Double
-    get() = when (this) {
-        is SteelSectionType.ISection -> {
-            // AISC: Cw = Iy * (h - tf)² / 4
-            iy * (h - tf).pow(2) / 4.0
-        }
-        is SteelSectionType.CSection -> {
-            // Cw for channel (simplified)
-            val hw = h - 2 * tf
-            bf * tf.pow(3) * hw.pow(2) / 4.0
-        }
-        else -> 0.0 // RHS, CHS, Angle, T, Pipe — warping negligible or complex
     }
 
 val SteelSectionType.rootRadius: Double
@@ -380,45 +254,10 @@ val SteelSectionType.flangeSlope: Double
         else -> 0.0
     }
 
-/** حساب عزم القصور حول X لقطاع I - mm⁴ */
+/** حساب عزم القصور لمقطع I - mm⁴ */
 private fun calculateIxISection(h: Double, b: Double, tw: Double, tf: Double): Double {
-    // Ix = (b*h³ - (b-tw)*(h-2tf)³) / 12
-    val hw = h - 2 * tf
+    val hw = h - 2 * tf  // ارتفاع الجذع الصافي
     return (b * h.pow(3) - (b - tw) * hw.pow(3)) / 12.0
-}
-
-/** حساب عزم القصور حول X لقطاع C-Channel - mm⁴ */
-private fun calculateIxCSection(h: Double, b: Double, tw: Double, tf: Double): Double {
-    // Same geometry as I-section for Ix (bending about strong axis)
-    val hw = h - 2 * tf
-    return (b * h.pow(3) - (b - tw) * hw.pow(3)) / 12.0
-}
-
-/** حساب عزم القصور حول Y لقطاع I - mm⁴ */
-private fun calculateIyISection(h: Double, b: Double, tw: Double, tf: Double): Double {
-    // Iy = 2 * [tf * bf³/12] + (h-2tf) * tw³/12
-    return 2.0 * tf * b.pow(3) / 12.0 + (h - 2 * tf) * tw.pow(3) / 12.0
-}
-
-/** حساب عزم القصور حول Y لقطاع C-Channel - mm⁴ */
-private fun calculateIyCSection(h: Double, b: Double, tw: Double, tf: Double): Double {
-    // Channel Y-axis: centroid is offset from web centerline
-    // Iy_own = 2 * (tf * bf³/12) + hw * tw³/12  (about own centroid)
-    val hw = h - 2 * tf
-    val A = 2 * b * tf + hw * tw
-    val xBar = (2 * b * tf * b / 2.0) / if (A > 0) A else 1.0  // centroid from web CL
-    // Parallel axis: shift from own centroid to section centroid
-    val IySelf = 2.0 * (tf * b.pow(3) / 12.0) + hw * tw.pow(3) / 12.0
-    // Subtract PA contribution from old centroid, add for new centroid
-    // Simplified: for channel, Iy about centroid ≈ same as about web CL (flanges contribute most)
-    return IySelf
-}
-
-/** حساب عزم القصور حول Y لمقطع RHS - mm⁴ */
-private fun calculateIyRHS(w: Double, h: Double, t: Double): Double {
-    val hw = h - 2 * t
-    val bw = w - 2 * t
-    return (h * w.pow(3) - hw * bw.pow(3)) / 12.0
 }
 
 /** حساب عزم القصور لمقطع RHS - mm⁴ */
@@ -428,34 +267,13 @@ private fun calculateIxRHS(w: Double, h: Double, t: Double): Double {
     return (w * h.pow(3) - bw * hw.pow(3)) / 12.0
 }
 
-/** حساب عزم القصور لزاوية (Angle) حول X - mm⁴
- * X-axis parallel to legB (shorter leg, horizontal)
- * Uses proper parallel axis theorem with centroid location.
- */
+/** حساب عزم القصور لزاوية متساوية الساقين تقريباً - mm⁴ */
 private fun calculateIxAngle(a: Double, b: Double, t: Double): Double {
-    // Two rectangles: vertical leg (a x t) and horizontal leg ((b-t) x t)
-    // Vertical leg: area = a*t, self-Ix = t*a³/12, centroid at a/2 from origin
-    // Horizontal leg: area = (b-t)*t, self-Ix = (b-t)*t³/12, centroid at t/2 from origin
+    // حول محور موازي لساق b (المسطح العلوي)
     val A = (a + b - t) * t
-    if (A <= 0) return 0.0
-    // y-bar from bottom (origin at outer bottom corner)
-    val yBar = (a * t * (a / 2.0) + (b - t) * t * (t / 2.0)) / A
-    // Ix about centroid = Σ(self_I + A*d²)
-    val IxVert = t * a.pow(3) / 12.0 + a * t * (a / 2.0 - yBar).pow(2)
-    val IxHoriz = (b - t) * t.pow(3) / 12.0 + (b - t) * t * (yBar - t / 2.0).pow(2)
-    return IxVert + IxHoriz
-}
-
-/** حساب عزم القصور لزاوية حول Y - mm⁴ */
-private fun calculateIyAngle(a: Double, b: Double, t: Double): Double {
-    val A = (a + b - t) * t
-    if (A <= 0) return 0.0
-    // x-bar from left edge
-    val xBar = ((a - t / 2.0) * t * (a - t / 2.0) / 2.0 + (b - t) * t * (t / 2.0 + (b - t) / 2.0)) / A
-    // Simplified: Iy using parallel axis theorem
-    val IyVert = a * t.pow(3) / 12.0 + a * t * ((a - t / 2.0) / 2.0 - xBar).pow(2)
-    val IyHoriz = (b - t) * t.pow(3) / 12.0 + (b - t) * t * (t / 2.0 + (b - t) / 2.0 - xBar).pow(2)
-    return IyVert + IyHoriz
+    val yBar = (a * a + (b - t) * t / 2.0) / (2.0 * (a + b - t))
+    return (a * t * (t / 2.0).pow(2) + (b - t) * t * (t / 2.0 + t / 2.0).pow(2) + 
+            t * a.pow(3) / 12.0 + (b - t) * t.pow(3) / 12.0)  // مبسط
 }
 
 /** حساب عزم القصور لقطاع Plate Girder (ممكن غير متماثل) - mm⁴ */
@@ -483,18 +301,6 @@ private fun calculateIxTSection(bf: Double, tf: Double, dw: Double, tw: Double):
     val IxFlange = bf * tf.pow(3) / 12.0 + bf * tf * (totalH - tf / 2.0 - yBar).pow(2)
     val IxWeb = tw * dw.pow(3) / 12.0 + tw * dw * (dw / 2.0 - yBar).pow(2)
     return IxFlange + IxWeb
-}
-
-/** حساب عزم القصور لمقطع T حول Y - mm⁴ (symmetric about Y-axis) */
-private fun calculateIyTSection(bf: Double, tf: Double, dw: Double, tw: Double): Double {
-    // Iy = bf³*tf/12 + dw*tw³/12 (both share the same vertical centroid axis)
-    return bf.pow(3) * tf / 12.0 + dw * tw.pow(3) / 12.0
-}
-
-/** حساب عزم القصور لقطاع Plate Girder حول Y - mm⁴ */
-private fun calculateIyPlateGirder(h: Double, bfTop: Double, bfBot: Double, tfTop: Double, tfBot: Double, tw: Double): Double {
-    // Iy = bfTop³*tfTop/12 + bfBot³*tfBot/12 + (h-tfTop-tfBot)*tw³/12
-    return bfTop.pow(3) * tfTop / 12.0 + bfBot.pow(3) * tfBot / 12.0 + (h - tfTop - tfBot) * tw.pow(3) / 12.0
 }
 
 @Parcelize

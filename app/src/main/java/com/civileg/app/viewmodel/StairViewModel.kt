@@ -5,12 +5,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,13 +28,6 @@ class StairViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
-
-    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
-    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
-
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
-    @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateStairPro(
         type: CalculatorEngine.StairType,
@@ -65,11 +56,6 @@ class StairViewModel @Inject constructor(
                     preferredDiameter = preferredDiameter,
                     code = code
                 )
-                
-                // Validate result for engineering consistency
-                val report = CalculationValidator.validateStair(res)
-                _validationReport.value = report
-                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -106,29 +92,20 @@ class StairViewModel @Inject constructor(
 
                     // Generate drawing for PDF
                     val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
-                    val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
-                    val pdfCover = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> 38.0
-                        CalculatorEngine.DesignCode.SAUDI -> 40.0
-                        else -> 25.0
-                    }
-                    // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                    val drawingBitmap = pendingDrawingBitmap ?: try {
+                    val drawingBitmap = try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = totalHeight,
-                            totalLength = nRisers.toDouble() * currentResult.tread,
-                            stairWidth = 1200.0,
+                            totalLength = currentResult.span,
+                            stairWidth = 1000.0,
                             riserHeight = currentResult.riser,
                             treadWidth = currentResult.tread,
                             slabThickness = currentResult.thickness,
                             mainDia = currentResult.reinforcement.diameter.toDouble(),
                             mainSpacing = currentResult.reinforcement.spacing,
                             distDia = currentResult.distributionReinforcement.diameter.toDouble(),
-                            distSpacing = currentResult.distributionReinforcement.spacing,
-                            cover = pdfCover
+                            distSpacing = currentResult.distributionReinforcement.spacing
                         )
                     } catch (e: Exception) { e.printStackTrace(); null }
-                    pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
                         CalculatorEngine.DesignCode.ACI -> "ACI 318"

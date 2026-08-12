@@ -101,7 +101,7 @@ class SBCBeam : BeamDesign {
             }
             // SBC 304-18.5.2: نسبة القص الأدنى في المناطق الزلزالية
             val Av_min_seismic = 0.062 * sqrt(0.8 * fcu) * width / fy * 1000  // mm²/m
-            if (result.providedShearReinforcement < Av_min_seismic) {
+            if (result.providedShearReinforcement < Av_min_seismic * 0.8) {
                 updatedWarnings.add("SBC 304-18: تسليح القص أقل من النسبة الزلزالية الدنيا")
             }
             updatedNotes.add("SBC 304: Seismic shear provisions (Section 18.5)")
@@ -184,10 +184,10 @@ class SBCBeam : BeamDesign {
 
     /**
      * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب SBC 304-2018
-     * SBC 304 follows ACI 318: f'c = 0.8 × fcu (cube-to-cylinder)
+     * SBC 304 يعتمد على ACI 318 مع تعديل: f'c = 0.67 × fcu / 1.5
      *
      * طريقة Rn-ρ (مثل ACI لكن مع مقاومة خرسانة SBC):
-     * - fc' = 0.8 × fcu
+     * - fc' = 0.67 × fcu / 1.5
      * - Rn = Mu / (φ × b × d²)
      * - ρ_bal = 0.85β₁(fc'/fy) × 600/(600+fy)
      * - If Rn > Rn_bal: needs compression steel

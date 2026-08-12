@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,11 +17,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import com.civileg.app.domain.entities.StirrupZone
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.math.sin
 
 // ─── Data classes ───────────────────────────────────────────────────────────
@@ -36,25 +34,25 @@ data class BarInfo(
 // ─── Color palette — delegates to shared DrawingColors ───────────────────
 
 private object C {
-    val Concrete = DrawingColorDefaults.ConcreteTopGray
+    val Concrete = DrawingColors.ConcreteTopGray
     val ConcreteLight = Color(0xFFA0A0A0)
-    val ConcreteDark = DrawingColorDefaults.ConcreteSideGray
-    val Bar = DrawingColorDefaults.RebarBlue
-    val CornerBar = DrawingColorDefaults.TopRebarBlue
-    val Tie = DrawingColorDefaults.StirrupPurple
+    val ConcreteDark = DrawingColors.ConcreteSideGray
+    val Bar = DrawingColors.RebarBlue
+    val CornerBar = DrawingColors.TopRebarBlue
+    val Tie = DrawingColors.StirrupPurple
     val TieLight = Color(0xFFB07CC8)
-    val White = DrawingColorDefaults.DimensionWhite
-    val DimLine = DrawingColorDefaults.ExtensionGray
-    val Safe = DrawingColorDefaults.SafeGreen
-    val Unsafe = DrawingColorDefaults.UnsafeRed
-    val Center = DrawingColorDefaults.CenterLine
-    val Hatch = DrawingColorDefaults.HatchColor
-    val TblBorder = DrawingColorDefaults.ExtensionGray
+    val White = DrawingColors.DimensionWhite
+    val DimLine = DrawingColors.ExtensionGray
+    val Safe = DrawingColors.SafeGreen
+    val Unsafe = DrawingColors.UnsafeRed
+    val Center = DrawingColors.CenterLine
+    val Hatch = DrawingColors.HatchColor
+    val TblBorder = DrawingColors.ExtensionGray
     val TblHeader = Color(0xFF3A3A3A)
-    val TblBg = DrawingColorDefaults.ConcreteFill
-    val Slab = DrawingColorDefaults.ConcreteSideGray
-    val Grid = DrawingColorDefaults.GridLine
-    val BgDark = DrawingColorDefaults.ConcreteFill
+    val TblBg = DrawingColors.ConcreteFill
+    val Slab = DrawingColors.ConcreteSideGray
+    val Grid = DrawingColors.GridLine
+    val BgDark = DrawingColors.ConcreteFill
     val BgDarker = Color(0xFF333333)
 }
 
@@ -79,107 +77,43 @@ fun ProfessionalColumnDrawing(
     isSpiral: Boolean = false,
     spiralPitch: Double = 0.0,
     sectionType: String = "Rectangular",
-    zones: List<StirrupZone> = emptyList(),
     interactionPoints: List<Pair<Double, Double>> = emptyList(),
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
-    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
         val W = size.width
         val H = size.height
+        val divX = W * 0.40f
+        val midY = H * 0.52f
 
-        // ── Layout zones — adjusted based on viewMode ──────────────
-        val divX = when (viewMode) {
-            1 -> W * 0.50f   // elevation mode: centered divider for tie detail below
-            2 -> W * 0.50f   // section mode: centered for interaction diagram
-            else -> W * 0.40f // all / reinforcement: standard layout
-        }
-        val midY = when (viewMode) {
-            0 -> H * 0.50f   // all: standard 50/50
-            1 -> H * 0.55f   // elevation: give more space to elevation
-            2 -> H * 0.55f   // section: give more space to section
-            3 -> H * 0.35f   // reinforcement: table gets more space
-            else -> H * 0.50f
-        }
+        // 1. 3D Column Elevation (left)
+        draw3DElevation(16f, 16f, divX - 32f, midY - 20f,
+            columnWidth, columnDepth, columnHeight,
+            longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType)
 
-        // Zone heights
-        val elevH = when (viewMode) {
-            1 -> H * 0.90f
-            0 -> H * 0.45f
-            else -> H * 0.05f
-        }
-        val secH = when (viewMode) {
-            2 -> H * 0.90f
-            0 -> H * 0.45f
-            else -> H * 0.05f
-        }
-        val tieH = when (viewMode) {
-            3 -> H * 0.55f
-            0 -> H * 0.20f
-            else -> H * 0.05f
-        }
-        val tableH = when (viewMode) {
-            3 -> H * 0.38f
-            0 -> H * 0.12f
-            else -> H * 0.05f
+        // 2. Cross-Section View (right-top)
+        drawCrossSection(divX + 16f, 16f, W - divX - 32f, midY - 20f,
+            columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
+
+        // 3. Tie/Spiral Detail Inset (below elevation)
+        drawTieDetailInset(16f, midY + 10f, divX - 32f, H - midY - 120f,
+            columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
+            isSpiral, spiralPitch, sectionType)
+
+        // 4. Section Dimensions (overlaid on cross-section)
+        drawSectionDimensions(divX + 16f, 16f, W - divX - 32f, midY - 20f,
+            columnWidth, columnDepth, cover, longitudinalBars)
+
+        // 5. Interaction Diagram (bottom-right)
+        if (interactionPoints.isNotEmpty()) {
+            drawInteractionDiagram(divX + 20f, midY + 10f,
+                W - divX - 36f, H - midY - 120f, interactionPoints, designPoint)
         }
 
-        val tableBottom = H - 8f
-        val tableTop = tableBottom - tableH
-        val tieBottom = if (viewMode == 0) midY + (H - midY - tableH) * 0.6f else tableTop - 4f
-        val tieTop = tieBottom - tieH
-        val elevBottom = if (viewMode == 0) midY - 10f else if (viewMode == 1) H * 0.92f else tieTop - 4f
-        val elevTop = elevBottom - elevH
-        val secBottom = if (viewMode == 0) midY - 10f else if (viewMode == 2) H * 0.92f else tieTop - 4f
-        val secTop = secBottom - secH
-
-        // 1. 3D Column Elevation (left) — viewMode 0 or 1
-        if (viewMode == 0 || viewMode == 1) {
-            val eLeft = if (viewMode == 1) 16f else 16f
-            val eRight = if (viewMode == 1) W - 32f else divX - 32f
-            draw3DElevation(eLeft, elevTop, eRight - eLeft, elevBottom - elevTop,
-                columnWidth, columnDepth, columnHeight,
-                longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType, zones)
-        }
-
-        // 2. Cross-Section View (right-top) — viewMode 0 or 2
-        if (viewMode == 0 || viewMode == 2) {
-            val sLeft = if (viewMode == 2) 16f else divX + 16f
-            val sRight = if (viewMode == 2) W - 32f else W - 32f
-            drawCrossSection(sLeft, secTop, sRight - sLeft, secBottom - secTop,
-                columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
-            drawSectionDimensions(sLeft, secTop, sRight - sLeft, secBottom - secTop,
-                columnWidth, columnDepth, cover, longitudinalBars)
-        }
-
-        // 3. Tie/Spiral Detail Inset — viewMode 0 or 3
-        if (viewMode == 0 || viewMode == 3) {
-            val tLeft = if (viewMode == 3) 16f else 16f
-            val tRight = if (viewMode == 3) W - 32f else divX - 32f
-            drawTieDetailInset(tLeft, tieTop, tRight - tLeft, tieBottom - tieTop,
-                columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
-                isSpiral, spiralPitch, sectionType)
-        }
-
-        // 4. Section Dimensions (overlaid on cross-section) — viewMode 0 or 2
-        // (already drawn above inside the cross-section guard)
-
-        // 5. Interaction Diagram (bottom-right) — viewMode 0 or 2
-        if (viewMode == 0 || viewMode == 2) {
-            if (interactionPoints.isNotEmpty()) {
-                val iLeft = if (viewMode == 2) 16f else divX + 20f
-                val iRight = if (viewMode == 2) W - 32f else W - 36f
-                drawInteractionDiagram(iLeft, tieTop,
-                    iRight - iLeft, tieBottom - tieTop, interactionPoints, designPoint)
-            }
-        }
-
-        // 6. Reinforcement Table (bottom) — viewMode 0 or 3
-        if (viewMode == 0 || viewMode == 3) {
-            drawReinforcementTable(16f, tableTop, W - 32f, tableBottom - tableTop,
-                longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
-        }
+        // 6. Reinforcement Table (bottom)
+        drawReinforcementTable(16f, H - 100f, W - 32f, 90f,
+            longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
     }
 }
 
@@ -191,8 +125,7 @@ private fun DrawScope.draw3DElevation(
     left: Float, top: Float, width: Float, height: Float,
     colW: Double, colD: Double, colH: Double,
     bars: List<BarInfo>, tieDia: Double, tieSpacing: Double,
-    cover: Double, isSpiral: Boolean, sectionType: String,
-    zones: List<StirrupZone> = emptyList()
+    cover: Double, isSpiral: Boolean, sectionType: String
 ) {
     val cosA = cos(Math.toRadians(30.0)).toFloat()
     val sinA = sin(Math.toRadians(30.0)).toFloat()
@@ -258,84 +191,33 @@ private fun DrawScope.draw3DElevation(
     drawRect(color = C.ConcreteDark, topLeft = Offset(ox, oy), size = Size(w, h), style = Stroke(width = 2f))
 
     // ── Longitudinal bars (blue vertical lines) ────────────────────────
-    // [EXPERT]: Project ALL bars onto visible faces
-    val frontBars = bars.filter { it.y <= colD * 0.1 }
-    frontBars.forEach { bar ->
+    val visibleBars = bars.filter { it.y <= colD / 2 }.take(6)
+    visibleBars.forEach { bar ->
         val bx = ox + (bar.x.toFloat() / colW.toFloat()) * w
         drawLine(color = C.Bar, start = Offset(bx, oy + 4f), end = Offset(bx, oy + h - 4f),
             strokeWidth = (bar.diameter.toFloat() * scale * 0.25f).coerceIn(2f, 5f))
     }
-    // Side face bars
-    val sideBars = bars.filter { it.x >= colW * 0.9 }
-    sideBars.forEach { bar ->
+    // Side face bars (projected)
+    bars.filter { it.x >= colW * 0.8 }.take(3).forEach { bar ->
         val yRatio = bar.y.toFloat() / colD.toFloat()
         val xOff = d * cosA * yRatio
-        drawLine(color = C.Bar.copy(alpha = 0.6f),
+        drawLine(color = C.Bar.copy(alpha = 0.5f),
             start = Offset(ox + w + xOff, oy + 4f - d * sinA * yRatio),
             end = Offset(ox + w + xOff, oy + h - 4f - d * sinA * yRatio),
             strokeWidth = (bar.diameter.toFloat() * scale * 0.2f).coerceIn(1.5f, 4f))
     }
 
     // ── Ties (purple horizontal lines) ─────────────────────────────────
-    if (zones.isNotEmpty()) {
-        val covOff = cover.toFloat() * scale * 0.4f
-        zones.forEach { zone ->
-            // Convert mm from bottom to screen coordinates (oy is top)
-            val zStartScreen = oy + h - (zone.endLocation.toFloat() / colH.toFloat()) * h
-            val zEndScreen = oy + h - (zone.startLocation.toFloat() / colH.toFloat()) * h
-            val zStep = (zone.spacing.toFloat() / colH.toFloat()) * h
-            
-            var ty = zEndScreen
-            val midYZone = (zStartScreen + zEndScreen) / 2f
-            
-            // Draw dimension line for zone on the LEFT side
-            val dimX = ox - 35f
-            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(dimX, zStartScreen), Offset(dimX, zEndScreen), 1f)
-            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(dimX - 5f, zStartScreen), Offset(dimX + 5f, zStartScreen), 1f)
-            drawLine(C.DimLine.copy(alpha = 0.6f), Offset(dimX - 5f, zEndScreen), Offset(dimX + 5f, zEndScreen), 1f)
-            
-            // Label for zone spacing and type
-            drawContext.canvas.nativeCanvas.apply {
-                val p = android.graphics.Paint().apply {
-                    color = C.White.toArgb(); textSize = 11f * density; isFakeBoldText = true
-                    textAlign = android.graphics.Paint.Align.RIGHT
-                }
-                drawText("\u00D8${zone.diameter} @ ${zone.spacing.toInt()}mm", dimX - 8f, midYZone + 4f, p)
-                
-                p.textSize = 8.5f * density; p.isFakeBoldText = false; p.color = C.DimLine.toArgb()
-                val label = when {
-                    zone.name.contains("Confine", true) || zone.name.contains("تكثيف", true) -> "CONFINEMENT"
-                    else -> zone.name.uppercase()
-                }
-                drawText(label, dimX - 8f, midYZone + 16f * density, p)
-                
-                val zoneH = zone.endLocation - zone.startLocation
-                drawText("H=${zoneH.toInt()}mm", dimX - 8f, midYZone + 28f * density, p)
-            }
-
-            while (ty > zStartScreen + 1f) {
-                if (ty in oy..(oy + h)) {
-                    drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
-                        strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
-                    drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
-                        end = Offset(ox + w + d * cosA, ty - d * sinA),
-                        strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
-                }
-                ty -= zStep
-            }
-        }
-    } else {
-        val numTies = (colH / tieSpacing).toInt().coerceIn(3, 20)
-        val step = h / (numTies + 1)
-        val covOff = cover.toFloat() * scale * 0.4f
-        for (i in 1..numTies) {
-            val ty = oy + i * step
-            drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
-                strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
-            drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
-                end = Offset(ox + w + d * cosA, ty - d * sinA),
-                strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
-        }
+    val numTies = (colH / tieSpacing).toInt().coerceIn(3, 20)
+    val step = h / (numTies + 1)
+    val covOff = cover.toFloat() * scale * 0.4f
+    for (i in 1..numTies) {
+        val ty = oy + i * step
+        drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
+            strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
+        drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
+            end = Offset(ox + w + d * cosA, ty - d * sinA),
+            strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
     }
 
     // Column dimensions label on elevation
@@ -363,7 +245,7 @@ private fun DrawScope.draw3DElevation(
         restore()
     }
 
-    drawLabel("ELEVATION", left + width / 2f, top + height - 14f, 26f, true)
+    drawLabel("ELEVATION", left + width / 2f, top + height - 8f, 26f, true)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -523,9 +405,8 @@ private fun DrawScope.drawTieDetailInset(
         colW, colD, bars, tieDia, tieSpacing, cover, sectionType)
 
     val spacingLabel = if (isSpiral) "pitch = ${spiralPitch.toInt()} mm" else "s = ${tieSpacing.toInt()} mm"
-    val diaLabel = "\u00D8${tieDia.toInt()} "
-    drawLabel(diaLabel + spacingLabel, left + width / 2f, top + height - 8f, 20f, true)
-    drawLabel(if (isSpiral) "SPIRAL DETAIL" else "STIRRUP SHAPE & HOOKS (135\u00B0)", left + 6f, top + 18f, 18f, false)
+    drawLabel(spacingLabel, left + width / 2f, top + height - 8f, 20f, true)
+    drawLabel(if (isSpiral) "SPIRAL DETAIL" else "TIE DETAIL", left + 6f, top + 18f, 20f, false)
 }
 
 private fun DrawScope.drawTieDetailZoom(
@@ -562,9 +443,6 @@ private fun DrawScope.drawTieDetailZoom(
                 (tieDia.toFloat() * scale * 0.12f).coerceIn(1f, 2.5f))
         }
     }
-    
-    // Label hooks
-    drawTextAnnotated("135\u00B0 HOOKS", ox + dw - covPx + 10f, top + loopSpacing - dh/2f, C.TieLight, 9f * density)
 
     // Vertical bars between ties
     bars.map { it.x.toFloat() / colW.toFloat() }.distinct().take(6).forEach { ratio ->
@@ -817,8 +695,8 @@ private fun DrawScope.drawReinforcementTable(
         if (y > top + height - 4f) return@forEachIndexed
         val mark = if (idx < circledNums.size) circledNums[idx] else (idx + 1).toString()
         val pos = if (barList.any { it.isCorner }) "Corner+Side" else "Side"
-        val tieInfo = if (isSpiral) String.format(java.util.Locale.US, "\u00D8${tieDia.toInt()} @ %d mm", spiralPitch.roundToInt())
-            else String.format(java.util.Locale.US, "\u00D8${tieDia.toInt()} @ %d mm", tieSpacing.roundToInt())
+        val tieInfo = if (isSpiral) "\u00D8${tieDia.toInt()} @ ${spiralPitch.toInt()}mm"
+            else "\u00D8${tieDia.toInt()} @ ${tieSpacing.toInt()}mm"
         val tieType = if (isSpiral) "Spiral" else "Ties"
         val rowTexts = listOf(mark, "${barList.size}", "\u00D8${dia.toInt()}", pos, tieInfo, tieType)
         xOff = left
@@ -839,10 +717,10 @@ private fun DrawScope.drawReinforcementTable(
     if (grouped.isNotEmpty()) {
         val totalAs = bars.sumOf { kotlin.math.PI * (it.diameter / 2.0) * (it.diameter / 2.0) }
         val sumPaint = android.graphics.Paint().apply {
-            color = C.Safe.toArgb(); textSize = 13f * density
+            color = C.Safe.toArgb(); textSize = 13f
             textAlign = android.graphics.Paint.Align.RIGHT; isFakeBoldText = true
         }
-        native.drawText("As = ${String.format(java.util.Locale.US, "%.1f", totalAs)} mm\u00B2", left + width - 8f, top + height - 6f, sumPaint)
+        native.drawText("As = ${"%.1f".format(totalAs)} mm²", left + width - 8f, top + height - 6f, sumPaint)
     }
 
     if (grouped.isEmpty()) native.drawText("No reinforcement data", left + width / 2f - 60f, rowY, tp)

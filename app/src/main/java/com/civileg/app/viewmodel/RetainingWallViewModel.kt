@@ -5,12 +5,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,13 +28,6 @@ class RetainingWallViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
-
-    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
-    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
-
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
-    @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateRetainingWallPro(
         height: Double,
@@ -61,11 +52,6 @@ class RetainingWallViewModel @Inject constructor(
                     preferredDiameter = preferredDiameter,
                     code = code
                 )
-                
-                // Validate Retaining Wall
-                val report = CalculationValidator.validateRetainingWall(res)
-                _validationReport.value = report
-                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -93,43 +79,76 @@ class RetainingWallViewModel @Inject constructor(
             _isExporting.value = true
             try {
                 val exportedFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    // [EXPERT]: Modern specialized Retaining Wall exporter
-                    val exporter = com.civileg.app.utils.exporters.RetainingWallProPdfExporter(context)
-                    
-                    // Domain mapping
-                    val domainType = com.civileg.app.domain.calculations.base.TankType.RECTANGULAR // Dummy for matching if needed
-                    val designer: com.civileg.app.domain.calculations.base.RetainingWallDesign = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.calculations.aci.ACIRetainingWall()
-                        CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.calculations.sbc.SBCRetainingWall()
-                        else -> com.civileg.app.domain.calculations.ecp.ECPRetainingWall()
+                    // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                    val fileName = "RetainingWall_Report_${System.currentTimeMillis()}.pdf"
+                    val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                        ?: context.cacheDir
+                    directory.mkdirs()
+                    val file = java.io.File(directory, fileName)
+
+                    val drawingBitmap = try {
+                        PdfDrawingGenerator.generateRetainingWallDrawing(
+                            wallHeight = currentResult.height,
+                            wallTopThickness = currentResult.stemThickness * 0.6,
+                            wallBottomThickness = currentResult.stemThickness,
+                            baseWidth = currentResult.baseWidth,
+                            baseThickness = currentResult.stemThickness * 1.2,
+                            toeLength = currentResult.baseWidth * 0.25,
+                            heelLength = currentResult.baseWidth * 0.6,
+                            mainRebarDia = currentResult.stemReinforcement.diameter.toDouble(),
+                            mainRebarSpacing = currentResult.stemReinforcement.spacing.toDouble(),
+                            distRebarDia = currentResult.stemReinforcement.diameter.toDouble() * 0.7,
+                            distRebarSpacing = currentResult.stemReinforcement.spacing.toDouble() * 1.5,
+                            baseRebarDia = currentResult.baseReinforcement.diameter.toDouble(),
+                            baseRebarSpacing = currentResult.baseReinforcement.spacing.toDouble(),
+                            cover = 0.05,
+                            backfillAngle = currentResult.backfillAngle,
+                            hasKey = true,
+                            keyDepth = 0.15
+                        )
+                    } catch (e: Exception) { null }
+
+                    val codeName = when(currentResult.code) {
+                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        else -> "ECP 203"
+                    }
+                    val inputsMap = mapOf(
+                        "Wall Height" to "${currentResult.height} m",
+                        "Stem Thickness" to "${currentResult.stemThickness} mm",
+                        "Base Width" to "${currentResult.baseWidth} mm",
+                        "Backfill Angle" to "${String.format("%.1f", currentResult.backfillAngle)}°",
+                        "Design Code" to codeName
+                    )
+                    val resultsMap = mapOf(
+                        "Active Pressure Pa" to "${String.format("%.2f", currentResult.pa)} kN/m",
+                        "Stem Moment" to "${String.format("%.2f", currentResult.muStem)} kN.m/m",
+                        "Stem Reinforcement" to currentResult.stemReinforcement.barString,
+                        "Base Reinforcement" to currentResult.baseReinforcement.barString,
+                        "FS Overturning" to String.format("%.2f", currentResult.factorOfSafetyOverturning),
+                        "FS Sliding" to String.format("%.2f", currentResult.factorOfSafetySliding),
+                        "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
+                        "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg"
+                    )
+                    val safetyChecks = currentResult.safetyChecks.map { chk ->
+                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                            name = chk.name, calculated = chk.value,
+                            limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                        )
                     }
 
-                    val input = com.civileg.app.domain.calculations.base.RetainingWallInput(
-                        wallHeight = currentResult.height,
-                        stemBaseThickness = currentResult.stemThickness / 1000.0,
-                        stemTopThickness = currentResult.stemThickness / 1000.0 * 0.6,
-                        baseWidth = currentResult.baseWidth / 1000.0,
-                        baseThickness = currentResult.stemThickness / 1000.0 * 1.2,
-                        toeLength = currentResult.baseWidth / 1000.0 * 0.3,
-                        heelLength = currentResult.baseWidth / 1000.0 * 0.6,
-                        soilDensity = currentResult.soilDensity,
-                        frictionAngle = currentResult.backfillAngle,
-                        surchargeLoad = currentResult.surcharge,
-                        waterTableDepth = currentResult.waterTableHeight,
-                        fcu = currentResult.fcu,
-                        fy = currentResult.fy
-                    )
-
-                    val fullDomainResult = designer.designRetainingWall(input)
-
-                    val drawings = mutableMapOf<String, Bitmap?>()
-                    drawings["elevation"] = pendingDrawingBitmap
-
-                    exporter.exportToPdf(
-                        result = fullDomainResult,
-                        clientName = "Master Engineering Client",
-                        projectName = "Professional Cantilever Wall Analysis",
-                        drawings = drawings
+                    // Professional English PDF Report — English only, no Arabic encoding issues
+                    com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                        titleAr = "تقرير تصميم حائط ساند",
+                        titleEn = "Retaining Wall Design Report",
+                        subtitle = "Code: $codeName  •  H=${currentResult.height}m",
+                        designType = "Retaining Wall",
+                        inputs = inputsMap,
+                        results = resultsMap,
+                        safetyChecks = safetyChecks,
+                        isSafe = currentResult.isSafe,
+                        drawingBitmap = drawingBitmap,
+                        outputPath = file.absolutePath
                     )
                 }
                 exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

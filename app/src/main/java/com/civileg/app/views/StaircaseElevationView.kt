@@ -11,7 +11,6 @@ import kotlin.math.*
  * Professional Staircase Elevation View
  * Features: Engineering hatching, dimensioning, reinforcement detailing, and cost summary.
  */
-@Deprecated("Use ProfessionalStairDrawing")
 class StaircaseElevationView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

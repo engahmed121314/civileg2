@@ -14,11 +14,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.civileg.app.db.Project
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -39,12 +37,8 @@ import com.civileg.app.viewmodel.ColumnViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
-import com.civileg.app.utils.ComposeDrawingCaptureUtil
-import com.civileg.app.utils.captureToAndroidBitmap
-import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,12 +50,6 @@ fun ColumnScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
-    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -85,10 +73,10 @@ fun ColumnScreen(
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -159,7 +147,7 @@ fun ColumnScreen(
                         stringResource(R.string.column_axial_load_pu),
                         { viewModel.updateInputs(axialLoad = it) },
                         Modifier.weight(1f),
-                        validate = { v -> v.isEmpty() || (v.toDoubleOrNull()?.let { it >= 0 } ?: false) }
+                        validate = { v -> v.isEmpty() || (v.toDoubleOrNull()?.let { it > 0 } ?: false) }
                     )
                     ColumnInputField(
                         uiState.height,
@@ -168,45 +156,6 @@ fun ColumnScreen(
                         Modifier.weight(1f),
                         validate = { v -> v.toDoubleOrNull()?.let { it in 1.0..15.0 } ?: true }
                     )
-                }
-            }
-
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(
-                        uiState.mx,
-                        "Moment Mx (kN.m)",
-                        { viewModel.updateInputs(mx = it) },
-                        Modifier.weight(1f)
-                    )
-                    ColumnInputField(
-                        uiState.my,
-                        "Moment My (kN.m)",
-                        { viewModel.updateInputs(my = it) },
-                        Modifier.weight(1f)
-                    )
-                }
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Seismic Confinement", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            Text("Enable special detailing for earthquake zones", style = MaterialTheme.typography.labelSmall)
-                        }
-                        Switch(
-                            checked = uiState.isSeismic,
-                            onCheckedChange = { viewModel.updateInputs(isSeismic = it) }
-                        )
-                    }
                 }
             }
 
@@ -294,20 +243,6 @@ fun ColumnScreen(
 
                 item { ColumnResultCard(result) }
 
-                if (result.mx != 0.0 || result.my != 0.0) {
-                    item {
-                        Text("Biaxial Interaction (P-M)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        com.civileg.app.ui.compose.components.charts.BiaxialInteractionChart(
-                            mxPoints = emptyList(), // Needs wiring to ViewModel for actual curve
-                            myPoints = emptyList(),
-                            appliedMx = result.mx,
-                            appliedMy = result.my,
-                            appliedP = result.appliedAxial,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                }
-
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -379,29 +314,16 @@ fun ColumnScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = {
-                                scope.launch {
-                                    val captureBitmap = try {
-                                        pdfCaptureLayer.captureToAndroidBitmap()
-                                    } catch (_: Exception) { null }
-                                    viewModel.pendingDrawingBitmap = captureBitmap
-                                    viewModel.exportToPdf(context) { /* Handle completion */ }
-                                }
-                            },
+                            onClick = { viewModel.exportToPdf(context) { /* Handle completion */ } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !uiState.isExporting
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            if (uiState.isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
+                            Icon(painterResource(id = R.drawable.ic_pdf), contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.pdf_report))
                         }
 
                         Button(
@@ -418,51 +340,15 @@ fun ColumnScreen(
                 }
 
                 item {
-                    Button(
-                        onClick = {
-                            val res = uiState.result ?: return@Button
-                            val file = com.civileg.app.utils.DxfExporter.exportColumnDetailed(
-                                result = res,
-                                width = res.width,
-                                depth = res.depth,
-                                height = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
-                                outputPath = java.io.File(context.cacheDir, "Column_CAD_Detail.dxf").absolutePath
-                            )
-                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                    ) {
-                        Icon(Icons.Default.Architecture, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.export_cad_drawing))
-                    }
-                }
-
-                item {
                     Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     EngineeringFormulasCard(uiState.designCode)
                 }
 
                 item {
-                    var selectedViewMode by remember { mutableStateOf(0) }
-                    val configuration = LocalConfiguration.current
-                    val screenW = configuration.screenWidthDp.dp
-                    val wRatio = screenW.value / 360f
-                    val drawingHeight = when (selectedViewMode) {
-                        1 -> (450 * wRatio).toInt().coerceIn(300, 600)
-                        2 -> (450 * wRatio).toInt().coerceIn(300, 600)
-                        3 -> (400 * wRatio).toInt().coerceIn(250, 550)
-                        else -> (700 * wRatio).toInt().coerceIn(450, 1000)
-                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
-                        drawingHeightDp = drawingHeight,
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
-                        selectedViewMode = selectedViewMode,
-                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
@@ -474,40 +360,12 @@ fun ColumnScreen(
                                 cover = 40.0, // standard clear cover for columns
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
-                                zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
-                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     )
                 }
             }
-        }
-        // PDF drawing capture area (invisible, renders at viewMode=0)
-        uiState.result?.let { result ->
-            ComposeDrawingCaptureUtil.DrawingCaptureArea(
-                captureLayer = pdfCaptureLayer,
-                widthPx = screenWidthPx,
-                heightPx = screenHeightPx
-            ) {
-                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    ProfessionalColumnDrawing(
-                        columnWidth = result.width.toDouble(),
-                        columnDepth = result.depth.toDouble(),
-                        columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
-                        longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
-                        tieDia = result.stirrups.diameter.toDouble(),
-                        tieSpacing = result.stirrups.spacing.toDouble(),
-                        cover = 40.0,
-                        isSpiral = false,
-                        sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
-                        zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
-                        viewMode = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
         }
     }
 
@@ -589,25 +447,16 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
-            ResultDataRow("Applied Pu", "${String.format("%.1f", result.appliedAxial)} kN")
-            if (result.mx != 0.0 || result.my != 0.0) {
-                ResultDataRow("Applied Mx / My", "${result.mx} / ${result.my} kN.m")
-            }
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
-            if (result.stirrups.zones.isNotEmpty()) {
-                 Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
-                 result.stirrups.zones.forEach { zone ->
-                     ResultDataRow("${zone.name} (${String.format(java.util.Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
-                 }
-            } else if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
+            ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
+            // Code-based stirrup detailing
+            if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
                 ResultDataRow("Tie Spacing (ends)", "@${result.stirrups.spacingAtSupport.toInt()}mm c/c")
                 ResultDataRow("Tie Spacing (mid)", "@${result.stirrups.spacingAtMidspan.toInt()}mm c/c")
                 ResultDataRow("Condensation Zone", "${result.stirrups.condensationZoneLength.toInt()}mm from each end")
                 if (result.stirrups.codeNotes.isNotEmpty()) {
                     ResultDataRow("Code Ref", result.stirrups.codeNotes)
                 }
-            } else {
-                ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
             }
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
             

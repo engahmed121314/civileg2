@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -39,13 +39,12 @@ fun ProfessionalFootingDrawing(
     col2X: Double = 0.0,
     soilPressureMax: Double = 0.0,
     soilPressureMin: Double = 0.0,
-    viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxSize()
+            .aspectRatio(4f / 3f)
     ) {
         val w = size.width
         val h = size.height
@@ -58,7 +57,7 @@ fun ProfessionalFootingDrawing(
         val safeColD = columnDepth.coerceAtLeast(50.0)
 
         // ── Color Palette (delegates to shared DrawingColors) ─────
-        val C = DrawingColorDefaults
+        val C = DrawingColors
         val concreteFill = Color(0xFF3D3D3D)
         val concreteStroke = Color(0xFF6B6B6B)
         val footingBorder = Color(0xFF8A8A8A)
@@ -76,48 +75,15 @@ fun ProfessionalFootingDrawing(
         val critSectionColor = C.SafeGreen
         val tableHeaderBg = Color(0x55333333)
 
-        // ── Layout zones (proportional, viewMode-aware) ──────────
+        // ── Layout zones ───────────────────────────────────────────
         val margin = 30f
-        val hasPressure = footingType == "Combined" || footingType == "Raft"
-
-        val planH = when (viewMode) {
-            1 -> h * 0.88f
-            0 -> h * 0.32f
-            else -> h * 0.10f
-        }
-        val sectionH = when (viewMode) {
-            2 -> h * 0.55f
-            0 -> h * 0.24f
-            else -> h * 0.10f
-        }
-        val pressureH = if (hasPressure) when (viewMode) {
-            2 -> h * 0.18f
-            0 -> h * 0.08f
-            else -> 0f
-        } else 0f
-        val tableH = when (viewMode) {
-            3 -> h * 0.88f
-            0 -> h * 0.22f
-            else -> h * 0.10f
-        }
-
-        val planTop = h * 0.05f
-        val planBottom = planTop + planH
-        val secTop = planBottom + h * 0.02f
-        val secBottom = secTop + sectionH
-        val pressureTop = secBottom + h * 0.01f
-        val pressureBottom = pressureTop + pressureH
-        val tblTop = if (hasPressure && viewMode == 0) pressureBottom + h * 0.02f
-                     else secBottom + h * 0.02f
-
-        // ── Drawing Backdrop ──
-        drawRect(color = Color(0xFF1A1A2E), size = size) // Professional engineering background
-
-        // ── Title & Annotations ──
-        drawTextAnnotated("MASTER STRUCTURAL DRAWING - FOUNDATION", 20f, 30f, Color.Cyan, 20f, bold = true)
-
+        val planH = h * 0.38f
+        val sectionH = h * 0.30f
+        val pressureH = if (footingType == "Combined" || footingType == "Raft") h * 0.10f else 0f
         val planLeft = margin + 50f
         val planRight = w - margin
+        val planTop = 50f
+        val planBottom = planTop + planH - 20f
         val planW = planRight - planLeft
         val planDrawH = planBottom - planTop
 
@@ -133,14 +99,11 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW
         // ══════════════════════════════════════════════════════════
-        // Scaling (used by both plan and section views)
         val scaleX = planW / safeLX.toFloat()
         val scaleY = planDrawH / safeLY.toFloat()
         val scale = min(scaleX, scaleY) * 0.85f
         val drawLX = safeLX.toFloat() * scale
         val drawLY = safeLY.toFloat() * scale
-
-        if (viewMode == 0 || viewMode == 1) {
         val fLeft = planLeft + (planW - drawLX) / 2f
         val fTop = planTop + (planDrawH - drawLY) / 2f
         val fRight = fLeft + drawLX
@@ -323,19 +286,17 @@ fun ProfessionalFootingDrawing(
         drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
 
         // Section cut line using DrawingUtils
-        if (viewMode == 0) {
-            drawSectionCutLine(
-                x1 = fCenterX, y1 = fTop - 20f,
-                x2 = fCenterX, y2 = fBottom + 6f,
-                label = "A", color = C.SectionLine
-            )
-        }
-        } // end plan view
+        drawSectionCutLine(
+            x1 = fCenterX, y1 = fTop - 20f,
+            x2 = fCenterX, y2 = fBottom + 6f,
+            label = "A", color = C.SectionLine
+        )
 
         // ══════════════════════════════════════════════════════════
         //  SECTION VIEW
         // ══════════════════════════════════════════════════════════
-        if (viewMode == 0 || viewMode == 2) {
+        val secTop = fBottom + 36f
+        val secBottom = secTop + sectionH
         val secLeft = margin + 90f
         val secRight = w - margin
 
@@ -349,11 +310,9 @@ fun ProfessionalFootingDrawing(
         val sTop = secTop + (sectionH - thickPx) / 2f + 8f
         val sBottom = sTop + thickPx
         val sCenterX = sLeft + secSpanPx / 2f
-        val colWpx = (safeColW * secScale).toFloat()
 
         // Soil below footing (hatched area) using DrawingUtils
-        val soilBottom = min(sBottom + 20f, h * 0.60f)
-        val soilDepth = (soilBottom - sBottom).coerceAtLeast(0f)
+        val soilDepth = 30f
         drawRect(
             color = soilColor.copy(alpha = 0.4f),
             topLeft = Offset(sLeft - 20f, sBottom),
@@ -365,24 +324,14 @@ fun ProfessionalFootingDrawing(
         )
 
         // Footing concrete
-        if (footingType == "Hybrid (REB)") {
-            // Main raft slab
-            val raftH = thickPx * 0.4f
-            drawRect(color = concreteFill, topLeft = Offset(sLeft, sBottom - raftH), size = Size(secSpanPx, raftH))
-            // Thickened Pedestals under column
-            val pedW = colWpx * 2.5f
-            val pedH = thickPx
-            drawRect(color = concreteFill, topLeft = Offset(sCenterX - pedW / 2f, sBottom - pedH), size = Size(pedW, pedH))
-            drawRect(color = concreteStroke, topLeft = Offset(sCenterX - pedW / 2f, sBottom - pedH), size = Size(pedW, pedH), style = Stroke(1.5f))
-        } else {
-            drawRect(
-                color = concreteFill,
-                topLeft = Offset(sLeft, sTop),
-                size = Size(secSpanPx, thickPx)
-            )
-        }
+        drawRect(
+            color = concreteFill,
+            topLeft = Offset(sLeft, sTop),
+            size = Size(secSpanPx, thickPx)
+        )
 
         // Column above
+        val colWpx = (safeColW * secScale).toFloat()
         val colHpx = 40f
         val colLeft = sCenterX - colWpx / 2f
         drawRect(
@@ -464,8 +413,8 @@ fun ProfessionalFootingDrawing(
         //  SOIL PRESSURE DIAGRAM (Combined / Raft)
         // ══════════════════════════════════════════════════════════
         if (footingType == "Combined" || footingType == "Raft") {
-            val prTop = pressureTop
-            val prBottom = pressureBottom
+            val prTop = secBottom + 10f
+            val prBottom = prTop + pressureH
             val prLeft = secLeft
             val prRight = prLeft + secSpanPx
 
@@ -518,12 +467,10 @@ fun ProfessionalFootingDrawing(
             drawTextAnnotated("R", resultantX, prBottom - resultantH - 6f, C.WarningOrange, 9f * density, center = true, bold = true)
         }
 
-        } // end section view
-
         // ══════════════════════════════════════════════════════════
         //  REINFORCEMENT TABLE using DrawingUtils
         // ══════════════════════════════════════════════════════════
-        if (viewMode == 0 || viewMode == 3) {
+        val tblTop = if (pressureH > 0) secBottom + pressureH + 18f else secBottom + 14f
         val tblLeft = margin
         val tblWidth = w - 2 * margin
 
@@ -554,6 +501,5 @@ fun ProfessionalFootingDrawing(
             textColor = textColor,
             textSize = 9f * density
         )
-        } // end reinforcement table
     }
 }

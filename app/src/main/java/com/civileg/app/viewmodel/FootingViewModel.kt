@@ -9,13 +9,11 @@ import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,19 +25,6 @@ class FootingViewModel @Inject constructor(
     private val _result = MutableLiveData<CalculatorEngine.FootingResult?>()
     val result: LiveData<CalculatorEngine.FootingResult?> = _result
 
-    // Auto-design: per-footing results
-    data class AutoDesignSummary(
-        val footingResults: List<CalculatorEngine.FootingResult>,
-        val totalConcreteVolume: Double,
-        val totalSteelWeight: Double,
-        val soilAreaUtilization: Double, // percentage of soil area used by footings
-        val soilAreaM2: Double,
-        val totalFootingAreaM2: Double
-    )
-
-    private val _autoResults = MutableLiveData<AutoDesignSummary?>()
-    val autoResults: LiveData<AutoDesignSummary?> = _autoResults
-
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
@@ -48,17 +33,6 @@ class FootingViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
-    
-    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
-    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
-
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
-    @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
-
-    // Store actual inputs for save
-    private var lastFcu: Double = 25.0
-    private var lastFy: Double = 360.0
 
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
@@ -79,9 +53,6 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                lastFcu = fcu
-                lastFy = fy
-
                 val res = calculatorEngine.calculateFooting(
                     type = type,
                     p = p,
@@ -96,21 +67,8 @@ class FootingViewModel @Inject constructor(
                     p2 = p2,
                     distance = distance,
                     maxLeft = maxLeft,
-                    maxRight = maxRight,
-                    maxTop = null,
-                    maxBottom = null,
-                    numPiles = 4,
-                    pileDia = 500.0,
-                    pileCapacity = 500.0
+                    maxRight = maxRight
                 )
-                
-                // Validate Footing
-                val report = CalculationValidator.validate(res)
-                val dlReport = CalculationValidator.inspectDeadLoadConsistency("FOOTING", mapOf("width" to colB, "depth" to colT), p)
-                
-                val combinedWarnings = report.warnings + dlReport.warnings
-                _validationReport.value = report.copy(warnings = combinedWarnings)
-                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -123,78 +81,45 @@ class FootingViewModel @Inject constructor(
 
     /**
      * Auto-design foundations for multiple pieces given soil area dimensions and total soil load.
-     * Calculates individual footing loads based on equal distribution,
-     * designs each footing, and verifies soil area utilization.
+     * Calculates individual footing loads based on tributary area or equal distribution,
+     * then designs each footing automatically.
      */
     fun autoDesignFromSoil(
-        soilLengthM: Double,
-        soilWidthM: Double,
-        totalSoilLoadKN: Double,
-        numberOfFootings: Int,
+        soilLengthM: Double,   // soil area length in meters
+        soilWidthM: Double,    // soil area width in meters
+        totalSoilLoadKN: Double, // total load from superstructure on soil area in kN
+        numberOfFootings: Int,  // number of footings to distribute load to
         fcu: Double,
         fy: Double,
-        soilCapacity: Double,
+        soilCapacity: Double,   // allowable soil bearing pressure kN/m2
         colWidth: Double,
         colDepth: Double,
         code: CalculatorEngine.DesignCode,
-        preferredDiameter: Int = 16,
-        preferredSpacing: Double = 150.0
+        preferredDiameter: Int = 16
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val soilAreaM2 = soilLengthM * soilWidthM
+                // Distribute load equally among footings
                 val loadPerFooting = totalSoilLoadKN / numberOfFootings
-                val pu = loadPerFooting * 1.10 // +10% self-weight
+                // Also add self-weight estimate (10% of load)
+                val pu = loadPerFooting * 1.10
 
-                val footingResults = mutableListOf<CalculatorEngine.FootingResult>()
-                var totalConcrete = 0.0
-                var totalSteel = 0.0
-                var totalFootingArea = 0.0
-
-                for (i in 1..numberOfFootings) {
-                    val res = calculatorEngine.calculateFooting(
-                        type = CalculatorEngine.FootingType.ISOLATED,
-                        p = pu,
-                        fcu = fcu,
-                        fy = fy,
-                        soil = soilCapacity,
-                        colB = colWidth,
-                        colT = colDepth,
-                        code = code,
-                        preferredDiameter = preferredDiameter,
-                        preferredSpacing = preferredSpacing,
-                        p2 = 0.0,
-                        distance = 0.0,
-                        maxLeft = null,
-                        maxRight = null,
-                        maxTop = null,
-                        maxBottom = null,
-                        numPiles = 4,
-                        pileDia = 500.0,
-                        pileCapacity = 500.0
-                    )
-                    footingResults.add(res)
-                    totalConcrete += res.concreteVolume
-                    totalSteel += res.steelWeight
-                    totalFootingArea += (res.width / 1000.0) * (res.length / 1000.0)
-                }
-
-                val soilUtilization = (totalFootingArea / soilAreaM2) * 100.0
-
-                _autoResults.value = AutoDesignSummary(
-                    footingResults = footingResults,
-                    totalConcreteVolume = totalConcrete,
-                    totalSteelWeight = totalSteel,
-                    soilAreaUtilization = soilUtilization,
-                    soilAreaM2 = soilAreaM2,
-                    totalFootingAreaM2 = totalFootingArea
+                val res = calculatorEngine.calculateFooting(
+                    type = CalculatorEngine.FootingType.ISOLATED,
+                    p = pu,
+                    fcu = fcu,
+                    fy = fy,
+                    soil = soilCapacity,
+                    colB = colWidth,
+                    colT = colDepth,
+                    code = code,
+                    preferredDiameter = preferredDiameter,
+                    preferredSpacing = 150.0
                 )
-                // Also store first result for single-result consumers
-                _result.value = footingResults.firstOrNull()
-                _error.value = if (soilUtilization > 90.0) {
-                    "Warning: Soil area utilization is ${"%.0f".format(soilUtilization)}%. Consider increasing soil area or using raft foundation."
-                } else null
+                // Store additional auto-design metadata
+                _result.value = res
+                _error.value = null
             } catch (e: Exception) {
                 _error.value = "Auto-design error: ${e.message}"
             } finally {
@@ -205,7 +130,7 @@ class FootingViewModel @Inject constructor(
 
     fun saveFooting(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
         viewModelScope.launch {
-            repository.saveFootingDesign(projectId, name, result, lastFcu, lastFy)
+            repository.saveFootingDesign(projectId, name, result)
         }
     }
 
@@ -214,39 +139,70 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
-                // [EXPERT]: Modern specialized Footing exporter
-                val exporter = com.civileg.app.utils.exporters.FootingProPdfExporter(context)
-                
-                val designer: com.civileg.app.domain.calculations.base.FootingDesign = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.calculations.aci.ACIFooting()
-                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.calculations.sbc.SBCFooting()
-                    else -> com.civileg.app.domain.calculations.ecp.ECPFooting()
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                val fileName = "Footing_Report_${System.currentTimeMillis()}.pdf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
+
+                // Generate drawing for PDF
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generateFootingDrawing(
+                        footingLX = res.width,
+                        footingLY = res.length,
+                        footingThickness = res.thickness,
+                        colW = res.column1Size.first,
+                        colD = res.column1Size.second,
+                        rebarXCount = res.barsX,
+                        rebarXDia = res.barDiameter.toDouble(),
+                        rebarXSpacing = res.reinforcementBottom.spacing,
+                        rebarYCount = res.barsY,
+                        rebarYDia = res.barDiameter.toDouble(),
+                        rebarYSpatial = res.reinforcementBottom.spacing
+                    )
+                } catch (e: Exception) { e.printStackTrace(); null }
+
+                val codeName = when(res.code) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
                 }
-
-                // Re-calculate to get full professional metadata (formulas, etc)
-                val fullDomainResult = designer.designIsolatedFooting(
-                    fcu = lastFcu, fy = lastFy,
-                    columnWidth = res.column1Size.second, columnDepth = res.column1Size.first,
-                    axialLoad = res.soilPressure * res.width * res.length / 1e6 * 1.5, // Approx ultimate
-                    momentX = 0.0, momentY = 0.0,
-                    soilBearingCapacity = res.allowablePressure,
-                    footingDepth = res.thickness,
-                    loadCombination = com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE
+                val inputsMap = mapOf(
+                    "Footing Type" to res.type.displayName,
+                    "Width" to "${res.width} mm",
+                    "Length" to "${res.length} mm",
+                    "Thickness" to "${res.thickness} mm",
+                    "Column Size" to "${res.column1Size.first}×${res.column1Size.second} mm",
+                    "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
+                    "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
+                    "Design Code" to codeName
                 )
-
-                val drawings = mutableMapOf<String, Bitmap?>()
-                drawings["section"] = pendingDrawingBitmap
-
-                val generated = exporter.exportToPdf(
-                    result = fullDomainResult,
-                    clientName = "Master Engineering Client",
-                    projectName = "Professional Foundation Analysis",
-                    drawings = drawings
+                val resultsMap = mapOf(
+                    "Reinforcement" to res.reinforcementBottom.barString,
+                    "Bars X" to "${res.barsX} Ø${res.barDiameter}",
+                    "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
+                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
+                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg",
+                    "Efficiency" to "${String.format("%.0f", res.efficiencyScore)}%",
+                    "Optimal" to if (res.isOptimal) "Yes" else "No"
                 )
-                pendingDrawingBitmap = null 
+                // Professional English PDF Report — English only, no Arabic encoding issues
+                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
+                    titleEn = "Footing Design Report — ${res.type.displayName}",
+                    subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
+                    designType = "Footing (${res.type.displayName})",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = emptyList(),
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
+                )
 
                 withContext(Dispatchers.Main) {
-                    generated.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }

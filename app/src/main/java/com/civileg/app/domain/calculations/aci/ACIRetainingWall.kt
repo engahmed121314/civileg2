@@ -73,7 +73,7 @@ class ACIRetainingWall : RetainingWallDesign {
 
         // Stem - cantilever
         val stemH = H - tFooting
-        val MuStem = LF_LATERAL * (Ka * gamma * stemH.pow(3) / 6 + Ka * q * stemH.pow(2) / 2) * 1e6 // kN.m -> N.mm
+        val MuStem = LF_LATERAL * (Ka * gamma * stemH.pow(3) / 6 + Ka * q * stemH.pow(2) / 2) * 1e3 // kN.m -> N.mm
         val VuStem = LF_LATERAL * (Ka * gamma * stemH.pow(2) / 2 + Ka * q * stemH) // kN
         val b = 1000.0
         val d = tBase * 1000 - COVER_EARTH - 10.0
@@ -96,7 +96,7 @@ class ACIRetainingWall : RetainingWallDesign {
         val shearOk = VuStem * 1000 <= phiVc
 
         // Toe
-        val toeMu = max(0.0, (maxBP * toe * toe / 2 - minBP * toe * toe / 6)) * 1e6
+        val toeMu = max(0.0, (maxBP * toe * toe / 2 - minBP * toe * toe / 6)) * 1e3 * PHI_FLEXURE
         val toeD = tFooting * 1000 - COVER_EARTH - 10.0
         val toeRn = toeMu / (PHI_FLEXURE * b * toeD * toeD)
         val toeRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * toeRn / (0.85 * fc))))
@@ -104,46 +104,39 @@ class ACIRetainingWall : RetainingWallDesign {
         val tb = RetainingWallDesign.selectBars(toeAs)
 
         // Heel
-        val heelLoad = (H - tFooting) * gamma + q  // soil weight + surcharge (DEAD load)
-        val heelMu = heelLoad * heel * heel / 2 * LF_DEAD * 1e6  // ACI: soil is dead load → γD=1.2
+        val heelLoad = (H - tFooting) * gamma + q
+        val heelMu = heelLoad * heel * heel / 2 * LF_LIVE * 1e3 * PHI_FLEXURE
         val heelD = tFooting * 1000 - COVER_EARTH - 10.0
         val heelRn = heelMu / (PHI_FLEXURE * b * heelD * heelD)
         val heelRho = 0.85 * fc / fy * (1 - sqrt(max(0.0, 1 - 2 * heelRn / (0.85 * fc))))
         val heelAs = max(heelRho, rhoMin) * b * heelD
         val hb = RetainingWallDesign.selectBars(heelAs)
 
-        val formulas = mutableListOf<String>()
-        formulas.add("Lateral Earth Pressure Ka = tan\u00B2(45-\u03D5/2) = ${"%.3f".format(Ka)}")
-        formulas.add("Resisting Moment Mr = \u03A3(W_i \u00D7 X_i) = ${"%.1f".format(momentR)} kN.m")
-        formulas.add("Overturning Moment Mo = ${"%.1f".format(momentOT)} kN.m")
-        formulas.add("Design Stem Moment Mu = 1.6 \u00D7 Mo_stem = ${"%.1f".format(MuStem / 1e6)} kN.m")
-
         val checks = listOf(
-            WallSafetyCheck("Overturning", otFS >= OT_FS_LIMIT, otFS, OT_FS_LIMIT, "-", "FS = Mr/Mo",
-                "ACI: ${"%.2f".format(otFS)} >= ${OT_FS_LIMIT}"),
-            WallSafetyCheck("Sliding", slideFS >= SLIDE_FS_LIMIT, slideFS, SLIDE_FS_LIMIT, "-", "FS = (\u03BC.W + Pp)/Pa",
-                "Stability: ${"%.2f".format(slideFS)} >= ${SLIDE_FS_LIMIT}"),
-            WallSafetyCheck("Bearing", maxBP <= input.soilBearingCapacity, maxBP, input.soilBearingCapacity, "kPa", "q \u2264 q_all",
-                "Max Pressure: ${"%.1f".format(maxBP)} <= ${"%.1f".format(input.soilBearingCapacity)}"),
-            WallSafetyCheck("Flexure (ρ)", AsProv >= As * 0.95, AsProv, As, "mm\u00B2", "\u03C1 \u2265 \u03C1_min",
-                "ρ_final=${"%.4f".format(rhoFinal)}"),
-            WallSafetyCheck("Shear", shearOk, qu, phiVc / (b * d), "MPa", "Vu \u2264 \u03C6Vc",
-                "qu=${"%.2f".format(qu)} <= capacity")
+            WallSafetyCheck("OT FS", otFS >= OT_FS_LIMIT, otFS, OT_FS_LIMIT,
+                "ACI: FS=${"%.2f".format(otFS)} >= ${OT_FS_LIMIT}"),
+            WallSafetyCheck("Sliding FS", slideFS >= SLIDE_FS_LIMIT, slideFS, SLIDE_FS_LIMIT,
+                "FS=${"%.2f".format(slideFS)} >= ${SLIDE_FS_LIMIT}"),
+            WallSafetyCheck("Bearing", maxBP <= input.soilBearingCapacity, maxBP, input.soilBearingCapacity,
+                "${"%.1f".format(maxBP)} <= ${"%.1f".format(input.soilBearingCapacity)} kN/m\u00B2"),
+            WallSafetyCheck("Stem Flexure", AsProv >= As * 0.95, AsProv, As,
+                "\u03C1=${"%.4f".format(rhoFinal)} (min=${rhoMin})"),
+            WallSafetyCheck("Shear", shearOk, qu, phiVc / (b * d),
+                "Vu=${"%.0f".format(qu)} <= \u03C6Vc=${"%.0f".format(phiVc / (b * d))} N/mm\u00B2")
         )
 
         val isSafe = checks.all { it.isSafe }
         val notes = mutableListOf(
             "ACI 318: \u03C6f=${PHI_FLEXURE}, \u03C6v=${PHI_SHEAR}",
             "f'c = 0.8\u00D7fcu = ${"%.0f".format(fc)} MPa",
-            "Ka = ${"%.3f".format(Ka)} (Rankine Method)",
+            "Ka = ${"%.3f".format(Ka)} (Rankine)",
             "Cover = ${COVER_EARTH}mm (earth contact)",
             "Min \u03C1 = ${MIN_STEEL_RATIO}"
         )
+        if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
 
         return RetainingWallResult(
-            isSafe = isSafe, designCode = DesignCode.ACI, designCodeName = "ACI 318-19 / 350-06",
-            stemThickness = tBase,
-            baseWidth = B,
+            isSafe = isSafe, designCode = DesignCode.ACI,
             overturningFS = otFS, slidingFS = slideFS, bearingFS = bearingFS,
             maxBearingPressure = maxBP, minBearingPressure = minBP,
             stemMoment = MuStem / 1e6, stemShear = VuStem,
@@ -151,7 +144,7 @@ class ACIRetainingWall : RetainingWallDesign {
             stemDistributionRebar = "${distBars.first}\u03A6${distBars.second}",
             toeMoment = toeMu / 1e6, toeShear = maxBP * toe, toeRebar = "${tb.first}\u03A6${tb.second}",
             heelMoment = heelMu / 1e6, heelShear = heelLoad * heel, heelRebar = "${hb.first}\u03A6${hb.second}",
-            safetyChecks = checks, formulas = formulas, codeNotes = notes
+            safetyChecks = checks, codeNotes = notes
         )
     }
 }

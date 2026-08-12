@@ -397,13 +397,13 @@ class ECPCombinedFooting {
         // K_bal (dynamically calculated per ECP 203)
         val kBal = calculateKBalForFooting(fcu, fy)
 
-        // Lever arm: z = d * (0.5 + sqrt(0.25 - K/0.893)) — 0.893 = γc/(2×0.67) per ECP 203
-        val discriminant = 0.25 - K / 0.893
+        // Lever arm: z = d * (0.5 + sqrt(0.25 - K/1.25))
+        val discriminant = 0.25 - K / 1.25
         val z = if (discriminant >= 0) {
             d * (0.5 + sqrt(discriminant))
         } else {
             // Over-reinforced: use maximum lever arm limited by K_bal
-            d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
+            d * (0.5 + sqrt(0.25 - kBal / 1.25))
         }
 
         // Required steel
@@ -413,7 +413,7 @@ class ECPCombinedFooting {
         val asMin = if (isFooting) {
             MIN_REIN_RATIO * b * d
         } else {
-            max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d  // ECP 203 §4-2-1-2 (fixed: added missing sqrt)
+            max(0.26 * (fcu / fy), 0.0013) * b * d
         }
 
         asRequired = max(asRequired, asMin)
@@ -431,7 +431,7 @@ class ECPCombinedFooting {
         val epsilonCu = 0.003
         val epsilonY = fy / (Es * GAMMA_S)
         val cOverD = epsilonCu / (epsilonCu + epsilonY)
-        val beta = 0.9  // ECP 203 K-method factor (consistent with K_bal derivation)
+        val beta = 0.8  // Whitney stress block factor
         val aOverD = beta * cOverD
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
@@ -573,8 +573,7 @@ class ECPCombinedFooting {
         isDeformed: Boolean = true
     ): Double {
         val fbd = if (isDeformed) 0.6 * sqrt(fcu) else 0.3 * sqrt(fcu)
-        // ECP 203 §5-2-2: Ld = (fy/γs) × φ / (4 × fbd)
-        return 0.5 * (fy / GAMMA_S) * dia / fbd.coerceAtLeast(0.1)
+        return 0.5 * fy * dia / fbd.coerceAtLeast(0.1)
     }
 
     /**

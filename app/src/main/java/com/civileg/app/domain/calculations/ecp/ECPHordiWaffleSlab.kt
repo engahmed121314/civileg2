@@ -312,8 +312,8 @@ class ECPHordiSlabDesign {
             warnings.add("K = ${String.format("%.3f", K)} > K_bal = ${String.format("%.3f", K_bal)} - المقطع مفرط التسليح (${sectionLabel})")
         }
 
-        // z = d × (0.5 + √(0.25 - K/0.893))  — 0.893 = γc/(2×0.67) per ECP 203
-        val discriminant = 0.25 - K / 0.893
+        // z = d × (0.5 + √(0.25 - K/1.25))
+        val discriminant = 0.25 - K / 1.25
         val leverArm = if (discriminant > 0) {
             d * (0.5 + sqrt(discriminant))
         } else {
@@ -976,7 +976,7 @@ class ECPWaffleSlabDesign {
             warnings.add("K = ${String.format("%.3f", K)} > K_bal = ${String.format("%.3f", K_bal)} - الرأس الصلب يحتاج زيادة سماكة (${sectionLabel})")
         }
 
-        val discriminant = 0.25 - K / 0.893
+        val discriminant = 0.25 - K / 1.25
         val leverArm = if (discriminant > 0) {
             d * (0.5 + sqrt(discriminant))
         } else {
@@ -1058,7 +1058,7 @@ class ECPWaffleSlabDesign {
             warnings.add("K = ${String.format("%.3f", K)} > K_bal = ${String.format("%.3f", K_bal)} - كمرتة ($directionLabel) مفرطة التسليح")
         }
 
-        val discriminant = 0.25 - K / 0.893
+        val discriminant = 0.25 - K / 1.25
         val leverArm = if (discriminant > 0) {
             d * (0.5 + sqrt(discriminant))
         } else {

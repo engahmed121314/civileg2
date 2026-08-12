@@ -855,11 +855,7 @@ object PdfGenerator {
 
         // Header row
         canvas.drawRect(PdfLayoutHelper.MARGIN, y, PdfLayoutHelper.PAGE_WIDTH - PdfLayoutHelper.MARGIN, y + rowH, headerBg)
-        val headers = if (isEnglish(context)) {
-            arrayOf("#", "Item Name", "Type", "Quantity", "Unit", "Alert", "Notes")
-        } else {
-            arrayOf("#", "اسم البند", "النوع", "الكمية", "الوحدة", "تنبيه", "ملاحظات")
-        }
+        val headers = arrayOf("#", "Item Name", "Type", "Quantity", "Unit", "Alert", "Notes")
         headers.forEachIndexed { idx, h ->
             helper.drawText(canvas, h, colX[idx], y + 15f, headerPaint)
         }
@@ -867,7 +863,7 @@ object PdfGenerator {
 
         // Data rows
         items.forEachIndexed { idx, item ->
-            if (y > PdfLayoutHelper.PAGE_HEIGHT - 120f) { // Leave more room for summary
+            if (y > PdfLayoutHelper.PAGE_HEIGHT - 60f) {
                 helper.finishCurrentPage()
                 helper.startNewPage()
                 y = helper.currentY + 20f
@@ -891,13 +887,7 @@ object PdfGenerator {
             // Truncate name to 30 chars to fit column
             val truncatedName = if (item.name.length > 28) item.name.take(25) + "..." else item.name
             helper.drawText(canvas, truncatedName, colX[1], y + 15f, paint)
-            val typeName = if (isEnglish(context)) item.type.name else when(item.type) {
-                com.civileg.app.db.InventoryType.EQUIPMENT -> "معدات ثقيلة"
-                com.civileg.app.db.InventoryType.TOOLS -> "أدوات"
-                com.civileg.app.db.InventoryType.RAW_MATERIAL -> "خامات"
-                com.civileg.app.db.InventoryType.ACCESSORIES -> "إكسسوارات"
-            }
-            helper.drawText(canvas, typeName, colX[2], y + 15f, paint)
+            helper.drawText(canvas, item.type.name, colX[2], y + 15f, paint)
             helper.drawText(canvas, String.format("%.2f", item.quantity), colX[3], y + 15f, paint)
             helper.drawText(canvas, item.unit, colX[4], y + 15f, paint)
             val alertText = if (item.alertQuantity > 0) String.format("%.0f", item.alertQuantity) else "-"

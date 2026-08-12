@@ -30,39 +30,27 @@ object ExportUtils {
     }
     
     fun openPdf(context: Context, file: File) {
-        openFile(context, file, "application/pdf")
-    }
-
-    fun shareFile(context: Context, file: File, mimeType: String) {
-        try {
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = mimeType
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(intent, "Share File"))
-        } catch (e: Exception) {
-            Toast.makeText(context, "Unable to share file: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    fun openFile(context: Context, file: File, mimeType: String = "*/*") {
         try {
             if (!file.exists()) {
-                Toast.makeText(context, "File not found", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "PDF file not found", Toast.LENGTH_LONG).show()
                 return
             }
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, mimeType)
+                setDataAndType(uri, "application/pdf")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
+            
             context.startActivity(intent)
         } catch (e: android.content.ActivityNotFoundException) {
-            Toast.makeText(context, "No app found to open this file type.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "No PDF viewer installed. Please install one.", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Error opening PDF: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 }

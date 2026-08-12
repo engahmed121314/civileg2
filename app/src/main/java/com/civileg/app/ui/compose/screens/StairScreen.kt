@@ -9,7 +9,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -29,7 +28,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
@@ -40,11 +38,7 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
-import com.civileg.app.utils.ComposeDrawingCaptureUtil
-import com.civileg.app.utils.captureToAndroidBitmap
-import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.*
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,12 +52,6 @@ fun StairScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
-    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -86,11 +74,6 @@ fun StairScreen(
     var riserError by remember { mutableStateOf("") }
     var treadError by remember { mutableStateOf("") }
 
-    // Validation messages (captured in composable scope for use in onClick)
-    val spanRangeMsg = stringResource(R.string.stair_span_range)
-    val riserRangeMsg = stringResource(R.string.stair_riser_range)
-    val treadRangeMsg = stringResource(R.string.stair_tread_range)
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -105,10 +88,10 @@ fun StairScreen(
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -153,20 +136,20 @@ fun StairScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(tread, stringResource(R.string.stair_tread_mm), { tread = it }, Modifier.weight(1f), treadError)
-                    StairInputField(deadLoad, stringResource(R.string.stair_dead_load_kn_m2), { deadLoad = it }, Modifier.weight(1f))
+                    StairInputField(tread, "Tread (mm)", { tread = it }, Modifier.weight(1f), treadError)
+                    StairInputField(deadLoad, "D.L (kN/m²)", { deadLoad = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(liveLoad, stringResource(R.string.stair_live_load_kn_m2), { liveLoad = it }, Modifier.weight(1f))
-                    StairInputField(fcu, stringResource(R.string.stair_fcu_mpa), { fcu = it }, Modifier.weight(1f))
+                    StairInputField(liveLoad, "L.L (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
+                    StairInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
                 }
             }
 
             item {
-                StairInputField(fy, stringResource(R.string.stair_fy_mpa), { fy = it }, Modifier.fillMaxWidth())
+                StairInputField(fy, "fy (MPa)", { fy = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -185,9 +168,9 @@ fun StairScreen(
                         val r = riser.toDoubleOrNull()
                         val t = tread.toDoubleOrNull()
                         var valid = true
-                        if (s == null || s < 1.0 || s > 15.0) { spanError = spanRangeMsg; valid = false }
-                        if (r == null || r < 100.0 || r > 200.0) { riserError = riserRangeMsg; valid = false }
-                        if (t == null || t < 200.0 || t > 400.0) { treadError = treadRangeMsg; valid = false }
+                        if (s == null || s < 1.0 || s > 15.0) { spanError = "1-15 m"; valid = false }
+                        if (r == null || r < 100.0 || r > 200.0) { riserError = "100-200 mm"; valid = false }
+                        if (t == null || t < 200.0 || t > 400.0) { treadError = "200-400 mm"; valid = false }
                         if (!valid) return@Button
 
                         viewModel.calculateStairPro(
@@ -298,15 +281,7 @@ fun StairScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = {
-                                scope.launch {
-                                    val captureBitmap = try {
-                                        pdfCaptureLayer.captureToAndroidBitmap()
-                                    } catch (_: Exception) { null }
-                                    viewModel.pendingDrawingBitmap = captureBitmap
-                                    viewModel.exportToPdf(context) { /* Handle complete */ }
-                                }
-                            },
+                            onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -335,59 +310,19 @@ fun StairScreen(
                 }
 
                 item {
-                    Button(
-                        onClick = {
-                            val res = result ?: return@Button
-                            val file = com.civileg.app.utils.DxfExporter.exportStairDetailed(
-                                result = res,
-                                outputPath = java.io.File(context.cacheDir, "Staircase_CAD_Detail.dxf").absolutePath
-                            )
-                            com.civileg.app.utils.ExportUtils.openFile(context, file, "application/dxf")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                    ) {
-                        Icon(Icons.Default.Architecture, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.export_cad_drawing))
-                    }
+                    Text(stringResource(R.string.stair_reinforcement_drawing), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    StairReinforcementDrawing(res, modifier = Modifier.fillMaxWidth().aspectRatio(1.5f))
                 }
 
                 item {
-                    Text(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairFormulasCard()
-                }
-
-                item {
-                    var selectedViewMode by remember { mutableStateOf(0) }
-                    val configuration = LocalConfiguration.current
-                    val screenW = configuration.screenWidthDp.dp
-                    val wRatio = screenW.value / 360f
-                    val drawingHeight = when (selectedViewMode) {
-                        1 -> (550 * wRatio).toInt().coerceIn(350, 750)
-                        2 -> (450 * wRatio).toInt().coerceIn(300, 650)
-                        3 -> (400 * wRatio).toInt().coerceIn(250, 550)
-                        else -> (780 * wRatio).toInt().coerceIn(500, 1100)
-                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.stair_drawing_title),
-                        subtitle = stringResource(R.string.stair_drawing_subtitle),
-                        drawingHeightDp = drawingHeight,
-                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
-                        selectedViewMode = selectedViewMode,
-                        onViewModeChanged = { selectedViewMode = it },
+                        subtitle = "Staircase Reinforcement Detail",
                         drawingContent = {
-                            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
-                            val codeAwareCover = when (selectedCode) {
-                                CalculatorEngine.DesignCode.ACI -> 38.0
-                                CalculatorEngine.DesignCode.SAUDI -> 40.0
-                                else -> 25.0
-                            }
                             ProfessionalStairDrawing(
                                 stairWidth = 1200.0,
-                                totalHeight = nRisers.toDouble() * res.riser,
-                                totalLength = nRisers.toDouble() * res.tread,
+                                totalHeight = ((res.span * 1000.0) / res.tread).toInt() * res.riser,
+                                totalLength = res.span * 1000.0,
                                 riserHeight = res.riser,
                                 treadWidth = res.tread,
                                 slabThickness = res.thickness,
@@ -395,48 +330,18 @@ fun StairScreen(
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
-                                cover = codeAwareCover,
-                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     )
                 }
-            }
-            item { Spacer(modifier = Modifier.height(32.dp)) }
-        }
-        // PDF drawing capture area (invisible, renders at viewMode=0)
-        result?.let { res ->
-            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
-            val codeAwareCover = when (selectedCode) {
-                CalculatorEngine.DesignCode.ACI -> 38.0
-                CalculatorEngine.DesignCode.SAUDI -> 40.0
-                else -> 25.0
-            }
-            ComposeDrawingCaptureUtil.DrawingCaptureArea(
-                captureLayer = pdfCaptureLayer,
-                widthPx = screenWidthPx,
-                heightPx = screenHeightPx
-            ) {
-                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    ProfessionalStairDrawing(
-                        stairWidth = 1200.0,
-                        totalHeight = nRisers.toDouble() * res.riser,
-                        totalLength = nRisers.toDouble() * res.tread,
-                        riserHeight = res.riser,
-                        treadWidth = res.tread,
-                        slabThickness = res.thickness,
-                        mainRebarDia = res.reinforcement.diameter.toDouble(),
-                        mainRebarSpacing = res.reinforcement.spacing,
-                        distributionDia = res.distributionReinforcement.diameter.toDouble(),
-                        distributionSpacing = res.distributionReinforcement.spacing,
-                        cover = codeAwareCover,
-                        viewMode = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+
+                item {
+                    Text(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    StairFormulasCard()
                 }
             }
-        }
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 

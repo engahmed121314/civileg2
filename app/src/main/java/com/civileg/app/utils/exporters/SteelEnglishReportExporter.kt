@@ -532,42 +532,39 @@ class SteelEnglishReportExporter(private val context: Context) {
         var hasAnyDrawing = false
 
         sections.forEachIndexed { index, (mark, description, section) ->
-            val bitmap = sectionDrawings[mark]
+            // Try external bitmap first, then generate from section data
+            val bitmap = sectionDrawings[mark] ?: generateSectionBitmap(section)
             if (bitmap != null) {
-                if (index > 0) {
-                    document.add(AreaBreak())
-                }
+                if (index > 0) document.add(AreaBreak())
                 hasAnyDrawing = true
 
-                // Section heading with mark and description
                 document.add(
                     paragraph(
-                        "$mark  —  $description: ${section.sectionName}",
-                        11f,
-                        bold = true,
-                        color = PRIMARY_DARK,
+                        "$mark  -  $description: ${section.sectionName}",
+                        11f, bold = true, color = PRIMARY_DARK,
                         alignment = TextAlignment.CENTER
                     )
                 )
                 document.add(emptyLine())
+                addBitmapToDocument(document, bitmap, maxWidth = 480f)
 
-                // Embed the bitmap screenshot
-                addBitmapToDocument(document, bitmap, maxWidth = 460f)
-
-                // Section properties summary below the drawing
+                // Section properties below drawing
                 document.add(emptyLine())
                 val propsTable = Table(
-                    UnitValue.createPercentArray(floatArrayOf(25f, 25f, 25f, 25f))
+                    UnitValue.createPercentArray(floatArrayOf(20f, 20f, 20f, 20f, 20f))
                 ).useAllAvailableWidth()
                 propsTable.addHeaderCell(headerCell("SECTION"))
                 propsTable.addHeaderCell(headerCell("DEPTH (mm)"))
-                propsTable.addHeaderCell(headerCell("AREA (cm\u00B2)"))
+                propsTable.addHeaderCell(headerCell("AREA (cm2)"))
+                propsTable.addHeaderCell(headerCell("Ix (cm4)"))
                 propsTable.addHeaderCell(headerCell("GRADE"))
 
                 val areaCm2 = section.getArea() / 100.0
+                val ixCm4 = section.ix / 1e4
                 propsTable.addCell(dataCell(section.sectionName, bold = true, fontSize = 7f))
                 propsTable.addCell(dataCell("${section.depth.fmt(1)}", fontSize = 8f))
                 propsTable.addCell(dataCell("${areaCm2.fmt(2)}", fontSize = 8f))
+                propsTable.addCell(dataCell("${ixCm4.fmt(1)}", fontSize = 8f))
                 propsTable.addCell(dataCell(getGradeName(section), fontSize = 8f))
 
                 document.add(propsTable)
@@ -577,12 +574,92 @@ class SteelEnglishReportExporter(private val context: Context) {
         if (!hasAnyDrawing) {
             document.add(
                 paragraph(
-                    "[Cross-section drawings not available — ensure design data is complete]",
-                    9f,
-                    color = DARK_GRAY,
-                    alignment = TextAlignment.CENTER
+                    "[Cross-section drawings not available]",
+                    9f, color = DARK_GRAY, alignment = TextAlignment.CENTER
                 )
             )
+        }
+    }
+
+    /**
+     * Generate an accurate cross-section bitmap for a given SteelSectionType.
+     * Uses PdfDrawingGenerator.generateAccurateSteelSection().
+     */
+    private fun generateSectionBitmap(section: SteelSectionType): Bitmap? {
+        return try {
+            val gen = com.civileg.app.utils.PdfDrawingGenerator
+            when (section) {
+                is SteelSectionType.ISection -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.h, bf = section.bf, tw = section.tw, tf = section.tf,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, rootR = section.rootRadius
+                )
+                is SteelSectionType.CSection -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.h, bf = section.bf, tw = section.tw, tf = section.tf,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, rootR = section.rootRadius
+                )
+                is SteelSectionType.CHS -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.outerDiameter, bf = section.outerDiameter, tw = section.thickness, tf = section.thickness,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, outerDia = section.outerDiameter
+                )
+                is SteelSectionType.RHS -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.height, bf = section.width, tw = section.thickness, tf = section.thickness,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, rhsW = section.width, rhsH = section.height, rhsT = section.thickness
+                )
+                is SteelSectionType.LSection -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.legA, bf = section.legB, tw = section.thickness, tf = section.thickness,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, legA = section.legA, legB = section.legB, angleThk = section.thickness
+                )
+                is SteelSectionType.TSection -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.webDepth + section.flangeThickness, bf = section.flangeWidth, tw = section.webThickness, tf = section.flangeThickness,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, rootR = 0.0
+                )
+                is SteelSectionType.PlateGirder -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = section.displayName,
+                    h = section.h, bf = maxOf(section.bfTop, section.bfBot), tw = section.tw,
+                    tf = maxOf(section.tfTop, section.tfBot),
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight,
+                    bfTop = section.bfTop, bfBot = section.bfBot, tfTop = section.tfTop, tfBot = section.tfBot
+                )
+                is SteelSectionType.Pipe -> gen.generateAccurateSteelSection(
+                    sectionName = section.sectionName,
+                    sectionTypeName = "Pipe",
+                    h = section.outerDiameter, bf = section.outerDiameter, tw = section.wallThickness, tf = section.wallThickness,
+                    gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
+                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    weight = section.weight, outerDia = section.outerDiameter
+                )
+                is SteelSectionType.BuiltUp -> null // Complex - skip
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Section bitmap generation failed for ${section.sectionName}: ${e.message}")
+            null
         }
     }
 

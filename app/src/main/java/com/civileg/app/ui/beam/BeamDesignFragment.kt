@@ -235,13 +235,7 @@ class BeamDesignFragment : Fragment() {
         details.add("Moment Capacity (φMn)" to String.format(Locale.US, "%.2f kN.m", result.momentCapacity))
         details.add("Steel Required (As)" to String.format(Locale.US, "%.1f mm²", result.reinforcementBottom.area))
         details.add("Steel Provided" to "${result.reinforcementBottom.numBars}Ø${result.reinforcementBottom.diameter}")
-        if (result.stirrups.zones.isNotEmpty()) {
-            result.stirrups.zones.forEach { zone ->
-                details.add("${zone.name} (${String.format(Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)" to zone.description)
-            }
-        } else {
-            details.add("Stirrups" to result.stirrups.description)
-        }
+        details.add("Stirrups" to result.stirrups.description)
         details.add("Calculated Deflection" to String.format(Locale.US, "%.2f mm", result.deflection))
         details.add("Allowable Deflection" to String.format(Locale.US, "%.2f mm", result.allowableDeflection))
         details.add("Concrete Volume" to String.format(Locale.US, "%.3f m³", result.concreteVolume))

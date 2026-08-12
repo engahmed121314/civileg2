@@ -79,8 +79,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val allProjectsList by projectViewModel.allProjects.observeAsState(initial = emptyList())
-                    AppNavigation(drawerState, designCount, projectViewModel, allProjectsList)
+                    AppNavigation(drawerState, designCount)
                 }
             }
         }
@@ -93,12 +92,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation(
-    drawerState: DrawerState,
-    designCount: Int = 0,
-    projectViewModel: ProjectViewModel,
-    allProjects: List<com.civileg.app.db.Project>
-) {
+fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     var selectedBottomTab by remember { mutableIntStateOf(0) }
@@ -249,12 +243,7 @@ fun AppNavigation(
                     UnitConverterScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(AppScreen.BOQ.route) {
-                    BOQScreen(
-                        onNavigateToSummary = { id -> navController.navigate("project_summary/$id") },
-                        onNavigateToExecution = { id -> navController.navigate("execution_log/$id") },
-                        onNavigateToMasterBbs = { id -> navController.navigate("master_bbs/$id") },
-                        onNavigateBack = { navController.popBackStack() }
-                    )
+                    BOQScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(AppScreen.WaterLevel.route) {
                     WaterLevelScreen(onNavigateBack = { navController.popBackStack() })
@@ -273,39 +262,6 @@ fun AppNavigation(
                 }
                 composable(AppScreen.Inventory.route) {
                     InventoryScreen(onNavigateBack = { navController.popBackStack() })
-                }
-                
-                composable(AppScreen.SiteLayout.route) {
-                    SiteLayoutScreen()
-                }
-                composable(AppScreen.QuickFooting.route) {
-                    QuickFootingScreen(onNavigateBack = { navController.popBackStack() })
-                }
-                
-                composable(AppScreen.ProjectSummary.route) { backStackEntry ->
-                    val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull() ?: 0L
-                    val project = allProjects.find { it.id == projectId }
-                    val summaryFlow = projectViewModel.getProjectSummary(projectId).collectAsState(initial = com.civileg.app.domain.entities.ProjectSummary())
-                    ProjectSummaryScreen(
-                        summary = summaryFlow.value,
-                        projectName = project?.name ?: "Summary",
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(AppScreen.ExecutionLog.route) { backStackEntry ->
-                    val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull() ?: 0L
-                    ExecutionLogScreen(projectId = projectId, onNavigateBack = { navController.popBackStack() })
-                }
-
-                composable(AppScreen.MasterBbs.route) { backStackEntry ->
-                    val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull() ?: 0L
-                    val project = allProjects.find { it.id == projectId }
-                    MasterBbsScreen(
-                        projectName = project?.name ?: "Master BBS",
-                        allEntries = emptyList(), // Needs wiring to fetch all designs' BBS
-                        onNavigateBack = { navController.popBackStack() }
-                    )
                 }
             }
         }
