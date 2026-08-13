@@ -1,7 +1,14 @@
 package com.civileg.app.utils
 
 import com.civileg.app.utils.CalculatorEngine.*
-import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.entities.SteelMemberResult
+import com.civileg.app.domain.entities.SteelInputs
+import com.civileg.app.domain.entities.SteelWarehouseInputs
+import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
+import com.civileg.app.domain.entities.FrameNode
+import com.civileg.app.domain.entities.FrameMember
+import com.civileg.app.domain.entities.FrameAnalysisResult
+import com.civileg.app.domain.entities.SupportType as FrameSupportType
 import kotlin.math.*
 import java.util.Locale
 
@@ -1145,11 +1152,11 @@ object DxfExportEngine {
             val ny = node.y * scale
             // Draw support symbols
             when (node.support) {
-                SupportType.Pin,
-                SupportType.Hinge -> {
+                FrameSupportType.Pin,
+                FrameSupportType.Hinge -> {
                     drawSupportSymbol(sb, nx, ny, 200.0)
                 }
-                SupportType.Fixed -> {
+                FrameSupportType.Fixed -> {
                     // Fixed support — hatched ground line
                     drawLine(sb, nx - 250.0, ny, nx + 250.0, ny, "GEOM", 7)
                     for (i in -2..2) {
@@ -1180,7 +1187,7 @@ object DxfExportEngine {
         // Reaction labels at supports
         result.nodeResults.forEach { nr ->
             val node = nodes.find { it.id == nr.nodeId } ?: return@forEach
-            if (node.support != SupportType.Free) {
+            if (node.support != FrameSupportType.Free) {
                 val rx = node.x * scale
                 val ry = node.y * scale - 300.0
                 val hasReaction = abs(nr.reactionFx) > 0.01 || abs(nr.reactionFy) > 0.01
@@ -1196,7 +1203,7 @@ object DxfExportEngine {
             max(abs(it.mi_z), abs(it.mj_z))
         } ?: 0.0
         val maxShear = result.memberEndForces.maxOfOrNull {
-            max(abs(it.vi_y), abs(it.vj_y))
+            max(abs(it.fi_y), abs(it.fj_y))
         } ?: 0.0
 
         drawTitleBlock(sb, 10000.0, 5000.0, "FRAME ANALYSIS SUMMARY", listOf(
