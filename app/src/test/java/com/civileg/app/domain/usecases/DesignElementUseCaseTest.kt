@@ -34,7 +34,7 @@ class DesignElementUseCaseTest {
     }
 
     @Test
-    fun `executeDesign saves to repository when projectId > 0`() = runTest {
+    fun `executeDesign saves to repository when projectId is positive`() = runTest {
         useCase.executeDesign(
             projectId = 1,
             elementName = "Test Beam",
