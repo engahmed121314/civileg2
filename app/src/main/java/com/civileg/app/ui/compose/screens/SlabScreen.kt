@@ -408,13 +408,13 @@ fun SlabScreen(
                                 fy = fy.toDoubleOrNull() ?: 360.0,
                                 isSafe = res.isSafe,
                                 utilizationRatio = res.utilizationRatio,
-                                requiredAsX = 0.0, // TODO: add to SlabResult
-                                providedAsX = 0.0, // TODO: add to SlabResult
-                                requiredAsY = 0.0, // TODO: add to SlabResult
-                                providedAsY = 0.0, // TODO: add to SlabResult
-                                effectiveDepthX = 0.0, // TODO: add to SlabResult
-                                effectiveDepthY = 0.0, // TODO: add to SlabResult
-                                shearCheck = 0.0 // TODO: add to SlabResult
+                                requiredAsX = res.requiredAsX,
+                                providedAsX = res.providedAsX,
+                                requiredAsY = res.requiredAsY,
+                                providedAsY = res.providedAsY,
+                                effectiveDepthX = res.effectiveDepthX,
+                                effectiveDepthY = res.effectiveDepthY,
+                                shearCheck = res.shearCheck
                             )
                         }
                     )

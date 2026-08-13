@@ -332,8 +332,8 @@ fun RetainingWallScreen(
                             allowableBearingPressure = 200.0,
                             activePressureCoeff = res.ka,
                             stemMoment = res.muStem,
-                            heelMoment = 0.0, // TODO: add to RetainingWallResult
-                            toeMoment = 0.0, // TODO: add to RetainingWallResult
+                            heelMoment = res.heelMoment,
+                            toeMoment = res.toeMoment,
                             isSafe = res.isSafe,
                             fcu = fcu.toDoubleOrNull() ?: 25.0,
                             fy = fy.toDoubleOrNull() ?: 360.0,

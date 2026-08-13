@@ -62,6 +62,8 @@ class BillingManager @Inject constructor(
     private val _subscriptionDetails = MutableLiveData<List<SubscriptionDetail>>()
     val subscriptionDetails: LiveData<List<SubscriptionDetail>> = _subscriptionDetails
 
+    private val productDetailsMap = mutableMapOf<String, ProductDetails>()
+
     sealed class BillingEvent {
         data object PurchaseSuccess : BillingEvent()
         data object PurchaseCancelled : BillingEvent()
@@ -108,7 +110,21 @@ class BillingManager @Inject constructor(
             return
         }
 
+        val productDetails = productDetailsMap[productId]
+        val offerToken = _subscriptionDetails.value?.find { it.productId == productId }?.offerToken
+
+        if (productDetails == null || offerToken == null) {
+            _billingEvent.postValue(BillingEvent.PurchaseError("Product details not loaded"))
+            return
+        }
+
+        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(productDetails)
+            .setOfferToken(offerToken)
+            .build()
+
         val params = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(listOf(productDetailsParams))
             .build()
 
         billingClient.launchBillingFlow(activity, params)
@@ -202,6 +218,9 @@ class BillingManager @Inject constructor(
 
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                productDetailsList.forEach { detail ->
+                    productDetailsMap[detail.productId] = detail
+                }
                 val details = productDetailsList.mapNotNull { detail ->
                     val offer = detail.subscriptionOfferDetails?.firstOrNull() ?: return@mapNotNull null
                     val phaseList = offer.pricingPhases.pricingPhaseList

@@ -517,9 +517,9 @@ fun FootingScreen(
                                 soilPressureMax = res.soilPressure,
                                 soilPressureMin = res.soilPressure,
                                 axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
-                                punchingShear = 0.0, // TODO: add to FootingResult
-                                punchingCapacity = 0.0, // TODO: add to FootingResult
-                                bendingMoment = 0.0, // TODO: add to FootingResult
+                                punchingShear = res.punchingShear,
+                                punchingCapacity = res.punchingCapacity,
+                                bendingMoment = res.bendingMoment,
                                 netPressure = res.soilPressure,
                                 isSafe = res.isSafe,
                                 utilizationRatio = res.utilizationRatio,

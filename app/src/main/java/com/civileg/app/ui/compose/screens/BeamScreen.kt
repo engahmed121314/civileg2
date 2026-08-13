@@ -355,9 +355,9 @@ fun BeamScreen(
                                 utilizationRatio = res.utilizationRatio,
                                 resistingMoment = res.momentCapacity,
                                 concreteShearCapacity = res.shearCapacity,
-                                requiredAs = 0.0, // TODO: add to BeamResult
-                                providedAs = 0.0, // TODO: add to BeamResult
-                                effectiveDepth = 0.0, // TODO: add to BeamResult
+                                requiredAs = res.requiredAs,
+                                providedAs = res.providedAs,
+                                effectiveDepth = res.effectiveDepth,
                                 steelRatio = res.steelRatio,
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
                                 fy = fy.toDoubleOrNull() ?: 360.0,

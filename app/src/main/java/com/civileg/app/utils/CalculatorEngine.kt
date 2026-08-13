@@ -128,7 +128,10 @@ class CalculatorEngine @Inject constructor(
         val steelWasteTons: Double = 0.0,
         val deflection: Double = 0.0,
         val allowableDeflection: Double = 0.0,
-        val utilizationRatio: Double = 0.0
+        val utilizationRatio: Double = 0.0,
+        val requiredAs: Double = 0.0,
+        val providedAs: Double = 0.0,
+        val effectiveDepth: Double = 0.0
     ) : Parcelable
 
     @Parcelize
@@ -179,6 +182,9 @@ class CalculatorEngine @Inject constructor(
         val column2Size: Pair<Double, Double> = Pair(500.0, 500.0),
         val safetyChecks: List<DesignSafetyCheck> = emptyList(),
         val utilizationRatio: Double = 0.0,
+        val punchingShear: Double = 0.0,
+        val punchingCapacity: Double = 0.0,
+        val bendingMoment: Double = 0.0,
         val isNeighbor: Boolean = false
     ) : Parcelable
 
@@ -194,6 +200,13 @@ class CalculatorEngine @Inject constructor(
         val minThickness: Double = 0.0,
         val efficiencyScore: Double = 0.0,
         val utilizationRatio: Double = 0.0,
+        val requiredAsX: Double = 0.0,
+        val providedAsX: Double = 0.0,
+        val requiredAsY: Double = 0.0,
+        val providedAsY: Double = 0.0,
+        val effectiveDepthX: Double = 0.0,
+        val effectiveDepthY: Double = 0.0,
+        val shearCheck: Double = 0.0,
         val suggestions: List<String> = emptyList()
     ) : Parcelable
 
@@ -212,6 +225,7 @@ class CalculatorEngine @Inject constructor(
         val tread: Double = 0.0,
         val fcu: Double = 25.0,
         val fy: Double = 400.0,
+        val vu: Double = 0.0,
         val suggestions: List<String> = emptyList()
     ) : Parcelable
 
@@ -228,6 +242,10 @@ class CalculatorEngine @Inject constructor(
         val utilizationRatio: Double = 0.0,
         val fcu: Double = 25.0,
         val fy: Double = 400.0,
+        val baseMoment: Double = 0.0,
+        val hoopTension: Double = 0.0,
+        val shearCheck: Double = 0.0,
+        val slidingFactor: Double = 0.0,
         val suggestions: List<String> = emptyList()
     ) : Parcelable {
         val wallThick: Double get() = wallThickness
@@ -256,6 +274,8 @@ class CalculatorEngine @Inject constructor(
         val maxBearingPressure: Double = 0.0,
         val minBearingPressure: Double = 0.0,
         val bearingFS: Double = 0.0,
+        val heelMoment: Double = 0.0,
+        val toeMoment: Double = 0.0,
         val suggestions: List<String> = emptyList()
     ) : Parcelable
 
@@ -884,7 +904,10 @@ class CalculatorEngine @Inject constructor(
             deflection = deflection, allowableDeflection = allowableDeflection,
             momentCapacity = momentCapacity, shearCapacity = vc * width * d / 1000.0,
             steelRatio = (actualAs / (width * d)) * 100,
-            utilizationRatio = utilizationRatio
+            utilizationRatio = utilizationRatio,
+            requiredAs = asReq,
+            providedAs = actualAs,
+            effectiveDepth = d
         )
         }
 
@@ -1039,7 +1062,14 @@ class CalculatorEngine @Inject constructor(
             efficiencyScore = efficiencyScore,
             utilizationRatio = utilizationRatio,
             suggestions = suggestions,
-            steelWasteTons = steelWeight * 0.05 / 1000.0
+            steelWasteTons = steelWeight * 0.05 / 1000.0,
+            requiredAsX = asReqX,
+            providedAsX = providedAsX,
+            requiredAsY = asReqY,
+            providedAsY = (1000.0 / finalSpacingY) * barArea,
+            effectiveDepthX = d,
+            effectiveDepthY = d,
+            shearCheck = v_punch
         )
         }
 
@@ -1168,7 +1198,10 @@ class CalculatorEngine @Inject constructor(
             concreteVolume = vol, steelWeight = totalSteelWeight, 
             cost = vol * settingsManager.concretePrice + (totalSteelWeight / 1000.0 * settingsManager.steelPrice),
             barsX = numBarsW, barsY = numBarsL, barDiameter = preferredDiameter, safetyChecks = safetyChecks,
-            utilizationRatio = utilizationRatio
+            utilizationRatio = utilizationRatio,
+            punchingShear = punchingStress,
+            punchingCapacity = punchingLimit,
+            bendingMoment = max(muL, muW)
         )
         }
 
@@ -1529,7 +1562,8 @@ class CalculatorEngine @Inject constructor(
             tread = tread,
             fcu = fcu,
             fy = fy,
-            suggestions = suggestions
+            suggestions = suggestions,
+            vu = vu
         )
         }
 
@@ -1753,7 +1787,11 @@ class CalculatorEngine @Inject constructor(
             waterPressure = waterPressure, soilPressure = soilPressure, mu = mu, capacity = capacity,
             safetyChecks = safetyChecks, utilizationRatio = utilization,
             fcu = fcu, fy = fy,
-            suggestions = suggestions
+            suggestions = suggestions,
+            baseMoment = muZone1,
+            hoopTension = if (isCircular) gammaW * H * (length / 2.0) else 0.0,
+            shearCheck = gammaW * H * 1000.0,
+            slidingFactor = 1.5
         )
         }
 
@@ -1945,7 +1983,9 @@ class CalculatorEngine @Inject constructor(
             maxBearingPressure = maxBearingPressure,
             minBearingPressure = minBearingPressure,
             bearingFS = bearingFS,
-            suggestions = suggestions
+            suggestions = suggestions,
+            heelMoment = muHeel,
+            toeMoment = muToe
         )
         }
 

@@ -342,7 +342,7 @@ fun StairScreen(
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
                                 mu = res.mu,
-                                vu = 0.0, // TODO: add to StairResult
+                                vu = res.vu,
                                 isSafe = res.isSafe,
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
                                 fy = fy.toDoubleOrNull() ?: 360.0,

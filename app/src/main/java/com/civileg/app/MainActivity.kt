@@ -30,13 +30,19 @@ import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.SettingsViewModel
+import com.civileg.app.billing.BillingManager
+import com.civileg.app.ads.AdManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private var openDrawerAction: (() -> Unit)? = null
+    @Inject lateinit var billingManager: BillingManager
+    @Inject lateinit var preferencesManager: com.civileg.app.data.local.PreferencesManager
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.wrapContext(newBase))
@@ -52,6 +58,13 @@ class MainActivity : ComponentActivity() {
         // Apply saved language before any UI is created
         LocaleHelper.applySavedLocale(this)
 
+        // Initialize billing and sync premium state to AdManager
+        billingManager.startConnection()
+        lifecycleScope.launch {
+            preferencesManager.isPremiumUser.collectLatest { isPremium ->
+                AdManager.setPremiumUser(isPremium)
+            }
+        }
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val settings by settingsViewModel.settings.collectAsStateWithLifecycle()

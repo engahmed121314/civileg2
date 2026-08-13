@@ -368,10 +368,10 @@ fun TankScreen(
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                                 viewMode = tankViewMode,
                                 wallMoment = res.mu,
-                                baseMoment = 0.0, // TODO: add to TankResult
-                                hoopTension = 0.0, // TODO: add to TankResult
-                                shearCheck = 0.0, // TODO: add to TankResult
-                                slidingFactor = 0.0, // TODO: add to TankResult
+                                baseMoment = res.baseMoment,
+                                hoopTension = res.hoopTension,
+                                shearCheck = res.shearCheck,
+                                slidingFactor = res.slidingFactor,
                                 isSafe = res.isSafe,
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
                                 fy = fy.toDoubleOrNull() ?: 360.0,
