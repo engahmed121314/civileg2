@@ -7,8 +7,9 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.firebase.crashlytics)
+    // google-services & firebase-crashlytics plugins — enable after adding real google-services.json
+    // alias(libs.plugins.google.services)
+    // alias(libs.plugins.firebase.crashlytics)
     id("kotlin-parcelize")
     id("jacoco")
 }
