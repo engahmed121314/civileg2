@@ -20,12 +20,13 @@ class ECPColumnTest {
         )
         
         // Manual calculation for verification (ECP 203-2020)
+        // Pu = α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast] / 1000  (kN)
+        // α = 0.8, γc = 1.5, γs = 1.15
         val Ag = 300.0 * 300.0 // 90000 mm²
         val Ast = 1200.0
         val concreteStress = 0.67 * 25.0 / 1.5 // 11.167 MPa
         val steelStress = 420.0 / 1.15 // 365.22 MPa
-        val nominalCapacity = 0.8 * (concreteStress * (Ag - Ast) + steelStress * Ast)
-        val expected = 0.65 * nominalCapacity / 1000.0 // kN
+        val expected = 0.8 * (concreteStress * (Ag - Ast) + steelStress * Ast) / 1000.0
         
         assertEquals(expected, capacity, 0.1)
     }
