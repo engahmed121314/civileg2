@@ -39,6 +39,7 @@ fun ProfessionalFootingDrawing(
     col2X: Double = 0.0,
     soilPressureMax: Double = 0.0,
     soilPressureMin: Double = 0.0,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier,
     axialLoad: Double = 0.0,
     punchingShear: Double = 0.0,

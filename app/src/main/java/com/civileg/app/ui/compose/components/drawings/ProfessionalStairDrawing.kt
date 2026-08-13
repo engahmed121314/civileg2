@@ -114,6 +114,11 @@ fun ProfessionalStairDrawing(
     deflectionLOver: Double = 0.0,  // L/d ratio actual
     deflectionLimit: Double = 0.0, // L/d limit from code
     isDeflectionOk: Boolean = true,
+    // Enhanced design values
+    isSafe: Boolean = true,
+    fcu: Double = 25.0,
+    fy: Double = 360.0,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Canvas(

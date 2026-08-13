@@ -377,6 +377,7 @@ fun ColumnScreen(
                                 slendernessRatio = result.slenderness,
                                 fcu = uiState.fcu.toDoubleOrNull() ?: 25.0,
                                 fy = uiState.fy.toDoubleOrNull() ?: 360.0,
+                                isArabic = viewModel.isArabic,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

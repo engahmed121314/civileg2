@@ -11,6 +11,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.DxfExportEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,8 +22,11 @@ import javax.inject.Inject
 @HiltViewModel
 class FootingViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine
+    private val calculatorEngine: CalculatorEngine,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
+
+    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.FootingResult?>()
     val result: LiveData<CalculatorEngine.FootingResult?> = _result

@@ -524,6 +524,7 @@ fun FootingScreen(
                                 utilizationRatio = res.utilizationRatio,
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
                                 fy = fy.toDoubleOrNull() ?: 360.0,
+                                isArabic = viewModel.isArabic,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -17,41 +17,11 @@ object DxfExporter {
     private fun tr(en: String, ar: String): String = if (isAr()) ar else en
 
     // ─── SITE LAYOUT EXPORT ───────────────────────────────────────────
-
-    fun exportSiteLayout(columns: List<ColumnLoad>, plotWidth: Double, plotLength: Double, soilCapacity: Double, outputPath: String): File {
-        val sb = StringBuilder()
-        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
-        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
-        sb.append("0\nLAYER\n2\nAXES\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nCOLUMNS\n70\n0\n62\n4\n")
-        sb.append("0\nLAYER\n2\nFOOTINGS\n70\n0\n62\n3\n")
-        sb.append("0\nENDTAB\n0\nENDSEC\n")
-        sb.append("0\nSECTION\n2\nENTITIES\n")
-
-        drawRect(sb, 0.0, 0.0, plotWidth * 1000.0, plotLength * 1000.0, "0", 7)
-        drawText(sb, plotWidth * 500.0, plotLength * 1000.0 + 500.0, tr("PROJECT PLOT BOUNDARY", "حدود أرض المشروع"), "0", 300.0, 7)
-        drawHorizontalDimension(sb, 0.0, plotWidth * 1000.0, -1200.0, "${plotWidth.toInt()} m")
-        drawVerticalDimension(sb, 0.0, plotLength * 1000.0, -1500.0, "${plotLength.toInt()} m")
-
-        columns.forEach { col ->
-            drawRect(sb, col.x - col.width/2.0, col.y - col.depth/2.0, col.width, col.depth, "COLUMNS")
-            drawText(sb, col.x + col.width/2.0 + 100.0, col.y + col.depth/2.0 + 100.0, "C${col.id} (P=${col.axialLoad}kN)", "0", 140.0)
-        }
-        
-        val rec = LayoutOptimizer.analyzeLayout(plotWidth, plotLength, columns, soilCapacity, CalculatorEngine.DesignCode.EGYPTIAN)
-        rec.footingBounds.forEach { fb ->
-            val color = if(fb.type == "PileCap") 4 else (if(fb.type == "Boundary") 1 else 3)
-            drawRect(sb, fb.centerX - fb.width/2.0, fb.centerY - fb.length/2.0, fb.width, fb.length, "FOOTINGS", color)
-            drawText(sb, fb.centerX, fb.centerY, "${fb.type} [${fb.width.toInt()}x${fb.length.toInt()}]", "FOOTINGS", 130.0, color)
-        }
-
-        rec.axesX.forEach { axis -> drawCircle(sb, axis.coordinate, -2000.0, 300.0, "AXES", 1); drawText(sb, axis.coordinate, -2000.0, axis.label, "AXES", 250.0, 1) }
-        rec.axesY.forEach { axis -> drawCircle(sb, -2800.0, axis.coordinate, 300.0, "AXES", 1); drawText(sb, -2800.0, axis.coordinate, axis.label, "AXES", 250.0, 1) }
-        drawBOQTable(sb, (plotWidth * 1000.0 + 6000.0).toFloat(), (plotLength * 1000.0).toFloat(), rec)
-
-        sb.append("0\nENDSEC\n0\nEOF\n")
-        val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
-    }
+    // Temporarily disabled — depends on ColumnLoad/LayoutOptimizer/LayoutRecommendation types
+    // that were removed in a previous cleanup. Will be restored with DxfExportEngine integration.
+    /*
+    fun exportSiteLayout(columns: List<ColumnLoad>, plotWidth: Double, plotLength: Double, soilCapacity: Double, outputPath: String): File { ... }
+    */
 
     // ─── FOOTING DETAILED ─────────────────────────────────────────────
 
@@ -115,10 +85,18 @@ object DxfExporter {
         drawLine(sb, -300.0, cover, sMm + endOff, cover, "REBAR_MAIN")
         drawLine(sb, -300.0, height - cover, sMm + endOff, height - cover, "REBAR_MAIN")
         
-        result.stirrups.zones.forEach { zone ->
-            var curX = zone.startLocation; while (curX < zone.endLocation - 1.0) { drawLine(sb, curX, cover, curX, height - cover, "STIRRUPS"); curX += zone.spacing }
-            drawText(sb, curX - zone.spacing/2, height + 400.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 100.0)
+        // Draw stirrups — condensation zone at supports, midspan zone in between
+        val st = result.stirrups
+        val sSupport = if (st.spacingAtSupport > 0) st.spacingAtSupport else st.spacing
+        val sMid = if (st.spacingAtMidspan > 0) st.spacingAtMidspan else st.spacing
+        val zoneLen = if (st.condensationZoneLength > 0) st.condensationZoneLength else 600.0
+        var sx = 0.0
+        while (sx < sMm) {
+            val sp = if (sx < zoneLen || sx > sMm - zoneLen) sSupport else sMid
+            drawLine(sb, sx, cover, sx, height - cover, "STIRRUPS")
+            sx += sp
         }
+        drawText(sb, 0.0, height + 400.0, "%%c${st.diameter}@${st.spacing.toInt()}", "TEXT", 100.0)
         drawResultTable(sb, sMm + 3500.0, height, tr("BEAM DATA", "بيانات تصميم الكمرة"), listOf(
             tr("Moment Mu", "عزم التصميم") to "%.1f kNm".format(result.appliedMoment),
             tr("Deflection", "الترخيم") to "%.2f mm".format(result.deflection),
@@ -153,8 +131,16 @@ object DxfExporter {
             drawLine(sb, bx, hMm, bx - 25.0, hMm + 180.0, "REBAR")
         }
         
-        result.stirrups.zones.forEach { zone ->
-            var curY = zone.startLocation; while (curY < zone.endLocation - 1.0) { drawLine(sb, cover, curY, width - cover, curY, "REBAR"); curY += zone.spacing }
+        // Draw ties — condensation zone at top/bottom, midspan zone in between
+        val ct = result.stirrups
+        val tSupport = if (ct.spacingAtSupport > 0) ct.spacingAtSupport else ct.spacing
+        val tMid = if (ct.spacingAtMidspan > 0) ct.spacingAtMidspan else ct.spacing
+        val tZoneLen = if (ct.condensationZoneLength > 0) ct.condensationZoneLength else 600.0
+        var ty = 0.0
+        while (ty < hMm) {
+            val tsp = if (ty < tZoneLen || ty > hMm - tZoneLen) tSupport else tMid
+            drawLine(sb, cover, ty, width - cover, ty, "REBAR")
+            ty += tsp
         }
         
         drawResultTable(sb, width + 5500.0, height / 2.0, tr("COLUMN DATA", "بيانات تصميم العمود"), listOf(
@@ -327,10 +313,8 @@ object DxfExporter {
         sb.append("0\nCIRCLE\n8\n$layer\n"); if (color != -1) sb.append("62\n$color\n"); sb.append("10\n$x\n20\n$y\n30\n0.0\n40\n$radius\n")
     }
 
-    private fun drawBOQTable(sb: StringBuilder, x: Float, y: Float, rec: LayoutRecommendation) {
-        val startX = x.toDouble(); val startY = y.toDouble(); val rowH = 350.0; val colW = 4500.0
-        drawText(sb, startX, startY + rowH, tr("BILL OF QUANTITIES", "جدول حصر الكميات"), "0", 250.0, 2); drawRect(sb, startX, startY-3000, colW*2, 4000.0, "0", 7); drawLine(sb, startX+colW, startY+rowH, startX+colW, startY-3000, "0")
-        var cY = startY-rowH; fun addR(l: String, v: String) { drawText(sb, startX+150, cY, l, "0", 180.0); drawText(sb, startX+colW+150, cY, v, "0", 180.0, 4); drawLine(sb, startX, cY-100, startX+colW*2, cY-100, "0"); cY -= rowH }
-        addR(tr("Foundation", "نوع الأساسات"), rec.suggestedType); addR(tr("Concrete", "خرسانة"), "%.1f m3".format(rec.totalConcreteEst)); addR(tr("Steel", "حديد"), "%.2f Tons".format(rec.totalSteelEst/1000.0))
-    }
+    // drawBOQTable temporarily disabled — depends on LayoutRecommendation type
+    /*
+    private fun drawBOQTable(sb: StringBuilder, x: Float, y: Float, rec: LayoutRecommendation) { ... }
+    */
 }

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -14,8 +15,11 @@ import javax.inject.Inject
 @HiltViewModel
 class StairViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine
+    private val calculatorEngine: CalculatorEngine,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
+
+    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.StairResult?>()
     val result: LiveData<CalculatorEngine.StairResult?> = _result

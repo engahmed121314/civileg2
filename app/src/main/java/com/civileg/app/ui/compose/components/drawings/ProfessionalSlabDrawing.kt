@@ -40,6 +40,7 @@ fun ProfessionalSlabDrawing(
     ribWidth: Double = 0.0,
     ribSpacing: Double = 0.0,
     viewMode: Int = 0,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier,
     momentX: Double = 0.0,
     momentY: Double = 0.0,
@@ -47,7 +48,15 @@ fun ProfessionalSlabDrawing(
     fcu: Double = 25.0,
     fy: Double = 360.0,
     isSafe: Boolean = true,
-    utilizationRatio: Double = 0.0
+    utilizationRatio: Double = 0.0,
+    // Enhanced design values
+    requiredAsX: Double = 0.0,
+    providedAsX: Double = 0.0,
+    requiredAsY: Double = 0.0,
+    providedAsY: Double = 0.0,
+    effectiveDepthX: Double = 0.0,
+    effectiveDepthY: Double = 0.0,
+    shearCheck: Double = 0.0
 ) {
     // Canvas fills the parent-constrained size from InteractiveDrawingScreen (responsive)
     Canvas(
@@ -146,7 +155,7 @@ fun ProfessionalSlabDrawing(
             size = Size(w, 36f), cornerRadius = CornerRadius(0f)
         )
         val statusLabel = if (isSafe) "✓ ${"SAFE"}" else "✗ ${"UNSAFE"}"
-        val headerText = "${"SLAB DETAIL"} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%"
+        val headerText = "${"SLAB DETAIL"} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%  •  fcu=${fcu.toInt()}  fy=${fy.toInt()}"
         dt(headerText, w / 2f, 24f, textColor, 11f, bold = true)
 
         // ══════════════════════════════════════════════════════════

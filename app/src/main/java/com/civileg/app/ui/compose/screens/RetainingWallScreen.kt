@@ -336,6 +336,7 @@ fun RetainingWallScreen(
                             isSafe = res.isSafe,
                             fcu = fcu.toDoubleOrNull() ?: 25.0,
                             fy = fy.toDoubleOrNull() ?: 360.0,
+                            isArabic = viewModel.isArabic,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

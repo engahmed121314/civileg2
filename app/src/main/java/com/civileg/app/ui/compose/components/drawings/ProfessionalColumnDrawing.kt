@@ -81,7 +81,18 @@ fun ProfessionalColumnDrawing(
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
     appliedAxial: Double = 0.0,       // Pu (kN)
     appliedMoment: Double = 0.0,      // Mu (kN.m)
-    utilizationRatio: Double = 0.0,   // UR
+    // Enhanced design value parameters
+    axialLoad: Double = 0.0,        // Pu (kN)
+    appliedMomentX: Double = 0.0,   // Mux (kN.m)
+    appliedMomentY: Double = 0.0,   // Muy (kN.m)
+    utilizationRatio: Double = 0.0,
+    requiredAs: Double = 0.0,        // mm²
+    providedAs: Double = 0.0,        // mm²
+    slendernessRatio: Double = 0.0,
+    eccentricity: Double = 0.0,      // mm
+    fcu: Double = 25.0,
+    fy: Double = 360.0,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
@@ -119,9 +130,27 @@ fun ProfessionalColumnDrawing(
             longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
 
         // ── Design Values Overlay (top-right) ──
-        if (appliedAxial > 0 || appliedMoment > 0 || utilizationRatio > 0) {
-            val boxW = 170f
-            val boxH = if (appliedAxial > 0 && appliedMoment > 0) 72f else 48f
+        if (appliedAxial > 0 || appliedMoment > 0 || utilizationRatio > 0 ||
+            axialLoad > 0 || appliedMomentX > 0 || appliedMomentY > 0 ||
+            requiredAs > 0 || providedAs > 0 || slendernessRatio > 0 || eccentricity > 0
+        ) {
+            // Count active rows to size the box
+            val rows = mutableListOf<String>()
+            if (axialLoad > 0) rows.add("")
+            if (appliedMomentX > 0) rows.add("")
+            if (appliedMomentY > 0) rows.add("")
+            if (utilizationRatio > 0) rows.add("")
+            if (requiredAs > 0) rows.add("")
+            if (providedAs > 0) rows.add("")
+            if (slendernessRatio > 0) rows.add("")
+            if (eccentricity > 0) rows.add("")
+            // Always show fcu and fy
+            rows.add("")
+            rows.add("")
+
+            val rowH = 18f
+            val boxW = 190f
+            val boxH = rows.size * rowH + 12f
             val boxLeft = W - boxW - 8f
             val boxTop = 8f
 
@@ -145,21 +174,47 @@ fun ProfessionalColumnDrawing(
                 isAntiAlias = true
                 isFakeBoldText = true
             }
-            var ty = boxTop + 18f
-            if (appliedAxial > 0) {
-                drawContext.canvas.nativeCanvas.drawText("Pu = ${"%.0f".format(appliedAxial)} kN", boxLeft + 10f, ty, labelPaint)
-                ty += 20f
+            var ty = boxTop + 16f
+            if (axialLoad > 0) {
+                drawContext.canvas.nativeCanvas.drawText("Pu = ${"%.0f".format(axialLoad)} kN", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
             }
-            if (appliedMoment > 0) {
-                drawContext.canvas.nativeCanvas.drawText("Mu = ${"%.1f".format(appliedMoment)} kN.m", boxLeft + 10f, ty, labelPaint)
-                ty += 20f
+            if (appliedMomentX > 0) {
+                drawContext.canvas.nativeCanvas.drawText("Mux = ${"%.1f".format(appliedMomentX)} kN.m", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
+            }
+            if (appliedMomentY > 0) {
+                drawContext.canvas.nativeCanvas.drawText("Muy = ${"%.1f".format(appliedMomentY)} kN.m", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
             }
             if (utilizationRatio > 0) {
                 val urColorInt = if (utilizationRatio <= 1.0) 0xFF2ECC71.toInt() else 0xFFE74C3C.toInt()
                 labelPaint.color = urColorInt
                 labelPaint.textSize = 14f
                 drawContext.canvas.nativeCanvas.drawText("UR = ${"%.2f".format(utilizationRatio)}", boxLeft + 10f, ty, labelPaint)
+                labelPaint.color = android.graphics.Color.WHITE
+                labelPaint.textSize = 13f
+                ty += rowH
             }
+            if (requiredAs > 0) {
+                drawContext.canvas.nativeCanvas.drawText("As req = ${"%.0f".format(requiredAs)} mm\u00B2", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
+            }
+            if (providedAs > 0) {
+                drawContext.canvas.nativeCanvas.drawText("As prov = ${"%.0f".format(providedAs)} mm\u00B2", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
+            }
+            if (slendernessRatio > 0) {
+                drawContext.canvas.nativeCanvas.drawText("\u03BB = ${"%.1f".format(slendernessRatio)}", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
+            }
+            if (eccentricity > 0) {
+                drawContext.canvas.nativeCanvas.drawText("e = ${"%.1f".format(eccentricity)} mm", boxLeft + 10f, ty, labelPaint)
+                ty += rowH
+            }
+            drawContext.canvas.nativeCanvas.drawText("fcu = ${"%.0f".format(fcu)} MPa", boxLeft + 10f, ty, labelPaint)
+            ty += rowH
+            drawContext.canvas.nativeCanvas.drawText("fy = ${"%.0f".format(fy)} MPa", boxLeft + 10f, ty, labelPaint)
         }
     }
 }

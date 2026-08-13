@@ -112,6 +112,16 @@ fun ProfessionalBeamDrawing(
     appliedMoment: Double = 0.0,    // Mu (kN.m)
     appliedShear: Double = 0.0,     // Vu (kN)
     utilizationRatio: Double = 0.0,  // UR
+    // Enhanced design value parameters
+    resistingMoment: Double = 0.0,       // MuR (kN.m)
+    concreteShearCapacity: Double = 0.0, // Vc (kN)
+    requiredAs: Double = 0.0,            // mm²
+    providedAs: Double = 0.0,            // mm²
+    effectiveDepth: Double = 0.0,        // d (mm)
+    steelRatio: Double = 0.0,            // ρ
+    fcu: Double = 25.0,
+    fy: Double = 360.0,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -224,9 +234,28 @@ fun ProfessionalBeamDrawing(
         )
 
         // ── Design Values Overlay (top-right corner) ──
-        if (appliedMoment > 0 || appliedShear > 0 || utilizationRatio > 0) {
-            val boxW = 160f
-            val boxH = if (appliedMoment > 0 && appliedShear > 0) 72f else 48f
+        if (appliedMoment > 0 || appliedShear > 0 || utilizationRatio > 0 ||
+            resistingMoment > 0 || concreteShearCapacity > 0 || requiredAs > 0 ||
+            providedAs > 0 || effectiveDepth > 0 || steelRatio > 0
+        ) {
+            // Count active rows to size the box
+            val rows = mutableListOf<String>()
+            if (appliedMoment > 0) rows.add("")
+            if (appliedShear > 0) rows.add("")
+            if (resistingMoment > 0) rows.add("")
+            if (concreteShearCapacity > 0) rows.add("")
+            if (requiredAs > 0) rows.add("")
+            if (providedAs > 0) rows.add("")
+            if (effectiveDepth > 0) rows.add("")
+            if (steelRatio > 0) rows.add("")
+            if (utilizationRatio > 0) rows.add("")
+            // Always show fcu and fy
+            rows.add("")
+            rows.add("")
+
+            val rowH = 18f
+            val boxW = 180f
+            val boxH = rows.size * rowH + 12f
             val boxLeft = cw - boxW - 12f
             val boxTop = 12f
 
@@ -244,19 +273,47 @@ fun ProfessionalBeamDrawing(
                 style = Stroke(1f)
             )
 
-            var ty = boxTop + 18f
+            var ty = boxTop + 16f
             if (appliedMoment > 0) {
                 drawTextAnnotated("Mu = ${"%.1f".format(appliedMoment)} kN.m", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += 20f
+                ty += rowH
             }
             if (appliedShear > 0) {
                 drawTextAnnotated("Vu = ${"%.1f".format(appliedShear)} kN", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += 20f
+                ty += rowH
+            }
+            if (resistingMoment > 0) {
+                drawTextAnnotated("MuR = ${"%.1f".format(resistingMoment)} kN.m", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += rowH
+            }
+            if (concreteShearCapacity > 0) {
+                drawTextAnnotated("Vc = ${"%.1f".format(concreteShearCapacity)} kN", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += rowH
+            }
+            if (requiredAs > 0) {
+                drawTextAnnotated("As req = ${"%.0f".format(requiredAs)} mm\u00B2", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += rowH
+            }
+            if (providedAs > 0) {
+                drawTextAnnotated("As prov = ${"%.0f".format(providedAs)} mm\u00B2", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += rowH
+            }
+            if (effectiveDepth > 0) {
+                drawTextAnnotated("d = ${"%.0f".format(effectiveDepth)} mm", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += rowH
+            }
+            if (steelRatio > 0) {
+                drawTextAnnotated("\u03C1 = ${"%.4f".format(steelRatio)}", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += rowH
             }
             if (utilizationRatio > 0) {
                 val urColor = if (utilizationRatio <= 1.0f) Color(0xFF2ECC71) else Color(0xFFE74C3C)
                 drawTextAnnotated("UR = ${"%.2f".format(utilizationRatio)}", boxLeft + 10f, ty, urColor, 14f, bold = true)
+                ty += rowH
             }
+            drawTextAnnotated("fcu = ${"%.0f".format(fcu)} MPa", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+            ty += rowH
+            drawTextAnnotated("fy = ${"%.0f".format(fy)} MPa", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
         }
     }
 }

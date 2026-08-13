@@ -340,11 +340,12 @@ fun StairScreen(
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
-                                appliedMoment = res.mu,
-                                appliedShear = 0.0, // TODO: add to StairResult
+                                mu = res.mu,
+                                vu = 0.0, // TODO: add to StairResult
                                 isSafe = res.isSafe,
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
                                 fy = fy.toDoubleOrNull() ?: 360.0,
+                                isArabic = viewModel.isArabic,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -46,6 +46,8 @@ class ColumnViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ColumnUiState())
     val uiState: StateFlow<ColumnUiState> = _uiState.asStateFlow()
     
+    val isArabic: Boolean get() = settingsManager.language == "ar"
+
     init {
         // Initialize with default code from settings
         _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }

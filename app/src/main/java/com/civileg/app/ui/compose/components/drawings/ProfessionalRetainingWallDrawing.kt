@@ -63,6 +63,15 @@ fun ProfessionalRetainingWallDrawing(
     fsSliding: Double = 1.5,
     maxBearingPressure: Double = 0.0,
     allowableBearingPressure: Double = 200.0,
+    // Enhanced design values
+    activePressureCoeff: Double = 0.0,
+    stemMoment: Double = 0.0,
+    heelMoment: Double = 0.0,
+    toeMoment: Double = 0.0,
+    isSafe: Boolean = true,
+    fcu: Double = 25.0,
+    fy: Double = 360.0,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -153,6 +162,60 @@ fun ProfessionalRetainingWallDrawing(
             distRebarDia, distRebarSpacing,
             baseRebarDia, baseRebarSpacing, wallHeight
         )
+
+        // ══════════════════════════════════════════════════════════
+        //  8. DESIGN VALUES OVERLAY (top-right)
+        // ══════════════════════════════════════════════════════════
+        val designRows = mutableListOf<Pair<String, String>>()
+        designRows.add("fcu" to "${"%.0f".format(fcu)} MPa")
+        designRows.add("fy" to "${"%.0f".format(fy)} MPa")
+        if (activePressureCoeff > 0) designRows.add("Ka" to "${"%.3f".format(activePressureCoeff)}")
+        if (stemMoment > 0) designRows.add("Mu stem" to "${"%.1f".format(stemMoment)} kN.m/m")
+        if (heelMoment > 0) designRows.add("Mu heel" to "${"%.1f".format(heelMoment)} kN.m/m")
+        if (toeMoment > 0) designRows.add("Mu toe" to "${"%.1f".format(toeMoment)} kN.m/m")
+
+        if (designRows.size > 2) {
+            val ovW = 155f
+            val ovH = 24f + designRows.size * 18f
+            val ovX = cw - ovW - 12f
+            val ovY = 44f
+            drawRoundRect(
+                color = Color(0xCC222244),
+                topLeft = Offset(ovX, ovY),
+                size = Size(ovW, ovH),
+                cornerRadius = CornerRadius(6f)
+            )
+            drawRoundRect(
+                color = Color(0x66AAAAAA),
+                topLeft = Offset(ovX, ovY),
+                size = Size(ovW, ovH),
+                cornerRadius = CornerRadius(6f),
+                style = Stroke(1f)
+            )
+            drawTextAnnotated("Design Values", ovX + ovW / 2f, ovY + 14f, DrawingColors.DimensionWhite, 12f, center = true, bold = true)
+            designRows.forEachIndexed { idx, (label, value) ->
+                val ry = ovY + 28f + idx * 18f
+                drawTextAnnotated(label, ovX + 8f, ry + 10f, Color(0xFFAAAAAA), 10f)
+                drawTextAnnotated(value, ovX + ovW - 8f, ry + 10f, DrawingColors.DimensionWhite, 10f, center = true)
+            }
+        }
+
+        // SAFE / UNSAFE badge
+        val badgeColor = if (isSafe) DrawingColors.SafeGreen else DrawingColors.UnsafeRed
+        val badgeLabel = if (isSafe) "SAFE" else "UNSAFE"
+        val badgePaint = android.graphics.Paint().apply {
+            color = badgeColor.toArgb()
+            textSize = 14f
+            isAntiAlias = true
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+        }
+        val badgeX = cw - 60f
+        val badgeY = if (designRows.size > 2) 44f + 24f + designRows.size * 18f + 10f else 52f
+        drawRoundRect(color = badgeColor.copy(alpha = 0.25f), topLeft = Offset(badgeX, badgeY), size = Size(52f, 22f), cornerRadius = CornerRadius(11f))
+        drawRoundRect(color = badgeColor, topLeft = Offset(badgeX, badgeY), size = Size(52f, 22f), cornerRadius = CornerRadius(11f), style = Stroke(1.5f))
+        drawContext.canvas.nativeCanvas.drawText(badgeLabel, badgeX + 26f, badgeY + 16f, badgePaint)
     }
 }
 

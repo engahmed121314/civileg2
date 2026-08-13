@@ -398,6 +398,7 @@ fun SlabScreen(
                                 ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
                                 ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
                                 viewMode = selectedViewMode,
+                                isArabic = viewModel.isArabic,
                                 modifier = Modifier.fillMaxWidth(),
                                 // NEW: Pass real design values from the SlabResult
                                 momentX = res.momentX,

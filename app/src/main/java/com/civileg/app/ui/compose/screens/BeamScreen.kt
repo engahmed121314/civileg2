@@ -360,7 +360,8 @@ fun BeamScreen(
                                 effectiveDepth = 0.0, // TODO: add to BeamResult
                                 steelRatio = res.steelRatio,
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0
+                                fy = fy.toDoubleOrNull() ?: 360.0,
+                                isArabic = viewModel.isArabic
                             )
                         }
                     )
