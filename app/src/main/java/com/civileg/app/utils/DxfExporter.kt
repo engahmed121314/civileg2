@@ -96,17 +96,27 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nSTIRRUPS\n70\n0\n62\n2\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         val cover = 50.0; val sMm = span * 1000.0
+        val isCant = result.supportType == CalculatorEngine.SupportType.CANTILEVER
+        
+        // Supports
+        drawRect(sb, -400.0, -1200.0, 400.0, 1200.0, "CONCRETE") 
+        if (!isCant) drawRect(sb, sMm, -1200.0, 400.0, 1200.0, "CONCRETE")
+        
         drawRect(sb, 0.0, 0.0, sMm, height, "CONCRETE")
-        drawLine(sb, -300.0, cover, sMm + 300.0, cover, "REBAR")
-        drawLine(sb, -300.0, height - cover, sMm + 300.0, height - cover, "REBAR")
+        
+        val endOff = if (isCant) 0.0 else 300.0
+        drawLine(sb, -300.0, cover, sMm + endOff, cover, "REBAR_MAIN")
+        drawLine(sb, -300.0, height - cover, sMm + endOff, height - cover, "REBAR_MAIN")
+        
         result.stirrups.zones.forEach { zone ->
-            var curX = zone.startLocation; while (curX < zone.endLocation - 1.0) { drawLine(sb, curX, cover, curX, height - cover, "REBAR"); curX += zone.spacing }
+            var curX = zone.startLocation; while (curX < zone.endLocation - 1.0) { drawLine(sb, curX, cover, curX, height - cover, "STIRRUPS"); curX += zone.spacing }
             drawText(sb, curX - zone.spacing/2, height + 400.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 100.0)
         }
         drawResultTable(sb, sMm + 3500.0, height, tr("BEAM DATA", "بيانات تصميم الكمرة"), listOf(
@@ -125,7 +135,7 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
@@ -164,14 +174,14 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         val lxMm = lx * 1000.0; val lyMm = ly * 1000.0
         drawRect(sb, 0.0, 0.0, lxMm, lyMm, "CONCRETE")
-        var cy = result.reinforcementMain.spacing / 2.0; while (cy < lyMm) { drawLine(sb, 100.0, cy, lxMm - 100.0, cy, "REBAR"); cy += result.reinforcementMain.spacing * 5 }
+        var cy = result.reinforcementMain.spacing / 2.0; while (cy < lyMm) { drawLine(sb, 100.0, cy, lxMm - 100.0, cy, "REBAR_MAIN"); cy += result.reinforcementMain.spacing * 5 }
         drawResultTable(sb, lxMm + 3500.0, lyMm / 2.0, tr("SLAB DATA", "بيانات تصميم البلاطة"), listOf(
             tr("Thickness", "السمك") to "${result.thickness.toInt()} mm",
             tr("Moment Mx", "عزم X") to "%.1f kNm".format(result.momentX),
@@ -209,6 +219,7 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
         sb.append("0\nLAYER\n2\nWATER\n70\n0\n62\n5\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
@@ -255,7 +266,7 @@ object DxfExporter {
         drawRect(sb, 0.0, 0.0, 300.0, eh, "FRAME"); drawRect(sb, span-300.0, 0.0, 300.0, eh, "FRAME")
         drawLine(sb, 0.0, eh, midX, inputs.ridgeHeight * 1000.0, "FRAME"); drawLine(sb, span, eh, midX, inputs.ridgeHeight * 1000.0, "FRAME")
         
-        drawResultTable(sb, span+7500.0, eh, tr("STEEL DATA", "بيانات العنبر المعدني"), listOf(tr("Span", "البحر") to "${inputs.span} m", tr("Weight", "الوزن") to "%.2f Tons".format(result.totalWeight), tr("Column", "العمود") to result.mainFrame.columnSection.sectionName, tr("Rafter", "الرافدة") to result.mainFrame.rafterSection.sectionName))
+        drawResultTable(sb, span+7000.0, eh, tr("STEEL DATA", "بيانات العنبر المعدني"), listOf(tr("Span", "البحر") to "${inputs.span} m", tr("Weight", "الوزن") to "%.2f Tons".format(result.totalWeight), tr("Column", "العمود") to result.mainFrame.columnSection.sectionName, tr("Rafter", "الرافدة") to result.mainFrame.rafterSection.sectionName))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
