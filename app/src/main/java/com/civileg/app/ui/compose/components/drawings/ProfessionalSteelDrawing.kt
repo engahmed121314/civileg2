@@ -65,6 +65,9 @@ fun ProfessionalSteelDrawing(
     hasStiffener: Boolean = false,
     weldSize: Double = 6.0,
     isArabic: Boolean = false,
+    appliedMoment: Double = 0.0,      // Mu in kN.m
+    appliedShear: Double = 0.0,       // Vu in kN
+    appliedAxial: Double = 0.0,      // Pu in kN
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -79,16 +82,25 @@ fun ProfessionalSteelDrawing(
         val tableHeight = 120f
         val tableTop = ch - tableHeight - margin
 
-        // Elevation view (top zone ~40%)
+        val isBeam = memberType == SteelMemberType.BEAM || memberType == SteelMemberType.GIRDERS
+        val hasLoads = appliedMoment > 0 || appliedShear > 0 || appliedAxial > 0
+
+        // Elevation view (top zone)
         val elevLeft = margin + 40f
         val elevRight = cw - margin - 40f
         val elevTop = margin + 40f
-        val elevBottom = ch * 0.42f
+        val elevBottom = if (isBeam && hasLoads) ch * 0.35f else ch * 0.42f
+
+        // BMD/SFD zone (only for beams with loads, between elevation and cross-section)
+        val bmdLeft = margin + 20f
+        val bmdRight = cw - margin - 20f
+        val bmdTop = elevBottom + 10f
+        val bmdBottom = if (isBeam && hasLoads) ch * 0.55f else elevBottom + 10f
 
         // Cross-section (bottom-left)
         val sectLeft = margin + 20f
-        val sectRight = cw * 0.50f
-        val sectTop = elevBottom + 40f
+        val sectRight = if (isBeam && hasLoads) cw * 0.50f else cw * 0.50f
+        val sectTop = bmdBottom + 20f
         val sectBottom = tableTop - 10f
 
         // Connection detail (bottom-right)
@@ -97,15 +109,24 @@ fun ProfessionalSteelDrawing(
         val connTop = sectTop
         val connBottom = sectBottom
 
-        // 1. ELEVATION VIEW
+        // 1. ELEVATION VIEW (with load arrows for beams)
         drawElevationView(
             elevLeft, elevTop, elevRight, elevBottom,
             section, memberLength, memberType,
             boltDia, boltCount, boltGauge, boltPitch, endPlateThickness,
-            hasStiffener, weldSize, isArabic
+            hasStiffener, weldSize, isArabic,
+            appliedMoment, appliedShear, appliedAxial
         )
 
-        // 2. CROSS-SECTION VIEW (accurate geometry)
+        // 2. BMD/SFD DIAGRAMS (beams only)
+        if (isBeam && hasLoads) {
+            drawBmdSfd(
+                bmdLeft, bmdTop, bmdRight, bmdBottom,
+                memberLength, appliedMoment, appliedShear, isArabic
+            )
+        }
+
+        // 3. CROSS-SECTION VIEW (accurate geometry)
         drawAccurateCrossSection(
             sectLeft, sectTop, sectRight, sectBottom,
             section, isArabic
@@ -145,7 +166,10 @@ private fun DrawScope.drawElevationView(
     memberType: SteelMemberType,
     boltDia: Double, boltCount: Int, boltGauge: Double, boltPitch: Double,
     endPlateThickness: Double, hasStiffener: Boolean, weldSize: Double,
-    isArabic: Boolean
+    isArabic: Boolean,
+    appliedMoment: Double = 0.0,
+    appliedShear: Double = 0.0,
+    appliedAxial: Double = 0.0
 ) {
     val viewW = right - left
     val viewH = bottom - top
@@ -281,6 +305,234 @@ private fun DrawScope.drawElevationView(
 
     // Section name label
     drawTextAnnotated(section.sectionName, cx, mTop - 12f, Color.Cyan, 13f, center = true, bold = true)
+
+    // ── Load arrows and support symbols (beams/girders with loads) ──
+    val isBeamType = memberType == SteelMemberType.BEAM || memberType == SteelMemberType.GIRDERS
+    if (isBeamType && (appliedMoment > 0 || appliedShear > 0)) {
+        // Support symbols (pin at left, roller at right)
+        val supportSize = min(12f, sDep * 0.3f)
+        // Left pin support (triangle)
+        drawPath(
+            path = Path().apply {
+                moveTo(mLeft, mBot)
+                lineTo(mLeft - supportSize, mBot + supportSize * 1.2f)
+                lineTo(mLeft + supportSize, mBot + supportSize * 1.2f)
+                close()
+            },
+            color = ExtGray
+        )
+        // Right roller support (triangle + circle)
+        drawPath(
+            path = Path().apply {
+                moveTo(mRight, mBot)
+                lineTo(mRight - supportSize, mBot + supportSize * 1.2f)
+                lineTo(mRight + supportSize, mBot + supportSize * 1.2f)
+                close()
+            },
+            color = ExtGray
+        )
+        drawCircle(ExtGray, supportSize * 0.25f, center = Offset(mRight, mBot + supportSize * 1.5f))
+
+        // UDL arrows (distributed load)
+        if (appliedMoment > 0) {
+            val arrowColor = Color(0xFF3498DB)
+            val numArrows = max(5, (sLen / 30f).toInt().coerceIn(5, 20))
+            val arrowSpacing = sLen / (numArrows + 1)
+            val arrowLen = min(20f, (mTop - top - 15f) * 0.7f)
+            val arrowTop = mTop - arrowLen - 6f
+
+            // Top distribution line
+            drawLine(arrowColor, Offset(mLeft, arrowTop), Offset(mRight, arrowTop), 1.2f)
+
+            for (i in 1..numArrows) {
+                val ax = mLeft + i * arrowSpacing
+                // Arrow shaft
+                drawLine(arrowColor, Offset(ax, arrowTop), Offset(ax, mTop - 2f), 0.8f)
+                // Arrow head
+                drawPath(
+                    path = Path().apply {
+                        moveTo(ax, mTop - 2f)
+                        lineTo(ax - 3f, mTop - 8f)
+                        lineTo(ax + 3f, mTop - 8f)
+                        close()
+                    },
+                    color = arrowColor
+                )
+            }
+
+            // Load value label
+            // From Mmax = wL²/8 → w = 8*M/(L²) in kN/m
+            val Lm = memberLength / 1000.0  // convert mm to m
+            val wUDL = if (Lm > 0) 8.0 * appliedMoment / (Lm * Lm) else 0.0
+            val udlLbl = if (isArabic) {
+                "w=${"%.1f".format(wUDL)} kN/m"
+            } else {
+                "w=${"%.1f".format(wUDL)} kN/m"
+            }
+            drawTextAnnotated(udlLbl, cx, arrowTop - 6f, arrowColor, 10f, center = true, bold = true)
+        }
+
+        // Axial load arrow (for columns or beam with axial)
+        if (appliedAxial > 0) {
+            val axialColor = Color(0xFF9B59B6)
+            val aArrowLen = min(18f, sLen * 0.08f)
+            // Downward arrow at mid-span top
+            drawLine(axialColor, Offset(cx, mTop - aArrowLen - 20f), Offset(cx, mTop - 2f), 1.5f)
+            drawPath(
+                path = Path().apply {
+                    moveTo(cx, mTop - 2f)
+                    lineTo(cx - 4f, mTop - 10f)
+                    lineTo(cx + 4f, mTop - 10f)
+                    close()
+                },
+                color = axialColor
+            )
+            val axialLbl = if (isArabic) "P=${appliedAxial.toInt()} kN" else "P=${appliedAxial.toInt()} kN"
+            drawTextAnnotated(axialLbl, cx + 8f, mTop - aArrowLen - 14f, axialColor, 9f, bold = true)
+        }
+    }
+
+    // Column axial load arrow
+    if (memberType == SteelMemberType.COLUMN && appliedAxial > 0) {
+        val axialColor = Color(0xFF9B59B6)
+        val aLen = min(25f, (mTop - top) * 0.5f)
+        drawLine(axialColor, Offset(cx, mTop - aLen), Offset(cx, mTop - 2f), 2f)
+        drawPath(
+            path = Path().apply {
+                moveTo(cx, mTop - 2f)
+                lineTo(cx - 5f, mTop - 12f)
+                lineTo(cx + 5f, mTop - 12f)
+                close()
+            },
+            color = axialColor
+        )
+        val pLbl = if (isArabic) "P=${appliedAxial.toInt()} kN" else "P=${appliedAxial.toInt()} kN"
+        drawTextAnnotated(pLbl, cx + 10f, mTop - aLen + 4f, axialColor, 11f, bold = true)
+
+        // Moment curved arrow at top
+        if (appliedMoment > 0) {
+            val mColor = Color(0xFFE67E22)
+            drawTextAnnotated("M=${appliedMoment.toInt()} kN.m", cx, mBot + 44f, mColor, 10f, center = true, bold = true)
+        }
+    }
+}
+
+// ============================================================================
+// BMD / SFD DIAGRAMS
+// ============================================================================
+
+private val BmdColor = Color(0xFF3498DB)
+private val SfdColor = Color(0xFFE74C3C)
+
+private fun DrawScope.drawBmdSfd(
+    left: Float, top: Float, right: Float, bottom: Float,
+    memberLength: Double,
+    maxMoment: Double,  // kN.m
+    maxShear: Double,   // kN
+    isArabic: Boolean
+) {
+    val viewW = right - left
+    val viewH = bottom - top
+    val midX = (left + right) / 2f
+
+    // Split into two halves: BMD (left) and SFD (right)
+    val halfW = (viewW - 20f) / 2f
+    val bmdL = left
+    val bmdR = left + halfW
+    val sfdL = left + halfW + 20f
+    val sfdR = right
+
+    // ── BMD (parabolic for UDL on simply supported beam) ──
+    val bmdLabel = if (isArabic) "مخطط العزم (BMD)" else "BENDING MOMENT (BMD)"
+    drawTextAnnotated(bmdLabel, (bmdL + bmdR) / 2f, top + 2f, BmdColor, 11f, center = true, bold = true)
+
+    // Baseline
+    val bmdBaseY = (top + bottom) / 2f + 8f
+    val bmdHeight = (bottom - top) * 0.35f
+    drawLine(ExtGray, Offset(bmdL + 8f, bmdBaseY), Offset(bmdR - 8f, bmdBaseY), 0.8f)
+
+    // Parabolic BMD: M(x) = Mmax * 4*x*(L-x)/L²
+    val bmdPath = Path().apply {
+        val steps = 40
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps
+            val x = bmdL + 12f + t * (halfW - 24f)
+            // Parabolic: max at t=0.5, zero at t=0 and t=1
+            val mRatio = 4.0 * t * (1.0 - t)
+            val y = bmdBaseY - mRatio * bmdHeight
+            if (i == 0) moveTo(x, y) else lineTo(x, y)
+        }
+    }
+    // Fill under curve
+    val bmdFillPath = Path().apply {
+        val steps = 40
+        moveTo(bmdL + 12f, bmdBaseY)
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps
+            val x = bmdL + 12f + t * (halfW - 24f)
+            val mRatio = 4.0 * t * (1.0 - t)
+            val y = bmdBaseY - mRatio * bmdHeight
+            lineTo(x, y)
+        }
+        lineTo(bmdR - 12f, bmdBaseY)
+        close()
+    }
+    drawPath(bmdFillPath, BmdColor.copy(alpha = 0.15f))
+    drawPath(bmdPath, BmdColor, style = Stroke(2f))
+
+    // Max moment value at midspan
+    val mVal = if (isArabic) "Mu=${"%.1f".format(maxMoment)}" else "Mu=${"%.1f".format(maxMoment)}"
+    drawTextAnnotated(mVal, (bmdL + bmdR) / 2f, bmdBaseY - bmdHeight - 4f, BmdColor, 10f, center = true, bold = true)
+    drawTextAnnotated("kN.m", (bmdL + bmdR) / 2f, bmdBaseY - bmdHeight + 8f, BmdColor.copy(alpha = 0.7f), 8f, center = true)
+
+    // ── SFD (linear for UDL on simply supported beam) ──
+    val sfdLabel = if (isArabic) "مخطط القص (SFD)" else "SHEAR FORCE (SFD)"
+    drawTextAnnotated(sfdLabel, (sfdL + sfdR) / 2f, top + 2f, SfdColor, 11f, center = true, bold = true)
+
+    val sfdBaseY = (top + bottom) / 2f + 8f
+    val sfdHeight = (bottom - top) * 0.35f
+    drawLine(ExtGray, Offset(sfdL + 8f, sfdBaseY), Offset(sfdR - 8f, sfdBaseY), 0.8f)
+
+    // Linear SFD: V(x) = Vmax*(1 - 2*x/L), crosses zero at midspan
+    val sfdPath = Path().apply {
+        val x1 = sfdL + 12f
+        val y1 = sfdBaseY - sfdHeight
+        val x2 = sfdR - 12f
+        val y2 = sfdBaseY + sfdHeight
+        moveTo(x1, y1)
+        lineTo((x1 + x2) / 2f, sfdBaseY)
+        lineTo(x2, y2)
+    }
+    // Fill triangles
+    val sfdFillPath = Path().apply {
+        val x1 = sfdL + 12f
+        val y1 = sfdBaseY - sfdHeight
+        val x2 = sfdR - 12f
+        moveTo(x1, sfdBaseY)
+        lineTo(x1, y1)
+        lineTo((x1 + x2) / 2f, sfdBaseY)
+        close()
+    }
+    val sfdFillPath2 = Path().apply {
+        val x2 = sfdR - 12f
+        val y2 = sfdBaseY + sfdHeight
+        val x1 = sfdL + 12f
+        moveTo(x2, sfdBaseY)
+        lineTo(x2, y2)
+        lineTo((x1 + x2) / 2f, sfdBaseY)
+        close()
+    }
+    drawPath(sfdFillPath, SfdColor.copy(alpha = 0.12f))
+    drawPath(sfdFillPath2, SfdColor.copy(alpha = 0.12f))
+    drawPath(sfdPath, SfdColor, style = Stroke(2f))
+
+    // Max shear values at supports
+    val vLeft = if (isArabic) "+${"%.1f".format(maxShear)}" else "+${"%.1f".format(maxShear)}"
+    val vRight = if (isArabic) "-${"%.1f".format(maxShear)}" else "-${"%.1f".format(maxShear)}"
+    drawTextAnnotated(vLeft, sfdL + 12f, sfdBaseY - sfdHeight - 4f, SfdColor, 10f, center = true, bold = true)
+    drawTextAnnotated(vRight, sfdR - 12f, sfdBaseY + sfdHeight + 12f, SfdColor, 10f, center = true, bold = true)
+    drawTextAnnotated("kN", sfdL + 12f, sfdBaseY - sfdHeight + 8f, SfdColor.copy(alpha = 0.7f), 8f, center = true)
+    drawTextAnnotated("kN", sfdR - 12f, sfdBaseY + sfdHeight + 22f, SfdColor.copy(alpha = 0.7f), 8f, center = true)
 }
 
 // ============================================================================

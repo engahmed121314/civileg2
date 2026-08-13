@@ -2335,6 +2335,9 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             hasStiffener = hasStiff,
                             weldSize = weldSz,
                             isArabic = viewModel.isArabic,
+                            appliedMoment = moment.toDoubleOrNull() ?: 0.0,
+                            appliedShear = shear.toDoubleOrNull() ?: 0.0,
+                            appliedAxial = axialLoad.toDoubleOrNull() ?: 0.0,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
