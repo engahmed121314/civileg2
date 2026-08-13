@@ -2039,7 +2039,7 @@ object PdfDrawingGenerator {
             }
             is SteelSectionType.CHS, is SteelSectionType.Pipe -> {
                 val outerR = sd / 2f
-                val thick = section.thickness.toFloat() * secScale
+                val thick = section.webThickness.toFloat() * secScale
                 canvas.drawCircle(sCx, sCy, outerR, fillP)
                 canvas.drawCircle(sCx, sCy, outerR, outlineP)
                 if (outerR - thick > 1f) {
@@ -2985,7 +2985,7 @@ object PdfDrawingGenerator {
 
         // Dimensions
         canvas.drawHDim(l, l + sBf, t + sH + 20f, "bf=${bf.toInt()}", 18f, createPaint(DIM_LINE, 1f))
-        canvas.drawVDim(t, t + sH, l + sBf + 25f, "h=${h.toInt()}", 18f, createPaint(DIM_LINE, 1f))
+        canvas.drawVDim(t, t + sH, l + sBf + 25f, "h=${h.toInt()}", 18f)
         canvas.drawText("tw=${tw.toInt()}", cx + sTw/2 + 10f, cy + 5f, dimP)
         canvas.drawText("tf=${tf.toInt()}", l + sBf + 10f, t + sTf/2 + 5f, dimP)
         if (r > 0) canvas.drawText("r=${r.toInt()}", cx + sTw/2 + 10f, t + sTf + 15f, dimP)
@@ -3012,7 +3012,7 @@ object PdfDrawingGenerator {
         canvas.drawRect(webL, top + sH - sTf, webL + sBf, top + sH, outlineP)
 
         canvas.drawHDim(webL, webL + sBf, top + sH + 20f, "bf=${bf.toInt()}", 18f, createPaint(DIM_LINE, 1f))
-        canvas.drawVDim(top, top + sH, webL - 25f, "h=${h.toInt()}", 18f, createPaint(DIM_LINE, 1f))
+        canvas.drawVDim(top, top + sH, webL - 25f, "h=${h.toInt()}", 18f)
         canvas.drawText("tw=${tw.toInt()}", webL + sTw + 10f, cy + 5f, dimP)
     }
 
@@ -3035,7 +3035,7 @@ object PdfDrawingGenerator {
         canvas.drawPath(path, fillP)
         canvas.drawPath(path, outlineP)
 
-        canvas.drawVDim(cy - sA/2, cy + sB/2, cx - 25f, "a=${a.toInt()}", 18f, createPaint(DIM_LINE, 1f))
+        canvas.drawVDim(cy - sA/2, cy + sB/2, cx - 25f, "a=${a.toInt()}", 18f)
         canvas.drawHDim(cx, cx + sB, cy + sB/2 + 20f, "b=${b.toInt()}", 18f, createPaint(DIM_LINE, 1f))
         canvas.drawText("t=${thk.toInt()}", cx + sB/2, cy - 10f, dimP)
     }
@@ -3084,7 +3084,7 @@ object PdfDrawingGenerator {
         canvas.drawRect(l + sT, top + sT, l + sW - sT, top + sH - sT, outlineP)
 
         canvas.drawHDim(l, l + sW, top + sH + 20f, "b=${rw.toInt()}", 18f, createPaint(DIM_LINE, 1f))
-        canvas.drawVDim(top, top + sH, l + sW + 25f, "h=${rh.toInt()}", 18f, createPaint(DIM_LINE, 1f))
+        canvas.drawVDim(top, top + sH, l + sW + 25f, "h=${rh.toInt()}", 18f)
         canvas.drawText("t=${t.toInt()}", cx + sW/2 - sT - 10f, cy + 5f, dimP)
     }
 
@@ -3105,7 +3105,7 @@ object PdfDrawingGenerator {
         canvas.drawRect(cx - sTw/2, top + sTf, cx + sTw/2, top + sH, outlineP)
 
         canvas.drawHDim(l, l + sBf, top + sH + 20f, "bf=${bf.toInt()}", 18f, createPaint(DIM_LINE, 1f))
-        canvas.drawVDim(top, top + sH, l + sBf + 25f, "h=${h.toInt()}", 18f, createPaint(DIM_LINE, 1f))
+        canvas.drawVDim(top, top + sH, l + sBf + 25f, "h=${h.toInt()}", 18f)
     }
 
     // --- Plate Girder PDF ---
@@ -3135,7 +3135,7 @@ object PdfDrawingGenerator {
         canvas.drawTriangle(cx - sTw/2 - ws, top + sTfT, cx - sTw/2, top + sTfT + ws, cx - sTw/2 + ws, top + sTfT, weldP)
         canvas.drawTriangle(cx + sTw/2 + ws, top + sTfT, cx + sTw/2, top + sTfT + ws, cx + sTw/2 - ws, top + sTfT, weldP)
 
-        canvas.drawVDim(top, top + sH, cx + maxOf(sBfT, sBfB)/2 + 30f, "h=${h.toInt()}", 18f, createPaint(DIM_LINE, 1f))
+        canvas.drawVDim(top, top + sH, cx + maxOf(sBfT, sBfB)/2 + 30f, "h=${h.toInt()}", 18f)
         canvas.drawText("bf_top=${bfTop.toInt()}", cx, top + sTfT/2 + 5f, dimP)
         canvas.drawText("bf_bot=${bfBot.toInt()}", cx, top + sH - sTfB/2 + 5f, dimP)
     }

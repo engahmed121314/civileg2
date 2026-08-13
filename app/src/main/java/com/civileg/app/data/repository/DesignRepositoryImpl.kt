@@ -1,5 +1,6 @@
 package com.civileg.app.data.repository
 
+import androidx.lifecycle.asFlow
 import com.civileg.app.db.*
 import com.civileg.app.domain.entities.SteelMemberResult
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
@@ -76,7 +77,7 @@ class DesignRepositoryImpl(
 
     // ── General Designs ──────────────────────────────────────────────────
 
-    override fun getDesignsForProject(projectId: Long) = designDao.getDesignsForProject(projectId)
+    override fun getDesignsForProject(projectId: Long): Flow<List<Design>> = designDao.getDesignsForProject(projectId).asFlow()
     override fun searchDesigns(query: String): Flow<List<Design>> = designDao.searchDesigns("%$query%")
     override suspend fun deleteDesign(design: Design) = designDao.deleteDesign(design)
     override suspend fun getTotalCost(projectId: Long): Double = designDao.getTotalCostForProject(projectId) ?: 0.0

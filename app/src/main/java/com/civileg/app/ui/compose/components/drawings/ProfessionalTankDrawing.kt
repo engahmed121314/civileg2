@@ -113,11 +113,13 @@ fun ProfessionalTankDrawing(
         )
 
         when (viewMode) {
-            1 -> drawPerspectiveView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
-            2 -> drawSectionDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
-            3 -> drawReinforcementDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
+            1 -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
+            2 -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
+            3 -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
                 length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
                 verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
             else -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
@@ -329,7 +331,7 @@ private fun DrawScope.drawCircularTankBody(
         Path().apply {
             addOval(androidx.compose.ui.geometry.Rect(left, top - 8f, left + l, top + 8f))
         },
-        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(1.5f, PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
     )
     drawTextAnnotated("(circular section)", cx - 40f, top - 14f, HoopGreen.copy(alpha = 0.6f), 11f)
 }

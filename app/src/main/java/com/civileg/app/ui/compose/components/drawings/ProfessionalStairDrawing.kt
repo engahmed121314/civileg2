@@ -71,6 +71,18 @@ private val HatchColor = Color(0x99AAAAAA)
 /** Section cut indicator */
 private val SectionCutColor = Color(0xFFE74C3C)
 
+/** Secondary stress color — RED */
+private val SecondaryRed = Color(0xFFE74C3C)
+
+/** Warning orange */
+private val WarningOrange = Color(0xFFF39C12)
+
+/** Safe status green */
+private val SafeGreen = Color(0xFF2ECC71)
+
+/** Unsafe status red */
+private val UnsafeRed = Color(0xFFE74C3C)
+
 /** Landing fill */
 private val LandingFill = Color(0xFF5E5E5E)
 

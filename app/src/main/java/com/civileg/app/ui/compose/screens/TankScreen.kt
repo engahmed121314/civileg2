@@ -318,8 +318,7 @@ fun TankScreen(
                         OutlinedButton(
                             onClick = { viewModel.exportToDxf(context) { _ -> } },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Draw, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))

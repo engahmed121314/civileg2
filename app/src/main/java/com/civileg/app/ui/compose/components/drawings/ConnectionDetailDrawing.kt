@@ -1,20 +1,17 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.calculations.ecp.BoltDesignResult
 import com.civileg.app.domain.calculations.ecp.WeldDesignResult
@@ -175,7 +172,8 @@ private fun DrawScope.drawBoltedConnectionDetail(
 
     // Hatch lines on plate (diagonal lines for steel plate)
     val hatchSpacing = 12f
-    for (hx in -spH..spW step hatchSpacing) {
+    var hx = -spH
+    while (hx <= spW) {
         val x1 = plateLeft + max(0f, hx)
         val y1 = plateTop + max(0f, -hx)
         val x2 = plateLeft + min(spW, hx + spH)
@@ -185,6 +183,7 @@ private fun DrawScope.drawBoltedConnectionDetail(
         if (x1 < x2c && y1 < y2) {
             drawLine(PlateColor.copy(alpha = 0.25f), Offset(x1, y1), Offset(x2c, y2), 0.5f)
         }
+        hx += hatchSpacing
     }
 
     // ── Draw bolts ──
@@ -254,8 +253,8 @@ private fun DrawScope.drawBoltedConnectionDetail(
     } else {
         if (isArabic) "غير آمن  UR=${"%.2f".format(res.utilizationRatio)}" else "FAIL  UR=${"%.2f".format(res.utilizationRatio)}"
     }
-    drawRect(statusColor.copy(alpha = 0.2f), Offset(right - 120f, top + 4f), Size(116f, 22f), CornerRadius(6f))
-    drawRect(statusColor, Offset(right - 120f, top + 4f), Size(116f, 22f), style = Stroke(1f), CornerRadius(6f))
+    drawRoundRect(statusColor.copy(alpha = 0.2f), Offset(right - 120f, top + 4f), Size(116f, 22f), cornerRadius = CornerRadius(6f))
+    drawRoundRect(statusColor, Offset(right - 120f, top + 4f), Size(116f, 22f), cornerRadius = CornerRadius(6f), style = Stroke(1f))
     drawTextAnnotated(statusText, right - 62f, top + 19f, statusColor, 10f, center = true, bold = true)
 }
 
@@ -413,75 +412,8 @@ private fun DrawScope.drawWeldedConnectionDetail(
     } else {
         if (isArabic) "غير آمن  UR=${"%.2f".format(res.utilizationRatio)}" else "FAIL  UR=${"%.2f".format(res.utilizationRatio)}"
     }
-    drawRect(statusColor.copy(alpha = 0.2f), Offset(right - 120f, top + 4f), Size(116f, 22f), CornerRadius(6f))
-    drawRect(statusColor, Offset(right - 120f, top + 4f), Size(116f, 22f), style = Stroke(1f), CornerRadius(6f))
+    drawRoundRect(statusColor.copy(alpha = 0.2f), Offset(right - 120f, top + 4f), Size(116f, 22f), cornerRadius = CornerRadius(6f))
+    drawRoundRect(statusColor, Offset(right - 120f, top + 4f), Size(116f, 22f), cornerRadius = CornerRadius(6f), style = Stroke(1f))
     drawTextAnnotated(statusText, right - 62f, top + 19f, statusColor, 10f, center = true, bold = true)
 }
 
-// ============================================================================
-// DRAWING UTILITIES (local copies to avoid dependency on DrawingUtils)
-// ============================================================================
-
-private fun DrawScope.drawTextAnnotated(
-    text: String, x: Float, y: Float, color: Color,
-    size: Float, center: Boolean = false, bold: Boolean = false
-) {
-    val paint = android.graphics.Paint().apply {
-        color = color.toArgbInt()
-        textSize = size
-        isAntiAlias = true
-        textAlign = if (center) android.graphics.Paint.Align.CENTER else android.graphics.Paint.Align.LEFT
-        typeface = android.graphics.Typeface.create(
-            if (bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL,
-            android.graphics.Typeface.ITALIC
-        )
-    }
-    drawContext.canvas.nativeCanvas.drawText(text, x, y, paint)
-}
-
-private fun DrawScope.drawHorizontalDimension(
-    x1: Float, x2: Float, y: Float,
-    text: String, color: Color, textSize: Float, offset: Float
-) {
-    if (abs(x2 - x1) < 1f) return
-    val extSize = 6f
-    // Extension lines
-    drawLine(color, Offset(x1, y - offset + extSize), Offset(x1, y + 2f), 0.8f)
-    drawLine(color, Offset(x2, y - offset + extSize), Offset(x2, y + 2f), 0.8f)
-    // Dimension line
-    drawLine(color, Offset(x1, y), Offset(x2, y), 0.8f)
-    // Arrow ticks
-    drawLine(color, Offset(x1, y), Offset(x1 + 4f, y - 2f), 1f)
-    drawLine(color, Offset(x1, y), Offset(x1 + 4f, y + 2f), 1f)
-    drawLine(color, Offset(x2, y), Offset(x2 - 4f, y - 2f), 1f)
-    drawLine(color, Offset(x2, y), Offset(x2 - 4f, y + 2f), 1f)
-    // Text
-    val mx = (x1 + x2) / 2f
-    drawTextAnnotated(text, mx, y - 4f, color, textSize, center = true)
-}
-
-private fun DrawScope.drawVerticalDimension(
-    y1: Float, y2: Float, x: Float,
-    text: String, color: Color, textSize: Float, offset: Float
-) {
-    if (abs(y2 - y1) < 1f) return
-    val extSize = 6f
-    drawLine(color, Offset(x - offset + extSize, y1), Offset(x + 2f, y1), 0.8f)
-    drawLine(color, Offset(x - offset + extSize, y2), Offset(x + 2f, y2), 0.8f)
-    drawLine(color, Offset(x, y1), Offset(x, y2), 0.8f)
-    drawLine(color, Offset(x, y1), Offset(x - 2f, y1 + 4f), 1f)
-    drawLine(color, Offset(x, y1), Offset(x + 2f, y1 + 4f), 1f)
-    drawLine(color, Offset(x, y2), Offset(x - 2f, y2 - 4f), 1f)
-    drawLine(color, Offset(x, y2), Offset(x + 2f, y2 - 4f), 1f)
-    val my = (y1 + y2) / 2f
-    // Rotated text (approximate with horizontal text)
-    drawTextAnnotated(text, x - offset + 4f, my + 3f, color, textSize)
-}
-
-private fun Color.toArgbInt(): Int {
-    val a = (alpha * 255).toInt() and 0xFF
-    val r = (red * 255).toInt() and 0xFF
-    val g = (green * 255).toInt() and 0xFF
-    val b = (blue * 255).toInt() and 0xFF
-    return (a shl 24) or (r shl 16) or (g shl 8) or b
-}

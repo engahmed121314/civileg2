@@ -1156,7 +1156,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                 val path = Path()
                 val fillPath = Path()
                 val maxDataMoment = momentData.maxOfOrNull { it.second } ?: 1.0
-                val scale = if (maxDataMoment > 0) bmdHeight * 0.8 / maxDataMoment else 0f
+                val scale = if (maxDataMoment > 0) bmdHeight.toDouble() * 0.8 / maxDataMoment else 0.0
 
                 path.moveTo(beamLeft, bmdBaseline)
                 fillPath.moveTo(beamLeft, bmdBaseline)
@@ -1229,7 +1229,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                 val sfdPath = Path()
                 val sfdFill = Path()
                 val maxDataShear = shearData.maxOfOrNull { kotlin.math.abs(it.second) } ?: 1.0
-                val sScale = if (maxDataShear > 0) sfdHalfH / maxDataShear else 0f
+                val sScale = if (maxDataShear > 0) sfdHalfH.toDouble() / maxDataShear else 0.0
 
                 sfdPath.moveTo(beamLeft, sfdMid)
                 sfdFill.moveTo(beamLeft, sfdMid)

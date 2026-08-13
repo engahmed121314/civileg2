@@ -81,7 +81,7 @@ object DxfExportEngine {
         drawRect(sb, 0.0, elY, span, h, "CONCRETE")
         // Support symbols (triangles)
         drawSupportSymbol(sb, 0.0, elY + h, if (result.supportType == SupportType.FIXED_FIXED || result.supportType == SupportType.FIXED_HINGED) 0.0 else 200.0)
-        drawSupportSymbol(sb, span, elY + h, if (result.supportType == SupportType.FIXED_FIXED || result.supportType == SupportType.HINGED_FIXED) 0.0 else 200.0)
+        drawSupportSymbol(sb, span, elY + h, if (result.supportType == SupportType.FIXED_FIXED) 0.0 else 200.0)
 
         // Bottom reinforcement (main bars)
         val botY = elY + cover
@@ -840,6 +840,12 @@ object DxfExportEngine {
         sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
+
+    // DXF header variable names (with $ prefix as required by DXF format)
+    private const val ACADVER = "\$ACADVER"
+    private const val INSBASE = "\$INSBASE"
+    private const val EXTMIN = "\$EXTMIN"
+    private const val EXTMAX = "\$EXTMAX"
 
     // ═══════════════════════════════════════════════════════════════
     //  DXF STRUCTURE WRITERS

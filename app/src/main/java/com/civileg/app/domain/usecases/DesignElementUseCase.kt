@@ -1,6 +1,7 @@
 package com.civileg.app.domain.usecases
 
 import com.civileg.app.domain.base.CalculationResult
+import com.civileg.app.domain.base.ErrorCode
 import com.civileg.app.domain.repository.DesignRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
@@ -40,7 +41,7 @@ class DesignElementUseCase @Inject constructor(
             }
             CalculationResult.Success(result)
         } catch (e: Exception) {
-            CalculationResult.Error(e.message ?: "Unknown calculation error")
+            CalculationResult.Error(e.message ?: "Unknown calculation error", ErrorCode.UNKNOWN)
         }
     }
 
@@ -54,7 +55,7 @@ class DesignElementUseCase @Inject constructor(
         saveAction: (suspend (DesignRepository, Long, String, T, String) -> Unit)? = null,
         codeUsed: String = ""
     ) = flow {
-        emit(CalculationResult.Loading<T>())
+        emit(CalculationResult.Loading)
         emit(executeDesign(projectId, elementName, calculate, saveAction, codeUsed))
     }.flowOn(Dispatchers.IO)
 }

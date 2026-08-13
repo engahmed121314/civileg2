@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
@@ -98,7 +99,7 @@ fun RetainingWallScreen(
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isExporting
                         ) {
-                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Icon(Icons.Default.Edit, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("DXF")
                         }

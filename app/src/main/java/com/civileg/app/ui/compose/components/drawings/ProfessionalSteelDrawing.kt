@@ -458,7 +458,7 @@ private fun DrawScope.drawBmdSfd(
             val t = i.toFloat() / steps
             val x = bmdL + 12f + t * (halfW - 24f)
             // Parabolic: max at t=0.5, zero at t=0 and t=1
-            val mRatio = 4.0 * t * (1.0 - t)
+            val mRatio = 4f * t * (1f - t)
             val y = bmdBaseY - mRatio * bmdHeight
             if (i == 0) moveTo(x, y) else lineTo(x, y)
         }
@@ -470,7 +470,7 @@ private fun DrawScope.drawBmdSfd(
         for (i in 0..steps) {
             val t = i.toFloat() / steps
             val x = bmdL + 12f + t * (halfW - 24f)
-            val mRatio = 4.0 * t * (1.0 - t)
+            val mRatio = 4f * t * (1f - t)
             val y = bmdBaseY - mRatio * bmdHeight
             lineTo(x, y)
         }

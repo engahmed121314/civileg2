@@ -656,18 +656,6 @@ class CalculatorEngine @Inject constructor(
         val rho = (finalAsProvided / ag) * 100.0
         val vol = (ag * clearHeight) / 1e9
         
-        // Accurate Steel Weight Calculation
-        val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
-        val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
-        
-        val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05
-        val steelWasteKg = totalSteelWeight * 0.05
-
-        val utilizationRatio = (pu / capacity).coerceIn(0.0, 1.2)
-        
-        safetyChecks.add(DesignSafetyCheck("Axial Capacity", pu, capacity, "kN", capacity >= pu))
-        safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, (asMin/ag)*100.0, "%", finalAsProvided >= asMin))
-
         // --- Code-based Tie/Stirrup Spacing ---
         val db = preferredDiameter.toDouble() // main bar diameter
         val dtie = 8.0 // tie diameter mm
@@ -698,6 +686,18 @@ class CalculatorEngine @Inject constructor(
         val numStirrupsNormal = ceil(max(0.0, clearHeight - 2 * condensationLen) / sMax).toInt()
         val numStirrups = numStirrupsDense + numStirrupsNormal
         val stirrupWeight = numStirrups * stirrupLength * (dtie.pow(2.0) / 162.0)
+
+        // Accurate Steel Weight Calculation
+        val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
+        val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
+        
+        val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05
+        val steelWasteKg = totalSteelWeight * 0.05
+
+        val utilizationRatio = (pu / capacity).coerceIn(0.0, 1.2)
+        
+        safetyChecks.add(DesignSafetyCheck("Axial Capacity", pu, capacity, "kN", capacity >= pu))
+        safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, (asMin/ag)*100.0, "%", finalAsProvided >= asMin))
 
         return ColumnResult(
             width = width, depth = depth, pu = pu, 

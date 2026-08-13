@@ -109,7 +109,6 @@ class BillingManager @Inject constructor(
         }
 
         val params = BillingFlowParams.newBuilder()
-            .setSubscriptionUpdateParams(null)
             .build()
 
         billingClient.launchBillingFlow(activity, params)
@@ -157,7 +156,9 @@ class BillingManager @Inject constructor(
             it == SUBSCRIPTION_MONTHLY || it == SUBSCRIPTION_YEARLY 
         }
         if (isSub) {
-            preferencesManager.setPremiumUser(true)
+            CoroutineScope(Dispatchers.IO).launch {
+                preferencesManager.setPremiumUser(true)
+            }
             _isPremium.postValue(true)
             _billingEvent.postValue(BillingEvent.PurchaseSuccess)
         }
@@ -176,7 +177,9 @@ class BillingManager @Inject constructor(
                     it.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     it.products.any { p -> p == SUBSCRIPTION_MONTHLY || p == SUBSCRIPTION_YEARLY }
                 }
-                preferencesManager.setPremiumUser(hasActiveSub)
+                CoroutineScope(Dispatchers.IO).launch {
+                    preferencesManager.setPremiumUser(hasActiveSub)
+                }
                 _isPremium.postValue(hasActiveSub)
                 _billingEvent.postValue(BillingEvent.SubscriptionRestored(hasActiveSub))
                 
@@ -205,18 +208,22 @@ class BillingManager @Inject constructor(
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val details = productDetailsList.map { detail ->
-                    val offer = detail.subscriptionOfferDetails?.firstOrNull()
+                    val phases = detail.subscriptionOfferDetails
+                        ?.firstOrNull()
+                        ?.pricingPhases
+                        ?.pricingPhases
+                        ?: emptyList()
+                    val lastPhase = phases.lastOrNull()
+                    val firstPhase = phases.firstOrNull()
                     SubscriptionDetail(
                         productId = detail.productId,
                         title = detail.title,
                         description = detail.description,
-                        price = detail.oneTimePurchaseOfferDetails?.price
-                            ?: detail.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhases?.last()?.formattedPrice ?: "",
-                        currencyCode = detail.oneTimePurchaseOfferDetails?.priceCurrencyCode
-                            ?: detail.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhases?.last()?.priceCurrencyCode ?: "",
-                        offerToken = offer?.offerToken ?: "",
-                        isFreeTrial = offer?.pricingPhases?.pricingPhases?.size ?: 0 > 1,
-                        freeTrialPeriod = offer?.pricingPhases?.pricingPhases?.firstOrNull()?.formattedPrice
+                        price = lastPhase?.formattedPrice ?: "",
+                        currencyCode = lastPhase?.priceCurrencyCode ?: "",
+                        offerToken = detail.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: "",
+                        isFreeTrial = phases.size > 1,
+                        freeTrialPeriod = firstPhase?.formattedPrice
                     )
                 }
                 _subscriptionDetails.postValue(details)
