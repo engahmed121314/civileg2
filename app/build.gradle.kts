@@ -227,14 +227,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-// JaCoCo Test Coverage
-tasks.withType<Test> {
-    jacoco {
-        includeNoLocationClasses = true
-        excludes = setOf("jdk.internal.*")
-    }
-}
-
+// JaCoCo Test Coverage — report task registered for CI
+// JaCoCo exec data is auto-collected by AGP when jacoco plugin is applied
 tasks.register<JacocoReport>("jacocoTestDebugUnitTestReport") {
     dependsOn("testDebugUnitTest")
     reports {
