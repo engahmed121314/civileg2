@@ -190,39 +190,31 @@ class BillingManager @Inject constructor(
     }
 
     private fun querySubscriptionDetails() {
+        val productList = listOf(SUBSCRIPTION_MONTHLY, SUBSCRIPTION_YEARLY).map { productId ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+        }
         val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(
-                listOf(
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(SUBSCRIPTION_MONTHLY)
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build(),
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(SUBSCRIPTION_YEARLY)
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build()
-                )
-            )
+            .setProductList(productList)
             .build()
 
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val details = productDetailsList.map { detail ->
-                    val phases = detail.subscriptionOfferDetails
-                        ?.firstOrNull()
-                        ?.pricingPhases
-                        ?.pricingPhases
-                        ?: emptyList()
-                    val lastPhase = phases.lastOrNull()
-                    val firstPhase = phases.firstOrNull()
+                val details = productDetailsList.mapNotNull { detail ->
+                    val offer = detail.subscriptionOfferDetails?.firstOrNull() ?: return@mapNotNull null
+                    val phaseList = offer.pricingPhases.pricingPhasesList
+                    val lastPhase = phaseList.lastOrNull() ?: return@mapNotNull null
+                    val firstPhase = phaseList.firstOrNull()
                     SubscriptionDetail(
                         productId = detail.productId,
                         title = detail.title,
                         description = detail.description,
-                        price = lastPhase?.formattedPrice ?: "",
-                        currencyCode = lastPhase?.priceCurrencyCode ?: "",
-                        offerToken = detail.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: "",
-                        isFreeTrial = phases.size > 1,
+                        price = lastPhase.formattedPrice,
+                        currencyCode = lastPhase.priceCurrencyCode,
+                        offerToken = offer.offerToken,
+                        isFreeTrial = phaseList.size > 1,
                         freeTrialPeriod = firstPhase?.formattedPrice
                     )
                 }

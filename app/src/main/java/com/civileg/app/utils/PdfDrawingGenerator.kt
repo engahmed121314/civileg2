@@ -2970,7 +2970,7 @@ object PdfDrawingGenerator {
 
         // Root radius arcs (4 corners)
         if (sR > 1f) {
-            val arcR = min(sR, sTf / 2f, (sBf - sTw) / 4f)
+            val arcR = minOf(sR, sTf / 2f, (sBf - sTw) / 4f)
             val arcPaint = fillP
             canvas.drawCircle(cx - sTw/2 + arcR, t + sTf + arcR, arcR, arcPaint)
             canvas.drawCircle(cx + sTw/2 - arcR, t + sTf + arcR, arcR, arcPaint)

@@ -19,7 +19,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlin.math.isNaN
+import kotlin.math.abs
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
