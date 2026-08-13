@@ -162,15 +162,15 @@ class SteelViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate steel drawing bitmap using actual section properties
+                // Generate steel drawing bitmap using actual section properties (V2 — all section types)
                 val drawingBitmap = try {
-                    PdfDrawingGenerator.generateSteelDrawing(
-                        sectionName = stored.section.displayName,
-                        sectionHeight = stored.section.depth,
-                        flangeWidth = stored.section.width,
-                        webThickness = stored.section.webThickness,
-                        flangeThickness = stored.section.flangeThickness,
+                    PdfDrawingGenerator.generateSteelDrawingV2(
+                        section = stored.section,
                         memberLength = stored.inputs.length,
+                        memberType = stored.memberType,
+                        appliedMoment = stored.inputs.moment,
+                        appliedShear = stored.inputs.shear,
+                        appliedAxial = stored.inputs.axialLoad,
                         isSafe = res.isSafe,
                         utilizationRatio = res.utilizationRatio * 100
                     )

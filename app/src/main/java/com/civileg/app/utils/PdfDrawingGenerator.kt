@@ -6,6 +6,7 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.compose.ui.geometry.Offset
+import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
@@ -1880,6 +1881,299 @@ object PdfDrawingGenerator {
 
         drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Steel Detail")
 
+        return bitmap
+    }
+
+    // ========== ENHANCED STEEL DRAWING (ALL SECTION TYPES) ==========
+    /**
+     * Generates a professional steel section drawing bitmap for all 9 section types,
+     * with elevation view, accurate cross-section, connection detail, and properties table.
+     */
+    fun generateSteelDrawingV2(
+        section: SteelSectionType,
+        memberLength: Double,
+        memberType: SteelMemberType = SteelMemberType.BEAM,
+        appliedMoment: Double = 0.0,
+        appliedShear: Double = 0.0,
+        appliedAxial: Double = 0.0,
+        boltDia: Double = 20.0,
+        boltCount: Int = 4,
+        boltGauge: Double = 90.0,
+        boltPitch: Double = 75.0,
+        endPlateThickness: Double = 12.0,
+        weldSize: Double = 6.0,
+        isSafe: Boolean = true,
+        utilizationRatio: Double = 0.0
+    ): Bitmap {
+        val W = 1200; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 1.5f)
+        val titleP = textPaint(Color.WHITE, 22f, true)
+        val dimP = createPaint(DIM_TEXT, 14f)
+        val centerP = createPaint(DIM_LINE, 0.8f).apply {
+            pathEffect = DashPathEffect(floatArrayOf(8f, 4f), 0f)
+        }
+
+        // ── ZONE 1: ELEVATION (top, full width) ──
+        val eLeft = 80f; val eTop = 60f; val eRight = W - 80f; val eBottom = 340f
+        val eW = eRight - eLeft; val eH = eBottom - eTop
+        val d = section.depth.toFloat()
+        val w = section.width.toFloat()
+        val scaleE = min((eW - 60f) / memberLength.toFloat(), (eH * 0.5f) / d) * 0.9f
+        val sLen = memberLength.toFloat() * scaleE
+        val sDep = d * scaleE
+        val sTf = section.flangeThickness.toFloat() * scaleE
+        val mLeft = (eLeft + eRight) / 2f - sLen / 2f
+        val mRight = mLeft + sLen
+        val mTop = (eTop + eBottom) / 2f - sDep / 2f + 10f
+        val mBot = mTop + sDep
+
+        // Draw member body based on type
+        val steelBlue = Color.parseColor("#3D3D3D")
+        val steelOutline = Color.parseColor("#2C3E50")
+        val fillP = fillPaint(steelBlue)
+
+        when (section) {
+            is SteelSectionType.ISection, is SteelSectionType.PlateGirder -> {
+                canvas.drawRect(mLeft, mTop, mRight, mBot, fillP)
+                canvas.drawRect(mLeft, mTop, mRight, mBot, outlineP)
+                // Flange lines
+                val flangeP = createPaint(Color.parseColor("#7F8C8D"), 1f)
+                canvas.drawLine(mLeft, mTop + sTf, mRight, mTop + sTf, flangeP)
+                canvas.drawLine(mLeft, mBot - sTf, mRight, mBot - sTf, flangeP)
+            }
+            is SteelSectionType.CHS, is SteelSectionType.Pipe -> {
+                canvas.drawRoundRect(RectF(mLeft, mTop, mRight, mBot), sDep/2f, sDep/2f, fillP)
+                canvas.drawRoundRect(RectF(mLeft, mTop, mRight, mBot), sDep/2f, sDep/2f, outlineP)
+            }
+            is SteelSectionType.RHS -> {
+                canvas.drawRect(mLeft, mTop, mRight, mBot, fillP)
+                canvas.drawRect(mLeft, mTop, mRight, mBot, outlineP)
+            }
+            else -> {
+                canvas.drawRect(mLeft, mTop, mRight, mBot, fillP)
+                canvas.drawRect(mLeft, mTop, mRight, mBot, outlineP)
+            }
+        }
+
+        // End plates
+        val epTh = endPlateThickness.toFloat() * scaleE
+        val plateP = createPaint(Color.parseColor("#95A5A6"), 1f)
+        canvas.drawRect(mLeft - epTh, mTop - 5f, mLeft, mBot + 5f, fillPaint(Color.parseColor("#555555")))
+        canvas.drawRect(mLeft - epTh, mTop - 5f, mLeft, mBot + 5f, plateP)
+        canvas.drawRect(mRight, mTop - 5f, mRight + epTh, mBot + 5f, fillPaint(Color.parseColor("#555555")))
+        canvas.drawRect(mRight, mTop - 5f, mRight + epTh, mBot + 5f, plateP)
+
+        // Support symbols for beams
+        if (memberType == SteelMemberType.BEAM || memberType == SteelMemberType.GIRDERS) {
+            val triP = createPaint(DIM_TEXT, 1.5f)
+            // Left pin
+            canvas.drawPath(Path().apply {
+                moveTo(mLeft, mBot); lineTo(mLeft - 12f, mBot + 16f); lineTo(mLeft + 12f, mBot + 16f); close()
+            }, triP)
+            canvas.drawLine(mLeft - 16f, mBot + 16f, mLeft + 16f, mBot + 16f, triP)
+            // Right roller
+            canvas.drawPath(Path().apply {
+                moveTo(mRight, mBot); lineTo(mRight - 12f, mBot + 16f); lineTo(mRight + 12f, mBot + 16f); close()
+            }, triP)
+            canvas.drawCircle(mRight - 5f, mBot + 20f, 3f, triP)
+            canvas.drawCircle(mRight + 5f, mBot + 20f, 3f, triP)
+            canvas.drawLine(mRight - 16f, mBot + 24f, mRight + 16f, mBot + 24f, triP)
+        }
+
+        // UDL arrows for beams with moment
+        if ((memberType == SteelMemberType.BEAM || memberType == SteelMemberType.GIRDERS) && appliedMoment > 0) {
+            val arrowP = createPaint(Color.parseColor("#3498DB"), 1f)
+            val nArr = 15
+            val arrSpacing = sLen / (nArr + 1)
+            val arrTop = mTop - 30f
+            canvas.drawLine(mLeft, arrTop, mRight, arrTop, arrowP)
+            for (i in 1..nArr) {
+                val ax = mLeft + i * arrSpacing
+                canvas.drawLine(ax, arrTop, ax, mTop - 2f, arrowP)
+                canvas.drawPath(Path().apply {
+                    moveTo(ax, mTop - 2f); lineTo(ax - 3f, mTop - 8f); lineTo(ax + 3f, mTop - 8f); close()
+                }, arrowP)
+            }
+            val Lm = memberLength / 1000.0
+            val wUDL = if (Lm > 0) 8.0 * appliedMoment / (Lm * Lm) else 0.0
+            canvas.drawTextCentered("w=${"%.1f".format(wUDL)} kN/m", (mLeft + mRight) / 2f, arrTop - 8f, textPaint(Color.parseColor("#3498DB"), 14f, true))
+        }
+
+        // Column axial arrow
+        if (memberType == SteelMemberType.COLUMN && appliedAxial > 0) {
+            val axP = createPaint(Color.parseColor("#9B59B6"), 2f)
+            val cx = (mLeft + mRight) / 2f
+            canvas.drawLine(cx, mTop - 40f, cx, mTop - 2f, axP)
+            canvas.drawPath(Path().apply {
+                moveTo(cx, mTop - 2f); lineTo(cx - 5f, mTop - 12f); lineTo(cx + 5f, mTop - 12f); close()
+            }, axP)
+            canvas.drawText("P=${appliedAxial.toInt()} kN", cx + 12f, mTop - 28f, textPaint(Color.parseColor("#9B59B6"), 14f, true))
+        }
+
+        // Dimensions
+        canvas.drawHDim(mLeft, mRight, mBot + 35f, "L=${memberLength.toInt()} mm")
+        canvas.drawVDim(mTop, mBot, mRight + epTh + 15f, "d=${d.toInt()}")
+        canvas.drawTextCentered("ELEVATION", (eLeft + eRight) / 2f, eTop - 5f, textPaint(DIM_TEXT, 18f, true))
+        canvas.drawTextCentered(section.sectionName, (mLeft + mRight) / 2f, mTop - 8f, textPaint(Color.CYAN, 16f, true))
+
+        // ── ZONE 2: CROSS-SECTION (bottom-left) ──
+        val sLeft = 80f; val sTop = 380f; val sRight = W * 0.48f; val sBot = 700f
+        val sCx = (sLeft + sRight) / 2f; val sCy = (sTop + sBot) / 2f
+        val secScale = min((sRight - sLeft) * 0.55f / w, (sBot - sTop) * 0.55f / d)
+        val sd = d * secScale; val sw = w * secScale
+        val stf = section.flangeThickness.toFloat() * secScale
+        val stw = section.webThickness.toFloat() * secScale
+
+        when (section) {
+            is SteelSectionType.ISection -> {
+                // Flanges
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy - sd/2f + stf, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy - sd/2f + stf, outlineP)
+                canvas.drawRect(sCx - sw/2f, sCy + sd/2f - stf, sCx + sw/2f, sCy + sd/2f, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy + sd/2f - stf, sCx + sw/2f, sCy + sd/2f, outlineP)
+                // Web
+                val webW = max(stw, 2f)
+                canvas.drawRect(sCx - webW/2f, sCy - sd/2f + stf, sCx + webW/2f, sCy + sd/2f - stf, fillP)
+                canvas.drawRect(sCx - webW/2f, sCy - sd/2f + stf, sCx + webW/2f, sCy + sd/2f - stf, outlineP)
+            }
+            is SteelSectionType.CHS, is SteelSectionType.Pipe -> {
+                val outerR = sd / 2f
+                val thick = section.thickness.toFloat() * secScale
+                canvas.drawCircle(sCx, sCy, outerR, fillP)
+                canvas.drawCircle(sCx, sCy, outerR, outlineP)
+                if (outerR - thick > 1f) {
+                    canvas.drawCircle(sCx, sCy, outerR - thick, createPaint(Color.parseColor("#1A1A1A"), 1f))
+                }
+            }
+            is SteelSectionType.RHS -> {
+                val thick = section.thickness.toFloat() * secScale
+                canvas.drawRoundRect(RectF(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy + sd/2f), thick, thick, fillP)
+                canvas.drawRoundRect(RectF(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy + sd/2f), thick, thick, outlineP)
+            }
+            is SteelSectionType.CSection -> {
+                // Channel: C-shape with web and two flanges (one side)
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy + sd/2f, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy + sd/2f, outlineP)
+                // Top flange (extends right)
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f + stf, sCy - sd/2f + stf, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f + stf, sCy - sd/2f + stf, outlineP)
+                // Bottom flange
+                canvas.drawRect(sCx - sw/2f, sCy + sd/2f - stf, sCx + sw/2f + stf, sCy + sd/2f, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy + sd/2f - stf, sCx + sw/2f + stf, sCy + sd/2f, outlineP)
+            }
+            is SteelSectionType.LSection -> {
+                val legA = (section as SteelSectionType.LSection).legA.toFloat() * secScale
+                val legB = section.legB.toFloat() * secScale
+                val t = section.thickness.toFloat() * secScale
+                canvas.drawPath(Path().apply {
+                    moveTo(sCx - legB/2f, sCy - legA/2f); lineTo(sCx + legB/2f, sCy - legA/2f)
+                    lineTo(sCx + legB/2f, sCy - legA/2f + t); lineTo(sCx - legB/2f + t, sCy - legA/2f + t)
+                    lineTo(sCx - legB/2f + t, sCy + legA/2f); lineTo(sCx - legB/2f, sCy + legA/2f)
+                    close()
+                }, fillP)
+                canvas.drawPath(Path().apply {
+                    moveTo(sCx - legB/2f, sCy - legA/2f); lineTo(sCx + legB/2f, sCy - legA/2f)
+                    lineTo(sCx + legB/2f, sCy - legA/2f + t); lineTo(sCx - legB/2f + t, sCy - legA/2f + t)
+                    lineTo(sCx - legB/2f + t, sCy + legA/2f); lineTo(sCx - legB/2f, sCy + legA/2f)
+                    close()
+                }, outlineP)
+            }
+            is SteelSectionType.TSection -> {
+                val fw = section.flangeWidth.toFloat() * secScale
+                val ft = section.flangeThickness.toFloat() * secScale
+                val wd = section.webDepth.toFloat() * secScale
+                val wwt = section.webThickness.toFloat() * secScale
+                // Flange
+                canvas.drawRect(sCx - fw/2f, sCy - sd/2f, sCx + fw/2f, sCy - sd/2f + ft, fillP)
+                canvas.drawRect(sCx - fw/2f, sCy - sd/2f, sCx + fw/2f, sCy - sd/2f + ft, outlineP)
+                // Web (stem)
+                canvas.drawRect(sCx - wwt/2f, sCy - sd/2f + ft, sCx + wwt/2f, sCy + sd/2f, fillP)
+                canvas.drawRect(sCx - wwt/2f, sCy - sd/2f + ft, sCx + wwt/2f, sCy + sd/2f, outlineP)
+            }
+            else -> {
+                // PlateGirder, Pipe, BuiltUp: draw as I-beam fallback
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy - sd/2f + stf, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy - sd/2f, sCx + sw/2f, sCy - sd/2f + stf, outlineP)
+                canvas.drawRect(sCx - sw/2f, sCy + sd/2f - stf, sCx + sw/2f, sCy + sd/2f, fillP)
+                canvas.drawRect(sCx - sw/2f, sCy + sd/2f - stf, sCx + sw/2f, sCy + sd/2f, outlineP)
+                canvas.drawRect(sCx - stw/2f, sCy - sd/2f + stf, sCx + stw/2f, sCy + sd/2f - stf, fillP)
+                canvas.drawRect(sCx - stw/2f, sCy - sd/2f + stf, sCx + stw/2f, sCy + sd/2f - stf, outlineP)
+            }
+        }
+
+        // Center lines
+        canvas.drawLine(sCx, sCy - sd/2f - 15f, sCx, sCy + sd/2f + 15f, centerP)
+        canvas.drawLine(sCx - sw/2f - 15f, sCy, sCx + sw/2f + 15f, sCy, centerP)
+        canvas.drawTextCentered("SECTION A-A", sCx, sTop - 10f, textPaint(DIM_TEXT, 16f, true))
+
+        // Section dimensions
+        canvas.drawVDim(sCy - sd/2f, sCy + sd/2f, sCx + sw/2f + 15f, "h=${d.toInt()}")
+
+        // ── ZONE 3: CONNECTION DETAIL (bottom-right) ──
+        val cLeft = W * 0.52f; val cTop = 380f; val cRight = W - 60f; val cBot = 700f
+        val cCx = (cLeft + cRight) / 2f; val cCy = (cTop + cBot) / 2f
+        canvas.drawTextCentered("CONNECTION", cCx, cTop - 10f, textPaint(DIM_TEXT, 16f, true))
+
+        // End plate
+        val connScale = min((cRight - cLeft) * 0.5f / w, (cBot - cTop) * 0.5f / d) * 0.8f
+        val cpW = w * connScale + 20f; val cpH = d * connScale + 10f
+        val cpLeft = cCx - cpW/2f; val cpTop = cCy - cpH/2f
+        canvas.drawRect(cpLeft, cpTop, cpLeft + cpW, cpTop + cpH, fillPaint(Color.parseColor("#555555")))
+        canvas.drawRect(cpLeft, cpTop, cpLeft + cpW, cpTop + cpH, createPaint(Color.parseColor("#95A5A6"), 1.2f))
+
+        // Bolt grid
+        val boltR = max(boltDia.toFloat() * connScale / 2f, 4f)
+        val sGauge = boltGauge.toFloat() * connScale
+        val sPitch = boltPitch.toFloat() * connScale
+        val bCols = 2; val bRows = max(boltCount / bCols, 1)
+        val boltOrange = Color.parseColor("#F39C12")
+        val boltP = fillPaint(boltOrange)
+        val boltDarkP = fillPaint(Color.parseColor("#1A1A1A"))
+        for (r in 0 until bRows) {
+            for (c in 0 until bCols) {
+                val bx = cCx - sGauge/2f + c * sGauge
+                val by = cCy - (bRows - 1) * sPitch / 2f + r * sPitch
+                canvas.drawCircle(bx, by, boltR + 1f, boltDarkP)
+                canvas.drawCircle(bx, by, boltR, boltP)
+            }
+        }
+
+        // Bolt info
+        canvas.drawTextCentered("${boltCount}x M${boltDia.toInt()}", cCx, cBot + 15f, textPaint(boltOrange, 14f, true))
+        // Weld info
+        val weldRed = Color.parseColor("#E74C3C")
+        canvas.drawTextCentered("Fillet ${weldSize.toInt()}mm", cCx, cBot + 35f, textPaint(weldRed, 13f, true))
+
+        // ── ZONE 4: PROPERTIES TABLE (bottom strip) ──
+        val tLeft = 80f; val tTop = 730f; val tRight = W - 60f; val tBot = 860f
+        val areaCm2 = section.area / 100.0
+        val ixVal = section.ix / 1e4
+        val sxVal = section.sx / 1e3
+        val wt = section.weight
+        val grade = when (section) {
+            is SteelSectionType.ISection -> section.grade.name
+            is SteelSectionType.CSection -> section.grade.name
+            is SteelSectionType.LSection -> section.grade.name
+            is SteelSectionType.CHS -> section.grade.name
+            is SteelSectionType.RHS -> section.grade.name
+            is SteelSectionType.TSection -> section.grade.name
+            is SteelSectionType.PlateGirder -> section.grade.name
+            is SteelSectionType.Pipe -> section.grade.name
+            is SteelSectionType.BuiltUp -> "-"
+        }
+
+        drawRebarTable(canvas, x = tLeft, y = tTop,
+            data = listOf(
+                listOf("Property", "Value", "Property", "Value"),
+                listOf("Area", "${"%.1f".format(areaCm2)} cm\u00B2", "Weight", "${"%.1f".format(wt)} kg/m"),
+                listOf("Ix", "${"%.0f".format(ixVal)} cm\u2074", "Sx", "${"%.0f".format(sxVal)} cm\u00B3"),
+                listOf("Length", "${memberLength.toInt()} mm", "Grade", grade),
+                listOf("UR", "${"%.2f".format(utilizationRatio)}", "Status", if (isSafe) "SAFE" else "UNSAFE")
+            )
+        )
+
+        drawTitleBlock(canvas, W - 280f, H - 50f, 280f, 50f, "Steel Detail - ${section.sectionName}")
         return bitmap
     }
 
