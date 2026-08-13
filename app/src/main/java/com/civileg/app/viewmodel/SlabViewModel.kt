@@ -200,13 +200,34 @@ class SlabViewModel @Inject constructor(
             }
         }
     }
-}
 
-data class SlabInputData(
-    val spanX: Double,
-    val spanY: Double,
-    val load: Double,
-    val fcu: Double,
-    val fy: Double,
-    val type: CalculatorEngine.SlabType
-)
+
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        val res = _result.value ?: return
+        val inputs = lastInputs ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val fileName = "Slab_Drawing_${System.currentTimeMillis()}.dxf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
+                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateSlabDxf(res, inputs.lx, inputs.ly)
+                file.writeText(dxfContent)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
+                    _isExporting.value = false
+                    onComplete(file)
+                }
+            } catch (e: Throwable) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _error.value = "DXF export failed: ${e.message}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+}

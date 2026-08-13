@@ -2,6 +2,11 @@ package com.civileg.app.utils.exporters
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import android.util.Log
 import com.civileg.app.domain.entities.*
 import com.itextpdf.io.font.constants.StandardFonts
@@ -663,6 +668,621 @@ class SteelEnglishReportExporter(private val context: Context) {
         }
     }
 
+    // ==================== CONNECTION DETAIL BITMAP ====================
+
+    /**
+     * Generates a bitmap showing connection detail (end plate, bolt holes, weld symbol).
+     * Uses pure Android Canvas — no Compose.
+     * Returns 800x600 bitmap with white background and black lines.
+     */
+    private fun generateConnectionBitmap(connection: SteelConnectionDetail): Bitmap? {
+        return try {
+            val W = 800
+            val H = 600
+            val bitmap = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(Color.WHITE)
+
+            val blackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+            }
+            val thickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = 4f
+            }
+            val fillGray = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#D0D0D0")
+                style = Paint.Style.FILL
+            }
+            val fillDarkGray = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#808080")
+                style = Paint.Style.FILL
+            }
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 28f
+                textAlign = Paint.Align.LEFT
+            }
+            val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 32f
+                textAlign = Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            val smallText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#333333")
+                textSize = 22f
+                textAlign = Paint.Align.LEFT
+            }
+            val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#555555")
+                textSize = 20f
+                textAlign = Paint.Align.CENTER
+            }
+
+            // Title
+            canvas.drawText("Connection Detail: ${connection.name}", W / 2f, 40f, titlePaint)
+
+            // Subtitle line
+            canvas.drawLine(60f, 55f, (W - 60).toFloat(), 55f, blackPaint)
+
+            val cx = W / 2f
+            val cy = 250f
+            val epW = 280f // end plate width
+            val epH = 180f // end plate height
+
+            when (val ct = connection.type) {
+                is ConnectionType.Bolted -> {
+                    // Draw end plate
+                    val epRect = RectF(cx - epW / 2, cy - epH / 2, cx + epW / 2, cy + epH / 2)
+                    canvas.drawRect(epRect, fillGray)
+                    canvas.drawRect(epRect, thickPaint)
+
+                    // Draw bolt holes based on pattern
+                    val boltDia = ct.boltDiameter.toFloat().coerceIn(12f, 36f)
+                    val holeRadius = boltDia / 2f + 3f
+                    val numBolts = ct.numberOfBolts.coerceIn(2, 16)
+
+                    when (ct.boltPattern) {
+                        com.civileg.app.domain.entities.BoltPattern.SINGLE_ROW -> {
+                            val spacing = epH / (numBolts + 1)
+                            for (i in 1..numBolts) {
+                                val y = cy - epH / 2 + spacing * i
+                                canvas.drawCircle(cx - 30f, y, holeRadius, fillDarkGray)
+                                canvas.drawCircle(cx - 30f, y, holeRadius, blackPaint)
+                                canvas.drawCircle(cx + 30f, y, holeRadius, fillDarkGray)
+                                canvas.drawCircle(cx + 30f, y, holeRadius, blackPaint)
+                            }
+                            // Center-to-center spacing annotation
+                            if (numBolts >= 2) {
+                                val sp1 = cy - epH / 2 + spacing
+                                val sp2 = cy - epH / 2 + spacing * 2
+                                canvas.drawLine(cx + 70f, sp1, cx + 70f, sp2, blackPaint)
+                                canvas.drawLine(cx + 60f, sp1, cx + 80f, sp1, blackPaint)
+                                canvas.drawLine(cx + 60f, sp2, cx + 80f, sp2, blackPaint)
+                                canvas.drawText(
+                                    "@${spacing.toInt()} mm",
+                                    cx + 120f, (sp1 + sp2) / 2 + 7f, dimPaint
+                                )
+                            }
+                        }
+                        com.civileg.app.domain.entities.BoltPattern.DOUBLE_ROW -> {
+                            val rows = maxOf(2, numBolts / 2)
+                            val spacing = epH / (rows + 1)
+                            for (i in 1..rows) {
+                                val y = cy - epH / 2 + spacing * i
+                                canvas.drawCircle(cx - 60f, y, holeRadius, fillDarkGray)
+                                canvas.drawCircle(cx - 60f, y, holeRadius, blackPaint)
+                                canvas.drawCircle(cx + 60f, y, holeRadius, fillDarkGray)
+                                canvas.drawCircle(cx + 60f, y, holeRadius, blackPaint)
+                            }
+                        }
+                        com.civileg.app.domain.entities.BoltPattern.STAGGERED -> {
+                            val rows = maxOf(2, numBolts / 2)
+                            val spacing = epH / (rows + 1)
+                            for (i in 1..rows) {
+                                val y = cy - epH / 2 + spacing * i
+                                val offsetX = if (i % 2 == 0) 20f else -20f
+                                canvas.drawCircle(cx - 60f + offsetX, y, holeRadius, fillDarkGray)
+                                canvas.drawCircle(cx - 60f + offsetX, y, holeRadius, blackPaint)
+                                canvas.drawCircle(cx + 60f + offsetX, y, holeRadius, fillDarkGray)
+                                canvas.drawCircle(cx + 60f + offsetX, y, holeRadius, blackPaint)
+                            }
+                        }
+                        com.civileg.app.domain.entities.BoltPattern.GRID -> {
+                            val cols = 2
+                            val rows = maxOf(2, numBolts / cols)
+                            val spX = epW / (cols + 1)
+                            val spY = epH / (rows + 1)
+                            for (r in 1..rows) {
+                                for (c in 1..cols) {
+                                    val bx = cx - epW / 2 + spX * c
+                                    val by = cy - epH / 2 + spY * r
+                                    canvas.drawCircle(bx, by, holeRadius, fillDarkGray)
+                                    canvas.drawCircle(bx, by, holeRadius, blackPaint)
+                                }
+                            }
+                        }
+                    }
+
+                    // Bolt diameter annotation
+                    canvas.drawText(
+                        "Bolt: ${ct.boltDiameter.fmt(0)}mm ${ct.boltGrade.displayName} x${ct.numberOfBolts}",
+                        60f, cy + epH / 2 + 45f, textPaint
+                    )
+                    canvas.drawText(
+                        "Pattern: ${ct.boltPattern.displayName}",
+                        60f, cy + epH / 2 + 75f, smallText
+                    )
+                    canvas.drawText(
+                        "Type: ${ct.connectionType.displayName}",
+                        60f, cy + epH / 2 + 100f, smallText
+                    )
+                }
+                is ConnectionType.Welded -> {
+                    // Draw end plate
+                    val epRect = RectF(cx - epW / 2, cy - epH / 2, cx + epW / 2, cy + epH / 2)
+                    canvas.drawRect(epRect, fillGray)
+                    canvas.drawRect(epRect, thickPaint)
+
+                    // Draw weld symbol (fillet weld triangles along the plate edges)
+                    val weldSize = ct.weldSize.toFloat().coerceIn(3f, 20f)
+                    val triH = weldSize * 3 // visual weld triangle height
+                    val numWelds = 6
+                    val weldSpacing = epH / (numWelds + 1)
+
+                    // Left edge welds
+                    val weldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.BLACK
+                        style = Paint.Style.FILL
+                    }
+                    for (i in 1..numWelds) {
+                        val y = cy - epH / 2 + weldSpacing * i
+                        val path = Path()
+                        path.moveTo(cx - epW / 2, y - triH / 2)
+                        path.lineTo(cx - epW / 2 - triH, y)
+                        path.lineTo(cx - epW / 2, y + triH / 2)
+                        path.close()
+                        canvas.drawPath(path, weldPaint)
+                    }
+
+                    // Right edge welds
+                    for (i in 1..numWelds) {
+                        val y = cy - epH / 2 + weldSpacing * i
+                        val path = Path()
+                        path.moveTo(cx + epW / 2, y - triH / 2)
+                        path.lineTo(cx + epW / 2 + triH, y)
+                        path.lineTo(cx + epW / 2, y + triH / 2)
+                        path.close()
+                        canvas.drawPath(path, weldPaint)
+                    }
+
+                    canvas.drawText(
+                        "Weld: ${ct.weldType.displayName}",
+                        60f, cy + epH / 2 + 45f, textPaint
+                    )
+                    canvas.drawText(
+                        "Size: ${ct.weldSize.fmt(0)}mm, Length: ${ct.weldLength.fmt(0)}mm",
+                        60f, cy + epH / 2 + 75f, smallText
+                    )
+                    canvas.drawText(
+                        "Electrode: ${ct.electrodeType.displayName}",
+                        60f, cy + epH / 2 + 100f, smallText
+                    )
+                }
+                is ConnectionType.Hybrid -> {
+                    // Simplified hybrid: show plate with bolts on one side and weld triangles on the other
+                    val epRect = RectF(cx - epW / 2, cy - epH / 2, cx + epW / 2, cy + epH / 2)
+                    canvas.drawRect(epRect, fillGray)
+                    canvas.drawRect(epRect, thickPaint)
+
+                    // Bolt holes on the left
+                    val holeR = 12f
+                    for (i in 1..4) {
+                        val y = cy - epH / 2 + (epH / 5) * i
+                        canvas.drawCircle(cx - 50f, y, holeR, fillDarkGray)
+                        canvas.drawCircle(cx - 50f, y, holeR, blackPaint)
+                    }
+
+                    // Weld symbols on the right
+                    val weldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.BLACK
+                        style = Paint.Style.FILL
+                    }
+                    for (i in 1..4) {
+                        val y = cy - epH / 2 + (epH / 5) * i
+                        val path = Path()
+                        path.moveTo(cx + epW / 2, y - 18f)
+                        path.lineTo(cx + epW / 2 + 30f, y)
+                        path.lineTo(cx + epW / 2, y + 18f)
+                        path.close()
+                        canvas.drawPath(path, weldPaint)
+                    }
+
+                    canvas.drawText("Hybrid Connection (Welded + Bolted)", 60f, cy + epH / 2 + 45f, textPaint)
+                }
+                is ConnectionType.Pressed -> {
+                    // Simplified pressed connection: plate with hatching
+                    val epRect = RectF(cx - epW / 2, cy - epH / 2, cx + epW / 2, cy + epH / 2)
+                    canvas.drawRect(epRect, fillGray)
+                    canvas.drawRect(epRect, thickPaint)
+                    // Hatching lines
+                    val hatchPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.parseColor("#666666")
+                        style = Paint.Style.STROKE
+                        strokeWidth = 1f
+                    }
+                    for (i in -10..10) {
+                        val x1 = cx - epW / 2 + i * 25f
+                        canvas.drawLine(x1, cy - epH / 2, x1 + epH, cy + epH / 2, hatchPaint)
+                    }
+                    canvas.drawText("Pressed Connection", 60f, cy + epH / 2 + 45f, textPaint)
+                    canvas.drawText(
+                        "Surface: ${ct.surfaceTreatment}",
+                        60f, cy + epH / 2 + 75f, smallText
+                    )
+                }
+            }
+
+            // Capacity / Demand summary box
+            val boxY = 440f
+            val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#F0F0F0")
+                style = Paint.Style.FILL
+            }
+            val boxRect = RectF(60f, boxY, W - 60f, H - 30f)
+            canvas.drawRect(boxRect, boxPaint)
+            canvas.drawRect(boxRect, blackPaint)
+
+            val utilPct = if (connection.capacity > 0) {
+                (connection.demand / connection.capacity * 100)
+            } else 0.0
+            val statusText = if (connection.isSafe) "PASS" else "FAIL"
+            val statusColor = if (connection.isSafe) Color.parseColor("#2E7D32") else Color.RED
+            val statusPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = statusColor
+                textSize = 30f
+                textAlign = Paint.Align.RIGHT
+                isFakeBoldText = true
+            }
+
+            canvas.drawText(
+                "Capacity: ${connection.capacity.fmt(1)} kN", 80f, boxY + 35f, textPaint
+            )
+            canvas.drawText(
+                "Demand: ${connection.demand.fmt(1)} kN", 80f, boxY + 65f, textPaint
+            )
+            canvas.drawText(
+                "Utilization: ${utilPct.fmt(1)}%", 80f, boxY + 95f, textPaint
+            )
+            canvas.drawText(statusText, W - 80f, boxY + 75f, statusPaint)
+
+            bitmap
+        } catch (e: Exception) {
+            Log.e(TAG, "Connection bitmap generation failed: ${e.message}")
+            null
+        }
+    }
+
+    // ==================== LOAD DIAGRAM BITMAP ====================
+
+    /**
+     * Generates a bitmap showing beam elevation with applied loads, BMD, and SFD.
+     * Uses pure Android Canvas — no Compose.
+     * Returns 800x600 bitmap with white background and black lines.
+     */
+    private fun generateLoadDiagramBitmap(
+        inputs: SteelWarehouseInputs,
+        result: SteelWarehouseAnalysisResult
+    ): Bitmap? {
+        return try {
+            val W = 800
+            val H = 600
+            val bitmap = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(Color.WHITE)
+
+            val blackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+            }
+            val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = 6f
+            }
+            val thinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#333333")
+                style = Paint.Style.STROKE
+                strokeWidth = 1.5f
+            }
+            val bmdFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#E3F2FD")
+                style = Paint.Style.FILL
+            }
+            val sfdFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#FFF3E0")
+                style = Paint.Style.FILL
+            }
+            val bmdLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#1565C0")
+                style = Paint.Style.STROKE
+                strokeWidth = 2.5f
+            }
+            val sfdLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#E65100")
+                style = Paint.Style.STROKE
+                strokeWidth = 2.5f
+            }
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 26f
+                textAlign = Paint.Align.LEFT
+            }
+            val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 28f
+                textAlign = Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            val smallText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#444444")
+                textSize = 20f
+                textAlign = Paint.Align.CENTER
+            }
+            val dimText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#1565C0")
+                textSize = 18f
+                textAlign = Paint.Align.CENTER
+            }
+            val shearDimText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#E65100")
+                textSize = 18f
+                textAlign = Paint.Align.CENTER
+            }
+
+            // Title
+            canvas.drawText("Frame Load Diagram & Internal Forces", W / 2f, 30f, titlePaint)
+            canvas.drawLine(50f, 42f, (W - 50).toFloat(), 42f, blackPaint)
+
+            // Beam section: top portion of the bitmap (y=60..260)
+            val beamLeft = 80f
+            val beamRight = (W - 80).toFloat()
+            val beamLen = beamRight - beamLeft
+            val beamY = 200f
+
+            // Draw supports (pin left, roller right)
+            // Left pin support - triangle
+            val pinPath = Path()
+            pinPath.moveTo(beamLeft, beamY)
+            pinPath.lineTo(beamLeft - 15f, beamY + 25f)
+            pinPath.lineTo(beamLeft + 15f, beamY + 25f)
+            pinPath.close()
+            canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK; style = Paint.Style.FILL
+            })
+            // Ground lines under pin
+            for (i in 0..3) {
+                val lx = beamLeft - 18f + i * 12f
+                canvas.drawLine(lx, beamY + 25f, lx - 6f, beamY + 33f, thinPaint)
+            }
+
+            // Right roller support - triangle + circle
+            val rollerPath = Path()
+            rollerPath.moveTo(beamRight, beamY)
+            rollerPath.lineTo(beamRight - 15f, beamY + 20f)
+            rollerPath.lineTo(beamRight + 15f, beamY + 20f)
+            rollerPath.close()
+            canvas.drawPath(rollerPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK; style = Paint.Style.FILL
+            })
+            canvas.drawCircle(beamRight, beamY + 28f, 5f, blackPaint)
+            canvas.drawCircle(beamRight, beamY + 28f, 5f, Paint().apply {
+                color = Color.WHITE; style = Paint.Style.FILL
+            })
+            // Ground lines under roller
+            for (i in 0..3) {
+                val lx = beamRight - 18f + i * 12f
+                canvas.drawLine(lx, beamY + 35f, lx - 6f, beamY + 43f, thinPaint)
+            }
+
+            // Draw beam
+            canvas.drawLine(beamLeft, beamY, beamRight, beamY, beamPaint)
+
+            // Draw load arrows (UDL from combined dead + live load)
+            val totalUDL = inputs.deadLoad + inputs.liveLoad + inputs.windLoad + inputs.snowLoad
+            val numArrows = 10
+            val arrowSpacing = beamLen / (numArrows + 1)
+            val maxArrowH = 80f
+            val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.RED
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+            }
+            val arrowHeadPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.RED
+                style = Paint.Style.FILL
+            }
+
+            // UDL line on top
+            canvas.drawLine(beamLeft, beamY - maxArrowH, beamRight, beamY - maxArrowH, arrowPaint)
+
+            // UDL label
+            canvas.drawText(
+                "UDL = ${totalUDL.fmt(2)} kN/m",
+                W / 2f, beamY - maxArrowH - 8f, smallText
+            )
+
+            // Individual arrows
+            for (i in 1..numArrows) {
+                val ax = beamLeft + arrowSpacing * i
+                canvas.drawLine(ax, beamY - maxArrowH, ax, beamY - 8f, arrowPaint)
+                // Arrow head
+                val headPath = Path()
+                headPath.moveTo(ax, beamY)
+                headPath.lineTo(ax - 5f, beamY - 12f)
+                headPath.lineTo(ax + 5f, beamY - 12f)
+                headPath.close()
+                canvas.drawPath(headPath, arrowHeadPaint)
+            }
+
+            // Span dimension
+            canvas.drawText("L = ${inputs.span.fmt(1)} m", W / 2f, beamY + 55f, smallText)
+
+            // Labels
+            canvas.drawText("Beam Elevation", beamLeft, beamY - maxArrowH - 30f, textPaint)
+            canvas.drawText("DL: ${inputs.deadLoad.fmt(2)} kN/m\u00B2", beamLeft, beamY + 55f, smallText)
+            canvas.drawText("LL: ${inputs.liveLoad.fmt(2)} kN/m\u00B2", beamLeft + beamLen * 0.3f, beamY + 55f, smallText)
+            canvas.drawText("WL: ${inputs.windLoad.fmt(2)} kN/m\u00B2", beamLeft + beamLen * 0.6f, beamY + 55f, smallText)
+
+            // ===== BMD Section (y=280..430) =====
+            val bmdTop = 290f
+            val bmdBaseline = 400f
+            val bmdHeight = bmdBaseline - bmdTop
+            canvas.drawText("Bending Moment Diagram (BMD)", W / 2f, bmdTop - 8f, titlePaint)
+            // Baseline
+            canvas.drawLine(beamLeft, bmdBaseline, beamRight, bmdBaseline, thinPaint)
+
+            // Use actual moment diagram data if available, otherwise draw parabolic approximation
+            val maxMoment = result.mainFrame.maxMoment
+            val momentData = result.loadDiagram?.momentDiagram
+
+            if (!momentData.isNullOrEmpty()) {
+                // Draw from actual data
+                val path = Path()
+                val fillPath = Path()
+                val maxDataMoment = momentData.maxOfOrNull { it.second } ?: 1.0
+                val scale = if (maxDataMoment > 0) bmdHeight * 0.8 / maxDataMoment else 0f
+
+                path.moveTo(beamLeft, bmdBaseline)
+                fillPath.moveTo(beamLeft, bmdBaseline)
+                momentData.forEach { (pos, moment) ->
+                    val x = beamLeft + (pos / inputs.span).toFloat() * beamLen
+                    val y = bmdBaseline - (moment * scale).toFloat()
+                    path.lineTo(x, y)
+                    fillPath.lineTo(x, y)
+                }
+                path.lineTo(beamRight, bmdBaseline)
+                fillPath.lineTo(beamRight, bmdBaseline)
+                fillPath.close()
+                canvas.drawPath(fillPath, bmdFillPaint)
+                canvas.drawPath(path, bmdLinePaint)
+            } else {
+                // Draw parabolic BMD approximation for simply supported beam with UDL
+                // M_max = wL^2/8, M(x) = w*x*(L-x)/2
+                val bmdMaxH = if (maxMoment > 0) bmdHeight * 0.8f else 20f
+                val scale = bmdMaxH / bmdHeight
+
+                val bmdPath = Path()
+                bmdPath.moveTo(beamLeft, bmdBaseline)
+                for (step in 0..40) {
+                    val t = step / 40f
+                    val x = beamLeft + t * beamLen
+                    // Parabolic shape: max at midspan
+                    val momentFrac = 4f * t * (1f - t) // 0 at ends, 1 at center
+                    val y = bmdBaseline - momentFrac * bmdHeight * scale
+                    bmdPath.lineTo(x, y)
+                }
+                bmdPath.lineTo(beamRight, bmdBaseline)
+                bmdPath.close()
+                canvas.drawPath(bmdPath, bmdFillPaint)
+                // Outline
+                canvas.drawPath(Path().apply {
+                    moveTo(beamLeft, bmdBaseline)
+                    for (step in 0..40) {
+                        val t = step / 40f
+                        val x = beamLeft + t * beamLen
+                        val momentFrac = 4f * t * (1f - t)
+                        val y = bmdBaseline - momentFrac * bmdHeight * scale
+                        lineTo(x, y)
+                    }
+                    lineTo(beamRight, bmdBaseline)
+                }, bmdLinePaint)
+            }
+
+            // Max moment annotation
+            if (maxMoment > 0) {
+                val maxBmdY = bmdBaseline - bmdHeight * 0.8f
+                canvas.drawText(
+                    "M_max = ${maxMoment.fmt(1)} kN.m",
+                    W / 2f, maxBmdY - 5f, dimText
+                )
+            }
+
+            // ===== SFD Section (y=430..570) =====
+            val sfdTop = 440f
+            val sfdMid = 510f
+            val sfdBase = 580f
+            canvas.drawText("Shear Force Diagram (SFD)", W / 2f, sfdTop - 5f, titlePaint)
+            // Zero line
+            canvas.drawLine(beamLeft, sfdMid, beamRight, sfdMid, thinPaint)
+
+            val maxShear = result.mainFrame.maxShear
+            val shearData = result.loadDiagram?.shearDiagram
+            val sfdHalfH = 35f
+
+            if (!shearData.isNullOrEmpty()) {
+                val sfdPath = Path()
+                val sfdFill = Path()
+                val maxDataShear = shearData.maxOfOrNull { kotlin.math.abs(it.second) } ?: 1.0
+                val sScale = if (maxDataShear > 0) sfdHalfH / maxDataShear else 0f
+
+                sfdPath.moveTo(beamLeft, sfdMid)
+                sfdFill.moveTo(beamLeft, sfdMid)
+                shearData.forEach { (pos, shear) ->
+                    val x = beamLeft + (pos / inputs.span).toFloat() * beamLen
+                    val y = sfdMid - (shear * sScale).toFloat()
+                    sfdPath.lineTo(x, y)
+                    sfdFill.lineTo(x, y)
+                }
+                sfdFill.lineTo(beamLeft, sfdMid)
+                sfdFill.close()
+                canvas.drawPath(sfdFill, sfdFillPaint)
+                canvas.drawPath(sfdPath, sfdLinePaint)
+            } else {
+                // Draw linear SFD approximation: +V at left, -V at right for UDL
+                val vScale = if (maxShear > 0) sfdHalfH * 0.8f / maxShear else 0f
+                val sfdPath = Path()
+                sfdPath.moveTo(beamLeft, sfdMid - sfdHalfH * 0.8f)
+                sfdPath.lineTo(beamRight, sfdMid + sfdHalfH * 0.8f)
+                canvas.drawPath(sfdPath, sfdLinePaint)
+
+                // Fill positive and negative regions
+                val posFill = Path()
+                posFill.moveTo(beamLeft, sfdMid)
+                posFill.lineTo(beamLeft, sfdMid - sfdHalfH * 0.8f)
+                posFill.lineTo(W / 2f, sfdMid)
+                posFill.close()
+                canvas.drawPath(posFill, sfdFillPaint)
+            }
+
+            // Max shear annotation
+            if (maxShear > 0) {
+                canvas.drawText(
+                    "V_max = ${maxShear.fmt(1)} kN",
+                    beamLeft + 10f, sfdMid - sfdHalfH - 5f, shearDimText
+                )
+            }
+
+            // Legend at bottom right
+            val legendX = W - 200f
+            val legendY = sfdBase - 30f
+            canvas.drawText("BMD", legendX, legendY, dimText)
+            canvas.drawLine(legendX - 30f, legendY - 5f, legendX - 10f, legendY - 5f, bmdLinePaint)
+            canvas.drawText("SFD", legendX + 60f, legendY, shearDimText)
+            canvas.drawLine(legendX + 30f, legendY - 5f, legendX + 50f, legendY - 5f, sfdLinePaint)
+
+            bitmap
+        } catch (e: Exception) {
+            Log.e(TAG, "Load diagram bitmap generation failed: ${e.message}")
+            null
+        }
+    }
+
     // ==================== SECTION 4: LOAD DIAGRAMS ====================
 
     private fun addLoadDiagrams(
@@ -713,9 +1333,14 @@ class SteelEnglishReportExporter(private val context: Context) {
         document.add(emptyLine())
 
         // Embed Load Diagram Bitmap
-        if (loadDiagramBitmap != null) {
+        val generatedLoadBitmap = if (loadDiagramBitmap == null) {
+            generateLoadDiagramBitmap(inputs, result)
+        } else null
+        val effectiveBitmap = loadDiagramBitmap ?: generatedLoadBitmap
+
+        if (effectiveBitmap != null) {
             document.add(subTitle("Load Diagram"))
-            addBitmapToDocument(document, loadDiagramBitmap, maxWidth = 480f)
+            addBitmapToDocument(document, effectiveBitmap, maxWidth = 480f)
         } else if (result.loadDiagram != null) {
             // If no bitmap but we have diagram data, show a text representation
             document.add(subTitle("Frame Load Distribution (Data)"))
@@ -975,6 +1600,24 @@ class SteelEnglishReportExporter(private val context: Context) {
         )
         connNotes.forEach { note ->
             document.add(paragraph("  -  $note", 7f, color = SECONDARY))
+        }
+
+        // Embed Connection Detail Bitmaps
+        document.add(emptyLine())
+        result.connections.forEachIndexed { i, conn ->
+            val bitmap = generateConnectionBitmap(conn)
+            if (bitmap != null) {
+                if (i > 0) document.add(AreaBreak())
+                document.add(
+                    paragraph(
+                        "Connection Drawing: ${conn.name}",
+                        10f, bold = true, color = PRIMARY_DARK,
+                        alignment = TextAlignment.CENTER
+                    )
+                )
+                addBitmapToDocument(document, bitmap, maxWidth = 480f)
+                document.add(emptyLine())
+            }
         }
     }
 

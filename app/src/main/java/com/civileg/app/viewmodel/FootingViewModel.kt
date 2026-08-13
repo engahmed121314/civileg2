@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.DxfExportEngine
+import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -215,4 +217,33 @@ class FootingViewModel @Inject constructor(
             }
         }
     }
+
+
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit) {
+        val res = _result.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val fileName = "Footing_Drawing_${System.currentTimeMillis()}.dxf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
+                val dxfContent = DxfExportEngine.generateFootingDxf(res, res.column1Size.first, res.column1Size.second)
+                file.writeText(dxfContent)
+                withContext(Dispatchers.Main) {
+                    ExportUtils.openDxf(context, file)
+                    _isExporting.value = false
+                    onComplete(file)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _error.value = "DXF export failed: ${e.message}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
 }

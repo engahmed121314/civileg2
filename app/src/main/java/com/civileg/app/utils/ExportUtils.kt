@@ -7,7 +7,55 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 object ExportUtils {
-    
+
+    // ── DXF helpers ──────────────────────────────────────────────
+
+    fun openDxf(context: Context, file: File) {
+        try {
+            if (!file.exists()) {
+                Toast.makeText(context, "DXF file not found", Toast.LENGTH_LONG).show()
+                return
+            }
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/dxf")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            // No DXF viewer – offer to share
+            shareDxf(context, file)
+            Toast.makeText(context, "No DXF viewer found. Sharing file instead.", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error opening DXF: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun shareDxf(context: Context, file: File) {
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/dxf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "Civil EG DXF Drawing")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Share DXF Drawing"))
+        } catch (e: Exception) {
+            Toast.makeText(context, "Unable to share DXF: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // ── PDF helpers (existing) ───────────────────────────────────
+
     fun sharePdf(context: Context, file: File) {
         try {
             val uri = FileProvider.getUriForFile(

@@ -56,6 +56,7 @@ fun MomentShearForceDiagram(
     var selectedPoint by remember { mutableStateOf<Offset?>(null) }
     var selectedMoment by remember { mutableStateOf(0f) }
     var selectedShear by remember { mutableStateOf(0f) }
+    var selectedXRatio by remember { mutableStateOf(0f) }
 
     // Calculate diagrams if not provided - use code-specific load factors
     val wu = (deadLoad * designCode.getDeadLoadFactor() + liveLoad * designCode.getLiveLoadFactor())
@@ -64,6 +65,7 @@ fun MomentShearForceDiagram(
 
     val maxMoment = momentData.maxOfOrNull { abs(it.second) } ?: 1f
     val maxShear = shearData.maxOfOrNull { abs(it.second) } ?: 1f
+    val (rLeft, rRight) = getReactions(wu, span, supportType)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -115,6 +117,7 @@ fun MomentShearForceDiagram(
                             selectedPoint = offset
                             // Find nearest x ratio
                             val xRatio = ((offset.x - 50f) / (size.width - 100f)).coerceIn(0f, 1f)
+                            selectedXRatio = xRatio
                             // Interpolate moment
                             selectedMoment = interpolate(momentData, xRatio)
                             selectedShear = interpolate(shearData, xRatio)
@@ -241,6 +244,23 @@ fun MomentShearForceDiagram(
                 drawTextAnnotated("L/2", marginL + diagramW / 2f, size.height - 2f, Color(0xAAFFFFFF), 12f, center = true)
                 drawTextAnnotated("L", marginL + diagramW, size.height - 2f, Color(0xAAFFFFFF), 12f, center = true)
 
+                // Support reaction annotations
+                val reactionColor = Color(0xFF2ECC71)
+                if (rLeft > 0.01) {
+                    // Draw small upward arrow at left support
+                    drawLine(reactionColor, Offset(marginL, size.height - 22f), Offset(marginL, size.height - 34f), 1.5f)
+                    drawLine(reactionColor, Offset(marginL, size.height - 34f), Offset(marginL - 3f, size.height - 30f), 1.5f)
+                    drawLine(reactionColor, Offset(marginL, size.height - 34f), Offset(marginL + 3f, size.height - 30f), 1.5f)
+                    drawTextAnnotated("R=${"%.1f".format(rLeft)}kN", marginL, size.height - 36f, reactionColor, 10f, center = true)
+                }
+                if (rRight > 0.01) {
+                    // Draw small upward arrow at right support
+                    drawLine(reactionColor, Offset(marginL + diagramW, size.height - 22f), Offset(marginL + diagramW, size.height - 34f), 1.5f)
+                    drawLine(reactionColor, Offset(marginL + diagramW, size.height - 34f), Offset(marginL + diagramW - 3f, size.height - 30f), 1.5f)
+                    drawLine(reactionColor, Offset(marginL + diagramW, size.height - 34f), Offset(marginL + diagramW + 3f, size.height - 30f), 1.5f)
+                    drawTextAnnotated("R=${"%.1f".format(rRight)}kN", marginL + diagramW, size.height - 36f, reactionColor, 10f, center = true)
+                }
+
                 // Selected point indicator
                 selectedPoint?.let { pt ->
                     val xRatio = ((pt.x - marginL) / diagramW).coerceIn(0f, 1f)
@@ -263,7 +283,7 @@ fun MomentShearForceDiagram(
                         modifier = Modifier.padding(8.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        Text("x/L = ${"%.2f".format(((selectedPoint!!.x - 50f) / (800f - 100f)).coerceIn(0f, 1f))}",
+                        Text("x/L = ${"%.2f".format(selectedXRatio)}",
                             color = Color.White, fontSize = 11.sp)
                         Text("M = ${"%.1f".format(selectedMoment)} kN.m",
                             color = Color(0xFF4A90D9), fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -320,8 +340,20 @@ private fun calculateMomentDiagram(span: Double, wu: Double, supportType: String
                 x to m
             }
         }
+        "FIXED_HINGED", "FH" -> {
+            // Propped cantilever: fixed at left (x=0), hinged at right (x=L)
+            // M(x) = -wL²/8 + 5wLx/8 - wx²/2  (x is ratio 0..1)
+            // M(0) = -wL²/8 (hogging at fixed end), M(L) = 0 (hinged end)
+            // Max positive M at x=5/8: M = 9wL²/128
+            (0..n).map { i ->
+                val x = i.toFloat() / n
+                val mL2 = wu * span * span
+                val m = (-mL2 / 8f + 5f * mL2 * x / 8f - mL2 * x * x / 2f).toFloat()
+                x to m
+            }
+        }
         "CANTILEVER" -> {
-            // M(x) = -wu * x² / 2
+            // M(x) = -wu * x² / 2  (free at left, fixed at right)
             (0..n).map { i ->
                 val x = i.toFloat() / n
                 val m = (-wu * x * x * span * span / 2f).toFloat()
@@ -358,8 +390,18 @@ private fun calculateShearDiagram(span: Double, wu: Double, supportType: String)
                 x to v
             }
         }
+        "FIXED_HINGED", "FH" -> {
+            // Propped cantilever: fixed at left (x=0), hinged at right (x=L)
+            // V(x) = 5wL/8 - wx  (x is ratio 0..1)
+            // V(0) = 5wL/8 (reaction at fixed end), V(L) = -3wL/8 (reaction at hinged end)
+            (0..n).map { i ->
+                val x = i.toFloat() / n
+                val v = (5f * wu * span / 8f - wu * span * x).toFloat()
+                x to v
+            }
+        }
         "CANTILEVER" -> {
-            // V(x) = -wu * (L - x)
+            // V(x) = -wu * (L - x)  (free at left, fixed at right)
             (0..n).map { i ->
                 val x = i.toFloat() / n
                 val v = (-wu * span * (1f - x)).toFloat()
@@ -373,6 +415,16 @@ private fun calculateShearDiagram(span: Double, wu: Double, supportType: String)
                 x to v
             }
         }
+    }
+}
+
+private fun getReactions(wu: Double, span: Double, supportType: String): Pair<Double, Double> {
+    return when (supportType) {
+        "SIMPLY_SUPPORTED", "SS" -> wu * span / 2.0 to wu * span / 2.0
+        "FIXED_FIXED", "FF" -> wu * span / 2.0 to wu * span / 2.0
+        "FIXED_HINGED", "FH" -> 5.0 * wu * span / 8.0 to 3.0 * wu * span / 8.0
+        "CANTILEVER" -> wu * span to 0.0
+        else -> wu * span / 2.0 to wu * span / 2.0
     }
 }
 

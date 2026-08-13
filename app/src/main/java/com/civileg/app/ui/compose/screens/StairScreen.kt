@@ -298,6 +298,16 @@ fun StairScreen(
 
                         Button(
                             onClick = { showSaveDialog = true },
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -330,6 +340,11 @@ fun StairScreen(
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
+                                appliedMoment = res.mu,
+                                appliedShear = 0.0, // TODO: add to StairResult
+                                isSafe = res.isSafe,
+                                fcu = fcu.toDoubleOrNull() ?: 25.0,
+                                fy = fy.toDoubleOrNull() ?: 360.0,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

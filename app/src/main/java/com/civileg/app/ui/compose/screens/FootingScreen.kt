@@ -453,6 +453,16 @@ fun FootingScreen(
 
                         Button(
                             onClick = { showSaveDialog = true },
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -505,6 +515,15 @@ fun FootingScreen(
                                 col2X = col2XPos,
                                 soilPressureMax = res.soilPressure,
                                 soilPressureMin = res.soilPressure,
+                                axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
+                                punchingShear = 0.0, // TODO: add to FootingResult
+                                punchingCapacity = 0.0, // TODO: add to FootingResult
+                                bendingMoment = 0.0, // TODO: add to FootingResult
+                                netPressure = res.soilPressure,
+                                isSafe = res.isSafe,
+                                utilizationRatio = res.utilizationRatio,
+                                fcu = fcu.toDoubleOrNull() ?: 25.0,
+                                fy = fy.toDoubleOrNull() ?: 360.0,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

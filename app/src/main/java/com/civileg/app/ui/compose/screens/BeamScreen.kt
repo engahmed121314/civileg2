@@ -52,6 +52,7 @@ fun BeamScreen(
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
 
     var pdfError by remember { mutableStateOf<String?>(null) }
+    var dxfError by remember { mutableStateOf<String?>(null) }
     // ... existing state vars ...
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -299,6 +300,21 @@ fun BeamScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }
+
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.exportToDxf(context) { file ->
+                                    if (file == null) dxfError = "DXF export failed" else dxfError = null
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                     }
                 }
 
@@ -336,7 +352,15 @@ fun BeamScreen(
                                 topRebarCount = res.reinforcementTop.numBars,
                                 appliedMoment = res.appliedMoment,
                                 appliedShear = res.appliedShear,
-                                utilizationRatio = res.utilizationRatio
+                                utilizationRatio = res.utilizationRatio,
+                                resistingMoment = res.momentCapacity,
+                                concreteShearCapacity = res.shearCapacity,
+                                requiredAs = 0.0, // TODO: add to BeamResult
+                                providedAs = 0.0, // TODO: add to BeamResult
+                                effectiveDepth = 0.0, // TODO: add to BeamResult
+                                steelRatio = res.steelRatio,
+                                fcu = fcu.toDoubleOrNull() ?: 25.0,
+                                fy = fy.toDoubleOrNull() ?: 360.0
                             )
                         }
                     )

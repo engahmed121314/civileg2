@@ -317,6 +317,16 @@ fun TankScreen(
 
                         Button(
                             onClick = { showSaveDialog = true },
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -357,6 +367,14 @@ fun TankScreen(
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                                 viewMode = tankViewMode,
+                                wallMoment = res.mu,
+                                baseMoment = 0.0, // TODO: add to TankResult
+                                hoopTension = 0.0, // TODO: add to TankResult
+                                shearCheck = 0.0, // TODO: add to TankResult
+                                slidingFactor = 0.0, // TODO: add to TankResult
+                                isSafe = res.isSafe,
+                                fcu = fcu.toDoubleOrNull() ?: 25.0,
+                                fy = fy.toDoubleOrNull() ?: 360.0,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

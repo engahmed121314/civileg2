@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.DxfExportEngine
+import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -277,5 +279,35 @@ class ColumnViewModel @Inject constructor(
 
     fun reset() {
         _uiState.value = ColumnUiState()
+    }
+
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit) {
+        val state = _uiState.value
+        val res = state.result ?: return
+        _uiState.update { it.copy(isExporting = true) }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val h = state.height.toDoubleOrNull() ?: 3.0
+                val fileName = "Column_Drawing_${System.currentTimeMillis()}.dxf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
+                val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
+                val fyVal = state.fy.toDoubleOrNull() ?: 400.0
+                val dxfContent = DxfExportEngine.generateColumnDxf(res, h, fcuVal, fyVal)
+                file.writeText(dxfContent)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiState.update { it.copy(isExporting = false) }
+                    ExportUtils.openDxf(context, file)
+                    onComplete(file)
+                }
+            } catch (e: Throwable) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiState.update { it.copy(isExporting = false, errors = listOf("DXF Error: ${e.message}")) }
+                    onComplete(null)
+                }
+            }
+        }
     }
 }

@@ -328,6 +328,16 @@ fun ColumnScreen(
 
                         Button(
                             onClick = { showSaveDialog = true },
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !uiState.isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -360,6 +370,13 @@ fun ColumnScreen(
                                 cover = 40.0, // standard clear cover for columns
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
+                                axialLoad = result.appliedAxial,
+                                utilizationRatio = result.utilizationRatio,
+                                requiredAs = result.minReinforcementArea,
+                                providedAs = result.reinforcementArea,
+                                slendernessRatio = result.slenderness,
+                                fcu = uiState.fcu.toDoubleOrNull() ?: 25.0,
+                                fy = uiState.fy.toDoubleOrNull() ?: 360.0,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

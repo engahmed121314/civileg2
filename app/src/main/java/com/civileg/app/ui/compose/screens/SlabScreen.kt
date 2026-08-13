@@ -90,6 +90,16 @@ fun SlabScreen(
                 actions = {
                     if (result != null) {
                         IconButton(onClick = { showSaveDialog = true }) {
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                             Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save_to_project), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -396,7 +406,14 @@ fun SlabScreen(
                                 fcu = fcu.toDoubleOrNull() ?: 25.0,
                                 fy = fy.toDoubleOrNull() ?: 360.0,
                                 isSafe = res.isSafe,
-                                utilizationRatio = res.utilizationRatio
+                                utilizationRatio = res.utilizationRatio,
+                                requiredAsX = 0.0, // TODO: add to SlabResult
+                                providedAsX = 0.0, // TODO: add to SlabResult
+                                requiredAsY = 0.0, // TODO: add to SlabResult
+                                providedAsY = 0.0, // TODO: add to SlabResult
+                                effectiveDepthX = 0.0, // TODO: add to SlabResult
+                                effectiveDepthY = 0.0, // TODO: add to SlabResult
+                                shearCheck = 0.0 // TODO: add to SlabResult
                             )
                         }
                     )

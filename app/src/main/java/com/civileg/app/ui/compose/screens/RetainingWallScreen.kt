@@ -92,6 +92,16 @@ fun RetainingWallScreen(
                         }
                     }
                     IconButton(onClick = { showSaveDialog = true }, enabled = result != null) {
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                         Icon(Icons.Default.Save, contentDescription = "Save")
                     }
                 }
@@ -319,6 +329,13 @@ fun RetainingWallScreen(
                             fsSliding = res.factorOfSafetySliding,
                             maxBearingPressure = res.maxBearingPressure,
                             allowableBearingPressure = 200.0,
+                            activePressureCoeff = res.ka,
+                            stemMoment = res.muStem,
+                            heelMoment = 0.0, // TODO: add to RetainingWallResult
+                            toeMoment = 0.0, // TODO: add to RetainingWallResult
+                            isSafe = res.isSafe,
+                            fcu = fcu.toDoubleOrNull() ?: 25.0,
+                            fy = fy.toDoubleOrNull() ?: 360.0,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
