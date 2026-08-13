@@ -109,6 +109,9 @@ fun ProfessionalBeamDrawing(
     hasTopSteel: Boolean = false,
     topRebarDia: Double = 0.0,
     topRebarCount: Int = 0,
+    appliedMoment: Double = 0.0,    // Mu (kN.m)
+    appliedShear: Double = 0.0,     // Vu (kN)
+    utilizationRatio: Double = 0.0,  // UR
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -219,6 +222,42 @@ fun ProfessionalBeamDrawing(
             topRebarDia = topRebarDia, topRebarCount = topRebarCount,
             developmentLength = developmentLength
         )
+
+        // ── Design Values Overlay (top-right corner) ──
+        if (appliedMoment > 0 || appliedShear > 0 || utilizationRatio > 0) {
+            val boxW = 160f
+            val boxH = if (appliedMoment > 0 && appliedShear > 0) 72f else 48f
+            val boxLeft = cw - boxW - 12f
+            val boxTop = 12f
+
+            drawRoundRect(
+                color = Color(0xCC1A1A2E),
+                topLeft = Offset(boxLeft, boxTop),
+                size = Size(boxW, boxH),
+                cornerRadius = CornerRadius(8f)
+            )
+            drawRoundRect(
+                color = Color(0xFF4A90D9).copy(alpha = 0.5f),
+                topLeft = Offset(boxLeft, boxTop),
+                size = Size(boxW, boxH),
+                cornerRadius = CornerRadius(8f),
+                style = Stroke(1f)
+            )
+
+            var ty = boxTop + 18f
+            if (appliedMoment > 0) {
+                drawTextAnnotated("Mu = ${"%.1f".format(appliedMoment)} kN.m", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += 20f
+            }
+            if (appliedShear > 0) {
+                drawTextAnnotated("Vu = ${"%.1f".format(appliedShear)} kN", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+                ty += 20f
+            }
+            if (utilizationRatio > 0) {
+                val urColor = if (utilizationRatio <= 1.0f) Color(0xFF2ECC71) else Color(0xFFE74C3C)
+                drawTextAnnotated("UR = ${"%.2f".format(utilizationRatio)}", boxLeft + 10f, ty, urColor, 14f, bold = true)
+            }
+        }
     }
 }
 

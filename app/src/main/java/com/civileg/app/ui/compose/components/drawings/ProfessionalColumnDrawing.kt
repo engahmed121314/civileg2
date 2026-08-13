@@ -79,6 +79,9 @@ fun ProfessionalColumnDrawing(
     sectionType: String = "Rectangular",
     interactionPoints: List<Pair<Double, Double>> = emptyList(),
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
+    appliedAxial: Double = 0.0,       // Pu (kN)
+    appliedMoment: Double = 0.0,      // Mu (kN.m)
+    utilizationRatio: Double = 0.0,   // UR
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
@@ -114,6 +117,50 @@ fun ProfessionalColumnDrawing(
         // 6. Reinforcement Table (bottom)
         drawReinforcementTable(16f, H - 100f, W - 32f, 90f,
             longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
+
+        // ── Design Values Overlay (top-right) ──
+        if (appliedAxial > 0 || appliedMoment > 0 || utilizationRatio > 0) {
+            val boxW = 170f
+            val boxH = if (appliedAxial > 0 && appliedMoment > 0) 72f else 48f
+            val boxLeft = W - boxW - 8f
+            val boxTop = 8f
+
+            drawRoundRect(
+                color = Color(0xCC1A1A2E),
+                topLeft = Offset(boxLeft, boxTop),
+                size = Size(boxW, boxH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f)
+            )
+            drawRoundRect(
+                color = Color(0xFF4A90D9).copy(alpha = 0.5f),
+                topLeft = Offset(boxLeft, boxTop),
+                size = Size(boxW, boxH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f),
+                style = Stroke(1f)
+            )
+
+            val labelPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = 13f
+                isAntiAlias = true
+                isFakeBoldText = true
+            }
+            var ty = boxTop + 18f
+            if (appliedAxial > 0) {
+                drawContext.canvas.nativeCanvas.drawText("Pu = ${"%.0f".format(appliedAxial)} kN", boxLeft + 10f, ty, labelPaint)
+                ty += 20f
+            }
+            if (appliedMoment > 0) {
+                drawContext.canvas.nativeCanvas.drawText("Mu = ${"%.1f".format(appliedMoment)} kN.m", boxLeft + 10f, ty, labelPaint)
+                ty += 20f
+            }
+            if (utilizationRatio > 0) {
+                val urColorInt = if (utilizationRatio <= 1.0) 0xFF2ECC71.toInt() else 0xFFE74C3C.toInt()
+                labelPaint.color = urColorInt
+                labelPaint.textSize = 14f
+                drawContext.canvas.nativeCanvas.drawText("UR = ${"%.2f".format(utilizationRatio)}", boxLeft + 10f, ty, labelPaint)
+            }
+        }
     }
 }
 

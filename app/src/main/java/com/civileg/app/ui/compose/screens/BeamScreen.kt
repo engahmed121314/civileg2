@@ -333,7 +333,10 @@ fun BeamScreen(
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),
-                                topRebarCount = res.reinforcementTop.numBars
+                                topRebarCount = res.reinforcementTop.numBars,
+                                appliedMoment = res.appliedMoment,
+                                appliedShear = res.appliedShear,
+                                utilizationRatio = res.utilizationRatio
                             )
                         }
                     )
