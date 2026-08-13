@@ -51,6 +51,8 @@ class SteelViewModel @Inject constructor(
 
     val sectionLibrary: Map<String, List<SteelSectionType>> = calculatorEngine.getSteelSectionLibrary()
 
+    val isArabic: Boolean get() = settingsManager.language == "ar"
+
     private val _searchResults = MutableLiveData<List<SteelSectionType>>()
     val searchResults: LiveData<List<SteelSectionType>> = _searchResults
 

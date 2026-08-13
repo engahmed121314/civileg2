@@ -2333,6 +2333,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             endPlateThickness = endPlateThk,
                             hasStiffener = hasStiff,
                             weldSize = weldSz,
+                            isArabic = viewModel.isArabic,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
