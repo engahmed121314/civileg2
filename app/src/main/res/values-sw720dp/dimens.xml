@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dimensions for Large Tablets (minimum 720dp width) — 10" tablets -->
+<resources>
+    <!-- Spacing -->
+    <dimen name="spacing_xs">8dp</dimen>
+    <dimen name="spacing_s">12dp</dimen>
+    <dimen name="spacing_m">24dp</dimen>
+    <dimen name="spacing_l">40dp</dimen>
+    <dimen name="spacing_xl">56dp</dimen>
+    <dimen name="spacing_xxl">72dp</dimen>
+
+    <!-- Text Sizes -->
+    <dimen name="text_size_xs">14sp</dimen>
+    <dimen name="text_size_s">16sp</dimen>
+    <dimen name="text_size_m">20sp</dimen>
+    <dimen name="text_size_l">24sp</dimen>
+    <dimen name="text_size_xl">32sp</dimen>
+    <dimen name="text_size_xxl">40sp</dimen>
+
+    <!-- Card Properties -->
+    <dimen name="card_radius">20dp</dimen>
+    <dimen name="card_elevation">10dp</dimen>
+    <dimen name="card_margin">20dp</dimen>
+
+    <!-- Button Properties -->
+    <dimen name="button_radius">20dp</dimen>
+    <dimen name="button_height">56dp</dimen>
+    <dimen name="button_padding_horizontal">40dp</dimen>
+    <dimen name="button_padding_vertical">18dp</dimen>
+
+    <!-- Input Fields -->
+    <dimen name="input_radius">14dp</dimen>
+    <dimen name="input_height">56dp</dimen>
+    <dimen name="input_padding">20dp</dimen>
+
+    <!-- Icons -->
+    <dimen name="icon_size_small">36dp</dimen>
+    <dimen name="icon_size_medium">48dp</dimen>
+    <dimen name="icon_size_large">56dp</dimen>
+    <dimen name="icon_size_xlarge">64dp</dimen>
+
+    <!-- Drawing Area — much larger on 10" tablets -->
+    <dimen name="drawing_area_height">500dp</dimen>
+    <dimen name="drawing_area_width">800dp</dimen>
+
+    <!-- Grid and List -->
+    <dimen name="grid_columns">4</dimen>
+    <dimen name="grid_spacing">20dp</dimen>
+    <dimen name="list_item_height">88dp</dimen>
+
+    <!-- Form Layout — wider for side-by-side on large tablets -->
+    <dimen name="form_max_width">900dp</dimen>
+    <dimen name="form_columns">3</dimen>
+
+    <!-- Layout -->
+    <dimen name="sidebar_width">320dp</dimen>
+    <dimen name="content_area_max_width">1200dp</dimen>
+    <dimen name="divider_height">1dp</dimen>
+    <dimen name="divider_margin">20dp</dimen>
+</resources>

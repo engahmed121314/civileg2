@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network permission — required for future API integrations -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Storage permissions for PDF/Excel export (scoped to SDK 32 and below) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Modern scoped storage for SDK 33+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- Security: prevent screen capture of sensitive design data -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Support all screen sizes: phones, tablets, foldables -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:resizeableActivity="true"
+        android:anyDensity="true"
+        android:requiresSmallestWidthDp="320" />
+
+    <application
+        android:name=".CivilEGApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CivilEg"
+        android:forceDarkAllowed="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="35">
+
+        <!-- Splash Screen — Single Launcher Entry Point -->
+        <activity
+            android:name=".ui.splash.SplashActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Main Activity — Internal only -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <!-- Design Module Activities — All internal (exported=false) -->
+        <activity
+            android:name=".ui.column.ColumnInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.column.ColumnResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".ui.slab.SlabInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.slab.SlabResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".ui.beam.BeamInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.beam.BeamResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".ui.stairs.StairInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.stairs.StairResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".ui.retaining.RetainingWallInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.retaining.RetainingWallResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".ui.watertank.TankInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.watertank.TankResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <!-- Steel warehouse (if needed in future, add Activity class first) -->
+
+        <!-- FileProvider — Restricted to exports directory only -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
+        <!-- Google Play Services version — auto-managed by play-services-basement -->
+
+        <!-- Developer Contact Metadata -->
+        <meta-data
+            android:name="com.civileg.app.developer.name"
+            android:value="Eng. Ahmed Magdy" />
+        <meta-data
+            android:name="com.civileg.app.developer.email"
+            android:value="eng.ahmedmagdy121314@gmail.com" />
+        <meta-data
+            android:name="com.civileg.app.developer.phone"
+            android:value="+201012628353" />
+        <meta-data
+            android:name="com.civileg.app.developer.copyright"
+            android:value="Copyright (c) 2024-2025 Eng. Ahmed Magdy. All rights reserved." />
+
+        <!-- Google AdMob — App ID (REPLACE with your real AdMob App ID before release) -->
+        <!-- Get yours at: https://admob.google.com/home/ → Add App → Copy App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+        <!-- Delay app measurement until user consent (GDPR/UCMP compliance) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+
+    </application>
+
+</manifest>

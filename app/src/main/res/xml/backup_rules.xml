@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Civil Engineer Pro - Restrictive backup rules for security -->
+<!-- Developer: Eng. Ahmed Magdy -->
+<full-backup-content>
+    <!-- Only allow project exports to be backed up -->
+    <include domain="external" path="CivilEngineerPro/exports/"/>
+</full-backup-content>

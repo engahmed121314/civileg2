@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dimensions for Landscape Orientation -->
+<resources>
+    <!-- Spacing -->
+    <dimen name="spacing_xs">6dp</dimen>
+    <dimen name="spacing_s">8dp</dimen>
+    <dimen name="spacing_m">12dp</dimen>
+    <dimen name="spacing_l">16dp</dimen>
+    <dimen name="spacing_xl">24dp</dimen>
+
+    <!-- Text Sizes (Slightly smaller for landscape) -->
+    <dimen name="text_size_xs">11sp</dimen>
+    <dimen name="text_size_s">12sp</dimen>
+    <dimen name="text_size_m">14sp</dimen>
+    <dimen name="text_size_l">16sp</dimen>
+    <dimen name="text_size_xl">18sp</dimen>
+    <dimen name="text_size_xxl">22sp</dimen>
+
+    <!-- Card Properties -->
+    <dimen name="card_radius">8dp</dimen>
+    <dimen name="card_elevation">2dp</dimen>
+    <dimen name="card_margin">8dp</dimen>
+
+    <!-- Button Properties -->
+    <dimen name="button_radius">8dp</dimen>
+    <dimen name="button_height">36dp</dimen>
+    <dimen name="button_padding_horizontal">16dp</dimen>
+    <dimen name="button_padding_vertical">8dp</dimen>
+
+    <!-- Input Fields -->
+    <dimen name="input_radius">6dp</dimen>
+    <dimen name="input_height">36dp</dimen>
+    <dimen name="input_padding">8dp</dimen>
+
+    <!-- Icons -->
+    <dimen name="icon_size_small">20dp</dimen>
+    <dimen name="icon_size_medium">24dp</dimen>
+    <dimen name="icon_size_large">28dp</dimen>
+    <dimen name="icon_size_xlarge">32dp</dimen>
+
+    <!-- Drawing Area -->
+    <dimen name="drawing_area_height">250dp</dimen>
+    <dimen name="drawing_area_width">400dp</dimen>
+
+    <!-- Grid and List -->
+    <dimen name="grid_columns">2</dimen>
+    <dimen name="grid_spacing">8dp</dimen>
+    <dimen name="list_item_height">50dp</dimen>
+
+    <!-- Form Layout -->
+    <dimen name="form_max_width">900dp</dimen>
+    <dimen name="form_columns">2</dimen>
+
+    <!-- Additional Landscape Specific -->
+    <dimen name="sidebar_width">0dp</dimen>
+    <dimen name="content_area_max_width">1200dp</dimen>
+    <dimen name="divider_height">0.5dp</dimen>
+    <dimen name="divider_margin">8dp</dimen>
+</resources>
+

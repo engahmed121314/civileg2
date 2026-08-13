@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Steel I-Beam cross section -->
+    <!-- Top flange -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,4h18v3H3z"/>
+    <!-- Web -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M9,7h6v10H9z"/>
+    <!-- Bottom flange -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,17h18v3H3z"/>
+    <!-- Section lines on web (hatching for steel) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.3"
+        android:strokeLineCap="round"
+        android:pathData="M10,8.5h4M10,10h4M10,11.5h4M10,13h4M10,14.5h4"/>
+    <!-- Dimension lines -->
+    <!-- Height -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.25"
+        android:pathData="M21,4v16M20.5,4h1M20.5,20h1"/>
+    <!-- Flange width -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.25"
+        android:pathData="M3,21.5h18M3,21v1M21,21v1"/>
+    <!-- Center mark -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M11.5,10.5h1M12,10v1"/>
+</vector>

@@ -1,0 +1,1254 @@
+<resources>
+    <string name="app_name">Civil Engineer Pro</string>
+    <string name="stirrups_distribution">Detailed Stirrup Distribution</string>
+    <string name="app_subtitle">Your Structural Engineering Pro</string>
+
+    <string name="disclaimer_title">⚠️ Important Notice</string>
+    <string name="disclaimer_text">
+        This application is for educational and preliminary design purposes only.
+        All calculations should be verified by a licensed structural engineer.
+        The developer is not responsible for any errors or damages resulting from the use of this application.
+    </string>
+    <string name="accept">I Understand</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_design">Design Tools</string>
+    <string name="nav_projects">Projects</string>
+    <string name="nav_quantity">BOQ &amp; Estimates</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_gallery">Reference Gallery</string>
+    <string name="nav_more">More Modules</string>
+    <string name="nav_tools">Utilities</string>
+    <string name="gallery">Gallery</string>
+
+    <!-- Design Modules -->
+    <string name="beam_design">Beam Design</string>
+    <string name="column_design">Column Design</string>
+    <string name="footing_design">Footing Design</string>
+    <string name="slab_design">Slab Design</string>
+    <string name="stairs_design">Staircase Design</string>
+    <string name="retaining_wall">Retaining Wall</string>
+    <string name="water_tank">Water Tank</string>
+    <string name="pile_foundation">Pile Foundation</string>
+    <string name="seismic_analysis">Seismic Analysis</string>
+
+    <!-- Management -->
+    <string name="quantity_surveying">Quantity Surveying</string>
+    <string name="project_costing">Cost Analysis</string>
+    <string name="unit_converter">Unit Converter</string>
+
+    <!-- Design Codes -->
+    <string name="code_egyptian">Egyptian Code (ECP)</string>
+    <string name="code_aci">ACI 318 (USA)</string>
+    <string name="code_saudi">SBC (Saudi Code)</string>
+    <string name="design_code">Design Code</string>
+
+    <!-- Common Actions -->
+    <string name="calculate">Analyze &amp; Calculate</string>
+    <string name="reset">Clear Inputs</string>
+    <string name="export_pdf">Export Design Report (PDF)</string>
+    <string name="save_to_project">Save to Project Vault</string>
+    <string name="save_design">Save Design</string>
+    <string name="export_cad_drawing">Export to AutoCAD (DXF)</string>
+    <string name="add_to_boq">Add to BOQ List</string>
+    <string name="share">Share Report</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Results & Status -->
+    <string name="results_summary">Analysis Summary</string>
+    <string name="results">Results</string>
+    <string name="input_parameters">Input Parameters</string>
+    <string name="status_safe">DESIGN STATUS: SAFE</string>
+    <string name="status_unsafe">DESIGN STATUS: UNSAFE</string>
+    <string name="economic_selection">Optimal Selection</string>
+    <string name="calculation_complete">Calculation completed successfully</string>
+
+    <!-- Professional Labels -->
+    <string name="concrete_vol">Total Concrete Volume</string>
+    <string name="steel_weight">Total Steel Weight</string>
+    <string name="est_total_cost">Estimated Project Cost</string>
+    <string name="design_moment">Ult. Design Moment (Mu)</string>
+    <string name="axial_capacity">Axial Capacity (ΦPn)</string>
+    <string name="moment_capacity">Moment Capacity</string>
+    <string name="shear_capacity">Shear Capacity</string>
+    <string name="required_reinforcement">Required Reinforcement</string>
+    <string name="bottom_steel">Bottom Steel</string>
+    <string name="top_steel">Top Steel</string>
+    <string name="stirrups">Stirrups</string>
+    <string name="column_dimensions">Column Dimensions</string>
+    <string name="beam_dimensions">Beam Dimensions</string>
+    <string name="slab_dimensions">Slab Dimensions</string>
+    <string name="material_properties">Material Properties</string>
+    <string name="loading">Loading</string>
+    <string name="cross_section_view">Cross-Section View</string>
+    <string name="longitudinal_bars">Longitudinal Bars</string>
+    <string name="ties">Ties</string>
+    <string name="column_type">Column Type</string>
+    <string name="rectangular">Rectangular</string>
+    <string name="circular">Circular</string>
+
+    <!-- Dimension Labels -->
+    <string name="width_label">Width (b):</string>
+    <string name="height_label">Height (h):</string>
+    <string name="length_label">Length (L):</string>
+    <string name="cover_label">Cover (c):</string>
+    <string name="diameter_label">Diameter (D):</string>
+    <string name="concrete_strength_label">fc\' (MPa):</string>
+    <string name="steel_strength_label">fy (MPa):</string>
+    <string name="dead_load_label">Dead Load:</string>
+    <string name="live_load_label">Live Load:</string>
+    <string name="site_layout_title">Site Layout &amp; CAD</string>
+    <string name="site_layout_sub">Survey Points, Axes, and Advanced AutoCAD Export</string>
+    <string name="axial_load_label">Axial Load (Pu):</string>
+    <string name="moment_x_label">Moment X:</string>
+    <string name="moment_y_label">Moment Y:</string>
+    <string name="span_x_label">Span Lx (m):</string>
+    <string name="span_y_label">Span Ly (m):</string>
+    <string name="thickness_label">Thickness (t):</string>
+    <string name="bottom_reinforcement">Bottom Reinforcement</string>
+    <string name="top_reinforcement">Top Reinforcement</string>
+
+    <!-- Hints -->
+    <string name="beam_width_hint">Width in mm</string>
+    <string name="beam_height_hint">Height in mm</string>
+    <string name="beam_length_hint">Length in mm</string>
+    <string name="concrete_cover_hint">Cover in mm</string>
+    <string name="concrete_strength_hint">fcu/fc\' in MPa</string>
+    <string name="steel_strength_hint">fy in MPa</string>
+    <string name="dead_load_hint">DL in kN/m</string>
+    <string name="live_load_hint">LL in kN/m</string>
+    <string name="column_width_hint">Width in mm</string>
+    <string name="column_height_hint">Height in mm</string>
+    <string name="column_diameter_hint">Diameter in mm</string>
+    <string name="column_length_hint">Length in mm</string>
+    <string name="axial_load_hint">Load in kN</string>
+    <string name="moment_x_hint">Mx in kNm</string>
+    <string name="moment_y_hint">My in kNm</string>
+
+    <!-- Slab Types -->
+    <string name="solid_slab">Solid Slab</string>
+    <string name="flat_slab">Flat Slab</string>
+    <string name="waffle_slab">Waffle Slab</string>
+    <string name="ribbed_slab">Ribbed Slab</string>
+    <string name="hollow_block">Hollow Block</string>
+
+    <!-- Language & Theme -->
+    <string name="language_selection">Language / اللغة</string>
+    <string name="dark_mode">Night Mode</string>
+
+    <!-- User Profile Placeholder -->
+    <string name="user_name">Pro Engineer</string>
+    <string name="user_role">Senior Structural Designer</string>
+    <string name="search_hint">Find tools, formulas, or projects...</string>
+
+    <!-- Error Messages -->
+    <string name="error">Error</string>
+    <string name="check_inputs">Please check your input values</string>
+    <string name="save_success">Saved successfully</string>
+
+    <!-- New Strings from User Request -->
+    <string name="height_m">Height (m)</string>
+    <string name="depth_m">Depth (m)</string>
+    <string name="depth_value">Depth: %.2f m</string>
+    <string name="width_value">Width: %.2f m</string>
+    <string name="column_reinforcement">Main Bars: %d mm @ %.1f cm (%d bars)</string>
+    <string name="ties_reinforcement">Ties: %d mm @ %.1f cm</string>
+    <string name="ties_diameter">Tie Diameter (mm)</string>
+    <string name="ties_spacing">Tie Spacing (cm)</string>
+    <string name="concrete_volume">Concrete Volume: %.2f m³</string>
+    <string name="steel_weight_val">Steel Weight: %.1f kg</string>
+    <string name="cost_value">Cost: %.2f</string>
+    <string name="error_no_project">No project selected!</string>
+    <string name="enter_all_values">Please enter all values</string>
+    <string name="pdf_saved">PDF report saved successfully</string>
+    <string name="pdf_failed">Failed to save PDF</string>
+    <string name="csv_saved">Excel/CSV file saved successfully</string>
+    <string name="csv_failed">Failed to save Excel/CSV</string>
+    <string name="export_excel">Export Excel</string>
+    <string name="load">Load (kN)</string>
+    <string name="fcu">fcu (MPa)</string>
+    <string name="fy">fy (MPa)</string>
+    <string name="col_width">Width (m)</string>
+    <string name="col_depth">Depth (m)</string>
+    <string name="width">Width (m)</string>
+    <string name="rebar_diameter">Rebar Diameter (mm)</string>
+    <string name="spacing">Spacing (cm)</string>
+    <string name="num_bars">Number of Bars</string>
+    <string name="cost">Cost</string>
+    <string name="select_design">Select Design</string>
+    <string name="footing">Footing</string>
+    <string name="column">Column</string>
+    <string name="slab">Slab</string>
+    <string name="beam">Beam</string>
+    <string name="stair">Stair</string>
+    <string name="retaining_wall_item">Retaining Wall</string>
+    <string name="tank">Tank</string>
+
+    <!-- Tank Types -->
+    <string name="tank_type">Tank Type</string>
+    <string name="rectangular_tank">Rectangular Tank</string>
+    <string name="circular_tank">Circular Tank</string>
+    <string name="elevated_tank">Elevated Tank</string>
+    <string name="underground_tank">Underground Tank</string>
+    <string name="diameter_m">Diameter (m)</string>
+
+    <!-- Tank Results -->
+    <string name="tank_capacity">Capacity: %.2f m³</string>
+    <string name="wall_thickness_label">Wall Thickness: %.0f mm</string>
+    <string name="base_thickness_label">Base Thickness: %.0f mm</string>
+    <string name="reinforcement_label">Reinforcement: %s</string>
+
+    <!-- Stair Types -->
+    <string name="stair_type">Staircase Type</string>
+    <string name="single_flight">Single Flight</string>
+    <string name="double_flight">Double Flight (Half Landing)</string>
+    <string name="cantilever_stair">Cantilever Stair</string>
+    <string name="landing_width">Landing Width (m)</string>
+
+    <string name="fcu_label">Concrete Strength (fcu)</string>
+    <string name="fy_label">Steel Strength (fy)</string>
+    <string name="data_sheet_row">%1$s: %2$s</string>
+    <string name="reinforcement_format">%1$dØ%2$d</string>
+    <string name="waste_tons_format">Estimated Steel Waste: %.3f Tons</string>
+    <string name="pdf_beam_report_title">Beam Design Report</string>
+
+    <!-- Developer & Legal Information -->
+    <string name="developer_name">Eng. Ahmed Magdy</string>
+    <string name="developer_email">eng.ahmedmagdy121314@gmail.com</string>
+    <string name="developer_phone">+20 101 262 8353</string>
+    <string name="developer_copyright">Copyright \u00a9 2024–2025 Eng. Ahmed Magdy. All rights reserved.</string>
+    <string name="app_version">Version %1$s (Build %2$d)</string>
+    <string name="about_developer">About Developer</string>
+    <string name="about_developer_text">Civil Engineer Pro is developed by Eng. Ahmed Magdy, a structural engineer specializing in concrete and steel design.\n\nContact:\nEmail: eng.ahmedmagdy121314@gmail.com\nPhone: +20 101 262 8353</string>
+    <string name="security_warning_root">This device appears to be rooted. For security reasons, some features may be limited.</string>
+    <string name="security_warning_tamper">App integrity check failed. Please reinstall from the official source.</string>
+    <string name="legal_disclaimer_full">DISCLAIMER: This application is a professional tool for educational and preliminary design purposes only. All structural calculations, designs, and outputs must be verified by a licensed structural engineer before any construction use. The developer (Eng. Ahmed Magdy) assumes no liability for errors, damages, or any consequences resulting from the use of this application. Use at your own risk.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Localization System – Navigation & Tabs -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="nav_design_hub">Design Hub</string>
+    <string name="nav_steel">Steel Design</string>
+    <string name="nav_drawer_title">Main Menu</string>
+    <string name="nav_inventory">Site Inventory</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Home Screen – Design Modules -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="home_beam">Beams</string>
+    <string name="home_beam_sub">Concrete Beam Design</string>
+    <string name="home_column">Columns</string>
+    <string name="home_column_sub">Concrete Column Design</string>
+    <string name="home_slab">Slabs</string>
+    <string name="home_slab_sub">Solid &amp; Ribbed Slabs</string>
+    <string name="home_footing">Footings</string>
+    <string name="home_footing_sub">Isolated Footing Design</string>
+    <string name="home_tank">Tanks</string>
+    <string name="home_tank_sub">Water Tanks (Above/Below Ground)</string>
+    <string name="home_retaining_wall">Ret. Walls</string>
+    <string name="home_retaining_wall_sub">Retaining Walls &amp; Soil Stability</string>
+    <string name="home_stair">Staircases</string>
+    <string name="home_stair_sub">Concrete Staircase Design</string>
+    <string name="home_steel">Steel Structures</string>
+    <string name="home_steel_sub">Connection &amp; Member Design</string>
+    <string name="home_seismic">Seismic</string>
+    <string name="home_seismic_sub">Seismic &amp; Wind Forces</string>
+    <string name="home_frame">Frame Analysis</string>
+    <string name="home_frame_sub">2D Structural Analysis &amp; Design</string>
+
+    <!-- Home Screen – Quick Tools -->
+    <string name="home_calculator">Calculator</string>
+    <string name="home_calculator_sub">Scientific Calculator</string>
+    <string name="home_unit_converter">Unit Converter</string>
+    <string name="home_unit_converter_sub">Unit Converter</string>
+    <string name="home_steel_tables">Steel Tables</string>
+    <string name="home_steel_tables_sub">Steel Rebar Tables</string>
+    <string name="home_boq">Bill of Quantities</string>
+    <string name="home_boq_sub">Quantity Surveying</string>
+    <string name="home_inventory">Site Inventory</string>
+    <string name="home_inventory_sub">Site Inventory</string>
+    <string name="home_water_level">Water Level</string>
+    <string name="home_water_level_sub">RL &amp; HI Level Calculations</string>
+
+    <!-- Home Screen – Header & Sections -->
+    <string name="home_welcome">Civil Engineer</string>
+    <string name="home_tagline">Professional multi-code engineering design</string>
+    <string name="home_cta">Start your next structural project with precision and professionalism\nSupports Egyptian Code ECP 203, American ACI 318, and Saudi SBC 304</string>
+    <string name="home_version_badge">v2.0 — Professional Edition</string>
+    <string name="home_stat_saved">Saved Designs</string>
+    <string name="home_stat_codes">Codes Used</string>
+    <string name="home_stat_types">Element Types</string>
+    <string name="home_section_design_title">Structural Design</string>
+    <string name="home_section_design_sub">9 integrated design modules</string>
+    <string name="home_section_tools_title">Quick Tools</string>
+    <string name="home_section_tools_sub">Utilities for civil engineers</string>
+    <string name="home_section_recent_title">Recent Designs</string>
+    <string name="home_section_recent_sub">Your recently saved designs</string>
+    <string name="home_no_designs">No saved designs</string>
+    <string name="home_no_designs_sub">Start your first design and it will appear here</string>
+    <string name="home_footer_title">Professional Civil Engineer Portfolio</string>
+    <string name="home_footer_team">Developed by CivilEG Team — Specialized Software Engineering</string>
+
+    <!-- Design Type Labels (for recent designs) -->
+    <string name="design_type_beam">Beams</string>
+    <string name="design_type_column">Columns</string>
+    <string name="design_type_slab">Slabs</string>
+    <string name="design_type_footing">Footings</string>
+    <string name="design_type_staircase">Staircases</string>
+    <string name="design_type_retaining_wall">Ret. Walls</string>
+    <string name="design_type_water_tank">Tanks</string>
+    <string name="design_type_seismic">Seismic</string>
+    <string name="design_type_steel_member">Steel</string>
+    <string name="design_type_pile">Piles</string>
+    <string name="design_type_steel_warehouse">Steel Warehouse</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Settings Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">App Language</string>
+    <string name="settings_design_code">Default Design Code</string>
+    <string name="settings_unit_system">Unit System</string>
+    <string name="settings_material_prices">Material Prices</string>
+    <string name="settings_currency">Default Currency</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_unit_si">SI System (mm, kN, MPa)</string>
+    <string name="settings_unit_imperial">Imperial System (in, kip, psi)</string>
+    <string name="settings_price_concrete">Concrete price (per m³)</string>
+    <string name="settings_price_steel">Steel price (per ton)</string>
+    <string name="settings_price_formwork">Formwork price (per m²)</string>
+    <string name="settings_currency_egp">Egyptian Pound</string>
+    <string name="settings_currency_sar">Saudi Riyal</string>
+    <string name="settings_currency_usd">US Dollar</string>
+    <string name="settings_currency_aed">UAE Dirham</string>
+    <string name="settings_supported_codes">Supported Codes</string>
+    <string name="settings_disclaimer_notice">Notice: This application is for educational and preliminary design purposes only. All calculations should be verified by a licensed structural engineer.</string>
+    <string name="settings_developer_team">Developed by CivilEG Team — Specialized Software Engineering</string>
+
+    <!-- Design Codes -->
+    <string name="code_ecp">Egyptian Code ECP 203</string>
+    <string name="code_sbc">Saudi Code SBC 304</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Frame Analysis Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="frame_title">Frame Analysis &amp; Design</string>
+    <string name="frame_tab_drawing">Drawing</string>
+    <string name="frame_tab_nodes">Nodes</string>
+    <string name="frame_tab_members">Members</string>
+    <string name="frame_tab_loads">Loads</string>
+    <string name="frame_tab_results">Results</string>
+    <string name="frame_solve">Solve</string>
+    <string name="frame_info_nodes">Nodes: %d</string>
+    <string name="frame_info_members">Members: %d</string>
+    <string name="frame_info_solved">Solved ✓  |  Loads: %d</string>
+    <string name="frame_press_solve">Press \'Solve\' to start analysis</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- General -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="error_calculation">Calculation Error</string>
+    <string name="safe">Safe</string>
+    <string name="unsafe">Unsafe</string>
+    <string name="save">Save</string>
+    <string name="back">Back</string>
+    <string name="language_arabic">Arabic</string>
+    <string name="language_english">English</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Section Headers -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="hub_design_choose">Select a Design Element</string>
+    <string name="hub_tools_quick_title">Quick Engineering Tools</string>
+    <string name="hub_more_title">More</string>
+    <string name="hub_more_management">Management &amp; More Tools</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Tool Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="tool_calculator_sub">Engineering Calculations</string>
+    <string name="tool_converter_sub">Convert 7 Unit Categories</string>
+    <string name="tool_steel_tables_sub">IPE, HEA, HEB, UPN, Angles</string>
+    <string name="tool_boq_sub">Cost Estimation &amp; Feasibility</string>
+    <string name="tool_inventory_sub">Manage Steel &amp; Materials on Site</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – Design Hub Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="hub_design_tank_sub">Water Tanks</string>
+    <string name="hub_design_frame_sub">2D Structural Analysis</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Hub Screens – More Hub Card Subtitles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="more_projects_sub">Saved Designs &amp; Archive</string>
+    <string name="more_settings_sub">Default Code, Language, Units</string>
+    <string name="more_inventory_sub">Manage Steel &amp; Materials on Site</string>
+    <string name="more_frame_sub">2D Structural Analysis</string>
+    <string name="more_seismic_sub">Seismic &amp; Wind Forces</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Screen TopAppBar Titles -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="screen_beam_title">Concrete Beam Design Pro</string>
+    <string name="screen_column_title">Concrete Column Design Pro</string>
+    <string name="screen_slab_title">Slab Design Pro</string>
+    <string name="screen_footing_title">Footing Design Pro</string>
+    <string name="screen_stair_title">Staircase Design Pro</string>
+    <string name="screen_tank_title">Water Tank Design Pro</string>
+    <string name="screen_retaining_wall_title">Retaining Wall Design Pro</string>
+    <string name="screen_seismic_title">Seismic Analysis Pro</string>
+    <string name="screen_steel_title">Steel Structure Design</string>
+    <string name="screen_steel_tables_title">Steel Section Tables</string>
+    <string name="screen_boq_title">Quantity Surveying &amp; Costing Pro</string>
+    <string name="screen_calculator_title">Scientific Calculator</string>
+    <string name="screen_inventory_title">Site Inventory</string>
+    <string name="screen_water_level_title">Water Level Calculator</string>
+    <string name="screen_unit_converter_title">Engineering Unit Converter</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Common Shared Strings (Design Screens) -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="save_design_in_project">Save Design in Project</string>
+    <string name="select_project">Select Project:</string>
+    <string name="no_projects_available">No projects available. A default project will be created.</string>
+    <string name="element_name_hint">Element name (e.g.: B1)</string>
+    <string name="safe_check">Safe ✓</string>
+    <string name="unsafe_check">Unsafe ✗</string>
+    <string name="consultant_ratio">Structural Consultant: Utilization Ratio</string>
+    <string name="design_results">Design Results</string>
+    <string name="detailed_drawing">Detailed Engineering Drawing</string>
+    <string name="view_all">All</string>
+    <string name="view_section">Cross Section</string>
+    <string name="view_elevation">Elevation</string>
+    <string name="view_reinforcement">Reinforcement</string>
+    <string name="safety_checks">Code Safety Checks:</string>
+    <string name="loading_input">Applied Loads</string>
+    <string name="section_dimensions">Section Dimensions</string>
+    <string name="design_code_label">Design Code</string>
+    <string name="width_b_mm">Width b (mm)</string>
+    <string name="depth_h_mm">Depth h (mm)</string>
+    <string name="thickness_mm">Thickness (mm)</string>
+    <string name="span_m">Span (m)</string>
+    <string name="axial_load_kn">Axial Load Pu (kN)</string>
+    <string name="design_safe_ideal">Safe &amp; Economical Design ✅</string>
+    <string name="design_unsafe">Unsafe Design ❌</string>
+    <string name="design_caution">High Load (Caution) ⚠️</string>
+    <string name="design_conservative">Conservative Design (Over-reinforced) 🔵</string>
+    <string name="no_projects">No saved projects</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="close">Close</string>
+    <string name="add">Add</string>
+    <string name="confirm">Confirm</string>
+    <string name="total">Total</string>
+    <string name="quantity">Quantity</string>
+    <string name="unit_price">Unit Price</string>
+    <string name="description">Description</string>
+    <string name="name">Name</string>
+    <string name="type">Type</string>
+    <string name="value">Value</string>
+    <string name="action">Action</string>
+    <string name="search">Search</string>
+    <string name="filter">Filter</string>
+    <string name="clear_all">Clear All</string>
+    <string name="view_details">View Details</string>
+    <string name="project_name">Project Name</string>
+    <string name="create_new">Create New</string>
+    <string name="import_data">Import</string>
+    <string name="export_data">Export</string>
+    <string name="date">Date</string>
+    <string name="status">Status</string>
+    <string name="notes">Notes</string>
+    <string name="copy">Copy</string>
+    <string name="print">Print</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Steel Design Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="steel_tab_warehouses">Warehouses</string>
+    <string name="steel_tab_sections">Sections</string>
+    <string name="steel_tab_welds">Welds</string>
+    <string name="steel_tab_bolts">Bolts</string>
+    <string name="steel_tab_baseplates">Base Plates</string>
+    <string name="steel_tab_connections">Connections</string>
+    <string name="steel_warehouse_input_header">🏢 Steel Structure Design Inputs</string>
+    <string name="steel_approved_code">Approved Code</string>
+    <string name="steel_span_hint">Span (m)</string>
+    <string name="steel_length_hint">Length (m)</string>
+    <string name="steel_eave_height_hint">Eave Height (m)</string>
+    <string name="steel_ridge_height_hint">Ridge Height (m)</string>
+    <string name="steel_bay_spacing_hint">Bay Spacing (m)</string>
+    <string name="steel_floors_hint">Floors</string>
+    <string name="steel_analyze_structure">Analyze &amp; Design Structure</string>
+    <string name="steel_perspective_details">📐 Structural Perspective Details</string>
+    <string name="steel_stress_analysis">📊 Stress &amp; Load Analysis</string>
+    <string name="steel_feasibility_study">💰 Economic Feasibility Study</string>
+    <string name="steel_total_weight">Total Steel Weight</string>
+    <string name="steel_estimated_cost">Estimated Total Cost</string>
+    <string name="steel_cost_per_m2">Cost per m²</string>
+    <string name="steel_net_profit">Expected Net Profit</string>
+    <string name="steel_roi">Return on Investment (ROI)</string>
+    <string name="steel_export_pro_report">Engineering Technical Report (Pro Drawings)</string>
+    <string name="steel_analysis_results">📈 Calculation Results</string>
+    <string name="steel_section_details">🏗️ Section Details</string>
+    <string name="steel_connections">🔗 Connections</string>
+    <string name="steel_main_columns">Main Columns</string>
+    <string name="steel_rafters">Rafters</string>
+    <string name="steel_max_design_stress">Maximum Design Stresses</string>
+    <string name="steel_max_moment">Max Moment (M_max)</string>
+    <string name="steel_max_shear">Max Shear (V_max)</string>
+    <string name="steel_max_axial">Axial Load (P_max)</string>
+    <string name="steel_deflection">Deflection</string>
+    <string name="steel_safety_analysis_safe">Safety Analysis: Safe ✅</string>
+    <string name="steel_safety_analysis_unsafe">Safety Analysis: Exceeded Limits ❌</string>
+    <string name="steel_structural_perspective">Structural Perspective</string>
+    <string name="steel_front_view">Front Elevation</string>
+    <string name="steel_plan_view">Plan View</string>
+    <string name="steel_side_view">Side Elevation</string>
+    <string name="steel_3d_view">3D View</string>
+    <string name="steel_frame_analysis">Frame Structural Analysis</string>
+    <string name="steel_secondary_members">Secondary &amp; Bracing Members</string>
+    <string name="steel_purlins">Purlins</string>
+    <string name="steel_girts">Girts</string>
+    <string name="steel_bracing">Bracing</string>
+    <string name="steel_total_purlin_count">Total Purlin Count</string>
+    <string name="steel_safe">Safe ✅</string>
+    <string name="steel_fail">Failed ❌</string>
+    <string name="steel_recommendations">Design Recommendations</string>
+    <string name="steel_section_dictionary">📐 Section Dictionary &amp; Smart Analysis</string>
+    <string name="steel_design_code_metal">Steel Design Code</string>
+    <string name="steel_search_hint">Search by section number (e.g.: 300)</string>
+    <string name="steel_search_results">Search Results:</string>
+    <string name="steel_section_category">Section Category</string>
+    <string name="steel_selected_section">Selected Section</string>
+    <string name="steel_select_section">Select a section</string>
+    <string name="steel_section_properties">Section Properties:</string>
+    <string name="steel_area">Area (A)</string>
+    <string name="steel_weight_per_m">Weight (W)</string>
+    <string name="steel_height">Height (h)</string>
+    <string name="steel_flange">Flange (bf)</string>
+    <string name="steel_flange_thickness">Flange Thickness (tf)</string>
+    <string name="steel_web_thickness">Web Thickness (tw)</string>
+    <string name="steel_design_inputs">Design Inputs</string>
+    <string name="steel_analyze_section">Analyze &amp; Design Section</string>
+    <string name="steel_utilization_ratio">Utilization Ratio</string>
+    <string name="steel_section_safe">Section Safe ✅</string>
+    <string name="steel_section_unsafe">Section Unsafe ❌</string>
+    <string name="steel_drawing_title">Steel Section Drawing</string>
+    <string name="steel_drawing_all">All</string>
+    <string name="steel_drawing_elevation">Elevation</string>
+    <string name="steel_drawing_cross_section">Cross Section</string>
+    <string name="steel_drawing_connections">Connections</string>
+    <string name="steel_economy_indicator">Economy &amp; Safety Indicator</string>
+    <string name="steel_ideal_economical">Ideal &amp; Economical</string>
+    <string name="steel_unsafe_need_larger">Unsafe — Larger Section Needed</string>
+    <string name="steel_conservative_design">Conservative Design — Steel Wasted</string>
+    <string name="steel_weld_design_header">🔥 Professional Weld Connection Design</string>
+    <string name="steel_weld_size_hint">Weld Size s (mm)</string>
+    <string name="steel_weld_length_hint">Weld Length L (mm)</string>
+    <string name="steel_electrode_type">Electrode Type</string>
+    <string name="steel_calc_shear_rn">Calculate Shear Resistance (Design Rn)</string>
+    <string name="steel_weld_capacity">Weld Design Capacity:</string>
+    <string name="steel_effective_throat_area">Effective Throat Area: %s mm²</string>
+    <string name="steel_bolt_design_header">🔩 Professional Bolt Connection Design</string>
+    <string name="steel_bolt_diameter_hint">Bolt Diameter M (mm)</string>
+    <string name="steel_bolt_count_hint">Number of Bolts</string>
+    <string name="steel_bolt_grade">Bolt Grade</string>
+    <string name="steel_calc_bolt_shear">Calculate Group Shear Resistance</string>
+    <string name="steel_total_shear_rn">Total Shear Resistance (Total Rn):</string>
+    <string name="steel_single_bolt_capacity">Single Bolt Capacity: %s kN</string>
+    <string name="steel_section_area">Section Area</string>
+    <string name="steel_compression_capacity">Compression Capacity</string>
+    <string name="steel_flexural_capacity">Flexural Capacity</string>
+    <string name="steel_usage_ratio">Usage Ratio</string>
+    <string name="steel_baseplate_header">🔧 Steel Base Plate Design</string>
+    <string name="steel_column_data">Column Data</string>
+    <string name="steel_section_hint">Section (e.g.: HEB 300)</string>
+    <string name="steel_flange_width_hint">Flange Width bf (mm)</string>
+    <string name="steel_column_depth_hint">Column Depth dc (mm)</string>
+    <string name="steel_applied_loads">Applied Loads</string>
+    <string name="steel_axial_force_hint">Axial Force P (kN)</string>
+    <string name="steel_moment_hint">Moment M (kN.m) — Optional</string>
+    <string name="steel_anchor_bolt_grade">Anchor Bolt Grade</string>
+    <string name="steel_design_baseplate">Design Base Plate</string>
+    <string name="steel_design_safe">Design Safe ✅</string>
+    <string name="steel_design_unsafe_full">Design Unsafe ❌</string>
+    <string name="steel_plate_dims">Plate Dimensions (B × N)</string>
+    <string name="steel_plate_thickness">Plate Thickness tp</string>
+    <string name="steel_max_bearing">Max Bearing Pressure</string>
+    <string name="steel_concrete_capacity">Concrete Capacity</string>
+    <string name="steel_anchor_bolts">Anchor Bolts</string>
+    <string name="steel_bolt_count">Number of Bolts</string>
+    <string name="steel_bolt_dia">Bolt Diameter</string>
+    <string name="steel_bolt_spacing">Bolt Spacing</string>
+    <string name="steel_edge_distance">Edge Distance</string>
+    <string name="steel_tension_capacity_per_bolt">Tension Capacity per Bolt</string>
+    <string name="steel_embedment_length">Embedment Length</string>
+    <string name="steel_grout">Grout</string>
+    <string name="steel_grout_thickness">Grout Thickness</string>
+    <string name="steel_grout_strength">Grout Strength</string>
+    <string name="steel_ur_label">Utilization Ratio (U.R)</string>
+    <string name="steel_warnings">⚠️ Warnings:</string>
+    <string name="steel_conn_type_shear">Bolted Shear</string>
+    <string name="steel_conn_type_moment">Bolted Moment</string>
+    <string name="steel_conn_type_welded">Welded</string>
+    <string name="steel_conn_type_combined">Combined</string>
+    <string name="steel_connection_header">🔗 Structural Connection Design</string>
+    <string name="steel_connection_type">Connection Type</string>
+    <string name="steel_bolt_data">Bolt Data</string>
+    <string name="steel_bolt_diameter_mm">Bolt Diameter (mm)</string>
+    <string name="steel_bolt_count_label">Number of Bolts</string>
+    <string name="steel_bolt_spacing_mm">Bolt Spacing (mm)</string>
+    <string name="steel_edge_distance_mm">Edge Distance (mm)</string>
+    <string name="steel_bolt_pattern">Bolt Pattern</string>
+    <string name="steel_weld_data">Weld Data</string>
+    <string name="steel_weld_size_mm">Weld Size (mm)</string>
+    <string name="steel_weld_length_mm">Weld Length (mm)</string>
+    <string name="steel_applied_force_hint">Applied Force (kN)</string>
+    <string name="steel_electrode_type_label">Electrode Type</string>
+    <string name="steel_design_check_connection">Design &amp; Check Connection</string>
+    <string name="steel_bolt_result_title">Bolt Connection Result — %s</string>
+    <string name="steel_shear_per_bolt">Shear Capacity per Bolt</string>
+    <string name="steel_bearing_per_bolt">Bearing Capacity per Bolt</string>
+    <string name="steel_tension_per_bolt">Tension Capacity per Bolt</string>
+    <string name="steel_controlling_capacity">Governing Capacity</string>
+    <string name="steel_block_shear_check">Block Shear Check</string>
+    <string name="steel_block_shear_capacity">Block Shear Capacity</string>
+    <string name="steel_weld_result_title">Weld Result — %s</string>
+    <string name="steel_weld_type_label">Weld Type</string>
+    <string name="steel_weld_size_label">Weld Size</string>
+    <string name="steel_effective_length">Effective Length</string>
+    <string name="steel_throat_area">Throat Area</string>
+    <string name="steel_weld_capacity_label">Weld Capacity</string>
+    <string name="steel_elastic_stress_dist">Elastic Stress Distribution</string>
+    <string name="steel_no_pdf_reader">No PDF reader available</string>
+    <string name="steel_design_summary">Design Summary</string>
+    <string name="steel_total_weight_label">Total Weight: %s ton</string>
+    <string name="steel_cost_m2_label">Cost/m²: %s EGP</string>
+    <string name="steel_roi_label">ROI: %s %%</string>
+    <string name="steel_span_dim">Span: %sm</string>
+    <string name="steel_length_dim">Length: %sm</string>
+    <string name="steel_total_length_label">Total Length: %sm</string>
+    <string name="steel_fcu_mpa">Concrete Strength f\'c (MPa)</string>
+    <string name="steel_fy_mpa">Yield Stress Fy (MPa)</string>
+    <string name="steel_default_client">Default Client</string>
+    <string name="steel_warehouse_project">Steel Warehouse Project</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Frame Analysis Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="frame_template_simple">Simple Frame Template</string>
+    <string name="frame_clear_all">Clear All</string>
+    <string name="frame_share_report">Share Report</string>
+    <string name="frame_pdf_error">Error creating PDF: %s</string>
+    <string name="frame_export_pdf">Export PDF</string>
+    <string name="frame_nodes_count">Nodes (%d)</string>
+    <string name="frame_add_node">Add Node</string>
+    <string name="frame_no_nodes">No nodes yet</string>
+    <string name="frame_add_or_template">Add nodes or use a template</string>
+    <string name="frame_support">Support</string>
+    <string name="frame_edit">Edit</string>
+    <string name="frame_edit_node">Edit Node</string>
+    <string name="frame_add_node_title">Add Node</string>
+    <string name="frame_x_m">X (m)</string>
+    <string name="frame_y_m">Y (m)</string>
+    <string name="frame_support_type">Support Type:</string>
+    <string name="frame_members_count">Members (%d)</string>
+    <string name="frame_add_member">Add Member</string>
+    <string name="frame_no_members">No members yet</string>
+    <string name="frame_no_name">Unnamed</string>
+    <string name="frame_node_to_node">Node %d → Node %d</string>
+    <string name="frame_edit_member">Edit Member</string>
+    <string name="frame_add_member_title">Add Member</string>
+    <string name="frame_node_i">Start Node (I)</string>
+    <string name="frame_node_j">End Node (J)</string>
+    <string name="frame_member_name_hint">Member name (optional)</string>
+    <string name="frame_material_type">Material Type:</string>
+    <string name="frame_member_type">Member Type:</string>
+    <string name="frame_concrete_section_props">Concrete Section Properties:</string>
+    <string name="frame_steel_section">Steel Section:</string>
+    <string name="frame_section_name_hint">Section name (e.g.: IPE 300)</string>
+    <string name="frame_nodal_loads_tab">Nodal Loads</string>
+    <string name="frame_member_loads_tab">Member Loads</string>
+    <string name="frame_nodal_loads">Nodal Loads</string>
+    <string name="frame_no_nodal_loads">No nodal loads</string>
+    <string name="frame_node_label">Node %d</string>
+    <string name="frame_member_loads">Member Loads</string>
+    <string name="frame_no_member_loads">No member loads</string>
+    <string name="frame_on_member">On: %s (#%d)</string>
+    <string name="frame_add_nodal_load">Add Nodal Load</string>
+    <string name="frame_node_number">Node Number</string>
+    <string name="frame_fx_horizontal">Fx - Horizontal (kN)</string>
+    <string name="frame_fy_vertical">Fy - Vertical (kN) - Positive Up</string>
+    <string name="frame_mz_moment">Mz - Moment (kN.m)</string>
+    <string name="frame_add_member_load">Add Member Load</string>
+    <string name="frame_member_number">Member Number</string>
+    <string name="frame_load_type">Load Type:</string>
+    <string name="frame_load_value">Load Value</string>
+    <string name="frame_position_from_start">Position from start (m)</string>
+    <string name="frame_result_displacements">Displacements</string>
+    <string name="frame_result_reactions">Reactions</string>
+    <string name="frame_result_concrete_design">Concrete Design</string>
+    <string name="frame_result_steel_design">Steel Design</string>
+    <string name="frame_node_displacements">Node Displacements</string>
+    <string name="frame_node_disp_format">Node %d: dx=%s mm, dy=%s mm, θ=%s rad</string>
+    <string name="frame_reactions">Reactions</string>
+    <string name="frame_reaction_format">Node %d: Rx=%s kN, Ry=%s kN, M=%s kN.m</string>
+    <string name="frame_internal_forces">Internal End Forces</string>
+    <string name="frame_member_label">Member %s (#%d):</string>
+    <string name="frame_section_label">Section: %s×%s mm | f\'c=%s MPa</string>
+    <string name="frame_req_reinforcement">Required Reinforcement: %s mm²</string>
+    <string name="frame_bottom_steel">Bottom: %dØ%d (As=%s mm²)</string>
+    <string name="frame_top_steel">Top: %dØ%d (As=%s mm²)</string>
+    <string name="frame_stirrups">Stirrups: Ø%d @ %d mm</string>
+    <string name="frame_bending">Bending:</string>
+    <string name="frame_shear">Shear:     </string>
+    <string name="frame_axial">Axial:  </string>
+    <string name="frame_combined">Combined:   </string>
+    <string name="frame_selected_section">Selected Section: %s</string>
+    <string name="frame_section_weight">Weight: %s kg/m | Ix=%s cm⁴ | Sx=%s cm³</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Seismic Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="seismic_code_ecp">ECP 201 - Egyptian Code</string>
+    <string name="seismic_code_sbc">SBC 301 - Saudi Code</string>
+    <string name="seismic_default_name">Seismic Design S1</string>
+    <string name="seismic_saved_success">Design saved successfully ✓</string>
+    <string name="seismic_section_code">📋 Select Design Code</string>
+    <string name="seismic_site_data">🌍 Site Data</string>
+    <string name="seismic_zone">Seismic Zone</string>
+    <string name="seismic_soil_type">Soil Type</string>
+    <string name="seismic_building_data">🏢 Building Data</string>
+    <string name="seismic_num_floors">Number of Floors</string>
+    <string name="seismic_avg_floor_height">Avg. Floor Height (m)</string>
+    <string name="seismic_total_weight">Total Weight W (kN)</string>
+    <string name="seismic_importance_factor">Importance Factor (I)</string>
+    <string name="seismic_response_modification">Response Modification Factor (R)</string>
+    <string name="seismic_est_height">Est. Total Height: %.1f m  •  %d floors</string>
+    <string name="seismic_calc_button">Calculate Base Shear &amp; Floor Distribution</string>
+    <string name="seismic_results">📊 Seismic Analysis Results</string>
+    <string name="seismic_base_shear_v">Base Shear Force (V)</string>
+    <string name="seismic_fundamental_period">Fundamental Period T</string>
+    <string name="seismic_spectral_accel">Design Spectral Acceleration Sa(T)</string>
+    <string name="seismic_zone_factor">Zone Factor Z</string>
+    <string name="seismic_soil_factor">Soil Factor S</string>
+    <string name="seismic_importance_factor_val">Importance Factor I</string>
+    <string name="seismic_response_mod_val">Response Modification R</string>
+    <string name="seismic_reference">Reference: %s</string>
+    <string name="seismic_code_warnings">Code Warnings</string>
+    <string name="seismic_force_distribution">Force Distribution per Floor</string>
+    <string name="seismic_floor">Floor</string>
+    <string name="seismic_force_kn">Force (kN)</string>
+    <string name="seismic_shear_kn">Shear (kN)</string>
+    <string name="seismic_moment_knm">Moment (kN.m)</string>
+    <string name="seismic_floor_n">Floor %d</string>
+    <string name="seismic_total">Total</string>
+    <string name="seismic_response_spectrum">📈 Response Spectrum Curve</string>
+    <string name="seismic_pdf_code">Code</string>
+    <string name="seismic_pdf_zone">Seismic Zone</string>
+    <string name="seismic_pdf_soil">Soil Type</string>
+    <string name="seismic_pdf_floors">Number of Floors</string>
+    <string name="seismic_pdf_height">Total Height</string>
+    <string name="seismic_pdf_weight">Total Weight</string>
+    <string name="seismic_pdf_equation">Equation</string>
+    <string name="seismic_pdf_code_ref">Code Reference</string>
+    <string name="seismic_pdf_title">Seismic Analysis Report - %s</string>
+    <string name="seismic_pdf_report">PDF Report</string>
+    <string name="seismic_save_in_project">Save in Project</string>
+    <string name="seismic_reference_equations">📝 Reference Equations</string>
+    <string name="seismic_formula_period">T₁ ≈ 0.075 × H^0.75  (Concrete Frames)</string>
+    <string name="seismic_formula_v">Vi = Σ Fj (Top-Down Summation)</string>
+    <string name="seismic_formula_mot">MOTi = Vi × hi (Overturning Moments)</string>
+    <string name="seismic_save_dialog_title">Save Seismic Design in Project</string>
+    <string name="seismic_design_name_hint">Design name (e.g.: S1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Column Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="column_default_name">Ground Floor Column</string>
+    <string name="column_load_combo_dead_only">💡 Dead Load Only: Used in temporary structures or special conditions with no live loads.</string>
+    <string name="column_load_combo_dead_live">💡 Dead + Live: Most common and safe design combination, includes structure weight, furniture, and occupants.</string>
+    <string name="column_section_props">📐 Section Dimensions &amp; Properties</string>
+    <string name="column_width_t_mm">Width b (mm)</string>
+    <string name="column_depth_t_mm">Depth t (mm)</string>
+    <string name="column_applied_loads">⚡ Applied Loads</string>
+    <string name="column_axial_load_pu">Axial Load Pu (kN)</string>
+    <string name="column_design_now">Design Now</string>
+    <string name="column_results_economy">📊 Design Results &amp; Economy Indicator</string>
+    <string name="column_section_unsafe">Section is structurally unsafe! ❌</string>
+    <string name="column_section_ideal">Ideal economical section ✅</string>
+    <string name="column_section_large">Oversized section (uneconomical) 🔵</string>
+    <string name="column_economy_option">Economy Option 💰</string>
+    <string name="column_safest_option">Safest Option 🛡️</string>
+    <string name="column_custom_rebar">Custom Reinforcement (for Economy)</string>
+    <string name="column_num_bars_label">Number of Bars</string>
+    <string name="column_bar_diameter_label">Bar Diameter Ø (mm)</string>
+    <string name="column_update_rebar">Update Custom Reinforcement</string>
+    <string name="column_equations_title">📝 Engineering Equations (No Results)</string>
+    <string name="column_drawing_title">📐 Detailed Engineering Drawing</string>
+    <string name="column_view_perspective">Perspective</string>
+    <string name="column_view_rebar_table">Rebar Table</string>
+    <string name="column_save_dialog_title">Save Column Design in Project</string>
+    <string name="column_name_hint">Column name (e.g.: C1)</string>
+    <string name="column_section_safe">Section Safe (SAFE)</string>
+    <string name="column_section_unsafe_label">Section Unsafe (UNSAFE)</string>
+    <string name="column_provided_reinforcement">Provided Reinforcement</string>
+    <string name="column_reinforcement_ratio">Reinforcement Ratio (μ)</string>
+    <string name="column_quantities">Quantities &amp; Estimates:</string>
+    <string name="column_concrete_vol">Concrete Volume</string>
+    <string name="column_steel_weight">Steel Weight</string>
+    <string name="column_estimated_cost">Estimated Cost</string>
+    <string name="column_select_code">Select Design Code</string>
+    <string name="column_load_combo">Load Combination</string>
+    <string name="column_fcu_label">f\'cu (MPa)</string>
+    <string name="column_fy_label">fy (MPa)</string>
+    <string name="column_height_label">Height (m)</string>
+    <string name="column_drawing_subtitle">Column Reinforcement Detail</string>
+    <string name="column_formula_ecp_pu">Pu = 0.35·f\'cu·Ac + 0.67·fy·As</string>
+    <string name="column_formula_aci_pu">φPn = 0.85·f\'c·Ag + fy·As</string>
+    <string name="column_formula_sbc_pu">Pu = 0.35·f\'cu·Ac + 0.67·fy·As</string>
+    <string name="column_formula_shear">Shear: q_u = Pu / (b·d) ≤ q_cu</string>
+    <string name="column_formula_punching">Punching: q_p = Pu / (perimeter·d) ≤ q_p_limit</string>
+    <string name="column_formula_as_min_ecp">As_min = 0.008·Ac  (ECP 203)</string>
+    <string name="column_formula_as_min_aci">As_min = 0.01·Ag  (ACI 318)</string>
+    <string name="column_formula_as_min_sbc">As_min = 0.008·Ac  (SBC 304)</string>
+    <string name="column_code_ecp">ECP Code</string>
+    <string name="column_code_aci">ACI Code</string>
+    <string name="column_code_sbc">SAUDI Code</string>
+    <string name="column_validation_positive">Value must be positive</string>
+    <string name="column_validation_required">Required field</string>
+    <string name="column_validation_fcu_range">f\'cu must be 20–60 MPa</string>
+    <string name="column_validation_fy_range">fy must be 200–600 MPa</string>
+    <string name="column_validation_dim_range">Dimension must be 100–1500 mm</string>
+    <string name="column_validation_load_range">Load must be positive</string>
+    <string name="column_cover_label">Cover (mm)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Beam Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="beam_default_name">Beam B1</string>
+    <string name="beam_section_support">📐 Beam Dimensions &amp; Support Type</string>
+    <string name="beam_support_type">Support Type</string>
+    <string name="beam_width_b_mm">Width b (mm)</string>
+    <string name="beam_depth_h_mm">Depth h (mm)</string>
+    <string name="beam_effective_length">Effective Length L (m)</string>
+    <string name="beam_material_props">🔩 Material Properties</string>
+    <string name="beam_rebar_selection">Rebar Selection (Economy Check)</string>
+    <string name="beam_num_bars_label">Number of Bars</string>
+    <string name="beam_bar_diameter_label">Bar Diameter Ø (mm)</string>
+    <string name="beam_design_now">Analyze &amp; Design Section</string>
+    <string name="beam_results_economy">📊 Analysis Results &amp; Economy</string>
+    <string name="beam_section_unsafe">Section is structurally unsafe! ❌</string>
+    <string name="beam_section_ideal">Ideal economical design ✅</string>
+    <string name="beam_section_large">Oversized section (uneconomical) 🔵</string>
+    <string name="beam_pdf_error">Error creating PDF report</string>
+    <string name="exporting_pdf">Generating PDF…</string>
+    <string name="beam_view_perspective">Perspective</string>
+    <string name="beam_view_rebar_table">Rebar Table</string>
+    <string name="beam_equations_title">📝 Engineering Equations (No Results)</string>
+    <string name="beam_save_dialog_title">Save Beam Design in Project</string>
+    <string name="beam_name_hint">Beam name (e.g.: B1)</string>
+    <string name="beam_final_results">Final Results:</string>
+    <string name="beam_bottom_reinforcement">Bottom Reinforcement</string>
+    <string name="beam_top_reinforcement">Top Reinforcement</string>
+    <string name="beam_max_moment">Max Moment</string>
+    <string name="beam_max_shear">Max Shear</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Tank Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="tank_default_name">Water Tank T1</string>
+    <string name="tank_type_section">📐 Tank Type &amp; Data</string>
+    <string name="tank_location">Tank Location:</string>
+    <string name="tank_location_ground">Ground</string>
+    <string name="tank_location_elevated">Elevated</string>
+    <string name="tank_location_underground">Underground</string>
+    <string name="tank_section_shape">Section Shape (Structural):</string>
+    <string name="tank_shape_rectangular">Rectangular (Bending)</string>
+    <string name="tank_shape_circular">Circular (Hoop Tension)</string>
+    <string name="tank_capacity_m3">Capacity (m³)</string>
+    <string name="tank_height_m">Height (m)</string>
+    <string name="tank_start_design">Start Structural Design</string>
+    <string name="tank_analysis_results">📊 Hydraulic Analysis Results</string>
+    <string name="tank_design_unsafe">Unsafe Design! ❌</string>
+    <string name="tank_design_ideal">Ideal economical tank ✅</string>
+    <string name="tank_section_large">Oversized section (uneconomical) 🔵</string>
+    <string name="tank_wall_thickness">Wall Thickness</string>
+    <string name="tank_base_thickness">Base Slab Thickness</string>
+    <string name="tank_max_water_pressure">Max Water Pressure</string>
+    <string name="tank_wall_reinforcement">Wall Reinforcement</string>
+    <string name="tank_drawing_title">📐 Detailed Tank Drawing</string>
+    <string name="tank_view_perspective">Perspective</string>
+    <string name="tank_save_dialog_title">Save Tank Design in Project</string>
+    <string name="tank_name_hint">Tank name (e.g.: T1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Steel Tables Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="steel_tables_angles">Angles</string>
+    <string name="steel_tables_depth_h">Depth h</string>
+    <string name="steel_tables_width_b">Width b</string>
+    <string name="steel_tables_web_tw">Web Thickness tw</string>
+    <string name="steel_tables_flange_tf">Flange Thickness tf</string>
+    <string name="steel_tables_area">Area</string>
+    <string name="steel_tables_weight">Weight</string>
+    <string name="steel_tables_iy">Strong Axis Moment of Inertia Iy</string>
+    <string name="steel_tables_iz">Weak Axis Moment of Inertia Iz</string>
+    <string name="steel_tables_sy">Strong Axis Section Modulus Sy</string>
+    <string name="steel_tables_sz">Weak Axis Section Modulus Sz</string>
+    <string name="steel_tables_ry">Strong Axis Radius of Gyration ry</string>
+    <string name="steel_tables_rz">Weak Axis Radius of Gyration rz</string>
+    <string name="steel_tables_zx">Strong Axis Plastic Modulus Zx</string>
+    <string name="steel_tables_zy">Weak Axis Plastic Modulus Zy</string>
+    <string name="steel_tables_search_hint">Search sections…</string>
+    <string name="steel_tables_count">%d sections</string>
+    <string name="steel_tables_section">Section</string>
+    <string name="steel_tables_weight_label">Weight</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- BOQ Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="boq_title">Design Quantity Survey</string>
+    <string name="boq_subtitle">Smart Estimator Pro</string>
+    <string name="boq_what_to_calculate">What would you like to calculate today?</string>
+    <string name="boq_currency">Currency</string>
+    <string name="boq_full_project">Full Project</string>
+    <string name="boq_apartment_finish">Apartment Finishing</string>
+    <string name="boq_specific_item">Specific Item</string>
+    <string name="boq_feasibility_study">Feasibility Study</string>
+    <string name="boq_structure_type">Structure Type</string>
+    <string name="boq_land_area">Land Area (m²)</string>
+    <string name="boq_land_price_per_m">Land Price per m²</string>
+    <string name="boq_expected_sell_price">Expected Selling Price per m²</string>
+    <string name="boq_num_floors">Number of Floors</string>
+    <string name="boq_basement">Basement</string>
+    <string name="boq_apartment_area">Apartment Area (m²)</string>
+    <string name="boq_generate_report">Generate Quantity &amp; Feasibility Report</string>
+    <string name="boq_data_safety_report">🛡️ Data Safety Report (Trial Run)</string>
+    <string name="boq_export_pdf">Export Project BOQ PDF</string>
+    <string name="boq_export_failed">Export Failed: %s</string>
+    <string name="boq_export_failed_title">Export Failed</string>
+    <string name="boq_open_report">Open Report</string>
+    <string name="boq_integrated_estimate">Integrated Financial &amp; Technical Estimate</string>
+    <string name="boq_feasibility_section">📊 Feasibility Study</string>
+    <string name="boq_expected_roi">Expected ROI</string>
+    <string name="boq_net_profit">Net Profit</string>
+    <string name="boq_profit_margin">Profit Margin</string>
+    <string name="boq_num_units">Number of Units</string>
+    <string name="boq_construction_duration">Construction Duration</string>
+    <string name="boq_duration_months">%d months</string>
+    <string name="boq_export_report_pdf">Export Report PDF</string>
+    <string name="boq_total_saved_cost">Total Cost of Saved Designs</string>
+    <string name="boq_no_projects_found">No projects found</string>
+    <string name="boq_add_first_project">Add your first project to get started</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Slab Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="slab_default_name">Floor Slab</string>
+    <string name="slab_type_label">Slab Type</string>
+    <string name="slab_code_label">Code</string>
+    <string name="slab_dimensions_loading">📐 Slab Dimensions &amp; Loading</string>
+    <string name="slab_material_props">🔧 Material Properties</string>
+    <string name="slab_thickness_mm">Thickness (mm)</string>
+    <string name="slab_bar_diameter_mm">Bar Diameter (mm)</string>
+    <string name="slab_column_width_mm">Column Width (mm)</string>
+    <string name="slab_drop_thickness_mm">Drop Panel Thickness (mm)</string>
+    <string name="slab_compressive_force">Compressive Force P (kN)</string>
+    <string name="slab_ribbed_dims">📦 Ribbed Slab Dimensions</string>
+    <string name="slab_rib_width_mm">Rib Width (mm)</string>
+    <string name="slab_rib_spacing_mm">Rib Spacing (mm)</string>
+    <string name="slab_waffle_dims">📦 Waffle Slab Dimensions</string>
+    <string name="slab_waffle_rib_width_mm">Rib Width (mm)</string>
+    <string name="slab_waffle_spacing_x_mm">Spacing X (mm)</string>
+    <string name="slab_waffle_spacing_y_mm">Spacing Y (mm)</string>
+    <string name="slab_design_now">Analyze &amp; Design</string>
+    <string name="slab_results">📊 Design Results</string>
+    <string name="slab_equations_title">📝 Equations (No Results)</string>
+    <string name="slab_drawing_title">📐 Detailed Slab Drawing</string>
+    <string name="slab_view_plan">Plan</string>
+    <string name="slab_pdf_error">Error creating PDF report</string>
+    <string name="slab_save_in_project">Save in Project</string>
+    <string name="slab_name_hint">Element name (e.g.: Roof Slab)</string>
+    <string name="slab_safe">Slab is structurally safe</string>
+    <string name="slab_unsafe">Slab is unsafe!</string>
+    <string name="slab_thickness_label2">Slab Thickness</string>
+    <string name="slab_moment_mx">Moment Mx</string>
+    <string name="slab_main_steel_lx">Main Steel (Lx):</string>
+    <string name="slab_secondary_steel_ly">Secondary Steel (Ly):</string>
+    <string name="slab_dl_label">DL (kN/m²)</string>
+    <string name="slab_ll_label">LL (kN/m²)</string>
+    <string name="slab_reinforcement_subtitle">Slab Reinforcement Detail</string>
+    <string name="slab_validate_inputs">Please enter valid positive values for all fields</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Footing Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="footing_default_name">Isolated Footing F1</string>
+    <string name="footing_inputs">🏗️ Footing Type &amp; Inputs</string>
+    <string name="footing_type_label">Footing Type</string>
+    <string name="footing_column_length_mm">Column Length (mm)</string>
+    <string name="footing_column_width_mm">Column Width (mm)</string>
+    <string name="footing_rebar_options">Reinforcement Options (Economy Check)</string>
+    <string name="footing_bar_diameter">Bar Diameter Ø</string>
+    <string name="footing_bar_spacing">Bar Spacing S (mm)</string>
+    <string name="footing_design_now">Analyze &amp; Design Footing</string>
+    <string name="footing_results">📊 Design Results</string>
+    <string name="footing_safe_economical">Safe &amp; Economical Design</string>
+    <string name="footing_safe_review">Safe (Under Review)</string>
+    <string name="footing_dims">Footing Dimensions</string>
+    <string name="footing_thickness_label2">Footing Thickness</string>
+    <string name="footing_exporting">Exporting…</string>
+    <string name="footing_drawing_title">📐 Detailed Footing Drawing</string>
+    <string name="footing_view_plan">Plan</string>
+    <string name="footing_save_dialog_title">Save Footing Design in Project</string>
+    <string name="footing_name_hint">Footing name (e.g.: F1)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Water Level Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="water_level_tool">Engineer\'s Level Tool</string>
+    <string name="water_level_subtitle">HI &amp; RL Calculations for Survey Points</string>
+    <string name="water_level_step1">📌 Step 1: Benchmark &amp; Backsight</string>
+    <string name="water_level_bm">Benchmark BM (m)</string>
+    <string name="water_level_bs">Backsight Reading BS (m)</string>
+    <string name="water_level_step2">📌 Step 2: Number of Points</string>
+    <string name="water_level_num_points">Number of Points (Foresight Readings)</string>
+    <string name="water_level_step3">📌 Step 3: Staff Readings (FS)</string>
+    <string name="water_level_fs_n">Point %d FS Reading (m)</string>
+    <string name="water_level_hi">Instrument Height HI</string>
+    <string name="water_level_value_m">%.3f m</string>
+    <string name="water_level_results_table">📋 Results Table</string>
+    <string name="water_level_point">Point</string>
+    <string name="water_level_type">Type</string>
+    <string name="water_level_reading">Reading</string>
+    <string name="water_level_rl">RL (m)</string>
+    <string name="water_level_backsight">Backsight</string>
+    <string name="water_level_foresight">Foresight</string>
+    <string name="water_level_hi_summary">HI = %.3f m | Points: %d</string>
+    <string name="water_level_summary">Summary</string>
+    <string name="water_level_max_rl">Max RL</string>
+    <string name="water_level_min_rl">Min RL</string>
+    <string name="water_level_diff">Level Difference</string>
+    <string name="water_level_export_pdf">Export PDF (Coming Soon)</string>
+    <string name="water_level_enter_data">Enter data to calculate levels</string>
+    <string name="water_level_formula_hint">HI = RL (BM) + Backsight Reading\nRL (Point) = HI - Foresight Reading</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Stair Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="stair_default_name">Stair S1</string>
+    <string name="stair_dimensions">📐 Stair Type &amp; Dimensions</string>
+    <string name="stair_type_label">Staircase Type</string>
+    <string name="stair_horizontal_length">Horizontal Length L (m)</string>
+    <string name="stair_riser">Riser R (mm)</string>
+    <string name="stair_design_now">Calculate &amp; Draw</string>
+    <string name="stair_results">📊 Structural Design Results</string>
+    <string name="stair_design_unsafe">Unsafe Design! ❌</string>
+    <string name="stair_design_ideal">Ideal economical design ✅</string>
+    <string name="stair_section_large">Oversized section (uneconomical) 🔵</string>
+    <string name="stair_slab_thickness">Slab Thickness ts</string>
+    <string name="stair_main_reinforcement">Main Reinforcement</string>
+    <string name="stair_distribution_reinforcement">Distribution Reinforcement</string>
+    <string name="stair_reinforcement_drawing">🎨 Detailed Reinforcement Drawing</string>
+    <string name="stair_drawing_title">Detailed Stair Drawing</string>
+    <string name="stair_equations_title">📝 Engineering Equations</string>
+    <string name="stair_save_dialog_title">Save Stair Design in Project</string>
+    <string name="stair_name_hint">Stair name (e.g.: S1)</string>
+    <string name="stair_tread_mm">Tread T (mm)</string>
+    <string name="stair_dead_load_kn_m2">D.L (kN/m²)</string>
+    <string name="stair_live_load_kn_m2">L.L (kN/m²)</string>
+    <string name="stair_fcu_mpa">f\'cu (MPa)</string>
+    <string name="stair_fy_mpa">fy (MPa)</string>
+    <string name="tank_fcu_mpa">f\'cu (MPa)</string>
+    <string name="tank_fy_mpa">fy (MPa)</string>
+    <string name="beam_fcu_mpa">f\'cu (MPa)</string>
+    <string name="beam_fy_mpa">fy (MPa)</string>
+    <string name="beam_dead_load_kn_m">Dead Load (kN/m)</string>
+    <string name="beam_live_load_kn_m">Live Load (kN/m)</string>
+    <string name="rw_fcu_mpa">f\'cu (MPa)</string>
+    <string name="rw_fy_mpa">fy (MPa)</string>
+    <string name="beam_drawing_subtitle">Beam Reinforcement Detail</string>
+    <string name="stair_drawing_subtitle">Staircase Reinforcement Detail</string>
+    <string name="tank_drawing_subtitle">Water Tank Detail</string>
+    <string name="stair_span_range">1-15 m</string>
+    <string name="stair_riser_range">100-200 mm</string>
+    <string name="stair_tread_range">200-400 mm</string>
+    <string name="rw_err_all_positive">Invalid: all fields must be positive</string>
+    <string name="rw_err_friction_angle">Invalid: friction angle 0-90</string>
+    <string name="rw_err_surcharge">Invalid: surcharge must be ≥ 0</string>
+    <string name="rw_err_fcu">Invalid: fcu must be positive</string>
+    <string name="rw_err_fy">Invalid: fy must be positive</string>
+    <string name="slab_err_invalid_values">Please enter valid values for all fields</string>
+    <string name="slab_err_range_check">Check value ranges: fcu 15-60, fy 200-700, thickness 50-500</string>
+    <string name="tank_err_invalid_number">Invalid number</string>
+    <string name="tank_err_gt_zero">Must be > 0</string>
+    <string name="tank_err_max_10000">Max 10000 m³</string>
+    <string name="tank_err_min_height">Min 1.0 m</string>
+    <string name="tank_err_max_height">Max 10.0 m</string>
+    <string name="tank_err_min_fcu">Min 20 MPa</string>
+    <string name="tank_err_max_fcu">Max 60 MPa</string>
+    <string name="tank_err_min_fy">Min 240 MPa</string>
+    <string name="tank_err_max_fy">Max 500 MPa</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Archive Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="archive_search_hint">Search projects…</string>
+    <string name="archive_saved_projects">Saved Projects</string>
+    <string name="archive_no_projects">No saved projects</string>
+    <string name="archive_add_new">Press + to create a new project</string>
+    <string name="archive_no_results_for">No results for </string>
+    <string name="archive_results_count">Results: %d</string>
+    <string name="archive_create_new">Create New Project</string>
+    <string name="archive_project_name_required">Project Name *</string>
+    <string name="archive_design_code_hint">Design Code (ECP / ACI / SBC)</string>
+    <string name="archive_location_hint">Location (optional)</string>
+    <string name="archive_create">Create</string>
+    <string name="archive_code_label">Design Code: %s</string>
+    <string name="archive_design_count">%d designs</string>
+    <string name="archive_type_beams">Beams</string>
+    <string name="archive_type_columns">Columns</string>
+    <string name="archive_type_footings">Footings</string>
+    <string name="archive_type_slabs">Slabs</string>
+    <string name="archive_type_stairs">Stairs</string>
+    <string name="archive_type_walls">Ret. Walls</string>
+    <string name="archive_type_tanks">Tanks</string>
+    <string name="archive_type_piles">Piles</string>
+    <string name="archive_type_seismic">Seismic</string>
+    <string name="archive_type_steel_rebar">Steel Rebar</string>
+    <string name="archive_type_steel_structure">Steel Structure</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Retaining Wall Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="rw_default_name">Retaining Wall RW1</string>
+    <string name="rw_data_input">Technical Data Input</string>
+    <string name="rw_wall_height">Wall Height (m)</string>
+    <string name="rw_soil_density">Soil Density (kN/m³)</string>
+    <string name="rw_friction_angle">Friction Angle Φ (deg)</string>
+    <string name="rw_surcharge">Additional Surcharge Load (kN/m²)</string>
+    <string name="rw_analyze">Analyze Stability &amp; Design Wall</string>
+    <string name="rw_safe">Wall is fully safe</string>
+    <string name="rw_unsafe">Wall is unsafe (critical)</string>
+    <string name="rw_stem_thickness">Stem Thickness</string>
+    <string name="rw_base_width">Base Width</string>
+    <string name="rw_stem_reinforcement">Stem Reinforcement</string>
+    <string name="rw_base_reinforcement">Base Reinforcement</string>
+    <string name="rw_drawing_title">📐 Detailed Retaining Wall Drawing</string>
+    <string name="rw_view_soil_pressure">Soil Pressure</string>
+    <string name="rw_save_dialog_title">Save Retaining Wall Design in Project</string>
+    <string name="rw_name_hint">Wall name (e.g.: RW1)</string>
+    <string name="rw_no_projects">No projects available.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Inventory Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="inventory_search_hint">Search items…</string>
+    <string name="inventory_empty">Inventory is empty. Add new items.</string>
+    <string name="inventory_no_results">No search results found.</string>
+    <string name="inventory_last_updated">Last updated: %s</string>
+    <string name="inventory_low_stock">Low stock!</string>
+    <string name="inventory_bag_ton">Bag/Ton</string>
+    <string name="inventory_add_dialog_title">Add New Inventory Item</string>
+    <string name="inventory_name_hint">Name (cement, sand, bricks…)</string>
+    <string name="inventory_quantity_label">Quantity</string>
+    <string name="inventory_unit_label">Unit</string>
+    <string name="inventory_alert_hint">Alert when quantity falls below…</string>
+    <string name="inventory_category_heavy">Heavy Equipment</string>
+    <string name="inventory_category_tools">Tools &amp; Small Equipment</string>
+    <string name="inventory_category_materials">Materials (cement, sand…)</string>
+    <string name="inventory_category_accessories">Accessories &amp; Supplies</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Unit Converter Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="converter_length">Length</string>
+    <string name="converter_area">Area</string>
+    <string name="converter_volume">Volume</string>
+    <string name="converter_weight">Weight</string>
+    <string name="converter_force">Force</string>
+    <string name="converter_pressure">Pressure</string>
+    <string name="converter_moment">Moment</string>
+    <string name="converter_input_value">Value</string>
+    <string name="converter_result">Result</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Calculator Screen -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="calc_history">History</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Shared: Used Across Multiple Screens -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="pdf_report">PDF Report</string>
+    <string name="save_in_project">Save in Project</string>
+    <string name="view_perspective">Perspective</string>
+    <string name="view_plan">Plan</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Steel Design Screen - New Strings -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <string name="steel_compress_capacity">Compressive Capacity</string>
+    <string name="steel_util_ratio">Utilization Ratio</string>
+    <string name="steel_section_drawing">Steel Section Drawing</string>
+    <string name="steel_view_all">All</string>
+    <string name="steel_view_longitudinal">Longitudinal Section</string>
+    <string name="steel_view_cross">Cross Section</string>
+    <string name="steel_view_connections">Connections</string>
+    <string name="steel_front_elev">Front Elevation</string>
+    <string name="steel_side_elev">Side Elevation</string>
+    <string name="steel_span_label">Span</string>
+    <string name="steel_length_label">Length</string>
+    <string name="steel_total_length">Total Length</string>
+    <string name="steel_num_bolts">Number of Bolts</string>
+    <string name="steel_bolt_diameter">Bolt Diameter</string>
+    <string name="steel_bolt_spacing_label">Bolt Spacing</string>
+    <string name="steel_tension_cap_bolt">Tension Capacity per Bolt</string>
+    <string name="steel_connection_design">Connection Design</string>
+    <string name="steel_conn_type">Connection Type</string>
+    <string name="steel_conn_bolted_shear">Bolted Shear</string>
+    <string name="steel_conn_bolted_moment">Bolted Moment</string>
+    <string name="steel_conn_welded">Welded</string>
+    <string name="steel_conn_combined">Combined</string>
+    <string name="steel_bolt_dia_hint">Bolt Diameter (mm)</string>
+    <string name="steel_bolt_spacing_hint">Bolt Spacing (mm)</string>
+    <string name="steel_edge_dist_hint">Edge Distance (mm)</string>
+    <string name="steel_bolt_grade_label">Bolt Grade</string>
+    <string name="steel_dist_pattern">Distribution Pattern</string>
+    <string name="steel_shear_vu">Shear Vu (kN)</string>
+    <string name="steel_tension_tu">Tension Tu (kN)</string>
+    <string name="steel_design_check_conn">Design &amp; Check Connection</string>
+    <string name="steel_bolt_result_safe">Bolted Connection Result — Safe</string>
+    <string name="steel_bolt_result_fail">Bolted Connection Result — Failed</string>
+    <string name="steel_shear_cap_bolt">Shear Capacity per Bolt</string>
+    <string name="steel_bearing_cap_bolt">Bearing Capacity per Bolt</string>
+    <string name="steel_tensile_cap_bolt">Tension Capacity per Bolt</string>
+    <string name="steel_controlling_cap">Controlling Capacity</string>
+    <string name="steel_block_shear">Block Shear Check</string>
+    <string name="steel_block_shear_cap">Block Shear Capacity</string>
+    <string name="steel_weld_result_safe">Weld Result — Safe</string>
+    <string name="steel_weld_result_fail">Weld Result — Failed</string>
+    <string name="steel_tons">tons</string>
+    <string name="steel_currency_suffix">EGP</string>
+
+    <!-- Footing Screen (additional bilingual strings) -->
+    <string name="footing_fcu_label">f\'cu (MPa)</string>
+    <string name="footing_fy_label">fy (MPa)</string>
+    <string name="footing_pu1_label">Pu1 (kN)</string>
+    <string name="footing_soil_label">Soil Capacity (kPa)</string>
+    <string name="footing_pu2_label">Pu2 (kN)</string>
+    <string name="footing_distance_label">Column Distance (m)</string>
+    <string name="footing_boundary_label">Boundary Constraints (Optional)</string>
+    <string name="footing_max_left_label">Max Left (m)</string>
+    <string name="footing_max_right_label">Max Right (m)</string>
+    <string name="footing_reinforcement_detail">Footing Reinforcement Detail</string>
+    <string name="footing_validate_inputs">Please enter valid positive values for all required fields</string>
+    <string name="rw_drawing_subtitle">Retaining Wall Section Detail</string>
+    <string name="rw_validate_inputs">Please enter valid positive numbers for all fields</string>
+</resources>

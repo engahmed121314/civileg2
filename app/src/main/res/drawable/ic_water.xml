@@ -1,0 +1,61 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Rectangular water tank with water level -->
+    <!-- Tank walls (U-shape cross section) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.2"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M4,3h16v17H4z"/>
+    <!-- Tank wall thickness (inner rectangle) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineJoin="round"
+        android:pathData="M5.5,4.5h13v14h-13z"/>
+    <!-- Water level (wavy) -->
+    <path
+        android:fillColor="#4D000000"
+        android:pathData="M5.5,9Q8,7.5 10.5,9Q13,10.5 15.5,9Q18,7.5 18.5,9v9.5h-13z"/>
+    <!-- Water wave line -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M5.5,9Q8,7.5 10.5,9Q13,10.5 15.5,9Q18,7.5 18.5,9"/>
+    <!-- Inlet pipe at top -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:pathData="M12,1v2M11,2h2"/>
+    <!-- Outlet pipe at bottom -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:pathData="M20,15h2.5M20.5,14v2"/>
+    <!-- Base/foundation -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3.5,20h17v1.5h-17z"/>
+    <!-- Base hatching -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:strokeLineCap="round"
+        android:pathData="M4,22L5,23M6,22L7,23M8,22L9,23M10,22L11,23M12,22L13,23M14,22L15,23M16,22L17,23M18,22L19,23M20,22L21,23"/>
+    <!-- Hydrostatic pressure arrows -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.25"
+        android:pathData="M5.5,10h-1M5.5,13h-1.5M5.5,16h-2M18.5,10h1M18.5,13h1.5M18.5,16h2"/>
+</vector>

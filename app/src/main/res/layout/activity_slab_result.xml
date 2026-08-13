@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Slab Design Results (نتائج تصميم البلاطة)"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"
+            android:textColor="?attr/colorPrimary"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="6dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"
+                    android:text="SAFE"/>
+
+                <TextView android:id="@+id/tvThickness" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="16sp" android:layout_marginBottom="4dp"/>
+                <TextView android:id="@+id/tvReinforcement" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="16sp" android:textStyle="bold" android:textColor="@android:color/holo_green_dark" android:layout_marginBottom="4dp"/>
+                <TextView android:id="@+id/tvConcrete" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="16sp" android:layout_marginBottom="4dp"/>
+                <TextView android:id="@+id/tvSteel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="16sp" android:layout_marginBottom="4dp"/>
+                <TextView android:id="@+id/tvCost" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="18sp" android:textStyle="bold" android:textColor="?attr/colorPrimary"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reinforcement Section (قطاع تسليح البلاطة)"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            app:cardCornerRadius="8dp"
+            android:layout_marginBottom="24dp">
+            <com.civileg.app.ui.slab.SlabDrawingView
+                android:id="@+id/drawingView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"/>
+        </androidx.cardview.widget.CardView>
+
+        <Button
+            android:id="@+id/btnExportPDF"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Export Professional PDF"
+            app:icon="@android:drawable/ic_menu_save"
+            android:layout_marginBottom="32dp"/>
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Civil Engineer Pro - Restricted FileProvider paths -->
+<!-- Developer: Eng. Ahmed Magdy -->
+<paths>
+    <!-- Only expose the exports directory, not the entire storage -->
+    <external-files-path name="pdf_exports" path="CivilEngineerPro/exports/" />
+    <!-- Allow sharing any file from the app's external files dir (used by PdfGenerator, AdvancedPdfExporter) -->
+    <external-files-path name="external_root" path="." />
+    <!-- Allow sharing any file from cache dir (used by ComprehensivePdfExporter + ViewModels) -->
+    <cache-path name="cache" path="." />
+</paths>

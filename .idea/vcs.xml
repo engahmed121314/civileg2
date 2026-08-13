@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/AndroidAgenticWiki" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/AndroidAgenticWiki/AndroidAgenticWiki" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/AndroidAgenticWiki/AndroidAgenticWiki/external_skills/android-skills" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/AndroidAgenticWiki/external_skills/android-skills" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/NeuroVerse" vcs="Git" />
+  </component>
+</project>

@@ -1,0 +1,53 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Professional staircase elevation view -->
+    <!-- Stringer (main beam) -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M3,20L3,4L21,4"/>
+    <!-- Steps -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M3,18h3v-3h3v-3h3v-3h3v-3h3"/>
+    <!-- Step lines (treads and risers) -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M3,18h18M6,15h15M9,12h12M12,9h9M15,6h6M6,18v-3M9,15v-3M12,12v-3M15,9v-3M18,6v-2"/>
+    <!-- Handrail -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:pathData="M2,5L3,4"/>
+    <!-- Railing posts -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:strokeLineCap="round"
+        android:pathData="M6,15v-3M9,12v-3M12,9v-3M15,6v-2"/>
+    <!-- Railing top rail (angled line along the stair slope) -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.5"
+        android:strokeLineCap="round"
+        android:pathData="M2,6.5L18,5"/>
+    <!-- Dimension arrow for rise -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M21,4v16M20.5,4h1M20.5,20h1"/>
+    <!-- Dimension arrow for run -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.3"
+        android:pathData="M3,22h18M3,21.5v1M21,21.5v1"/>
+</vector>
