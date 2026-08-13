@@ -231,7 +231,7 @@ dependencies {
 tasks.withType<Test> {
     jacoco {
         includeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*")
+        excludes = setOf("jdk.internal.*")
     }
 }
 
