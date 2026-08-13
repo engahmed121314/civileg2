@@ -33,6 +33,7 @@ import com.civileg.app.viewmodel.SettingsViewModel
 import com.civileg.app.billing.BillingManager
 import com.civileg.app.ads.AdManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
