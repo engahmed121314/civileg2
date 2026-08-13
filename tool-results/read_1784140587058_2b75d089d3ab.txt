@@ -1,0 +1,276 @@
+   100→   100→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/aci/ACIRetainingWall.kt:122:52 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/compareTo' in 'compareTo'.
+   101→   101→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/aci/ACIRetainingWall.kt:143:29 Unresolved reference 'formatRebar'.
+   102→   102→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/aci/ACIStaircase.kt:98:26 Unresolved reference 'toDegrees'.
+   103→   103→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/aci/ACIStaircase.kt:99:28 Unresolved reference 'toRadians'.
+   104→   104→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/base/RetainingWallDesign.kt:62:56 Unresolved reference 'pow'.
+   105→   105→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/base/RetainingWallDesign.kt:63:30 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/compareTo' in 'compareTo'.
+   106→   106→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:96:33 Unresolved reference 'selectBars'.
+   107→   107→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:96:33 Function 'component1()' is ambiguous for this expression: 
+   108→   108→fun <T> Array<out T>.component1(): T
+   109→   109→fun ByteArray.component1(): Byte
+   110→   110→fun ShortArray.component1(): Short
+   111→   111→fun IntArray.component1(): Int
+   112→   112→fun LongArray.component1(): Long
+   113→   113→fun FloatArray.component1(): Float
+   114→   114→fun DoubleArray.component1(): Double
+   115→   115→fun BooleanArray.component1(): Boolean
+   116→   116→fun CharArray.component1(): Char
+   117→   117→fun <T> List<T>.component1(): T
+   118→   118→fun <K, V> Map.Entry<K, V>.component1(): K
+   119→   119→fun UIntArray.component1(): UInt
+   120→   120→fun ULongArray.component1(): ULong
+   121→   121→fun UByteArray.component1(): UByte
+   122→   122→fun UShortArray.component1(): UShort.
+   123→   123→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:96:33 Function 'component2()' is ambiguous for this expression: 
+   124→   124→fun <T> Array<out T>.component2(): T
+   125→   125→fun ByteArray.component2(): Byte
+   126→   126→fun ShortArray.component2(): Short
+   127→   127→fun IntArray.component2(): Int
+   128→   128→fun LongArray.component2(): Long
+   129→   129→fun FloatArray.component2(): Float
+   130→   130→fun DoubleArray.component2(): Double
+   131→   131→fun BooleanArray.component2(): Boolean
+   132→   132→fun CharArray.component2(): Char
+   133→   133→fun <T> List<T>.component2(): T
+   134→   134→fun <K, V> Map.Entry<K, V>.component2(): V
+   135→   135→fun UIntArray.component2(): UInt
+   136→   136→fun ULongArray.component2(): ULong
+   137→   137→fun UByteArray.component2(): UByte
+   138→   138→fun UShortArray.component2(): UShort.
+   139→   139→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:98:24 Unresolved reference 'selectBars'.
+   140→   140→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:98:49 Cannot infer type for this parameter. Please specify it explicitly.
+   141→   141→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:98:53 Cannot infer type for this parameter. Please specify it explicitly.
+   142→   142→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:98:61 Function invocation 'first()' expected.
+   143→   143→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:98:78 Unresolved reference 'second'.
+   144→   144→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:114:23 Unresolved reference 'selectBars'.
+   145→   145→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:126:24 Unresolved reference 'selectBars'.
+   146→   146→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:136:56 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/compareTo' in 'compareTo'.
+   147→   147→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPRetainingWall.kt:156:29 Unresolved reference 'formatRebar'.
+   148→   148→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPStaircase.kt:93:26 Unresolved reference 'toDegrees'.
+   149→   149→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/ecp/ECPStaircase.kt:94:28 Unresolved reference 'toRadians'.
+   150→   150→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/sbc/SBCStaircase.kt:99:26 Unresolved reference 'toDegrees'.
+   151→   151→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/domain/calculations/sbc/SBCStaircase.kt:100:28 Unresolved reference 'toRadians'.
+   152→   152→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:97:49 Unresolved reference 'status_section_unsafe'.
+   153→   153→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:98:49 Unresolved reference 'status_high_load_warning'.
+   154→   154→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:99:49 Unresolved reference 'status_ideal_economic'.
+   155→   155→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:100:41 Unresolved reference 'status_oversized'.
+   156→   156→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:237:70 Unresolved reference 'design_evaluation'.
+   157→   157→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:288:49 Unresolved reference 'utilization_ratio'.
+   158→   158→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:427:41 Unresolved reference 'code_checks'.
+   159→   159→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:513:46 Unresolved reference 'pdf_report'.
+   160→   160→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:529:42 Unresolved reference 'save'.
+   161→   161→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:547:70 Unresolved reference 'engineering_equations'.
+   162→   162→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/ProfessionalComponents.kt:632:74 Unresolved reference 'analyzing'.
+   163→   163→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:76:37 Unresolved reference 'design_code_label'.
+   164→   164→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:250:45 Unresolved reference 'utilization_ratio'.
+   165→   165→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:306:65 Unresolved reference 'detailed_results_title'.
+   166→   166→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:379:41 Unresolved reference 'analysis_title'.
+   167→   167→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:398:46 Unresolved reference 'flexure'.
+   168→   168→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:420:46 Unresolved reference 'shear'.
+   169→   169→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:454:45 Unresolved reference 'status_high_load'.
+   170→   170→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:455:45 Unresolved reference 'status_safe_ideal'.
+   171→   171→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:456:37 Unresolved reference 'status_uneconomical'.
+   172→   172→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/SharedComponents.kt:558:65 Unresolved reference 'design_equations'.
+   173→   173→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/charts/InteractionDiagramChart.kt:260:76 Unresolved reference 'close'.
+   174→   174→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:51:33 Unresolved reference 'view_modes_all'.
+   175→   175→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:52:33 Unresolved reference 'view_modes_longitudinal'.
+   176→   176→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:53:33 Unresolved reference 'view_modes_cross'.
+   177→   177→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:54:33 Unresolved reference 'view_modes_plan'.
+   178→   178→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:165:63 Unresolved reference 'info_label_title'.
+   179→   179→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:166:63 Unresolved reference 'info_label_type'.
+   180→   180→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:167:63 Unresolved reference 'info_label_zoom'.
+   181→   181→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:168:63 Unresolved reference 'info_label_gesture'.
+   182→   182→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:168:110 Unresolved reference 'info_gesture_hint'.
+   183→   183→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:82:50 Unresolved reference 'analysis_title'.
+   184→   184→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/interactive/InteractiveColumnSection.kt:54:5 Unresolved reference 'Card'.
+   185→   185→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/interactive/InteractiveColumnSection.kt:56:18 Unresolved reference 'CardDefaults'.
+   186→   186→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/interactive/InteractiveColumnSection.kt:60:9 @Composable invocations can only happen from the context of a @Composable function
+   187→   187→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/interactive/InteractiveColumnSection.kt:274:73 Unresolved reference 'close'.
+   188→   188→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/BeamScreen.kt:320:33 No value passed for parameter 'developmentLength'.
+   189→   189→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/BeamScreen.kt:320:33 No value passed for parameter 'lapLength'.
+   190→   190→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:127:67 Unsupported [References to variables aren't supported yet].
+   191→   191→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:127:81 Unsupported [References to variables aren't supported yet].
+   192→   192→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:128:67 Unsupported [References to variables aren't supported yet].
+   193→   193→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:128:81 Unsupported [References to variables aren't supported yet].
+   194→   194→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:129:67 Unsupported [References to variables aren't supported yet].
+   195→   195→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:129:81 Unsupported [References to variables aren't supported yet].
+   196→   196→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:130:67 Unsupported [References to variables aren't supported yet].
+   197→   197→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:130:81 Unsupported [References to variables aren't supported yet].
+   198→   198→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:131:65 Unsupported [References to variables aren't supported yet].
+   199→   199→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:131:79 Unsupported [References to variables aren't supported yet].
+   200→   200→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:132:63 Unsupported [References to variables aren't supported yet].
+   201→   201→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:132:77 Unsupported [References to variables aren't supported yet].
+   202→   202→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:134:65 Unsupported [References to variables aren't supported yet].
+   203→   203→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:134:79 Unsupported [References to variables aren't supported yet].
+   204→   204→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:135:65 Unsupported [References to variables aren't supported yet].
+   205→   205→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:135:79 Unsupported [References to variables aren't supported yet].
+   206→   206→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:137:66 Unsupported [References to variables aren't supported yet].
+   207→   207→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:137:80 Unsupported [References to variables aren't supported yet].
+   208→   208→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:138:67 Unsupported [References to variables aren't supported yet].
+   209→   209→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:138:81 Unsupported [References to variables aren't supported yet].
+   210→   210→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:152:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   211→   211→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:152:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   212→   212→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:155:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   213→   213→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:155:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   214→   214→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:158:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   215→   215→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:158:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   216→   216→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:161:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   217→   217→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:161:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   218→   218→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:167:80 Unsupported [References to variables aren't supported yet].
+   219→   219→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:167:94 Unsupported [References to variables aren't supported yet].
+   220→   220→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:168:80 Unsupported [References to variables aren't supported yet].
+   221→   221→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:168:94 Unsupported [References to variables aren't supported yet].
+   222→   222→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:169:80 Unsupported [References to variables aren't supported yet].
+   223→   223→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:169:94 Unsupported [References to variables aren't supported yet].
+   224→   224→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:170:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   225→   225→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:170:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   226→   226→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:176:80 Unsupported [References to variables aren't supported yet].
+   227→   227→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:176:94 Unsupported [References to variables aren't supported yet].
+   228→   228→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:177:80 Unsupported [References to variables aren't supported yet].
+   229→   229→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:177:94 Unsupported [References to variables aren't supported yet].
+   230→   230→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:178:80 Unsupported [References to variables aren't supported yet].
+   231→   231→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:178:94 Unsupported [References to variables aren't supported yet].
+   232→   232→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:179:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   233→   233→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:179:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   234→   234→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:185:80 Unsupported [References to variables aren't supported yet].
+   235→   235→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:185:94 Unsupported [References to variables aren't supported yet].
+   236→   236→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:186:80 Unsupported [References to variables aren't supported yet].
+   237→   237→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:186:94 Unsupported [References to variables aren't supported yet].
+   238→   238→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:187:80 Unsupported [References to variables aren't supported yet].
+   239→   239→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:187:94 Unsupported [References to variables aren't supported yet].
+   240→   240→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:188:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   241→   241→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:188:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   242→   242→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:200:80 Unsupported [References to variables aren't supported yet].
+   243→   243→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:200:94 Unsupported [References to variables aren't supported yet].
+   244→   244→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:202:37 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'androidx.compose.ui.Modifier' was expected.
+   245→   245→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/CalculatorScreen.kt:202:56 Argument type mismatch: actual type is 'androidx.compose.ui.Modifier', but 'androidx.compose.ui.graphics.Color' was expected.
+   246→   246→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/DesignHubScreen.kt:94:52 Expression 'luminance' of type 'kotlin.Float' cannot be invoked as a function. Function 'invoke()' is not found.
+   247→   247→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/DesignHubScreen.kt:94:64 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/compareTo' in 'compareTo'.
+   248→   248→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/HomeScreen.kt:372:18 Unresolved reference 'offset'.
+   249→   249→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/HomeScreen.kt:380:18 Unresolved reference 'offset'.
+   250→   250→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/HomeScreen.kt:630:22 Unresolved reference 'offset'.
+   251→   251→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SettingsScreen.kt:242:11 Unresolved reference 'ImageVector'.
+   252→   252→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:289:9 No value passed for parameter 'drawingContent'.
+   253→   253→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:290:7 Argument type mismatch: actual type is 'kotlin.Function0<kotlin.Unit>', but 'androidx.compose.ui.Modifier' was expected.
+   254→   254→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:291:9 @Composable invocations can only happen from the context of a @Composable function
+   255→   255→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:318:35 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   256→   256→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:318:63 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   257→   257→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:321:39 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   258→   258→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:321:57 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   259→   259→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:328:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   260→   260→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:329:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   261→   261→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:330:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   262→   262→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:335:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   263→   263→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:336:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   264→   264→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:337:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   265→   265→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:349:35 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   266→   266→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:349:62 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   267→   267→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:350:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   268→   268→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:350:56 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   269→   269→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:351:38 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   270→   270→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:351:65 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   271→   271→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:354:35 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   272→   272→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:354:62 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   273→   273→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:355:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   274→   274→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:355:56 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   275→   275→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:356:38 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   276→   276→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:356:65 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   277→   277→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:359:35 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   278→   278→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:360:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   279→   279→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:362:35 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   280→   280→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:363:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   281→   281→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:368:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   282→   282→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:369:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   283→   283→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:389:37 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   284→   284→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:389:93 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   285→   285→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:391:37 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   286→   286→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:391:63 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   287→   287→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:392:37 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   288→   288→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:392:63 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   289→   289→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:397:37 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   290→   290→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:397:93 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   291→   291→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:398:37 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   292→   292→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:398:63 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   293→   293→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:399:37 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   294→   294→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:399:63 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   295→   295→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:405:17 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   296→   296→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:412:48 None of the following candidates is applicable:
+   297→   297→fun max(a: Double, b: Double): Double
+   298→   298→fun max(a: Float, b: Float): Float
+   299→   299→fun max(a: Int, b: Int): Int
+   300→   300→fun max(a: Long, b: Long): Long
+   301→   301→fun max(a: UInt, b: UInt): UInt
+   302→   302→fun max(a: ULong, b: ULong): ULong
+   303→   303→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:416:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   304→   304→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:424:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   305→   305→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:424:55 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   306→   306→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:434:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   307→   307→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:442:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   308→   308→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:442:55 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   309→   309→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:453:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   310→   310→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:454:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   311→   311→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:455:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   312→   312→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:459:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   313→   313→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:460:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   314→   314→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:461:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   315→   315→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:465:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   316→   316→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:466:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   317→   317→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:467:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   318→   318→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:471:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   319→   319→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:472:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   320→   320→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:473:24 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   321→   321→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:483:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   322→   322→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:483:59 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   323→   323→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:484:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   324→   324→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:484:59 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   325→   325→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:485:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   326→   326→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:485:53 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   327→   327→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:486:84 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   328→   328→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:490:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   329→   329→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:490:59 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   330→   330→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:491:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   331→   331→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:491:64 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   332→   332→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:492:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   333→   333→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:492:53 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   334→   334→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:494:58 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   335→   335→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:495:90 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   336→   336→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:500:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   337→   337→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:500:59 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   338→   338→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:501:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   339→   339→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:501:64 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   340→   340→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:502:32 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   341→   341→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:502:54 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   342→   342→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:504:58 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   343→   343→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:505:91 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   344→   344→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:511:58 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   345→   345→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:512:98 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   346→   346→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:564:9 No value passed for parameter 'drawingContent'.
+   347→   347→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:565:7 Argument type mismatch: actual type is 'kotlin.Function0<kotlin.Unit>', but 'androidx.compose.ui.Modifier' was expected.
+   348→   348→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:566:9 @Composable invocations can only happen from the context of a @Composable function
+   349→   349→
+   350→   350→> Task :app:compileDebugKotlin FAILED
+   351→   351→
+   352→   352→[Incubating] Problems report is available at: file:///home/z/my-project/civileg2/build/reports/problems/problems-report.html
+   353→   353→
+   354→   354→FAILURE: Build failed with an exception.
+   355→   355→
+   356→   356→* What went wrong:
+   357→   357→Execution failed for task ':app:compileDebugKotlin'.
+   358→   358→> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   359→   359→   > Compilation error. See log for more details
+   360→   360→
+   361→   361→* Try:
+   362→   362→> Run with --stacktrace option to get the stack trace.
+   363→   363→> Run with --info or --debug option to get more log output.
+   364→   364→> Run with --scan to get full insights.
+   365→   365→> Get more help at https://help.gradle.org.
+   366→   366→
+   367→   367→Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+   368→   368→
+   369→   369→You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+   370→   370→
+   371→   371→For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+   372→   372→
+   373→   373→BUILD FAILED in 2m 6s
+   374→   374→32 actionable tasks: 2 executed, 30 up-to-date
+   375→   375→

@@ -1,0 +1,1542 @@
+     1→package com.civileg.app.domain.calculations.aci
+     2→
+     3→import com.civileg.app.domain.calculations.base.ColumnDesign
+     4→import com.civileg.app.domain.entities.*
+     5→import com.civileg.app.domain.usecases.AnalyzeRebarInventory
+     6→import kotlin.math.*
+     7→
+     8→/**
+     9→ * تصميم أعمدة متقدم حسب الكود الأمريكي ACI 318-19
+    10→ * يغطي جميع حالات التصميم: النحافة، الانحناء الثنائي، الأعمدة الحلزونية،
+    11→ * قص الاختراق، منحنى التفاعل، وتكبير العزوم
+    12→ */
+    13→class ACIAdvancedColumn : ColumnDesign {
+    14→
+    15→    companion object {
+    16→        private const val PHI_TIED = 0.65          // ACI 21.2.1(b) - tied columns
+    17→        private const val PHI_SPIRAL = 0.75        // ACI 21.2.1(b) - spiral columns
+    18→        private const val PHI_FLEXURE = 0.9        // ACI 21.2.1(a) - tension-controlled
+    19→        private const val PHI_SHEAR = 0.75         // ACI 21.2.1(c) - shear
+    20→        private const val BETA_1_DEFAULT = 0.85    // for fc' <= 28 MPa (ACI 22.2.2.4.1)
+    21→        private const val EPSILON_CU = 0.003       // ACI 22.2.2.1 - max concrete strain
+    22→        private const val EPSILON_T_MIN = 0.005    // tension-controlled limit (ACI 21.2.2)
+    23→        private const val EPSILON_TY = 0.002       // compression-controlled limit (ACI Table 21.2.2)
+    24→        private const val NS_LIMIT = 22.0          // tied columns (ACI 22.4.2.1)
+    25→        private const val NS_LIMIT_SPIRAL = 28.0   // spiral columns (ACI 22.4.2.1)
+    26→        private const val ES = 200_000.0           // Steel modulus of elasticity (MPa)
+    27→        private const val LAMBDA = 1.0             // Normal-weight concrete (ACI 19.2.4.1)
+    28→        private const val CLEAR_COVER = 40.0       // mm - ACI 20.6.1
+    29→        private const val TIE_BAR_EXTRA = 10.0     // mm - tie bar diameter estimate
+    30→        private const val BETA_DNS = 0.6           // Sustained load ratio for creep
+    31→
+    32→        /** ACI standard bar diameters (No.3 through No.11 in metric) */
+    33→        private val ACI_BAR_DIAMETERS = listOf(
+    34→            10.0, 12.0, 14.0, 16.0, 19.0, 22.0, 25.0, 29.0, 32.0, 36.0
+    35→        )
+    36→    }
+    37→
+    38→    private val baseDesign = ACIColumn()
+    39→    private val inventoryAnalyzer = AnalyzeRebarInventory()
+    40→
+    41→    // ═══════════════════════════════════════════════════════════════════
+    42→    // MAIN DESIGN FUNCTION
+    43→    // ═══════════════════════════════════════════════════════════════════
+    44→
+    45→    /**
+    46→     * تصميم عمود متقدم حسب ACI 318-19
+    47→     * Advanced column design covering slenderness, biaxial bending, interaction diagrams,
+    48→     * spiral/tied reinforcement, and punching shear checks.
+    49→     *
+    50→     * @param columnType نوع العمود وأبعاده
+    51→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+    52→     * @param fy إجهاد خضوع الحديد (MPa)
+    53→     * @param axialLoad الحمل المحوري التصميمي (kN)
+    54→     * @param momentX العزم حول المحور X (kN.m)
+    55→     * @param momentY العزم حول المحور Y (kN.m)
+    56→     * @param unsupportedLength الطول غير المدعوم (m)
+    57→     * @param endConditions ظروف التثبيت
+    58→     * @param connectedSlab نوع البلاطة المتصلة
+    59→     * @param hasCap هل يوجد رأس عمود (column cap)
+    60→     * @param inventory مخزون الحديد المتاح
+    61→     * @param loadCombination مجموعة التحميل
+    62→     * @param isSpiral هل العمود حلزوني
+    63→     * @param clearCover الغطاء الخرساني (mm)
+    64→     * @param slabDepth سمك البلاطة للقص الاختراقي (mm)
+    65→     */
+    66→    fun designAdvancedColumn(
+    67→        columnType: ColumnType,
+    68→        fcu: Double,
+    69→        fy: Double,
+    70→        axialLoad: Double,
+    71→        momentX: Double,
+    72→        momentY: Double,
+    73→        unsupportedLength: Double,
+    74→        endConditions: ColumnEndConditions,
+    75→        connectedSlab: ConnectedSlabType,
+    76→        hasCap: Boolean,
+    77→        inventory: RebarInventory?,
+    78→        loadCombination: LoadCombination,
+    79→        isSpiral: Boolean = false,
+    80→        clearCover: Double = CLEAR_COVER,
+    81→        slabDepth: Double = 200.0
+    82→    ): AdvancedColumnResult {
+    83→        val warnings = mutableListOf<String>()
+    84→        val codeNotes = mutableListOf<String>()
+    85→        val fcPrime = 0.8 * fcu // Cube to cylinder conversion for ACI
+    86→
+    87→        // ── Section geometry ──
+    88→        val (b, h) = getColumnDimensions(columnType)
+    89→        val Ag = columnType.getGrossArea()
+    90→
+    91→        // ── Step 1: Slenderness analysis ──
+    92→        val (kFactor, isSway) = calculateEffectiveLengthFactor(endConditions)
+    93→        val r = getRadiusOfGyration(columnType)
+    94→        val slendernessRatio = calculateSlendernessRatio(kFactor, unsupportedLength, r)
+    95→        val short = isShortColumn(slendernessRatio, isSpiral)
+    96→
+    97→        if (!short) {
+    98→            warnings.add("⚠️ عمود نحيف! يجب مراعاة تأثيرات الدرجة الثانية (P-Delta)")
+    99→            codeNotes.add("ACI 318-22.4: Slenderness ratio λ=%.1f > %.0f".format(slendernessRatio, if (isSpiral) NS_LIMIT_SPIRAL else NS_LIMIT))
+   100→        }
+   101→
+   102→        // ── Step 2: Moment magnification for slender columns ──
+   103→        val Ig = getGrossMomentOfInertia(columnType)
+   104→        val Ec = 4700.0 * sqrt(fcPrime) // ACI 19.2.2.1
+   105→        val Is = calculateSteelMomentOfInertia(columnType, Ag, clearCover)
+   106→        val EI = calculateEffectiveEI(Ec, Ig, Is, Ag)
+   107→
+   108→        val KLu = kFactor * unsupportedLength // m
+   109→        val Pc = calculateCriticalLoad(EI, KLu)
+   110→        val Pu = axialLoad
+   111→
+   112→        val magnifierX = if (!short) calculateMomentMagnification(Pu, momentX, Pc) else 1.0
+   113→        val magnifierY = if (!short) calculateMomentMagnification(Pu, momentY, Pc) else 1.0
+   114→
+   115→        val MxDesign = momentX * magnifierX
+   116→        val MyDesign = momentY * magnifierY
+   117→
+   118→        if (magnifierX > 1.05 || magnifierY > 1.05) {
+   119→            codeNotes.add("ACI 22.4.2.1: Moment magnification δx=%.2f, δy=%.2f".format(magnifierX, magnifierY))
+   120→        }
+   121→
+   122→        // ── Step 3: Reinforcement design ──
+   123→        val reinforcementResult = if (short) {
+   124→            designShortColumn(
+   125→                fcPrime, fy, b, h, Ag, Pu, MxDesign, MyDesign,
+   126→                isSpiral, clearCover, warnings, codeNotes
+   127→            )
+   128→        } else {
+   129→            designShortColumn(
+   130→                fcPrime, fy, b, h, Ag, Pu, MxDesign, MyDesign,
+   131→                isSpiral, clearCover, warnings, codeNotes
+   132→            )
+   133→        }
+   134→
+   135→        // ── Step 4: Capacity calculations ──
+   136→        val As = reinforcementResult.astProvided
+   137→        val axialCapacity = calculateAxialCapacityWithPhi(
+   138→            fcPrime, fy, b, h, As, Ag, isSpiral
+   139→        )
+   140→
+   141→        val dEff = h - clearCover - TIE_BAR_EXTRA - reinforcementResult.barDiameter / 2
+   142→        val momentCapacityX = calculateMomentCapacity(fcPrime, fy, b, h, As, dEff, Ag, isSpiral, clearCover)
+   143→        val momentCapacityY = if (abs(b - h) > 1.0) {
+   144→            val dEffY = b - clearCover - TIE_BAR_EXTRA - reinforcementResult.barDiameter / 2
+   145→            calculateMomentCapacity(fcPrime, fy, h, b, As, dEffY, Ag, isSpiral, clearCover)
+   146→        } else {
+   147→            momentCapacityX
+   148→        }
+   149→
+   150→        // ── Step 5: Biaxial bending check ──
+   151→        val biaxialCheck = if (abs(momentX) > 0.01 && abs(momentY) > 0.01) {
+   152→            val breslerResult = checkBiaxialBresler(
+   153→                fcPrime, fy, b, h, Ag, As, Pu, MxDesign, MyDesign, isSpiral, clearCover
+   154→            )
+   155→            if (breslerResult.isSafe) {
+   156→                breslerResult
+   157→            } else {
+   158→                // Verify with load contour method
+   159→                checkBiaxialLoadContour(
+   160→                    fcPrime, fy, b, h, Ag, As, Pu, MxDesign, MyDesign,
+   161→                    momentCapacityX, momentCapacityY, isSpiral, clearCover
+   162→                )
+   163→            }
+   164→        } else null
+   165→
+   166→        if (biaxialCheck != null && !biaxialCheck.isSafe) {
+   167→            warnings.add("❌ فشل فحص الانحناء الثنائي! يجب زيادة مقطع العمود أو التسليح")
+   168→        }
+   169→
+   170→        // ── Step 6: Spiral reinforcement design ──
+   171→        if (isSpiral) {
+   172→            val spiralResult = designSpiralReinforcement(fcPrime, fy, columnType, Ag, clearCover)
+   173→            codeNotes.add("ACI 25.7.6: Spiral ρs=%.4f, pitch=%.0fmm, dia=%.0fmm".format(
+   174→                spiralResult.third, spiralResult.first, spiralResult.second
+   175→            ))
+   176→        }
+   177→
+   178→        // ── Step 7: Punching shear check (flat slab only) ──
+   179→        val punchingCheck = if (connectedSlab == ConnectedSlabType.FLAT) {
+   180→            checkPunchingShear(columnType, Pu, fcPrime, slabDepth, clearCover, hasCap, warnings, codeNotes)
+   181→        } else null
+   182→
+   183→        // ── Step 8: Inventory analysis ──
+   184→        val inventoryAnalysis = inventory?.let { inv ->
+   185→            inventoryAnalyzer.analyze(
+   186→                requiredArea = reinforcementResult.astRequired,
+   187→                requiredLength = reinforcementResult.numberOfBars * unsupportedLength,
+   188→                inventory = inv,
+   189→                designCode = DesignCode.ACI,
+   190→                elementLength = unsupportedLength,
+   191→                cover = clearCover
+   192→            )
+   193→        }
+   194→
+   195→        // ── Code notes ──
+   196→        codeNotes.add("ACI 318-19: Chapter 10 - Design of Compression Members")
+   197→        codeNotes.add("ACI 21.2.1: φ = %.2f (%s column)".format(
+   198→            if (isSpiral) PHI_SPIRAL else PHI_TIED,
+   199→            if (isSpiral) "spiral" else "tied"
+   200→        ))
+   201→        codeNotes.add("ACI 10.6.1.1: Reinforcement ratio = %.2f%%".format(As / Ag * 100))
+   202→        if (fcu > 0) {
+   203→            codeNotes.add("fc' = 0.8 × fcu = %.0f MPa (cylinder strength)".format(fcPrime))
+   204→        }
+   205→        codeNotes.add("ACI 20.6.1: Clear cover = %.0fmm".format(clearCover))
+   206→
+   207→        // ── Steel weight and concrete volume per meter ──
+   208→        val steelWeightPerMeter = As / 1e6 * 7850.0 // kg/m (longitudinal bars only)
+   209→        val concreteVolumePerMeter = Ag / 1e6 // m³/m
+   210→
+   211→        return AdvancedColumnResult(
+   212→            columnType = columnType,
+   213→            axialCapacity = axialCapacity,
+   214→            momentCapacityX = momentCapacityX,
+   215→            momentCapacityY = momentCapacityY,
+   216→            slendernessRatio = slendernessRatio,
+   217→            isSlender = !short,
+   218→            effectiveLength = KLu * 1000.0, // mm
+   219→            reinforcementResult = reinforcementResult,
+   220→            inventoryAnalysis = inventoryAnalysis,
+   221→            biaxialCheck = biaxialCheck,
+   222→            punchingCheck = punchingCheck,
+   223→            warnings = warnings,
+   224→            codeNotes = codeNotes,
+   225→            steelWeightPerMeter = steelWeightPerMeter,
+   226→            concreteVolumePerMeter = concreteVolumePerMeter
+   227→        )
+   228→    }
+   229→
+   230→    // ═══════════════════════════════════════════════════════════════════
+   231→    // SLENDERNESS ANALYSIS  (ACI 318-22.4)
+   232→    // ═══════════════════════════════════════════════════════════════════
+   233→
+   234→    /**
+   235→     * Calculate effective length factor K from end conditions.
+   236→     * Uses simplified alignment chart values per ACI 22.4.2.
+   237→     * Returns K factor and whether the frame is considered sway.
+   238→     */
+   239→    fun calculateEffectiveLengthFactor(endConditions: ColumnEndConditions): Pair<Double, Boolean> {
+   240→        val kTop = endConditions.topCondition.effectiveLengthFactor
+   241→        val kBottom = endConditions.bottomCondition.effectiveLengthFactor
+   242→
+   243→        // Use the average of top and bottom, or the more critical value
+   244→        // For braced (non-sway) frames: 0.5 ≤ K ≤ 1.0
+   245→        // For unbraced (sway) frames: 1.0 ≤ K ≤ ∞
+   246→        val kAvg = (kTop + kBottom) / 2.0
+   247→
+   248→        // Sway determination: if both ends are fixed or partially fixed → non-sway
+   249→        val isSway = when {
+   250→            endConditions.topCondition == EndCondition.PINNED ||
+   251→            endConditions.topCondition == EndCondition.ROLLER ||
+   252→            endConditions.topCondition == EndCondition.FREE -> true
+   253→            endConditions.bottomCondition == EndCondition.PINNED ||
+   254→            endConditions.bottomCondition == EndCondition.ROLLER -> true
+   255→            else -> false
+   256→        }
+   257→
+   258→        // For non-sway frames, limit K to [0.5, 1.0]
+   259→        // For sway frames, K ≥ 1.0
+   260→        val kEffective = if (isSway) {
+   261→            max(1.0, kAvg)
+   262→        } else {
+   263→            kAvg.coerceIn(0.5, 1.0)
+   264→        }
+   265→
+   266→        return Pair(kEffective, isSway)
+   267→    }
+   268→
+   269→    /**
+   270→     * Calculate slenderness ratio λ = K × Lu / r
+   271→     * ACI 318-22.4.1
+   272→     *
+   273→     * @param K effective length factor
+   274→     * @param unsupportedLength unsupported length (m)
+   275→     * @param r radius of gyration (mm)
+   276→     * @return slenderness ratio (dimensionless)
+   277→     */
+   278→    fun calculateSlendernessRatio(K: Double, unsupportedLength: Double, r: Double): Double {
+   279→        val Lu_mm = unsupportedLength * 1000.0
+   280→        return K * Lu_mm / r
+   281→    }
+   282→
+   283→    /**
+   284→     * Check if the column is short per ACI 22.4.2.1
+   285→     * λ ≤ 22 for tied columns, λ ≤ 28 for spiral columns
+   286→     */
+   287→    fun isShortColumn(slendernessRatio: Double, isSpiral: Boolean): Boolean {
+   288→        val limit = if (isSpiral) NS_LIMIT_SPIRAL else NS_LIMIT
+   289→        return slendernessRatio <= limit
+   290→    }
+   291→
+   292→    /**
+   293→     * Calculate non-sway moment magnification factor δns
+   294→     * ACI 22.4.2.1: δns = Cm / (1 - Pu / (0.75 × Pc))
+   295→     *
+   296→     * Cm is taken as 1.0 (conservative for transverse loads or unknown M1/M2 ratio).
+   297→     * βdns defaults to 0.6 (typical sustained load ratio).
+   298→     */
+   299→    fun calculateMomentMagnification(Pu: Double, M: Double, Pc: Double, Cm: Double = 1.0): Double {
+   300→        if (M < 0.01 || Pc <= 0.0) return 1.0
+   301→        val ratio = Pu * 1000.0 / (0.75 * Pc) // Pu in N, Pc in N
+   302→        if (ratio >= 1.0) return 10.0 // Cap to indicate failure
+   303→        return (Cm / (1.0 - ratio)).coerceIn(1.0, 10.0)
+   304→    }
+   305→
+   306→    /**
+   307→     * Calculate sway moment magnification factor δs
+   308→     * ACI 22.4.4: δs = 1 / (1 - ΣPu / (0.75 × ΣPc))
+   309→     *
+   310→     * For a single column: δs = 1 / (1 - Pu / (0.75 × Pc))
+   311→     */
+   312→    fun calculateSwayMomentMagnification(Pu: Double, Pc: Double): Double {
+   313→        val ratio = Pu * 1000.0 / (0.75 * Pc)
+   314→        if (ratio >= 1.0) return 10.0
+   315→        return (1.0 / (1.0 - ratio)).coerceIn(1.0, 10.0)
+   316→    }
+   317→
+   318→    /**
+   319→     * Calculate effective flexural stiffness EI per ACI 22.4.2.4
+   320→     * EI = 0.4 × Ec × Ig / (1 + βdns)
+   321→     *
+   322→     * @param Ec concrete elastic modulus (MPa)
+   323→     * @param Ig gross moment of inertia (mm⁴)
+   324→     * @param Is steel moment of inertia (mm⁴)
+   325→     * @param Ag gross area (mm²)
+   326→     * @param betaDns ratio of max sustained axial load to max factored axial load
+   327→     * @return EI in N·mm²
+   328→     */
+   329→    fun calculateEffectiveEI(
+   330→        Ec: Double, Ig: Double, Is: Double, Ag: Double,
+   331→        betaDns: Double = BETA_DNS
+   332→    ): Double {
+   333→        // Simplified: EI = 0.4 × Ec × Ig / (1 + βdns)  [ACI 22.4.2.4(a)]
+   334→        val eiSimplified = 0.4 * Ec * Ig / (1.0 + betaDns)
+   335→
+   336→        // Detailed: EI = (0.2 × Ec × Ig + Es × Is) / (1 + βdns)  [ACI 22.4.2.4(b)]
+   337→        val eiDetailed = (0.2 * Ec * Ig + ES * Is) / (1.0 + betaDns)
+   338→
+   339→        // Use the larger of the two for conservative design
+   340→        return max(eiSimplified, eiDetailed)
+   341→    }
+   342→
+   343→    /**
+   344→     * Calculate critical buckling load Pc
+   345→     * Pc = π² × EI / (K × Lu)²
+   346→     *
+   347→     * @param EI effective stiffness (N·mm²)
+   348→     * @param KLu K × unsupported length (m)
+   349→     * @return Pc in N
+   350→     */
+   351→    fun calculateCriticalLoad(EI: Double, KLu: Double): Double {
+   352→        val KLu_mm = KLu * 1000.0
+   353→        return PI * PI * EI / (KLu_mm * KLu_mm)
+   354→    }
+   355→
+   356→    // ═══════════════════════════════════════════════════════════════════
+   357→    // INTERACTION DIAGRAM  (ACI 318 Chapter 10)
+   358→    // ═══════════════════════════════════════════════════════════════════
+   359→
+   360→    /**
+   361→     * Generate a P-M interaction diagram with at least 20 points.
+   362→     * Returns list of (φPn in kN, φMn in kN·m) pairs from pure compression to pure tension.
+   363→     *
+   364→     * For rectangular columns: uses Whitney stress block with strain compatibility.
+   365→     * For circular columns: uses equivalent rectangular approximation.
+   366→     */
+   367→    fun generateInteractionDiagram(
+   368→        columnType: ColumnType,
+   369→        fcu: Double,
+   370→        fy: Double,
+   371→        reinforcementArea: Double,
+   372→        isSpiral: Boolean = false,
+   373→        clearCover: Double = CLEAR_COVER
+   374→    ): List<Pair<Double, Double>> {
+   375→        val fcPrime = 0.8 * fcu
+   376→        val (b, h) = getColumnDimensions(columnType)
+   377→        val Ag = columnType.getGrossArea()
+   378→        val As = reinforcementArea.coerceAtMost(Ag * 0.08)
+   379→
+   380→        return when (columnType) {
+   381→            is ColumnType.Rectangular, is ColumnType.LShaped, is ColumnType.TShaped, is ColumnType.Composite, is ColumnType.Tubular -> {
+   382→                generateRectangularInteractionDiagram(b, h, fcPrime, fy, As, isSpiral, clearCover)
+   383→            }
+   384→            is ColumnType.Circular -> {
+   385→                generateCircularInteractionDiagram(columnType.diameter, fcPrime, fy, As, isSpiral, clearCover)
+   386→            }
+   387→        }
+   388→    }
+   389→
+   390→    /**
+   391→     * Generate interaction diagram for rectangular columns using strain compatibility
+   392→     * and Whitney stress block per ACI 318 Chapter 10.
+   393→     */
+   394→    private fun generateRectangularInteractionDiagram(
+   395→        b: Double, h: Double,
+   396→        fcPrime: Double, fy: Double,
+   397→        As: Double, isSpiral: Boolean,
+   398→        clearCover: Double
+   399→    ): List<Pair<Double, Double>> {
+   400→        val points = mutableListOf<Pair<Double, Double>>()
+   401→        val beta1 = getBeta1(fcPrime)
+   402→        val d = h - clearCover - TIE_BAR_EXTRA
+   403→        val dPrime = clearCover + TIE_BAR_EXTRA
+   404→        val epsilonY = fy / ES
+   405→
+   406→        // Bar positions: distribute around perimeter
+   407→        // 4 corners + side bars
+   408→        val numBars = max(4, (As / (PI * 16.0 * 16.0 / 4)).toInt().coerceIn(4, 16))
+   409→        val barArea = As / numBars
+   410→        val barPositions = getRectangularBarPositions(b, h, numBars, clearCover, TIE_BAR_EXTRA)
+   411→
+   412→        // Balanced neutral axis depth
+   413→        val cBalanced = d * EPSILON_CU / (EPSILON_CU + epsilonY)
+   414→
+   415→        // Generate 24 points from pure compression to pure tension
+   416→        val cValues = mutableListOf<Double>()
+   417→
+   418→        // Pure compression region (c > h): 4 points
+   419→        cValues.add(3.0 * h)
+   420→        cValues.add(2.0 * h)
+   421→        cValues.add(1.5 * h)
+   422→        cValues.add(1.2 * h)
+   423→
+   424→        // Near balanced: 3 points
+   425→        cValues.add(cBalanced * 1.5)
+   426→        cValues.add(cBalanced * 1.1)
+   427→        cValues.add(cBalanced)
+   428→
+   429→        // Transition zone (cBalanced to tension-controlled): 8 points
+   430→        val cTc = d * EPSILON_CU / (EPSILON_CU + EPSILON_T_MIN) // tension-controlled NA depth
+   431→        for (i in 8 downTo 1) {
+   432→            cValues.add(cBalanced - (cBalanced - cTc) * i / 8.0)
+   433→        }
+   434→
+   435→        // Tension-controlled region: 6 points
+   436→        for (i in 1..6) {
+   437→            val cVal = cTc * (1.0 - i / 7.0)
+   438→            if (cVal > 5.0) cValues.add(cVal)
+   439→        }
+   440→
+   441→        // Near pure tension: 3 points
+   442→        cValues.add(15.0)
+   443→        cValues.add(10.0)
+   444→        cValues.add(5.0)
+   445→
+   446→        for (c in cValues) {
+   447→            val (phiPn, phiMn) = calculateRectangularInteractionPoint(
+   448→                b, h, fcPrime, fy, beta1, barPositions, barArea, c, d, isSpiral
+   449→            )
+   450→            points.add(Pair(phiPn, phiMn))
+   451→        }
+   452→
+   453→        // Pure tension point
+   454→        val phiT = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   455→        val pureTensionPn = -As * fy / 1000.0 * PHI_FLEXURE
+   456→        points.add(Pair(pureTensionPn, 0.0))
+   457→
+   458→        return points
+   459→    }
+   460→
+   461→    /**
+   462→     * Generate interaction diagram for circular columns using equivalent rectangular approximation.
+   463→     */
+   464→    private fun generateCircularInteractionDiagram(
+   465→        diameter: Double,
+   466→        fcPrime: Double, fy: Double,
+   467→        As: Double, isSpiral: Boolean,
+   468→        clearCover: Double
+   469→    ): List<Pair<Double, Double>> {
+   470→        val points = mutableListOf<Pair<Double, Double>>()
+   471→        val R = diameter / 2.0
+   472→        val beta1 = getBeta1(fcPrime)
+   473→        val d = diameter - clearCover - TIE_BAR_EXTRA
+   474→        val epsilonY = fy / ES
+   475→
+   476→        // Bar positions: equally spaced around the circumference
+   477→        val numBars = max(6, (As / (PI * 16.0 * 16.0 / 4)).toInt().coerceIn(6, 16))
+   478→        val barArea = As / numBars
+   479→        val barPositions = getCircularBarPositions(diameter, numBars, clearCover, TIE_BAR_EXTRA)
+   480→
+   481→        val cBalanced = d * EPSILON_CU / (EPSILON_CU + epsilonY)
+   482→        val cTc = d * EPSILON_CU / (EPSILON_CU + EPSILON_T_MIN)
+   483→
+   484→        val cValues = mutableListOf<Double>()
+   485→        cValues.add(3.0 * diameter)
+   486→        cValues.add(2.0 * diameter)
+   487→        cValues.add(1.5 * diameter)
+   488→        cValues.add(1.2 * diameter)
+   489→        cValues.add(cBalanced * 1.5)
+   490→        cValues.add(cBalanced * 1.1)
+   491→        cValues.add(cBalanced)
+   492→
+   493→        for (i in 8 downTo 1) {
+   494→            cValues.add(cBalanced - (cBalanced - cTc) * i / 8.0)
+   495→        }
+   496→        for (i in 1..6) {
+   497→            val cVal = cTc * (1.0 - i / 7.0)
+   498→            if (cVal > 5.0) cValues.add(cVal)
+   499→        }
+   500→        cValues.add(15.0)
+   501→        cValues.add(10.0)
+   502→        cValues.add(5.0)
+   503→
+   504→        for (c in cValues) {
+   505→            val (phiPn, phiMn) = calculateCircularInteractionPoint(
+   506→                diameter, R, fcPrime, fy, beta1, barPositions, barArea, c, d, isSpiral
+   507→            )
+   508→            points.add(Pair(phiPn, phiMn))
+   509→        }
+   510→
+   511→        val pureTensionPn = -As * fy / 1000.0 * PHI_FLEXURE
+   512→        points.add(Pair(pureTensionPn, 0.0))
+   513→
+   514→        return points
+   515→    }
+   516→
+   517→    /**
+   518→     * Calculate a single point on the rectangular interaction diagram.
+   519→     * Uses Whitney stress block and strain compatibility per ACI 318.
+   520→     *
+   521→     * @param c neutral axis depth from extreme compression fiber (mm)
+   522→     * @return Pair(φPn in kN, φMn in kN·m)
+   523→     */
+   524→    private fun calculateRectangularInteractionPoint(
+   525→        b: Double, h: Double,
+   526→        fcPrime: Double, fy: Double,
+   527→        beta1: Double,
+   528→        barPositions: List<Pair<Double, Double>>,
+   529→        barArea: Double,
+   530→        c: Double, d: Double,
+   531→        isSpiral: Boolean
+   532→    ): Pair<Double, Double> {
+   533→        val a = min(beta1 * c, h) // Depth of stress block, capped at h
+   534→
+   535→        // Concrete compression force: Cc = 0.85 × fc' × a × b
+   536→        val Cc = 0.85 * fcPrime * a * b
+   537→        // Cc acts at (h/2 - a/2) from centroid
+   538→        val yCc = h / 2.0 - a / 2.0
+   539→
+   540→        var totalSteelForce = 0.0 // N (positive = compression)
+   541→        var totalMoment = 0.0     // N·mm (positive)
+   542→
+   543→        // Find extreme tension bar strain for φ calculation
+   544→        var minTensionStrain = Double.MAX_VALUE
+   545→        val compressionFaceY = h / 2.0 // y-coordinate of compression face from centroid
+   546→
+   547→        for ((yi, _) in barPositions) {
+   548→            // Distance from compression face (positive y is up, compression at top)
+   549→            val distFromCompression = compressionFaceY - yi
+   550→
+   551→            // Strain at this bar: εs = εcu × (c - dist) / c
+   552→            val epsilonS = EPSILON_CU * (c - distFromCompression) / max(c, 1.0)
+   553→
+   554→            // Track most extreme tension strain (most negative εs)
+   555→            if (epsilonS < minTensionStrain) {
+   556→                minTensionStrain = epsilonS
+   557→            }
+   558→
+   559→            // Steel stress (capped at ±fy)
+   560→            val fs = (ES * epsilonS).coerceIn(-fy, fy)
+   561→
+   562→            val barForce = barArea * fs // N, positive = compression
+   563→            totalSteelForce += barForce
+   564→            totalMoment += barForce * yi // Moment about centroid
+   565→        }
+   566→
+   567→        // Pn = Cc + ΣFs (compression positive)
+   568→        val Pn = Cc + totalSteelForce
+   569→
+   570→        // Mn = Cc × (h/2 - a/2) + Σ(Fs × yi) about centroid
+   571→        val Mn = Cc * yCc + totalMoment
+   572→
+   573→        // φ factor based on net tensile strain
+   574→        val phi = getPhiFactor(minTensionStrain, isSpiral)
+   575→
+   576→        // For high compression (c > h), limit concrete force to 0.85 × fc' × Ag
+   577→        val PnCapped = if (a >= h) {
+   578→            val steelContribution = totalSteelForce
+   579→            val concreteMax = 0.85 * fcPrime * b * h
+   580→            concreteMax + steelContribution
+   581→        } else {
+   582→            Pn
+   583→        }
+   584→
+   585→        return Pair(phi * PnCapped / 1000.0, phi * abs(Mn) / 1e6)
+   586→    }
+   587→
+   588→    /**
+   589→     * Calculate a single point on the circular interaction diagram.
+   590→     * Uses circular segment area for compression zone.
+   591→     */
+   592→    private fun calculateCircularInteractionPoint(
+   593→        diameter: Double, R: Double,
+   594→        fcPrime: Double, fy: Double,
+   595→        beta1: Double,
+   596→        barPositions: List<Pair<Double, Double>>,
+   597→        barArea: Double,
+   598→        c: Double, d: Double,
+   599→        isSpiral: Boolean
+   600→    ): Pair<Double, Double> {
+   601→        val a = min(beta1 * c, diameter)
+   602→
+   603→        // Compression zone is a circular segment of depth a from the compression face
+   604→        // Use the equivalent rectangular approximation: Cc = 0.85 × fc' × Ac_eff
+   605→        // where Ac_eff ≈ a × 0.8 × diameter (approximate width of compression zone)
+   606→        val effectiveWidth = if (a <= R) {
+   607→            // Partial compression zone - use circular segment area
+   608→            val cosTheta = (R - a) / R
+   609→            val theta = 2.0 * acos(cosTheta.coerceIn(-1.0, 1.0))
+   610→            val segmentArea = R * R * (theta - sin(theta)) / 2.0
+   611→            // Centroid of segment from compression face
+   612→            val segmentCentroid = if (theta > 0.01) {
+   613→                R * R * R * sin(theta).pow(3) / (3.0 * segmentArea) - (R - a)
+   614→            } else {
+   615→                a / 2.0
+   616→            }
+   617→            // Effective force
+   618→            val Cc = 0.85 * fcPrime * segmentArea
+   619→            val yCc = R - a + segmentCentroid - R // from centroid (centroid at center)
+   620→
+   621→            var totalSteelForce = 0.0
+   622→            var totalMoment = 0.0
+   623→            var minTensionStrain = Double.MAX_VALUE
+   624→
+   625→            for ((yi, _) in barPositions) {
+   626→                val distFromCompression = R - yi // R is compression face y from centroid
+   627→                val epsilonS = EPSILON_CU * (c - distFromCompression) / max(c, 1.0)
+   628→                if (epsilonS < minTensionStrain) minTensionStrain = epsilonS
+   629→
+   630→                val fs = (ES * epsilonS).coerceIn(-fy, fy)
+   631→                totalSteelForce += barArea * fs
+   632→                totalMoment += barArea * fs * yi
+   633→            }
+   634→
+   635→            val Pn = Cc + totalSteelForce
+   636→            val Mn = Cc * yCc + totalMoment
+   637→            val phi = getPhiFactor(minTensionStrain, isSpiral)
+   638→            return Pair(phi * Pn / 1000.0, phi * abs(Mn) / 1e6)
+   639→        } else {
+   640→            // Full section in compression
+   641→            val Ag = PI * R * R
+   642→            val Cc = 0.85 * fcPrime * Ag
+   643→
+   644→            var totalSteelForce = 0.0
+   645→            for ((yi, _) in barPositions) {
+   646→                val epsilonS = EPSILON_CU * (c - (R - yi)) / max(c, 1.0)
+   647→                val fs = (ES * epsilonS).coerceIn(-fy, fy)
+   648→                totalSteelForce += barArea * fs
+   649→            }
+   650→
+   651→            val Pn = Cc + totalSteelForce
+   652→            val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   653→            return Pair(phi * Pn / 1000.0, 0.0)
+   654→        }
+   655→    }
+   656→
+   657→    // ═══════════════════════════════════════════════════════════════════
+   658→    // BIAXIAL BENDING  (ACI 318-22.10)
+   659→    // ═══════════════════════════════════════════════════════════════════
+   660→
+   661→    /**
+   662→     * Bresler reciprocal load method per ACI 22.10.3.2 (Eq. 22.10.3.2):
+   663→     *   1/Pn = 1/Pnx + 1/Pny - 1/Po
+   664→     *
+   665→     * Pnx: nominal axial strength at given Mux (bending about X only)
+   666→     * Pny: nominal axial strength at given Muy (bending about Y only)
+   667→     * Po:  pure axial nominal strength
+   668→     */
+   669→    fun checkBiaxialBresler(
+   670→        fcPrime: Double, fy: Double,
+   671→        b: Double, h: Double,
+   672→        Ag: Double, As: Double,
+   673→        Pu: Double, Mx: Double, My: Double,
+   674→        isSpiral: Boolean = false,
+   675→        clearCover: Double = CLEAR_COVER
+   676→    ): BiaxialCheckResult {
+   677→        val phiComp = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   678→
+   679→        // Pure axial capacity Po (ACI 22.10.2.2)
+   680→        val Po = 0.85 * fcPrime * (Ag - As) + As * fy
+   681→
+   682→        // Generate interaction diagrams for each axis
+   683→        val diagramX = generateInteractionDiagram(
+   684→            ColumnType.Rectangular(b, h), fcPrime / 0.8, fy, As, isSpiral, clearCover
+   685→        )
+   686→        val diagramY = generateInteractionDiagram(
+   687→            ColumnType.Rectangular(h, b), fcPrime / 0.8, fy, As, isSpiral, clearCover
+   688→        )
+   689→
+   690→        // Find Pnx at Mx: interpolate on the X-axis interaction diagram
+   691→        val Pnx = interpolatePnFromDiagram(diagramX, Mx)
+   692→
+   693→        // Find Pny at My: interpolate on the Y-axis interaction diagram
+   694→        val Pny = interpolatePnFromDiagram(diagramY, My)
+   695→
+   696→        // Bresler equation: 1/Pn = 1/Pnx + 1/Pny - 1/Po
+   697→        val invPnx = if (abs(Pnx) > 0.01) 1.0 / Pnx else 0.0
+   698→        val invPny = if (abs(Pny) > 0.01) 1.0 / Pny else 0.0
+   699→        val invPo = 1.0 / Po
+   700→
+   701→        var invPn = invPnx + invPny - invPo
+   702→        val PnBresler = if (abs(invPn) > 1e-10) 1.0 / invPn else Double.MAX_VALUE
+   703→
+   704→        // For tension: PnBresler is negative, check with absolute values
+   705→        val isSafe = if (Pu >= 0) {
+   706→            // Compression case: φPn ≥ Pu
+   707→            phiComp * PnBresler / 1000.0 >= Pu * 0.95 // 5% tolerance
+   708→        } else {
+   709→            // Tension case
+   710→            PHI_FLEXURE * abs(PnBresler) / 1000.0 >= abs(Pu) * 0.95
+   711→        }
+   712→
+   713→        val mxRatio = if (abs(Pnx) > 0.01) abs(Pu * 1000.0) / abs(Pnx) else 0.0
+   714→        val myRatio = if (abs(Pny) > 0.01) abs(Pu * 1000.0) / abs(Pny) else 0.0
+   715→        val interactionFactor = if (isSafe) mxRatio.coerceAtMost(myRatio) else max(mxRatio, myRatio)
+   716→
+   717→        return BiaxialCheckResult(
+   718→            mxRatio = mxRatio,
+   719→            myRatio = myRatio,
+   720→            interactionFactor = if (PnBresler > 0) Pu * 1000.0 / PnBresler else abs(Pu * 1000.0 / PnBresler),
+   721→            isSafe = isSafe,
+   722→            formula = "ACI 22.10.3.2: 1/Pn = 1/Pnx + 1/Pny - 1/Po, Pn=%.0fkN".format(PnBresler / 1000.0)
+   723→        )
+   724→    }
+   725→
+   726→    /**
+   727→     * Load contour method (approximate interaction surface) per ACI 22.10.3.
+   728→     * Uses the Hsu equation: (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1.0
+   729→     * where α ≈ 1.15 to 2.0 depending on Pn/Po ratio.
+   730→     */
+   731→    fun checkBiaxialLoadContour(
+   732→        fcPrime: Double, fy: Double,
+   733→        b: Double, h: Double,
+   734→        Ag: Double, As: Double,
+   735→        Pu: Double, Mx: Double, My: Double,
+   736→        Mnx: Double, Mny: Double,
+   737→        isSpiral: Boolean = false,
+   738→        clearCover: Double = CLEAR_COVER
+   739→    ): BiaxialCheckResult {
+   740→        val phiComp = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   741→
+   742→        // Pure axial capacity
+   743→        val Po = 0.85 * fcPrime * (Ag - As) + As * fy
+   744→
+   745→        // Load level ratio
+   746→        val r = (Pu * 1000.0 / (phiComp * Po)).coerceIn(0.1, 0.95)
+   747→
+   748→        // Exponent α per Hsu (1973): α = 1.15 + 0.84 × r
+   749→        // Higher α when axial load is high (more circular interaction surface)
+   750→        val alpha = 1.15 + 0.84 * r
+   751→
+   752→        // Ratios
+   753→        val mxRatio = if (Mnx > 0.01) abs(Mx) / Mnx else 0.0
+   754→        val myRatio = if (Mny > 0.01) abs(My) / Mny else 0.0
+   755→
+   756→        // Interaction factor: (Mux/Mnx)^α + (Muy/Mny)^α
+   757→        val interactionFactor = mxRatio.pow(alpha) + myRatio.pow(alpha)
+   758→
+   759→        val isSafe = interactionFactor <= 1.0
+   760→
+   761→        return BiaxialCheckResult(
+   762→            mxRatio = mxRatio,
+   763→            myRatio = myRatio,
+   764→            interactionFactor = interactionFactor,
+   765→            isSafe = isSafe,
+   766→            formula = "ACI 22.10.3 (Hsu): (Mx/Mnx)^%.2f + (My/Mny)^%.2f = %.3f ≤ 1.0".format(alpha, alpha, interactionFactor)
+   767→        )
+   768→    }
+   769→
+   770→    /**
+   771→     * Interpolate Pn from the interaction diagram at a given moment value.
+   772→     * The diagram points are (φPn in kN, φMn in kN·m).
+   773→     * For a given M, finds the maximum Pn that can be sustained.
+   774→     */
+   775→    private fun interpolatePnFromDiagram(diagram: List<Pair<Double, Double>>, M: Double): Double {
+   776→        if (diagram.isEmpty()) return 0.0
+   777→        if (diagram.size == 1) return diagram[0].first * 1000.0
+   778→
+   779→        val absM = abs(M)
+   780→
+   781→        // The interaction diagram goes from high P, low M to low P, high M (compression side)
+   782→        // Find two points that bracket the target moment
+   783→        for (i in 0 until diagram.size - 1) {
+   784→            val (p1, m1) = diagram[i]
+   785→            val (p2, m2) = diagram[i + 1]
+   786→
+   787→            if ((m1 <= absM && m2 >= absM) || (m1 >= absM && m2 <= absM)) {
+   788→                // Interpolate
+   789→                val dm = m2 - m1
+   790→                val dp = p2 - p1
+   791→                if (abs(dm) < 1e-6) return (p1 + p2) / 2.0 * 1000.0
+   792→                val t = (absM - m1) / dm
+   793→                return (p1 + t * dp) * 1000.0 // Convert kN to N
+   794→            }
+   795→        }
+   796→
+   797→        // If moment is beyond the diagram range, use the last point
+   798→        return diagram.last().first * 1000.0
+   799→    }
+   800→
+   801→    // ═══════════════════════════════════════════════════════════════════
+   802→    // SPIRAL COLUMN DESIGN  (ACI 318-25.7.6)
+   803→    // ═══════════════════════════════════════════════════════════════════
+   804→
+   805→    /**
+   806→     * Design spiral reinforcement per ACI 25.7.6.
+   807→     *
+   808→     * Required volumetric ratio:
+   809→     *   ρs ≥ 0.45 × (Ag/Ac - 1) × (fc'/fyh)
+   810→     *
+   811→     * Pitch limits: 25mm ≤ s ≤ 75mm
+   812→     * Clear spacing between spirals ≥ 25mm (ACI 25.7.6.1)
+   813→     *
+   814→     * @return Triple(pitch_mm, spiralDiameter_mm, rhoS)
+   815→     */
+   816→    fun designSpiralReinforcement(
+   817→        fcPrime: Double, fy: Double,
+   818→        columnType: ColumnType,
+   819→        Ag: Double,
+   820→        clearCover: Double = CLEAR_COVER
+   821→    ): Triple<Double, Double, Double> {
+   822→        // Core dimensions
+   823→        val (coreWidth, coreDepth) = when (columnType) {
+   824→            is ColumnType.Rectangular -> {
+   825→                // For rectangular columns with spiral: use inscribed circle
+   826→                val Ds = min(columnType.width, columnType.depth) - 2.0 * clearCover
+   827→                Pair(Ds, Ds)
+   828→            }
+   829→            is ColumnType.Circular -> {
+   830→                val Ds = columnType.diameter - 2.0 * clearCover
+   831→                Pair(Ds, Ds)
+   832→            }
+   833→            else -> {
+   834→                // For other types, use equivalent circle
+   835→                val Ds = sqrt(4.0 * Ag / PI) - 2.0 * clearCover
+   836→                Pair(Ds, Ds)
+   837→            }
+   838→        }
+   839→
+   840→        val Ds = coreWidth // spiral diameter (mm)
+   841→        val Ac = PI * Ds * Ds / 4.0 // Core area
+   842→
+   843→        // Required volumetric spiral reinforcement ratio (ACI 25.7.6.1)
+   844→        val rhoSRequired = 0.45 * (Ag / Ac - 1.0) * (fcPrime / fy)
+   845→
+   846→        // Try standard spiral diameters (8mm to 12mm typical)
+   847→        val spiralDiameters = listOf(8.0, 10.0, 12.0)
+   848→        var bestPitch = 75.0
+   849→        var bestDia = 10.0
+   850→        var bestRhoS = 0.0
+   851→
+   852→        for (spiralDia in spiralDiameters) {
+   853→            val asSpiral = PI * spiralDia * spiralDia / 4.0
+   854→
+   855→            // ρs = 4 × Aspiral / (Ds × s)  →  s = 4 × Aspiral / (Ds × ρs)
+   856→            val pitchForRequired = 4.0 * asSpiral / (Ds * rhoSRequired)
+   857→
+   858→            // Check pitch limits
+   859→            val pitch = pitchForRequired.coerceIn(25.0, 75.0)
+   860→
+   861→            // Check clear spacing: s - dspiral ≥ 25mm
+   862→            val clearSpacing = pitch - spiralDia
+   863→            if (clearSpacing >= 25.0 || pitch == 25.0) {
+   864→                // Calculate actual ρs with this pitch
+   865→                val rhoSActual = 4.0 * asSpiral / (Ds * pitch)
+   866→                if (rhoSActual >= rhoSRequired) {
+   867→                    bestPitch = pitch
+   868→                    bestDia = spiralDia
+   869→                    bestRhoS = rhoSActual
+   870→                    break // Accept first valid solution
+   871→                }
+   872→            }
+   873→        }
+   874→
+   875→        // If no solution found with clear spacing requirement, relax and use minimum pitch
+   876→        if (bestRhoS < rhoSRequired) {
+   877→            val spiralDia = 12.0
+   878→            val asSpiral = PI * spiralDia * spiralDia / 4.0
+   879→            bestPitch = (4.0 * asSpiral / (Ds * rhoSRequired)).coerceIn(25.0, 75.0)
+   880→            bestDia = spiralDia
+   881→            bestRhoS = 4.0 * asSpiral / (Ds * bestPitch)
+   882→        }
+   883→
+   884→        return Triple(bestPitch, bestDia, bestRhoS)
+   885→    }
+   886→
+   887→    // ═══════════════════════════════════════════════════════════════════
+   888→    // SHORT COLUMN DESIGN
+   889→    // ═══════════════════════════════════════════════════════════════════
+   890→
+   891→    /**
+   892→     * Design a short column without P-Delta effects.
+   893→     * Uses simplified interaction approach per ACI 318 Chapter 10.
+   894→     *
+   895→     * For Pu/(φAg) > 0.1×fc': compression controls, use axial formula.
+   896→     * For Pu/(φAg) ≤ 0.1×fc': use interaction diagram or approximate formula.
+   897→     */
+   898→    private fun designShortColumn(
+   899→        fcPrime: Double, fy: Double,
+   900→        b: Double, h: Double, Ag: Double,
+   901→        Pu: Double, Mx: Double, My: Double,
+   902→        isSpiral: Boolean,
+   903→        clearCover: Double,
+   904→        warnings: MutableList<String>,
+   905→        codeNotes: MutableList<String>
+   906→    ): ReinforcementResult {
+   907→        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   908→        val Pu_N = Pu * 1000.0 // Convert to N
+   909→
+   910→        // Check if compression controls
+   911→        val stressRatio = Pu_N / (phi * Ag)
+   912→        val compressionThreshold = 0.1 * fcPrime
+   913→
+   914→        // Minimum and maximum reinforcement ratios per ACI 10.6.1.1
+   915→        val rhoMin = 0.01
+   916→        val rhoMax = 0.08
+   917→        val AsMin = rhoMin * Ag
+   918→        val AsMax = rhoMax * Ag
+   919→
+   920→        // Estimate required steel area
+   921→        // ACI simplified: Pu = φ × [0.85×fc'×(Ag - Ast) + fy×Ast]
+   922→        // Solving for Ast: Ast = (Pu/φ - 0.85×fc'×Ag) / (fy - 0.85×fc')
+   923→        val numerator = Pu_N / phi - 0.85 * fcPrime * Ag
+   924→        val denominator = fy - 0.85 * fcPrime
+   925→        val AsRequired = if (abs(denominator) > 1.0) numerator / denominator else 0.0
+   926→
+   927→        // If there is significant moment, increase reinforcement
+   928→        val Mu = sqrt(Mx * Mx + My * My) // Resultant moment (kN.m)
+   929→        val Mu_Nmm = Mu * 1e6 // N·mm
+   930→
+   931→        // Approximate moment contribution to required steel
+   932→        val d = h - clearCover - TIE_BAR_EXTRA
+   933→        val leverArm = 0.8 * d // Approximate lever arm for column
+   934→        val AsMoment = if (leverArm > 0 && fy > 0) Mu_Nmm / (leverArm * fy) else 0.0
+   935→
+   936→        // Total required steel: axial + moment contribution
+   937→        var astRequired = max(AsRequired, AsMoment)
+   938→        astRequired = astRequired.coerceIn(AsMin, AsMax)
+   939→
+   940→        if (AsRequired < AsMin) {
+   941→            warnings.add("تم تطبيق نسبة التسليح الدنيا (1%) حسب ACI 10.6.1.1")
+   942→            codeNotes.add("ACI 10.6.1.1: ρmin = 1% applied (governs)")
+   943→        }
+   944→
+   945→        // Compression load ratio check
+   946→        if (stressRatio > 0.1 * fcPrime) {
+   947→            codeNotes.add("ACI 10.6.2: Compression controls (Pu/φAg = %.1f > 0.1fc' = %.1f)".format(
+   948→                stressRatio, 0.1 * fcPrime
+   949→            ))
+   950→        }
+   951→
+   952→        // Select bar diameter and number
+   953→        var selectedBarDia = 16.0
+   954→        var numberOfBars = 4
+   955→        var astProvided = 0.0
+   956→
+   957→        // Find optimal bar combination
+   958→        for (dia in ACI_BAR_DIAMETERS) {
+   959→            val barArea = PI * dia * dia / 4.0
+   960→            val n = ceil(astRequired / barArea).toInt().coerceIn(4, 16)
+   961→
+   962→            // Check if bars fit in the section (ACI 25.2)
+   963→            val minSpacing = max(dia, 25.0)
+   964→            val perimeter = 2.0 * (b + h) - 8.0 * clearCover // usable perimeter
+   965→            val maxBarsBySpacing = (perimeter / (dia + minSpacing)).toInt()
+   966→
+   967→            if (n <= maxBarsBySpacing || n <= 12) {
+   968→                val asProv = n * barArea
+   969→                if (asProv >= astRequired && asProv <= AsMax) {
+   970→                    selectedBarDia = dia
+   971→                    numberOfBars = n
+   972→                    astProvided = asProv
+   973→                    break
+   974→                }
+   975→            }
+   976→        }
+   977→
+   978→        if (astProvided < astRequired) {
+   979→            // Fallback: use the smallest bars that work
+   980→            for (dia in ACI_BAR_DIAMETERS) {
+   981→                val barArea = PI * dia * dia / 4.0
+   982→                val n = ceil(astRequired / barArea).toInt().coerceIn(4, 20)
+   983→                val asProv = n * barArea
+   984→                if (asProv >= astRequired && asProv <= AsMax) {
+   985→                    selectedBarDia = dia
+   986→                    numberOfBars = n
+   987→                    astProvided = asProv
+   988→                    break
+   989→                }
+   990→            }
+   991→        }
+   992→
+   993→        astProvided = numberOfBars * PI * selectedBarDia * selectedBarDia / 4.0
+   994→
+   995→        // Design ties or spirals
+   996→        val tiesDiameter = if (isSpiral) {
+   997→            // Spiral tie: typically smaller than longitudinal bars
+   998→            if (selectedBarDia <= 25.0) 10.0 else 12.0
+   999→        } else {
+  1000→            // Tied column: ACI 25.7.2.2
+  1001→            if (selectedBarDia <= 32.0) 10.0 else 12.0
+  1002→        }
+  1003→
+  1004→        val tiesSpacing = if (isSpiral) {
+  1005→            // Spiral spacing is handled separately, put nominal value
+  1006→            val spiralResult = designSpiralReinforcement(fcPrime, fy, ColumnType.Rectangular(b, h), Ag, clearCover)
+  1007→            spiralResult.first
+  1008→        } else {
+  1009→            // ACI 25.7.2.1: min of 16db, 48dtie, min(b,h), 300mm
+  1010→            minOf(
+  1011→                16.0 * selectedBarDia,
+  1012→                48.0 * tiesDiameter,
+  1013→                min(b, h),
+  1014→                300.0
+  1015→            ).coerceIn(40.0, 300.0)
+  1016→        }
+  1017→
+  1018→        // Safety check: verify capacity
+  1019→        val capacity = calculateAxialCapacityWithPhi(fcPrime, fy, b, h, astProvided, Ag, isSpiral)
+  1020→        val utilizationRatio = if (capacity > 0) Pu / capacity else 2.0
+  1021→        val isSafe = utilizationRatio <= 1.0
+  1022→
+  1023→        // Check maximum spacing
+  1024→        if (tiesSpacing > 150.0) {
+  1025→            codeNotes.add("ACI 25.7.2.3: Tighter spacing may be needed near joints (so/2 ≤ %.0fmm)".format(tiesSpacing / 2))
+  1026→        }
+  1027→
+  1028→        val description = if (isSpiral) {
+  1029→            "Spiral: %dØ%d + Spiral Ø%d @ %.0fmm".format(
+  1030→                numberOfBars, selectedBarDia.toInt(), tiesDiameter.toInt(), tiesSpacing
+  1031→            )
+  1032→        } else {
+  1033→            "%dØ%d, Ties Ø%d @ %.0fmm".format(
+  1034→                numberOfBars, selectedBarDia.toInt(), tiesDiameter.toInt(), tiesSpacing
+  1035→            )
+  1036→        }
+  1037→
+  1038→        return ReinforcementResult(
+  1039→            astRequired = astRequired,
+  1040→            astProvided = astProvided,
+  1041→            barDiameter = selectedBarDia,
+  1042→            numberOfBars = numberOfBars,
+  1043→            tiesDiameter = tiesDiameter,
+  1044→            tiesSpacing = tiesSpacing,
+  1045→            isSafe = isSafe,
+  1046→            utilizationRatio = utilizationRatio,
+  1047→            warnings = warnings,
+  1048→            codeNotes = codeNotes,
+  1049→            spacing = tiesSpacing,
+  1050→            description = description
+  1051→        )
+  1052→    }
+  1053→
+  1054→    // ═══════════════════════════════════════════════════════════════════
+  1055→    // PUNCHING SHEAR  (ACI 318-22.6)
+  1056→    // ═══════════════════════════════════════════════════════════════════
+  1057→
+  1058→    /**
+  1059→     * Check punching shear for flat slab columns per ACI 22.6.
+  1060→     *
+  1061→     * Interior: vc = 0.33 × λ × √fc'   (ACI 22.6.5.2)
+  1062→     * Edge:     vc = 0.33 × λ × √fc' × (1 + 2/β)
+  1063→     * Corner:   vc = 0.33 × λ × √fc' × (2 + αs×d/bo) / 12
+  1064→     *
+  1065→     * φ = 0.75 for shear (ACI 21.2.1)
+  1066→     * Shear head design when vc is exceeded.
+  1067→     *
+  1068→     * @param slabDepth effective slab depth d (mm)
+  1069→     */
+  1070→    fun checkPunchingShear(
+  1071→        columnType: ColumnType,
+  1072→        Pu: Double,        // kN - column axial load (transfer from slab)
+  1073→        fcPrime: Double,   // MPa
+  1074→        slabDepth: Double, // mm - slab effective depth d
+  1075→        clearCover: Double,
+  1076→        hasCap: Boolean,
+  1077→        warnings: MutableList<String>,
+  1078→        codeNotes: MutableList<String>
+  1079→    ): PunchingCheckResult {
+  1080→        val d = slabDepth - clearCover - 8.0 // Effective depth of slab (mm)
+  1081→        val Pu_N = Pu * 1000.0 // N
+  1082→
+  1083→        // Critical section perimeter at d/2 from column face
+  1084→        val (b, h) = getColumnDimensions(columnType)
+  1085→
+  1086→        val bo = when (columnType) {
+  1087→            is ColumnType.Rectangular -> {
+  1088→                2.0 * (b + h) + 4.0 * d
+  1089→            }
+  1090→            is ColumnType.Circular -> {
+  1091→                PI * (columnType.diameter + d)
+  1092→            }
+  1093→            else -> {
+  1094→                // Approximate with equivalent square
+  1095→                val side = sqrt(columnType.getGrossArea())
+  1096→                4.0 * (side + d)
+  1097→            }
+  1098→        }
+  1099→
+  1100→        // Applied shear stress
+  1101→        val vu = Pu_N / (bo * d)
+  1102→
+  1103→        // β = ratio of long side to short side of critical section (for rectangular columns)
+  1104→        val beta = when (columnType) {
+  1105→            is ColumnType.Rectangular -> max(b, h) / min(b, h)
+  1106→            is ColumnType.Circular -> 1.0
+  1107→            else -> 1.0
+  1108→        }
+  1109→
+  1110→        // αs factor: 30 for interior, 20 for edge, 15 for corner
+  1111→        // Default to interior (most common and conservative for checking)
+  1112→        val alphaS = 30.0
+  1113→
+  1114→        // Calculate vc for all cases and take the minimum (most conservative)
+  1115→        val vcInterior = 0.33 * LAMBDA * sqrt(fcPrime)
+  1116→        val vcEdge = 0.33 * LAMBDA * sqrt(fcPrime) * (1.0 + 2.0 / beta)
+  1117→        val vcCorner = 0.33 * LAMBDA * sqrt(fcPrime) * (2.0 + alphaS * d / bo) / 12.0
+  1118→
+  1119→        // Use the appropriate vc based on column position
+  1120→        // For interior columns: min of the three limits
+  1121→        val vc = minOf(vcInterior, vcEdge, vcCorner)
+  1122→
+  1123→        // Column cap factor (increases capacity)
+  1124→        val capFactor = if (hasCap) 1.25 else 1.0
+  1125→
+  1126→        // Design capacity: φ × vc × bo × d
+  1127→        val phiVc = PHI_SHEAR * vc * capFactor * bo * d
+  1128→
+  1129→        val isSafe = Pu_N <= phiVc
+  1130→
+  1131→        if (!isSafe) {
+  1132→            warnings.add("❌ فشل قص الاختراق! vu=%.2f > φvc=%.2f MPa".format(vu, PHI_SHEAR * vc * capFactor))
+  1133→            warnings.add("يجب زيادة سمك البلاطة أو إضافة رأس عمود أو حديد قص إضافي (shear studs)")
+  1134→            codeNotes.add("ACI 22.6.5: Shear head or shear studs required (vc exceeded)")
+  1135→            codeNotes.add("ACI 22.6.8: Consider shear reinforcement (studs or stirrups)")
+  1136→        }
+  1137→
+  1138→        codeNotes.add("ACI 22.6: Critical perimeter bo=%.0fmm at d/2=%.0fmm".format(bo, d / 2))
+  1139→        codeNotes.add("ACI 22.6.5.2: vc=%.2f MPa (interior), φ=%.2f".format(vc, PHI_SHEAR))
+  1140→
+  1141→        return PunchingCheckResult(
+  1142→            appliedShear = Pu,
+  1143→            capacity = phiVc / 1000.0, // kN
+  1144→            isSafe = isSafe,
+  1145→            hasCap = hasCap,
+  1146→            criticalPerimeter = bo
+  1147→        )
+  1148→    }
+  1149→
+  1150→    // ═══════════════════════════════════════════════════════════════════
+  1151→    // REINFORCEMENT DETAILS  (ACI 25.7.2, 25.2)
+  1152→    // ═══════════════════════════════════════════════════════════════════
+  1153→
+  1154→    /**
+  1155→     * Design ties per ACI 25.7.2.
+  1156→     * Returns Pair(tiesDiameter, tiesSpacing).
+  1157→     *
+  1158→     * Tie diameter: ACI 25.7.2.2 - No.3 (10mm) for bars ≤ No.10 (32mm), No.4 (12mm) otherwise
+  1159→     * Tie spacing: ACI 25.7.2.1 - min(16db, 48dtie, min column dimension, 300mm)
+  1160→     */
+  1161→    fun designTies(barDiameter: Double, numBars: Int, b: Double, h: Double): Pair<Double, Double> {
+  1162→        // Tie diameter per ACI 25.7.2.2
+  1163→        val tiesDiameter = if (barDiameter <= 32.0) 10.0 else 12.0
+  1164→
+  1165→        // Tie spacing per ACI 25.7.2.1
+  1166→        val tiesSpacing = minOf(
+  1167→            16.0 * barDiameter,     // 16 × longitudinal bar diameter
+  1168→            48.0 * tiesDiameter,    // 48 × tie bar diameter
+  1169→            min(b, h),              // least column dimension
+  1170→            300.0                   // 300 mm maximum
+  1171→        ).coerceIn(40.0, 300.0)
+  1172→
+  1173→        // ACI 25.7.2.3: Every corner and alternate bar must be laterally supported
+  1174→        // Max clear spacing between laterally supported bars: 150mm
+  1175→        // Additional ties may be needed at splice regions (so/2)
+  1176→
+  1177→        return Pair(tiesDiameter, tiesSpacing)
+  1178→    }
+  1179→
+  1180→    /**
+  1181→     * Calculate bar positions for rectangular columns.
+  1182→     * Distributes bars around the perimeter with bars at corners and along faces.
+  1183→     *
+  1184→     * @return List of (y, x) positions from centroid in mm
+  1185→     */
+  1186→    private fun getRectangularBarPositions(
+  1187→        b: Double, h: Double,
+  1188→        numBars: Int,
+  1189→        cover: Double, tieBar: Double
+  1190→    ): List<Pair<Double, Double>> {
+  1191→        val positions = mutableListOf<Pair<Double, Double>>()
+  1192→        val xMax = b / 2.0 - cover - tieBar
+  1193→        val yMax = h / 2.0 - cover - tieBar
+  1194→
+  1195→        when {
+  1196→            numBars == 4 -> {
+  1197→                // 4 corner bars
+  1198→                positions.add(Pair(yMax, xMax))
+  1199→                positions.add(Pair(yMax, -xMax))
+  1200→                positions.add(Pair(-yMax, xMax))
+  1201→                positions.add(Pair(-yMax, -xMax))
+  1202→            }
+  1203→            numBars <= 8 -> {
+  1204→                // 4 corners + distribute remaining along the longer face
+  1205→                val sideBars = numBars - 4
+  1206→                val barsPerLongFace = if (h >= b) ceil(sideBars / 2.0).toInt() else 0
+  1207→                val barsPerShortFace = sideBars - barsPerLongFace
+  1208→
+  1209→                // Corners
+  1210→                positions.add(Pair(yMax, xMax))
+  1211→                positions.add(Pair(yMax, -xMax))
+  1212→                positions.add(Pair(-yMax, xMax))
+  1213→                positions.add(Pair(-yMax, -xMax))
+  1214→
+  1215→                // Long face bars (top and bottom)
+  1216→                if (h >= b) {
+  1217→                    for (i in 1..barsPerLongFace) {
+  1218→                        val y = yMax - 2.0 * yMax * i / (barsPerLongFace + 1)
+  1219→                        positions.add(Pair(y, 0.0))
+  1220→                        positions.add(Pair(-y, 0.0))
+  1221→                    }
+  1222→                }
+  1223→
+  1224→                // Short face bars (left and right)
+  1225→                for (i in 1..barsPerShortFace) {
+  1226→                    val x = xMax - 2.0 * xMax * i / (barsPerShortFace + 1)
+  1227→                    positions.add(Pair(0.0, x))
+  1228→                    positions.add(Pair(0.0, -x))
+  1229→                }
+  1230→            }
+  1231→            else -> {
+  1232→                // More than 8 bars: distribute evenly around perimeter
+  1233→                // Assign bars proportionally to each face
+  1234→                val perimeter = 2.0 * (b + h)
+  1235→                val usablePerimeter = 2.0 * (2.0 * xMax + 2.0 * yMax)
+  1236→
+  1237→                // Distribute: corners first, then sides proportionally
+  1238→                positions.add(Pair(yMax, xMax))
+  1239→                positions.add(Pair(yMax, -xMax))
+  1240→                positions.add(Pair(-yMax, xMax))
+  1241→                positions.add(Pair(-yMax, -xMax))
+  1242→
+  1243→                val remaining = numBars - 4
+  1244→                val longFaceLength = 2.0 * yMax
+  1245→                val shortFaceLength = 2.0 * xMax
+  1246→                val totalFaceLength = 2.0 * longFaceLength + 2.0 * shortFaceLength
+  1247→
+  1248→                // Distribute remaining bars proportionally to face lengths
+  1249→                var barsAllocated = 0
+  1250→                val longFaceBars = if (h >= b) {
+  1251→                    round(remaining * 2.0 * longFaceLength / totalFaceLength).toInt().coerceAtLeast(2)
+  1252→                } else {
+  1253→                    round(remaining * 2.0 * shortFaceLength / totalFaceLength).toInt().coerceAtLeast(2)
+  1254→                }
+  1255→                barsAllocated += longFaceBars
+  1256→                val shortFaceBars = remaining - barsAllocated
+  1257→
+  1258→                // Long face bars (y direction, x = 0)
+  1259→                val barsPerSide = longFaceBars / 2
+  1260→                for (i in 1..barsPerSide) {
+  1261→                    val y = yMax - 2.0 * yMax * i / (barsPerSide + 1)
+  1262→                    positions.add(Pair(y, 0.0))
+  1263→                    if (positions.size < numBars) positions.add(Pair(-y, 0.0))
+  1264→                }
+  1265→
+  1266→                // Short face bars (x direction, y = 0)
+  1267→                val barsPerSideShort = max(0, (numBars - positions.size) / 2)
+  1268→                for (i in 1..barsPerSideShort) {
+  1269→                    if (positions.size >= numBars) break
+  1270→                    val x = xMax - 2.0 * xMax * i / (barsPerSideShort + 1)
+  1271→                    positions.add(Pair(0.0, x))
+  1272→                    if (positions.size < numBars) positions.add(Pair(0.0, -x))
+  1273→                }
+  1274→
+  1275→                // Fill remaining to match numBars
+  1276→                var fillCount = 0
+  1277→                while (positions.size < numBars && fillCount < numBars) {
+  1278→                    fillCount++
+  1279→                    // Add at varying positions along the faces
+  1280→                    val idx = (positions.size - 4).coerceAtLeast(0)
+  1281→                    val frac = (idx + 1).toDouble() / (numBars - 3).coerceAtLeast(1)
+  1282→                    val y = yMax - 2.0 * yMax * frac
+  1283→                    val xPos = if (positions.size % 2 == 0) xMax else -xMax
+  1284→                    positions.add(Pair(y, xPos))
+  1285→                }
+  1286→            }
+  1287→        }
+  1288→
+  1289→        return positions.take(numBars)
+  1290→    }
+  1291→
+  1292→    /**
+  1293→     * Calculate bar positions for circular columns.
+  1294→     * Bars equally spaced around a circle of diameter (D - 2×cover - 2×tie).
+  1295→     *
+  1296→     * @return List of (y, x) positions from center in mm
+  1297→     */
+  1298→    private fun getCircularBarPositions(
+  1299→        diameter: Double,
+  1300→        numBars: Int,
+  1301→        cover: Double,
+  1302→        tieBar: Double
+  1303→    ): List<Pair<Double, Double>> {
+  1304→        val positions = mutableListOf<Pair<Double, Double>>()
+  1305→        val rBar = diameter / 2.0 - cover - tieBar // radius of bar circle
+  1306→
+  1307→        for (i in 0 until numBars) {
+  1308→            val angle = 2.0 * PI * i / numBars
+  1309→            val x = rBar * cos(angle)
+  1310→            val y = rBar * sin(angle)
+  1311→            positions.add(Pair(y, x))
+  1312→        }
+  1313→
+  1314→        return positions
+  1315→    }
+  1316→
+  1317→    // ═══════════════════════════════════════════════════════════════════
+  1318→    // CAPACITY CALCULATIONS
+  1319→    // ═══════════════════════════════════════════════════════════════════
+  1320→
+  1321→    /**
+  1322→     * Calculate axial capacity with phi factor.
+  1323→     * ACI 22.10.2.1: φPn = φ × [0.85×fc'×(Ag - Ast) + fy×Ast]
+  1324→     */
+  1325→    fun calculateAxialCapacityWithPhi(
+  1326→        fcPrime: Double, fy: Double,
+  1327→        b: Double, h: Double,
+  1328→        As: Double, Ag: Double,
+  1329→        isSpiral: Boolean
+  1330→    ): Double {
+  1331→        val AsCapped = As.coerceAtMost(Ag * 0.08)
+  1332→        val concreteCapacity = 0.85 * fcPrime * (Ag - AsCapped)
+  1333→        val steelCapacity = fy * AsCapped
+  1334→        val nominalCapacity = concreteCapacity + steelCapacity
+  1335→        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+  1336→        return phi * nominalCapacity / 1000.0 // kN
+  1337→    }
+  1338→
+  1339→    /**
+  1340→     * Calculate approximate moment capacity of the column section.
+  1341→     * Uses the interaction diagram approach at zero axial load (pure flexure).
+  1342→     */
+  1343→    private fun calculateMomentCapacity(
+  1344→        fcPrime: Double, fy: Double,
+  1345→        b: Double, h: Double,
+  1346→        As: Double, d: Double,
+  1347→        Ag: Double, isSpiral: Boolean,
+  1348→        clearCover: Double
+  1349→    ): Double {
+  1350→        // Generate interaction diagram and find max moment point
+  1351→        val diagram = generateInteractionDiagram(
+  1352→            ColumnType.Rectangular(b, h), fcPrime / 0.8, fy, As, isSpiral, clearCover
+  1353→        )
+  1354→
+  1355→        // Find maximum moment on the compression side
+  1356→        var maxMoment = 0.0
+  1357→        for ((p, m) in diagram) {
+  1358→            if (m > maxMoment && p >= 0) {
+  1359→                maxMoment = m
+  1360→            }
+  1361→        }
+  1362→
+  1363→        // Also check tension side
+  1364→        for ((p, m) in diagram) {
+  1365→            if (m > maxMoment) {
+  1366→                maxMoment = m
+  1367→            }
+  1368→        }
+  1369→
+  1370→        return maxMoment
+  1371→    }
+  1372→
+  1373→    // ═══════════════════════════════════════════════════════════════════
+  1374→    // HELPER FUNCTIONS
+  1375→    // ═══════════════════════════════════════════════════════════════════
+  1376→
+  1377→    /**
+  1378→     * Get β1 factor per ACI 22.2.2.4.1.
+  1379→     * β1 = 0.85 for fc' ≤ 28 MPa
+  1380→     * β1 decreases by 0.05 for each 7 MPa above 28 MPa
+  1381→     * Minimum β1 = 0.65
+  1382→     */
+  1383→    fun getBeta1(fcPrime: Double): Double {
+  1384→        return if (fcPrime <= 28.0) {
+  1385→            BETA_1_DEFAULT
+  1386→        } else {
+  1387→            val reduction = 0.05 * floor((fcPrime - 28.0) / 7.0)
+  1388→            (BETA_1_DEFAULT - reduction).coerceAtLeast(0.65)
+  1389→        }
+  1390→    }
+  1391→
+  1392→    /**
+  1393→     * Get phi (φ) reduction factor based on net tensile strain.
+  1394→     * ACI 21.2.2:
+  1395→     *   εt ≥ 0.005 → φ = 0.9 (tension-controlled)
+  1396→     *   εt ≤ 0.002 → φ = 0.65 (tied) or 0.75 (spiral) (compression-controlled)
+  1397→     *   0.002 < εt < 0.005 → linear interpolation
+  1398→     */
+  1399→    fun getPhiFactor(epsilonT: Double, isSpiral: Boolean): Double {
+  1400→        val phiComp = if (isSpiral) PHI_SPIRAL else PHI_TIED
+  1401→
+  1402→        return when {
+  1403→            epsilonT >= EPSILON_T_MIN -> PHI_FLEXURE
+  1404→            epsilonT <= EPSILON_TY -> phiComp
+  1405→            else -> {
+  1406→                // Linear interpolation between compression and tension-controlled
+  1407→                phiComp + (PHI_FLEXURE - phiComp) * (epsilonT - EPSILON_TY) / (EPSILON_T_MIN - EPSILON_TY)
+  1408→            }
+  1409→        }
+  1410→    }
+  1411→
+  1412→    /**
+  1413→     * Extract column dimensions (b, h) from ColumnType.
+  1414→     * Returns width and depth in mm.
+  1415→     */
+  1416→    private fun getColumnDimensions(columnType: ColumnType): Pair<Double, Double> {
+  1417→        return when (columnType) {
+  1418→            is ColumnType.Rectangular -> Pair(columnType.width, columnType.depth)
+  1419→            is ColumnType.Circular -> {
+  1420→                // Equivalent square: b = 0.8D for interaction calculations
+  1421→                Pair(0.8 * columnType.diameter, columnType.diameter)
+  1422→            }
+  1423→            is ColumnType.LShaped -> {
+  1424→                // Equivalent rectangular: gross area based
+  1425→                val Ag = columnType.getGrossArea()
+  1426→                val eqSide = sqrt(Ag)
+  1427→                Pair(eqSide, eqSide)
+  1428→            }
+  1429→            is ColumnType.TShaped -> {
+  1430→                val Ag = columnType.getGrossArea()
+  1431→                val eqSide = sqrt(Ag)
+  1432→                Pair(eqSide, eqSide)
+  1433→            }
+  1434→            is ColumnType.Composite -> {
+  1435→                Pair(columnType.concreteWidth, columnType.concreteDepth)
+  1436→            }
+  1437→            is ColumnType.Tubular -> {
+  1438→                Pair(columnType.outerDiameter, columnType.outerDiameter)
+  1439→            }
+  1440→        }
+  1441→    }
+  1442→
+  1443→    /**
+  1444→     * Get radius of gyration r for the column section.
+  1445→     * ACI 22.4.1.2: r = 0.3 × min dimension (rectangular), 0.25 × D (circular)
+  1446→     */
+  1447→    private fun getRadiusOfGyration(columnType: ColumnType): Double {
+  1448→        return when (columnType) {
+  1449→            is ColumnType.Rectangular -> {
+  1450→                0.3 * min(columnType.width, columnType.depth)
+  1451→            }
+  1452→            is ColumnType.Circular -> {
+  1453→                0.25 * columnType.diameter
+  1454→            }
+  1455→            is ColumnType.LShaped -> {
+  1456→                // Use smallest leg dimension
+  1457→                0.3 * min(columnType.legWidth, columnType.legDepth, columnType.thickness)
+  1458→            }
+  1459→            is ColumnType.TShaped -> {
+  1460→                0.3 * min(columnType.webWidth, columnType.flangeThickness)
+  1461→            }
+  1462→            is ColumnType.Composite -> {
+  1463→                0.3 * min(columnType.concreteWidth, columnType.concreteDepth)
+  1464→            }
+  1465→            is ColumnType.Tubular -> {
+  1466→                0.25 * columnType.outerDiameter
+  1467→            }
+  1468→        }
+  1469→    }
+  1470→
+  1471→    /**
+  1472→     * Get gross moment of inertia Ig for the column section (mm⁴).
+  1473→     */
+  1474→    private fun getGrossMomentOfInertia(columnType: ColumnType): Double {
+  1475→        return when (columnType) {
+  1476→            is ColumnType.Rectangular -> {
+  1477→                columnType.width * columnType.depth.pow(3) / 12.0
+  1478→            }
+  1479→            is ColumnType.Circular -> {
+  1480→                PI * columnType.diameter.pow(4) / 64.0
+  1481→            }
+  1482→            is ColumnType.LShaped -> {
+  1483→                // Approximate with equivalent square
+  1484→                val side = sqrt(columnType.getGrossArea())
+  1485→                side.pow(4) / 12.0
+  1486→            }
+  1487→            is ColumnType.TShaped -> {
+  1488→                val side = sqrt(columnType.getGrossArea())
+  1489→                side.pow(4) / 12.0
+  1490→            }
+  1491→            is ColumnType.Composite -> {
+  1492→                columnType.concreteWidth * columnType.concreteDepth.pow(3) / 12.0
+  1493→            }
+  1494→            is ColumnType.Tubular -> {
+  1495→                PI * (columnType.outerDiameter.pow(4) - columnType.innerDiameter.pow(4)) / 64.0
+  1496→            }
+  1497→        }
+  1498→    }
+  1499→
+  1500→    /**
+  1501→     * Estimate steel moment of inertia Is (mm⁴).
+  1502→     * Assumes 1% reinforcement ratio, bars distributed at 0.8 × h/2 from centroid.
+  1503→     */
+  1504→    private fun calculateSteelMomentOfInertia(columnType: ColumnType, Ag: Double, clearCover: Double): Double {
+  1505→        val rho = 0.01 // assumed reinforcement ratio
+  1506→        val As = rho * Ag
+  1507→        val (b, h) = getColumnDimensions(columnType)
+  1508→
+  1509→        // Approximate: assume bars at distance 0.4h from centroid on each side
+  1510→        val dBar = 0.4 * h
+  1511→        // Is ≈ 2 × (As/2) × dBar² (two groups of bars)
+  1512→        return As * dBar * dBar
+  1513→    }
+  1514→
+  1515→    // ═══════════════════════════════════════════════════════════════════
+  1516→    // INTERFACE IMPLEMENTATIONS (delegate to base ACIColumn)
+  1517→    // ═══════════════════════════════════════════════════════════════════
+  1518→
+  1519→    override fun calculateAxialCapacity(
+  1520→        fcu: Double, fy: Double,
+  1521→        width: Double, depth: Double,
+  1522→        reinforcementArea: Double,
+  1523→        loadCombination: LoadCombination
+  1524→    ): Double {
+  1525→        return baseDesign.calculateAxialCapacity(fcu, fy, width, depth, reinforcementArea, loadCombination)
+  1526→    }
+  1527→
+  1528→    override fun calculateReinforcement(
+  1529→        fcu: Double, fy: Double,
+  1530→        width: Double, depth: Double,
+  1531→        axialLoad: Double, momentX: Double, momentY: Double,
+  1532→        loadCombination: LoadCombination
+  1533→    ): ReinforcementResult {
+  1534→        return baseDesign.calculateReinforcement(fcu, fy, width, depth, axialLoad, momentX, momentY, loadCombination)
+  1535→    }
+  1536→
+  1537→    override fun getMinReinforcementRatio(): Double = 0.01   // ACI 10.6.1.1: 1%
+  1538→    override fun getMaxReinforcementRatio(): Double = 0.08   // ACI 10.6.1.1: 8%
+  1539→    override fun getMinSpacing(): Double = 40.0               // ACI 25.2
+  1540→    override fun getMaxSpacing(): Double = 300.0              // ACI 25.7.2.1
+  1541→    override fun getMinCover(): Double = CLEAR_COVER           // ACI 20.6.1
+  1542→}

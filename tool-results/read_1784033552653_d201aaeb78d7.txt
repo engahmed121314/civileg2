@@ -1,0 +1,502 @@
+     1→   501→
+     2→   502→    // Add/Edit Member Dialog
+     3→   503→    if (showAddDialog) {
+     4→   504→        AlertDialog(
+     5→   505→            onDismissRequest = { showAddDialog = false },
+     6→   506→            title = Text(if (editingMemberId != null) "تعديل عضو" else "إضافة عضو"),
+     7→   507→            text = {
+     8→   508→                LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+     9→   509→                    item {
+    10→   510→                        OutlinedTextField(
+    11→   511→                            value = editNodeI, onValueChange = { editNodeI = it },
+    12→   512→                            label = { Text("رقم العقدة البداية (I)") },
+    13→   513→                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    14→   514→                            modifier = Modifier.fillMaxWidth()
+    15→   515→                        )
+    16→   516→                    }
+    17→   517→                    item {
+    18→   518→                        OutlinedTextField(
+    19→   519→                            value = editNodeJ, onValueChange = { editNodeJ = it },
+    20→   520→                            label = { Text("رقم العقدة النهاية (J)") },
+    21→   521→                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    22→   522→                            modifier = Modifier.fillMaxWidth()
+    23→   523→                        )
+    24→   524→                    }
+    25→   525→                    item {
+    26→   526→                        OutlinedTextField(value = editName, onValueChange = { editName = it },
+    27→   527→                            label = { Text("اسم العضو (اختياري)") }, modifier = Modifier.fillMaxWidth())
+    28→   528→                    }
+    29→   529→                    item {
+    30→   530→                        Text("نوع المادة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    31→   531→                        Row {
+    32→   532→                            for (mt in FrameMaterialType.entries) {
+    33→   533→                                FilterChip(
+    34→   534→                                    selected = editMaterial == mt,
+    35→   535→                                    onClick = { editMaterial = mt },
+    36→   536→                                    label = { Text(mt.displayNameAr, fontSize = 12.sp) },
+    37→   537→                                    modifier = Modifier.padding(end = 4.dp)
+    38→   538→                                )
+    39→   539→                            }
+    40→   540→                        }
+    41→   541→                    }
+    42→   542→                    item {
+    43→   543→                        Text("نوع العضو:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    44→   544→                        Row {
+    45→   545→                            for (mtype in FrameMemberType.entries) {
+    46→   546→                                FilterChip(
+    47→   547→                                    selected = editMemberType == mtype,
+    48→   548→                                    onClick = { editMemberType = mtype },
+    49→   549→                                    label = { Text(mtype.displayNameAr, fontSize = 12.sp) },
+    50→   550→                                    modifier = Modifier.padding(end = 4.dp)
+    51→   551→                                )
+    52→   552→                            }
+    53→   553→                        }
+    54→   554→                    }
+    55→   555→                    if (editMaterial == FrameMaterialType.Concrete) {
+    56→   556→                        item {
+    57→   557→                            Text("خصائص المقطع الخرساني:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    58→   558→                        }
+    59→   559→                        item {
+    60→   560→                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    61→   561→                                OutlinedTextField(value = editWidth, onValueChange = { editWidth = it },
+    62→   562→                                    label = { Text("b (mm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    63→   563→                                    modifier = Modifier.weight(1f))
+    64→   564→                                OutlinedTextField(value = editDepth, onValueChange = { editDepth = it },
+    65→   565→                                    label = { Text("h (mm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    66→   566→                                    modifier = Modifier.weight(1f))
+    67→   567→                            }
+    68→   568→                        }
+    69→   569→                        item {
+    70→   570→                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    71→   571→                                OutlinedTextField(value = editFcu, onValueChange = { editFcu = it },
+    72→   572→                                    label = { Text("f'c (MPa)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    73→   573→                                    modifier = Modifier.weight(1f))
+    74→   574→                                OutlinedTextField(value = editFy, onValueChange = { editFy = it },
+    75→   575→                                    label = { Text("fy (MPa)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    76→   576→                                    modifier = Modifier.weight(1f))
+    77→   577→                            }
+    78→   578→                        }
+    79→   579→                    } else {
+    80→   580→                        item {
+    81→   581→                            Text("القطاع المعدني:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    82→   582→                            OutlinedTextField(value = editSteelSection, onValueChange = { editSteelSection = it },
+    83→   583→                                label = { Text("اسم القطاع (مثل: IPE 300)") }, modifier = Modifier.fillMaxWidth())
+    84→   584→                        }
+    85→   585→                    }
+    86→   586→                }
+    87→   587→            },
+    88→   588→            confirmButton = {
+    89→   589→                TextButton(onClick = {
+    90→   590→                    val nI = editNodeI.toIntOrNull() ?: return@TextButton
+    91→   591→                    val nJ = editNodeJ.toIntOrNull() ?: return@TextButton
+    92→   592→                    val concreteSec = if (editMaterial == FrameMaterialType.Concrete)
+    93→   593→                        ConcreteSectionProps(
+    94→   594→                            width = editWidth.toDoubleOrNull() ?: 250.0,
+    95→   595→                            depth = editDepth.toDoubleOrNull() ?: 500.0,
+    96→   596→                            fcu = editFcu.toDoubleOrNull() ?: 25.0,
+    97→   597→                            fy = editFy.toDoubleOrNull() ?: 400.0
+    98→   598→                        ) else null
+    99→   599→                    if (editingMemberId != null) {
+   100→   600→                        val existing = members.find { it.id == editingMemberId }
+   101→   601→                        if (existing != null) {
+   102→   602→                            viewModel.updateMember(existing.copy(
+   103→   603→                                nodeI = nI, nodeJ = nJ, materialType = editMaterial,
+   104→   604→                                memberType = editMemberType, concreteSection = concreteSec,
+   105→   605→                                steelSectionName = if (editMaterial == FrameMaterialType.Steel) editSteelSection else null,
+   106→   606→                                name = editName
+   107→   607→                            ))
+   108→   608→                        }
+   109→   609→                    } else {
+   110→   610→                        viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, editSteelSection, editName)
+   111→   611→                    }
+   112→   612→                    showAddDialog = false
+   113→   613→                }) { Text("حفظ", color = Color(0xFF1565C0)) }
+   114→   614→            },
+   115→   615→            dismissButton = {
+   116→   616→                TextButton(onClick = { showAddDialog = false }) { Text("إلغاء") }
+   117→   617→            }
+   118→   618→        )
+   119→   619→    }
+   120→   620→}
+   121→   621→
+   122→   622→// ============================================================================
+   123→   623→// Tab 3: Loads
+   124→   624→// ============================================================================
+   125→   625→@Composable
+   126→   626→private fun LoadsTab(
+   127→   627→    nodes: List<FrameNode>,
+   128→   628→    members: List<FrameMember>,
+   129→   629→    nodalLoads: List<NodalLoad>,
+   130→   630→    memberLoads: List<MemberLoad>,
+   131→   631→    viewModel: FrameAnalysisViewModel
+   132→   632→) {
+   133→   633→    var showNodalDialog by remember { mutableStateOf(false) }
+   134→   634→    var showMemberDialog by remember { mutableStateOf(false) }
+   135→   635→    var loadTabIndex by remember { mutableIntStateOf(0) }
+   136→   636→
+   137→   637→    // Nodal load dialog state
+   138→   638→    var nlNodeId by remember { mutableStateOf("") }
+   139→   639→    var nlFx by remember { mutableStateOf("0") }
+   140→   640→    var nlFy by remember { mutableStateOf("-10") }
+   141→   641→    var nlMz by remember { mutableStateOf("0") }
+   142→   642→
+   143→   643→    // Member load dialog state
+   144→   644→    var mlMemberId by remember { mutableStateOf("") }
+   145→   645→    var mlType by remember { mutableStateOf(MemberLoadType.UDL) }
+   146→   646→    var mlValue by remember { mutableStateOf("20") }
+   147→   647→    var mlPosition by remember { mutableStateOf("0") }
+   148→   648→
+   149→   649→    Column(modifier = Modifier.fillMaxSize()) {
+   150→   650→        // Tab for Nodal vs Member loads
+   151→   651→        TabRow(
+   152→   652→            selectedTabIndex = loadTabIndex,
+   153→   653→            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+   154→   654→        ) {
+   155→   655→            Tab(selected = loadTabIndex == 0, onClick = { loadTabIndex = 0 }, text = { Text("حمولات عقدية") })
+   156→   656→            Tab(selected = loadTabIndex == 1, onClick = { loadTabIndex = 1 }, text = { Text("حمولات على الأعضاء") })
+   157→   657→        }
+   158→   658→
+   159→   659→        if (loadTabIndex == 0) {
+   160→   660→            // Nodal loads
+   161→   661→            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+   162→   662→                Text("حمولات العقد", fontWeight = FontWeight.Bold)
+   163→   663→                Button(onClick = { showNodalDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
+   164→   664→                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
+   165→   665→                }
+   166→   666→            }
+   167→   667→            if (nodalLoads.isEmpty()) {
+   168→   668→                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("لا توجد حمولات عقدية", color = Color.Gray) }
+   169→   669→            } else {
+   170→   670→                LazyColumn(modifier = Modifier.fillMaxSize()) {
+   171→   671→                    itemsIndexed(nodalLoads) { index, load ->
+   172→   672→                        Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+   173→   673→                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+   174→   674→                                Column(Modifier.weight(1f)) {
+   175→   675→                                    Text("عقدة ${load.nodeId}", fontWeight = FontWeight.Bold)
+   176→   676→                                    Text("Fx=${load.fx}, Fy=${load.fy} kN, M=${load.mz} kN.m", fontSize = 11.sp, color = Color.Gray)
+   177→   677→                                }
+   178→   678→                                IconButton(onClick = { viewModel.removeNodalLoad(index) }) {
+   179→   679→                                    Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(18.dp))
+   180→   680→                                }
+   181→   681→                            }
+   182→   682→                        }
+   183→   683→                    }
+   184→   684→                }
+   185→   685→            }
+   186→   686→        } else {
+   187→   687→            // Member loads
+   188→   688→            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+   189→   689→                Text("حمولات الأعضاء", fontWeight = FontWeight.Bold)
+   190→   690→                Button(onClick = { showMemberDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
+   191→   691→                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text("إضافة")
+   192→   692→                }
+   193→   693→            }
+   194→   694→            if (memberLoads.isEmpty()) {
+   195→   695→                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("لا توجد حمولات على الأعضاء", color = Color.Gray) }
+   196→   696→            } else {
+   197→   697→                LazyColumn(modifier = Modifier.fillMaxSize()) {
+   198→   698→                    itemsIndexed(memberLoads) { index, load ->
+   199→   699→                        Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+   200→   700→                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+   201→   701→                                Column(Modifier.weight(1f)) {
+   202→   702→                                    val mName = members.find { it.id == load.memberId }?.name ?: "عضو ${load.memberId}"
+   203→   703→                                    Text("على: $mName (#${load.memberId})", fontWeight = FontWeight.Bold)
+   204→   704→                                    Text("${load.loadType.displayNameAr}: ${load.value} kN/m", fontSize = 11.sp, color = Color.Gray)
+   205→   705→                                }
+   206→   706→                                IconButton(onClick = { viewModel.removeMemberLoad(index) }) {
+   207→   707→                                    Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(18.dp))
+   208→   708→                                }
+   209→   709→                            }
+   210→   710→                        }
+   211→   711→                    }
+   212→   712→                }
+   213→   713→            }
+   214→   714→        }
+   215→   715→    }
+   216→   716→
+   217→   717→    // Nodal Load Dialog
+   218→   718→    if (showNodalDialog) {
+   219→   719→        AlertDialog(
+   220→   720→            onDismissRequest = { showNodalDialog = false },
+   221→   721→            title = Text("إضافة حمولة عقدية"),
+   222→   722→            text = {
+   223→   723→                Column {
+   224→   724→                    OutlinedTextField(value = nlNodeId, onValueChange = { nlNodeId = it },
+   225→   725→                        label = { Text("رقم العقدة") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+   226→   726→                    Spacer(Modifier.height(4.dp))
+   227→   727→                    OutlinedTextField(value = nlFx, onValueChange = { nlFx = it },
+   228→   728→                        label = { Text("Fx - أفقي (kN)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+   229→   729→                    Spacer(Modifier.height(4.dp))
+   230→   730→                    OutlinedTextField(value = nlFy, onValueChange = { nlFy = it },
+   231→   731→                        label = { Text("Fy - رأسي (kN) - موجب لأعلى") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+   232→   732→                    Spacer(Modifier.height(4.dp))
+   233→   733→                    OutlinedTextField(value = nlMz, onValueChange = { nlMz = it },
+   234→   734→                        label = { Text("Mz - عزم (kN.m)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+   235→   735→                }
+   236→   736→            },
+   237→   737→            confirmButton = {
+   238→   738→                TextButton(onClick = {
+   239→   739→                    val nid = nlNodeId.toIntOrNull() ?: return@TextButton
+   240→   740→                    viewModel.addNodalLoad(nid, nlFx.toDoubleOrNull() ?: 0.0, nlFy.toDoubleOrNull() ?: 0.0, nlMz.toDoubleOrNull() ?: 0.0, "DL")
+   241→   741→                    showNodalDialog = false
+   242→   742→                }) { Text("إضافة", color = Color(0xFF1565C0)) }
+   243→   743→            },
+   244→   744→            dismissButton = { TextButton(onClick = { showNodalDialog = false }) { Text("إلغاء") } }
+   245→   745→        )
+   246→   746→    }
+   247→   747→
+   248→   748→    // Member Load Dialog
+   249→   749→    if (showMemberDialog) {
+   250→   750→        AlertDialog(
+   251→   751→            onDismissRequest = { showMemberDialog = false },
+   252→   752→            title = Text("إضافة حمولة على عضو"),
+   253→   753→            text = {
+   254→   754→                Column {
+   255→   755→                    OutlinedTextField(value = mlMemberId, onValueChange = { mlMemberId = it },
+   256→   756→                        label = { Text("رقم العضو") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+   257→   757→                    Spacer(Modifier.height(4.dp))
+   258→   758→                    Text("نوع الحمولة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+   259→   759→                    Row {
+   260→   760→                        for (lt in MemberLoadType.entries) {
+   261→   761→                            FilterChip(selected = mlType == lt, onClick = { mlType = lt },
+   262→   762→                                label = { Text(lt.displayNameAr, fontSize = 11.sp) }, modifier = Modifier.padding(end = 4.dp))
+   263→   763→                        }
+   264→   764→                    }
+   265→   765→                    Spacer(Modifier.height(4.dp))
+   266→   766→                    OutlinedTextField(value = mlValue, onValueChange = { mlValue = it },
+   267→   767→                        label = { Text("قيمة الحمولة") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+   268→   768→                    if (mlType != MemberLoadType.UDL) {
+   269→   769→                        Spacer(Modifier.height(4.dp))
+   270→   770→                        OutlinedTextField(value = mlPosition, onValueChange = { mlPosition = it },
+   271→   771→                            label = { Text("الموقع من بداية العضو (م)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+   272→   772→                    }
+   273→   773→                }
+   274→   774→            },
+   275→   775→            confirmButton = {
+   276→   776→                TextButton(onClick = {
+   277→   777→                    val mid = mlMemberId.toIntOrNull() ?: return@TextButton
+   278→   778→                    viewModel.addMemberLoad(mid, mlType, mlValue.toDoubleOrNull() ?: 0.0, mlPosition.toDoubleOrNull() ?: 0.0, "DL")
+   279→   779→                    showMemberDialog = false
+   280→   780→                }) { Text("إضافة", color = Color(0xFF1565C0)) }
+   281→   781→            },
+   282→   782→            dismissButton = { TextButton(onClick = { showMemberDialog = false }) { Text("إلغاء") } }
+   283→   783→        )
+   284→   784→    }
+   285→   785→}
+   286→   786→
+   287→   787→// ============================================================================
+   288→   788→// Tab 4: Results
+   289→   789→// ============================================================================
+   290→   790→@Composable
+   291→   791→private fun ResultsTab(
+   292→   792→    result: FrameAnalysisResult?,
+   293→   793→    concreteResults: List<ConcreteMemberDesignResult>,
+   294→   794→    steelResults: List<SteelMemberDesignResult>,
+   295→   795→    selectedMemberId: Int?,
+   296→   796→    viewModel: FrameAnalysisViewModel
+   297→   797→) {
+   298→   798→    if (result == null || !result.hasResults) {
+   299→   799→        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+   300→   800→            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+   301→   801→                Icon(Icons.Default.Analytics, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+   302→   802→                Spacer(Modifier.height(8.dp))
+   303→   803→                Text("اضغط على زر 'حل' لبدء التحليل", color = Color.Gray, fontSize = 14.sp)
+   304→   804→            }
+   305→   805→        }
+   306→   806→        return
+   307→   807→    }
+   308→   808→
+   309→   809→    var resultSubTab by remember { mutableIntStateOf(0) }
+   310→   810→    val subTabs = buildList {
+   311→   811→        add("الإزاحات")
+   312→   812→        add("ردود الأفعال")
+   313→   813→        if (concreteResults.isNotEmpty()) add("تصميم خرسانة")
+   314→   814→        if (steelResults.isNotEmpty()) add("تصميم حديد")
+   315→   815→    }
+   316→   816→
+   317→   817→    TabRow(selectedTabIndex = resultSubTab) {
+   318→   818→        for ((i, title) in subTabs.withIndex()) {
+   319→   819→            Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
+   320→   820→        }
+   321→   821→    }
+   322→   822→
+   323→   823→    LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+   324→   824→        // === Displacements ===
+   325→   825→        if (resultSubTab == 0) {
+   326→   826→            item {
+   327→   827→                Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5))) {
+   328→   828→                    Column(modifier = Modifier.padding(12.dp)) {
+   329→   829→                        Text("إزاحات العقد", fontWeight = FontWeight.Bold)
+   330→   830→                        Spacer(Modifier.height(4.dp))
+   331→   831→                        for (nr in result.nodeResults.filter { it.nodeId in (viewModel.nodes.value?.map { it.id } ?: emptyList()) }) {
+   332→   832→                            Text(
+   333→   833→                                "عقدة ${nr.nodeId}: dx=${String.format("%.4f", nr.dx * 1000)} mm, dy=${String.format("%.4f", nr.dy * 1000)} mm, θ=${String.format("%.6f", nr.rz)} rad",
+   334→   834→                                fontSize = 11.sp
+   335→   835→                            )
+   336→   836→                        }
+   337→   837→                    }
+   338→   838→                }
+   339→   839→            }
+   340→   840→        }
+   341→   841→
+   342→   842→        // === Reactions ===
+   343→   843→        if (resultSubTab == 1) {
+   344→   844→            item {
+   345→   845→                Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))) {
+   346→   846→                    Column(modifier = Modifier.padding(12.dp)) {
+   347→   847→                        Text("ردود الأفعال", fontWeight = FontWeight.Bold)
+   348→   848→                        Spacer(Modifier.height(4.dp))
+   349→   849→                        for (nr in result.nodeResults.filter { abs(it.reactionFx) > 0.01 || abs(it.reactionFy) > 0.01 || abs(it.reactionMz) > 0.01 }) {
+   350→   850→                            Text(
+   351→   851→                                "عقدة ${nr.nodeId}: Rx=${String.format("%.2f", nr.reactionFx)} kN, Ry=${String.format("%.2f", nr.reactionFy)} kN, M=${String.format("%.2f", nr.reactionMz)} kN.m",
+   352→   852→                                fontSize = 11.sp
+   353→   853→                            )
+   354→   854→                        }
+   355→   855→                    }
+   356→   856→                }
+   357→   857→            }
+   358→   858→
+   359→   859→            // Member end forces
+   360→   860→            item {
+   361→   861→                Card(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+   362→   862→                    Column(modifier = Modifier.padding(12.dp)) {
+   363→   863→                        Text("القوى الداخلية عند النهايات", fontWeight = FontWeight.Bold)
+   364→   864→                        Spacer(Modifier.height(4.dp))
+   365→   865→                        for (mf in result.memberEndForces) {
+   366→   866→                            val mname = viewModel.members.value?.find { it.id == mf.memberId }?.name ?: "عضو ${mf.memberId}"
+   367→   867→                            Text("عضو $mname (#${mf.memberId}):", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+   368→   868→                            Text("  I: N=${String.format("%.1f", mf.fi_x)} kN, V=${String.format("%.1f", mf.fi_y)} kN, M=${String.format("%.1f", mf.mi_z)} kN.m", fontSize = 10.sp, color = Color.Gray)
+   369→   869→                            Text("  J: N=${String.format("%.1f", mf.fj_x)} kN, V=${String.format("%.1f", mf.fj_y)} kN, M=${String.format("%.1f", mf.mj_z)} kN.m", fontSize = 10.sp, color = Color.Gray)
+   370→   870→                            Spacer(Modifier.height(4.dp))
+   371→   871→                        }
+   372→   872→                    }
+   373→   873→                }
+   374→   874→            }
+   375→   875→        }
+   376→   876→
+   377→   877→        // === Concrete Design Results ===
+   378→   878→        if (resultSubTab == 2 && concreteResults.isNotEmpty()) {
+   379→   879→            items(concreteResults) { cr ->
+   380→   880→                Card(
+   381→   881→                    modifier = Modifier
+   382→   882→                        .fillMaxWidth()
+   383→   883→                        .padding(4.dp),
+   384→   884→                    colors = CardDefaults.cardColors(
+   385→   885→                        containerColor = if (cr.isSafe) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+   386→   886→                    )
+   387→   887→                ) {
+   388→   888→                    Column(modifier = Modifier.padding(12.dp)) {
+   389→   889→                        Row(verticalAlignment = Alignment.CenterVertically) {
+   390→   890→                            Icon(
+   391→   891→                                if (cr.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+   392→   892→                                contentDescription = null,
+   393→   893→                                tint = if (cr.isSafe) Color(0xFF4CAF50) else Color(0xFFF44336),
+   394→   894→                                modifier = Modifier.size(20.dp)
+   395→   895→                            )
+   396→   896→                            Spacer(modifier = Modifier.width(8.dp))
+   397→   897→                            Text("${cr.memberName} (#${cr.memberId})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+   398→   898→                        }
+   399→   899→                        Spacer(Modifier.height(4.dp))
+   400→   900→                        Text("القطاع: ${cr.section.width}×${cr.section.depth} mm | f'c=${cr.section.fcu} MPa", fontSize = 11.sp, color = Color.Gray)
+   401→   901→                        Spacer(Modifier.height(2.dp))
+   402→   902→                        Text("Max M=${String.format("%.1f", cr.maxMoment)} kN.m | Max V=${String.format("%.1f", cr.maxShear)} kN | N=${String.format("%.1f", cr.axialForce)} kN", fontSize = 11.sp)
+   403→   903→                        Spacer(Modifier.height(4.dp))
+   404→   904→                        Text("التسليح المطلوب: ${String.format("%.0f", cr.asRequired)} mm²", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+   405→   905→                        if (cr.numBarsBot > 0) {
+   406→   906→                            Text("سفلي: ${cr.numBarsBot}Ø${cr.barDia.toInt()} (As=${String.format("%.0f", cr.asBot)} mm²)", fontSize = 11.sp)
+   407→   907→                        }
+   408→   908→                        if (cr.numBarsTop > 0) {
+   409→   909→                            Text("علوي: ${cr.numBarsTop}Ø${cr.barDia.toInt()} (As=${String.format("%.0f", cr.asTop)} mm²)", fontSize = 11.sp)
+   410→   910→                        }
+   411→   911→                        if (cr.stirrupDia > 0) {
+   412→   912→                            Text("الكانات: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm", fontSize = 11.sp)
+   413→   913→                        }
+   414→   914→                        Spacer(Modifier.height(4.dp))
+   415→   915→
+   416→   916→                        // Utilization bars
+   417→   917→                        Row {
+   418→   918→                            Text("انحناء: ", fontSize = 11.sp)
+   419→   919→                            UtilizationBar(cr.momentUtilization, Modifier.weight(1f))
+   420→   920→                        }
+   421→   921→                        Spacer(Modifier.height(2.dp))
+   422→   922→                        Row {
+   423→   923→                            Text("قص:     ", fontSize = 11.sp)
+   424→   924→                            UtilizationBar(cr.shearUtilization, Modifier.weight(1f))
+   425→   925→                        }
+   426→   926→
+   427→   927→                        if (cr.warnings.isNotEmpty()) {
+   428→   928→                            Spacer(Modifier.height(4.dp))
+   429→   929→                            for (w in cr.warnings) {
+   430→   930→                                Text("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
+   431→   931→                            }
+   432→   932→                        }
+   433→   933→                    }
+   434→   934→                }
+   435→   935→            }
+   436→   936→        }
+   437→   937→
+   438→   938→        // === Steel Design Results ===
+   439→   939→        if (resultSubTab == 3 && steelResults.isNotEmpty()) {
+   440→   940→            items(steelResults) { sr ->
+   441→   941→                Card(
+   442→   942→                    modifier = Modifier.fillMaxWidth().padding(4.dp),
+   443→   943→                    colors = CardDefaults.cardColors(
+   444→   944→                        containerColor = if (sr.isSafe) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+   445→   945→                    )
+   446→   946→                ) {
+   447→   947→                    Column(modifier = Modifier.padding(12.dp)) {
+   448→   948→                        Row(verticalAlignment = Alignment.CenterVertically) {
+   449→   949→                            Icon(
+   450→   950→                                if (sr.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+   451→   951→                                null,
+   452→   952→                                tint = if (sr.isSafe) Color(0xFF4CAF50) else Color(0xFFF44336),
+   453→   953→                                modifier = Modifier.size(20.dp)
+   454→   954→                            )
+   455→   955→                            Spacer(Modifier.width(8.dp))
+   456→   956→                            Text("${sr.memberName} (#${sr.memberId})", fontWeight = FontWeight.Bold)
+   457→   957→                        }
+   458→   958→                        Spacer(Modifier.height(4.dp))
+   459→   959→                        Text("القطاع: ${sr.selectedSection}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+   460→   960→                        Text("W=${sr.sectionWeight} kg/m | A=${sr.sectionArea} cm2 | Ix=${sr.sectionIx} cm4 | Zx=${sr.sectionZx} cm3", fontSize = 10.sp, color = Color.Gray)
+   461→   961→
+   462→   962→                        // القوى المؤثرة
+   463→   963→                        Spacer(Modifier.height(4.dp))
+   464→   964→                        Text("القوى المؤثرة:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+   465→   965→                        Text("M=${String.format("%.1f", sr.maxMoment)} kN.m | V=${String.format("%.1f", sr.maxShear)} kN | N=${String.format("%.1f", sr.axialForce)} kN", fontSize = 11.sp)
+   466→   966→
+   467→   967→                        // السعات التصميمية
+   468→   968→                        Spacer(Modifier.height(4.dp))
+   469→   969→                        Text("السعات التصميمية:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+   470→   970→                        Text("Mn=${String.format("%.1f", sr.flexuralCapacity)} kN.m | Vn=${String.format("%.1f", sr.shearCapacity)} kN | Pn=${String.format("%.1f", sr.axialCapacity)} kN", fontSize = 11.sp)
+   471→   971→
+   472→   972→                        // مراجع الكود
+   473→   973→                        if (sr.codeNotes.isNotEmpty()) {
+   474→   974→                            Spacer(Modifier.height(4.dp))
+   475→   975→                            for (note in sr.codeNotes) {
+   476→   976→                                Text("▸ $note", fontSize = 10.sp, color = Color(0xFF1565C0))
+   477→   977→                            }
+   478→   978→                        }
+   479→   979→                        if (sr.warnings.isNotEmpty()) {
+   480→   980→                            Spacer(Modifier.height(4.dp))
+   481→   981→                            for (w in sr.warnings) {
+   482→   982→                                Text("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
+   483→   983→                            }
+   484→   984→                        }
+   485→   985→                        Spacer(Modifier.height(4.dp))
+   486→   986→
+   487→   987→                        Row { Text("انحناء: ", fontSize = 11.sp); UtilizationBar(sr.flexuralUtilization, Modifier.weight(1f)) }
+   488→   988→                        Spacer(Modifier.height(2.dp))
+   489→   989→                        Row { Text("قص:     ", fontSize = 11.sp); UtilizationBar(sr.shearUtilization, Modifier.weight(1f)) }
+   490→   990→                        Spacer(Modifier.height(2.dp))
+   491→   991→                        Row { Text("محوري:  ", fontSize = 11.sp); UtilizationBar(sr.axialUtilization, Modifier.weight(1f)) }
+   492→   992→                        Spacer(Modifier.height(2.dp))
+   493→   993→                        Row { Text("مدمج:   ", fontSize = 11.sp); UtilizationBar(sr.combinedUtilization, Modifier.weight(1f)) }
+   494→   994→                    }
+   495→   995→                }
+   496→   996→            }
+   497→   997→        }
+   498→   998→    }
+   499→   999→}
+   500→  1000→
+   501→
+   502→[showing lines 501-1000 of 1027; use offset=1001 with limit to continue reading]

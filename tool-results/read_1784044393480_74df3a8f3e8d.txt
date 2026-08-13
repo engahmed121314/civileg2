@@ -1,0 +1,1036 @@
+     1→     1→package com.civileg.app.ui.compose.screens
+     2→     2→
+     3→     3→import androidx.compose.animation.animateColorAsState
+     4→     4→import androidx.compose.animation.core.FastOutSlowInEasing
+     5→     5→import androidx.compose.animation.core.animateFloatAsState
+     6→     6→import androidx.compose.animation.core.tween
+     7→     7→import androidx.compose.foundation.background
+     8→     8→import androidx.compose.foundation.clickable
+     9→     9→import androidx.compose.foundation.horizontalScroll
+    10→    10→import androidx.compose.foundation.isSystemInDarkTheme
+    11→    11→import androidx.compose.foundation.layout.Arrangement
+    12→    12→import androidx.compose.foundation.layout.Box
+    13→    13→import androidx.compose.foundation.layout.Column
+    14→    14→import androidx.compose.foundation.layout.Row
+    15→    15→import androidx.compose.foundation.layout.Spacer
+    16→    16→import androidx.compose.foundation.layout.fillMaxSize
+    17→    17→import androidx.compose.foundation.layout.fillMaxWidth
+    18→    18→import androidx.compose.foundation.layout.height
+    19→    19→import androidx.compose.foundation.layout.padding
+    20→    20→import androidx.compose.foundation.layout.size
+    21→    21→import androidx.compose.foundation.layout.width
+    22→    22→import androidx.compose.foundation.lazy.grid.GridCells
+    23→    23→import androidx.compose.foundation.lazy.grid.GridItemSpan
+    24→    24→import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+    25→    25→import androidx.compose.foundation.lazy.grid.items
+    26→    26→import androidx.compose.foundation.rememberScrollState
+    27→    27→import androidx.compose.foundation.shape.CircleShape
+    28→    28→import androidx.compose.foundation.shape.RoundedCornerShape
+    29→    29→import androidx.compose.material.icons.Icons
+    30→    30→import androidx.compose.material.icons.filled.*
+    31→    31→import androidx.compose.material3.*
+    32→    32→import androidx.compose.runtime.Composable
+    33→    33→import androidx.compose.runtime.Immutable
+    34→    34→import androidx.compose.runtime.getValue
+    35→    35→import androidx.compose.runtime.livedata.observeAsState
+    36→    36→import androidx.compose.ui.Alignment
+    37→    37→import androidx.hilt.navigation.compose.hiltViewModel
+    38→    38→import com.civileg.app.viewmodel.ProjectViewModel
+    39→    39→import com.civileg.app.db.DesignType
+    40→    40→import java.text.SimpleDateFormat
+    41→    41→import java.util.Locale
+    42→    42→import androidx.compose.ui.Modifier
+    43→    43→import androidx.compose.ui.draw.clip
+    44→    44→import androidx.compose.ui.draw.shadow
+    45→    45→import androidx.compose.ui.geometry.Offset
+    46→    46→import androidx.compose.ui.graphics.Brush
+    47→    47→import androidx.compose.ui.graphics.Color
+    48→    48→import androidx.compose.ui.graphics.vector.ImageVector
+    49→    49→import androidx.compose.ui.res.painterResource
+    50→    50→import androidx.compose.ui.text.font.FontWeight
+    51→    51→import androidx.compose.ui.text.style.TextAlign
+    52→    52→import androidx.compose.ui.text.style.TextOverflow
+    53→    53→import androidx.compose.ui.unit.dp
+    54→    54→import androidx.compose.ui.unit.sp
+    55→    55→import com.civileg.app.R
+    56→    56→
+    57→    57→// ══════════════════════════════════════════════════════════════════════
+    58→    58→// Color palette extensions for the Home Screen
+    59→    59→// ══════════════════════════════════════════════════════════════════════
+    60→    60→private val HeaderGradientStart   = Color(0xFF0D1B3E)
+    61→    61→private val HeaderGradientMid     = Color(0xFF162B5B)
+    62→    62→private val HeaderGradientEnd     = Color(0xFF2A1B5E) // deep purple
+    63→    63→private val HeaderOverlay         = Color(0xFF0F9DFF).copy(alpha = 0.06f)
+    64→    64→
+    65→    65→private val StatCardBlue          = Color(0xFF1565C0)
+    66→    66→private val StatCardGreen         = Color(0xFF2E7D32)
+    67→    67→private val StatCardOrange        = Color(0xFFE65100)
+    68→    68→
+    69→    69→private val CardAccentBeam        = Color(0xFF1976D2)
+    70→    70→private val CardAccentColumn      = Color(0xFF7B1FA2)
+    71→    71→private val CardAccentSlab        = Color(0xFF00838F)
+    72→    72→private val CardAccentFooting     = Color(0xFF4E342E)
+    73→    73→private val CardAccentTank        = Color(0xFF0277BD)
+    74→    74→private val CardAccentWall        = Color(0xFF558B2F)
+    75→    75→private val CardAccentStair       = Color(0xFFAD1457)
+    76→    76→private val CardAccentSteel       = Color(0xFF37474F)
+    77→    77→private val CardAccentSeismic     = Color(0xFFBF360C)
+    78→    78→private val CardAccentFrame       = Color(0xFF1A237E)
+    79→    79→
+    80→    80→private val ToolCalcBg            = Color(0xFF1B5E20).copy(alpha = 0.12f)
+    81→    81→private val ToolCalcAccent        = Color(0xFF2E7D32)
+    82→    82→private val ToolConvBg            = Color(0xFF0D47A1).copy(alpha = 0.12f)
+    83→    83→private val ToolConvAccent        = Color(0xFF1565C0)
+    84→    84→private val ToolSteelBg           = Color(0xFF4E342E).copy(alpha = 0.12f)
+    85→    85→private val ToolSteelAccent       = Color(0xFF5D4037)
+    86→    86→private val ToolQtyBg             = Color(0xFFE65100).copy(alpha = 0.12f)
+    87→    87→private val ToolQtyAccent         = Color(0xFFEF6C00)
+    88→    88→private val ToolPdfBg             = Color(0xFFB71C1C).copy(alpha = 0.12f)
+    89→    89→private val ToolPdfAccent         = Color(0xFFD32F2F)
+    90→    90→
+    91→    91→private val FooterBackground      = Color(0xFFF8F9FA)
+    92→    92→private val FooterDarkBg          = Color(0xFF161622)
+    93→    93→
+    94→    94→// ══════════════════════════════════════════════════════════════════════
+    95→    95→// Data models
+    96→    96→// ══════════════════════════════════════════════════════════════════════
+    97→    97→
+    98→    98→@Immutable
+    99→    99→data class DesignModuleItem(
+   100→   100→    val screen: AppScreen,
+   101→   101→    val title: String,
+   102→   102→    val subtitle: String,
+   103→   103→    val supportedCodes: List<String>,
+   104→   104→    val accentColor: Color,
+   105→   105→    val icon: ImageVector
+   106→   106→)
+   107→   107→
+   108→   108→@Immutable
+   109→   109→data class QuickTool(
+   110→   110→    val title: String,
+   111→   111→    val subtitle: String,
+   112→   112→    val icon: ImageVector,
+   113→   113→    val bgColor: Color,
+   114→   114→    val accentColor: Color,
+   115→   115→    val route: String
+   116→   116→)
+   117→   117→
+   118→   118→@Immutable
+   119→   119→data class RecentProject(
+   120→   120→    val name: String,
+   121→   121→    val elementType: String,
+   122→   122→    val date: String,
+   123→   123→    val code: String,
+   124→   124→    val icon: ImageVector
+   125→   125→)
+   126→   126→
+   127→   127→private val enhancedDesignModules = listOf(
+   128→   128→    DesignModuleItem(AppScreen.BeamDesign,     "الكمرات",           "تصميم الكمرات الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentBeam,   Icons.Default.AccountBalance),
+   129→   129→    DesignModuleItem(AppScreen.ColumnDesign,    "الأعمدة",           "تصميم الأعمدة الخرسانية",   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
+   130→   130→    DesignModuleItem(AppScreen.SlabDesign,      "البلاطات",          "البلاطات المصمتة والهوردية", listOf("ECP", "ACI"),        CardAccentSlab,    Icons.Default.ViewWeek),
+   131→   131→    DesignModuleItem(AppScreen.FootingDesign,   "القواعد",           "تصميم القواعد المنفصلة",    listOf("ECP", "ACI"),        CardAccentFooting, Icons.Default.Layers),
+   132→   132→    DesignModuleItem(AppScreen.TankDesign,      "الخزانات",          "خزانات المياه (علوي/أرضي)", listOf("ECP", "ACI"),        CardAccentTank,    Icons.Default.WaterDrop),
+   133→   133→    DesignModuleItem(AppScreen.RetainingWall,   "حوائط السند",       "حوائط السند واستقرار التربة", listOf("ECP", "ACI"),     CardAccentWall,    Icons.Default.SensorDoor),
+   134→   134→    DesignModuleItem(AppScreen.StairDesign,     "السلالم",           "تصميم السلالم الخرسانية",   listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
+   135→   135→    DesignModuleItem(AppScreen.SteelDesign,     "المنشآت المعدنية",  "تصميم الوصلات والأعضاء",     listOf("AISC", "ECP"),      CardAccentSteel,   Icons.Default.Build),
+   136→   136→    DesignModuleItem(AppScreen.SeismicAnalysis, "الزلازل",           "قوى الزلازل والرياح",       listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning),
+   137→   137→    DesignModuleItem(AppScreen.FrameAnalysis,  "تحليل الإطارات",   "تحليل وتصميم الهياكل ثنائية الأبعاد", listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree)
+   138→   138→)
+   139→   139→
+   140→   140→private val quickTools = listOf(
+   141→   141→    QuickTool("حاسبة علمية",    "Scientific Calculator",  Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  AppScreen.Calculator.route),
+   142→   142→    QuickTool("محول الوحدات",   "Unit Converter",         Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
+   143→   143→    QuickTool("جداول الحديد",   "Steel Rebar Tables",     Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
+   144→   144→    QuickTool("كميات الأعمال",  "Quantity Surveying",     Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+   145→   145→    QuickTool("مخزن الموقع",    "Site Inventory",         Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
+   146→   146→)
+   147→   147→
+   148→   148→// Recent projects now loaded from DB via ViewModel in HomeScreen composable
+   149→   149→
+   150→   150→// ══════════════════════════════════════════════════════════════════════
+   151→   151→// Main Home Screen
+   152→   152→// ══════════════════════════════════════════════════════════════════════
+   153→   153→
+   154→   154→@OptIn(ExperimentalMaterial3Api::class)
+   155→   155→@Composable
+   156→   156→fun HomeScreen(
+   157→   157→    onNavigateTo: (String) -> Unit,
+   158→   158→    onShowSettings: () -> Unit,
+   159→   159→    projectViewModel: ProjectViewModel = hiltViewModel()
+   160→   160→) {
+   161→   161→    val isDark = isSystemInDarkTheme()
+   162→   162→    val allDesigns by projectViewModel.allDesigns.observeAsState(initial = emptyList())
+   163→   163→    val allProjects by projectViewModel.allProjects.observeAsState(initial = emptyList())
+   164→   164→    val designCount = allDesigns.size
+   165→   165→    val uniqueCodes = allDesigns.map { it.codeUsed }.distinct().size
+   166→   166→    val uniqueTypes = allDesigns.map { it.type }.distinct().size
+   167→   167→
+   168→   168→    val recentProjects = allDesigns
+   169→   169→        .sortedByDescending { it.createdAt }
+   170→   170→        .take(5)
+   171→   171→        .map { design ->
+   172→   172→            val typeLabel = when (design.type) {
+   173→   173→                DesignType.BEAM -> "كمرات"
+   174→   174→                DesignType.COLUMN -> "أعمدة"
+   175→   175→                DesignType.SLAB -> "بلاطات"
+   176→   176→                DesignType.FOOTING -> "قواعد"
+   177→   177→                DesignType.STAIRCASE -> "سلالم"
+   178→   178→                DesignType.RETAINING_WALL -> "حوائط سند"
+   179→   179→                DesignType.WATER_TANK -> "خزانات"
+   180→   180→                DesignType.SEISMIC -> "زلازل"
+   181→   181→                DesignType.STEEL_MEMBER -> "معدني"
+   182→   182→                DesignType.PILE -> "ركائز"
+   183→   183→                DesignType.STEEL_WAREHOUSE -> "مخزن معدني"
+   184→   184→            }
+   185→   185→            val icon = when (design.type) {
+   186→   186→                DesignType.BEAM -> Icons.Default.AccountBalance
+   187→   187→                DesignType.COLUMN -> Icons.Default.ViewColumn
+   188→   188→                DesignType.SLAB -> Icons.Default.ViewWeek
+   189→   189→                DesignType.FOOTING -> Icons.Default.Layers
+   190→   190→                DesignType.STAIRCASE -> Icons.Default.Stairs
+   191→   191→                DesignType.RETAINING_WALL -> Icons.Default.SensorDoor
+   192→   192→                DesignType.WATER_TANK -> Icons.Default.WaterDrop
+   193→   193→                DesignType.SEISMIC -> Icons.Default.Warning
+   194→   194→                DesignType.STEEL_MEMBER -> Icons.Default.Build
+   195→   195→                else -> Icons.Default.Description
+   196→   196→            }
+   197→   197→            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale("ar")).format(design.createdAt)
+   198→   198→            RecentProject(
+   199→   199→                name = design.name,
+   200→   200→                elementType = typeLabel,
+   201→   201→                date = dateStr,
+   202→   202→                code = design.codeUsed,
+   203→   203→                icon = icon
+   204→   204→            )
+   205→   205→        }
+   206→   206→
+   207→   207→    Scaffold(
+   208→   208→        topBar = {
+   209→   209→            TopAppBar(
+   210→   210→                title = {
+   211→   211→                    Row(verticalAlignment = Alignment.CenterVertically) {
+   212→   212→                        Icon(
+   213→   213→                            painter = painterResource(id = R.drawable.ic_logo),
+   214→   214→                            contentDescription = null,
+   215→   215→                            modifier = Modifier.size(32.dp),
+   216→   216→                            tint = MaterialTheme.colorScheme.primary
+   217→   217→                        )
+   218→   218→                        Spacer(modifier = Modifier.width(12.dp))
+   219→   219→                        Column {
+   220→   220→                            Text(
+   221→   221→                                "Civil Engineer Pro",
+   222→   222→                                fontWeight = FontWeight.ExtraBold,
+   223→   223→                                fontSize = 18.sp
+   224→   224→                            )
+   225→   225→                            Text(
+   226→   226→                                "Professional Suite",
+   227→   227→                                style = MaterialTheme.typography.labelSmall,
+   228→   228→                                color = MaterialTheme.colorScheme.primary
+   229→   229→                            )
+   230→   230→                        }
+   231→   231→                    }
+   232→   232→                },
+   233→   233→                actions = {
+   234→   234→                    IconButton(onClick = onShowSettings) {
+   235→   235→                        Icon(
+   236→   236→                            Icons.Default.Settings,
+   237→   237→                            contentDescription = "Settings",
+   238→   238→                            tint = MaterialTheme.colorScheme.primary
+   239→   239→                        )
+   240→   240→                    }
+   241→   241→                },
+   242→   242→                colors = TopAppBarDefaults.topAppBarColors(
+   243→   243→                    containerColor = MaterialTheme.colorScheme.surface
+   244→   244→                )
+   245→   245→            )
+   246→   246→        }
+   247→   247→    ) { padding ->
+   248→   248→        LazyVerticalGrid(
+   249→   249→            columns = GridCells.Fixed(2),
+   250→   250→            horizontalArrangement = Arrangement.spacedBy(12.dp),
+   251→   251→            verticalArrangement = Arrangement.spacedBy(10.dp),
+   252→   252→            modifier = Modifier
+   253→   253→                .fillMaxSize()
+   254→   254→                .padding(padding)
+   255→   255→                .background(
+   256→   256→                    if (isDark) Color(0xFF0F0F1A) else Color(0xFFF5F6FA)
+   257→   257→                )
+   258→   258→                .padding(horizontal = 14.dp)
+   259→   259→        ) {
+   260→   260→            // ══════════════════════════════════════════
+   261→   261→            // A. HEADER SECTION
+   262→   262→            // ══════════════════════════════════════════
+   263→   263→            item(span = { GridItemSpan(2) }) {
+   264→   264→                HeaderSection(isDark = isDark)
+   265→   265→            }
+   266→   266→
+   267→   267→            // ══════════════════════════════════════════
+   268→   268→            // B. QUICK STATS ROW
+   269→   269→            // ══════════════════════════════════════════
+   270→   270→            item(span = { GridItemSpan(2) }) {
+   271→   271→                QuickStatsRow(isDark = isDark, designCount = designCount, codeCount = uniqueCodes, typeCount = uniqueTypes)
+   272→   272→            }
+   273→   273→
+   274→   274→            // ══════════════════════════════════════════
+   275→   275→            // C. MAIN DESIGN MODULES GRID
+   276→   276→            // ══════════════════════════════════════════
+   277→   277→            item(span = { GridItemSpan(2) }) {
+   278→   278→                SectionHeader(
+   279→   279→                    icon = Icons.Default.Engineering,
+   280→   280→                    title = "التصميم الإنشائي",
+   281→   281→                    subtitle = "9 وحدات تصميم متكاملة"
+   282→   282→                )
+   283→   283→            }
+   284→   284→
+   285→   285→            items(enhancedDesignModules) { module ->
+   286→   286→                EnhancedModuleCard(
+   287→   287→                    module = module,
+   288→   288→                    isDark = isDark,
+   289→   289→                    onClick = { onNavigateTo(module.screen.route) }
+   290→   290→                )
+   291→   291→            }
+   292→   292→
+   293→   293→            // ══════════════════════════════════════════
+   294→   294→            // D. QUICK TOOLS SECTION (horizontal)
+   295→   295→            // ══════════════════════════════════════════
+   296→   296→            item(span = { GridItemSpan(2) }) {
+   297→   297→                SectionHeader(
+   298→   298→                    icon = Icons.Default.Build,
+   299→   299→                    title = "أدوات سريعة",
+   300→   300→                    subtitle = "أدوات مساعدة للمهندس المدني"
+   301→   301→                )
+   302→   302→            }
+   303→   303→
+   304→   304→            item(span = { GridItemSpan(2) }) {
+   305→   305→                QuickToolsRow(
+   306→   306→                    isDark = isDark,
+   307→   307→                    onToolClick = { onNavigateTo(it) }
+   308→   308→                )
+   309→   309→            }
+   310→   310→
+   311→   311→            // ══════════════════════════════════════════
+   312→   312→            // E. RECENT PROJECTS SECTION
+   313→   313→            // ══════════════════════════════════════════
+   314→   314→            item(span = { GridItemSpan(2) }) {
+   315→   315→                SectionHeader(
+   316→   316→                    icon = Icons.Default.History,
+   317→   317→                    title = "آخر التصاميم",
+   318→   318→                    subtitle = "تصاميمك المحفوظة مؤخراً"
+   319→   319→                )
+   320→   320→            }
+   321→   321→
+   322→   322→            item(span = { GridItemSpan(2) }) {
+   323→   323→                RecentProjectsSection(
+   324→   324→                    projects = recentProjects,
+   325→   325→                    isDark = isDark
+   326→   326→                )
+   327→   327→            }
+   328→   328→
+   329→   329→            // ══════════════════════════════════════════
+   330→   330→            // F. FOOTER
+   331→   331→            // ══════════════════════════════════════════
+   332→   332→            item(span = { GridItemSpan(2) }) {
+   333→   333→                FooterSection(isDark = isDark)
+   334→   334→            }
+   335→   335→
+   336→   336→            // Bottom spacer
+   337→   337→            item(span = { GridItemSpan(2) }) {
+   338→   338→                Spacer(modifier = Modifier.height(20.dp))
+   339→   339→            }
+   340→   340→        }
+   341→   341→    }
+   342→   342→}
+   343→   343→
+   344→   344→// ══════════════════════════════════════════════════════════════════════
+   345→   345→// A. HEADER SECTION
+   346→   346→// ══════════════════════════════════════════════════════════════════════
+   347→   347→
+   348→   348→@Composable
+   349→   349→private fun HeaderSection(isDark: Boolean) {
+   350→   350→    Box(
+   351→   351→        modifier = Modifier
+   352→   352→            .fillMaxWidth()
+   353→   353→            .padding(vertical = 8.dp)
+   354→   354→            .shadow(12.dp, RoundedCornerShape(28.dp))
+   355→   355→            .clip(RoundedCornerShape(28.dp))
+   356→   356→            .background(
+   357→   357→                Brush.linearGradient(
+   358→   358→                    colors = listOf(
+   359→   359→                        HeaderGradientStart,
+   360→   360→                        HeaderGradientMid,
+   361→   361→                        HeaderGradientEnd
+   362→   362→                    ),
+   363→   363→                    start = Offset.Zero,
+   364→   364→                    end = Offset(600f, 300f)
+   365→   365→                )
+   366→   366→            )
+   367→   367→    ) {
+   368→   368→        // Decorative circles
+   369→   369→        Box(
+   370→   370→            modifier = Modifier
+   371→   371→                .align(Alignment.TopEnd)
+   372→   372→                .offset(x = (-20).dp, y = (-20).dp)
+   373→   373→                .size(120.dp)
+   374→   374→                .clip(CircleShape)
+   375→   375→                .background(Color.White.copy(alpha = 0.04f))
+   376→   376→        )
+   377→   377→        Box(
+   378→   378→            modifier = Modifier
+   379→   379→                .align(Alignment.BottomStart)
+   380→   380→                .offset(x = 30.dp, y = 30.dp)
+   381→   381→                .size(80.dp)
+   382→   382→                .clip(CircleShape)
+   383→   383→                .background(Color.White.copy(alpha = 0.03f))
+   384→   384→        )
+   385→   385→
+   386→   386→        Column(
+   387→   387→            modifier = Modifier
+   388→   388→                .fillMaxWidth()
+   389→   389→                .padding(horizontal = 24.dp, vertical = 28.dp)
+   390→   390→        ) {
+   391→   391→            // Logo + version badge row
+   392→   392→            Row(verticalAlignment = Alignment.CenterVertically) {
+   393→   393→                Icon(
+   394→   394→                    painter = painterResource(id = R.drawable.ic_logo),
+   395→   395→                    contentDescription = null,
+   396→   396→                    modifier = Modifier.size(42.dp),
+   397→   397→                    tint = Color.White.copy(alpha = 0.95f)
+   398→   398→                )
+   399→   399→                Spacer(modifier = Modifier.width(14.dp))
+   400→   400→                Column {
+   401→   401→                    Text(
+   402→   402→                        "مهندس المدني",
+   403→   403→                        color = Color.White,
+   404→   404→                        fontWeight = FontWeight.ExtraBold,
+   405→   405→                        fontSize = 26.sp,
+   406→   406→                        lineHeight = 32.sp
+   407→   407→                    )
+   408→   408→                    Surface(
+   409→   409→                        color = Color.White.copy(alpha = 0.15f),
+   410→   410→                        shape = RoundedCornerShape(8.dp),
+   411→   411→                        modifier = Modifier.padding(top = 4.dp)
+   412→   412→                    ) {
+   413→   413→                        Text(
+   414→   414→                            text = "تصميم هندسي احترافي متعدد الأكواد",
+   415→   415→                            color = Color.White.copy(alpha = 0.9f),
+   416→   416→                            fontSize = 11.sp,
+   417→   417→                            fontWeight = FontWeight.Medium,
+   418→   418→                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+   419→   419→                        )
+   420→   420→                    }
+   421→   421→                }
+   422→   422→            }
+   423→   423→
+   424→   424→            Spacer(modifier = Modifier.height(18.dp))
+   425→   425→
+   426→   426→            // Subtitle
+   427→   427→            Text(
+   428→   428→                "ابدأ مشروعك الإنشائي القادم بدقة واحترافية\nيدعم الكود المصري ECP 203 والأمريكي ACI 318 والسعودي SBC 304",
+   429→   429→                color = Color.White.copy(alpha = 0.75f),
+   430→   430→                fontSize = 12.sp,
+   431→   431→                lineHeight = 18.sp
+   432→   432→            )
+   433→   433→
+   434→   434→            Spacer(modifier = Modifier.height(14.dp))
+   435→   435→
+   436→   436→            // Code badges row
+   437→   437→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   438→   438→                CodeBadge("ECP 203", Color(0xFF4FC3F7))
+   439→   439→                CodeBadge("ACI 318", Color(0xFF81C784))
+   440→   440→                CodeBadge("SBC 304", Color(0xFFFFB74D))
+   441→   441→                CodeBadge("AISC", Color(0xFFEF9A9A))
+   442→   442→            }
+   443→   443→
+   444→   444→            Spacer(modifier = Modifier.height(10.dp))
+   445→   445→
+   446→   446→            // Version badge
+   447→   447→            Surface(
+   448→   448→                color = Color.White.copy(alpha = 0.1f),
+   449→   449→                shape = RoundedCornerShape(20.dp)
+   450→   450→            ) {
+   451→   451→                Row(
+   452→   452→                    verticalAlignment = Alignment.CenterVertically,
+   453→   453→                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+   454→   454→                ) {
+   455→   455→                    Icon(
+   456→   456→                        Icons.Default.Verified,
+   457→   457→                        contentDescription = null,
+   458→   458→                        tint = Color(0xFF4FC3F7),
+   459→   459→                        modifier = Modifier.size(12.dp)
+   460→   460→                    )
+   461→   461→                    Spacer(modifier = Modifier.width(4.dp))
+   462→   462→                    Text(
+   463→   463→                        "v2.0 — إصدار احترافي",
+   464→   464→                        color = Color.White.copy(alpha = 0.7f),
+   465→   465→                        fontSize = 10.sp,
+   466→   466→                        fontWeight = FontWeight.Medium
+   467→   467→                    )
+   468→   468→                }
+   469→   469→            }
+   470→   470→        }
+   471→   471→    }
+   472→   472→}
+   473→   473→
+   474→   474→@Composable
+   475→   475→private fun CodeBadge(code: String, color: Color) {
+   476→   476→    Surface(
+   477→   477→        color = color.copy(alpha = 0.2f),
+   478→   478→        shape = RoundedCornerShape(6.dp)
+   479→   479→    ) {
+   480→   480→        Text(
+   481→   481→            text = code,
+   482→   482→            color = color,
+   483→   483→            fontSize = 11.sp,
+   484→   484→            fontWeight = FontWeight.Bold,
+   485→   485→            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+   486→   486→        )
+   487→   487→    }
+   488→   488→}
+   489→   489→
+   490→   490→// ══════════════════════════════════════════════════════════════════════
+   491→   491→// B. QUICK STATS ROW
+   492→   492→// ══════════════════════════════════════════════════════════════════════
+   493→   493→
+   494→   494→@Composable
+   495→   495→private fun QuickStatsRow(isDark: Boolean, designCount: Int, codeCount: Int, typeCount: Int) {
+   496→   496→    Row(
+   497→   497→        modifier = Modifier
+   498→   498→            .fillMaxWidth()
+   499→   499→            .padding(vertical = 6.dp),
+   500→   500→        horizontalArrangement = Arrangement.spacedBy(10.dp)
+   501→   501→    ) {
+   502→   502→        StatCard(
+   503→   503→            value = "$designCount",
+   504→   504→            label = "تصميمات محفوظة",
+   505→   505→            accentColor = StatCardBlue,
+   506→   506→            icon = Icons.Default.Save,
+   507→   507→            isDark = isDark,
+   508→   508→            modifier = Modifier.weight(1f)
+   509→   509→        )
+   510→   510→        StatCard(
+   511→   511→            value = "$codeCount",
+   512→   512→            label = "الأكواد المستخدمة",
+   513→   513→            accentColor = StatCardGreen,
+   514→   514→            icon = Icons.Default.Gavel,
+   515→   515→            isDark = isDark,
+   516→   516→            modifier = Modifier.weight(1f)
+   517→   517→        )
+   518→   518→        StatCard(
+   519→   519→            value = "$typeCount+",
+   520→   520→            label = "أنواع العناصر",
+   521→   521→            accentColor = StatCardOrange,
+   522→   522→            icon = Icons.Default.Grid3x3,
+   523→   523→            isDark = isDark,
+   524→   524→            modifier = Modifier.weight(1f)
+   525→   525→        )
+   526→   526→    }
+   527→   527→}
+   528→   528→
+   529→   529→@Composable
+   530→   530→private fun StatCard(
+   531→   531→    value: String,
+   532→   532→    label: String,
+   533→   533→    accentColor: Color,
+   534→   534→    icon: ImageVector,
+   535→   535→    isDark: Boolean,
+   536→   536→    modifier: Modifier = Modifier
+   537→   537→) {
+   538→   538→    val animatedValue by animateFloatAsState(
+   539→   539→        targetValue = 1f,
+   540→   540→        animationSpec = tween(800, delayMillis = 100, easing = FastOutSlowInEasing),
+   541→   541→        label = "stat_animate"
+   542→   542→    )
+   543→   543→
+   544→   544→    Card(
+   545→   545→        modifier = modifier.height(90.dp),
+   546→   546→        shape = RoundedCornerShape(18.dp),
+   547→   547→        colors = CardDefaults.cardColors(
+   548→   548→            containerColor = if (isDark) Color(0xFF1E1E30) else Color.White
+   549→   549→        ),
+   550→   550→        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+   551→   551→    ) {
+   552→   552→        Box(
+   553→   553→            modifier = Modifier
+   554→   554→                .fillMaxSize()
+   555→   555→                .padding(12.dp)
+   556→   556→        ) {
+   557→   557→            // Accent bar on the left
+   558→   558→            Box(
+   559→   559→                modifier = Modifier
+   560→   560→                    .align(Alignment.CenterStart)
+   561→   561→                    .width(3.dp)
+   562→   562→                    .height(36.dp)
+   563→   563→                    .clip(RoundedCornerShape(2.dp))
+   564→   564→                    .background(accentColor)
+   565→   565→            )
+   566→   566→
+   567→   567→            Column(
+   568→   568→                modifier = Modifier
+   569→   569→                    .fillMaxSize()
+   570→   570→                    .padding(start = 12.dp),
+   571→   571→                verticalArrangement = Arrangement.SpaceBetween
+   572→   572→            ) {
+   573→   573→                Icon(
+   574→   574→                    imageVector = icon,
+   575→   575→                    contentDescription = null,
+   576→   576→                    tint = accentColor,
+   577→   577→                    modifier = Modifier.size(18.dp)
+   578→   578→                )
+   579→   579→                Column {
+   580→   580→                    Text(
+   581→   581→                        text = value,
+   582→   582→                        fontWeight = FontWeight.ExtraBold,
+   583→   583→                        fontSize = 22.sp,
+   584→   584→                        color = if (isDark) Color.White else Color(0xFF1A1A2E),
+   585→   585→                        lineHeight = 24.sp
+   586→   586→                    )
+   587→   587→                    Text(
+   588→   588→                        text = label,
+   589→   589→                        fontSize = 10.sp,
+   590→   590→                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
+   591→   591→                        lineHeight = 13.sp,
+   592→   592→                        maxLines = 1,
+   593→   593→                        overflow = TextOverflow.Ellipsis
+   594→   594→                    )
+   595→   595→                }
+   596→   596→            }
+   597→   597→        }
+   598→   598→    }
+   599→   599→}
+   600→   600→
+   601→   601→// ══════════════════════════════════════════════════════════════════════
+   602→   602→// C. ENHANCED DESIGN MODULE CARD
+   603→   603→// ══════════════════════════════════════════════════════════════════════
+   604→   604→
+   605→   605→@Composable
+   606→   606→private fun EnhancedModuleCard(
+   607→   607→    module: DesignModuleItem,
+   608→   608→    isDark: Boolean,
+   609→   609→    onClick: () -> Unit
+   610→   610→) {
+   611→   611→    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+   612→   612→    val subtleBg = module.accentColor.copy(alpha = 0.06f)
+   613→   613→
+   614→   614→    Card(
+   615→   615→        onClick = onClick,
+   616→   616→        modifier = Modifier.height(170.dp),
+   617→   617→        shape = RoundedCornerShape(20.dp),
+   618→   618→        colors = CardDefaults.cardColors(containerColor = cardBg),
+   619→   619→        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+   620→   620→    ) {
+   621→   621→        Box(
+   622→   622→            modifier = Modifier
+   623→   623→                .fillMaxSize()
+   624→   624→                .background(subtleBg)
+   625→   625→        ) {
+   626→   626→            // Top-right decorative circle
+   627→   627→            Box(
+   628→   628→                modifier = Modifier
+   629→   629→                    .align(Alignment.TopEnd)
+   630→   630→                    .offset(x = 12.dp, y = (-12).dp)
+   631→   631→                    .size(50.dp)
+   632→   632→                    .clip(CircleShape)
+   633→   633→                    .background(module.accentColor.copy(alpha = 0.08f))
+   634→   634→            )
+   635→   635→
+   636→   636→            Column(
+   637→   637→                modifier = Modifier
+   638→   638→                    .fillMaxSize()
+   639→   639→                    .padding(14.dp),
+   640→   640→                verticalArrangement = Arrangement.SpaceBetween
+   641→   641→            ) {
+   642→   642→                // Icon with accent background
+   643→   643→                Box(
+   644→   644→                    modifier = Modifier
+   645→   645→                        .size(44.dp)
+   646→   646→                        .clip(RoundedCornerShape(14.dp))
+   647→   647→                        .background(module.accentColor.copy(alpha = 0.12f)),
+   648→   648→                    contentAlignment = Alignment.Center
+   649→   649→                ) {
+   650→   650→                    Icon(
+   651→   651→                        imageVector = module.icon,
+   652→   652→                        contentDescription = null,
+   653→   653→                        modifier = Modifier.size(24.dp),
+   654→   654→                        tint = module.accentColor
+   655→   655→                    )
+   656→   656→                }
+   657→   657→
+   658→   658→                // Title + subtitle
+   659→   659→                Column {
+   660→   660→                    Text(
+   661→   661→                        text = module.title,
+   662→   662→                        fontWeight = FontWeight.Bold,
+   663→   663→                        fontSize = 16.sp,
+   664→   664→                        color = if (isDark) Color.White else Color(0xFF1A1A2E),
+   665→   665→                        maxLines = 1
+   666→   666→                    )
+   667→   667→                    Spacer(modifier = Modifier.height(2.dp))
+   668→   668→                    Text(
+   669→   669→                        text = module.subtitle,
+   670→   670→                        style = MaterialTheme.typography.bodySmall,
+   671→   671→                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
+   672→   672→                        maxLines = 2,
+   673→   673→                        lineHeight = 15.sp,
+   674→   674→                        fontSize = 11.sp
+   675→   675→                    )
+   676→   676→                }
+   677→   677→
+   678→   678→                // Code badges
+   679→   679→                if (module.supportedCodes.isNotEmpty()) {
+   680→   680→                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+   681→   681→                        module.supportedCodes.forEach { code ->
+   682→   682→                            Surface(
+   683→   683→                                color = module.accentColor.copy(alpha = 0.1f),
+   684→   684→                                shape = RoundedCornerShape(4.dp)
+   685→   685→                            ) {
+   686→   686→                                Text(
+   687→   687→                                    text = code,
+   688→   688→                                    style = MaterialTheme.typography.labelSmall,
+   689→   689→                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+   690→   690→                                    fontSize = 9.sp,
+   691→   691→                                    fontWeight = FontWeight.SemiBold,
+   692→   692→                                    color = module.accentColor
+   693→   693→                                )
+   694→   694→                            }
+   695→   695→                        }
+   696→   696→                    }
+   697→   697→                }
+   698→   698→            }
+   699→   699→        }
+   700→   700→    }
+   701→   701→}
+   702→   702→
+   703→   703→// ══════════════════════════════════════════════════════════════════════
+   704→   704→// D. QUICK TOOLS ROW (horizontal scroll)
+   705→   705→// ══════════════════════════════════════════════════════════════════════
+   706→   706→
+   707→   707→@Composable
+   708→   708→private fun QuickToolsRow(
+   709→   709→    isDark: Boolean,
+   710→   710→    onToolClick: (String) -> Unit
+   711→   711→) {
+   712→   712→    Row(
+   713→   713→        modifier = Modifier
+   714→   714→            .fillMaxWidth()
+   715→   715→            .horizontalScroll(rememberScrollState())
+   716→   716→            .padding(vertical = 4.dp),
+   717→   717→        horizontalArrangement = Arrangement.spacedBy(10.dp)
+   718→   718→    ) {
+   719→   719→        quickTools.forEach { tool ->
+   720→   720→            QuickToolCard(
+   721→   721→                tool = tool,
+   722→   722→                isDark = isDark,
+   723→   723→                onClick = { onToolClick(tool.route) }
+   724→   724→            )
+   725→   725→        }
+   726→   726→    }
+   727→   727→}
+   728→   728→
+   729→   729→@Composable
+   730→   730→private fun QuickToolCard(
+   731→   731→    tool: QuickTool,
+   732→   732→    isDark: Boolean,
+   733→   733→    onClick: () -> Unit
+   734→   734→) {
+   735→   735→    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+   736→   736→
+   737→   737→    Card(
+   738→   738→        onClick = onClick,
+   739→   739→        modifier = Modifier.width(130.dp),
+   740→   740→        shape = RoundedCornerShape(18.dp),
+   741→   741→        colors = CardDefaults.cardColors(containerColor = cardBg),
+   742→   742→        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+   743→   743→    ) {
+   744→   744→        Column(
+   745→   745→            modifier = Modifier
+   746→   746→                .fillMaxWidth()
+   747→   747→                .padding(14.dp),
+   748→   748→            horizontalAlignment = Alignment.CenterHorizontally
+   749→   749→        ) {
+   750→   750→            // Icon
+   751→   751→            Box(
+   752→   752→                modifier = Modifier
+   753→   753→                    .size(46.dp)
+   754→   754→                    .clip(RoundedCornerShape(14.dp))
+   755→   755→                    .background(tool.bgColor),
+   756→   756→                contentAlignment = Alignment.Center
+   757→   757→            ) {
+   758→   758→                Icon(
+   759→   759→                    imageVector = tool.icon,
+   760→   760→                    contentDescription = null,
+   761→   761→                    tint = tool.accentColor,
+   762→   762→                    modifier = Modifier.size(24.dp)
+   763→   763→                )
+   764→   764→            }
+   765→   765→
+   766→   766→            Spacer(modifier = Modifier.height(10.dp))
+   767→   767→
+   768→   768→            // Title
+   769→   769→            Text(
+   770→   770→                text = tool.title,
+   771→   771→                fontWeight = FontWeight.Bold,
+   772→   772→                fontSize = 13.sp,
+   773→   773→                color = if (isDark) Color.White else Color(0xFF1A1A2E),
+   774→   774→                maxLines = 1,
+   775→   775→                textAlign = TextAlign.Center
+   776→   776→            )
+   777→   777→
+   778→   778→            Spacer(modifier = Modifier.height(2.dp))
+   779→   779→
+   780→   780→            // Subtitle
+   781→   781→            Text(
+   782→   782→                text = tool.subtitle,
+   783→   783→                fontSize = 9.sp,
+   784→   784→                color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF9E9E9E),
+   785→   785→                maxLines = 1,
+   786→   786→                textAlign = TextAlign.Center
+   787→   787→            )
+   788→   788→        }
+   789→   789→    }
+   790→   790→}
+   791→   791→
+   792→   792→// ══════════════════════════════════════════════════════════════════════
+   793→   793→// E. RECENT PROJECTS SECTION
+   794→   794→// ══════════════════════════════════════════════════════════════════════
+   795→   795→
+   796→   796→@Composable
+   797→   797→private fun RecentProjectsSection(
+   798→   798→    projects: List<RecentProject>,
+   799→   799→    isDark: Boolean
+   800→   800→) {
+   801→   801→    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+   802→   802→
+   803→   803→    if (projects.isEmpty()) {
+   804→   804→        // Empty state
+   805→   805→        Card(
+   806→   806→            modifier = Modifier.fillMaxWidth(),
+   807→   807→            shape = RoundedCornerShape(18.dp),
+   808→   808→            colors = CardDefaults.cardColors(containerColor = cardBg),
+   809→   809→            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+   810→   810→        ) {
+   811→   811→            Column(
+   812→   812→                modifier = Modifier
+   813→   813→                    .fillMaxWidth()
+   814→   814→                    .padding(vertical = 24.dp),
+   815→   815→                horizontalAlignment = Alignment.CenterHorizontally
+   816→   816→            ) {
+   817→   817→                Icon(
+   818→   818→                    imageVector = Icons.Default.FolderOpen,
+   819→   819→                    contentDescription = null,
+   820→   820→                    tint = if (isDark) Color(0xFF4A4A6A) else Color(0xFFBDBDBD),
+   821→   821→                    modifier = Modifier.size(40.dp)
+   822→   822→                )
+   823→   823→                Spacer(modifier = Modifier.height(10.dp))
+   824→   824→                Text(
+   825→   825→                    text = "لا توجد تصاميم محفوظة",
+   826→   826→                    fontWeight = FontWeight.SemiBold,
+   827→   827→                    fontSize = 14.sp,
+   828→   828→                    color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+   829→   829→                )
+   830→   830→                Spacer(modifier = Modifier.height(4.dp))
+   831→   831→                Text(
+   832→   832→                    text = "ابدأ تصميمك الأول وسيظهر هنا",
+   833→   833→                    fontSize = 12.sp,
+   834→   834→                    color = if (isDark) Color(0xFF6B6B8A) else Color(0xFFBDBDBD)
+   835→   835→                )
+   836→   836→            }
+   837→   837→        }
+   838→   838→    } else {
+   839→   839→        // List of recent projects
+   840→   840→        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   841→   841→            projects.take(3).forEach { project ->
+   842→   842→                RecentProjectItem(project = project, isDark = isDark)
+   843→   843→            }
+   844→   844→        }
+   845→   845→    }
+   846→   846→}
+   847→   847→
+   848→   848→@Composable
+   849→   849→private fun RecentProjectItem(
+   850→   850→    project: RecentProject,
+   851→   851→    isDark: Boolean
+   852→   852→) {
+   853→   853→    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+   854→   854→
+   855→   855→    Card(
+   856→   856→        modifier = Modifier.fillMaxWidth(),
+   857→   857→        shape = RoundedCornerShape(16.dp),
+   858→   858→        colors = CardDefaults.cardColors(containerColor = cardBg),
+   859→   859→        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+   860→   860→    ) {
+   861→   861→        Row(
+   862→   862→            modifier = Modifier
+   863→   863→                .fillMaxWidth()
+   864→   864→                .padding(14.dp),
+   865→   865→            verticalAlignment = Alignment.CenterVertically
+   866→   866→        ) {
+   867→   867→            // Element icon
+   868→   868→            Box(
+   869→   869→                modifier = Modifier
+   870→   870→                    .size(40.dp)
+   871→   871→                    .clip(RoundedCornerShape(12.dp))
+   872→   872→                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+   873→   873→                contentAlignment = Alignment.Center
+   874→   874→            ) {
+   875→   875→                Icon(
+   876→   876→                    imageVector = project.icon,
+   877→   877→                    contentDescription = null,
+   878→   878→                    tint = MaterialTheme.colorScheme.primary,
+   879→   879→                    modifier = Modifier.size(20.dp)
+   880→   880→                )
+   881→   881→            }
+   882→   882→
+   883→   883→            Spacer(modifier = Modifier.width(14.dp))
+   884→   884→
+   885→   885→            // Name + type
+   886→   886→            Column(modifier = Modifier.weight(1f)) {
+   887→   887→                Text(
+   888→   888→                    text = project.name,
+   889→   889→                    fontWeight = FontWeight.Bold,
+   890→   890→                    fontSize = 14.sp,
+   891→   891→                    color = if (isDark) Color.White else Color(0xFF1A1A2E),
+   892→   892→                    maxLines = 1
+   893→   893→                )
+   894→   894→                Row(verticalAlignment = Alignment.CenterVertically) {
+   895→   895→                    Text(
+   896→   896→                        text = project.elementType,
+   897→   897→                        fontSize = 11.sp,
+   898→   898→                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+   899→   899→                    )
+   900→   900→                    Spacer(modifier = Modifier.width(8.dp))
+   901→   901→                    Text(
+   902→   902→                        text = "•",
+   903→   903→                        color = if (isDark) Color(0xFF4A4A6A) else Color(0xFFBDBDBD),
+   904→   904→                        fontSize = 11.sp
+   905→   905→                    )
+   906→   906→                    Spacer(modifier = Modifier.width(8.dp))
+   907→   907→                    Text(
+   908→   908→                        text = project.date,
+   909→   909→                        fontSize = 11.sp,
+   910→   910→                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+   911→   911→                    )
+   912→   912→                }
+   913→   913→            }
+   914→   914→
+   915→   915→            // Code badge
+   916→   916→            Surface(
+   917→   917→                color = MaterialTheme.colorScheme.secondaryContainer,
+   918→   918→                shape = RoundedCornerShape(6.dp)
+   919→   919→            ) {
+   920→   920→                Text(
+   921→   921→                    text = project.code,
+   922→   922→                    fontSize = 10.sp,
+   923→   923→                    fontWeight = FontWeight.Bold,
+   924→   924→                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+   925→   925→                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+   926→   926→                )
+   927→   927→            }
+   928→   928→        }
+   929→   929→    }
+   930→   930→}
+   931→   931→
+   932→   932→// ══════════════════════════════════════════════════════════════════════
+   933→   933→// F. FOOTER
+   934→   934→// ══════════════════════════════════════════════════════════════════════
+   935→   935→
+   936→   936→@Composable
+   937→   937→private fun FooterSection(isDark: Boolean) {
+   938→   938→    val footerBg = if (isDark) FooterDarkBg else FooterBackground
+   939→   939→    val textColor = if (isDark) Color(0xFF6B6B8A) else Color(0xFF9E9E9E)
+   940→   940→
+   941→   941→    Surface(
+   942→   942→        modifier = Modifier.fillMaxWidth(),
+   943→   943→        color = footerBg,
+   944→   944→        shape = RoundedCornerShape(20.dp)
+   945→   945→    ) {
+   946→   946→        Column(
+   947→   947→            modifier = Modifier
+   948→   948→                .fillMaxWidth()
+   949→   949→                .padding(vertical = 20.dp, horizontal = 20.dp),
+   950→   950→            horizontalAlignment = Alignment.CenterHorizontally
+   951→   951→        ) {
+   952→   952→            // Divider
+   953→   953→            HorizontalDivider(
+   954→   954→                color = if (isDark) Color(0xFF2A2A3E) else Color(0xFFE0E0E0),
+   955→   955→                thickness = 1.dp
+   956→   956→            )
+   957→   957→
+   958→   958→            Spacer(modifier = Modifier.height(16.dp))
+   959→   959→
+   960→   960→            // App branding
+   961→   961→            Text(
+   962→   962→                text = "CivilEG v2.0",
+   963→   963→                fontWeight = FontWeight.ExtraBold,
+   964→   964→                fontSize = 18.sp,
+   965→   965→                color = if (isDark) Color(0xFF4FC3F7) else Color(0xFF1565C0)
+   966→   966→            )
+   967→   967→            Spacer(modifier = Modifier.height(4.dp))
+   968→   968→            Text(
+   969→   969→                text = "محفظة المهندس المدني الاحترافية",
+   970→   970→                fontSize = 11.sp,
+   971→   971→                color = textColor
+   972→   972→            )
+   973→   973→
+   974→   974→            Spacer(modifier = Modifier.height(12.dp))
+   975→   975→
+   976→   976→            // Code badges
+   977→   977→            Row(
+   978→   978→                horizontalArrangement = Arrangement.spacedBy(6.dp),
+   979→   979→                verticalAlignment = Alignment.CenterVertically
+   980→   980→            ) {
+   981→   981→                CodeBadge("ECP 203", Color(0xFF4FC3F7))
+   982→   982→                Text("•", color = textColor, fontSize = 12.sp)
+   983→   983→                CodeBadge("ACI 318", Color(0xFF81C784))
+   984→   984→                Text("•", color = textColor, fontSize = 12.sp)
+   985→   985→                CodeBadge("SBC 304", Color(0xFFFFB74D))
+   986→   986→            }
+   987→   987→
+   988→   988→            Spacer(modifier = Modifier.height(14.dp))
+   989→   989→
+   990→   990→            // Developer credit
+   991→   991→            Text(
+   992→   992→                text = "تطوير فريق CivilEG — هندسة برمجية متخصصة",
+   993→   993→                fontSize = 10.sp,
+   994→   994→                color = textColor.copy(alpha = 0.7f),
+   995→   995→                textAlign = TextAlign.Center
+   996→   996→            )
+   997→   997→        }
+   998→   998→    }
+   999→   999→}
+  1000→  1000→
+  1001→  1001→// ══════════════════════════════════════════════════════════════════════
+  1002→  1002→// SHARED — Section Header
+  1003→  1003→// ══════════════════════════════════════════════════════════════════════
+  1004→  1004→
+  1005→  1005→@Composable
+  1006→  1006→private fun SectionHeader(
+  1007→  1007→    icon: ImageVector,
+  1008→  1008→    title: String,
+  1009→  1009→    subtitle: String
+  1010→  1010→) {
+  1011→  1011→    Row(
+  1012→  1012→        verticalAlignment = Alignment.CenterVertically,
+  1013→  1013→        modifier = Modifier.padding(top = 14.dp, bottom = 6.dp)
+  1014→  1014→    ) {
+  1015→  1015→        Icon(
+  1016→  1016→            imageVector = icon,
+  1017→  1017→            contentDescription = null,
+  1018→  1018→            tint = MaterialTheme.colorScheme.primary,
+  1019→  1019→            modifier = Modifier.size(22.dp)
+  1020→  1020→        )
+  1021→  1021→        Spacer(modifier = Modifier.width(8.dp))
+  1022→  1022→        Column {
+  1023→  1023→            Text(
+  1024→  1024→                text = title,
+  1025→  1025→                style = MaterialTheme.typography.titleMedium,
+  1026→  1026→                fontWeight = FontWeight.Bold,
+  1027→  1027→                color = MaterialTheme.colorScheme.onBackground
+  1028→  1028→            )
+  1029→  1029→            Text(
+  1030→  1030→                text = subtitle,
+  1031→  1031→                style = MaterialTheme.typography.labelSmall,
+  1032→  1032→                color = MaterialTheme.colorScheme.onSurfaceVariant
+  1033→  1033→            )
+  1034→  1034→        }
+  1035→  1035→    }
+  1036→  1036→}

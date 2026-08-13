@@ -1,0 +1,813 @@
+     1→package com.civileg.app.ui.compose.components.drawings
+     2→
+     3→import androidx.compose.foundation.Canvas
+     4→import androidx.compose.foundation.layout.fillMaxWidth
+     5→import androidx.compose.foundation.layout.height
+     6→import androidx.compose.runtime.Composable
+     7→import androidx.compose.ui.Modifier
+     8→import androidx.compose.ui.geometry.Offset
+     9→import androidx.compose.ui.geometry.Size
+    10→import androidx.compose.ui.graphics.Color
+    11→import androidx.compose.ui.graphics.Path
+    12→import androidx.compose.ui.graphics.PathEffect
+    13→import androidx.compose.ui.graphics.drawscope.Fill
+    14→import androidx.compose.ui.graphics.drawscope.Stroke
+    15→import androidx.compose.ui.graphics.StrokeCap
+    16→import androidx.compose.ui.graphics.StrokeJoin
+    17→import androidx.compose.ui.graphics.nativeCanvas
+    18→import androidx.compose.ui.unit.dp
+    19→import kotlin.math.cos
+    20→import kotlin.math.min
+    21→import kotlin.math.sin
+    22→import kotlin.math.sqrt
+    23→
+    24→// ─── Data classes ───────────────────────────────────────────────────────────
+    25→
+    26→data class BarInfo(
+    27→    val x: Double,
+    28→    val y: Double,
+    29→    val diameter: Double,
+    30→    val isCorner: Boolean = false
+    31→)
+    32→
+    33→// ─── Color palette (matches beam drawing style) ─────────────────────────────
+    34→
+    35→private object C {
+    36→    val Concrete = Color(0xFF888888)
+    37→    val ConcreteLight = Color(0xFFA0A0A0)
+    38→    val ConcreteDark = Color(0xFF606060)
+    39→    val Bar = Color(0xFF4A90D9)
+    40→    val CornerBar = Color(0xFF5BA0E9)
+    41→    val Tie = Color(0xFF9B59B6)
+    42→    val TieLight = Color(0xFFB07CC8)
+    43→    val White = Color(0xFFFFFFFF)
+    44→    val DimLine = Color(0xFFCCCCCC)
+    45→    val Safe = Color(0xFF27AE60)
+    46→    val Unsafe = Color(0xFFE74C3C)
+    47→    val Center = Color(0xFF666666)
+    48→    val Hatch = Color(0xFFAAAAAA)
+    49→    val TblBorder = Color(0xFF555555)
+    50→    val TblHeader = Color(0xFF3A3A3A)
+    51→    val TblBg = Color(0xFF2A2A2A)
+    52→    val Slab = Color(0xFF505050)
+    53→    val Grid = Color(0xFF444444)
+    54→    val BgDark = Color(0xFF2A2A2A)
+    55→    val BgDarker = Color(0xFF333333)
+    56→}
+    57→
+    58→private val circledNums = listOf(
+    59→    "\u2460", "\u2461", "\u2462", "\u2463", "\u2464",
+    60→    "\u2465", "\u2466", "\u2467", "\u2468", "\u2469",
+    61→    "\u246A", "\u246B", "\u246C", "\u246D", "\u246E",
+    62→    "\u246F", "\u2470", "\u2471", "\u2472", "\u2473"
+    63→)
+    64→
+    65→// ─── Main composable ────────────────────────────────────────────────────────
+    66→
+    67→@Composable
+    68→fun ProfessionalColumnDrawing(
+    69→    columnWidth: Double,
+    70→    columnDepth: Double,
+    71→    columnHeight: Double,
+    72→    longitudinalBars: List<BarInfo>,
+    73→    tieDia: Double,
+    74→    tieSpacing: Double,
+    75→    cover: Double,
+    76→    isSpiral: Boolean = false,
+    77→    spiralPitch: Double = 0.0,
+    78→    sectionType: String = "Rectangular",
+    79→    interactionPoints: List<Pair<Double, Double>> = emptyList(),
+    80→    designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
+    81→    modifier: Modifier = Modifier
+    82→) {
+    83→    Canvas(modifier = modifier.fillMaxWidth().height(680.dp)) {
+    84→        val W = size.width
+    85→        val H = size.height
+    86→        val divX = W * 0.40f
+    87→        val midY = H * 0.52f
+    88→
+    89→        // 1. 3D Column Elevation (left)
+    90→        draw3DElevation(16f, 16f, divX - 32f, midY - 20f,
+    91→            columnWidth, columnDepth, columnHeight,
+    92→            longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType)
+    93→
+    94→        // 2. Cross-Section View (right-top)
+    95→        drawCrossSection(divX + 16f, 16f, W - divX - 32f, midY - 20f,
+    96→            columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
+    97→
+    98→        // 3. Tie/Spiral Detail Inset (below elevation)
+    99→        drawTieDetailInset(16f, midY + 10f, divX - 32f, H - midY - 120f,
+   100→            columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
+   101→            isSpiral, spiralPitch, sectionType)
+   102→
+   103→        // 4. Section Dimensions (overlaid on cross-section)
+   104→        drawSectionDimensions(divX + 16f, 16f, W - divX - 32f, midY - 20f,
+   105→            columnWidth, columnDepth, cover, longitudinalBars)
+   106→
+   107→        // 5. Interaction Diagram (bottom-right)
+   108→        if (interactionPoints.isNotEmpty()) {
+   109→            drawInteractionDiagram(divX + 20f, midY + 10f,
+   110→                W - divX - 36f, H - midY - 120f, interactionPoints, designPoint)
+   111→        }
+   112→
+   113→        // 6. Reinforcement Table (bottom)
+   114→        drawReinforcementTable(16f, H - 100f, W - 32f, 90f,
+   115→            longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
+   116→    }
+   117→}
+   118→
+   119→// ═══════════════════════════════════════════════════════════════════════════
+   120→// 1. 3D COLUMN ELEVATION
+   121→// ═══════════════════════════════════════════════════════════════════════════
+   122→
+   123→private fun DrawScope.draw3DElevation(
+   124→    left: Float, top: Float, width: Float, height: Float,
+   125→    colW: Double, colD: Double, colH: Double,
+   126→    bars: List<BarInfo>, tieDia: Double, tieSpacing: Double,
+   127→    cover: Double, isSpiral: Boolean, sectionType: String
+   128→) {
+   129→    val cosA = cos(Math.toRadians(30.0)).toFloat()
+   130→    val sinA = sin(Math.toRadians(30.0)).toFloat()
+   131→    val dScale = 0.45f
+   132→    val maxDim = maxOf(colW, colH)
+   133→    val scale = (min(width, height) * 0.45f) / maxDim.toFloat()
+   134→
+   135→    val w = colW.toFloat() * scale
+   136→    val h = colH.toFloat() * scale
+   137→    val d = colD.toFloat() * scale * dScale
+   138→    val ox = left + width * 0.42f - w / 2f
+   139→    val oy = top + height * 0.5f - h / 2f
+   140→    val slabH = h * 0.06f
+   141→
+   142→    // ── Top slab ───────────────────────────────────────────────────────
+   143→    val ext = w * 0.2f
+   144→    val topSlab = Path().apply {
+   145→        moveTo(ox - ext, oy - slabH); lineTo(ox + w + ext, oy - slabH)
+   146→        lineTo(ox + w + ext, oy); lineTo(ox - ext, oy); close()
+   147→        moveTo(ox - ext, oy - slabH); lineTo(ox - ext + d * cosA, oy - slabH - d * sinA)
+   148→        lineTo(ox + w + ext + d * cosA, oy - slabH - d * sinA)
+   149→        lineTo(ox + w + ext, oy - slabH); close()
+   150→        moveTo(ox + w + ext, oy - slabH); lineTo(ox + w + ext + d * cosA, oy - slabH - d * sinA)
+   151→        lineTo(ox + w + ext + d * cosA, oy - d * sinA); lineTo(ox + w + ext, oy); close()
+   152→    }
+   153→    drawPath(topSlab, color = C.Slab, style = Fill)
+   154→    drawPath(topSlab, color = C.ConcreteDark, style = Stroke(width = 1.5f))
+   155→    drawHatch(Offset(ox - ext, oy - slabH - d * sinA), w + 2 * ext + d * cosA, slabH + d * sinA)
+   156→
+   157→    // ── Bottom slab ────────────────────────────────────────────────────
+   158→    val bY = oy + h
+   159→    val botSlab = Path().apply {
+   160→        moveTo(ox - ext, bY); lineTo(ox + w + ext, bY)
+   161→        lineTo(ox + w + ext, bY + slabH); lineTo(ox - ext, bY + slabH); close()
+   162→        moveTo(ox - ext, bY); lineTo(ox - ext + d * cosA, bY - d * sinA)
+   163→        lineTo(ox + w + ext + d * cosA, bY - d * sinA); lineTo(ox + w + ext, bY); close()
+   164→        moveTo(ox + w + ext, bY); lineTo(ox + w + ext + d * cosA, bY - d * sinA)
+   165→        lineTo(ox + w + ext + d * cosA, bY + slabH - d * sinA); lineTo(ox + w + ext, bY + slabH); close()
+   166→    }
+   167→    drawPath(botSlab, color = C.Slab, style = Fill)
+   168→    drawPath(botSlab, color = C.ConcreteDark, style = Stroke(width = 1.5f))
+   169→
+   170→    // ── Front face (lighter) ───────────────────────────────────────────
+   171→    drawRect(color = C.ConcreteLight, topLeft = Offset(ox, oy), size = Size(w, h))
+   172→
+   173→    // ── Right side face (darker) ───────────────────────────────────────
+   174→    val sidePath = Path().apply {
+   175→        moveTo(ox + w, oy); lineTo(ox + w + d * cosA, oy - d * sinA)
+   176→        lineTo(ox + w + d * cosA, oy + h - d * sinA); lineTo(ox + w, oy + h); close()
+   177→    }
+   178→    drawPath(sidePath, color = C.ConcreteDark, style = Fill)
+   179→    drawPath(sidePath, color = C.Concrete, style = Stroke(width = 1.5f))
+   180→
+   181→    // ── Top face (isometric) ───────────────────────────────────────────
+   182→    val topPath = Path().apply {
+   183→        moveTo(ox, oy); lineTo(ox + d * cosA, oy - d * sinA)
+   184→        lineTo(ox + w + d * cosA, oy - d * sinA); lineTo(ox + w, oy); close()
+   185→    }
+   186→    drawPath(topPath, color = C.Concrete, style = Fill)
+   187→    drawPath(topPath, color = C.ConcreteDark, style = Stroke(width = 1.5f))
+   188→
+   189→    // ── Front face border ──────────────────────────────────────────────
+   190→    drawRect(color = C.ConcreteDark, topLeft = Offset(ox, oy), size = Size(w, h), style = Stroke(width = 2f))
+   191→
+   192→    // ── Longitudinal bars (blue vertical lines) ────────────────────────
+   193→    val visibleBars = bars.filter { it.y <= colD / 2 }.take(6)
+   194→    visibleBars.forEach { bar ->
+   195→        val bx = ox + (bar.x.toFloat() / colW.toFloat()) * w
+   196→        drawLine(color = C.Bar, start = Offset(bx, oy + 4f), end = Offset(bx, oy + h - 4f),
+   197→            strokeWidth = (bar.diameter.toFloat() * scale * 0.25f).coerceIn(2f, 5f))
+   198→    }
+   199→    // Side face bars (projected)
+   200→    bars.filter { it.x >= colW * 0.8 }.take(3).forEach { bar ->
+   201→        val yRatio = bar.y.toFloat() / colD.toFloat()
+   202→        val xOff = d * cosA * yRatio
+   203→        drawLine(color = C.Bar.copy(alpha = 0.5f),
+   204→            start = Offset(ox + w + xOff, oy + 4f - d * sinA * yRatio),
+   205→            end = Offset(ox + w + xOff, oy + h - 4f - d * sinA * yRatio),
+   206→            strokeWidth = (bar.diameter.toFloat() * scale * 0.2f).coerceIn(1.5f, 4f))
+   207→    }
+   208→
+   209→    // ── Ties (purple horizontal lines) ─────────────────────────────────
+   210→    val numTies = (colH / tieSpacing).toInt().coerceIn(3, 20)
+   211→    val step = h / (numTies + 1)
+   212→    val covOff = cover.toFloat() * scale * 0.4f
+   213→    for (i in 1..numTies) {
+   214→        val ty = oy + i * step
+   215→        drawLine(color = C.Tie, start = Offset(ox + covOff, ty), end = Offset(ox + w - covOff, ty),
+   216→            strokeWidth = (tieDia.toFloat() * scale * 0.18f).coerceIn(1f, 3f))
+   217→        drawLine(color = C.Tie.copy(alpha = 0.5f), start = Offset(ox + w, ty),
+   218→            end = Offset(ox + w + d * cosA, ty - d * sinA),
+   219→            strokeWidth = (tieDia.toFloat() * scale * 0.14f).coerceIn(1f, 2.5f))
+   220→    }
+   221→
+   222→    // Column dimensions label on elevation
+   223→    val dimLabelPaint = android.graphics.Paint().apply {
+   224→        color = android.graphics.Color.WHITE; textSize = 16f; isFakeBoldText = false
+   225→        textAlign = android.graphics.Paint.Align.LEFT
+   226→    }
+   227→    drawContext.canvas.nativeCanvas.apply {
+   228→        drawText("${colW.toInt()}×${colD.toInt()}×${colH.toInt()} mm", ox, oy - slabH - d * sinA - 14f, dimLabelPaint)
+   229→        // Section type label
+   230→        drawText("($sectionType)", ox, oy - slabH - d * sinA + 2f, dimLabelPaint)
+   231→    }
+   232→
+   233→    // Elevation height dimension (right side of 3D view)
+   234→    val elevDimX = ox + w + d * cosA + 16f
+   235→    drawLine(C.DimLine, Offset(elevDimX, oy), Offset(elevDimX, oy + h), 1f)
+   236→    drawTriV(elevDimX, oy, 4f, true)
+   237→    drawTriV(elevDimX, oy + h, 4f, false)
+   238→    drawContext.canvas.nativeCanvas.apply {
+   239→        val dp = android.graphics.Paint().apply {
+   240→            color = android.graphics.Color.WHITE; textSize = 14f
+   241→        }
+   242→        save(); rotate(-90f, elevDimX + 12f, oy + h / 2f)
+   243→        drawText("${colH.toInt()}", elevDimX + 12f, oy + h / 2f + 5f, dp)
+   244→        restore()
+   245→    }
+   246→
+   247→    drawLabel("ELEVATION", left + width / 2f, top + height - 8f, 26f, true)
+   248→}
+   249→
+   250→// ═══════════════════════════════════════════════════════════════════════════
+   251→// 2. CROSS-SECTION VIEW
+   252→// ═══════════════════════════════════════════════════════════════════════════
+   253→
+   254→private fun DrawScope.drawCrossSection(
+   255→    left: Float, top: Float, width: Float, height: Float,
+   256→    colW: Double, colD: Double, bars: List<BarInfo>,
+   257→    tieDia: Double, cover: Double, isSpiral: Boolean, sectionType: String
+   258→) {
+   259→    val pad = 60f
+   260→    val avW = width - 2 * pad
+   261→    val avH = height - 2 * pad - 20f
+   262→    val scale = min(avW / colW.toFloat(), avH / colD.toFloat()) * 0.85f
+   263→    val dw = colW.toFloat() * scale
+   264→    val dh = colD.toFloat() * scale
+   265→    val cx = left + pad + (avW - dw) / 2f
+   266→    val cy = top + pad + 20f + (avH - dh) / 2f
+   267→    val centerX = cx + dw / 2f
+   268→    val centerY = cy + dh / 2f
+   269→    val clExt = 18f
+   270→    val covPx = cover.toFloat() * scale
+   271→
+   272→    // Concrete fill
+   273→    if (sectionType == "Circular") {
+   274→        val r = min(dw, dh) / 2f
+   275→        drawCircle(color = C.Concrete, radius = r, center = Offset(centerX, centerY))
+   276→        drawCircle(color = C.ConcreteDark, radius = r, center = Offset(centerX, centerY), style = Stroke(2.5f))
+   277→    } else {
+   278→        drawRect(color = C.Concrete, topLeft = Offset(cx, cy), size = Size(dw, dh))
+   279→        drawRect(color = C.ConcreteDark, topLeft = Offset(cx, cy), size = Size(dw, dh), style = Stroke(2.5f))
+   280→    }
+   281→
+   282→    // Centerlines
+   283→    val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 5f))
+   284→    drawLine(C.Center, Offset(cx - clExt, centerY), Offset(cx + dw + clExt, centerY), 1f, pathEffect = dash)
+   285→    drawLine(C.Center, Offset(centerX, cy - clExt), Offset(centerX, cy + dh + clExt), 1f, pathEffect = dash)
+   286→
+   287→    // Tie / Spiral
+   288→    val tieL = cx + covPx; val tieT = cy + covPx
+   289→    val tieW = dw - 2 * covPx; val tieH = dh - 2 * covPx
+   290→    val tieStroke = (tieDia.toFloat() * scale * 0.12f).coerceIn(1.5f, 3f)
+   291→    val tieDash = PathEffect.dashPathEffect(floatArrayOf(8f, 4f))
+   292→
+   293→    if (sectionType == "Circular") {
+   294→        val coreR = min(dw, dh) / 2f - covPx
+   295→        if (isSpiral) drawSpiralCircle(centerX, centerY, coreR, 4)
+   296→        else drawCircle(color = C.Tie, radius = coreR, center = Offset(centerX, centerY), style = Stroke(tieStroke))
+   297→    } else {
+   298→        if (isSpiral) {
+   299→            drawSpiralRect(tieL, tieT, tieW, tieH, 4)
+   300→        } else {
+   301→            drawRect(color = C.Tie, topLeft = Offset(tieL, tieT), size = Size(tieW, tieH),
+   302→                style = Stroke(width = tieStroke, pathEffect = tieDash))
+   303→            // Crossties for > 8 bars
+   304→            if (bars.size > 8) {
+   305→                val midX = tieL + tieW / 2f
+   306→                val csDash = PathEffect.dashPathEffect(floatArrayOf(6f, 3f))
+   307→                val csStroke = (tieDia.toFloat() * scale * 0.10f).coerceIn(1f, 2.5f)
+   308→                drawLine(C.Tie, Offset(tieL, centerY), Offset(midX, centerY), csStroke, pathEffect = csDash)
+   309→                drawLine(C.Tie, Offset(midX, tieT), Offset(midX, centerY), csStroke, pathEffect = csDash)
+   310→            }
+   311→        }
+   312→    }
+   313→
+   314→    // Longitudinal bars
+   315→    bars.forEachIndexed { index, bar ->
+   316→        val bx = cx + (bar.x.toFloat() / colW.toFloat()) * dw
+   317→        val by = cy + (bar.y.toFloat() / colD.toFloat()) * dh
+   318→        val br = (bar.diameter.toFloat() / 2f * scale * 0.45f).coerceIn(3.5f, 9f)
+   319→        val barColor = if (bar.isCorner) C.CornerBar else C.Bar
+   320→        drawCircle(color = barColor, radius = br, center = Offset(bx, by))
+   321→        drawCircle(color = Color.Black, radius = br, center = Offset(bx, by), style = Stroke(0.8f))
+   322→        drawCircle(color = Color.White, radius = br * 0.25f, center = Offset(bx, by))
+   323→    }
+   324→
+   325→    // Bar marks with leader lines
+   326→    val marked = mutableSetOf<Double>(); var mi = 0
+   327→    bars.forEach { bar ->
+   328→        if (marked.add(bar.diameter) && mi < circledNums.size) {
+   329→            val bx = cx + (bar.x.toFloat() / colW.toFloat()) * dw
+   330→            val by = cy + (bar.y.toFloat() / colD.toFloat()) * dh
+   331→            val br = (bar.diameter.toFloat() / 2f * scale * 0.45f).coerceIn(3.5f, 9f)
+   332→            val leaderEnd = Offset(bx + br + 14f, by - br - 14f)
+   333→            drawLine(C.White, Offset(bx + br, by - br), leaderEnd, 1f)
+   334→            drawContext.canvas.nativeCanvas.apply {
+   335→                val p = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 18f; isFakeBoldText = true }
+   336→                drawText(circledNums[mi], leaderEnd.x + 2f, leaderEnd.y - 2f, p)
+   337→                p.textSize = 14f; p.isFakeBoldText = false
+   338→                drawText("\u00D8${bar.diameter.toInt()}", leaderEnd.x + 2f, leaderEnd.y + 14f, p)
+   339→            }
+   340→            mi++
+   341→        }
+   342→    }
+   343→
+   344→    // Bar spacing dimensions (horizontal bars on same row)
+   345→    val barsByRow = bars.groupBy { it.y }
+   346→    barsByRow.values.forEach { rowBars ->
+   347→        if (rowBars.size >= 2) {
+   348→            val sorted = rowBars.sortedBy { it.x }
+   349→            for (i in 0 until sorted.size - 1) {
+   350→                val b1x = cx + (sorted[i].x.toFloat() / colW.toFloat()) * dw
+   351→                val b2x = cx + (sorted[i + 1].x.toFloat() / colW.toFloat()) * dw
+   352→                val br1 = (sorted[i].diameter.toFloat() / 2f * scale * 0.45f).coerceIn(3.5f, 9f)
+   353→                val br2 = (sorted[i + 1].diameter.toFloat() / 2f * scale * 0.45f).coerceIn(3.5f, 9f)
+   354→                val spacingMm = sorted[i + 1].x - sorted[i].x
+   355→                // Small dimension between bars
+   356→                val spY = cy + (sorted[i].y.toFloat() / colD.toFloat()) * dh + br1 + 12f
+   357→                val barNative = drawContext.canvas.nativeCanvas
+   358→                val spPaint = android.graphics.Paint().apply {
+   359→                    color = android.graphics.Color.parseColor("#BBBBBB"); textSize = 11f
+   360→                    textAlign = android.graphics.Paint.Align.CENTER
+   361→                }
+   362→                barNative.drawText("${spacingMm.toInt()}", (b1x + b2x) / 2f, spY, spPaint)
+   363→                // Tiny bracket lines
+   364→                drawLine(C.DimLine.copy(alpha = 0.5f), Offset(b1x, spY - 10f), Offset(b1x, spY - 6f), 0.6f)
+   365→                drawLine(C.DimLine.copy(alpha = 0.5f), Offset(b2x, spY - 10f), Offset(b2x, spY - 6f), 0.6f)
+   366→                drawLine(C.DimLine.copy(alpha = 0.5f), Offset(b1x, spY - 8f), Offset(b2x, spY - 8f), 0.6f)
+   367→            }
+   368→        }
+   369→    }
+   370→
+   371→    // Cover dimensions on right and bottom
+   372→    val native = drawContext.canvas.nativeCanvas
+   373→    // Right cover
+   374→    val rCovX = cx + dw + 14f
+   375→    drawLine(C.DimLine.copy(alpha = 0.7f), Offset(rCovX, centerY), Offset(rCovX + covPx, centerY), 0.8f)
+   376→    native.drawText("c", rCovX + covPx / 2f - 4f, centerY - 6f,
+   377→        android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#AAAAAA"); textSize = 12f })
+   378→    // Bottom cover
+   379→    val bCovY = cy + dh + 14f
+   380→    drawLine(C.DimLine.copy(alpha = 0.7f), Offset(centerX, bCovY), Offset(centerX, bCovY + covPx), 0.8f)
+   381→    native.drawText("c", centerX + 4f, bCovY + covPx / 2f + 4f,
+   382→        android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#AAAAAA"); textSize = 12f })
+   383→
+   384→    drawLabel("SECTION A-A", left + width / 2f, top + height - 8f, 26f, true)
+   385→}
+   386→
+   387→// ═══════════════════════════════════════════════════════════════════════════
+   388→// 3. TIE / SPIRAL DETAIL INSET
+   389→// ═══════════════════════════════════════════════════════════════════════════
+   390→
+   391→private fun DrawScope.drawTieDetailInset(
+   392→    left: Float, top: Float, width: Float, height: Float,
+   393→    colW: Double, colD: Double, bars: List<BarInfo>, tieDia: Double,
+   394→    tieSpacing: Double, cover: Double, isSpiral: Boolean,
+   395→    spiralPitch: Double, sectionType: String
+   396→) {
+   397→    drawRect(color = C.BgDarker, topLeft = Offset(left, top), size = Size(width, height))
+   398→    drawRect(color = C.TblBorder, topLeft = Offset(left, top), size = Size(width, height), style = Stroke(2f))
+   399→
+   400→    val ip = 16f
+   401→    if (isSpiral) drawSpiralDetailZoom(left + ip, top + ip, width - 2 * ip, height - 2 * ip - 20f,
+   402→        colW, colD, tieDia, spiralPitch, cover, sectionType)
+   403→    else drawTieDetailZoom(left + ip, top + ip, width - 2 * ip, height - 2 * ip - 20f,
+   404→        colW, colD, bars, tieDia, tieSpacing, cover, sectionType)
+   405→
+   406→    val spacingLabel = if (isSpiral) "pitch = ${spiralPitch.toInt()} mm" else "s = ${tieSpacing.toInt()} mm"
+   407→    drawLabel(spacingLabel, left + width / 2f, top + height - 8f, 20f, true)
+   408→    drawLabel(if (isSpiral) "SPIRAL DETAIL" else "TIE DETAIL", left + 6f, top + 18f, 20f, false)
+   409→}
+   410→
+   411→private fun DrawScope.drawTieDetailZoom(
+   412→    left: Float, top: Float, width: Float, height: Float,
+   413→    colW: Double, colD: Double, bars: List<BarInfo>,
+   414→    tieDia: Double, tieSpacing: Double, cover: Double, sectionType: String
+   415→) {
+   416→    val numLoops = 3
+   417→    val loopSpacing = height / (numLoops + 1)
+   418→    val scale = min((width * 0.7f) / colW.toFloat(), (loopSpacing * 0.7f) / colD.toFloat()) * 0.85f
+   419→    val dw = colW.toFloat() * scale
+   420→    val dh = colD.toFloat() * scale * 0.3f
+   421→    val ox = left + (width - dw) / 2f
+   422→    val covPx = cover.toFloat() * scale
+   423→    val hookLen = (tieDia * 6).toFloat() * scale * 0.08f
+   424→
+   425→    for (i in 1..numLoops) {
+   426→        val oy = top + i * loopSpacing - dh / 2f
+   427→        val tieL = ox + covPx; val tieW = dw - 2 * covPx
+   428→
+   429→        // Tie rectangle
+   430→        drawRect(color = C.Tie, topLeft = Offset(tieL, oy), size = Size(tieW, dh),
+   431→            style = Stroke((tieDia.toFloat() * scale * 0.15f).coerceIn(1.5f, 3.5f)))
+   432→
+   433→        // 135° hooks at 4 corners
+   434→        val corners = listOf(
+   435→            Offset(tieL, oy) to 135.0, Offset(tieL + tieW, oy) to 225.0,
+   436→            Offset(tieL + tieW, oy + dh) to 315.0, Offset(tieL, oy + dh) to 45.0
+   437→        )
+   438→        corners.forEach { (corner, angle) ->
+   439→            val rad = Math.toRadians(angle)
+   440→            drawLine(C.TieLight, corner,
+   441→                Offset(corner.x + hookLen * cos(rad).toFloat(), corner.y + hookLen * sin(rad).toFloat()),
+   442→                (tieDia.toFloat() * scale * 0.12f).coerceIn(1f, 2.5f))
+   443→        }
+   444→    }
+   445→
+   446→    // Vertical bars between ties
+   447→    bars.map { it.x.toFloat() / colW.toFloat() }.distinct().take(6).forEach { ratio ->
+   448→        val bx = ox + ratio * dw
+   449→        drawLine(C.Bar, Offset(bx, top + loopSpacing - dh), Offset(bx, top + (numLoops + 0.5f) * loopSpacing), 2.5f)
+   450→    }
+   451→
+   452→    // Spacing arrow
+   453→    drawDimArrow(ox + dw + 12f, top + loopSpacing, ox + dw + 12f, top + 2 * loopSpacing)
+   454→}
+   455→
+   456→private fun DrawScope.drawSpiralDetailZoom(
+   457→    left: Float, top: Float, width: Float, height: Float,
+   458→    colW: Double, colD: Double, tieDia: Double, spiralPitch: Double,
+   459→    cover: Double, sectionType: String
+   460→) {
+   461→    val cx = left + width / 2f
+   462→    val cy = top + height / 2f
+   463→    val maxR = min(width, height) * 0.35f
+   464→    val path = Path()
+   465→    val turns = 4; val total = turns * 40
+   466→
+   467→    for (i in 0..total) {
+   468→        val t = i.toFloat() / total
+   469→        val angle = t * turns * 2 * kotlin.math.PI.toFloat()
+   470→        val x = cx + maxR * cos(angle)
+   471→        val y = cy - height * 0.35f + t * height * 0.7f
+   472→        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+   473→    }
+   474→    drawPath(path, color = C.Tie, style = Stroke((tieDia.toFloat() * 0.15f).coerceIn(1.5f, 3f)))
+   475→    drawLine(C.Bar, Offset(cx, cy - height * 0.3f), Offset(cx, cy + height * 0.3f), 3f)
+   476→}
+   477→
+   478→// ═══════════════════════════════════════════════════════════════════════════
+   479→// 4. DIMENSION LINES
+   480→// ═══════════════════════════════════════════════════════════════════════════
+   481→
+   482→private fun DrawScope.drawSectionDimensions(
+   483→    left: Float, top: Float, width: Float, height: Float,
+   484→    colW: Double, colD: Double, cover: Double, bars: List<BarInfo>
+   485→) {
+   486→    val pad = 60f
+   487→    val avW = width - 2 * pad; val avH = height - 2 * pad - 20f
+   488→    val scale = min(avW / colW.toFloat(), avH / colD.toFloat()) * 0.85f
+   489→    val dw = colW.toFloat() * scale; val dh = colD.toFloat() * scale
+   490→    val cx = left + pad + (avW - dw) / 2f
+   491→    val cy = top + pad + 20f + (avH - dh) / 2f
+   492→    val covPx = cover.toFloat() * scale
+   493→    val native = drawContext.canvas.nativeCanvas
+   494→
+   495→    // Width (top)
+   496→    val dimY = cy - 24f
+   497→    drawLine(C.DimLine, Offset(cx, dimY), Offset(cx + dw, dimY), 1f)
+   498→    drawLine(C.DimLine, Offset(cx, dimY - 6f), Offset(cx, cy - 4f), 0.8f)
+   499→    drawLine(C.DimLine, Offset(cx + dw, dimY - 6f), Offset(cx + dw, cy - 4f), 0.8f)
+   500→    drawTriH(cx, dimY, 5f, true); drawTriH(cx + dw, dimY, 5f, false)
+   501→    native.drawText("${colW.toInt()}", cx + dw / 2f - 20f, dimY - 5f,
+   502→        android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 18f })
+   503→
+   504→    // Depth (right)
+   505→    val dimX = cx + dw + 24f
+   506→    drawLine(C.DimLine, Offset(dimX, cy), Offset(dimX, cy + dh), 1f)
+   507→    drawLine(C.DimLine, Offset(cx + dw + 4f, cy), Offset(dimX + 6f, cy), 0.8f)
+   508→    drawLine(C.DimLine, Offset(cx + dw + 4f, cy + dh), Offset(dimX + 6f, cy + dh), 0.8f)
+   509→    drawTriV(dimX, cy, 5f, true); drawTriV(dimX, cy + dh, 5f, false)
+   510→    native.apply {
+   511→        save(); rotate(-90f, dimX + 14f, cy + dh / 2f)
+   512→        drawText("${colD.toInt()}", dimX + 14f, cy + dh / 2f + 5f,
+   513→            android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 18f })
+   514→        restore()
+   515→    }
+   516→
+   517→    // Cover (left side)
+   518→    val covDimX = cx - 20f
+   519→    drawLine(C.DimLine.copy(alpha = 0.7f), Offset(covDimX, cy), Offset(covDimX, cy + covPx), 0.8f)
+   520→    native.drawText("c=${cover.toInt()}", covDimX - 40f, cy + covPx / 2f + 4f,
+   521→        android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#AAAAAA"); textSize = 14f })
+   522→}
+   523→
+   524→// ═══════════════════════════════════════════════════════════════════════════
+   525→// 5. INTERACTION DIAGRAM
+   526→// ═══════════════════════════════════════════════════════════════════════════
+   527→
+   528→private fun DrawScope.drawInteractionDiagram(
+   529→    left: Float, top: Float, width: Float, height: Float,
+   530→    points: List<Pair<Double, Double>>, designPt: Pair<Double, Double>
+   531→) {
+   532→    drawRect(color = C.BgDark, topLeft = Offset(left, top), size = Size(width, height))
+   533→    drawRect(color = C.TblBorder, topLeft = Offset(left, top), size = Size(width, height), style = Stroke(1.5f))
+   534→
+   535→    val pad = 44f
+   536→    val pW = width - 2 * pad; val pH = height - 2 * pad
+   537→    val maxP = (points.maxOfOrNull { it.first } ?: 1000.0) * 1.15
+   538→    val maxM = (points.maxOfOrNull { it.second } ?: 100.0) * 1.15
+   539→    val native = drawContext.canvas.nativeCanvas
+   540→
+   541→    fun toX(m: Double) = left + pad + (m / maxM * pW).toFloat()
+   542→    fun toY(p: Double) = top + height - pad - (p / maxP * pH).toFloat()
+   543→
+   544→    // Grid
+   545→    for (i in 1..4) {
+   546→        drawLine(C.Grid, Offset(left + pad, toY(maxP * i / 5.0)), Offset(left + width - pad, toY(maxP * i / 5.0)), 0.5f)
+   547→        drawLine(C.Grid, Offset(toX(maxM * i / 5.0), top + pad), Offset(toX(maxM * i / 5.0), top + height - pad), 0.5f)
+   548→    }
+   549→
+   550→    // Axes
+   551→    drawLine(C.DimLine, Offset(toX(0.0), top + pad - 10f), Offset(toX(0.0), top + height - pad), 1.5f)
+   552→    drawLine(C.DimLine, Offset(left + pad, toY(0.0)), Offset(left + width - pad + 10f, toY(0.0)), 1.5f)
+   553→
+   554→    // Axis labels
+   555→    val lp = android.graphics.Paint().apply {
+   556→        color = android.graphics.Color.parseColor("#CCCCCC"); textSize = 14f
+   557→        textAlign = android.graphics.Paint.Align.CENTER
+   558→    }
+   559→    native.drawText("M (kN.m)", left + width / 2f, top + height - 4f, lp)
+   560→    native.apply { save(); rotate(-90f, left + 10f, top + height / 2f)
+   561→        drawText("P (kN)", left + 10f, top + height / 2f + 4f, lp); restore() }
+   562→
+   563→    // Axis tick marks and values
+   564→    val tickPaint = android.graphics.Paint().apply {
+   565→        color = android.graphics.Color.parseColor("#999999"); textSize = 11f
+   566→        textAlign = android.graphics.Paint.Align.CENTER
+   567→    }
+   568→    val tickLen = 4f
+   569→    // P-axis ticks (vertical)
+   570→    for (i in 0..5) {
+   571→        val valP = maxP * i / 5.0
+   572→        val ty = toY(valP)
+   573→        drawLine(C.DimLine, Offset(toX(0.0) - tickLen, ty), Offset(toX(0.0), ty), 1f)
+   574→        val label = if (valP >= 1000) "${(valP / 1000).toInt()}k" else "${valP.toInt()}"
+   575→        native.drawText(label, toX(0.0) - tickLen - 4f, ty + 4f,
+   576→            tickPaint.apply { textAlign = android.graphics.Paint.Align.RIGHT })
+   577→    }
+   578→    // M-axis ticks (horizontal)
+   579→    for (i in 0..5) {
+   580→        val valM = maxM * i / 5.0
+   581→        val tx = toX(valM)
+   582→        drawLine(C.DimLine, Offset(tx, toY(0.0)), Offset(tx, toY(0.0) + tickLen), 1f)
+   583→        val label = if (valM >= 100) "${(valM / 1).toInt()}" else "${valM.toInt()}"
+   584→        native.drawText(label, tx, toY(0.0) + tickLen + 14f, tickPaint)
+   585→    }
+   586→
+   587→    // Safe zone fill (green)
+   588→    if (points.size >= 3) {
+   589→        val fp = Path()
+   590→        points.forEachIndexed { i, (p, m) -> if (i == 0) fp.moveTo(toX(m), toY(p)) else fp.lineTo(toX(m), toY(p)) }
+   591→        fp.lineTo(toX(0.0), toY(0.0)); fp.close()
+   592→        drawPath(fp, color = C.Safe.copy(alpha = 0.15f), style = Fill)
+   593→    }
+   594→
+   595→    // Unsafe tint background
+   596→    drawRect(color = C.Unsafe.copy(alpha = 0.06f), topLeft = Offset(left + pad, top + pad), size = Size(pW, pH))
+   597→
+   598→    // Interaction curve
+   599→    if (points.size >= 2) {
+   600→        val cp = Path()
+   601→        points.forEachIndexed { i, (p, m) -> if (i == 0) cp.moveTo(toX(m), toY(p)) else cp.lineTo(toX(m), toY(p)) }
+   602→        cp.lineTo(toX(points.first().second), toY(points.first().first))
+   603→        drawPath(cp, color = C.Safe, style = Stroke(2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+   604→    }
+   605→
+   606→    // Design point
+   607→    if (designPt.first != 0.0 || designPt.second != 0.0) {
+   608→        val dpx = toX(designPt.second); val dpy = toY(designPt.first)
+   609→        val inside = isInsideCurve(designPt, points)
+   610→        drawCircle(color = if (inside) C.Safe else C.Unsafe, radius = 7f, center = Offset(dpx, dpy))
+   611→        drawCircle(color = Color.White, radius = 3f, center = Offset(dpx, dpy))
+   612→        native.drawText("(${designPt.first.toInt()}, ${designPt.second.toInt()})", dpx + 12f, dpy - 8f,
+   613→            android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 12f; isFakeBoldText = true })
+   614→    }
+   615→
+   616→    // Legend indicators
+   617→    val legY = top + height - 18f
+   618→    val legX = left + pad + 4f
+   619→    val legPaint = android.graphics.Paint().apply {
+   620→        color = android.graphics.Color.parseColor("#CCCCCC"); textSize = 11f
+   621→    }
+   622→    // Safe indicator
+   623→    drawCircle(color = C.Safe, radius = 4f, center = Offset(legX + 4f, legY - 4f))
+   624→    native.drawText("Safe", legX + 12f, legY, legPaint)
+   625→    // Curve indicator
+   626→    drawLine(C.Safe, Offset(legX + 46f, legY - 4f), Offset(legX + 60f, legY - 4f), 2f)
+   627→    native.drawText("Capacity", legX + 64f, legY, legPaint)
+   628→    // Point indicator
+   629→    drawCircle(color = C.Unsafe, radius = 4f, center = Offset(legX + 122f, legY - 4f))
+   630→    drawCircle(color = Color.White, radius = 1.5f, center = Offset(legX + 122f, legY - 4f))
+   631→    native.drawText("Design Pt", legX + 130f, legY, legPaint)
+   632→
+   633→    drawLabel("P-M Interaction", left + 8f, top + 16f, 18f, false)
+   634→}
+   635→
+   636→// ═══════════════════════════════════════════════════════════════════════════
+   637→// 6. REINFORCEMENT TABLE
+   638→// ═══════════════════════════════════════════════════════════════════════════
+   639→
+   640→private fun DrawScope.drawReinforcementTable(
+   641→    left: Float, top: Float, width: Float, height: Float,
+   642→    bars: List<BarInfo>, tieDia: Double, tieSpacing: Double,
+   643→    isSpiral: Boolean, spiralPitch: Double, sectionType: String
+   644→) {
+   645→    drawRect(color = C.TblBg, topLeft = Offset(left, top), size = Size(width, height))
+   646→    drawRect(color = C.TblBorder, topLeft = Offset(left, top), size = Size(width, height), style = Stroke(1.5f))
+   647→
+   648→    val native = drawContext.canvas.nativeCanvas
+   649→    val hp = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 15f; isFakeBoldText = true }
+   650→    val tp = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 15f }
+   651→
+   652→    // Color legend strip (top of table)
+   653→    val legendH = 14f
+   654→    var legOff = left + 4f
+   655→    drawRect(color = C.Bar, topLeft = Offset(legOff, top + 2f), size = Size(10f, 10f))
+   656→    legOff += 14f
+   657→    native.drawText("Bars", legOff, top + 12f, android.graphics.Paint().apply {
+   658→        color = android.graphics.Color.WHITE; textSize = 11f
+   659→    })
+   660→    legOff += 34f
+   661→    drawRect(color = C.Tie, topLeft = Offset(legOff, top + 2f), size = Size(10f, 10f))
+   662→    legOff += 14f
+   663→    native.drawText("Ties/Spiral", legOff, top + 12f, android.graphics.Paint().apply {
+   664→        color = android.graphics.Color.WHITE; textSize = 11f
+   665→    })
+   666→    legOff += 66f
+   667→    drawRect(color = C.Concrete, topLeft = Offset(legOff, top + 2f), size = Size(10f, 10f))
+   668→    legOff += 14f
+   669→    native.drawText("Concrete", legOff, top + 12f, android.graphics.Paint().apply {
+   670→        color = android.graphics.Color.WHITE; textSize = 11f
+   671→    })
+   672→
+   673→    // Header
+   674→    val hH = 22f
+   675→    val headerTop = top + legendH
+   676→    drawRect(color = C.TblHeader, topLeft = Offset(left, headerTop), size = Size(width, hH))
+   677→    val cols = listOf("Mark", "No.", "Dia.", "Position", "Tie/Spiral", "Type")
+   678→    val colW = listOf(0.12f, 0.13f, 0.13f, 0.20f, 0.22f, 1.0f).let { fracs ->
+   679→        fracs.dropLast(1).map { it * width }.toMutableList().also { it.add(width - it.sum()) }
+   680→    }
+   681→    var xOff = left
+   682→    cols.forEachIndexed { i, h ->
+   683→        native.drawText(h, xOff + 6f, headerTop + 16f, hp)
+   684→        xOff += colW[i]
+   685→        if (i < cols.lastIndex) drawLine(C.TblBorder, Offset(xOff, headerTop), Offset(xOff, top + height), 1f)
+   686→    }
+   687→    drawLine(C.TblBorder, Offset(left, headerTop + hH), Offset(left + width, headerTop + hH), 1f)
+   688→
+   689→    // Rows
+   690→    val grouped = bars.groupBy { it.diameter }
+   691→    val rowY = headerTop + hH + 16f
+   692→    grouped.entries.forEachIndexed { idx, (dia, barList) ->
+   693→        val y = rowY + idx * 18f
+   694→        if (y > top + height - 4f) return@forEachIndexed
+   695→        val mark = if (idx < circledNums.size) circledNums[idx] else (idx + 1).toString()
+   696→        val pos = if (barList.any { it.isCorner }) "Corner+Side" else "Side"
+   697→        val tieInfo = if (isSpiral) "\u00D8${tieDia.toInt()} @ ${spiralPitch.toInt()}mm"
+   698→            else "\u00D8${tieDia.toInt()} @ ${tieSpacing.toInt()}mm"
+   699→        val tieType = if (isSpiral) "Spiral" else "Ties"
+   700→        val rowTexts = listOf(mark, "${barList.size}", "\u00D8${dia.toInt()}", pos, tieInfo, tieType)
+   701→        xOff = left
+   702→        rowTexts.forEachIndexed { i, txt ->
+   703→            native.drawText(txt, xOff + 6f, y, tp)
+   704→            xOff += colW[i]
+   705→        }
+   706→    }
+   707→    // Row separators
+   708→    grouped.entries.forEachIndexed { idx, _ ->
+   709→        val sepY = rowY + idx * 18f + 6f
+   710→        if (sepY < top + height) {
+   711→            drawLine(C.TblBorder.copy(alpha = 0.3f), Offset(left, sepY), Offset(left + width, sepY), 0.5f)
+   712→        }
+   713→    }
+   714→
+   715→    // Total steel area summary (right-aligned)
+   716→    if (grouped.isNotEmpty()) {
+   717→        val totalAs = bars.sumOf { kotlin.math.PI * (it.diameter / 2.0) * (it.diameter / 2.0) }
+   718→        val sumPaint = android.graphics.Paint().apply {
+   719→            color = android.graphics.Color.parseColor("#88CC88"); textSize = 13f
+   720→            textAlign = android.graphics.Paint.Align.RIGHT; isFakeBoldText = true
+   721→        }
+   722→        native.drawText("As = ${"%.1f".format(totalAs)} mm²", left + width - 8f, top + height - 6f, sumPaint)
+   723→    }
+   724→
+   725→    if (grouped.isEmpty()) native.drawText("No reinforcement data", left + width / 2f - 60f, rowY, tp)
+   726→}
+   727→
+   728→// ═══════════════════════════════════════════════════════════════════════════
+   729→// HELPERS
+   730→// ═══════════════════════════════════════════════════════════════════════════
+   731→
+   732→private fun DrawScope.drawLabel(text: String, x: Float, y: Float, size: Float, center: Boolean) {
+   733→    drawContext.canvas.nativeCanvas.drawText(text, x, y,
+   734→        android.graphics.Paint().apply {
+   735→            color = android.graphics.Color.WHITE; textSize = size; isFakeBoldText = true
+   736→            if (center) textAlign = android.graphics.Paint.Align.CENTER
+   737→        })
+   738→}
+   739→
+   740→private fun DrawScope.drawHatch(origin: Offset, w: Float, h: Float) {
+   741→    val diag = sqrt(w * w + h * h)
+   742→    val steps = (diag / 6f).toInt()
+   743→    for (i in 0..steps) {
+   744→        val t = i.toFloat() / steps
+   745→        drawLine(C.Hatch.copy(alpha = 0.4f),
+   746→            Offset(origin.x + t * w, origin.y),
+   747→            Offset(origin.x, origin.y + t * h), 0.8f)
+   748→    }
+   749→}
+   750→
+   751→private fun DrawScope.drawDimArrow(x1: Float, y1: Float, x2: Float, y2: Float) {
+   752→    drawLine(C.DimLine, Offset(x1, y1), Offset(x2, y2), 1f)
+   753→    val angle = kotlin.math.atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
+   754→    val len = 6f
+   755→    listOf(x1 to y1, x2 to y2).forEach { (px, py) ->
+   756→        val dir = if (px == x1) 1f else -1f
+   757→        for (s in listOf(1, -1)) {
+   758→            drawLine(C.DimLine, Offset(px, py),
+   759→                Offset((px + dir * len * cos(angle + s * 0.4).toFloat()), (py + dir * len * sin(angle + s * 0.4).toFloat())), 1f)
+   760→        }
+   761→    }
+   762→}
+   763→
+   764→private fun DrawScope.drawTriH(x: Float, y: Float, s: Float, left: Boolean) {
+   765→    val d = if (left) -1f else 1f
+   766→    drawPath(Path().apply { moveTo(x, y); lineTo(x + d * s, y - s * 0.5f); lineTo(x + d * s, y + s * 0.5f); close() },
+   767→        color = C.DimLine, style = Fill)
+   768→}
+   769→
+   770→private fun DrawScope.drawTriV(x: Float, y: Float, s: Float, up: Boolean) {
+   771→    val d = if (up) -1f else 1f
+   772→    drawPath(Path().apply { moveTo(x, y); lineTo(x - s * 0.5f, y + d * s); lineTo(x + s * 0.5f, y + d * s); close() },
+   773→        color = C.DimLine, style = Fill)
+   774→}
+   775→
+   776→private fun DrawScope.drawSpiralCircle(cx: Float, cy: Float, radius: Float, turns: Int) {
+   777→    val path = Path(); val total = turns * 36
+   778→    for (i in 0..total) {
+   779→        val t = i.toFloat() / total
+   780→        val a = t * turns * 2 * kotlin.math.PI.toFloat()
+   781→        val r = radius * (0.85f + 0.15f * t)
+   782→        if (i == 0) path.moveTo(cx + r * cos(a), cy + r * sin(a))
+   783→        else path.lineTo(cx + r * cos(a), cy + r * sin(a))
+   784→    }
+   785→    drawPath(path, color = C.Tie, style = Stroke(2f))
+   786→}
+   787→
+   788→private fun DrawScope.drawSpiralRect(left: Float, top: Float, w: Float, h: Float, turns: Int) {
+   789→    val cx = left + w / 2f; val cy = top + h / 2f
+   790→    val path = Path(); val total = turns * 36
+   791→    for (i in 0..total) {
+   792→        val t = i.toFloat() / total
+   793→        val a = t * turns * 2 * kotlin.math.PI.toFloat()
+   794→        val ca = cos(a); val sa = sin(a)
+   795→        val n = 4.0
+   796→        val r = 1.0 / (kotlin.math.pow(kotlin.math.pow(kotlin.math.pow(ca, 2.0), n / 2.0) +
+   797→                kotlin.math.pow(kotlin.math.pow(sa, 2.0), n / 2.0), 1.0 / n))
+   798→        val x = cx + (w / 2f) * r * ca; val y = cy + (h / 2f) * r * sa
+   799→        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+   800→    }
+   801→    drawPath(path, color = C.Tie, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f))))
+   802→}
+   803→
+   804→private fun isInsideCurve(point: Pair<Double, Double>, curve: List<Pair<Double, Double>>): Boolean {
+   805→    if (curve.size < 3) return false
+   806→    val (px, py) = point; var inside = false; var j = curve.size - 1
+   807→    for (i in curve.indices) {
+   808→        val (xi, yi) = curve[i]; val (xj, yj) = curve[j]
+   809→        if (((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside
+   810→        j = i
+   811→    }
+   812→    return inside
+   813→}

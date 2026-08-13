@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Civil Engineer Pro - App Screenshots</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 50%, #e8eaf6 100%);
+    font-family: 'Roboto', 'Noto Sans Arabic', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+
+  .page-title {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .page-title h1 {
+    font-size: 2.2em;
+    color: #1a237e;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .page-title p {
+    color: #5c6bc0;
+    font-size: 1.05em;
+    font-weight: 400;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px 30px;
+    max-width: 1600px;
+    margin: 0 auto;
+    justify-items: center;
+  }
+
+  @media (max-width: 1400px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 1050px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 35px 25px; } }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ===== PHONE FRAME ===== */
+  .phone-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .phone-frame {
+    width: 300px;
+    height: 650px;
+    background: #111;
+    border-radius: 36px;
+    padding: 10px;
+    position: relative;
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.35),
+      0 4px 16px rgba(0,0,0,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    border-radius: 28px;
+    border: 1px solid #333;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .phone-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 28px;
+    overflow: hidden;
+    background: #F5F5F5;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .status-bar {
+    height: 28px;
+    background: #1a237e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 10px;
+    color: #fff;
+    font-weight: 500;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 3;
+  }
+  .status-bar .notch {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 16px;
+    background: #111;
+    border-radius: 0 0 14px 14px;
+    z-index: 10;
+  }
+  .status-bar .notch::after {
+    content: '';
+    position: absolute;
+    top: 5px; left: 50%;
+    transform: translateX(-50%);
+    width: 8px; height: 8px;
+    background: #1a1a2e;
+    border-radius: 50%;
+    border: 1.5px solid #333;
+  }
+  .status-icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    z-index: 4;
+  }
+
+  /* ===== APP BAR ===== */
+  .app-bar {
+    height: 44px;
+    background: #1565C0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 10px;
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .app-bar .back-arrow {
+    font-size: 16px;
+    opacity: 0.9;
+  }
+  .app-bar .title {
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .app-bar .subtitle-ar {
+    font-family: 'Noto Sans Arabic', sans-serif;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+
+  /* ===== CONTENT AREA ===== */
+  .content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ===== BOTTOM NAV ===== */
+  .bottom-nav {
+    height: 48px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+  }
+  .bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 7px;
+    color: #888;
+    gap: 2px;
+  }
+  .bottom-nav .nav-item.active {
+    color: #1565C0;
+  }
+  .bottom-nav .nav-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ===== CAPTION ===== */
+  .caption {
+    margin-top: 16px;
+    text-align: center;
+    max-width: 280px;
+  }
+  .caption .en {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a237e;
+  }
+  .caption .ar {
+    font-family: 'Noto Sans Arabic', sans-serif;
+    font-size: 12px;
+    color: #5c6bc0;
+    direction: rtl;
+    margin-top: 2px;
+  }
+
+  /* ===== SVG ICONS (inline) ===== */
+  .icon-svg { display: inline-block; vertical-align: middle; }
+
+  /* ========== SCREEN 1: HOME ========== */
+  .home-header {
+    background: #1a237e;
+    padding: 14px 14px 18px;
+    text-align: center;
+  }
+  .home-header .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .home-header .logo-text {
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .home-header .logo-text span { color: #FFB300; }
+  .home-header .logo-ar {
+    color: rgba(255,255,255,0.7);
+    font-family: 'Noto Sans Arabic', sans-serif;
+    font-size: 12px;
+  }
+  .home-search {
+    margin: 10px 14px 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .home-search input {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.8);
+    font-size: 11px;
+    outline: none;
+    width: 100%;
+  }
+  .home-search input::placeholder { color: rgba(255,255,255,0.5); }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 10px 10px;
+    overflow: hidden;
+  }
+  .feature-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 8px 4px 6px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .feature-card .fc-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .feature-card .fc-label {
+    font-size: 7.5px;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .feature-card .fc-label-ar {
+    font-family: 'Noto Sans Arabic', sans-serif;
+    font-size: 6.5px;
+    color: #888;
+    direction: rtl;
+  }
+
+  /* ========== SCREEN 2-8 COMMON ========== */
+  .screen-title-bar {
+    background: #1565C0;
+    padding: 12px;
+    color: #fff;
+  }
+  .screen-title-bar h2 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .screen-title-bar .st-ar {
+    font-family: 'Noto Sans Arabic', sans-serif;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+
+  .form-section {
+    padding: 8px 12px;
+  }
+  .form-section .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1565C0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1.5px solid #E3F2FD;
+  }
+  .form-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+  .form-group {
+    flex: 1;
+  }
+  .form-group label {
+    display: block;
+    font-size: 7.5px;
+    color: #666;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 9px;
+    background: #fff;
+    color: #333;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #1565C0;
+    box-shadow: 0 0 0 2px rgba(21,101,192,0.1);
+  }
+
+  .btn-primary {
+    background: #1565C0;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-secondary {
+    background: #E3F2FD;
+    color: #1565C0;
+    border: 1px solid #90CAF9;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .drawing-area {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin: 6px 12px;
+    padding: 6px;
+    position: relative;
+  }
+  .drawing-area .drawing-label {
+    font-size: 8px;
+    color: #888;
+    text-align: center;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .result-box {
+    background: #E8F5E9;
+    border: 1px solid #A5D6A7;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 6px 12px;
+  }
+  .result-box .result-title {
+    font-size: 8px;
+    color: #2E7D32;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .result-box .result-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: #333;
+    margin-bottom: 1px;
+  }
+  .result-box .result-val {
+    font-weight: 700;
+    color: #1B5E20;
+  }
+
+  /* Settings */
+  .setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+  }
+  .setting-item .si-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .setting-item .si-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+  }
+  .setting-item .si-label {
+    font-size: 10px;
+    color: #333;
+    font-weight: 500;
+  }
+  .setting-item .si-desc {
+    font-size: 7.5px;
+    color: #999;
+  }
+  .setting-item .si-value {
+    font-size: 9px;
+    color: #1565C0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .toggle {
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    position: relative;
+  }
+  .toggle.on { background: #1565C0; }
+  .toggle.off { background: #ccc; }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle.on::after { right: 2px; }
+  .toggle.off::after { left: 2px; }
+
+  /* Chip / pill selector */
+  .chip-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 8px;
+    font-weight: 500;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #666;
+  }
+  .chip.active {
+    background: #1565C0;
+    color: #fff;
+    border-color: #1565C0;
+  }
+
+  /* Tab bar inside screens */
+  .inner-tabs {
+    display: flex;
+    background: #E3F2FD;
+    border-bottom: 1px solid #BBDEFB;
+  }
+  .inner-tab {
+    flex: 1;
+    text-align: center;
+    padding: 7px 4px;
+    font-size: 8.5px;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 2px solid transparent;
+  }
+  .inner-tab.active {
+    color: #1565C0;
+    border-bottom-color: #1565C0;
+    background: #fff;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>Civil Engineer Pro - App Screenshots</h1>
+  <p>مهندس مدني محترف - لقطات شاشة التطبيق</p>
+</div>
+
+<div class="grid">
+
+<!-- ==================== SCREEN 1: HOME ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <!-- wifi -->
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <!-- signal -->
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="#fff"><rect x="1" y="7" width="2" height="3" rx="0.5"/><rect x="4" y="5" width="2" height="5" rx="0.5"/><rect x="7" y="3" width="2" height="7" rx="0.5"/><rect x="10" y="0" width="2" height="10" rx="0.5" opacity="0.4"/></svg>
+          <!-- battery -->
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="content">
+        <div class="home-header">
+          <div class="logo">
+            <!-- engineering icon -->
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <circle cx="14" cy="14" r="13" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+              <path d="M14 6L8 11v7l6 4 6-4v-7L14 6z" stroke="#FFB300" stroke-width="1.5" fill="none"/>
+              <path d="M14 6v16M8 11l6 4 6-4M8 18l6-4 6 4" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+            </svg>
+            <div>
+              <div class="logo-text">CE <span>Pro</span></div>
+              <div class="logo-ar">مهندس مدني محترف</div>
+            </div>
+          </div>
+          <div class="home-search">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.2"/><line x1="8" y1="8" x2="11" y2="11" stroke="rgba(255,255,255,0.6)" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <input type="text" placeholder="Search features..." disabled>
+          </div>
+        </div>
+        <div class="feature-grid">
+          <!-- Row 1 -->
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#E3F2FD;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="1" y="8" width="16" height="3" rx="0.5" fill="#1565C0"/><line x1="3" y1="11" x2="3" y2="15" stroke="#1565C0" stroke-width="1.5"/><line x1="15" y1="11" x2="15" y2="15" stroke="#1565C0" stroke-width="1.5"/></svg>
+            </div>
+            <div class="fc-label">Beams</div>
+            <div class="fc-label-ar">الكمرات</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#FCE4EC;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="6" y="2" width="6" height="14" rx="1" fill="#C62828"/><rect x="4" y="14" width="10" height="2" rx="0.5" fill="#C62828"/></svg>
+            </div>
+            <div class="fc-label">Columns</div>
+            <div class="fc-label-ar">الأعمدة</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#E8F5E9;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="2" y="6" width="14" height="4" rx="0.5" fill="#2E7D32"/><line x1="2" y1="10" x2="5" y2="14" stroke="#2E7D32" stroke-width="1"/><line x1="16" y1="10" x2="13" y2="14" stroke="#2E7D32" stroke-width="1"/></svg>
+            </div>
+            <div class="fc-label">Slabs</div>
+            <div class="fc-label-ar">البلاطات</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#FFF3E0;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 14h12v2H3z" fill="#E65100"/><path d="M4 14V8l5-5 5 5v6" fill="none" stroke="#E65100" stroke-width="1.5"/></svg>
+            </div>
+            <div class="fc-label">Footings</div>
+            <div class="fc-label-ar">الأساسات</div>
+          </div>
+          <!-- Row 2 -->
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#F3E5F5;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="1" fill="none" stroke="#7B1FA2" stroke-width="1.5"/><path d="M9 3v12M3 9h12" stroke="#7B1FA2" stroke-width="0.8"/></svg>
+            </div>
+            <div class="fc-label">Retaining<br>Walls</div>
+            <div class="fc-label-ar">جدران ساندة</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#E0F2F1;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 16V6l5-4 5 4v10" fill="none" stroke="#00695C" stroke-width="1.5"/><line x1="6" y1="8" x2="6" y2="16" stroke="#00695C" stroke-width="1"/><line x1="9" y1="6" x2="9" y2="16" stroke="#00695C" stroke-width="1"/><line x1="12" y1="8" x2="12" y2="16" stroke="#00695C" stroke-width="1"/></svg>
+            </div>
+            <div class="fc-label">Stairs</div>
+            <div class="fc-label-ar">السلالم</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#E1F5FE;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="4" width="12" height="10" rx="2" fill="none" stroke="#0277BD" stroke-width="1.5"/><path d="M3 9h12" stroke="#0277BD" stroke-width="0.8" stroke-dasharray="2 1"/></svg>
+            </div>
+            <div class="fc-label">Water<br>Tanks</div>
+            <div class="fc-label-ar">خزانات مياه</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#FBE9E7;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2L2 8h3v8h8V8h3L9 2z" fill="none" stroke="#BF360C" stroke-width="1.3"/><path d="M7 12h4M7 14h4" stroke="#BF360C" stroke-width="0.8"/></svg>
+            </div>
+            <div class="fc-label">Steel<br>Design</div>
+            <div class="fc-label-ar">تصميم حديد</div>
+          </div>
+          <!-- Row 3 -->
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#FFF8E1;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 15L9 3l6 12" fill="none" stroke="#F57F17" stroke-width="1.5" stroke-linecap="round"/><path d="M5 11h8" stroke="#F57F17" stroke-width="1" stroke-linecap="round"/></svg>
+            </div>
+            <div class="fc-label">Seismic</div>
+            <div class="fc-label-ar">زلازل</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#EDE7F6;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="2" y="3" width="4" height="12" rx="0.5" fill="#4527A0" opacity="0.7"/><rect x="7" y="6" width="4" height="9" rx="0.5" fill="#4527A0" opacity="0.85"/><rect x="12" y="4" width="4" height="11" rx="0.5" fill="#4527A0"/></svg>
+            </div>
+            <div class="fc-label">Frame<br>Analysis</div>
+            <div class="fc-label-ar">تحليل هياكل</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#E8EAF6;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="1" fill="none" stroke="#283593" stroke-width="1.3"/><path d="M3 7h12M3 11h12M7 3v12M11 3v12" stroke="#283593" stroke-width="0.7"/></svg>
+            </div>
+            <div class="fc-label">BOQ</div>
+            <div class="fc-label-ar">كميات</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#E0F7FA;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="2" fill="none" stroke="#00838F" stroke-width="1.3"/><text x="9" y="12" text-anchor="middle" font-size="9" fill="#00838F" font-weight="700">÷</text></svg>
+            </div>
+            <div class="fc-label">Calculator</div>
+            <div class="fc-label-ar">آلة حاسبة</div>
+          </div>
+          <!-- Row 4 -->
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#F1F8E9;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 5h4v4H3zM11 5h4v4h-4zM3 11h4v4H3zM11 11h4v4h-4z" fill="none" stroke="#558B2F" stroke-width="1.2" rx="1"/><path d="M7 5h4M7 9h4M7 13h4" stroke="#558B2F" stroke-width="0.8" stroke-dasharray="1.5 1"/></svg>
+            </div>
+            <div class="fc-label">Unit<br>Converter</div>
+            <div class="fc-label-ar">تحويل وحدات</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#FCE4EC;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="5" width="12" height="8" rx="1" fill="none" stroke="#AD1457" stroke-width="1.3"/><path d="M3 8h12" stroke="#AD1457" stroke-width="0.8"/><circle cx="9" cy="10" r="1.5" fill="#AD1457" opacity="0.4"/></svg>
+            </div>
+            <div class="fc-label">Inventory</div>
+            <div class="fc-label-ar">مخزون</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#EFEBE9;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 4h10v2H4z" fill="#4E342E"/><rect x="3" y="6" width="12" height="9" rx="1" fill="none" stroke="#4E342E" stroke-width="1.3"/><path d="M6 9h6M6 11h6" stroke="#4E342E" stroke-width="0.8"/></svg>
+            </div>
+            <div class="fc-label">Archive</div>
+            <div class="fc-label-ar">أرشيف</div>
+          </div>
+          <div class="feature-card">
+            <div class="fc-icon" style="background:#ECEFF1;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6" fill="none" stroke="#455A64" stroke-width="1.3"/><path d="M9 6v3l2 2" stroke="#455A64" stroke-width="1.2" stroke-linecap="round"/><circle cx="9" cy="9" r="1" fill="#455A64"/></svg>
+            </div>
+            <div class="fc-label">Settings</div>
+            <div class="fc-label-ar">إعدادات</div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item active">
+          <svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#1565C0"/></svg>
+          <span>Home</span>
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#999"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#999"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#999"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#999"/></svg>
+          <span>Modules</span>
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 2C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10.5c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z" fill="#999"/><path d="M8 5.5v3.5l2.5 1.5" stroke="#999" stroke-width="1" fill="none"/></svg>
+          <span>History</span>
+        </div>
+        <div class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" fill="#999"/></svg>
+          <span>Profile</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Home Screen</div>
+    <div class="ar">الشاشة الرئيسية</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 2: BEAM DESIGN ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar">
+        <span class="back-arrow">←</span>
+        <span class="title">Beam Design <span class="subtitle-ar">| تصميم الكمرات</span></span>
+      </div>
+      <div class="content">
+        <div class="inner-tabs">
+          <div class="inner-tab active">Input</div>
+          <div class="inner-tab">Results</div>
+          <div class="inner-tab">Drawing</div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Beam Dimensions أبعاد الكمرة</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Span (m) / البحر</label>
+              <input type="text" value="6.0" readonly>
+            </div>
+            <div class="form-group">
+              <label>Width b (mm)</label>
+              <input type="text" value="300" readonly>
+            </div>
+            <div class="form-group">
+              <label>Depth h (mm)</label>
+              <input type="text" value="600" readonly>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:6px;">Applied Loads الأحمال</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Dead Load (kN/m)</label>
+              <input type="text" value="25.0" readonly>
+            </div>
+            <div class="form-group">
+              <label>Live Load (kN/m)</label>
+              <input type="text" value="15.0" readonly>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:6px;">Material Properties خواص المواد</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>f'c (MPa) / إجهاد الخرسانة</label>
+              <input type="text" value="25" readonly>
+            </div>
+            <div class="form-group">
+              <label>fy (MPa) / إجهاد الحديد</label>
+              <input type="text" value="420" readonly>
+            </div>
+          </div>
+        </div>
+        <div class="drawing-area">
+          <div class="drawing-label">Beam Cross-Section — مقطع الكمرة</div>
+          <svg width="260" height="120" viewBox="0 0 260 120">
+            <!-- Concrete -->
+            <rect x="50" y="10" width="80" height="100" fill="#BBDEFB" stroke="#1565C0" stroke-width="2"/>
+            <!-- Concrete hatch pattern -->
+            <line x1="50" y1="20" x2="70" y2="10" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="50" y1="35" x2="90" y2="10" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="50" y1="50" x2="110" y2="10" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="50" y1="65" x2="130" y2="10" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="50" y1="80" x2="130" y2="35" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="50" y1="95" x2="130" y2="50" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="50" y1="110" x2="130" y2="65" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="65" y1="110" x2="130" y2="80" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="80" y1="110" x2="130" y2="95" stroke="#90CAF9" stroke-width="0.5"/>
+            <line x1="95" y1="110" x2="130" y2="108" stroke="#90CAF9" stroke-width="0.5"/>
+            <!-- Top bars -->
+            <circle cx="67" cy="28" r="5" fill="#D32F2F" stroke="#B71C1C" stroke-width="1"/>
+            <circle cx="113" cy="28" r="5" fill="#D32F2F" stroke="#B71C1C" stroke-width="1"/>
+            <!-- Bottom bars -->
+            <circle cx="67" cy="92" r="6" fill="#D32F2F" stroke="#B71C1C" stroke-width="1.2"/>
+            <circle cx="90" cy="92" r="6" fill="#D32F2F" stroke="#B71C1C" stroke-width="1.2"/>
+            <circle cx="113" cy="92" r="6" fill="#D32F2F" stroke="#B71C1C" stroke-width="1.2"/>
+            <!-- Stirrups -->
+            <rect x="60" y="20" width="60" height="80" fill="none" stroke="#D32F2F" stroke-width="1.2" rx="2" stroke-dasharray="6 3"/>
+            <!-- Dimensions -->
+            <line x1="140" y1="10" x2="140" y2="110" stroke="#333" stroke-width="0.8"/>
+            <line x1="136" y1="10" x2="144" y2="10" stroke="#333" stroke-width="0.8"/>
+            <line x1="136" y1="110" x2="144" y2="110" stroke="#333" stroke-width="0.8"/>
+            <text x="146" y="64" font-size="8" fill="#333" font-family="Roboto">600 mm</text>
+            <line x1="50" y1="118" x2="130" y2="118" stroke="#333" stroke-width="0.8"/>
+            <line x1="50" y1="114" x2="50" y2="122" stroke="#333" stroke-width="0.8"/>
+            <line x1="130" y1="114" x2="130" y2="122" stroke="#333" stroke-width="0.8"/>
+            <text x="73" y="118" font-size="7" fill="#333" font-family="Roboto">300</text>
+            <!-- Labels -->
+            <text x="170" y="30" font-size="7" fill="#D32F2F" font-weight="600">2φ12</text>
+            <text x="170" y="94" font-size="7" fill="#D32F2F" font-weight="600">3φ16</text>
+            <text x="170" y="62" font-size="7" fill="#D32F2F" font-weight="600">φ8 @ 150</text>
+            <!-- Legend -->
+            <rect x="190" y="8" width="10" height="10" fill="#BBDEFB" stroke="#1565C0" stroke-width="0.8"/>
+            <text x="204" y="16" font-size="6.5" fill="#555">Concrete</text>
+            <circle cx="195" cy="28" r="5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <text x="204" y="31" font-size="6.5" fill="#555">Rebar</text>
+          </svg>
+        </div>
+        <div class="result-box">
+          <div class="result-title">✓ Design Results — نتائج التصميم</div>
+          <div class="result-row"><span>Mu = 172.8 kN·m</span><span class="result-val">As = 942 mm² (3φ16)</span></div>
+          <div class="result-row"><span>ρ = 0.0052</span><span class="result-val">ρmin = 0.0033 ✓</span></div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#1565C0"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Beam Design</div>
+    <div class="ar">تصميم الكمرات</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 3: COLUMN DESIGN ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar">
+        <span class="back-arrow">←</span>
+        <span class="title">Column Design <span class="subtitle-ar">| تصميم الأعمدة</span></span>
+      </div>
+      <div class="content">
+        <div class="inner-tabs">
+          <div class="inner-tab active">Input</div>
+          <div class="inner-tab">P-M Diagram</div>
+          <div class="inner-tab">Section</div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Column Dimensions أبعاد العمود</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Width b (mm)</label>
+              <input type="text" value="400" readonly>
+            </div>
+            <div class="form-group">
+              <label>Depth h (mm)</label>
+              <input type="text" value="400" readonly>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:4px;">Applied Forces القوى المؤثرة</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Pu (kN) / القوة المحورية</label>
+              <input type="text" value="1200" readonly>
+            </div>
+            <div class="form-group">
+              <label>Mux (kN·m)</label>
+              <input type="text" value="180" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Muy (kN·m)</label>
+              <input type="text" value="120" readonly>
+            </div>
+            <div class="form-group">
+              <label>ρg (%)</label>
+              <input type="text" value="2.0" readonly>
+            </div>
+          </div>
+        </div>
+        <!-- P-M Interaction Diagram -->
+        <div class="drawing-area">
+          <div class="drawing-label">P-M Interaction Diagram — منحنى التفاعل</div>
+          <svg width="260" height="110" viewBox="0 0 260 110">
+            <!-- Axes -->
+            <line x1="40" y1="10" x2="40" y2="95" stroke="#333" stroke-width="1.2"/>
+            <line x1="40" y1="95" x2="250" y2="95" stroke="#333" stroke-width="1.2"/>
+            <!-- Axis labels -->
+            <text x="5" y="55" font-size="7" fill="#333" font-family="Roboto" transform="rotate(-90,12,55)">P (kN)</text>
+            <text x="130" y="107" font-size="7" fill="#333" font-family="Roboto" text-anchor="middle">M (kN·m)</text>
+            <!-- Grid -->
+            <line x1="40" y1="30" x2="250" y2="30" stroke="#eee" stroke-width="0.5"/>
+            <line x1="40" y1="50" x2="250" y2="50" stroke="#eee" stroke-width="0.5"/>
+            <line x1="40" y1="70" x2="250" y2="70" stroke="#eee" stroke-width="0.5"/>
+            <line x1="100" y1="10" x2="100" y2="95" stroke="#eee" stroke-width="0.5"/>
+            <line x1="160" y1="10" x2="160" y2="95" stroke="#eee" stroke-width="0.5"/>
+            <line x1="220" y1="10" x2="220" y2="95" stroke="#eee" stroke-width="0.5"/>
+            <!-- P-M curve -->
+            <path d="M50,18 C60,16 80,14 100,20 C120,28 140,45 155,60 C168,73 178,83 190,90 C200,95 210,96 215,95" fill="none" stroke="#1565C0" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Right side (negative M) -->
+            <path d="M50,18 C60,16 80,14 100,20 C120,28 140,45 155,60 C168,73 178,83 190,90 C200,95 210,96 215,95" fill="none" stroke="#1565C0" stroke-width="0" />
+            <path d="M50,18 C60,16 80,14 100,20 C120,28 140,45 155,60 C168,73 178,83 190,90" fill="none" stroke="#90CAF9" stroke-width="1" stroke-dasharray="3 2" transform="translate(0,0) scale(-1,1) translate(-290,0)"/>
+            <!-- Fill area -->
+            <path d="M50,18 C60,16 80,14 100,20 C120,28 140,45 155,60 C168,73 178,83 190,90 C200,95 210,96 215,95 L215,95 C210,96 200,95 190,90 C178,83 168,73 155,60 C140,45 120,28 100,20 C80,14 60,16 50,18 Z" fill="rgba(21,101,192,0.1)"/>
+            <!-- Design point -->
+            <circle cx="145" cy="42" r="5" fill="#FF6F00" stroke="#fff" stroke-width="1.5"/>
+            <line x1="145" y1="42" x2="145" y2="95" stroke="#FF6F00" stroke-width="0.8" stroke-dasharray="3 2"/>
+            <line x1="40" y1="42" x2="145" y2="42" stroke="#FF6F00" stroke-width="0.8" stroke-dasharray="3 2"/>
+            <text x="148" y="38" font-size="7" fill="#FF6F00" font-weight="700">Design Point</text>
+            <!-- Tick labels -->
+            <text x="36" y="32" font-size="6" fill="#666" text-anchor="end">2400</text>
+            <text x="36" y="52" font-size="6" fill="#666" text-anchor="end">1600</text>
+            <text x="36" y="72" font-size="6" fill="#666" text-anchor="end">800</text>
+            <text x="36" y="93" font-size="6" fill="#666" text-anchor="end">0</text>
+            <text x="100" y="102" font-size="6" fill="#666" text-anchor="middle">100</text>
+            <text x="160" y="102" font-size="6" fill="#666" text-anchor="middle">200</text>
+            <text x="220" y="102" font-size="6" fill="#666" text-anchor="middle">300</text>
+          </svg>
+        </div>
+        <!-- Column Section -->
+        <div class="drawing-area">
+          <div class="drawing-label">Column Section — مقطع العمود</div>
+          <svg width="260" height="80" viewBox="0 0 260 80">
+            <rect x="30" y="5" width="70" height="70" fill="#BBDEFB" stroke="#1565C0" stroke-width="2"/>
+            <!-- Rebars -->
+            <circle cx="40" cy="15" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="65" cy="15" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="90" cy="15" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="40" cy="40" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="90" cy="40" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="40" cy="65" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="65" cy="65" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <circle cx="90" cy="65" r="4.5" fill="#D32F2F" stroke="#B71C1C" stroke-width="0.8"/>
+            <!-- Ties -->
+            <rect x="36" y="11" width="58" height="58" fill="none" stroke="#D32F2F" stroke-width="1" rx="1" stroke-dasharray="5 3"/>
+            <line x1="65" y1="11" x2="65" y2="35" stroke="#D32F2F" stroke-width="0.8"/>
+            <line x1="65" y1="45" x2="65" y2="69" stroke="#D32F2F" stroke-width="0.8"/>
+            <!-- Labels -->
+            <text x="115" y="20" font-size="7" fill="#1565C0" font-weight="600">8φ20</text>
+            <text x="115" y="35" font-size="7" fill="#D32F2F">φ10 @ 200 ties</text>
+            <text x="115" y="50" font-size="7" fill="#333">400 × 400 mm</text>
+            <text x="115" y="65" font-size="7" fill="#333">ρ = 1.57% ✓</text>
+          </svg>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#1565C0"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Column Design</div>
+    <div class="ar">تصميم الأعمدة</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 4: STEEL DESIGN ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar">
+        <span class="back-arrow">←</span>
+        <span class="title">Steel Design <span class="subtitle-ar">| تصميم المنشآت الفولاذية</span></span>
+      </div>
+      <div class="content">
+        <div class="inner-tabs">
+          <div class="inner-tab active">Section</div>
+          <div class="inner-tab">Connection</div>
+          <div class="inner-tab">Check</div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Steel Section Section الفولاذي</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Section Type</label>
+              <select disabled><option>W-Shape (I-Beam)</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Designation</label>
+              <select disabled><option>W310 × 107</option></select>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:4px;">Connection Details تفاصيل الاتصال</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Bolt Grade</label>
+              <input type="text" value="A325" readonly>
+            </div>
+            <div class="form-group">
+              <label>Bolt Dia. (mm)</label>
+              <input type="text" value="22" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Weld Size (mm)</label>
+              <input type="text" value="8" readonly>
+            </div>
+            <div class="form-group">
+              <label>Fy (MPa)</label>
+              <input type="text" value="345" readonly>
+            </div>
+          </div>
+        </div>
+        <!-- I-Beam Drawing -->
+        <div class="drawing-area">
+          <div class="drawing-label">I-Beam Cross-Section — مقطع العارضة</div>
+          <svg width="260" height="110" viewBox="0 0 260 110">
+            <!-- I-Beam profile -->
+            <path d="M70,10 L190,10 L190,22 L165,22 L165,88 L190,88 L190,100 L70,100 L70,88 L95,88 L95,22 L70,22 Z" fill="#CFD8DC" stroke="#37474F" stroke-width="1.8"/>
+            <!-- Web hatching -->
+            <line x1="97" y1="24" x2="163" y2="24" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="33" x2="163" y2="33" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="42" x2="163" y2="42" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="51" x2="163" y2="51" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="60" x2="163" y2="60" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="69" x2="163" y2="69" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="78" x2="163" y2="78" stroke="#B0BEC5" stroke-width="0.5"/>
+            <line x1="97" y1="86" x2="163" y2="86" stroke="#B0BEC5" stroke-width="0.5"/>
+            <!-- Dimension lines -->
+            <!-- Height -->
+            <line x1="200" y1="10" x2="200" y2="100" stroke="#333" stroke-width="0.8"/>
+            <line x1="196" y1="10" x2="204" y2="10" stroke="#333" stroke-width="0.8"/>
+            <line x1="196" y1="100" x2="204" y2="100" stroke="#333" stroke-width="0.8"/>
+            <text x="208" y="58" font-size="8" fill="#333" font-weight="500">310 mm</text>
+            <!-- Flange width -->
+            <line x1="70" y1="106" x2="190" y2="106" stroke="#333" stroke-width="0.8"/>
+            <line x1="70" y1="102" x2="70" y2="110" stroke="#333" stroke-width="0.8"/>
+            <line x1="190" y1="102" x2="190" y2="110" stroke="#333" stroke-width="0.8"/>
+            <text x="110" y="106" font-size="7" fill="#333" font-weight="500">bf = 306 mm</text>
+            <!-- tf -->
+            <line x1="54" y1="10" x2="54" y2="22" stroke="#666" stroke-width="0.6"/>
+            <line x1="50" y1="10" x2="58" y2="10" stroke="#666" stroke-width="0.6"/>
+            <line x1="50" y1="22" x2="58" y2="22" stroke="#666" stroke-width="0.6"/>
+            <text x="20" y="19" font-size="6.5" fill="#666">tf=13.1</text>
+            <!-- tw -->
+            <line x1="54" y1="40" x2="54" y2="70" stroke="#666" stroke-width="0.6"/>
+            <line x1="50" y1="40" x2="58" y2="40" stroke="#666" stroke-width="0.6"/>
+            <line x1="50" y1="70" x2="58" y2="70" stroke="#666" stroke-width="0.6"/>
+            <text x="18" y="58" font-size="6.5" fill="#666">tw=8.8</text>
+            <!-- Center line -->
+            <line x1="130" y1="4" x2="130" y2="107" stroke="#1565C0" stroke-width="0.5" stroke-dasharray="4 2"/>
+            <text x="220" y="18" font-size="6.5" fill="#1565C0" font-weight="600">W310×107</text>
+            <text x="220" y="30" font-size="6" fill="#666">d = 311 mm</text>
+            <text x="220" y="40" font-size="6" fill="#666">tw = 8.8 mm</text>
+            <text x="220" y="50" font-size="6" fill="#666">tf = 13.1 mm</text>
+            <text x="220" y="60" font-size="6" fill="#666">bf = 306 mm</text>
+            <text x="220" y="72" font-size="6" fill="#2E7D32" font-weight="600">Ix = 22,800 cm⁴</text>
+            <text x="220" y="82" font-size="6" fill="#2E7D32" font-weight="600">Zx = 1,520 cm³</text>
+          </svg>
+        </div>
+        <div class="result-box">
+          <div class="result-title">✓ Member Check — فحص العضو</div>
+          <div class="result-row"><span>φMn = 460 kN·m</span><span class="result-val">> Mu = 320 kN·m ✓</span></div>
+          <div class="result-row"><span>φVn = 580 kN</span><span class="result-val">> Vu = 210 kN ✓</span></div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#1565C0"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Steel Design</div>
+    <div class="ar">تصميم المنشآت الفولاذية</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 5: FRAME ANALYSIS ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar">
+        <span class="back-arrow">←</span>
+        <span class="title">Frame Analysis <span class="subtitle-ar">| تحليل الهياكل</span></span>
+      </div>
+      <div class="content">
+        <div class="inner-tabs">
+          <div class="inner-tab">Model</div>
+          <div class="inner-tab active">BMD</div>
+          <div class="inner-tab">SFD</div>
+          <div class="inner-tab">Defl.</div>
+        </div>
+        <!-- 2D Frame with BMD -->
+        <div class="drawing-area" style="margin:8px 8px;">
+          <div class="drawing-label">2D Frame — Bending Moment Diagram</div>
+          <svg width="268" height="210" viewBox="0 0 268 210">
+            <!-- Background grid -->
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="268" height="210" fill="url(#grid)"/>
+            <!-- Ground -->
+            <line x1="20" y1="170" x2="248" y2="170" stroke="#999" stroke-width="1.5"/>
+            <path d="M25,170 L22,176 M35,170 L32,176 M45,170 L42,176 M205,170 L202,176 M215,170 L212,176 M225,170 L222,176 M235,170 L232,176 M245,170 L242,176" stroke="#999" stroke-width="0.8"/>
+
+            <!-- Frame members -->
+            <!-- Left column -->
+            <line x1="40" y1="170" x2="40" y2="45" stroke="#37474F" stroke-width="3.5" stroke-linecap="round"/>
+            <!-- Right column -->
+            <line x1="228" y1="170" x2="228" y2="45" stroke="#37474F" stroke-width="3.5" stroke-linecap="round"/>
+            <!-- Beam -->
+            <line x1="40" y1="45" x2="228" y2="45" stroke="#37474F" stroke-width="3.5" stroke-linecap="round"/>
+
+            <!-- Nodes -->
+            <circle cx="40" cy="170" r="5" fill="#1565C0" stroke="#fff" stroke-width="1.5"/>
+            <circle cx="228" cy="170" r="5" fill="#1565C0" stroke="#fff" stroke-width="1.5"/>
+            <circle cx="40" cy="45" r="4" fill="#FF6F00" stroke="#fff" stroke-width="1"/>
+            <circle cx="134" cy="45" r="4" fill="#FF6F00" stroke="#fff" stroke-width="1"/>
+            <circle cx="228" cy="45" r="4" fill="#FF6F00" stroke="#fff" stroke-width="1"/>
+
+            <!-- Support symbols -->
+            <polygon points="40,170 32,184 48,184" fill="none" stroke="#37474F" stroke-width="1.2"/>
+            <polygon points="228,170 220,184 236,184" fill="none" stroke="#37474F" stroke-width="1.2"/>
+
+            <!-- Loading arrows (distributed on beam) -->
+            <line x1="60" y1="18" x2="60" y2="38" stroke="#D32F2F" stroke-width="1.5"/>
+            <polygon points="60,38 57,32 63,32" fill="#D32F2F"/>
+            <line x1="90" y1="18" x2="90" y2="38" stroke="#D32F2F" stroke-width="1.5"/>
+            <polygon points="90,38 87,32 93,32" fill="#D32F2F"/>
+            <line x1="120" y1="18" x2="120" y2="38" stroke="#D32F2F" stroke-width="1.5"/>
+            <polygon points="120,38 117,32 123,32" fill="#D32F2F"/>
+            <line x1="150" y1="18" x2="150" y2="38" stroke="#D32F2F" stroke-width="1.5"/>
+            <polygon points="150,38 147,32 153,32" fill="#D32F2F"/>
+            <line x1="180" y1="18" x2="180" y2="38" stroke="#D32F2F" stroke-width="1.5"/>
+            <polygon points="180,38 177,32 183,32" fill="#D32F2F"/>
+            <line x1="210" y1="18" x2="210" y2="38" stroke="#D32F2F" stroke-width="1.5"/>
+            <polygon points="210,38 207,32 213,32" fill="#D32F2F"/>
+            <text x="120" y="14" font-size="7" fill="#D32F2F" text-anchor="middle" font-weight="600">w = 25 kN/m</text>
+
+            <!-- BMD on beam (parabolic) -->
+            <path d="M40,45 C60,45 80,70 134,80 C188,70 208,45 228,45" fill="none" stroke="#7B1FA2" stroke-width="2"/>
+            <path d="M40,45 C60,45 80,70 134,80 C188,70 208,45 228,45" fill="rgba(123,31,162,0.12)" stroke="none"/>
+
+            <!-- BMD on left column -->
+            <path d="M40,45 C40,45 28,80 35,120 C42,160 40,170 40,170" fill="none" stroke="#7B1FA2" stroke-width="2"/>
+            <path d="M40,45 C40,45 28,80 35,120 C42,160 40,170 40,170 L40,170 L40,45 Z" fill="rgba(123,31,162,0.08)" stroke="none"/>
+
+            <!-- BMD on right column -->
+            <path d="M228,45 C228,45 240,80 233,120 C226,160 228,170 228,170" fill="none" stroke="#7B1FA2" stroke-width="2"/>
+
+            <!-- Moment values -->
+            <text x="134" y="96" font-size="7" fill="#7B1FA2" text-anchor="middle" font-weight="700">189.0 kN·m</text>
+            <text x="20" y="110" font-size="6.5" fill="#7B1FA2" text-anchor="middle" font-weight="600">-63.0</text>
+            <text x="248" y="110" font-size="6.5" fill="#7B1FA2" text-anchor="middle" font-weight="600">-63.0</text>
+
+            <!-- Node labels -->
+            <text x="40" y="196" font-size="7" fill="#1565C0" text-anchor="middle" font-weight="600">N1 (pin)</text>
+            <text x="228" y="196" font-size="7" fill="#1565C0" text-anchor="middle" font-weight="600">N4 (pin)</text>
+            <text x="40" y="38" font-size="6.5" fill="#FF6F00">N2</text>
+            <text x="134" y="38" font-size="6.5" fill="#FF6F00">N3</text>
+            <text x="228" y="38" font-size="6.5" fill="#FF6F00">N5</text>
+
+            <!-- Reactions -->
+            <line x1="40" y1="186" x2="40" y2="200" stroke="#2E7D32" stroke-width="1.5"/>
+            <polygon points="40,200 37,194 43,194" fill="#2E7D32"/>
+            <text x="40" y="208" font-size="6" fill="#2E7D32" text-anchor="middle" font-weight="600">75 kN</text>
+            <line x1="228" y1="186" x2="228" y2="200" stroke="#2E7D32" stroke-width="1.5"/>
+            <polygon points="228,200 225,194 231,194" fill="#2E7D32"/>
+            <text x="228" y="208" font-size="6" fill="#2E7D32" text-anchor="middle" font-weight="600">75 kN</text>
+
+            <!-- Legend -->
+            <rect x="140" y="180" width="8" height="8" fill="#7B1FA2" opacity="0.3" stroke="#7B1FA2" stroke-width="0.8"/>
+            <text x="152" y="187" font-size="6" fill="#555">BMD (kN·m)</text>
+          </svg>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#1565C0"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#1565C0"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#1565C0"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Frame Analysis</div>
+    <div class="ar">تحليل الهياكل</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 6: SEISMIC ANALYSIS ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar" style="background:#BF360C;">
+        <span class="back-arrow">←</span>
+        <span class="title">Seismic Analysis <span class="subtitle-ar">| التحليل الزلزالي</span></span>
+      </div>
+      <div class="content">
+        <div class="inner-tabs" style="background:#FBE9E7; border-bottom-color:#FFAB91;">
+          <div class="inner-tab active" style="color:#BF360C; border-bottom-color:#BF360C; background:#fff;">Forces</div>
+          <div class="inner-tab" style="color:#BF360C;">Story Drift</div>
+          <div class="inner-tab" style="color:#BF360C;">Spectrum</div>
+        </div>
+        <div class="form-section" style="padding:6px 12px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Zone / المنطقة الزلزالية</label>
+              <input type="text" value="Zone 2A (Sa=0.15g)" readonly>
+            </div>
+            <div class="form-group">
+              <label>Soil Type / نوع التربة</label>
+              <input type="text" value="Type C (Sc=1.2)" readonly>
+            </div>
+          </div>
+        </div>
+        <!-- Building Elevation -->
+        <div class="drawing-area" style="margin:4px 10px;">
+          <div class="drawing-label">Building Elevation & Story Forces — الواجهة والقوى الأفقية</div>
+          <svg width="268" height="150" viewBox="0 0 268 150">
+            <!-- Ground -->
+            <line x1="30" y1="135" x2="160" y2="135" stroke="#999" stroke-width="1.5"/>
+            <path d="M35,135 L32,141 M45,135 L42,141 M55,135 L52,141 M135,135 L132,141 M145,135 L142,141 M155,135 L152,141" stroke="#999" stroke-width="0.7"/>
+
+            <!-- Building floors -->
+            <!-- Foundation -->
+            <rect x="55" y="128" width="80" height="7" fill="#E0E0E0" stroke="#999" stroke-width="1"/>
+            <!-- Floor 1 -->
+            <rect x="60" y="100" width="70" height="28" fill="#FFF3E0" stroke="#E65100" stroke-width="1" opacity="0.7"/>
+            <rect x="60" y="100" width="70" height="4" fill="#E65100" opacity="0.4"/>
+            <!-- Floor 2 -->
+            <rect x="60" y="68" width="70" height="32" fill="#FFF3E0" stroke="#E65100" stroke-width="1" opacity="0.7"/>
+            <rect x="60" y="68" width="70" height="4" fill="#E65100" opacity="0.4"/>
+            <!-- Floor 3 -->
+            <rect x="60" y="36" width="70" height="32" fill="#FFF3E0" stroke="#E65100" stroke-width="1" opacity="0.7"/>
+            <rect x="60" y="36" width="70" height="4" fill="#E65100" opacity="0.4"/>
+            <!-- Roof -->
+            <rect x="55" y="30" width="80" height="6" fill="#BF360C" opacity="0.3" stroke="#BF360C" stroke-width="1"/>
+
+            <!-- Columns -->
+            <line x1="62" y1="128" x2="62" y2="30" stroke="#795548" stroke-width="2.5"/>
+            <line x1="128" y1="128" x2="128" y2="30" stroke="#795548" stroke-width="2.5"/>
+
+            <!-- Floor labels -->
+            <text x="45" y="118" font-size="6.5" fill="#666" text-anchor="end">Floor 1</text>
+            <text x="45" y="86" font-size="6.5" fill="#666" text-anchor="end">Floor 2</text>
+            <text x="45" y="54" font-size="6.5" fill="#666" text-anchor="end">Floor 3</text>
+            <text x="45" y="34" font-size="6.5" fill="#666" text-anchor="end">Roof</text>
+
+            <!-- Seismic force arrows -->
+            <!-- Roof -->
+            <line x1="170" y1="33" x2="145" y2="33" stroke="#D32F2F" stroke-width="2"/>
+            <polygon points="145,33 150,30 150,36" fill="#D32F2F"/>
+            <text x="175" y="36" font-size="6.5" fill="#D32F2F" font-weight="600">F3=45 kN</text>
+            <!-- Floor 3 -->
+            <line x1="180" y1="66" x2="145" y2="66" stroke="#E65100" stroke-width="2"/>
+            <polygon points="145,66 150,63 150,69" fill="#E65100"/>
+            <text x="185" y="69" font-size="6.5" fill="#E65100" font-weight="600">F2=72 kN</text>
+            <!-- Floor 2 -->
+            <line x1="190" y1="98" x2="145" y2="98" stroke="#FF8F00" stroke-width="2"/>
+            <polygon points="145,98 150,95 150,101" fill="#FF8F00"/>
+            <text x="195" y="101" font-size="6.5" fill="#FF8F00" font-weight="600">F1=90 kN</text>
+            <!-- Base shear -->
+            <line x1="200" y1="128" x2="145" y2="128" stroke="#B71C1C" stroke-width="2.5"/>
+            <polygon points="145,128 151,125 151,131" fill="#B71C1C"/>
+            <text x="205" y="131" font-size="7" fill="#B71C1C" font-weight="700">V=207 kN</text>
+
+            <!-- Height dimension -->
+            <line x1="25" y1="128" x2="25" y2="30" stroke="#333" stroke-width="0.6"/>
+            <line x1="22" y1="128" x2="28" y2="128" stroke="#333" stroke-width="0.6"/>
+            <line x1="22" y1="30" x2="28" y2="30" stroke="#333" stroke-width="0.6"/>
+            <text x="10" y="82" font-size="6" fill="#333" transform="rotate(-90,18,82)" text-anchor="middle">H = 12.0 m</text>
+          </svg>
+        </div>
+        <!-- Story Shear Bar Chart -->
+        <div class="drawing-area" style="margin:4px 10px;">
+          <div class="drawing-label">Story Shears — قوى القص الطابقي</div>
+          <svg width="268" height="80" viewBox="0 0 268 80">
+            <!-- Axes -->
+            <line x1="40" y1="5" x2="40" y2="60" stroke="#333" stroke-width="1"/>
+            <line x1="40" y1="60" x2="250" y2="60" stroke="#333" stroke-width="1"/>
+            <!-- Bars -->
+            <rect x="60" y="20" width="40" height="40" fill="#FF8F00" rx="2" opacity="0.85"/>
+            <text x="80" y="15" font-size="7" fill="#E65100" font-weight="700" text-anchor="middle">207 kN</text>
+            <text x="80" y="74" font-size="7" fill="#666" text-anchor="middle">Base</text>
+
+            <rect x="120" y="30" width="40" height="30" fill="#FF6F00" rx="2" opacity="0.85"/>
+            <text x="140" y="25" font-size="7" fill="#E65100" font-weight="700" text-anchor="middle">117 kN</text>
+            <text x="140" y="74" font-size="7" fill="#666" text-anchor="middle">Story 1</text>
+
+            <rect x="180" y="40" width="40" height="20" fill="#FFB300" rx="2" opacity="0.85"/>
+            <text x="200" y="36" font-size="7" fill="#E65100" font-weight="700" text-anchor="middle">45 kN</text>
+            <text x="200" y="74" font-size="7" fill="#666" text-anchor="middle">Story 2</text>
+          </svg>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#BF360C"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#BF360C"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#BF360C"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#BF360C"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Seismic Analysis</div>
+    <div class="ar">التحليل الزلزالي</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 7: WATER TANK DESIGN ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar" style="background:#0277BD;">
+        <span class="back-arrow">←</span>
+        <span class="title">Water Tank <span class="subtitle-ar">| تصميم خزانات المياه</span></span>
+      </div>
+      <div class="content">
+        <div class="inner-tabs" style="background:#E1F5FE; border-bottom-color:#81D4FA;">
+          <div class="inner-tab active" style="color:#0277BD; border-bottom-color:#0277BD; background:#fff;">Geometry</div>
+          <div class="inner-tab" style="color:#0277BD;">Walls</div>
+          <div class="inner-tab" style="color:#0277BD;">Base</div>
+        </div>
+        <div class="form-section" style="padding:6px 12px;">
+          <div class="section-label" style="color:#0277BD; border-bottom-color:#E1F5FE;">Tank Dimensions أبعاد الخزان</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Length L (m)</label>
+              <input type="text" value="6.0" readonly>
+            </div>
+            <div class="form-group">
+              <label>Width B (m)</label>
+              <input type="text" value="4.0" readonly>
+            </div>
+            <div class="form-group">
+              <label>Height H (m)</label>
+              <input type="text" value="3.0" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Water Depth (m)</label>
+              <input type="text" value="2.8" readonly>
+            </div>
+            <div class="form-group">
+              <label>f'c (MPa)</label>
+              <input type="text" value="30" readonly>
+            </div>
+          </div>
+        </div>
+        <!-- Tank Cross-Section Drawing -->
+        <div class="drawing-area" style="margin:4px 8px;">
+          <div class="drawing-label">Tank Cross-Section — مقطع الخزان</div>
+          <svg width="272" height="175" viewBox="0 0 272 175">
+            <!-- Ground -->
+            <line x1="25" y1="155" x2="248" y2="155" stroke="#999" stroke-width="1.5"/>
+            <path d="M30,155 L27,161 M40,155 L37,161 M50,155 L47,161 M225,155 L222,161 M235,155 L232,161 M245,155 L242,161" stroke="#999" stroke-width="0.7"/>
+
+            <!-- Base slab -->
+            <rect x="40" y="145" width="190" height="12" fill="#90A4AE" stroke="#37474F" stroke-width="1.5" rx="1"/>
+            <text x="135" y="154" font-size="6.5" fill="#fff" text-anchor="middle" font-weight="500">Base Slab 300mm</text>
+
+            <!-- Left wall -->
+            <rect x="40" y="35" width="14" height="110" fill="#90A4AE" stroke="#37474F" stroke-width="1.5" rx="1"/>
+            <!-- Right wall -->
+            <rect x="216" y="35" width="14" height="110" fill="#90A4AE" stroke="#37474F" stroke-width="1.5" rx="1"/>
+
+            <!-- Water fill -->
+            <rect x="54" y="60" width="162" height="85" fill="#42A5F5" opacity="0.25" rx="1"/>
+            <rect x="54" y="60" width="162" height="85" fill="none" stroke="#42A5F5" stroke-width="0.5" stroke-dasharray="4 2" rx="1"/>
+            <!-- Water surface wave -->
+            <path d="M54,60 C80,56 100,64 135,60 C170,56 190,64 216,60" fill="none" stroke="#1565C0" stroke-width="1.5"/>
+            <!-- Water label -->
+            <text x="135" y="110" font-size="10" fill="#1565C0" text-anchor="middle" font-weight="600" opacity="0.5">WATER</text>
+            <text x="135" y="122" font-size="7" fill="#1565C0" text-anchor="middle" opacity="0.4">γ_w = 9.81 kN/m³</text>
+
+            <!-- Hydrostatic pressure arrows (triangular on left wall) -->
+            <line x1="32" y1="145" x2="38" y2="145" stroke="#0277BD" stroke-width="1.5"/>
+            <line x1="28" y1="130" x2="38" y2="130" stroke="#0277BD" stroke-width="1.2"/>
+            <line x1="24" y1="115" x2="38" y2="115" stroke="#0277BD" stroke-width="1"/>
+            <line x1="20" y1="100" x2="38" y2="100" stroke="#0277BD" stroke-width="0.8"/>
+            <line x1="16" y1="85" x2="38" y2="85" stroke="#0277BD" stroke-width="0.6"/>
+            <!-- Pressure envelope -->
+            <path d="M38,60 L12,145 L38,145" fill="rgba(2,119,189,0.1)" stroke="#0277BD" stroke-width="1" stroke-dasharray="3 2"/>
+            <text x="6" y="100" font-size="6" fill="#0277BD" transform="rotate(-90,6,100)" text-anchor="middle">Hydrostatic Pressure</text>
+
+            <!-- Pressure arrows on right wall -->
+            <line x1="230" y1="145" x2="236" y2="145" stroke="#0277BD" stroke-width="1.5"/>
+            <line x1="234" y1="130" x2="236" y2="130" stroke="#0277BD" stroke-width="1.2"/>
+            <line x1="238" y1="115" x2="236" y2="115" stroke="#0277BD" stroke-width="1"/>
+            <line x1="242" y1="100" x2="236" y2="100" stroke="#0277BD" stroke-width="0.8"/>
+
+            <!-- Uplift pressure (base) -->
+            <line x1="70" y1="160" x2="70" y2="170" stroke="#D32F2F" stroke-width="1"/>
+            <polygon points="70,170 67,166 73,166" fill="#D32F2F"/>
+            <line x1="110" y1="160" x2="110" y2="170" stroke="#D32F2F" stroke-width="1"/>
+            <polygon points="110,170 107,166 113,166" fill="#D32F2F"/>
+            <line x1="150" y1="160" x2="150" y2="170" stroke="#D32F2F" stroke-width="1"/>
+            <polygon points="150,170 147,166 153,166" fill="#D32F2F"/>
+            <line x1="190" y1="160" x2="190" y2="170" stroke="#D32F2F" stroke-width="1"/>
+            <polygon points="190,170 187,166 193,166" fill="#D32F2F"/>
+            <text x="135" y="174" font-size="6" fill="#D32F2F" text-anchor="middle">Uplift = 27.5 kN/m²</text>
+
+            <!-- Reinforcement in left wall -->
+            <circle cx="47" cy="70" r="2.5" fill="#D32F2F"/>
+            <circle cx="47" cy="90" r="2.5" fill="#D32F2F"/>
+            <circle cx="47" cy="110" r="2.5" fill="#D32F2F"/>
+            <circle cx="47" cy="130" r="2.5" fill="#D32F2F"/>
+            <circle cx="47" cy="75" r="2" fill="#D32F2F"/>
+            <circle cx="47" cy="95" r="2" fill="#D32F2F"/>
+            <circle cx="47" cy="115" r="2" fill="#D32F2F"/>
+            <circle cx="47" cy="135" r="2" fill="#D32F2F"/>
+
+            <!-- Dimension: Height -->
+            <line x1="252" y1="35" x2="252" y2="145" stroke="#333" stroke-width="0.6"/>
+            <line x1="248" y1="35" x2="256" y2="35" stroke="#333" stroke-width="0.6"/>
+            <line x1="248" y1="145" x2="256" y2="145" stroke="#333" stroke-width="0.6"/>
+            <text x="260" y="93" font-size="6.5" fill="#333" font-weight="500">3.0m</text>
+            <!-- Water depth -->
+            <line x1="258" y1="60" x2="258" y2="145" stroke="#1565C0" stroke-width="0.6"/>
+            <line x1="254" y1="60" x2="262" y2="60" stroke="#1565C0" stroke-width="0.6"/>
+            <line x1="254" y1="145" x2="262" y2="145" stroke="#1565C0" stroke-width="0.6"/>
+            <text x="262" y="107" font-size="6" fill="#1565C0">2.8m</text>
+
+            <!-- Top label -->
+            <text x="135" y="28" font-size="8" fill="#0277BD" text-anchor="middle" font-weight="600">Rectangular Ground Water Tank</text>
+            <text x="135" y="38" font-size="7" fill="#666" text-anchor="middle">6.0 × 4.0 × 3.0 m</text>
+          </svg>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#0277BD"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#0277BD"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#0277BD"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#0277BD"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#999"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Water Tank Design</div>
+    <div class="ar">تصميم خزانات المياه</div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 8: SETTINGS ==================== -->
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch"></div>
+        <div class="status-icons">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 8.5a1 1 0 100-2 1 1 0 000 2z" fill="#fff"/><path d="M3.5 6.5c1.4-1.4 3.6-1.4 5 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/><path d="M1.5 4.5c2.5-2.5 6.5-2.5 9 0" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none"><rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="#fff" stroke-width="1"/><rect x="16" y="3" width="2" height="4" rx="0.5" fill="#fff"/><rect x="2" y="2" width="11" height="6" rx="0.5" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="app-bar" style="background:#37474F;">
+        <span class="back-arrow">←</span>
+        <span class="title">Settings <span class="subtitle-ar">| الإعدادات</span></span>
+      </div>
+      <div class="content" style="background:#F5F5F5;">
+        <!-- Section: Design Code -->
+        <div style="padding:10px 14px 4px; font-size:9px; color:#888; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+          Design Standards — معايير التصميم
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#1565C0;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1" fill="none" stroke="#fff" stroke-width="1.2"/><line x1="4" y1="4" x2="10" y2="4" stroke="#fff" stroke-width="0.8"/><line x1="4" y1="6.5" x2="10" y2="6.5" stroke="#fff" stroke-width="0.8"/><line x1="4" y1="9" x2="8" y2="9" stroke="#fff" stroke-width="0.8"/></svg>
+            </div>
+            <div>
+              <div class="si-label">Design Code / كود التصميم</div>
+              <div class="si-desc">Select structural design standard</div>
+            </div>
+          </div>
+          <div class="si-value">
+            <div class="chip-group">
+              <span class="chip" style="font-size:7px; padding:2px 5px;">ECP</span>
+              <span class="chip active" style="font-size:7px; padding:2px 5px;">ACI 318</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">SBC</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">Euro</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Language & Appearance -->
+        <div style="padding:10px 14px 4px; font-size:9px; color:#888; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+          Appearance — المظهر
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#FF6F00;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><text x="7" y="10" text-anchor="middle" font-size="9" fill="#fff" font-weight="700">Aa</text></svg>
+            </div>
+            <div>
+              <div class="si-label">Language / اللغة</div>
+              <div class="si-desc">App interface language</div>
+            </div>
+          </div>
+          <div class="si-value">
+            <div class="chip-group">
+              <span class="chip active" style="font-size:7px; padding:2px 5px;">English</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">العربية</span>
+            </div>
+          </div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#455A64;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M7 2v5l3 3" stroke="#fff" stroke-width="1" fill="none"/></svg>
+            </div>
+            <div>
+              <div class="si-label">Theme / السمة</div>
+              <div class="si-desc">Light or Dark mode</div>
+            </div>
+          </div>
+          <div class="si-value">
+            <div class="chip-group">
+              <span class="chip active" style="font-size:7px; padding:2px 5px;">☀ Light</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">🌙 Dark</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Export & Units -->
+        <div style="padding:10px 14px 4px; font-size:9px; color:#888; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+          Output — المخرجات
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#2E7D32;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 2v8M4 7l3 3 3-3" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M2 12h10" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="si-label">Export Format / صيغة التصدير</div>
+              <div class="si-desc">Report output format</div>
+            </div>
+          </div>
+          <div class="si-value" style="flex-direction:column; align-items:flex-end; gap:2px;">
+            <div class="chip-group">
+              <span class="chip active" style="font-size:7px; padding:2px 5px;">PDF</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">DOCX</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">XLSX</span>
+            </div>
+          </div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#6A1B9A;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><text x="7" y="10.5" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">m</text></svg>
+            </div>
+            <div>
+              <div class="si-label">Units System / نظام الوحدات</div>
+              <div class="si-desc">Measurement units</div>
+            </div>
+          </div>
+          <div class="si-value">
+            <div class="chip-group">
+              <span class="chip active" style="font-size:7px; padding:2px 5px;">Metric</span>
+              <span class="chip" style="font-size:7px; padding:2px 5px;">Imperial</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Toggles -->
+        <div style="padding:10px 14px 4px; font-size:9px; color:#888; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+          Preferences — التفضيلات
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#00695C;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1.5l1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5L2 5l3.5-.5z" fill="#fff"/></svg>
+            </div>
+            <div>
+              <div class="si-label">Auto-Save / الحفظ التلقائي</div>
+            </div>
+          </div>
+          <div class="si-value">
+            <div class="toggle on"></div>
+          </div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon" style="background:#C62828;">
+              <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 2a4 4 0 110 8 4 4 0 010-8z" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M7 4v4l2.5 1.5" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="si-label">Notifications / الإشعارات</div>
+            </div>
+          </div>
+          <div class="si-value">
+            <div class="toggle off"></div>
+          </div>
+        </div>
+
+        <!-- App Version -->
+        <div style="text-align:center; padding:14px; font-size:8px; color:#bbb;">
+          Civil Engineer Pro v3.2.1<br>
+          <span style="font-family:'Noto Sans Arabic';">مهندس مدني محترف</span>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5L1.5 6.5V14.5H5.5V10H10.5V14.5H14.5V6.5Z" fill="#999"/></svg><span>Home</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1" fill="#999"/><rect x="9" y="2" width="5" height="5" rx="1" fill="#999"/><rect x="2" y="9" width="5" height="5" rx="1" fill="#999"/><rect x="9" y="9" width="5" height="5" rx="1" fill="#999"/></svg><span>Modules</span></div>
+        <div class="nav-item"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#999" stroke-width="1.5"/></svg><span>History</span></div>
+        <div class="nav-item active"><svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="#37474F"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">
+    <div class="en">Settings</div>
+    <div class="ar">الإعدادات</div>
+  </div>
+</div>
+
+</div><!-- end grid -->
+</body>
+</html>

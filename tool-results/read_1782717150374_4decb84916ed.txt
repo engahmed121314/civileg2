@@ -1,0 +1,1521 @@
+     1→     1→package com.civileg.app.utils
+     2→     2→
+     3→     3→import android.os.Parcelable
+     4→     4→import com.civileg.app.domain.entities.*
+     5→     5→import kotlinx.parcelize.Parcelize
+     6→     6→import javax.inject.Inject
+     7→     7→import javax.inject.Singleton
+     8→     8→import kotlin.math.*
+     9→     9→
+    10→    10→@Singleton
+    11→    11→class CalculatorEngine @Inject constructor(
+    12→    12→    private val settingsManager: SettingsManager
+    13→    13→) {
+    14→    14→
+    15→    15→    enum class DesignCode(val displayName: String) {
+    16→    16→        EGYPTIAN("الكود المصري - ECP 203"),
+    17→    17→        ACI("الكود الأمريكي - ACI 318"),
+    18→    18→        SAUDI("الكود السعودي - SBC 304");
+    19→    19→
+    20→    20→        companion object {
+    21→    21→            fun fromDomain(code: com.civileg.app.domain.entities.DesignCode): DesignCode {
+    22→    22→                return when (code) {
+    23→    23→                    com.civileg.app.domain.entities.DesignCode.ECP -> EGYPTIAN
+    24→    24→                    com.civileg.app.domain.entities.DesignCode.ACI -> ACI
+    25→    25→                    com.civileg.app.domain.entities.DesignCode.SBC -> SAUDI
+    26→    26→                    else -> EGYPTIAN
+    27→    27→                }
+    28→    28→            }
+    29→    29→        }
+    30→    30→    }
+    31→    31→
+    32→    32→    enum class SlabType(val displayName: String) {
+    33→    33→        SOLID("بلاطة صلبة (Solid)"),
+    34→    34→        FLAT("بلاطة مسطحة (Flat Slab)"),
+    35→    35→        HOLLOW_BLOCK("هردي (Hollow Block)"),
+    36→    36→        POST_TENSION("بوست تنشن (PT)"),
+    37→    37→        WAFFLE("بلاطة وافل (Waffle)")
+    38→    38→    }
+    39→    39→    
+    40→    40→    enum class SupportType(val displayName: String) {
+    41→    41→        HINGED_HINGED("Hinged-Hinged"), ROLLER_HINGED("Roller-Hinged"), FIXED_HINGED("Fixed-Hinged"), FIXED_FIXED("Fixed-Fixed"), CANTILEVER("Cantilever")
+    42→    42→    }
+    43→    43→    
+    44→    44→    enum class StairType(val displayName: String) { 
+    45→    45→        SINGLE_FLIGHT("Single Flight"), DOUBLE_FLIGHT("Double Flight"), SPIRAL("Spiral") 
+    46→    46→    }
+    47→    47→    
+    48→    48→    enum class TankType(val displayName: String) { 
+    49→    49→        RECTANGULAR_GROUND("أرضي مستطيل"), CIRCULAR_GROUND("أرضي دائري"), 
+    50→    50→        RECTANGULAR_ELEVATED("علوي مستطيل"), CIRCULAR_ELEVATED("علوي دائري"),
+    51→    51→        UNDERGROUND("تحت الأرض مستطيل"), CIRCULAR_UNDERGROUND("تحت الأرض دائري")
+    52→    52→    }
+    53→    53→
+    54→    54→    @Parcelize
+    55→    55→    data class ReinforcementBar(
+    56→    56→        val numBars: Int = 0,
+    57→    57→        val diameter: Int = 12,
+    58→    58→        val spacing: Double = 0.0,
+    59→    59→        val type: String = "الرئيسي",
+    60→    60→        val description: String = "",
+    61→    61→        val weightKg: Double = 0.0,
+    62→    62→        val barLength: Double = 0.0, // in meters
+    63→    63→        val shapeCode: Int = 0       // for BBS
+    64→    64→    ) : Parcelable {
+    65→    65→        val barString: String get() = if (numBars > 0) "${numBars}Ø${diameter}" else if (spacing > 0) "${(1000/spacing).toInt()}Ø${diameter}/m'" else description
+    66→    66→        val area: Double get() = if (numBars > 0) numBars * (PI * diameter.toDouble().pow(2.0) / 4.0) else if (spacing > 0) (1000.0/spacing) * (PI * diameter.toDouble().pow(2.0) / 4.0) else 0.0
+    67→    67→        val totalLength: Double get() = if (numBars > 0) numBars * barLength else if (spacing > 0) (1000.0/spacing) * barLength else 0.0
+    68→    68→    }
+    69→    69→
+    70→    70→    @Parcelize
+    71→    71→    data class StirrupReinforcement(
+    72→    72→        val diameter: Int = 8, 
+    73→    73→        val spacing: Double = 200.0, 
+    74→    74→        val description: String = "5Ø8/m'", 
+    75→    75→        val weightKg: Double = 0.0,
+    76→    76→        val numLegs: Int = 2
+    77→    77→    ) : Parcelable {
+    78→    78→        val area: Double get() = numLegs * (PI * diameter.toDouble().pow(2.0) / 4.0)
+    79→    79→    }
+    80→    80→
+    81→    81→    @Parcelize
+    82→    82→    data class DesignSafetyCheck(val name: String, val value: Double, val limit: Double, val unit: String, val isSafe: Boolean) : Parcelable
+    83→    83→
+    84→    84→    @Parcelize
+    85→    85→    data class BOQData(val concreteM3: Double, val steelKg: Double, val totalCost: Double, val currency: String = "EGP", val wasteTons: Double = 0.0) : Parcelable
+    86→    86→
+    87→    87→    @Parcelize
+    88→    88→    data class DesignReport(
+    89→    89→        val elementTitle: String,
+    90→    90→        val dimensions: String,
+    91→    91→        val boq: BOQData,
+    92→    92→        val reinforcement: List<ReinforcementBar>,
+    93→    93→        val safetyChecks: List<DesignSafetyCheck>
+    94→    94→    ) : Parcelable
+    95→    95→
+    96→    96→    // --- Results Classes ---
+    97→    97→
+    98→    98→    @Parcelize
+    99→    99→    data class BeamResult(
+   100→   100→        val width: Double, val depth: Double, val mu: Double, val vu: Double,
+   101→   101→        val reinforcementBottom: ReinforcementBar, val reinforcementTop: ReinforcementBar,
+   102→   102→        val stirrups: StirrupReinforcement, val safetyChecks: List<DesignSafetyCheck> = emptyList(),
+   103→   103→        val isSafe: Boolean, val concreteVolume: Double, val steelWeight: Double,
+   104→   104→        val cost: Double, val code: DesignCode, val appliedMoment: Double, val appliedShear: Double,
+   105→   105→        val supportType: SupportType = SupportType.HINGED_HINGED,
+   106→   106→        val momentCapacity: Double = 0.0, val shearCapacity: Double = 0.0, val steelRatio: Double = 0.0,
+   107→   107→        val steelWasteTons: Double = 0.0,
+   108→   108→        val deflection: Double = 0.0,
+   109→   109→        val allowableDeflection: Double = 0.0,
+   110→   110→        val utilizationRatio: Double = 0.0
+   111→   111→    ) : Parcelable
+   112→   112→
+   113→   113→    @Parcelize
+   114→   114→    data class ColumnResult(
+   115→   115→        val width: Double, val depth: Double, val pu: Double,
+   116→   116→        val reinforcement: ReinforcementBar, val stirrups: StirrupReinforcement,
+   117→   117→        val safetyChecks: List<DesignSafetyCheck> = emptyList(), val isSafe: Boolean,
+   118→   118→        val concreteVolume: Double, val steelWeight: Double, val cost: Double, val code: DesignCode,
+   119→   119→        val axialCapacity: Double = 0.0, val appliedAxial: Double = 0.0,
+   120→   120→        val slenderness: Double = 0.0, val isSlender: Boolean = false,
+   121→   121→        val punchingSafe: Boolean = true,
+   122→   122→        val columnType: String = "RECTANGULAR",
+   123→   123→        val reinforcementArea: Double = 0.0,
+   124→   124→        val minReinforcementArea: Double = 0.0,
+   125→   125→        val maxReinforcementArea: Double = 0.0,
+   126→   126→        val reinforcementRatio: Double = 0.0,
+   127→   127→        val steelWasteKg: Double = 0.0,
+   128→   128→        val rebarAlternatives: List<ReinforcementBar> = emptyList(),
+   129→   129→        val momentCapacity: Double = 0.0,
+   130→   130→        val utilizationRatio: Double = 0.0
+   131→   131→    ) : Parcelable
+   132→   132→
+   133→   133→    enum class FootingType(val displayName: String) {
+   134→   134→        ISOLATED("منفصلة"),
+   135→   135→        COMBINED("مشتركة"),
+   136→   136→        STRIP("شريطية"),
+   137→   137→        RAFT("لبشة خرسانية"),
+   138→   138→        PILE_CAP("هامة خوازيق")
+   139→   139→        }
+   140→   140→
+   141→   141→    @Parcelize
+   142→   142→    data class FootingResult(
+   143→   143→        val type: FootingType,
+   144→   144→        val width: Double, val length: Double, val thickness: Double,
+   145→   145→        val soilPressure: Double, val allowablePressure: Double,
+   146→   146→        val reinforcementBottom: ReinforcementBar, val isSafe: Boolean, val code: DesignCode,
+   147→   147→        val concreteVolume: Double, val steelWeight: Double, val cost: Double,
+   148→   148→        val isOptimal: Boolean = true,
+   149→   149→        val efficiencyScore: Double = 100.0,
+   150→   150→        val barsX: Int = 10, val barsY: Int = 10, val barDiameter: Int = 16,
+   151→   151→        val reinforcementTopX: Int = 0, val reinforcementTopY: Int = 0,
+   152→   152→        val topBarDiameter: Int = 0,
+   153→   153→        val isCombined: Boolean = false,
+   154→   154→        val distanceBetweenColumns: Double = 0.0,
+   155→   155→        val column1Size: Pair<Double, Double> = Pair(500.0, 500.0),
+   156→   156→        val column2Size: Pair<Double, Double> = Pair(500.0, 500.0),
+   157→   157→        val safetyChecks: List<DesignSafetyCheck> = emptyList(),
+   158→   158→        val utilizationRatio: Double = 0.0,
+   159→   159→        val isNeighbor: Boolean = false
+   160→   160→    ) : Parcelable
+   161→   161→
+   162→   162→    @Parcelize
+   163→   163→    data class SlabResult(
+   164→   164→        val type: SlabType, val thickness: Double,
+   165→   165→        val reinforcementMain: ReinforcementBar, val reinforcementSecondary: ReinforcementBar,
+   166→   166→        val isSafe: Boolean, val concreteVolume: Double, val steelWeight: Double,
+   167→   167→        val cost: Double, val code: DesignCode,
+   168→   168→        val momentX: Double = 0.0, val momentY: Double = 0.0, val totalLoad: Double = 0.0,
+   169→   169→        val punchingSafe: Boolean = true, val safetyChecks: List<DesignSafetyCheck> = emptyList(),
+   170→   170→        val steelWasteTons: Double = 0.0,
+   171→   171→        val minThickness: Double = 0.0,
+   172→   172→        val efficiencyScore: Double = 0.0,
+   173→   173→        val utilizationRatio: Double = 0.0,
+   174→   174→        val suggestions: List<String> = emptyList()
+   175→   175→    ) : Parcelable
+   176→   176→
+   177→   177→    @Parcelize
+   178→   178→    data class StairResult(
+   179→   179→        val type: StairType, val thickness: Double,
+   180→   180→        val reinforcement: ReinforcementBar, val distributionReinforcement: ReinforcementBar,
+   181→   181→        val isSafe: Boolean, val concreteVolume: Double, val steelWeight: Double,
+   182→   182→        val cost: Double, val code: DesignCode,
+   183→   183→        val safetyChecks: List<DesignSafetyCheck> = emptyList(),
+   184→   184→        val utilizationRatio: Double = 0.0,
+   185→   185→        val mu: Double = 0.0,
+   186→   186→        val wu: Double = 0.0,
+   187→   187→        val span: Double = 0.0,
+   188→   188→        val riser: Double = 0.0,
+   189→   189→        val tread: Double = 0.0,
+   190→   190→        val fcu: Double = 25.0,
+   191→   191→        val fy: Double = 400.0
+   192→   192→    ) : Parcelable
+   193→   193→
+   194→   194→    @Parcelize
+   195→   195→    data class TankResult(
+   196→   196→        val type: TankType, val length: Double, val width: Double, val height: Double,
+   197→   197→        val wallThickness: Double, val baseThickness: Double,
+   198→   198→        val wallReinforcement: ReinforcementBar, val baseReinforcement: ReinforcementBar = ReinforcementBar(spacing = 200.0, diameter = 12),
+   199→   199→        val isSafe: Boolean, val concreteVolume: Double, val steelWeight: Double, val cost: Double, val code: DesignCode,
+   200→   200→        val waterPressure: Double = 0.0, val soilPressure: Double = 0.0, val mu: Double = 0.0, val capacity: Double = 0.0,
+   201→   201→        val safetyChecks: List<DesignSafetyCheck> = emptyList(),
+   202→   202→        val alternatives: List<TankResult> = emptyList(),
+   203→   203→        val isOptimal: Boolean = true,
+   204→   204→        val utilizationRatio: Double = 0.0,
+   205→   205→        val fcu: Double = 25.0,
+   206→   206→        val fy: Double = 400.0
+   207→   207→    ) : Parcelable {
+   208→   208→        val wallThick: Double get() = wallThickness
+   209→   209→        val baseThick: Double get() = baseThickness
+   210→   210→        val capacityM3: Double get() = capacity
+   211→   211→        val pressure: Double get() = waterPressure
+   212→   212→        val safetyCheck: String get() = if(isSafe) "SAFE" else "UNSAFE"
+   213→   213→        }
+   214→   214→
+   215→   215→    @Parcelize
+   216→   216→    data class RetainingWallResult(
+   217→   217→        val height: Double, val stemThickness: Double, val baseWidth: Double,
+   218→   218→        val stemReinforcement: ReinforcementBar, val baseReinforcement: ReinforcementBar,
+   219→   219→        val safetyChecks: List<DesignSafetyCheck> = emptyList(), val isSafe: Boolean,
+   220→   220→        val concreteVolume: Double, val steelWeight: Double, val cost: Double, val code: DesignCode,
+   221→   221→        val factorOfSafetyOverturning: Double = 2.0, val factorOfSafetySliding: Double = 1.5,
+   222→   222→        val utilizationRatio: Double = 0.0,
+   223→   223→        val muStem: Double = 0.0,
+   224→   224→        val pa: Double = 0.0,
+   225→   225→        val ps: Double = 0.0,
+   226→   226→        val ka: Double = 0.0,
+   227→   227→        val soilDensity: Double = 18.0,
+   228→   228→        val fcu: Double = 25.0,
+   229→   229→        val fy: Double = 400.0
+   230→   230→    ) : Parcelable
+   231→   231→
+   232→   232→    @Parcelize
+   233→   233→    data class SteelWarehouseResult(
+   234→   234→        val span: Double, 
+   235→   235→        val length: Double,
+   236→   236→        val eaveHeight: Double, 
+   237→   237→        val spacing: Double,
+   238→   238→        val totalHeight: Double,
+   239→   239→        val maxMoment: Double = 0.0,
+   240→   240→        val maxShear: Double = 0.0,
+   241→   241→        val columnSection: String, 
+   242→   242→        val rafterSection: String,
+   243→   243→        val purlinSection: String = "C100x50x2.5",
+   244→   244→        val boltType: String = "A325 M20",
+   245→   245→        val isSafe: Boolean = true, 
+   246→   246→        val concreteVolume: Double = 0.0, 
+   247→   247→        val steelWeight: Double = 0.0, 
+   248→   248→        val cost: Double = 0.0,
+   249→   249→        val code: DesignCode = DesignCode.EGYPTIAN
+   250→   250→    ) : Parcelable
+   251→   251→
+   252→   252→    @Parcelize
+   253→   253→    data class SeismicInput(
+   254→   254→        val zone: Double, val importance: Double, val soilType: String,
+   255→   255→        val height: Double, val totalWeight: Double, val systemType: String = "Frames", val reductionFactor: Double = 5.0
+   256→   256→    ) : Parcelable
+   257→   257→
+   258→   258→    @Parcelize
+   259→   259→    data class SeismicResult(
+   260→   260→        val baseShear: Double, val storyDrift: Double,
+   261→   261→        val timePeriod: Double = 0.0, val spectralAcceleration: Double = 0.0,
+   262→   262→        val forcesPerFloor: Map<Int, Double> = emptyMap(),
+   263→   263→        val isSafe: Boolean, val code: DesignCode,
+   264→   264→        val zone: Double = 0.0,
+   265→   265→        val importance: Double = 1.0,
+   266→   266→        val reductionFactor: Double = 5.0,
+   267→   267→        val totalWeight: Double = 0.0,
+   268→   268→        val height: Double = 0.0
+   269→   269→    ) : Parcelable
+   270→   270→
+   271→   271→    // --- Steel Dictionary & Design ---
+   272→   272→
+   273→   273→    fun getSteelSectionLibrary(): Map<String, List<SteelSectionType>> {
+   274→   274→        val iSections = mutableListOf<SteelSectionType>()
+   275→   275→        // IPE Standard Sections
+   276→   276→        val ipeSizes = listOf(80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400, 450, 500, 550, 600)
+   277→   277→        ipeSizes.forEach { h ->
+   278→   278→            val bf = when {
+   279→   279→                h <= 100 -> 55.0; h <= 140 -> 73.0; h <= 200 -> 100.0; h <= 300 -> 150.0; else -> 200.0
+   280→   280→                }
+   281→   281→            val tf = 7.0 + (h/100.0)*2.0
+   282→   282→            val tw = 4.0 + (h/100.0)*1.5
+   283→   283→            iSections.add(SteelSectionType.ISection(h.toDouble(), bf, tf, tw, SteelGrade.ST37, "IPE $h"))
+   284→   284→            }
+   285→   285→
+   286→   286→        val hebSections = mutableListOf<SteelSectionType>()
+   287→   287→        // HEB Standard Sections
+   288→   288→        val hebSizes = listOf(100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300)
+   289→   289→        hebSizes.forEach { h ->
+   290→   290→            hebSections.add(SteelSectionType.ISection(h.toDouble(), h.toDouble(), 10.0 + (h/50.0)*2.0, 6.0 + (h/50.0)*1.5, SteelGrade.ST37, "HEB $h"))
+   291→   291→            }
+   292→   292→
+   293→   293→        val angles = mutableListOf<SteelSectionType>()
+   294→   294→        // L-Angles Standard (Equal Legs)
+   295→   295→        listOf(40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 120.0).forEach { size ->
+   296→   296→            angles.add(SteelSectionType.LSection(size, size, size/10.0, SteelGrade.ST37, "L ${size.toInt()}x${size.toInt()}"))
+   297→   297→            }
+   298→   298→
+   299→   299→        val channels = mutableListOf<SteelSectionType>()
+   300→   300→        // UPE/UPN Standard
+   301→   301→        listOf(80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300).forEach { h ->
+   302→   302→            channels.add(SteelSectionType.CSection(h.toDouble(), h/2.0, 8.0 + h/100.0*2.0, 5.0 + h/100.0*1.5, SteelGrade.ST37, "UPN $h"))
+   303→   303→            }
+   304→   304→
+   305→   305→        val rhs = mutableListOf<SteelSectionType>()
+   306→   306→        // Rectangular Hollow Sections
+   307→   307→        listOf(50.0, 80.0, 100.0, 120.0, 150.0, 200.0).forEach { h ->
+   308→   308→            rhs.add(SteelSectionType.RHS(h, h/2.0, 4.0 + h/50.0, SteelGrade.S275, "RHS ${h.toInt()}x${(h/2).toInt()}"))
+   309→   309→            }
+   310→   310→
+   311→   311→        return mapOf(
+   312→   312→            "IPE (European I-Beams)" to iSections,
+   313→   313→            "HEB (European Wide Flange)" to hebSections,
+   314→   314→            "HEA (European Light Wide Flange)" to hebSections.map { 
+   315→   315→                val s = it as SteelSectionType.ISection
+   316→   316→                s.copy(tf = s.tf * 0.7, tw = s.tw * 0.8, customName = s.customName?.replace("HEB", "HEA")) 
+   317→   317→            },
+   318→   318→            "L-Angles (Equal)" to angles,
+   319→   319→            "UPN Channels" to channels,
+   320→   320→            "RHS (Hollow Sections)" to rhs
+   321→   321→        )
+   322→   322→        }
+   323→   323→
+   324→   324→    fun calculateSteelMember(
+   325→   325→        section: SteelSectionType,
+   326→   326→        memberType: SteelMemberType,
+   327→   327→        inputs: SteelInputs,
+   328→   328→        code: DesignCode
+   329→   329→    ): SteelMemberResult {
+   330→   330→        val area = section.getArea()
+   331→   331→        val fy = when (section) {
+   332→   332→            is SteelSectionType.ISection -> section.grade.fy
+   333→   333→            is SteelSectionType.CSection -> section.grade.fy
+   334→   334→            is SteelSectionType.LSection -> section.grade.fy
+   335→   335→            is SteelSectionType.CHS -> section.grade.fy
+   336→   336→            is SteelSectionType.RHS -> section.grade.fy
+   337→   337→            is SteelSectionType.TSection -> section.grade.fy
+   338→   338→            else -> 240.0
+   339→   339→            }
+   340→   340→        
+   341→   341→        // 1. Axial Capacity (Nominal) - Simplified AISC/ECP
+   342→   342→        val axialCapacity = (0.85 * fy * area) / 1000.0 // kN
+   343→   343→        
+   344→   344→        // 2. Flexural Capacity - Simplified Sx calculation for I/C/RHS
+   345→   345→        val sx = when (section) {
+   346→   346→            is SteelSectionType.ISection -> {
+   347→   347→                (section.tw * (section.h - 2 * section.tf).pow(2) / 6) + 
+   348→   348→                (2 * section.bf * section.tf * (section.h / 2 - section.tf / 2))
+   349→   349→                }
+   350→   350→            is SteelSectionType.RHS -> {
+   351→   351→                (section.height.pow(2) * section.width / 6.0) - ((section.height - 2*section.thickness).pow(2) * (section.width - 2*section.thickness) / 6.0)
+   352→   352→                }
+   353→   353→            else -> 1000.0 // Minimum placeholder
+   354→   354→            }
+   355→   355→        val flexuralCapacity = (0.9 * fy * sx) / 1e6 // kN.m
+   356→   356→
+   357→   357→        // 3. Shear Capacity
+   358→   358→        val shearArea = when(section) {
+   359→   359→            is SteelSectionType.ISection -> section.h * section.tw
+   360→   360→            else -> area * 0.6
+   361→   361→            }
+   362→   362→        val shearCapacity = (0.6 * fy * shearArea) / 1000.0 // kN
+   363→   363→
+   364→   364→        val utilAxial = inputs.axialLoad / axialCapacity.coerceAtLeast(1.0)
+   365→   365→        val utilMoment = inputs.moment / flexuralCapacity.coerceAtLeast(1.0)
+   366→   366→        
+   367→   367→        // 4. Professional Interaction Equation (AISC 360-H1 / ECP 205)
+   368→   368→        val totalUtil = if (utilAxial >= 0.2) {
+   369→   369→            utilAxial + (8.0/9.0) * utilMoment
+   370→   370→        } else {
+   371→   371→            (utilAxial / 2.0) + utilMoment
+   372→   372→            }
+   373→   373→
+   374→   374→        val weight = (area * 1e-6) * 7850.0 // kg/m (mm2 to m2 * density)
+   375→   375→
+   376→   376→        val depth = when(section) {
+   377→   377→            is SteelSectionType.ISection -> section.depth
+   378→   378→            is SteelSectionType.CSection -> section.depth
+   379→   379→            is SteelSectionType.RHS -> section.height
+   380→   380→            is SteelSectionType.CHS -> section.outerDiameter
+   381→   381→            is SteelSectionType.LSection -> section.legA
+   382→   382→            is SteelSectionType.TSection -> section.webDepth + section.flangeThickness
+   383→   383→            else -> 100.0
+   384→   384→            }
+   385→   385→        val slenderness = (inputs.unbracedLength / (depth * 0.28).coerceAtLeast(10.0))
+   386→   386→
+   387→   387→        return SteelMemberResult(
+   388→   388→            sectionType = section,
+   389→   389→            memberType = memberType,
+   390→   390→            axialCapacity = axialCapacity,
+   391→   391→            flexuralCapacity = flexuralCapacity,
+   392→   392→            shearCapacity = shearCapacity,
+   393→   393→            utilizationRatio = totalUtil,
+   394→   394→            isSafe = totalUtil <= 1.0 && inputs.shear <= shearCapacity,
+   395→   395→            connectionDesign = null,
+   396→   396→            bucklingCheck = BucklingCheckResult(
+   397→   397→                slendernessRatio = slenderness,
+   398→   398→                criticalStress = fy * 0.6,
+   399→   399→                bucklingMode = BucklingMode.FLEXURAL,
+   400→   400→                isSafe = slenderness <= 180.0,
+   401→   401→                codeReference = "AISC-E3 / ECP-4.2"
+   402→   402→            ),
+   403→   403→            weight = weight,
+   404→   404→            cost = weight * (settingsManager.steelPrice / 1000.0) * 1.2, // 20% fabrication markup
+   405→   405→            warnings = if (totalUtil > 0.9) listOf("Section close to capacity") else emptyList(),
+   406→   406→            codeNotes = listOf("Design based on ${code.displayName}", "E = 210,000 MPa")
+   407→   407→        )
+   408→   408→        }
+   409→   409→
+   410→   410→    fun designSteelWarehouse(inputs: SteelWarehouseInputs): SteelWarehouseAnalysisResult {
+   411→   411→        val span = inputs.span
+   412→   412→        val spacing = inputs.baySpacing
+   413→   413→        val load = (inputs.liveLoad + inputs.claddingWeight) * spacing // kN/m
+   414→   414→        val maxMoment = (load * span.pow(2)) / 8.0
+   415→   415→        val maxShear = (load * span) / 2.0
+   416→   416→        
+   417→   417→        // Mezzanine Loads
+   418→   418→        val mezzanineArea = inputs.numberOfMezzanines * span * inputs.length
+   419→   419→        val mezzanineLoadPerColumn = if (inputs.numberOfMezzanines > 0) {
+   420→   420→            (inputs.mezzanineLiveLoad + 2.0) * (spacing * span / 2.0) * inputs.numberOfMezzanines
+   421→   421→        } else 0.0
+   422→   422→        
+   423→   423→        val totalAxialLoad = 50.0 + mezzanineLoadPerColumn
+   424→   424→        
+   425→   425→        // Selection of Section (Simplistic search for optimal)
+   426→   426→        val library = getSteelSectionLibrary()["IPE (European I-Beams)"] ?: emptyList()
+   427→   427→        val selectedSection = library.firstOrNull { 
+   428→   428→            val res = calculateSteelMember(it, SteelMemberType.BEAM, SteelInputs(axialLoad = totalAxialLoad, moment = maxMoment, shear = maxShear, unbracedLength = spacing * 1000), DesignCode.EGYPTIAN)
+   429→   429→            res.isSafe
+   430→   430→        } ?: library.last()
+   431→   431→
+   432→   432→        val mezzanineSteelWeight = if (inputs.numberOfMezzanines > 0) {
+   433→   433→            mezzanineArea * 45.0 / 1000.0 // Tons (Estimated 45kg/m2 for mezzanine steel)
+   434→   434→        } else 0.0
+   435→   435→
+   436→   436→        val totalWeight = (span * inputs.length * 5) * (selectedSection.getArea() / 1e6 * 7850) / 1000.0 + mezzanineSteelWeight // Tons (Estimated)
+   437→   437→
+   438→   438→        // Feasibility Logic
+   439→   439→        val estimatedTotalCost = totalWeight * (settingsManager.steelPrice) * 1.3 // 30% for erection/accessories
+   440→   440→        val area = span * inputs.length
+   441→   441→        val costPerM2 = estimatedTotalCost / area.coerceAtLeast(1.0)
+   442→   442→        val estimatedProfit = estimatedTotalCost * 0.15 // 15% net profit margin
+   443→   443→        val roi = (estimatedProfit / estimatedTotalCost.coerceAtLeast(1.0)) * 100.0
+   444→   444→
+   445→   445→        return SteelWarehouseAnalysisResult(
+   446→   446→            mainFrame = MainFrameResult(
+   447→   447→                columnSection = selectedSection,
+   448→   448→                rafterSection = selectedSection,
+   449→   449→                maxMoment = maxMoment,
+   450→   450→                maxShear = maxShear,
+   451→   451→                maxAxial = totalAxialLoad,
+   452→   452→                maxDeflection = (5 * load * span.pow(4) * 1e12) / (384 * 210000 * 1e8), 
+   453→   453→                allowableDeflection = span * 1000 / 250.0,
+   454→   454→                isSafe = true,
+   455→   455→                utilizationMoment = 0.75
+   456→   456→            ),
+   457→   457→            secondaryMembers = SecondaryMembersResult(
+   458→   458→                purlinSection = SteelSectionType.CSection(140.0, 60.0, 8.0, 5.0, SteelGrade.S275),
+   459→   459→                girtSection = SteelSectionType.CSection(120.0, 50.0, 6.0, 4.0, SteelGrade.S275),
+   460→   460→                bracingSection = SteelSectionType.LSection(80.0, 80.0, 8.0, SteelGrade.ST37),
+   461→   461→                purlinCount = (span / inputs.purlinSpacing).toInt() * 2,
+   462→   462→                isSafe = true
+   463→   463→            ),
+   464→   464→            connections = emptyList(),
+   465→   465→            totalWeight = totalWeight,
+   466→   466→            totalCladdingArea = span * inputs.length,
+   467→   467→            weightPerM2 = (totalWeight * 1000) / (span * inputs.length).coerceAtLeast(1.0),
+   468→   468→            resultsByCode = "AISC-ASD / ECP 205",
+   469→   469→            safetyStatus = true,
+   470→   470→            recommendations = listOf("Use Anchor Bolts M24", "Check lateral bracing", if (inputs.numberOfMezzanines > 0) "Verify Mezzanine Joists" else ""),
+   471→   471→            materialTakeoff = mapOf("IPE Sections" to totalWeight, "Mezzanine Steel" to mezzanineSteelWeight),
+   472→   472→            estimatedTotalCost = estimatedTotalCost,
+   473→   473→            costPerM2 = costPerM2,
+   474→   474→            roi = roi,
+   475→   475→            netProfit = estimatedProfit,
+   476→   476→            mezzanineArea = mezzanineArea,
+   477→   477→            mezzanineSteelWeight = mezzanineSteelWeight
+   478→   478→        )
+   479→   479→    }
+   480→   480→
+   481→   481→    @Parcelize
+   482→   482→    data class ColumnECPResult(val capacity: Double, val asMin: Double) : Parcelable
+   483→   483→
+   484→   484→    fun calculateSteelWarehousePro(inputs: SteelWarehouseInputs): SteelWarehouseProResult {
+   485→   485→        val codeName = inputs.code.displayName
+   486→   486→        val tributaryArea = inputs.baySpacing * inputs.length
+   487→   487→        val serviceLoad = inputs.deadLoad + inputs.liveLoad + inputs.windLoad + inputs.snowLoad + inputs.claddingWeight
+   488→   488→        val frameReaction = tributaryArea * serviceLoad / 2.0
+   489→   489→        val spanM = inputs.span
+   490→   490→        val maxMoment = frameReaction * spanM / 4.0
+   491→   491→        val maxShear = frameReaction / 2.0
+   492→   492→        val axial = frameReaction * 0.35 + inputs.windLoad * tributaryArea * 0.18
+   493→   493→        val baseShear = max(0.0, inputs.windLoad * tributaryArea * 0.33)
+   494→   494→        
+   495→   495→        val drift = when (CalculatorEngine.DesignCode.fromDomain(inputs.code)) {
+   496→   496→            CalculatorEngine.DesignCode.EGYPTIAN -> spanM * 1000.0 / 500.0
+   497→   497→            CalculatorEngine.DesignCode.ACI -> spanM * 1000.0 / 400.0
+   498→   498→            CalculatorEngine.DesignCode.SAUDI -> spanM * 1000.0 / 450.0
+   499→   499→            else -> spanM * 1000.0 / 500.0
+   500→   500→        } * 0.8
+   501→   501→
+   502→   502→        val utilization = min(1.0, (maxMoment / 300.0) + (axial / 700.0) + (maxShear / 200.0))
+   503→   503→        val notes = listOf(
+   504→   504→            "Selected code: $codeName",
+   505→   505→            "Report layout is bilingual and drawing-oriented.",
+   506→   506→            "This export is structured for professional PDF presentation."
+   507→   507→        )
+   508→   508→
+   509→   509→        return SteelWarehouseProResult(
+   510→   510→            codeName = codeName,
+   511→   511→            tributaryAreaM2 = tributaryArea,
+   512→   512→            serviceLoadKnM2 = serviceLoad,
+   513→   513→            frameReactionKn = frameReaction,
+   514→   514→            baseShearKn = baseShear,
+   515→   515→            maxMomentKnM = maxMoment,
+   516→   516→            maxAxialKn = axial,
+   517→   517→            maxShearKn = maxShear,
+   518→   518→            driftMm = drift,
+   519→   519→            utilization = utilization,
+   520→   520→            compressionZone = "Top flange / rafter compression zone",
+   521→   521→            tensionZone = "Bottom flange / column base tension zone",
+   522→   522→            notes = notes
+   523→   523→        )
+   524→   524→        }
+   525→   525→
+   526→   526→    companion object {
+   527→   527→        fun designColumnECP(w: Double, d: Double, p: Double, fcu: Double, fy: Double): ColumnECPResult {
+   528→   528→            val ag = w * d
+   529→   529→            val capacity = (0.35 * fcu * ag + 0.67 * fy * (0.008 * ag)) / 1000.0
+   530→   530→            return ColumnECPResult(capacity, 0.008 * ag)
+   531→   531→            }
+   532→   532→        }
+   533→   533→
+   534→   534→    fun designColumn(
+   535→   535→        width: Double,
+   536→   536→        depth: Double,
+   537→   537→        pu: Double,
+   538→   538→        fcu: Double,
+   539→   539→        fy: Double,
+   540→   540→        code: DesignCode,
+   541→   541→        isCircular: Boolean = false,
+   542→   542→        connectedSlab: String = "SOLID",
+   543→   543→        hasCap: Boolean = false,
+   544→   544→        clearHeight: Double = 3000.0, // mm
+   545→   545→        preferredDiameter: Int = 16,
+   546→   546→        autoOptimize: Boolean = true,
+   547→   547→        manualNumBars: Int? = null
+   548→   548→    ): ColumnResult {
+   549→   549→        val ag = if (isCircular) PI * width.pow(2.0) / 4.0 else width * depth
+   550→   550→        
+   551→   551→        // --- Code Specific Factors & Constants ---
+   552→   552→        val fcPrime = if (code == DesignCode.EGYPTIAN) fcu else fcu * 0.8 // Approximate f'c from fcu
+   553→   553→        var capacity = 0.0
+   554→   554→        var asMin = 0.008 * ag
+   555→   555→        var asMax = 0.04 * ag
+   556→   556→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+   557→   557→
+   558→   558→        when (code) {
+   559→   559→            DesignCode.EGYPTIAN -> {
+   560→   560→                // ECP 203 (Art. 4-2-1-1): Pu = 0.35*fcu*Ac + 0.67*fy*Asc
+   561→   561→                // This formula is for short columns with minimum eccentricity.
+   562→   562→                val i = if (isCircular) 0.25 * width else min(width, depth) / sqrt(12.0)
+   563→   563→                val lambda = (1.0 * clearHeight) / i
+   564→   564→                val lambdaLimit = if (isCircular) 8.0 else 10.0
+   565→   565→                val isSlender = lambda > lambdaLimit
+   566→   566→                
+   567→   567→                asMin = 0.008 * ag // ECP Min reinforcement 0.8%
+   568→   568→                val asReq = max(asMin, (pu * 1000.0 - 0.35 * fcu * ag) / (0.67 * fy))
+   569→   569→                capacity = (0.35 * fcu * (ag - asReq) + 0.67 * fy * asReq) / 1000.0
+   570→   570→                
+   571→   571→                safetyChecks.add(DesignSafetyCheck("Slenderness λ (ECP)", lambda, lambdaLimit, "", lambda <= lambdaLimit))
+   572→   572→                if (isSlender) {
+   573→   573→                    // Approximate reduction for slenderness if not using delta method
+   574→   574→                    capacity *= 0.8 
+   575→   575→                }
+   576→   576→            }
+   577→   577→            DesignCode.SAUDI -> {
+   578→   578→                // SBC 304 (Art. 10.3.6.2): ΦPn,max = 0.80 * Φ * [0.85*fc'*(Ag - Ast) + fy*Ast]
+   579→   579→                // Tied columns: Φ = 0.65, α = 0.80. Spiral: Φ = 0.75, α = 0.85
+   580→   580→                val phi = if (isCircular) 0.75 else 0.65
+   581→   581→                val alpha = if (isCircular) 0.85 else 0.80
+   582→   582→                
+   583→   583→                asMin = 0.01 * ag // SBC Min 1%
+   584→   584→                asMax = 0.08 * ag
+   585→   585→                
+   586→   586→                val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
+   587→   587→                capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
+   588→   588→                
+   589→   589→                val r = if (isCircular) 0.25 * width else min(width, depth) * 0.3
+   590→   590→                val slenderness = (1.0 * clearHeight) / r
+   591→   591→                safetyChecks.add(DesignSafetyCheck("SBC Slenderness (kl/r)", slenderness, 22.0, "", slenderness <= 22.0))
+   592→   592→            }
+   593→   593→            DesignCode.ACI -> {
+   594→   594→                // ACI 318-19 (Table 22.4.2.1): Same as SBC
+   595→   595→                val phi = 0.65
+   596→   596→                val alpha = 0.80
+   597→   597→                asMin = 0.01 * ag
+   598→   598→                asMax = 0.08 * ag
+   599→   599→                val asReq = max(asMin, (pu * 1000.0 / (alpha * phi) - 0.85 * fcPrime * ag) / (fy - 0.85 * fcPrime))
+   600→   600→                capacity = (alpha * phi * (0.85 * fcPrime * (ag - asReq) + fy * asReq)) / 1000.0
+   601→   601→                
+   602→   602→                val r = if (isCircular) 0.25 * width else min(width, depth) * 0.3
+   603→   603→                val slenderness = (1.0 * clearHeight) / r
+   604→   604→                safetyChecks.add(DesignSafetyCheck("ACI Slenderness Ratio", slenderness, 22.0, "", slenderness <= 22.0))
+   605→   605→            }
+   606→   606→            }
+   607→   607→
+   608→   608→        val barDia = preferredDiameter.toDouble()
+   609→   609→        val areaOneBar = PI * barDia.pow(2.0) / 4.0
+   610→   610→        val asReqTotal = max(asMin, (pu * 1000.0 * 1.1) / fy)
+   611→   611→        
+   612→   612→        // --- Reinforcement Optimization / Manual Logic ---
+   613→   613→        val finalNumBars = if (autoOptimize) {
+   614→   614→            ceil(asReqTotal / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
+   615→   615→        } else {
+   616→   616→            manualNumBars ?: ceil(asMin / areaOneBar).toInt().coerceAtLeast(if (isCircular) 6 else 4)
+   617→   617→        }
+   618→   618→
+   619→   619→        val finalAsProvided = finalNumBars * areaOneBar
+   620→   620→        
+   621→   621→        val rho = (finalAsProvided / ag) * 100.0
+   622→   622→        val vol = (ag * clearHeight) / 1e9
+   623→   623→        
+   624→   624→        // Accurate Steel Weight Calculation
+   625→   625→        val mainBarWeightPerMeter = (barDia.pow(2.0) / 162.0)
+   626→   626→        val mainSteelWeight = finalNumBars * (clearHeight / 1000.0) * mainBarWeightPerMeter
+   627→   627→        
+   628→   628→        // Stirrups Weight (8mm @ 200mm or code min)
+   629→   629→        val stirrupLength = if (isCircular) PI * width / 1000.0 else (2 * (width + depth) / 1000.0)
+   630→   630→        val numStirrups = (clearHeight / 200.0) + 1
+   631→   631→        val stirrupWeight = numStirrups * stirrupLength * (8.0.pow(2.0) / 162.0)
+   632→   632→        
+   633→   633→        val totalSteelWeight = (mainSteelWeight + stirrupWeight) * 1.05
+   634→   634→        val steelWasteKg = totalSteelWeight * 0.05
+   635→   635→        
+   636→   636→        val utilizationRatio = (pu / capacity).coerceIn(0.0, 1.2)
+   637→   637→        
+   638→   638→        safetyChecks.add(DesignSafetyCheck("Axial Capacity", pu, capacity, "kN", capacity >= pu))
+   639→   639→        safetyChecks.add(DesignSafetyCheck("Min Reinforcement", rho, (asMin/ag)*100.0, "%", finalAsProvided >= asMin))
+   640→   640→
+   641→   641→        return ColumnResult(
+   642→   642→            width = width, depth = depth, pu = pu, 
+   643→   643→            reinforcement = ReinforcementBar(finalNumBars, preferredDiameter), 
+   644→   644→            stirrups = StirrupReinforcement(8, 200.0), 
+   645→   645→            safetyChecks = safetyChecks, isSafe = safetyChecks.all { it.isSafe } && rho <= (asMax/ag)*100.0,
+   646→   646→            concreteVolume = vol, steelWeight = totalSteelWeight, 
+   647→   647→            cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
+   648→   648→            code = code,
+   649→   649→            axialCapacity = capacity, appliedAxial = pu, 
+   650→   650→            reinforcementArea = finalAsProvided,
+   651→   651→            minReinforcementArea = asMin,
+   652→   652→            maxReinforcementArea = asMax,
+   653→   653→            reinforcementRatio = rho,
+   654→   654→            steelWasteKg = steelWasteKg,
+   655→   655→            rebarAlternatives = listOf(12, 14, 16, 18, 20, 25).map { dia ->
+   656→   656→                val areaOne = PI * dia.toDouble().pow(2) / 4.0
+   657→   657→                ReinforcementBar(ceil(asReqTotal/areaOne).toInt().coerceAtLeast(if(isCircular) 6 else 4), dia)
+   658→   658→            },
+   659→   659→            utilizationRatio = utilizationRatio
+   660→   660→        )
+   661→   661→        }
+   662→   662→
+   663→   663→    fun designBeam(
+   664→   664→        width: Double,
+   665→   665→        height: Double,
+   666→   666→        span: Double,
+   667→   667→        fcu: Double,
+   668→   668→        fy: Double,
+   669→   669→        deadLoad: Double,
+   670→   670→        liveLoad: Double,
+   671→   671→        preferredDiameter: Int,
+   672→   672→        code: DesignCode,
+   673→   673→        supportType: SupportType = SupportType.HINGED_HINGED,
+   674→   674→        customMoment: Double? = null,
+   675→   675→        customShear: Double? = null
+   676→   676→    ): BeamResult {
+   677→   677→        // Ultimate Load Factors based on code
+   678→   678→        val domainCode = when(code) {
+   679→   679→            DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
+   680→   680→            DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+   681→   681→            DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+   682→   682→        }
+   683→   683→        val totalLoad = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
+   684→   684→        
+   685→   685→        // Structural Analysis (Simple Beam Approximation)
+   686→   686→        val mu = customMoment ?: (totalLoad * span.pow(2.0) / 8.0)
+   687→   687→        val vu = customShear ?: (totalLoad * span / 2.0)
+   688→   688→        val d = height - 50.0 // Effective depth (Assuming 25mm cover + stirrup + bar/2)
+   689→   689→        
+   690→   690→        var asReq = 0.0
+   691→   691→        var momentCapacity = 0.0
+   692→   692→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+   693→   693→
+   694→   694→        when(code) {
+   695→   695→            DesignCode.EGYPTIAN -> {
+   696→   696→                // ECP 203 (First Principles / Curve): R = Mu / (fcu/gc * b * d^2)
+   697→   697→                val R = (mu * 1e6) / ((fcu / 1.5) * width * d.pow(2))
+   698→   698→                val omega = 1.25 * (1 - sqrt(1 - 2.25 * R))
+   699→   699→                asReq = (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
+   700→   700→                if (asReq.isNaN()) asReq = (mu * 1e6) / (0.8 * fy * d) 
+   701→   701→                }
+   702→   702→            DesignCode.ACI, DesignCode.SAUDI -> {
+   703→   703→                // ACI 318: Mn = As*fy(d - a/2), a = As*fy / (0.85*fc'*b)
+   704→   704→                val fcPrime = fcu * 0.8
+   705→   705→                val Rn = (mu * 1e6) / (0.9 * width * d.pow(2))
+   706→   706→                val rho = (0.85 * fcPrime / fy) * (1 - sqrt(1 - (2 * Rn) / (0.85 * fcPrime)))
+   707→   707→                asReq = rho * width * d
+   708→   708→                if (asReq.isNaN()) asReq = (mu * 1e6) / (0.9 * fy * 0.9 * d)
+   709→   709→                }
+   710→   710→            }
+   711→   711→        
+   712→   712→        // Minimum Reinforcement (ACI: 0.25*sqrt(fc')/fy * b*d | ECP: 0.225*sqrt(fcu)/fy * b*d)
+   713→   713→        val asMin = max(0.225 * sqrt(fcu * 0.8) / fy, 1.1 / fy) * width * d
+   714→   714→        asReq = max(asReq, asMin)
+   715→   715→        
+   716→   716→        val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
+   717→   717→        val numBars = ceil(asReq / barArea).toInt().coerceAtLeast(2)
+   718→   718→        val actualAs = numBars * barArea
+   719→   719→        
+   720→   720→        // Recalculate Capacity
+   721→   721→        momentCapacity = when(code) {
+   722→   722→            DesignCode.EGYPTIAN -> (actualAs * (fy/1.15) * (d - 0.4 * (actualAs * (fy/1.15) / (0.45 * fcu * width)))) / 1e6
+   723→   723→            else -> (0.9 * actualAs * fy * (d - (actualAs * fy / (2 * 0.85 * fcu * 0.8 * width)))) / 1e6
+   724→   724→            }
+   725→   725→
+   726→   726→        // --- Shear Design ---
+   727→   727→        val vc = when(code) {
+   728→   728→            DesignCode.EGYPTIAN -> 0.24 * sqrt(fcu / 1.5)
+   729→   729→            else -> 0.17 * sqrt(fcu * 0.8) * 0.75 // ACI Phi*0.17*sqrt(fc')
+   730→   730→            }
+   731→   731→        val v_stress = (vu * 1000.0) / (width * d)
+   732→   732→        
+   733→   733→        var stirrupSpacing = 200.0
+   734→   734→        var stirrupDia = 8
+   735→   735→        if (v_stress > vc) {
+   736→   736→            val vs = v_stress - (vc / 2.0) // Simplified
+   737→   737→            val stirrupArea = 2 * (PI * 8.0.pow(2) / 4.0) // 2 branches of 8mm
+   738→   738→            stirrupSpacing = (stirrupArea * (fy / 1.15) * d) / (vs * width)
+   739→   739→            stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
+   740→   740→            if (stirrupSpacing < 100.0) {
+   741→   741→                stirrupDia = 10
+   742→   742→                val area10 = 2 * (PI * 10.0.pow(2) / 4.0)
+   743→   743→                stirrupSpacing = (area10 * (fy / 1.15) * d) / (vs * width)
+   744→   744→                stirrupSpacing = min(200.0, floor(stirrupSpacing / 10.0) * 10.0).coerceAtLeast(100.0)
+   745→   745→                }
+   746→   746→            }
+   747→   747→        
+   748→   748→        val vol = (width * height * span) / 1e6
+   749→   749→        
+   750→   750→        // Accurate Steel Weight Calculation
+   751→   751→        val bottomWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
+   752→   752→        val topDia = (preferredDiameter * 0.8).toInt().coerceAtLeast(10)
+   753→   753→        val topWeightPerMeter = (topDia.toDouble().pow(2.0) / 162.0)
+   754→   754→        val stirrupWeightPerMeter = (stirrupDia.toDouble().pow(2.0) / 162.0)
+   755→   755→        
+   756→   756→        val bottomSteel = numBars * (span / 1000.0) * bottomWeightPerMeter
+   757→   757→        val topSteel = max(2, numBars/3) * (span / 1000.0) * topWeightPerMeter
+   758→   758→        val numStirrups = (span / stirrupSpacing) + 1
+   759→   759→        val stirrupLength = (2 * (width + height) / 1000.0)
+   760→   760→        val stirrupSteel = numStirrups * stirrupLength * stirrupWeightPerMeter
+   761→   761→        
+   762→   762→        val totalSteelWeight = (bottomSteel + topSteel + stirrupSteel) * 1.10 // 10% for laps/anchorage
+   763→   763→        
+   764→   764→        safetyChecks.add(DesignSafetyCheck("Flexural Strength", momentCapacity, mu, "kN.m", momentCapacity >= mu))
+   765→   765→        safetyChecks.add(DesignSafetyCheck("Shear Stress", v_stress, vc * 2.5, "MPa", v_stress <= vc * 2.5)) // Max limit check
+   766→   766→
+   767→   767→        val e_concrete = when(code) {
+   768→   768→            DesignCode.EGYPTIAN -> 4400 * sqrt(fcu)
+   769→   769→            else -> 4700 * sqrt(fcu * 0.8)
+   770→   770→            }
+   771→   771→        val deflection = (5 * totalLoad * (span * 1000).pow(4)) / (384 * e_concrete * (width * height.pow(3) / 12))
+   772→   772→        val allowableDeflection = (span * 1000) / 250.0
+   773→   773→        
+   774→   774→        val utilizationRatio = maxOf(mu / momentCapacity, deflection / allowableDeflection).coerceIn(0.0, 1.2)
+   775→   775→        
+   776→   776→        safetyChecks.add(DesignSafetyCheck("Deflection (Instant)", deflection, allowableDeflection, "mm", deflection <= allowableDeflection))
+   777→   777→
+   778→   778→        return BeamResult(
+   779→   779→            width = width, depth = height, mu = mu, vu = vu, 
+   780→   780→            reinforcementBottom = ReinforcementBar(numBars, preferredDiameter), 
+   781→   781→            reinforcementTop = ReinforcementBar(max(2, numBars/3), topDia), 
+   782→   782→            stirrups = StirrupReinforcement(stirrupDia, stirrupSpacing), 
+   783→   783→            safetyChecks = safetyChecks, isSafe = momentCapacity >= mu && deflection <= allowableDeflection && v_stress <= vc * 2.5, 
+   784→   784→            concreteVolume = vol, steelWeight = totalSteelWeight, 
+   785→   785→            cost = (vol * settingsManager.concretePrice) + (totalSteelWeight / 1000.0 * settingsManager.steelPrice), 
+   786→   786→            code = code, appliedMoment = mu, appliedShear = vu, 
+   787→   787→            supportType = supportType, steelWasteTons = totalSteelWeight * 0.1 / 1000.0,
+   788→   788→            deflection = deflection, allowableDeflection = allowableDeflection,
+   789→   789→            momentCapacity = momentCapacity, shearCapacity = vc * width * d / 1000.0,
+   790→   790→            steelRatio = (actualAs / (width * d)) * 100,
+   791→   791→            utilizationRatio = utilizationRatio
+   792→   792→        )
+   793→   793→        }
+   794→   794→
+   795→   795→    fun designSlab(
+   796→   796→        lx: Double,
+   797→   797→        ly: Double,
+   798→   798→        deadLoad: Double,
+   799→   799→        liveLoad: Double,
+   800→   800→        fcu: Double,
+   801→   801→        fy: Double,
+   802→   802→        ts: Double,
+   803→   803→        preferredDiameter: Int,
+   804→   804→        code: DesignCode,
+   805→   805→        type: SlabType = SlabType.SOLID,
+   806→   806→        prestressForce: Double = 0.0,
+   807→   807→        dropPanelThickness: Double = 0.0,
+   808→   808→        columnSize: Double = 400.0
+   809→   809→    ): SlabResult {
+   810→   810→        val domainCode = when(code) {
+   811→   811→            DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
+   812→   812→            DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+   813→   813→            DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+   814→   814→        }
+   815→   815→        val wu = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
+   816→   816→        
+   817→   817→        val shortSpan = min(lx, ly)
+   818→   818→        val longSpan = max(lx, ly)
+   819→   819→        val r = longSpan / shortSpan
+   820→   820→        
+   821→   821→        var mx: Double
+   822→   822→        var my: Double
+   823→   823→        var minTs: Double
+   824→   824→        
+   825→   825→        // --- Specific Logic for Slab Types ---
+   826→   826→        when (type) {
+   827→   827→            SlabType.FLAT -> {
+   828→   828→                // Flat Slab Direct Design Method (Simplified)
+   829→   829→                val totalMoment = (wu * ly * lx.pow(2)) / 8.0
+   830→   830→                mx = 0.35 * totalMoment // Column strip moment approx
+   831→   831→                my = 0.25 * totalMoment // Middle strip moment approx
+   832→   832→                minTs = lx * 1000 / 32.0 // ACI/ECP limit for flat slabs
+   833→   833→                if (dropPanelThickness > 0) minTs *= 0.9
+   834→   834→                }
+   835→   835→            SlabType.POST_TENSION -> {
+   836→   836→                // PT Slab: Balancing part of the dead load
+   837→   837→                val balancedLoad = (8 * prestressForce * 0.05) / shortSpan.pow(2) // 0.05 is approx drape
+   838→   838→                val netWu = max(0.2 * wu, wu - balancedLoad)
+   839→   839→                mx = netWu * shortSpan.pow(2) / 10.0
+   840→   840→                my = netWu * longSpan.pow(2) / 12.0
+   841→   841→                minTs = shortSpan * 1000 / 45.0 // PT slabs are thinner
+   842→   842→                }
+   843→   843→            SlabType.HOLLOW_BLOCK -> {
+   844→   844→                mx = wu * shortSpan.pow(2) / 8.0
+   845→   845→                my = wu * longSpan.pow(2) / 24.0
+   846→   846→                minTs = shortSpan * 1000 / 25.0
+   847→   847→                }
+   848→   848→            else -> {
+   849→   849→                // Solid Slab Grashoff
+   850→   850→                val alpha = if (r <= 2.0) r.pow(4) / (1 + r.pow(4)) else 1.0
+   851→   851→                val beta = if (r <= 2.0) 1 / (1 + r.pow(4)) else 0.0
+   852→   852→                mx = alpha * wu * shortSpan.pow(2) / 8.0
+   853→   853→                my = beta * wu * shortSpan.pow(2) / 8.0
+   854→   854→                minTs = shortSpan * 1000 / 35.0
+   855→   855→                }
+   856→   856→            }
+   857→   857→        
+   858→   858→        val d = ts - 25.0
+   859→   859→        
+   860→   860→        // Flexure Design
+   861→   861→        val asReqX = calculateAs(mx, fcu, fy, d, width = 1000.0, code = code)
+   862→   862→        val asReqY = calculateAs(my, fcu, fy, d, width = 1000.0, code = code)
+   863→   863→        
+   864→   864→        val asMin = when(type) {
+   865→   865→            SlabType.POST_TENSION -> 0.0012 * 1000.0 * ts
+   866→   866→            else -> 0.0018 * 1000.0 * ts
+   867→   867→            }
+   868→   868→        
+   869→   869→        val finalAsX = max(asReqX, asMin)
+   870→   870→        val finalAsY = max(asReqY, asMin)
+   871→   871→        
+   872→   872→        val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
+   873→   873→        val spacingX = (1000.0 * barArea) / finalAsX
+   874→   874→        val spacingY = (1000.0 * barArea) / finalAsY
+   875→   875→        
+   876→   876→        val finalSpacingX = min(200.0, floor(spacingX / 10.0) * 10.0).coerceAtLeast(100.0)
+   877→   877→        val finalSpacingY = min(200.0, floor(spacingY / 10.0) * 10.0).coerceAtLeast(100.0)
+   878→   878→        
+   879→   879→        val volM3 = (lx * ly * ts) / 1000.0
+   880→   880→        
+   881→   881→        val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
+   882→   882→        val numBarsX = (ly * 1000.0 / finalSpacingX) + 1
+   883→   883→        val numBarsY = (lx * 1000.0 / finalSpacingY) + 1
+   884→   884→        val steelWeight = (numBarsX * lx * barWeightPerMeter + numBarsY * ly * barWeightPerMeter) * 1.05
+   885→   885→        
+   886→   886→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+   887→   887→        safetyChecks.add(DesignSafetyCheck("Min Thickness", ts, minTs, "mm", ts >= minTs))
+   888→   888→        
+   889→   889→        // Punching Shear (Crucial for Flat Slabs)
+   890→   890→        val punchingLoad = wu * (lx * ly - (columnSize + d).pow(2) / 1e6)
+   891→   891→        val critPerimeter = 4 * (columnSize + d)
+   892→   892→        val v_punch = punchingLoad * 1000 / (critPerimeter * d)
+   893→   893→        val v_limit = when(code) {
+   894→   894→            DesignCode.EGYPTIAN -> 0.316 * sqrt(fcu / 1.5)
+   895→   895→            else -> 0.33 * 0.75 * sqrt(fcu * 0.8) // ACI 318 punching limit with Phi=0.75
+   896→   896→            }
+   897→   897→        
+   898→   898→        if (type == SlabType.FLAT) {
+   899→   899→            safetyChecks.add(DesignSafetyCheck("Punching Shear", v_punch, v_limit, "MPa", v_punch <= v_limit))
+   900→   900→            }
+   901→   901→
+   902→   902→        val efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100
+   903→   903→        val utilizationRatio = maxOf(mx / (0.85 * fcu * 1000 * d * d / 1e6), v_punch / v_limit).coerceIn(0.0, 1.2)
+   904→   904→        
+   905→   905→        val suggestions = mutableListOf<String>()
+   906→   906→        if (ts < minTs) suggestions.add("Increase slab thickness to satisfy deflection/code requirements.")
+   907→   907→        if (type == SlabType.FLAT && v_punch > v_limit) suggestions.add("Punching failure! Add drop panels or increase column size.")
+   908→   908→        if (type == SlabType.POST_TENSION && prestressForce < 200) suggestions.add("Prestress force seems low for this span.")
+   909→   909→
+   910→   910→        return SlabResult(
+   911→   911→            type = type, thickness = ts, 
+   912→   912→            reinforcementMain = ReinforcementBar(spacing = finalSpacingX, diameter = preferredDiameter, description = "Main (X)"), 
+   913→   913→            reinforcementSecondary = ReinforcementBar(spacing = finalSpacingY, diameter = preferredDiameter, description = "Sec (Y)"), 
+   914→   914→            isSafe = ts >= minTs && (type != SlabType.FLAT || v_punch <= v_limit),
+   915→   915→            concreteVolume = volM3, steelWeight = steelWeight,
+   916→   916→            cost = volM3 * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+   917→   917→            code = code, momentX = mx, momentY = my, totalLoad = wu,
+   918→   918→            punchingSafe = v_punch <= v_limit, safetyChecks = safetyChecks,
+   919→   919→            minThickness = minTs,
+   920→   920→            efficiencyScore = efficiencyScore,
+   921→   921→            utilizationRatio = utilizationRatio,
+   922→   922→            suggestions = suggestions,
+   923→   923→            steelWasteTons = steelWeight * 0.05 / 1000.0
+   924→   924→        )
+   925→   925→        }
+   926→   926→
+   927→   927→    private fun calculateAs(mu: Double, fcu: Double, fy: Double, d: Double, width: Double, code: DesignCode): Double {
+   928→   928→        return when(code) {
+   929→   929→            DesignCode.EGYPTIAN -> {
+   930→   930→                val R = (mu * 1e6) / ((fcu / 1.5) * width * d.pow(2))
+   931→   931→                if (R > 0.2) return (mu * 1e6) / (0.8 * fy * d) // High moment fallback
+   932→   932→                val omega = 1.25 * (1 - sqrt(1 - 2.25 * R))
+   933→   933→                (omega * (fcu / 1.5) / (fy / 1.15)) * width * d
+   934→   934→                }
+   935→   935→            else -> { // ACI/SBC
+   936→   936→                val fcPrime = fcu * 0.8
+   937→   937→                val Rn = (mu * 1e6) / (0.9 * width * d.pow(2))
+   938→   938→                val rho = (0.85 * fcPrime / fy) * (1 - sqrt(1 - (2 * Rn) / (0.85 * fcPrime)))
+   939→   939→                rho * width * d
+   940→   940→                }
+   941→   941→            }
+   942→   942→        }
+   943→   943→
+   944→   944→    fun calculateFooting(
+   945→   945→        type: FootingType,
+   946→   946→        p: Double,
+   947→   947→        fcu: Double,
+   948→   948→        fy: Double,
+   949→   949→        soil: Double,
+   950→   950→        colB: Double,
+   951→   951→        colT: Double,
+   952→   952→        code: DesignCode,
+   953→   953→        preferredDiameter: Int = 16,
+   954→   954→        preferredSpacing: Double = 150.0,
+   955→   955→        p2: Double = 0.0,
+   956→   956→        distance: Double = 0.0,
+   957→   957→        maxLeft: Double? = null,
+   958→   958→        maxRight: Double? = null,
+   959→   959→        maxTop: Double? = null,
+   960→   960→        maxBottom: Double? = null,
+   961→   961→        numPiles: Int = 4,
+   962→   962→        pileDia: Double = 500.0,
+   963→   963→        pileCapacity: Double = 500.0
+   964→   964→    ): FootingResult {
+   965→   965→        return when (type) {
+   966→   966→            FootingType.COMBINED -> calculateCombinedFootingInternal(p, p2, distance, fcu, fy, soil, colB, colT, code, preferredDiameter)
+   967→   967→            FootingType.STRIP -> calculateStripFootingInternal(p, fcu, fy, soil, colB, code, preferredDiameter)
+   968→   968→            FootingType.RAFT -> calculateRaftInternal(p, fcu, fy, soil, code, preferredDiameter)
+   969→   969→            FootingType.PILE_CAP -> calculatePileCapInternal(p, numPiles, pileDia, pileCapacity, fcu, fy, colB, colT, code, preferredDiameter)
+   970→   970→            else -> calculateIsolatedFootingInternal(p, fcu, fy, soil, colB, colT, code, preferredDiameter, maxLeft, maxRight, maxTop, maxBottom)
+   971→   971→            }
+   972→   972→        }
+   973→   973→
+   974→   974→    private fun calculateIsolatedFootingInternal(
+   975→   975→        p: Double, fcu: Double, fy: Double, soil: Double, colB: Double, colT: Double,
+   976→   976→        code: DesignCode, preferredDiameter: Int,
+   977→   977→        maxLeft: Double?, maxRight: Double?, maxTop: Double?, maxBottom: Double?
+   978→   978→    ): FootingResult {
+   979→   979→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+   980→   980→        val areaReq = (p * 1.1) / soil
+   981→   981→        var fL = sqrt(areaReq) 
+   982→   982→        var fW = fL
+   983→   983→        val diff = (colT - colB) / 1000.0
+   984→   984→        fL = sqrt(areaReq) + diff / 2.0
+   985→   985→        fW = areaReq / fL
+   986→   986→
+   987→   987→        maxLeft?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW }     }
+   988→   988→        maxRight?.let { if (fW / 2.0 > it / 1000.0) { fW = it * 2.0 / 1000.0; fL = areaReq / fW }     }
+   989→   989→        maxTop?.let { if (fL / 2.0 > it / 1000.0) { fL = it * 2.0 / 1000.0; fW = areaReq / fL }     }
+   990→   990→        maxBottom?.let { if (fL / 2.0 > it / 1000.0) { fL = it * 2.0 / 1000.0; fW = areaReq / fL }     }
+   991→   991→
+   992→   992→        fL = ceil(fL * 20.0) / 20.0 
+   993→   993→        fW = ceil(fW * 20.0) / 20.0
+   994→   994→        val fLmm = fL * 1000.0
+   995→   995→        val fWmm = fW * 1000.0
+   996→   996→        
+   997→   997→        val pu = if (code == DesignCode.EGYPTIAN) p * 1.5 else p * 1.4 
+   998→   998→        val qu = pu / (fL * fW)
+   999→   999→        
+  1000→  1000→        val projectionL = (fLmm - colT) / 2.0 
+  1001→  1001→        val projectionW = (fWmm - colB) / 2.0
+  1002→  1002→        val muL = (qu / 1000.0) * (projectionL.pow(2) / 2.0)
+  1003→  1003→        val muW = (qu / 1000.0) * (projectionW.pow(2) / 2.0)
+  1004→  1004→        
+  1005→  1005→        var thickness = 500.0
+  1006→  1006→        var d = thickness - 70.0
+  1007→  1007→        var punchingStress: Double
+  1008→  1008→        val punchingLimit = if (code == DesignCode.EGYPTIAN) {
+  1009→  1009→            0.316 * sqrt(fcu / 1.5) // ECP 203
+  1010→  1010→        } else {
+  1011→  1011→            0.33 * 0.75 * sqrt(fcu * 0.8) // ACI 318 (Phi = 0.75)
+  1012→  1012→        }
+  1013→  1013→        
+  1014→  1014→        do {
+  1015→  1015→            d = thickness - 70.0
+  1016→  1016→            val punchingForce = pu * 1000.0 * (1 - (colB + d)*(colT + d)/(fLmm*fWmm))
+  1017→  1017→            val b0 = 2 * (colB + d + colT + d)
+  1018→  1018→            punchingStress = punchingForce / (b0 * d)
+  1019→  1019→            if (punchingStress > punchingLimit) thickness += 50.0
+  1020→  1020→        } while (punchingStress > punchingLimit && thickness < 2000.0)
+  1021→  1021→        
+  1022→  1022→        val asReqL = calculateAs(muL / 1e3, fcu, fy, d, 1000.0, code)
+  1023→  1023→        val asReqW = calculateAs(muW / 1e3, fcu, fy, d, 1000.0, code)
+  1024→  1024→        val asMin = 0.0015 * 1000.0 * thickness
+  1025→  1025→        
+  1026→  1026→        val finalAsL = max(asReqL, asMin)
+  1027→  1027→        val finalAsW = max(asReqW, asMin)
+  1028→  1028→        
+  1029→  1029→        val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
+  1030→  1030→        val finalSpacingL = min(200.0, floor((1000.0 * barArea / finalAsL) / 10.0) * 10.0).coerceAtLeast(100.0)
+  1031→  1031→        val finalSpacingW = min(200.0, floor((1000.0 * barArea / finalAsW) / 10.0) * 10.0).coerceAtLeast(100.0)
+  1032→  1032→        
+  1033→  1033→        val vol = (fL * fW * thickness / 1000.0)
+  1034→  1034→        val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
+  1035→  1035→        val numBarsL = (fWmm / finalSpacingL).toInt() + 1
+  1036→  1036→        val numBarsW = (fLmm / finalSpacingW).toInt() + 1
+  1037→  1037→        val totalSteelWeight = (numBarsL * fL + numBarsW * fW) * barWeightPerMeter * 1.05
+  1038→  1038→        
+  1039→  1039→        val actualPressure = (p * 1.1) / (fL * fW)
+  1040→  1040→        val utilizationRatio = (actualPressure / soil).coerceIn(0.0, 1.2)
+  1041→  1041→        safetyChecks.add(DesignSafetyCheck("Soil Pressure", actualPressure, soil, "kPa", actualPressure <= soil))
+  1042→  1042→        safetyChecks.add(DesignSafetyCheck("Punching Shear", punchingStress, punchingLimit, "MPa", punchingStress <= punchingLimit))
+  1043→  1043→
+  1044→  1044→        return FootingResult(
+  1045→  1045→            type = FootingType.ISOLATED, width = fWmm, length = fLmm, thickness = thickness,
+  1046→  1046→            soilPressure = actualPressure, allowablePressure = soil,
+  1047→  1047→            reinforcementBottom = ReinforcementBar(spacing = finalSpacingL, diameter = preferredDiameter, description = "Bottom Mesh"),
+  1048→  1048→            isSafe = actualPressure <= soil && punchingStress <= punchingLimit, code = code,
+  1049→  1049→            concreteVolume = vol, steelWeight = totalSteelWeight, 
+  1050→  1050→            cost = vol * settingsManager.concretePrice + (totalSteelWeight / 1000.0 * settingsManager.steelPrice),
+  1051→  1051→            barsX = numBarsW, barsY = numBarsL, barDiameter = preferredDiameter, safetyChecks = safetyChecks,
+  1052→  1052→            utilizationRatio = utilizationRatio
+  1053→  1053→        )
+  1054→  1054→        }
+  1055→  1055→
+  1056→  1056→    private fun calculateStripFootingInternal(
+  1057→  1057→        p_per_m: Double, fcu: Double, fy: Double, soil: Double, colB: Double,
+  1058→  1058→        code: DesignCode, preferredDiameter: Int
+  1059→  1059→    ): FootingResult {
+  1060→  1060→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+  1061→  1061→        val width = (p_per_m * 1.1) / soil // m
+  1062→  1062→        val w_mm = ceil(width * 20.0) / 20.0 * 1000.0
+  1063→  1063→        
+  1064→  1064→        val pu = if (code == DesignCode.EGYPTIAN) p_per_m * 1.5 else p_per_m * 1.4
+  1065→  1065→        val qu = pu / (w_mm / 1000.0)
+  1066→  1066→        
+  1067→  1067→        val projection = (w_mm - colB) / 2.0
+  1068→  1068→        val mu = (qu / 1000.0) * (projection.pow(2) / 2.0)
+  1069→  1069→        
+  1070→  1070→        var thickness = 400.0
+  1071→  1071→        var d = thickness - 70.0
+  1072→  1072→        val shearLimit = if (code == DesignCode.EGYPTIAN) 0.16 * sqrt(fcu / 1.5) else 0.17 * sqrt(fcu * 0.8) * 0.75
+  1073→  1073→        
+  1074→  1074→        do {
+  1075→  1075→            d = thickness - 70.0
+  1076→  1076→            val shearForce = qu * (projection - d) / 1000.0 // kN
+  1077→  1077→            val shearStress = shearForce * 1000.0 / (1000.0 * d)
+  1078→  1078→            if (shearStress > shearLimit) thickness += 50.0
+  1079→  1079→        } while (shearStress > shearLimit && thickness < 1500.0)
+  1080→  1080→        
+  1081→  1081→        val asReq = calculateAs(mu / 1e3, fcu, fy, d, 1000.0, code)
+  1082→  1082→        val asMin = 0.0015 * 1000.0 * thickness
+  1083→  1083→        val finalAs = max(asReq, asMin)
+  1084→  1084→        
+  1085→  1085→        val actualPressure = p_per_m * 1.1 / (w_mm / 1000.0)
+  1086→  1086→        val utilizationRatio = (actualPressure / soil).coerceIn(0.0, 1.2)
+  1087→  1087→        
+  1088→  1088→        val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
+  1089→  1089→        val spacing = min(200.0, floor((1000.0 * barArea / finalAs) / 10.0) * 10.0).coerceAtLeast(100.0)
+  1090→  1090→        
+  1091→  1091→        val vol = (w_mm / 1000.0) * 1.0 * (thickness / 1000.0)
+  1092→  1092→        val steelWeight = (1000.0 / spacing) * (w_mm / 1000.0) * (preferredDiameter.toDouble().pow(2.0) / 162.0) * 1.1
+  1093→  1093→        
+  1094→  1094→        safetyChecks.add(DesignSafetyCheck("Soil Pressure", p_per_m * 1.1 / (w_mm/1000.0), soil, "kPa", true))
+  1095→  1095→
+  1096→  1096→        return FootingResult(
+  1097→  1097→            type = FootingType.STRIP, width = w_mm, length = 1000.0, thickness = thickness,
+  1098→  1098→            soilPressure = p_per_m * 1.1 / (w_mm/1000.0), allowablePressure = soil,
+  1099→  1099→            reinforcementBottom = ReinforcementBar(spacing = spacing, diameter = preferredDiameter, description = "Transverse Steel"),
+  1100→  1100→            isSafe = true, code = code, concreteVolume = vol, steelWeight = steelWeight,
+  1101→  1101→            cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+  1102→  1102→            safetyChecks = safetyChecks
+  1103→  1103→        )
+  1104→  1104→        }
+  1105→  1105→
+  1106→  1106→    private fun calculateRaftInternal(
+  1107→  1107→        totalP: Double, fcu: Double, fy: Double, soil: Double,
+  1108→  1108→        code: DesignCode, preferredDiameter: Int
+  1109→  1109→    ): FootingResult {
+  1110→  1110→        val area = (totalP * 1.1) / soil
+  1111→  1111→        val side = ceil(sqrt(area) * 2.0) / 2.0
+  1112→  1112→        val thickness = (side * 1000.0 / 10.0).coerceIn(600.0, 2000.0) // L/10 approx
+  1113→  1113→        val vol = side * side * thickness / 1000.0
+  1114→  1114→        
+  1115→  1115→        val actualPressure = totalP * 1.1 / (side * side)
+  1116→  1116→        val utilizationRatio = (actualPressure / soil).coerceIn(0.0, 1.2)
+  1117→  1117→        
+  1118→  1118→        val mu = (totalP / (side * side)) * (side / 3.0).pow(2) / 8.0 // Simplified span moment
+  1119→  1119→        val asReq = calculateAs(mu, fcu, fy, thickness - 70.0, 1000.0, code)
+  1120→  1120→        val steelWeight = side * side * (asReq * 2 * 7.85 * 1e-3) * 1.2 // 2 directions + top/bottom mesh estimate
+  1121→  1121→        
+  1122→  1122→        return FootingResult(
+  1123→  1123→            type = FootingType.RAFT, width = side * 1000.0, length = side * 1000.0, thickness = thickness,
+  1124→  1124→            soilPressure = totalP * 1.1 / (side * side), allowablePressure = soil,
+  1125→  1125→            reinforcementBottom = ReinforcementBar(spacing = 150.0, diameter = preferredDiameter, description = "Bottom Mat"),
+  1126→  1126→            isSafe = true, code = code, concreteVolume = vol, steelWeight = steelWeight,
+  1127→  1127→            cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+  1128→  1128→            safetyChecks = listOf(DesignSafetyCheck("Average Pressure", totalP / (side * side), soil, "kPa", true)),
+  1129→  1129→            utilizationRatio = utilizationRatio
+  1130→  1130→        )
+  1131→  1131→        }
+  1132→  1132→
+  1133→  1133→    private fun calculatePileCapInternal(
+  1134→  1134→        p: Double, numPiles: Int, pileDia: Double, pileCap: Double, fcu: Double, fy: Double,
+  1135→  1135→        colB: Double, colT: Double, code: DesignCode, preferredDiameter: Int
+  1136→  1136→    ): FootingResult {
+  1137→  1137→        val spacing = 3 * pileDia
+  1138→  1138→        val edge = 1.0 * pileDia
+  1139→  1139→        val rows = ceil(sqrt(numPiles.toDouble())).toInt()
+  1140→  1140→        val cols = ceil(numPiles.toDouble() / rows).toInt()
+  1141→  1141→        val length = (cols - 1) * spacing + 2 * edge
+  1142→  1142→        val width = (rows - 1) * spacing + 2 * edge
+  1143→  1143→        
+  1144→  1144→        val thickness = max(800.0, pileDia * 2)
+  1145→  1145→        val d = thickness - 100.0
+  1146→  1146→        
+  1147→  1147→        // Simplified Truss Method
+  1148→  1148→        val av = (spacing - colT) / 2.0
+  1149→  1149→        val tForce = (p * 1.5 * av) / (0.87 * d) // Simplified tension
+  1150→  1150→        val asReq = tForce * 1000.0 / (fy / 1.15)
+  1151→  1151→        
+  1152→  1152→        val vol = length * width * thickness / 1e9
+  1153→  1153→        val steelWeight = (asReq * length / 1000.0 * 2 + asReq * width / 1000.0 * 2) * 7.85 * 1e-3 * 1000.0 // Very rough kg
+  1154→  1154→        
+  1155→  1155→        return FootingResult(
+  1156→  1156→            type = FootingType.PILE_CAP, width = width, length = length, thickness = thickness,
+  1157→  1157→            soilPressure = (p * 1.1) / numPiles, allowablePressure = pileCap,
+  1158→  1158→            reinforcementBottom = ReinforcementBar(numBars = (asReq / 201.0).toInt().coerceAtLeast(8), diameter = 16, description = "Main Ties"),
+  1159→  1159→            isSafe = (p * 1.1 / numPiles) <= pileCap, code = code,
+  1160→  1160→            concreteVolume = vol, steelWeight = steelWeight,
+  1161→  1161→            cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+  1162→  1162→            safetyChecks = listOf(DesignSafetyCheck("Load per Pile", p * 1.1 / numPiles, pileCap, "kN", true))
+  1163→  1163→        )
+  1164→  1164→        }
+  1165→  1165→
+  1166→  1166→
+  1167→  1167→    private fun calculateCombinedFootingInternal(
+  1168→  1168→        p1: Double, p2: Double, distance: Double,
+  1169→  1169→        fcu: Double, fy: Double, soil: Double,
+  1170→  1170→        colB: Double, colT: Double, code: DesignCode,
+  1171→  1171→        preferredDiameter: Int
+  1172→  1172→    ): FootingResult {
+  1173→  1173→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+  1174→  1174→        val totalWorkingLoad = (p1 + p2) * 1.1
+  1175→  1175→        val areaReq = totalWorkingLoad / soil
+  1176→  1176→        
+  1177→  1177→        // Resultant position from P1
+  1178→  1178→        val xR = (p2 * distance) / (p1 + p2)
+  1179→  1179→        val s1 = 600.0 // Default projection
+  1180→  1180→        val length = 2 * (xR + s1)
+  1181→  1181→        var width = (areaReq * 1e6) / length
+  1182→  1182→        width = ceil(width / 50.0) * 50.0
+  1183→  1183→        
+  1184→  1184→        val actualArea = (length * width) / 1e6
+  1185→  1185→        val actualPressure = totalWorkingLoad / actualArea
+  1186→  1186→        val utilizationRatio = (actualPressure / soil).coerceIn(0.0, 1.2)
+  1187→  1187→        
+  1188→  1188→        val pu1 = if (code == DesignCode.EGYPTIAN) p1 * 1.5 else p1 * 1.4
+  1189→  1189→        val pu2 = if (code == DesignCode.EGYPTIAN) p2 * 1.5 else p2 * 1.4
+  1190→  1190→        val qu_ult = (pu1 + pu2) / actualArea
+  1191→  1191→        
+  1192→  1192→        var thickness = 800.0
+  1193→  1193→        var d = thickness - 70.0
+  1194→  1194→        val punchingLimit = if (code == DesignCode.EGYPTIAN) 0.316 * sqrt(fcu / 1.5) else 0.316 * sqrt(fcu * 0.8)
+  1195→  1195→        
+  1196→  1196→        // Punching check for both columns
+  1197→  1197→        val b0_1 = 2 * (colB + d + colT + d)
+  1198→  1198→        val stress1 = pu1 * 1000.0 / (b0_1 * d)
+  1199→  1199→        val b0_2 = 2 * (colB + d + colT + d)
+  1200→  1200→        val stress2 = pu2 * 1000.0 / (b0_2 * d)
+  1201→  1201→        
+  1202→  1202→        if (max(stress1, stress2) > punchingLimit) {
+  1203→  1203→            thickness = ceil((max(pu1, pu2) * 1000.0 / (2 * (colB + colT) * punchingLimit) + 70.0) / 50.0) * 50.0
+  1204→  1204→            }
+  1205→  1205→        d = thickness - 70.0
+  1206→  1206→
+  1207→  1207→        // Reinforcement (Simplified Beam Analogy)
+  1208→  1208→        val maxMoment = (qu_ult * (width/1000.0) * (length/2000.0).pow(2)) / 8.0
+  1209→  1209→        val asReq = calculateAs(maxMoment / (width/1000.0), fcu, fy, d, 1000.0, code)
+  1210→  1210→        val asMin = 0.0015 * 1000.0 * thickness
+  1211→  1211→        val finalAs = max(asReq, asMin)
+  1212→  1212→        
+  1213→  1213→        val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
+  1214→  1214→        val spacing = (1000.0 * barArea) / finalAs
+  1215→  1215→        val finalSpacing = min(200.0, floor(spacing / 10.0) * 10.0).coerceAtLeast(100.0)
+  1216→  1216→        
+  1217→  1217→        val vol = actualArea * thickness / 1000.0
+  1218→  1218→        val steelWeight = (actualArea * 150.0) // Rough estimate for combined 150kg/m3
+  1219→  1219→        
+  1220→  1220→        safetyChecks.add(DesignSafetyCheck("Soil Pressure", actualPressure, soil, "kPa", actualPressure <= soil))
+  1221→  1221→        safetyChecks.add(DesignSafetyCheck("Punching Column 1", stress1, punchingLimit, "MPa", stress1 <= punchingLimit))
+  1222→  1222→        safetyChecks.add(DesignSafetyCheck("Punching Column 2", stress2, punchingLimit, "MPa", stress2 <= punchingLimit))
+  1223→  1223→
+  1224→  1224→        return FootingResult(
+  1225→  1225→            type = FootingType.COMBINED,
+  1226→  1226→            width = width,
+  1227→  1227→            length = length,
+  1228→  1228→            thickness = thickness,
+  1229→  1229→            soilPressure = actualPressure,
+  1230→  1230→            allowablePressure = soil,
+  1231→  1231→            reinforcementBottom = ReinforcementBar(spacing = finalSpacing, diameter = preferredDiameter, description = "Bottom Mesh"),
+  1232→  1232→            reinforcementTopX = (finalAs * 0.8 / barArea).toInt(), // Simplified top reinforcement
+  1233→  1233→            topBarDiameter = preferredDiameter,
+  1234→  1234→            isSafe = actualPressure <= soil && max(stress1, stress2) <= punchingLimit,
+  1235→  1235→            code = code,
+  1236→  1236→            concreteVolume = vol,
+  1237→  1237→            steelWeight = steelWeight,
+  1238→  1238→            cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+  1239→  1239→            isCombined = true,
+  1240→  1240→            distanceBetweenColumns = distance,
+  1241→  1241→            column1Size = Pair(colT, colB),
+  1242→  1242→            column2Size = Pair(colT, colB),
+  1243→  1243→            safetyChecks = safetyChecks,
+  1244→  1244→            utilizationRatio = utilizationRatio
+  1245→  1245→        )
+  1246→  1246→        }
+  1247→  1247→
+  1248→  1248→
+  1249→  1249→    fun designStaircase(
+  1250→  1250→        type: StairType,
+  1251→  1251→        span: Double,
+  1252→  1252→        riser: Double,
+  1253→  1253→        tread: Double,
+  1254→  1254→        deadLoad: Double,
+  1255→  1255→        liveLoad: Double,
+  1256→  1256→        fcu: Double,
+  1257→  1257→        fy: Double,
+  1258→  1258→        preferredDiameter: Int,
+  1259→  1259→        code: DesignCode
+  1260→  1260→    ): StairResult {
+  1261→  1261→        // 1. Thickness (L/25 or L/20 depending on support)
+  1262→  1262→        val ts = (span * 1000.0 / 25.0).coerceAtLeast(150.0)
+  1263→  1263→        val angle = atan(riser / tread)
+  1264→  1264→        val cosAlpha = cos(angle)
+  1265→  1265→        
+  1266→  1266→        // 2. Loads on slant
+  1267→  1267→        val wu = when(code) {
+  1268→  1268→            DesignCode.EGYPTIAN -> 1.4 * deadLoad + 1.6 * liveLoad
+  1269→  1269→            else -> 1.2 * deadLoad + 1.6 * liveLoad
+  1270→  1270→            }
+  1271→  1271→        
+  1272→  1272→        // 3. Moment calculation (Simple span)
+  1273→  1273→        val mu = (wu * span.pow(2)) / 8.0
+  1274→  1274→        val d = ts - 25.0
+  1275→  1275→        
+  1276→  1276→        // 4. Reinforcement
+  1277→  1277→        val asReq = calculateAs(mu, fcu, fy, d, 1000.0, code)
+  1278→  1278→        val asMin = 0.0018 * 1000.0 * ts
+  1279→  1279→        val finalAs = max(asReq, asMin)
+  1280→  1280→        
+  1281→  1281→        val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
+  1282→  1282→        val spacing = (1000.0 * barArea) / finalAs
+  1283→  1283→        val finalSpacing = min(200.0, floor(spacing / 10.0) * 10.0).coerceAtLeast(100.0)
+  1284→  1284→        
+  1285→  1285→        // 5. Quantities
+  1286→  1286→        val lengthOnSlant = span / cosAlpha
+  1287→  1287→        val vol = (lengthOnSlant * 1.0 * ts / 1000.0) + (span * (riser / 2000.0)) // m3 per meter width
+  1288→  1288→        
+  1289→  1289→        val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
+  1290→  1290→        val distBarWeightPerMeter = (10.0.pow(2.0) / 162.0)
+  1291→  1291→        
+  1292→  1292→        val numMainBars = (1000.0 / finalSpacing) + 1
+  1293→  1293→        val numDistBars = (lengthOnSlant * 1000.0 / 200.0) + 1
+  1294→  1294→        
+  1295→  1295→        val steelWeight = (numMainBars * lengthOnSlant * barWeightPerMeter + numDistBars * 1.0 * distBarWeightPerMeter) * 1.05
+  1296→  1296→        
+  1297→  1297→        val cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice)
+  1298→  1298→        
+  1299→  1299→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+  1300→  1300→        val capacityMu = (finalAs * 0.8 * fy * d / 1e6)
+  1301→  1301→        val utilization = (mu / capacityMu).coerceIn(0.0, 1.2)
+  1302→  1302→        safetyChecks.add(DesignSafetyCheck("Flexural Capacity", mu, capacityMu, "kN.m", utilization <= 1.0))
+  1303→  1303→
+  1304→  1304→        return StairResult(
+  1305→  1305→            type = type,
+  1306→  1306→            thickness = ts,
+  1307→  1307→            reinforcement = ReinforcementBar(spacing = finalSpacing, diameter = preferredDiameter, description = "Main Steel"),
+  1308→  1308→            distributionReinforcement = ReinforcementBar(spacing = 200.0, diameter = 10, description = "Distribution"),
+  1309→  1309→            isSafe = utilization <= 1.0,
+  1310→  1310→            concreteVolume = vol,
+  1311→  1311→            steelWeight = steelWeight,
+  1312→  1312→            cost = cost,
+  1313→  1313→            code = code,
+  1314→  1314→            safetyChecks = safetyChecks,
+  1315→  1315→            utilizationRatio = utilization,
+  1316→  1316→            mu = mu,
+  1317→  1317→            wu = wu,
+  1318→  1318→            span = span,
+  1319→  1319→            riser = riser,
+  1320→  1320→            tread = tread,
+  1321→  1321→            fcu = fcu,
+  1322→  1322→            fy = fy
+  1323→  1323→        )
+  1324→  1324→        }
+  1325→  1325→
+  1326→  1326→    fun designTank(
+  1327→  1327→        type: TankType,
+  1328→  1328→        capacity: Double,
+  1329→  1329→        height: Double,
+  1330→  1330→        fcu: Double,
+  1331→  1331→        fy: Double,
+  1332→  1332→        preferredDiameter: Int = 12,
+  1333→  1333→        code: DesignCode = DesignCode.EGYPTIAN
+  1334→  1334→    ): TankResult {
+  1335→  1335→        val area = capacity / height
+  1336→  1336→        val dim = sqrt(area)
+  1337→  1337→        
+  1338→  1338→        // Design parameters
+  1339→  1339→        val wallThickness = (height * 100.0).coerceIn(250.0, 500.0)
+  1340→  1340→        val baseThickness = (wallThickness + 100.0).coerceIn(400.0, 800.0)
+  1341→  1341→        
+  1342→  1342→        val gamma_w = 10.0 // kN/m3
+  1343→  1343→        val waterPressure = gamma_w * height
+  1344→  1344→        val mu = (waterPressure * height.pow(2)) / 6.0 // Simple cantilever moment for walls
+  1345→  1345→        
+  1346→  1346→        // Crack Width Control (Simplified - ECP 203)
+  1347→  1347→        val allowableStress = when(code) {
+  1348→  1348→            DesignCode.EGYPTIAN -> 170.0 // MPa for service load
+  1349→  1349→            else -> 140.0 // MPa
+  1350→  1350→            }
+  1351→  1351→        
+  1352→  1352→        val d_wall = wallThickness - 50.0
+  1353→  1353→        val ms = mu / 1.5 // Service moment approx
+  1354→  1354→        val asReqCrack = (ms * 1e6) / (allowableStress * 0.85 * d_wall)
+  1355→  1355→        val finalAsWall = max(asReqCrack, 0.0025 * 1000.0 * wallThickness)
+  1356→  1356→        
+  1357→  1357→        val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
+  1358→  1358→        val spacing = (1000.0 * barArea) / finalAsWall
+  1359→  1359→        val finalSpacing = min(200.0, floor(spacing / 10.0) * 10.0).coerceAtLeast(100.0)
+  1360→  1360→        
+  1361→  1361→        val providedArea = (1000.0 / finalSpacing) * barArea
+  1362→  1362→        val utilization = (asReqCrack / providedArea).coerceIn(0.0, 1.2)
+  1363→  1363→
+  1364→  1364→        val volWall = (4 * dim * height * wallThickness / 1000.0)
+  1365→  1365→        val volBase = (dim * dim * baseThickness / 1000.0)
+  1366→  1366→        val totalVol = volWall + volBase
+  1367→  1367→        
+  1368→  1368→        // Accurate Steel Calculation
+  1369→  1369→        val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
+  1370→  1370→        
+  1371→  1371→        // Wall Steel (2 nets: inner and outer)
+  1372→  1372→        val numVerticalBars = floor((4 * dim * 1000.0) / finalSpacing).toInt() + 1
+  1373→  1373→        val numHorizontalBars = floor((height * 1000.0) / 200.0).toInt() + 1
+  1374→  1374→        val wallSteelWeight = (numVerticalBars * height + numHorizontalBars * (4 * dim)) * barWeightPerMeter * 2 // 2 nets
+  1375→  1375→        
+  1376→  1376→        // Base Steel (Top and Bottom nets)
+  1377→  1377→        val numBaseBarsX = floor((dim * 1000.0) / 200.0).toInt() + 1
+  1378→  1378→        val numBaseBarsY = floor((dim * 1000.0) / 200.0).toInt() + 1
+  1379→  1379→        val baseSteelWeight = (numBaseBarsX * dim + numBaseBarsY * dim) * barWeightPerMeter * 2 // 2 nets
+  1380→  1380→        
+  1381→  1381→        val totalSteelWeight = (wallSteelWeight + baseSteelWeight) * 1.15 // 15% laps/anchors/corners
+  1382→  1382→        val cost = totalVol * settingsManager.concretePrice + (totalSteelWeight/1000.0 * settingsManager.steelPrice)
+  1383→  1383→        
+  1384→  1384→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+  1385→  1385→        safetyChecks.add(DesignSafetyCheck("Crack Control (Steel Area)", providedArea, asReqCrack, "mm2", utilization <= 1.0))
+  1386→  1386→        safetyChecks.add(DesignSafetyCheck("Wall Thickness", wallThickness, 250.0, "mm", wallThickness >= 250.0))
+  1387→  1387→
+  1388→  1388→        return TankResult(
+  1389→  1389→            type = type, length = dim, width = dim, height = height,
+  1390→  1390→            wallThickness = wallThickness, baseThickness = baseThickness,
+  1391→  1391→            wallReinforcement = ReinforcementBar(spacing = finalSpacing, diameter = preferredDiameter, description = "Walls (Vertical)"),
+  1392→  1392→            baseReinforcement = ReinforcementBar(spacing = 200.0, diameter = preferredDiameter, description = "Base Mat"),
+  1393→  1393→            isSafe = utilization <= 1.0, concreteVolume = totalVol, steelWeight = totalSteelWeight, 
+  1394→  1394→            cost = cost, code = code,
+  1395→  1395→            waterPressure = waterPressure, mu = mu, capacity = capacity,
+  1396→  1396→            safetyChecks = safetyChecks, utilizationRatio = utilization,
+  1397→  1397→            fcu = fcu, fy = fy
+  1398→  1398→        )
+  1399→  1399→        }
+  1400→  1400→
+  1401→  1401→    fun designRetainingWall(
+  1402→  1402→        height: Double,
+  1403→  1403→        soilDensity: Double,
+  1404→  1404→        frictionAngle: Double,
+  1405→  1405→        surcharge: Double,
+  1406→  1406→        fcu: Double,
+  1407→  1407→        fy: Double,
+  1408→  1408→        preferredDiameter: Int = 16,
+  1409→  1409→        code: DesignCode = DesignCode.EGYPTIAN
+  1410→  1410→    ): RetainingWallResult {
+  1411→  1411→        // 1. Earth Pressure Coefficients
+  1412→  1412→        val phiRad = frictionAngle * PI / 180.0
+  1413→  1413→        val ka = (1 - sin(phiRad)) / (1 + sin(phiRad))
+  1414→  1414→        val kp = 1 / ka
+  1415→  1415→        
+  1416→  1416→        // 2. Dimensions (Standard Proportions)
+  1417→  1417→        val stemT = (height * 1000.0 / 12.0).coerceAtLeast(300.0) // mm
+  1418→  1418→        val baseW = (height * 0.5).coerceAtLeast(1.5) // m
+  1419→  1419→        val baseT = stemT // mm
+  1420→  1420→        val toeW = baseW / 3.0
+  1421→  1421→        val heelW = baseW - toeW - (stemT/1000.0)
+  1422→  1422→        
+  1423→  1423→        // 3. Stability Analysis
+  1424→  1424→        val pa = 0.5 * ka * soilDensity * height.pow(2)
+  1425→  1425→        val ps = ka * surcharge * height
+  1426→  1426→        
+  1427→  1427→        val wStem = height * (stemT / 1000.0) * 25.0
+  1428→  1428→        val wBase = baseW * (baseT / 1000.0) * 25.0
+  1429→  1429→        val wSoil = heelW * height * soilDensity
+  1430→  1430→        
+  1431→  1431→        val xStem = toeW + (stemT / 2000.0)
+  1432→  1432→        val xBase = baseW / 2.0
+  1433→  1433→        val xSoil = toeW + (stemT / 1000.0) + (heelW / 2.0)
+  1434→  1434→        
+  1435→  1435→        val resistingMoment = (wStem * xStem) + (wBase * xBase) + (wSoil * xSoil)
+  1436→  1436→        val drivingMoment = (pa * height / 3.0) + (ps * height / 2.0)
+  1437→  1437→        
+  1438→  1438→        val totalVerticalWeight = wStem + wBase + wSoil
+  1439→  1439→        val fsOverturning = resistingMoment / drivingMoment.coerceAtLeast(1.0)
+  1440→  1440→        val fsSliding = (0.5 * totalVerticalWeight) / (pa + ps).coerceAtLeast(1.0)
+  1441→  1441→        
+  1442→  1442→        val utilizationRatio = max(1.5 / fsOverturning, 1.5 / fsSliding)
+  1443→  1443→        val isSafe = fsOverturning >= 1.5 && fsSliding >= 1.5
+  1444→  1444→        
+  1445→  1445→        // 4. Design for Stem Moment
+  1446→  1446→        val muStem = drivingMoment * 1.5 // Factored
+  1447→  1447→        val d = stemT - 70.0
+  1448→  1448→        val asReq = calculateAs(muStem, fcu, fy, d, 1000.0, code)
+  1449→  1449→        
+  1450→  1450→        val barArea = PI * preferredDiameter.toDouble().pow(2) / 4.0
+  1451→  1451→        val numBars = ceil(asReq / barArea).toInt().coerceAtLeast(5)
+  1452→  1452→        val stemReinforcement = ReinforcementBar(numBars, preferredDiameter, description = "Stem (Vertical)")
+  1453→  1453→        
+  1454→  1454→        val vol = (height * (stemT / 1000.0)) + (baseW * (baseT / 1000.0))
+  1455→  1455→        val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
+  1456→  1456→        val steelWeight = (numBars * height + (1000.0/200.0) * baseW) * barWeightPerMeter * 1.15
+  1457→  1457→        
+  1458→  1458→        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+  1459→  1459→        safetyChecks.add(DesignSafetyCheck("Overturning Stability", fsOverturning, 1.5, "", fsOverturning >= 1.5))
+  1460→  1460→        safetyChecks.add(DesignSafetyCheck("Sliding Stability", fsSliding, 1.5, "", fsSliding >= 1.5))
+  1461→  1461→        
+  1462→  1462→        return RetainingWallResult(
+  1463→  1463→            height = height,
+  1464→  1464→            stemThickness = stemT,
+  1465→  1465→            baseWidth = baseW * 1000.0,
+  1466→  1466→            stemReinforcement = stemReinforcement,
+  1467→  1467→            baseReinforcement = ReinforcementBar(spacing = 200.0, diameter = preferredDiameter, description = "Base Bottom"),
+  1468→  1468→            safetyChecks = safetyChecks,
+  1469→  1469→            isSafe = isSafe,
+  1470→  1470→            concreteVolume = vol,
+  1471→  1471→            steelWeight = steelWeight,
+  1472→  1472→            cost = vol * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
+  1473→  1473→            code = code,
+  1474→  1474→            factorOfSafetyOverturning = fsOverturning,
+  1475→  1475→            factorOfSafetySliding = fsSliding,
+  1476→  1476→            utilizationRatio = utilizationRatio,
+  1477→  1477→            muStem = muStem,
+  1478→  1478→            pa = pa,
+  1479→  1479→            ps = ps,
+  1480→  1480→            ka = ka,
+  1481→  1481→            soilDensity = soilDensity,
+  1482→  1482→            fcu = fcu,
+  1483→  1483→            fy = fy
+  1484→  1484→        )
+  1485→  1485→        }
+  1486→  1486→
+  1487→  1487→    fun calculateSeismicLoads(input: SeismicInput): SeismicResult {
+  1488→  1488→        val h = input.height
+  1489→  1489→        val sa = (input.zone * input.importance * 2.5) / input.reductionFactor
+  1490→  1490→        val baseShear = sa * input.totalWeight
+  1491→  1491→        val forces = mutableMapOf<Int, Double>()
+  1492→  1492→        val n = max(1, ceil(h / 3.0).toInt())
+  1493→  1493→        for (i in 1..n) forces[i] = (i.toDouble() / (n*(n+1)/2.0)) * baseShear
+  1494→  1494→        return SeismicResult(
+  1495→  1495→            baseShear = baseShear, 
+  1496→  1496→            storyDrift = 0.005 * h/n, 
+  1497→  1497→            timePeriod = 0.075 * h.pow(0.75), 
+  1498→  1498→            spectralAcceleration = sa, 
+  1499→  1499→            forcesPerFloor = forces, 
+  1500→  1500→            isSafe = true, 
+  1501→  1501→            code = DesignCode.EGYPTIAN,
+  1502→  1502→            zone = input.zone,
+  1503→  1503→            importance = input.importance,
+  1504→  1504→            reductionFactor = input.reductionFactor,
+  1505→  1505→            totalWeight = input.totalWeight,
+  1506→  1506→            height = input.height
+  1507→  1507→        )
+  1508→  1508→    }
+  1509→  1509→
+  1510→  1510→    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: DesignCode): Double {
+  1511→  1511→        val phi = if (code == DesignCode.ACI) 0.75 else 0.70
+  1512→  1512→        return (phi * 0.60 * electrode.tensileStrength * 0.707 * size * length) / 1000.0 // kN
+  1513→  1513→    }
+  1514→  1514→
+  1515→  1515→    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: DesignCode): Double {
+  1516→  1516→        val area = PI * diameter.pow(2.0) / 4.0
+  1517→  1517→        val phi = if (code == DesignCode.ACI) 0.75 else 0.65
+  1518→  1518→        return (phi * 0.5 * grade.fu * area * count) / 1000.0 // kN
+  1519→  1519→    }
+  1520→  1520→}
+  1521→  1521→

@@ -1,0 +1,1146 @@
+     1→package com.civileg.app.domain.calculations.ecp
+     2→
+     3→import com.civileg.app.domain.calculations.base.ColumnDesign
+     4→import com.civileg.app.domain.entities.*
+     5→import com.civileg.app.domain.usecases.AnalyzeRebarInventory
+     6→import kotlin.math.*
+     7→
+     8→// ──────────────────────────────────────────────────────────────────────────────
+     9→// بيانات إضافية للدوال الجديدة (New Data Classes)
+    10→// ──────────────────────────────────────────────────────────────────────────────
+    11→
+    12→/**
+    13→ * توزيع أسياخ التسليح في المقطع
+    14→ * Bar configuration for interaction diagram generation
+    15→ */
+    16→enum class BarConfiguration(val displayNameAr: String) {
+    17→    SYMMETRIC("تسليح متماثل / Symmetric"),
+    18→    ONE_FACE("تسليح وجه واحد / Single Face"),
+    19→    TWO_FACES("تسليح وجهين / Two Faces"),
+    20→    PERIMETER("تسليح محيطي / Perimeter")
+    21→}
+    22→
+    23→/**
+    24→ * نقطة على منحنى التفاعل P-M
+    25→ * A single point on the interaction diagram (φPn vs φMn)
+    26→ */
+    27→data class InteractionDiagramPoint(
+    28→    val phiPn: Double,           // kN - factored axial capacity (φ × Pn)
+    29→    val phiMn: Double,           // kN.m - factored moment capacity (φ × Mn)
+    30→    val c: Double,               // mm - neutral axis depth
+    31→    val epsilonT: Double,        // tensile strain in extreme tension steel
+    32→    val phi: Double,             // strength reduction factor (α per ECP)
+    33→    val isTensionControlled: Boolean  // εt ≥ εy ?
+    34→)
+    35→
+    36→/**
+    37→ * نتيجة تكبير العزم (P-Delta / Moment Magnification)
+    38→ * Result of second-order moment magnification analysis
+    39→ */
+    40→data class MomentMagnificationResult(
+    41→    val magnifiedMoment: Double,     // kN.m - the design moment after magnification
+    42→    val delta: Double,               // magnification factor δ
+    43→    val EI: Double,                  // N.mm² - effective flexural rigidity
+    44→    val Pc: Double,                  // kN - Euler critical buckling load
+    45→    val isSlender: Boolean,          // whether column is classified as slender
+    46→    val isSwaySensitive: Boolean,    // whether the frame is sway-sensitive
+    47→    val codeNotes: List<String>      // explanatory code references
+    48→)
+    49→
+    50→/**
+    51→ * نتيجة تصنيف النحافة (Short vs Long Column)
+    52→ * Result of slenderness classification per ECP 203
+    53→ */
+    54→data class ColumnSlendernessResult(
+    55→    val slendernessRatio: Double,    // λ = K×L/r
+    56→    val kFactor: Double,             // effective length factor K
+    57→    val radiusOfGyration: Double,    // r in mm
+    58→    val shortColumnLimit: Double,    // 15 (rectangular) or 12 (circular)
+    59→    val isShortColumn: Boolean,      // true if λ ≤ limit
+    60→    val isLongColumn: Boolean,       // true if λ > limit
+    61→    val effectiveLength: Double,     // K×L in mm
+    62→    val notes: List<String>          // explanatory notes in Arabic/English
+    63→)
+    64→
+    65→class ECPAdvancedColumn : ColumnDesign {
+    66→    
+    67→    private val baseDesign = ECPColumn()
+    68→
+    69→    /**
+    70→     * تصميم متقدم للأعمدة بجميع أنواعها حسب الكود المصري ECP 203
+    71→     */
+    72→    fun designAdvancedColumn(
+    73→        columnType: ColumnType,
+    74→        fcu: Double,
+    75→        fy: Double,
+    76→        axialLoad: Double,
+    77→        momentX: Double,
+    78→        momentY: Double,
+    79→        unsupportedLength: Double,  // m
+    80→        endConditions: ColumnEndConditions,
+    81→        connectedSlab: ConnectedSlabType,
+    82→        hasCap: Boolean,
+    83→        inventory: RebarInventory?,
+    84→        loadCombination: LoadCombination
+    85→    ): AdvancedColumnResult {
+    86→        val warnings = mutableListOf<String>()
+    87→        val codeNotes = mutableListOf<String>()
+    88→        
+    89→        // المساحة الكلية
+    90→        val Ag = columnType.getGrossArea()
+    91→        
+    92→        // طول العمود الفعال
+    93→        val k = max(endConditions.topCondition.effectiveLengthFactor,
+    94→                   endConditions.bottomCondition.effectiveLengthFactor)
+    95→        val effectiveLength = k * unsupportedLength * 1000  // mm
+    96→        
+    97→        // نصف القطر الدوراني (Radius of Gyration)
+    98→        val radiusOfGyration = when (columnType) {
+    99→            is ColumnType.Rectangular -> min(columnType.width, columnType.depth) / sqrt(12.0)
+   100→            is ColumnType.Circular -> columnType.diameter / 4
+   101→            is ColumnType.LShaped -> columnType.thickness / sqrt(12.0)
+   102→            else -> sqrt(Ag / 12.0)
+   103→        }
+   104→        
+   105→        val slendernessRatio = effectiveLength / radiusOfGyration
+   106→        val limit = when(columnType) {
+   107→            is ColumnType.Circular -> 12.0
+   108→            else -> 15.0
+   109→        }
+   110→        
+   111→        val isSlender = slendernessRatio > limit
+   112→        if (isSlender) {
+   113→            warnings.add("⚠️ Slender column! Second-order effects (P-Delta) must be considered")
+   114→            codeNotes.add("ECP 203-4.2.7: Slenderness ratio λ=$slendernessRatio > $limit")
+   115→        }
+   116→        
+   117→        // حساب القدرة المحورية القصوى
+   118→        val axialCapacity = calculateAxialCapacity(fcu, fy, columnType, Ag)
+   119→        
+   120→        // ── BUG FIX: حساب تكبير العزوم للأعمدة النحيفة قبل حساب التسليح ──
+   121→        val (designMomentX, designMomentY) = if (isSlender) {
+   122→            val (w, d) = when (columnType) {
+   123→                is ColumnType.Rectangular -> columnType.width to columnType.depth
+   124→                is ColumnType.Circular -> columnType.diameter to columnType.diameter
+   125→                else -> sqrt(Ag) to sqrt(Ag)
+   126→            }
+   127→            val estAs = 0.01 * Ag
+   128→            val magX = calculateMomentMagnification(axialLoad, momentX, unsupportedLength, k, w, d, fcu, fy, estAs)
+   129→            val magY = calculateMomentMagnification(axialLoad, momentY, unsupportedLength, k, w, d, fcu, fy, estAs)
+   130→            codeNotes.add("Moment magnification applied: δx=${String.format("%.2f", magX.delta)}, δy=${String.format("%.2f", magY.delta)}")
+   131→            magX.magnifiedMoment to magY.magnifiedMoment
+   132→        } else {
+   133→            momentX to momentY
+   134→        }
+   135→        
+   136→        // حساب التسليح
+   137→        val reinforcementResult = when(columnType) {
+   138→            is ColumnType.Rectangular -> baseDesign.calculateReinforcement(
+   139→                fcu, fy, columnType.width, columnType.depth, axialLoad, designMomentX, designMomentY, loadCombination
+   140→            )
+   141→            is ColumnType.Circular -> {
+   142→                // تقريب دائري لمربع مكافئ
+   143→                val side = sqrt(Ag)
+   144→                baseDesign.calculateReinforcement(fcu, fy, side, side, axialLoad, designMomentX, designMomentY, loadCombination)
+   145→            }
+   146→            else -> {
+   147→                val side = sqrt(Ag)
+   148→                baseDesign.calculateReinforcement(fcu, fy, side, side, axialLoad, designMomentX, designMomentY, loadCombination)
+   149→            }
+   150→        }
+   151→        
+   152→        // فحص القص الاختراقي (Punching Shear Check) - للبلاطات المسطحة فقط
+   153→        val punchingResult = if (connectedSlab == ConnectedSlabType.FLAT) {
+   154→            checkPunching(columnType, axialLoad, fcu, hasCap, footingDepth = 200.0)
+   155→        } else null
+   156→
+   157→        if (punchingResult?.isSafe == false) {
+   158→            warnings.add("❌ Punching shear failure! Increase section or add column head/cap.")
+   159→        }
+   160→
+   161→        // تحليل المخزون وحساب الهالك
+   162→        val inventoryAnalysis = inventory?.let { inv ->
+   163→            analyzeInventory(reinforcementResult, unsupportedLength, inv)
+   164→        }
+   165→        
+   166→        val biaxialCheck = if (abs(momentX) > 0.1 && abs(momentY) > 0.1) {
+   167→            checkBiaxialLoading(columnType, axialLoad, momentX, momentY, axialCapacity)
+   168→        } else null
+   169→        
+   170→        codeNotes.add("ECP 203-2020: Section 4.2 Design of Compression Members")
+   171→        codeNotes.add("Slab Connection: ${connectedSlab.displayName}")
+   172→        if (hasCap) codeNotes.add("Column Cap provided - improved punching resistance")
+   173→        
+   174→        val steelWeight = (inventoryAnalysis?.totalWeight ?: (Ag * 0.01 * 7850 / 1e6)) * unsupportedLength
+   175→        
+   176→        // حساب قدرة العزم الحقيقية حسب ECP 203 البند 4-2-2
+   177→        val h_eff = when(columnType) {
+   178→            is ColumnType.Rectangular -> columnType.depth
+   179→            is ColumnType.Circular -> columnType.diameter
+   180→            else -> sqrt(Ag)
+   181→        } - 50.0 // d = h - cover(40) - ties(~10)
+   182→        val fs = fy / 1.15 // fy / γs
+   183→        // K-method لحساب قدرة العزم
+   184→        val As = reinforcementResult.astProvided
+   185→        val b = when(columnType) {
+   186→            is ColumnType.Rectangular -> columnType.width
+   187→            is ColumnType.Circular -> columnType.diameter
+   188→            else -> sqrt(Ag)
+   189→        }
+   190→        val Mu_capacity = fs * As * 0.8 * h_eff / 1e6 // kN.m (تقريبي: R=0.8d)
+   191→        // فحص K_bal
+   192→        val K_check = Mu_capacity * 1e6 / (fcu * b * h_eff * h_eff)
+   193→        val momentCapX = if (K_check <= 0.186) Mu_capacity else {
+   194→            // إذا K > K_bal: نستخدم z = d*(0.5+√(0.25-K/1.25))
+   195→            val z = h_eff * (0.5 + sqrt(max(0.001, 0.25 - 0.186 / 1.25)))
+   196→            As * fs * z / 1e6
+   197→        }
+   198→
+   199→        return AdvancedColumnResult(
+   200→            columnType = columnType,
+   201→            axialCapacity = axialCapacity,
+   202→            momentCapacityX = momentCapX,
+   203→            momentCapacityY = momentCapX,
+   204→            slendernessRatio = slendernessRatio,
+   205→            isSlender = isSlender,
+   206→            effectiveLength = effectiveLength,
+   207→            reinforcementResult = reinforcementResult,
+   208→            inventoryAnalysis = inventoryAnalysis,
+   209→            biaxialCheck = biaxialCheck,
+   210→            punchingCheck = punchingResult,
+   211→            warnings = warnings,
+   212→            codeNotes = codeNotes,
+   213→            steelWeightPerMeter = steelWeight / unsupportedLength,
+   214→            concreteVolumePerMeter = Ag / 1e6
+   215→        )
+   216→    }
+   217→    
+   218→    private fun checkPunching(type: ColumnType, pu: Double, fcu: Double, hasCap: Boolean, footingDepth: Double = 200.0): PunchingCheckResult {
+   219→        // ECP 203 البند 4-3-2: فحص قص الاختراق
+   220→        val d = footingDepth - 20.0 - 10.0  // d = سمك البلاطة - cover - bar/2
+   221→        val perimeter = when (type) {
+   222→            is ColumnType.Rectangular -> 2.0 * (type.width + type.depth) + 4.0 * d
+   223→            is ColumnType.Circular -> PI * (type.diameter + d)
+   224→            else -> 4.0 * (sqrt(type.getGrossArea()) + d)
+   225→        }
+   226→        
+   227→        // ضغط القص المطبق = Vu / (bo × d)
+   228→        val punchingStress = (pu * 0.90 * 1000.0) / (perimeter * d)
+   229→        // BUG FIX: قدرة قص الاختراق: qp = 0.316 × √(fcu) / γc (ECP 203)
+   230→        // Previously was 0.316 * sqrt(fcu/1.5) which incorrectly embeds γc inside the sqrt
+   231→        val GAMMA_C = 1.5
+   232→        val capacity = (if (hasCap) 1.5 else 1.0) * 0.316 * sqrt(fcu) / GAMMA_C
+   233→        
+   234→        return PunchingCheckResult(
+   235→            appliedShear = pu,
+   236→            capacity = capacity * perimeter * d / 1000.0,  // kN
+   237→            isSafe = punchingStress <= capacity,
+   238→            hasCap = hasCap,
+   239→            criticalPerimeter = perimeter
+   240→        )
+   241→    }
+   242→
+   243→    // حساب القدرة المحورية الإسمية حسب ECP 203-2020
+   244→    // Pu = φ × α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
+   245→    private fun calculateAxialCapacity(fcu: Double, fy: Double, columnType: ColumnType, Ag: Double, Ast: Double = 0.0): Double {
+   246→        val GAMMA_C = 1.5
+   247→        val GAMMA_S = 1.15
+   248→        val ALPHA = 0.8
+   249→        val PHI = 0.65
+   250→        val ast = if (Ast > 0) Ast.coerceAtMost(Ag * 0.08) else 0.008 * Ag
+   251→        val concreteStress = 0.67 * fcu / GAMMA_C
+   252→        val steelStress = fy / GAMMA_S
+   253→        val nominalCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
+   254→        return PHI * nominalCapacity / 1000.0 // kN
+   255→    }
+   256→    
+   257→    private fun analyzeInventory(result: ReinforcementResult, height: Double, inventory: RebarInventory): InventoryAnalysisResult {
+   258→        val analyzer = AnalyzeRebarInventory()
+   259→        return analyzer.analyze(result.astRequired, result.numberOfBars * height, inventory, DesignCode.ECP, height)
+   260→    }
+   261→    
+   262→    // فحص الانحناء الثنائي بطريقة Bresler التقريبية (ECP 203-4.2.6)
+   263→    // 1/Pn ≈ 1/Pnx + 1/Pny - 1/Po
+   264→    // أو طريقة الحد الأقصى المبسطة: (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1
+   265→    private fun checkBiaxialLoading(type: ColumnType, Pu: Double, Mx: Double, My: Double, Pn: Double, fy: Double = 360.0): BiaxialCheckResult {
+   266→        // حساب أبعاد المقطع
+   267→        val dimensions = when (type) {
+   268→            is ColumnType.Rectangular -> type.width to type.depth
+   269→            is ColumnType.Circular -> type.diameter to type.diameter
+   270→            else -> sqrt(type.getGrossArea()) to sqrt(type.getGrossArea())
+   271→        }
+   272→        val b = dimensions.first
+   273→        val h = dimensions.second
+   274→        
+   275→        // نسبة التسليح التقريبية (1%)
+   276→        val Ag = b * h
+   277→        val ast = 0.01 * Ag
+   278→        val d_eff = h - 40.0 - 10.0  // خصم الغطاء والكانة
+   279→        
+   280→        // قدرة العزم التصميمية لكل اتجاه (تقريبي)
+   281→        // Mnx = φ × (fy/γs) × As × (d - d') × 0.8
+   282→        val fs = fy / 1.15
+   283→        val d_prime = 40.0 + 10.0  // cover + stirrup
+   284→        val leverArm = (d_eff - d_prime).coerceAtLeast(d_eff * 0.5)
+   285→        val Mnx = 0.65 * fs * ast * leverArm / 1e6  // kN.m (مع φ=0.65 للضغط)
+   286→        
+   287→        // للمقطع الدائري: Mnx = Mny (تماثل)
+   288→        // للمستطيل: Mny يُحسب بنفس الطريقة لكن b و h يتبدلان
+   289→        val Mny = if (type is ColumnType.Rectangular && abs(b - h) > 10.0) {
+   290→            val d_eff_y = b - d_prime
+   291→            val leverArmY = (d_eff_y - d_prime).coerceAtLeast(d_eff_y * 0.5)
+   292→            0.65 * fs * ast * leverArmY / 1e6
+   293→        } else {
+   294→            Mnx  // للمربع والدائري
+   295→        }
+   296→        
+   297→        // معامل α حسب Bresler المبسط (ECP 203 البند 4-2-6)
+   298→        // α = 1.0 للعزوم المتساوية، يزيد مع عدم التماثل
+   299→        val alpha = if (Mnx > 0 && Mny > 0) {
+   300→            val beta = min(abs(Mx) / Mnx, abs(My) / Mny).coerceAtMost(1.0)
+   301→            // α يتراوح بين 1.0 و 2.0 حسب نسبة الحمل المحوري
+   302→            val r = (Pu / Pn).coerceIn(0.1, 0.9)
+   303→            1.0 + (1.0 - r)  // α أكبر عندما يكون الحمل المحوري أقل
+   304→        } else 1.0
+   305→        
+   306→        val interactionFactor = if (Mnx > 0 && Mny > 0) {
+   307→            (abs(Mx) / Mnx).pow(alpha) + (abs(My) / Mny).pow(alpha)
+   308→        } else 0.0
+   309→        
+   310→        return BiaxialCheckResult(
+   311→            abs(Mx), abs(My), interactionFactor,
+   312→            interactionFactor <= 1.0,
+   313→            String.format("Bresler's reciprocal approximation (ECP 203 Sec 4.2.6), α=%.2f", alpha)
+   314→        )
+   315→    }
+   316→    
+   317→    override fun calculateAxialCapacity(fcu: Double, fy: Double, width: Double, depth: Double, 
+   318→                                       reinforcementArea: Double, loadCombination: LoadCombination): Double {
+   319→        return baseDesign.calculateAxialCapacity(fcu, fy, width, depth, reinforcementArea, loadCombination)
+   320→    }
+   321→    
+   322→    override fun calculateReinforcement(fcu: Double, fy: Double, width: Double, depth: Double,
+   323→                                       axialLoad: Double, momentX: Double, momentY: Double,
+   324→                                       loadCombination: LoadCombination): ReinforcementResult {
+   325→        return baseDesign.calculateReinforcement(fcu, fy, width, depth, axialLoad, momentX, momentY, loadCombination)
+   326→    }
+   327→    
+   328→    override fun getMinReinforcementRatio(): Double = 0.008
+   329→    override fun getMaxReinforcementRatio(): Double = 0.08 // ECP 203: 8% max
+   330→    override fun getMinSpacing(): Double = 100.0
+   331→    override fun getMaxSpacing(): Double = 300.0 // ECP 203 البند 4-2-6: min(16×db, min(b,h), 300mm)
+   332→    override fun getMinCover(): Double = 40.0
+   333→
+   334→    // ──────────────────────────────────────────────────────────────────────────────
+   335→    // ثوابت الكود المصري ECP 203-2020 (ECP Constants)
+   336→    // ──────────────────────────────────────────────────────────────────────────────
+   337→
+   338→    companion object {
+   339→        const val GAMMA_C = 1.5         // معامل أمان الخرسانة
+   340→        const val GAMMA_S = 1.15        // معامل أمان الحديد
+   341→        const val ALPHA   = 0.8         // عامل اختزال مقاومة الخرسانة (ثابت حسب ECP)
+   342→        const val EPS_CU  = 0.003       // إنفعال الخرسانة الأقصى عند الضغط
+   343→        const val ES      = 200_000.0   // معامل مرونة الحديد (MPa)
+   344→        const val COVER   = 40.0        // الغطاء الخرساني (mm)
+   345→        const val STIRRUP_DIA = 10.0    // قطر الكانة الافتراضي (mm)
+   346→    }
+   347→
+   348→    // ──────────────────────────────────────────────────────────────────────────────
+   349→    // 1) منحنى التفاعل P-M  —  ECP 203 البند 4-2-4
+   350→    //    Interaction Diagram Generation
+   351→    // ──────────────────────────────────────────────────────────────────────────────
+   352→
+   353→    /**
+   354→     * توليد منحنى التفاعل (P-M Interaction Diagram) حسب الكود المصري ECP 203 البند 4-2-4
+   355→     *
+   356→     * يقوم بإنشاء 26 نقطة من الضغط البحت حتى الشد البحت
+   357→     * لكل نقطة يُحسب: φPn, φMn, c, εt, isTensionControlled
+   358→     *
+   359→     * @param fcu مقاومة الخرسانة المميزة (MPa)
+   360→     * @param fy  إجهاد خضوع الحديد (MPa)
+   361→     * @param width  عرض المقطع (mm)
+   362→     * @param depth  عمق المقطع (mm)
+   363→     * @param totalAs مساحة الحديد الكلية المقدمة (mm²)
+   364→     * @param barConfiguration توزيع الأسياخ (افتراضي: متماثل)
+   365→     * @return قائمة بنقاط منحنى التفاعل
+   366→     */
+   367→    fun generateInteractionDiagram(
+   368→        fcu: Double,
+   369→        fy: Double,
+   370→        width: Double,
+   371→        depth: Double,
+   372→        totalAs: Double,
+   373→        barConfiguration: BarConfiguration = BarConfiguration.SYMMETRIC
+   374→    ): List<InteractionDiagramPoint> {
+   375→        val h = depth
+   376→        val b = width
+   377→        val dPrime = COVER + STIRRUP_DIA                            // mm
+   378→        val d = h - dPrime                                         // mm to extreme tension steel
+   379→        val fsYield = fy / GAMMA_S                                  // MPa
+   380→
+   381→        // ── تعريف طبقات التسليح (Bar Layer Model) ──
+   382→        // كل طبقة: Pair<distance from extreme compression fiber (mm), area (mm²)>
+   383→        val layers: List<Pair<Double, Double>> = when (barConfiguration) {
+   384→            BarConfiguration.SYMMETRIC -> {
+   385→                // أربع طبقات: ضغط - نصفي - نصفي - شد
+   386→                val asFace = totalAs / 2.0
+   387→                listOf(
+   388→                    dPrime          to asFace / 2.0,   // ضغط (قريب من وجه الضغط)
+   389→                    h / 2.0         to asFace / 2.0,   // نصفي (عند المحور)
+   390→                    h / 2.0         to 0.0,             // (تم دمجه في الطبقة السابقة)
+   391→                    d               to asFace / 2.0    // شد (الوجه البعيد)
+   392→                ).filter { it.second > 0.0 }
+   393→            }
+   394→            BarConfiguration.ONE_FACE -> {
+   395→                listOf(d to totalAs)
+   396→            }
+   397→            BarConfiguration.TWO_FACES -> {
+   398→                val half = totalAs / 2.0
+   399→                listOf(dPrime to half, d to half)
+   400→            }
+   401→            BarConfiguration.PERIMETER -> {
+   402→                // تقريب: 4 طبقات متساوية على المحيط
+   403→                val perLayer = totalAs / 4.0
+   404→                listOf(
+   405→                    dPrime          to perLayer,
+   406→                    h * 0.25 + dPrime * 0.75  to perLayer,
+   407→                    h * 0.75 + dPrime * 0.25  to perLayer,
+   408→                    d               to perLayer
+   409→                )
+   410→            }
+   411→        }
+   412→
+   413→        // ── نقطة الضغط البحت (c → كبير جداً) ──
+   414→        val pureCompressionPn = ALPHA * (
+   415→            0.67 * fcu / GAMMA_C * (b * h - totalAs) + fsYield * totalAs
+   416→        )
+   417→
+   418→        val points = mutableListOf<InteractionDiagramPoint>()
+   419→        val numPoints = 26
+   420→
+   421→        // c varies from h (pure compression) down to 5 mm (near pure tension)
+   422→        // Use a mix of linear and fine spacing near balance
+   423→        for (i in 0 until numPoints) {
+   424→            val c = when (i) {
+   425→                0 -> h + 50.0     // beyond section depth → pure compression
+   426→                numPoints - 1 -> 5.0   // near pure tension
+   427→                else -> {
+   428→                    // Non-linear distribution: more points near balance region
+   429→                    val t = i.toDouble() / (numPoints - 1)  // 0→1
+   430→                    val cMax = h + 50.0
+   431→                    val cMin = 5.0
+   432→                    // Use power-law spacing for better resolution near balance
+   433→                    cMax - (cMax - cMin) * t.pow(0.7)
+   434→                }
+   435→            }
+   436→
+   437→            // a = β1 × c, β1 per ECP ≈ 0.85 for fcu ≤ 40, linearly decreasing
+   438→            val beta1 = if (fcu <= 30.0) 0.85
+   439→                        else if (fcu <= 55.0) 0.85 - 0.05 * (fcu - 30.0) / 5.0
+   440→                        else 0.80
+   441→            val a = beta1 * c
+   442→
+   443→            // Strain in each layer: εsi = εcu × (c - di) / c
+   444→            var sumFsiAsi = 0.0        // Σ(fsi × Asi)  in N
+   445→            var sumMoment = 0.0         // Σ(fsi × Asi × (di - h/2))  in N.mm
+   446→            var epsilonTensionExtreme = 0.0
+   447→
+   448→            for ((di, Asi) in layers) {
+   449→                val epsilonSi = EPS_CU * (c - di) / c
+   450→                // Stress: fsi = Es × εsi, capped at ±fy/γs
+   451→                var fsi = ES * epsilonSi
+   452→                fsi = fsi.coerceIn(-fsYield, fsYield)
+   453→
+   454→                sumFsiAsi += fsi * Asi
+   455→                sumMoment += fsi * Asi * (di - h / 2.0)
+   456→
+   457→                // Track extreme tension strain (largest di)
+   458→                if (di >= d - 1.0) {
+   459→                    epsilonTensionExtreme = epsilonSi
+   460→                }
+   461→            }
+   462→
+   463→            // Concrete compression block
+   464→            val concreteForce = 0.67 * fcu / GAMMA_C * a * b
+   465→
+   466→            // Nominal axial force (positive = compression)
+   467→            val Pn = concreteForce + sumFsiAsi
+   468→            // Nominal moment about section centroid
+   469→            val Mn = sumMoment
+   470→
+   471→            // ECP 203 uses α = 0.8 always (unlike ACI's variable φ)
+   472→            // φPn = α × Pn, φMn = α × Mn
+   473→            val phiPn = ALPHA * Pn / 1000.0     // kN
+   474→            val phiMn = ALPHA * Mn / 1e6          // kN.m
+   475→
+   476→            // Tension controlled: εt ≥ εy
+   477→            val epsilonYield = fy / ES
+   478→            val isTensionControlled = epsilonTensionExtreme >= epsilonYield
+   479→
+   480→            // Pure compression point override
+   481→            val finalPhiPn = if (i == 0) ALPHA * pureCompressionPn / 1000.0 else phiPn
+   482→            val finalPhiMn = if (i == 0) 0.0 else phiMn
+   483→
+   484→            points.add(InteractionDiagramPoint(
+   485→                phiPn = finalPhiPn,
+   486→                phiMn = finalPhiMn,
+   487→                c = c,
+   488→                epsilonT = epsilonTensionExtreme,
+   489→                phi = ALPHA,
+   490→                isTensionControlled = isTensionControlled
+   491→            ))
+   492→        }
+   493→
+   494→        // ── إضافة نقطة الشد البحت (Pure Tension) ──
+   495→        val pureTensionPn = -ALPHA * fsYield * totalAs / 1000.0  // kN (negative = tension)
+   496→        points.add(InteractionDiagramPoint(
+   497→            phiPn = pureTensionPn,
+   498→            phiMn = 0.0,
+   499→            c = 0.0,
+   500→            epsilonT = EPS_CU * 10.0,  // very large
+   501→            phi = ALPHA,
+   502→            isTensionControlled = true
+   503→        ))
+   504→
+   505→        return points
+   506→    }
+   507→
+   508→    // ──────────────────────────────────────────────────────────────────────────────
+   509→    // 2) تكبير العزم (P-Delta)  —  ECP 203 البند 4-2-7
+   510→    //    Moment Magnification for Slender Columns
+   511→    // ──────────────────────────────────────────────────────────────────────────────
+   512→
+   513→    /**
+   514→     * حساب تكبير العزم بسبب النحافة (P-Delta Effects) حسب ECP 203 البند 4-2-7
+   515→     *
+   516→     * @param Pu  الحمل المحوري التصميمي (kN)
+   517→     * @param Mu  العزم التصميمي (kN.m)
+   518→     * @param unsupportedLength  الطول غير المدعوم (m)
+   519→     * @param effectiveLengthFactor  معامل الطول الفعال K
+   520→     * @param width  عرض المقطع (mm)
+   521→     * @param depth  عمق المقطع (mm)
+   522→     * @param fcu  مقاومة الخرسانة (MPa)
+   523→     * @param fy  إجهاد خضوع الحديد (MPa)
+   524→     * @param totalAs  مساحة الحديد الكلية (mm²)
+   525→     * @param Cm  معامل العزم المكافئ (default 1.0)
+   526→     * @param isSwayFrame  هل الإطار مقاوم للجانبية؟
+   527→     * @return MomentMagnificationResult
+   528→     */
+   529→    fun calculateMomentMagnification(
+   530→        Pu: Double,                      // kN
+   531→        Mu: Double,                      // kN.m
+   532→        unsupportedLength: Double,       // m
+   533→        effectiveLengthFactor: Double,   // K
+   534→        width: Double,                   // mm
+   535→        depth: Double,                   // mm
+   536→        fcu: Double,
+   537→        fy: Double,
+   538→        totalAs: Double,                 // mm²
+   539→        Cm: Double = 1.0,                // equivalent moment factor
+   540→        isSwayFrame: Boolean = false
+   541→    ): MomentMagnificationResult {
+   542→        val codeNotes = mutableListOf<String>()
+   543→        val L = unsupportedLength * 1000.0   // m → mm
+   544→        val K = effectiveLengthFactor
+   545→
+   546→        // ── Section Properties ──
+   547→        val b = width
+   548→        val h = depth
+   549→        val Ig = b * h * h * h / 12.0       // mm⁴ - gross moment of inertia
+   550→
+   551→        // ── Modulus of Elasticity (ECP 203: Ec = 4400 × √fcu) ──
+   552→        val Ec = 4400.0 * sqrt(fcu)          // MPa
+   553→
+   554→        // ── Steel moment of inertia (approximate using gross section) ──
+   555→        // Is ≈ As × (h/2 - d')²  (assuming symmetric reinforcement)
+   556→        val dPrime = COVER + STIRRUP_DIA
+   557→        val leverArm = (h / 2.0 - dPrime).coerceAtLeast(0.0)
+   558→        val Is = totalAs * leverArm * leverArm   // mm⁴
+   559→
+   560→        // ── Effective Flexural Rigidity per ECP 203 (simplified) ──
+   561→        // BUG FIX: ECP uses 0.4×Ec×Ig/(1+βdns) instead of ACI 0.2×Ec×Ig + Es×Is
+   562→        val betaDns = 0.6  // ratio of max sustained axial load to max factored axial load
+   563→        val EI = 0.4 * Ec * Ig / (1.0 + betaDns)   // N.mm²
+   564→
+   565→        // ── Critical Buckling Load (Euler) ──
+   566→        val effectiveLength = K * L             // mm
+   567→        val Pc = PI * PI * EI / (effectiveLength * effectiveLength)  // N
+   568→        val PcKn = Pc / 1000.0                  // kN
+   569→
+   570→        // ── Slenderness check ──
+   571→        val r = min(b, h) / sqrt(12.0)          // mm - radius of gyration
+   572→        val lambda = effectiveLength / r
+   573→        val isSlender = lambda > 15.0           // rectangular column limit
+   574→
+   575→        codeNotes.add("ECP 203 البند 4-2-7: تكبير العزم بسبب النحافة")
+   576→        codeNotes.add(String.format("Ec = 4400√fcu = %.0f MPa", Ec))
+   577→        codeNotes.add(String.format("Ig = %.2e mm⁴, Is = %.2e mm⁴", Ig, Is))
+   578→        codeNotes.add(String.format("EI = %.2e N.mm²", EI))
+   579→        codeNotes.add(String.format("Pc = π²×EI/(KL)² = %.1f kN", PcKn))
+   580→        codeNotes.add(String.format("نسبة النحافة λ = %.1f, العمود %s", 
+   581→            lambda, if (isSlender) "طويل (Long)" else "قصير (Short)"))
+   582→
+   583→        // ── Magnification Factor ──
+   584→        val delta: Double
+   585→        val magnifiedMoment: Double
+   586→
+   587→        if (!isSwayFrame) {
+   588→            // Non-sway frame: δ = Cm / (1 - Pu/Pc) ≥ 1.0, capped at 2.5
+   589→            val ratio = (Pu * 1000.0) / Pc    // dimensionless
+   590→            if (ratio >= 1.0) {
+   591→                codeNotes.add(String.format("⚠️ Pu/Pc = %.3f ≥ 1.0 → عدم استقرار! يجب زيادة المقطع.", ratio))
+   592→                delta = 2.5  // cap at maximum
+   593→            } else {
+   594→                delta = (Cm / (1.0 - ratio)).coerceIn(1.0, 2.5)
+   595→            }
+   596→            magnifiedMoment = Mu * delta
+   597→
+   598→            codeNotes.add("إطار غير جانبي (Non-Sway): δ = Cm/(1-Pu/Pc)")
+   599→            codeNotes.add(String.format("Cm = %.2f, Pu/Pc = %.3f", Cm, ratio))
+   600→            codeNotes.add(String.format("δ = %.3f (max 2.5), M_design = %.1f kN.m", delta, magnifiedMoment))
+   601→
+   602→            if (delta > 1.05) {
+   603→                codeNotes.add(String.format("⚠️ العزم مكبّر بمعامل δ = %.2f > 1.05 — يُنصح بزيادة المقطع", delta))
+   604→            }
+   605→        } else {
+   606→            // Sway frame: δs = 1 / (1 - ΣPu/ΣPc)
+   607→            // Here we assume this column's Pu/Pc ratio as approximation for ΣPu/ΣPc
+   608→            val ratio = (Pu * 1000.0) / Pc
+   609→            val isSwaySensitive = ratio > 0.05
+   610→
+   611→            if (ratio >= 0.6) {
+   612→                codeNotes.add(String.format("⚠️ ΣPu/ΣPc = %.3f ≥ 0.6 → الإطار حساس جداً للجانبية!", ratio))
+   613→                delta = 1.0 / (1.0 - 0.59)  // use capped ratio
+   614→            } else {
+   615→                delta = 1.0 / (1.0 - ratio)
+   616→            }
+   617→            magnifiedMoment = Mu + (delta - 1.0) * Mu  // M_design = Mu + δs × Msway (≈ δs × Mu if all sway)
+   618→
+   619→            codeNotes.add("إطار جانبي (Sway): δs = 1/(1-ΣPu/ΣPc)")
+   620→            codeNotes.add(String.format("ΣPu/ΣPc ≈ %.3f, δs = %.3f", ratio, delta))
+   621→
+   622→            return MomentMagnificationResult(
+   623→                magnifiedMoment = magnifiedMoment,
+   624→                delta = delta,
+   625→                EI = EI,
+   626→                Pc = PcKn,
+   627→                isSlender = isSlender,
+   628→                isSwaySensitive = isSwaySensitive,
+   629→                codeNotes = codeNotes
+   630→            )
+   631→        }
+   632→
+   633→        return MomentMagnificationResult(
+   634→            magnifiedMoment = magnifiedMoment,
+   635→            delta = delta,
+   636→            EI = EI,
+   637→            Pc = PcKn,
+   638→            isSlender = isSlender,
+   639→            isSwaySensitive = false,
+   640→            codeNotes = codeNotes
+   641→        )
+   642→    }
+   643→
+   644→    // ──────────────────────────────────────────────────────────────────────────────
+   645→    // 3) تصميم عمود حلزوني (Spiral Column)  —  ECP 203 البند 4-2-6
+   646→    //    Spiral Reinforcement Design for Circular Columns
+   647→    // ──────────────────────────────────────────────────────────────────────────────
+   648→
+   649→    /**
+   650→     * تصميم عمود دائري حلزوني حسب الكود المصري ECP 203 البند 4-2-6
+   651→     *
+   652→     * يستخدم معامل φ = 0.75 بدلاً من 0.65 للأعمدة العادية
+   653→     *
+   654→     * @param fcu مقاومة الخرسانة (MPa)
+   655→     * @param fy  إجهاد خضوع الحديد (MPa)
+   656→     * @param diameter قطر العمود (mm)
+   657→     * @param axialLoad الحمل المحوري (kN)
+   658→     * @param moment العزم (kN.m)
+   659→     * @param unsupportedLength الطول غير المدعوم (m)
+   660→     * @param endConditions ظروف التثبيت
+   661→     * @param inventory مخزون الحديد (اختياري)
+   662→     * @param loadCombination مجموعة التحميل
+   663→     * @return AdvancedColumnResult مع ملاحظات الحلزون
+   664→     */
+   665→    fun designSpiralColumn(
+   666→        fcu: Double,
+   667→        fy: Double,
+   668→        diameter: Double,               // mm
+   669→        axialLoad: Double,              // kN
+   670→        moment: Double,                 // kN.m
+   671→        unsupportedLength: Double,      // m
+   672→        endConditions: ColumnEndConditions,
+   673→        inventory: RebarInventory?,
+   674→        loadCombination: LoadCombination
+   675→    ): AdvancedColumnResult {
+   676→        val warnings = mutableListOf<String>()
+   677→        val codeNotes = mutableListOf<String>()
+   678→
+   679→        // معامل أمان أعلى للأعمدة الحلزونية: φ = 0.75
+   680→        val PHI_SPIRAL = 0.75
+   681→        codeNotes.add("ECP 203 البند 4-2-6: عمود حلزوني (Spiral Column)")
+   682→        codeNotes.add(String.format("معامل التخفيض φ = %.2f (أعلى من 0.65 للأعمدة العادية)", PHI_SPIRAL))
+   683→
+   684→        val Ag = PI * diameter * diameter / 4.0
+   685→        val cover = COVER
+   686→        val dSpiral = 8.0  // قطر الحلزون الافتراضي (mm)
+   687→        val coreDiameter = diameter - 2.0 * cover
+   688→        val Ac = PI * coreDiameter * coreDiameter / 4.0  // مساحة اللب
+   689→
+   690→        // ── حساب التسليح الطولي المطلوب ──
+   691→        val b = diameter
+   692→        val h = diameter
+   693→        val columnType = ColumnType.Circular(diameter)
+   694→
+   695→        // delegate to base for reinforcement sizing
+   696→        val reinforcementResult = baseDesign.calculateReinforcement(
+   697→            fcu, fy, b, h, axialLoad, moment, 0.0, loadCombination
+   698→        )
+   699→
+   700→        // ── نسبة التسليح الحلزوني المطلوبة ──
+   701→        // ρs ≥ 0.45 × (Ag/Ac - 1) × (0.67×fcu/(γc × fy/γs))
+   702→        val concreteDesignStress = 0.67 * fcu / GAMMA_C
+   703→        val steelDesignStress = fy / GAMMA_S
+   704→        val rhoSRequired = 0.45 * (Ag / Ac - 1.0) * (concreteDesignStress / steelDesignStress)
+   705→
+   706→        // ── حساب مساحة الحلزون لكل لفة ──
+   707→        val asSpiral = PI * dSpiral * dSpiral / 4.0  // mm²
+   708→
+   709→        // ── حساب أقصى تباعد للالحلزون ──
+   710→        // s ≤ min(75mm, (D_core - 2×db_spiral) / 6)
+   711→        val sMax1 = 75.0
+   712→        val sMax2 = (coreDiameter - 2.0 * dSpiral) / 6.0
+   713→        val sMax = min(sMax1, sMax2)
+   714→
+   715→        // ── حساب التباعد المطلوب ──
+   716→        // ρs = 4 × as × π × (D_core - db) / (s × π × D_core²)
+   717→        // Simplified: s = 4 × as × (D_core - db) / (ρs × D_core²)
+   718→        // More directly: s = volume_of_spiral_per_turn / (ρs × Ac)
+   719→        val sRequired = if (rhoSRequired > 0) {
+   720→            4.0 * asSpiral * (coreDiameter - dSpiral) / (rhoSRequired * coreDiameter * coreDiameter)
+   721→        } else 75.0
+   722→
+   723→        val sProvided = sRequired.coerceIn(25.0, sMax)
+   724→
+   725→        codeNotes.add(String.format("المساحة الكلية Ag = %.0f mm², مساحة اللب Ac = %.0f mm²", Ag, Ac))
+   726→        codeNotes.add(String.format("نسبة التسليح الحلزوني المطلوبة ρs = %.4f", rhoSRequired))
+   727→        codeNotes.add(String.format("قطر الحلزون = %.0f mm, التباعد = %.0f mm (أقصى = %.0f mm)", dSpiral, sProvided, sMax))
+   728→
+   729→        if (sRequired > sMax) {
+   730→            warnings.add(String.format("⚠️ التباعد المطلوب للحلزون (%.0f mm) يزيد عن الحد الأقصى (%.0f mm)", sRequired, sMax))
+   731→            warnings.add("   يُنصح بزيادة قطر الحلزون أو قطر العمود")
+   732→        }
+   733→
+   734→        // ── فحص الحد الأدنى للمسافة الخالية بين الحلزونات ──
+   735→        val clearSpacing = sProvided - dSpiral
+   736→        if (clearSpacing < 25.0) {
+   737→            codeNotes.add(String.format("⚠️ المسافة الخالية بين الحلزونات = %.0f mm < 25 mm — تقليل تباعد الحلزون", clearSpacing))
+   738→        }
+   739→
+   740→        // ── Slenderness check ──
+   741→        val k = max(endConditions.topCondition.effectiveLengthFactor,
+   742→                   endConditions.bottomCondition.effectiveLengthFactor)
+   743→        val r = diameter / 4.0
+   744→        val effectiveLength = k * unsupportedLength * 1000.0
+   745→        val slendernessRatio = effectiveLength / r
+   746→        val isSlender = slendernessRatio > 12.0  // circular column limit
+   747→        if (isSlender) {
+   748→            warnings.add(String.format("⚠️ عمود حلزوني نحيف! λ = %.1f > 12 — يجب مراعاة تأثيرات الدرجة الثانية", slendernessRatio))
+   749→        }
+   750→
+   751→        // ── Axial capacity with spiral φ ──
+   752→        val axialCapacity = calculateAxialCapacityWithPhi(fcu, fy, Ag, reinforcementResult.astProvided, PHI_SPIRAL)
+   753→
+   754→        // ── Moment capacity (approximate for circular) ──
+   755→        val dEff = diameter - cover - STIRRUP_DIA
+   756→        val muCap = reinforcementResult.astProvided * (fy / GAMMA_S) * 0.8 * dEff / 1e6
+   757→
+   758→        codeNotes.add(String.format("القدرة المحورية (مع φ=%.2f) = %.1f kN", PHI_SPIRAL, axialCapacity))
+   759→        codeNotes.add(String.format("تباعد الكانات الحلزونية s = %.0f mm", sProvided))
+   760→
+   761→        val inventoryAnalysis = inventory?.let { inv ->
+   762→            analyzeInventory(reinforcementResult, unsupportedLength, inv)
+   763→        }
+   764→
+   765→        return AdvancedColumnResult(
+   766→            columnType = columnType,
+   767→            axialCapacity = axialCapacity,
+   768→            momentCapacityX = muCap,
+   769→            momentCapacityY = muCap,
+   770→            slendernessRatio = slendernessRatio,
+   771→            isSlender = isSlender,
+   772→            effectiveLength = effectiveLength,
+   773→            reinforcementResult = reinforcementResult,
+   774→            inventoryAnalysis = inventoryAnalysis,
+   775→            biaxialCheck = null,  // circular columns don't have biaxial bending
+   776→            punchingCheck = null,
+   777→            warnings = warnings,
+   778→            codeNotes = codeNotes,
+   779→            steelWeightPerMeter = reinforcementResult.astProvided * 7850.0 / 1e6 +
+   780→                                   (4.0 * asSpiral * PI * coreDiameter / max(sProvided, 1.0)) * 7850.0 / 1e6,
+   781→            concreteVolumePerMeter = Ag / 1e6
+   782→        )
+   783→    }
+   784→
+   785→    /**
+   786→     * حساب القدرة المحورية مع معامل تخفيض مخصص φ
+   787→     * Axial capacity with a custom φ factor (used for spiral columns with φ=0.75)
+   788→     */
+   789→    private fun calculateAxialCapacityWithPhi(
+   790→        fcu: Double, fy: Double, Ag: Double, Ast: Double, phi: Double
+   791→    ): Double {
+   792→        val ast = Ast.coerceAtMost(Ag * 0.08)
+   793→        val concreteStress = 0.67 * fcu / GAMMA_C
+   794→        val steelStress = fy / GAMMA_S
+   795→        val nominalCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
+   796→        return phi * nominalCapacity / 1000.0  // kN
+   797→    }
+   798→
+   799→    // ──────────────────────────────────────────────────────────────────────────────
+   800→    // 4) تصنيف العمود: قصير أم طويل  —  ECP 203 البند 4-2-7
+   801→    //    Short Column vs Long Column Classification
+   802→    // ──────────────────────────────────────────────────────────────────────────────
+   803→
+   804→    /**
+   805→     * تصنيف العمود إلى قصير أو طويل حسب نسبة النحافة
+   806→     * Classifies the column as short or long based on slenderness ratio per ECP 203
+   807→     *
+   808→     * @param unsupportedLength الطول غير المدعوم (m)
+   809→     * @param width  عرض المقطع (mm)
+   810→     * @param depth  عمق المقطع (mm)
+   811→     * @param endConditions ظروف التثبيت
+   812→     * @param columnType نوع العمود
+   813→     * @return ColumnSlendernessResult
+   814→     */
+   815→    fun checkShortColumnVsLongColumn(
+   816→        unsupportedLength: Double,
+   817→        width: Double,
+   818→        depth: Double,
+   819→        endConditions: ColumnEndConditions,
+   820→        columnType: ColumnType
+   821→    ): ColumnSlendernessResult {
+   822→        val notes = mutableListOf<String>()
+   823→
+   824→        // ── K factor: max of top and bottom conditions ──
+   825→        val kFactor = max(
+   826→            endConditions.topCondition.effectiveLengthFactor,
+   827→            endConditions.bottomCondition.effectiveLengthFactor
+   828→        )
+   829→        notes.add(String.format("معامل الطول الفعال K = %.2f (max of top=%.2f, bottom=%.2f)", 
+   830→            kFactor,
+   831→            endConditions.topCondition.effectiveLengthFactor,
+   832→            endConditions.bottomCondition.effectiveLengthFactor
+   833→        ))
+   834→
+   835→        // ── Radius of Gyration r ──
+   836→        val radiusOfGyration = when (columnType) {
+   837→            is ColumnType.Circular -> columnType.diameter / 4.0
+   838→            is ColumnType.Rectangular -> min(columnType.width, columnType.depth) / sqrt(12.0)
+   839→            is ColumnType.LShaped -> columnType.thickness / sqrt(12.0)
+   840→            is ColumnType.TShaped -> min(columnType.webWidth, columnType.flangeThickness) / sqrt(12.0)
+   841→            is ColumnType.Composite -> min(columnType.concreteWidth, columnType.concreteDepth) / sqrt(12.0)
+   842→            is ColumnType.Tubular -> (columnType.outerDiameter + columnType.innerDiameter) / 8.0
+   843→        }
+   844→
+   845→        notes.add(String.format("نصف القطر الدوراني r = %.1f mm", radiusOfGyration))
+   846→
+   847→        // ── Effective length and slenderness ratio ──
+   848→        val effectiveLength = kFactor * unsupportedLength * 1000.0  // mm
+   849→        val slendernessRatio = effectiveLength / radiusOfGyration
+   850→
+   851→        // ── Short column limits per ECP 203 ──
+   852→        val shortColumnLimit = when (columnType) {
+   853→            is ColumnType.Circular -> 12.0
+   854→            else -> 15.0
+   855→        }
+   856→
+   857→        val isShortColumn = slendernessRatio <= shortColumnLimit
+   858→        val isLongColumn = !isShortColumn
+   859→
+   860→        notes.add(String.format("الطول الفعال KL = %.0f mm (%.2f m)", effectiveLength, effectiveLength / 1000.0))
+   861→        notes.add(String.format("نسبة النحافة λ = KL/r = %.1f", slendernessRatio))
+   862→        notes.add(String.format("حد العمود القصير λ_lim = %.0f (%s)", 
+   863→            shortColumnLimit,
+   864→            if (columnType is ColumnType.Circular) "دائري" else "مستطيل"
+   865→        ))
+   866→
+   867→        if (isShortColumn) {
+   868→            notes.add("✅ العمود قصير (Short Column) — لا حاجة لتكبير العزم")
+   869→        } else {
+   870→            notes.add("⚠️ العمود طويل (Long Column) — يجب تطبيق البند 4-2-7 لتكبير العزم (P-Delta)")
+   871→        }
+   872→
+   873→        // ── Additional checks ──
+   874→        if (slendernessRatio > 100.0) {
+   875→            notes.add(String.format("⚠️ نسبة النحافة عالية جداً (λ=%.1f > 100) — يُنصح بإعادة النظر في تصميم النظام الإنشائي", slendernessRatio))
+   876→        }
+   877→
+   878→        // ── End condition recommendations ──
+   879→        if (isLongColumn && kFactor > 0.9) {
+   880→            notes.add("💡 لتحسين الأداء: يمكن تقليل K بتثبيت أفضل للأطراف (مثال: Fixed-Fixed → K=0.65)")
+   881→        }
+   882→
+   883→        return ColumnSlendernessResult(
+   884→            slendernessRatio = slendernessRatio,
+   885→            kFactor = kFactor,
+   886→            radiusOfGyration = radiusOfGyration,
+   887→            shortColumnLimit = shortColumnLimit,
+   888→            isShortColumn = isShortColumn,
+   889→            isLongColumn = isLongColumn,
+   890→            effectiveLength = effectiveLength,
+   891→            notes = notes
+   892→        )
+   893→    }
+   894→
+   895→    // ──────────────────────────────────────────────────────────────────────────────
+   896→    // 5) فحص الانحناء الثنائي المحسّن (Enhanced Biaxial Bending Check)
+   897→    //    Uses Bresler reciprocal load method + Load Contour method
+   898→    // ──────────────────────────────────────────────────────────────────────────────
+   899→
+   900→    /**
+   901→     * فحص الانحناء الثنائي المحسّن بطريقة Bresler وطريقة Load Contour
+   902→     * Enhanced biaxial bending check per ECP 203 Section 4-2-6
+   903→     *
+   904→     * @param type نوع العمود
+   905→     * @param Pu الحمل المحوري (kN)
+   906→     * @param Mx العزم حول المحور X (kN.m)
+   907→     * @param My العزم حول المحور Y (kN.m)
+   908→     * @param Pn القدرة المحورية الكلية (kN)
+   909→     * @param fy إجهاد خضوع الحديد (MPa)
+   910→     * @return BiaxialCheckResult
+   911→     */
+   912→    private fun checkBiaxialLoading(
+   913→        type: ColumnType,
+   914→        Pu: Double,
+   915→        Mx: Double,
+   916→        My: Double,
+   917→        Pn: Double,
+   918→        fcu: Double,
+   919→        fy: Double = 360.0
+   920→    ): BiaxialCheckResult {
+   921→        // ── Section dimensions ──
+   922→        val (b, h) = when (type) {
+   923→            is ColumnType.Rectangular -> type.width to type.depth
+   924→            is ColumnType.Circular -> type.diameter to type.diameter
+   925→            else -> {
+   926→                // Approximate L/T shaped as equivalent square
+   927→                val side = sqrt(type.getGrossArea())
+   928→                side to side
+   929→            }
+   930→        }
+   931→        val Ag = b * h
+   932→        val ast = 0.01 * Ag
+   933→
+   934→        // ── Generate interaction diagrams for both axes ──
+   935→        // BUG FIX: pass actual fcu instead of hardcoded 25.0
+   936→        val diagramX = generateInteractionDiagram(
+   937→            fcu = fcu,
+   938→            fy = fy,
+   939→            width = b,
+   940→            depth = h,
+   941→            totalAs = ast,
+   942→            barConfiguration = BarConfiguration.SYMMETRIC
+   943→        )
+   944→
+   945→        val diagramY = if (type is ColumnType.Rectangular && abs(b - h) > 10.0) {
+   946→            generateInteractionDiagram(
+   947→                fcu = fcu,
+   948→                fy = fy,
+   949→                width = h,   // swapped
+   950→                depth = b,
+   951→                totalAs = ast,
+   952→                barConfiguration = BarConfiguration.SYMMETRIC
+   953→            )
+   954→        } else {
+   955→            diagramX  // symmetric section
+   956→        }
+   957→
+   958→        // ── Interpolate to find Mnx and Mny at current Pu ──
+   959→        val Mnx = interpolateMomentAtLoad(diagramX, Pu)
+   960→        val Mny = interpolateMomentAtLoad(diagramY, Pu)
+   961→
+   962→        // ── Method 1: Bresler Reciprocal Load (ECP 203 Sec 4.2.6) ──
+   963→        // 1/Pn(Biaxial) = 1/Pnx + 1/Pny - 1/Po
+   964→        val Pnx = interpolateAxialAtMoment(diagramX, abs(Mx))
+   965→        val Pny = interpolateAxialAtMoment(diagramY, abs(My))
+   966→        val Po = diagramX.maxOfOrNull { it.phiPn } ?: 0.0
+   967→
+   968→        val breslerSafe = if (Pnx > 0 && Pny > 0 && Po > 0) {
+   969→            val PnBiaxial = 1.0 / (1.0 / Pnx + 1.0 / Pny - 1.0 / Po)
+   970→            PnBiaxial >= Pu
+   971→        } else true
+   972→
+   973→        // ── Method 2: Load Contour (Hsu) ──
+   974→        // (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1
+   975→        // α = 1.0 for Pu ≈ 0, α → 2.0 for Pu → P平衡
+   976→        // Accurate α based on Pu/Po ratio
+   977→        val r = if (Po > 0) (Pu / Po).coerceIn(0.05, 0.95) else 0.5
+   978→        val alphaContour = ln(0.5) / ln(max(0.001, 1.0 - r))  // Hsu equation
+   979→        val alphaEffective = alphaContour.coerceIn(1.0, 2.0)
+   980→
+   981→        val contourFactor = if (Mnx > 0 && Mny > 0) {
+   982→            (abs(Mx) / Mnx).pow(alphaEffective) + (abs(My) / Mny).pow(alphaEffective)
+   983→        } else 0.0
+   984→
+   985→        val contourSafe = contourFactor <= 1.0
+   986→
+   987→        // ── Use the more critical (higher) factor ──
+   988→        // Combine: use load contour factor as primary, Bresler as backup
+   989→        val interactionFactor = max(contourFactor,
+   990→            if (Pnx > 0 && Pny > 0 && Po > 0) {
+   991→                val PnBiaxial = 1.0 / (1.0 / Pnx + 1.0 / Pny - 1.0 / Po)
+   992→                if (PnBiaxial > 0) Pu / PnBiaxial else 99.0
+   993→            } else 0.0
+   994→        )
+   995→
+   996→        val isSafe = interactionFactor <= 1.0
+   997→
+   998→        val formula = buildString {
+   999→            append("Bresler + Load Contour (ECP 203 Sec 4.2.6)\n")
+  1000→            append(String.format("α(Hsu) = %.2f, Contour factor = %.3f\n", alphaEffective, contourFactor))
+  1001→            if (breslerSafe != contourSafe) {
+  1002→                append(String.format("Bresler: %s, Contour: %s", 
+  1003→                    if (breslerSafe) "✅" else "❌",
+  1004→                    if (contourSafe) "✅" else "❌"
+  1005→                ))
+  1006→            }
+  1007→        }
+  1008→
+  1009→        return BiaxialCheckResult(
+  1010→            mxRatio = if (Mnx > 0) abs(Mx) / Mnx else 0.0,
+  1011→            myRatio = if (Mny > 0) abs(My) / Mny else 0.0,
+  1012→            interactionFactor = interactionFactor,
+  1013→            isSafe = isSafe,
+  1014→            formula = formula
+  1015→        )
+  1016→    }
+  1017→
+  1018→    /**
+  1019→     * Interpolate moment capacity at a given axial load from interaction diagram
+  1020→     * يُعطي φMn عند φPn المطلوب بالاستكمال الخطي
+  1021→     */
+  1022→    private fun interpolateMomentAtLoad(diagram: List<InteractionDiagramPoint>, targetPn: Double): Double {
+  1023→        if (diagram.isEmpty()) return 0.0
+  1024→        if (diagram.size == 1) return diagram[0].phiMn
+  1025→
+  1026→        // Find two bracketing points
+  1027→        for (i in 0 until diagram.size - 1) {
+  1028→            val p1 = diagram[i]
+  1029→            val p2 = diagram[i + 1]
+  1030→
+  1031→            // Pn decreases as we move along the diagram (compression → tension)
+  1032→            if ((p1.phiPn >= targetPn && p2.phiPn <= targetPn) ||
+  1033→                (p1.phiPn <= targetPn && p2.phiPn >= targetPn)) {
+  1034→                val dp = p2.phiPn - p1.phiPn
+  1035→                if (abs(dp) < 0.001) return max(p1.phiMn, p2.phiMn)
+  1036→                val t = (targetPn - p1.phiPn) / dp
+  1037→                return p1.phiMn + t * (p2.phiMn - p1.phiMn)
+  1038→            }
+  1039→        }
+  1040→
+  1041→        // Extrapolate from nearest endpoint
+  1042→        return if (targetPn > diagram.first().phiPn) {
+  1043→            diagram.first().phiMn
+  1044→        } else {
+  1045→            diagram.last().phiMn
+  1046→        }
+  1047→    }
+  1048→
+  1049→    /**
+  1050→     * Interpolate axial capacity at a given moment from interaction diagram
+  1051→     * يُعطي φPn عند φMn المطلوب بالاستكمال الخطي
+  1052→     */
+  1053→    private fun interpolateAxialAtMoment(diagram: List<InteractionDiagramPoint>, targetMn: Double): Double {
+  1054→        if (diagram.isEmpty()) return 0.0
+  1055→        if (diagram.size == 1) return diagram[0].phiPn
+  1056→
+  1057→        for (i in 0 until diagram.size - 1) {
+  1058→            val p1 = diagram[i]
+  1059→            val p2 = diagram[i + 1]
+  1060→
+  1061→            if ((p1.phiMn <= targetMn && p2.phiMn >= targetMn) ||
+  1062→                (p1.phiMn >= targetMn && p2.phiMn <= targetMn)) {
+  1063→                val dm = p2.phiMn - p1.phiMn
+  1064→                if (abs(dm) < 0.001) return max(p1.phiPn, p2.phiPn)
+  1065→                val t = (targetMn - p1.phiMn) / dm
+  1066→                return p1.phiPn + t * (p2.phiPn - p1.phiPn)
+  1067→            }
+  1068→        }
+  1069→
+  1070→        return if (targetMn > (diagram.maxOfOrNull { it.phiMn } ?: 0.0)) {
+  1071→            diagram.minOfOrNull { it.phiPn } ?: 0.0
+  1072→        } else {
+  1073→            diagram.maxOfOrNull { it.phiPn } ?: 0.0
+  1074→        }
+  1075→    }
+  1076→
+  1077→    // ──────────────────────────────────────────────────────────────────────────────
+  1078→    // 6) الجساءة الجانبية للعمود (Lateral Stiffness)
+  1079→    //    For frame analysis and drift calculations
+  1080→    // ──────────────────────────────────────────────────────────────────────────────
+  1081→
+  1082→    /**
+  1083→     * حساب الجساءة الجانبية للعمود (k = F/δ) لتحليل الإطارات
+  1084→     * Calculates the lateral stiffness of the column for frame analysis
+  1085→     *
+  1086→     * المعادلات حسب ظروف التثبيت:
+  1087→     *   - Fixed-Fixed:     k = 12 × EI / L³
+  1088→     *   - Fixed-Pinned:    k = 3 × EI / L³
+  1089→     *   - Pinned-Pinned:   k = 0 (unstable laterally, returns minimum)
+  1090→     *   - Cantilever:      k = 3 × EI / L³
+  1091→     *
+  1092→     * @param width  عرض المقطع (mm)
+  1093→     * @param depth  عمق المقطع (mm)
+  1094→     * @param unsupportedLength  الطول غير المدعوم (m)
+  1095→     * @param fcu  مقاومة الخرسانة (MPa)
+  1096→     * @param fy  إجهاد خضوع الحديد (MPa)
+  1097→     * @param totalAs  مساحة الحديد الكلية (mm²)
+  1098→     * @param endConditions  ظروف التثبيت
+  1099→     * @return الجساءة الجانبية (kN/mm)
+  1100→     */
+  1101→    fun calculateLateralStiffness(
+  1102→        width: Double,
+  1103→        depth: Double,
+  1104→        unsupportedLength: Double,
+  1105→        fcu: Double,
+  1106→        fy: Double,
+  1107→        totalAs: Double,
+  1108→        endConditions: ColumnEndConditions
+  1109→    ): Double {
+  1110→        val L = unsupportedLength * 1000.0  // m → mm
+  1111→
+  1112→        // ── Flexural rigidity ──
+  1113→        val b = width
+  1114→        val h = depth
+  1115→        val Ig = b * h * h * h / 12.0
+  1116→        val Ec = 4400.0 * sqrt(fcu)
+  1117→        val dPrime = COVER + STIRRUP_DIA
+  1118→        val leverArm = (h / 2.0 - dPrime).coerceAtLeast(0.0)
+  1119→        val Is = totalAs * leverArm * leverArm
+  1120→
+  1121→        // EI = 0.2 × Ec × Ig + Es × Is (same formula as moment magnification)
+  1122→        val EI = 0.2 * Ec * Ig + ES * Is  // N.mm²
+  1123→
+  1124→        // ── Determine end condition factor for stiffness ──
+  1125→        // Use a simplified approach based on K-factor combinations
+  1126→        val kTop = endConditions.topCondition.effectiveLengthFactor
+  1127→        val kBottom = endConditions.bottomCondition.effectiveLengthFactor
+  1128→        val avgK = (kTop + kBottom) / 2.0
+  1129→
+  1130→        // Stiffness coefficient based on end conditions
+  1131→        // Fixed-Fixed → 12, Fixed-Pinned → 3, Pinned-Pinned → 0 (unstable)
+  1132→        val stiffnessCoeff = when {
+  1133→            kTop <= 0.7 && kBottom <= 0.7 -> 12.0        // approximately Fixed-Fixed
+  1134→            kTop <= 0.7 || kBottom <= 0.7 -> 3.0         // Fixed-Pinned or Pinned-Fixed
+  1135→            avgK <= 0.85 -> 6.0                           // Partially fixed both ends
+  1136→            else -> 1.5                                    // Pinned-Pinned (very low stiffness)
+  1137→        }
+  1138→
+  1139→        // k = coeff × EI / L³  (N/mm)
+  1140→        val stiffness = stiffnessCoeff * EI / (L * L * L)
+  1141→
+  1142→        // Convert to kN/mm
+  1143→        return stiffness / 1000.0
+  1144→    }
+  1145→}
+  1146→

@@ -1,0 +1,1192 @@
+    80→   139→   139→   139→        val wRib = wu * ribSpacing / 1000.0           // kN/m per rib
+    81→   140→   140→   140→
+    82→   141→   141→   141→        codeNotes.add("معامل التحميل: ${"%.2f".format(loadFactor)} | الحمل التصميمي: ${"%.1f".format(wu)} ك.ن/م²")
+    83→   142→   142→   142→        codeNotes.add("الحمل على الكمرتة: ${"%.2f".format(wRib)} ك.ن/م")
+    84→   143→   143→   143→
+    85→   144→   144→   144→        // ── 4. Moment calculation using coefficients per ECP 203 ──
+    86→   145→   145→   145→
+    87→   146→   146→   146→        val spanM = clearSpan / 1000.0 // meters
+    88→   147→   147→   147→
+    89→   148→   148→   148→        // Determine support type (simplified: use edgeA and edgeB for one-way behavior)
+    90→   149→   149→   149→        val edgeA = supportConditions.edgeA
+    91→   150→   150→   150→        val edgeB = supportConditions.edgeB
+    92→   151→   151→   151→
+    93→   152→   152→   152→        val momentCoefficients = getHordiMomentCoefficients(edgeA, edgeB)
+    94→   153→   153→   153→
+    95→   154→   154→   154→        val MuPos = momentCoefficients.positive * wRib * spanM * spanM   // kN.m per rib (mid-span)
+    96→   155→   155→   155→        val MuNeg = momentCoefficients.negative * wRib * spanM * spanM   // kN.m per rib (support)
+    97→   156→   156→   156→
+    98→   157→   157→   157→        codeNotes.add("عزم الموجب: ${"%.2f".format(MuPos)} ك.ن.م/كمرتة | عزم السالب: ${"%.2f".format(MuNeg)} ك.ن.م/كمرتة")
+    99→   158→   158→   158→        codeNotes.add("معامل العزم الموجب: ${"%.3f".format(momentCoefficients.positive)} | معامل العزم السالب: ${"%.3f".format(momentCoefficients.negative)}")
+   100→   159→   159→   159→
+   101→   160→   160→   160→        // ── 5. Rib flexure design (K-method per ECP 203) ──
+   102→   161→   161→   161→
+   103→   162→   162→   162→        val fs = fy / GAMMA_S
+   104→   163→   163→   163→        val K_bal = calculateKBal(fcu, fy)
+   105→   164→   164→   164→
+   106→   165→   165→   165→        // Positive moment (bottom steel at mid-span)
+   107→   166→   166→   166→        val ribBottom = designRibSection(
+   108→   167→   167→   167→            Mu = MuPos,
+   109→   168→   168→   168→            fcu = fcu,
+   110→   169→   169→   169→            fy = fy,
+   111→   170→   170→   170→            bw = ribWidth,
+   112→   171→   171→   171→            d = effectiveDepth,
+   113→   172→   172→   172→            fs = fs,
+   114→   173→   173→   173→            K_bal = K_bal,
+   115→   174→   174→   174→            maxBarsPerRib = 2,
+   116→   175→   175→   175→            sectionLabel = "سفل الكمرتة (منتصف البحر)",
+   117→   176→   176→   176→            warnings = warnings,
+   118→   177→   177→   177→            codeNotes = codeNotes
+   119→   178→   178→   178→        )
+   120→   179→   179→   179→
+   121→   180→   180→   180→        // Negative moment (top steel at support)
+   122→   181→   181→   181→        val ribTop = if (MuNeg > 0.01) {
+   123→   182→   182→   182→            designRibSection(
+   124→   183→   183→   183→                Mu = MuNeg,
+   125→   184→   184→   184→                fcu = fcu,
+   126→   185→   185→   185→                fy = fy,
+   127→   186→   186→   186→                bw = ribWidth,
+   128→   187→   187→   187→                d = effectiveDepth,
+   129→   188→   188→   188→                fs = fs,
+   130→   189→   189→   189→                K_bal = K_bal,
+   131→   190→   190→   190→                maxBarsPerRib = 2,
+   132→   191→   191→   191→                sectionLabel = "أعلى الكمرتة (عند الدعامة)",
+   133→   192→   192→   192→                warnings = warnings,
+   134→   193→   193→   193→                codeNotes = codeNotes
+   135→   194→   194→   194→            )
+   136→   195→   195→   195→        } else {
+   137→   196→   196→   196→            // No negative moment for simply supported - provide minimum
+   138→   197→   197→   197→            val minAs = getMinRibSteel(ribWidth, effectiveDepth, fy)
+   139→   198→   198→   198→            ReinforcementResult(
+   140→   199→   199→   199→                astRequired = minAs,
+   141→   200→   200→   200→                astProvided = minAs,
+   142→   201→   201→   201→                barDiameter = 10.0,
+   143→   202→   202→   202→                numberOfBars = 1,
+   144→   203→   203→   203→                tiesDiameter = 0.0,
+   145→   204→   204→   204→                tiesSpacing = 0.0,
+   146→   205→   205→   205→                isSafe = true,
+   147→   206→   206→   206→                utilizationRatio = 0.0,
+   148→   207→   207→   207→                spacing = 0.0,
+   149→   208→   208→   208→                description = "حديد أدنى بالدعامة (1Ø10)"
+   150→   209→   209→   209→            )
+   151→   210→   210→   210→        }
+   152→   211→   211→   211→
+   153→   212→   212→   212→        // ── 6. Topping design (distribution slab) ──
+   154→   213→   213→   213→
+   155→   214→   214→   214→        val toppingResult = designTopping(
+   156→   215→   215→   215→            toppingThickness = toppingThickness,
+   157→   216→   216→   216→            ribSpacing = ribSpacing,
+   158→   217→   217→   217→            ribWidth = ribWidth,
+   159→   218→   218→   218→            fcu = fcu,
+   160→   219→   219→   219→            fy = fy,
+   161→   220→   220→   220→            deadLoad = deadLoad,
+   162→   221→   221→   221→            liveLoad = liveLoad,
+   163→   222→   222→   222→            loadFactor = loadFactor,
+   164→   223→   223→   223→            warnings = warnings,
+   165→   224→   224→   224→            codeNotes = codeNotes
+   166→   225→   225→   225→        )
+   167→   226→   226→   226→
+   168→   227→   227→   227→        // ── 7. Shear check per rib ──
+   169→   228→   228→   228→
+   170→   229→   229→   229→        // V = coefficient × w × L (per rib)
+   171→   230→   230→   230→        val shearCoefficient = momentCoefficients.shear
+   172→   231→   231→   231→        val Vu = shearCoefficient * wRib * spanM // kN
+   173→   232→   232→   232→
+   174→   233→   233→   233→        // Vc = 0.24 × √(fcu/γc) × bw × d
+   175→   234→   234→   234→        val qcu = 0.24 * sqrt(fcu / GAMMA_C)
+   176→   235→   235→   235→        val Vc = qcu * ribWidth * effectiveDepth / 1000.0 // kN
+   177→   236→   236→   236→
+   178→   237→   237→   237→        val shearUtilization = if (Vc > 0) Vu / Vc else Double.MAX_VALUE
+   179→   238→   238→   238→        val isShearSafe = Vu <= Vc
+   180→   239→   239→   239→
+   181→   240→   240→   240→        if (!isShearSafe) {
+   182→   241→   241→   241→            warnings.add("قص الكمرتة يتجاوز قدرة الخرسانة! Vu=${"%.1f".format(Vu)} ك.ن > Vc=${"%.1f".format(Vc)} ك.ن")
+   183→   242→   242→   242→            warnings.add("يجب زيادة عرض الكمرتة أو السماكة الكلية")
+   184→   243→   243→   243→        }
+   185→   244→   244→   244→
+   186→   245→   245→   245→        codeNotes.add("قص الخرسانة: qcu = ${"%.2f".format(qcu)} ميجاباسكال | Vc = ${"%.1f".format(Vc)} ك.ن")
+   187→   246→   246→   246→
+   188→   247→   247→   247→        val ribShearCheck = ShearCheckResult(
+   189→   248→   248→   248→            appliedShear = Vu,
+   190→   249→   249→   249→            shearCapacity = Vc,
+   191→   250→   250→   250→            isSafe = isShearSafe,
+   192→   251→   251→   251→            utilizationRatio = shearUtilization,
+   193→   252→   252→   252→            criticalSection = effectiveDepth,
+   194→   253→   253→   253→            criticalPerimeter = 0.0,
+   195→   254→   254→   254→            warnings = if (!isShearSafe) listOf("قص الكمرتة يتجاوز قدرة الخرسانة - يحتاج كانات") else emptyList()
+   196→   255→   255→   255→        )
+   197→   256→   256→   256→
+   198→   257→   257→   257→        // ── 8. Deflection check ──
+   199→   258→   258→   258→
+   200→   259→   259→   259→        val deflectionCheck = checkHordiDeflection(
+   201→   260→   260→   260→            clearSpan = clearSpan,
+   202→   261→   261→   261→            totalThickness = totalThickness,
+   203→   262→   262→   262→            edgeA = edgeA,
+   204→   263→   263→   263→            edgeB = edgeB,
+   205→   264→   264→   264→            warnings = warnings,
+   206→   265→   265→   265→            codeNotes = codeNotes
+   207→   266→   266→   266→        )
+   208→   267→   267→   267→
+   209→   268→   268→   268→        // ── 9. Number of ribs (assumed for a 1-meter strip) ──
+   210→   269→   269→   269→
+   211→   270→   270→   270→        val numberOfRibs = max(floor(1000.0 / ribSpacing).toInt(), 1)
+   212→   271→   271→   271→
+   213→   272→   272→   272→        // ── Overall safety ──
+   214→   273→   273→   273→
+   215→   274→   274→   274→        val isSafe = ribBottom.isSafe && ribTop.isSafe && isShearSafe && deflectionCheck.isSafe
+   216→   275→   275→   275→
+   217→   276→   276→   276→        return HordiSlabResult(
+   218→   277→   277→   277→            ribReinforcement = ribBottom,
+   219→   278→   278→   278→            topReinforcement = ribTop,
+   220→   279→   279→   279→            toppingReinforcement = toppingResult,
+   221→   280→   280→   280→            ribShearCheck = ribShearCheck,
+   222→   281→   281→   281→            deflectionCheck = deflectionCheck,
+   223→   282→   282→   282→            isSafe = isSafe,
+   224→   283→   283→   283→            ribSpacing = ribSpacing,
+   225→   284→   284→   284→            numberOfRibs = numberOfRibs,
+   226→   285→   285→   285→            warnings = warnings,
+   227→   286→   286→   286→            codeNotes = codeNotes
+   228→   287→   287→   287→        )
+   229→   288→   288→   288→    }
+   230→   289→   289→   289→
+   231→   290→   290→   290→    // ── Rib section design using K-method ──
+   232→   291→   291→   291→
+   233→   292→   292→   292→    private fun designRibSection(
+   234→   293→   293→   293→        Mu: Double,
+   235→   294→   294→   294→        fcu: Double,
+   236→   295→   295→   295→        fy: Double,
+   237→   296→   296→   296→        bw: Double,
+   238→   297→   297→   297→        d: Double,
+   239→   298→   298→   298→        fs: Double,
+   240→   299→   299→   299→        K_bal: Double,
+   241→   300→   300→   300→        maxBarsPerRib: Int,
+   242→   301→   301→   301→        sectionLabel: String,
+   243→   302→   302→   302→        warnings: MutableList<String>,
+   244→   303→   303→   303→        codeNotes: MutableList<String>
+   245→   304→   304→   304→    ): ReinforcementResult {
+   246→   305→   305→   305→        val MuNmm = Mu * 1e6 // N.mm
+   247→   306→   306→   306→
+   248→   307→   307→   307→        val K = if (fcu > 0 && bw > 0 && d > 0) {
+   249→   308→   308→   308→            MuNmm / (fcu * bw * d * d)
+   250→   309→   309→   309→        } else 0.0
+   251→   310→   310→   310→
+   252→   311→   311→   311→        if (K > K_bal) {
+   253→   312→   312→   312→            warnings.add("K = ${"%.3f".format(K)} > K_bal = ${"%.3f".format(K_bal)} - المقطع مفرط التسليح (${sectionLabel})")
+   254→   313→   313→   313→        }
+   255→   314→   314→   314→
+   256→   315→   315→   315→        // z = d × (0.5 + √(0.25 - K/1.25))
+   257→   316→   316→   316→        val discriminant = 0.25 - K / 1.25
+   258→   317→   317→   317→        val leverArm = if (discriminant > 0) {
+   259→   318→   318→   318→            d * (0.5 + sqrt(discriminant))
+   260→   319→   319→   319→        } else {
+   261→   320→   320→   320→            d * 0.7
+   262→   321→   321→   321→        }.coerceAtMost(0.9 * d)
+   263→   322→   322→   322→
+   264→   323→   323→   323→        var astRequired = if (fs > 0 && leverArm > 0) MuNmm / (fs * leverArm) else 0.0
+   265→   324→   324→   324→
+   266→   325→   325→   325→        // Minimum steel for rib
+   267→   326→   326→   326→        val minAs = getMinRibSteel(bw, d, fy)
+   268→   327→   327→   327→        if (astRequired < minAs) {
+   269→   328→   328→   328→            astRequired = minAs
+   270→   329→   329→   329→        }
+   271→   330→   330→   330→
+   272→   331→   331→   331→        // Select bar diameter — max 2 bars per rib
+   273→   332→   332→   332→        val availableBars = listOf(10.0, 12.0, 14.0, 16.0)
+   274→   333→   333→   333→        var selectedDiameter = availableBars.first()
+   275→   334→   334→   334→        var numberOfBars = 1
+   276→   335→   335→   335→        var astProvided = 0.0
+   277→   336→   336→   336→
+   278→   337→   337→   337→        for (dia in availableBars) {
+   279→   338→   338→   338→            val barArea = PI * dia * dia / 4.0
+   280→   339→   339→   339→            val n = ceil(astRequired / barArea).toInt().coerceIn(1, maxBarsPerRib)
+   281→   340→   340→   340→            if (n <= maxBarsPerRib) {
+   282→   341→   341→   341→                selectedDiameter = dia
+   283→   342→   342→   342→                numberOfBars = n
+   284→   343→   343→   343→                astProvided = n * barArea
+   285→   344→   344→   344→                break
+   286→   345→   345→   345→            }
+   287→   346→   346→   346→        }
+   288→   347→   347→   347→
+   289→   348→   348→   348→        // If even the largest bar can't fit, use 2 bars of the largest
+   290→   349→   349→   349→        if (astProvided < astRequired) {
+   291→   350→   350→   350→            val barArea = PI * 16.0 * 16.0 / 4.0
+   292→   351→   351→   351→            selectedDiameter = 16.0
+   293→   352→   352→   352→            numberOfBars = maxBarsPerRib
+   294→   353→   353→   353→            astProvided = numberOfBars * barArea
+   295→   354→   354→   354→            warnings.add("تم استخدام أكبر تسليح ممكن (${numberOfBars}Ø${selectedDiameter.toInt()}) - زِد عرض الكمرتة")
+   296→   355→   355→   355→        }
+   297→   356→   356→   356→
+   298→   357→   357→   357→        val utilizationRatio = if (astProvided > 0 && leverArm > 0) {
+   299→   358→   358→   358→            (astRequired * fs * leverArm / 1e6) / Mu
+   300→   359→   359→   359→        } else 2.0
+   301→   360→   360→   360→
+   302→   361→   361→   361→        val isSafe = K <= K_bal && astProvided >= astRequired
+   303→   362→   362→   362→
+   304→   363→   363→   363→        codeNotes.add("${sectionLabel}: As_req = ${"%.0f".format(astRequired)} مم² | As_prov = ${"%.0f".format(astProvided)} مم² (${numberOfBars}Ø${selectedDiameter.toInt()})")
+   305→   364→   364→   364→
+   306→   365→   365→   365→        return ReinforcementResult(
+   307→   366→   366→   366→            astRequired = astRequired,
+   308→   367→   367→   367→            astProvided = astProvided,
+   309→   368→   368→   368→            barDiameter = selectedDiameter,
+   310→   369→   369→   369→            numberOfBars = numberOfBars,
+   311→   370→   370→   370→            tiesDiameter = 0.0,
+   312→   371→   371→   371→            tiesSpacing = 0.0,
+   313→   372→   372→   372→            isSafe = isSafe,
+   314→   373→   373→   373→            utilizationRatio = utilizationRatio,
+   315→   374→   374→   374→            warnings = if (K > K_bal) listOf("المقطع مفرط التسليح") else emptyList(),
+   316→   375→   375→   375→            codeNotes = listOf("ECP 203 البند 4-2-2-1: K-method")
+   317→   376→   376→   376→        )
+   318→   377→   377→   377→    }
+   319→   378→   378→   378→
+   320→   379→   379→   379→    // ── Topping slab design ──
+   321→   380→   380→   380→
+   322→   381→   381→   381→    private fun designTopping(
+   323→   382→   382→   382→        toppingThickness: Double,
+   324→   383→   383→   383→        ribSpacing: Double,
+   325→   384→   384→   384→        ribWidth: Double,
+   326→   385→   385→   385→        fcu: Double,
+   327→   386→   386→   386→        fy: Double,
+   328→   387→   387→   387→        deadLoad: Double,
+   329→   388→   388→   388→        liveLoad: Double,
+   330→   389→   389→   389→        loadFactor: Double,
+   331→   390→   390→   390→        warnings: MutableList<String>,
+   332→   391→   391→   391→        codeNotes: MutableList<String>
+   333→   392→   392→   392→    ): ReinforcementResult {
+   334→   393→   393→   393→        val clearSpanTopping = ribSpacing - ribWidth  // mm
+   335→   394→   394→   394→
+   336→   395→   395→   395→        // Minimum reinforcement per meter width for topping
+   337→   396→   396→   396→        val minAs = max(
+   338→   397→   397→   397→            0.0015 * 1000.0 * toppingThickness,           // 0.15% of gross area per meter
+   339→   398→   398→   398→            0.6 / fy.coerceAtLeast(1.0) * 1000.0 * toppingThickness // 0.6/fy * b * d
+   340→   399→   399→   399→        )
+   341→   400→   400→   400→
+   342→   401→   401→   401→        // Select welded wire mesh
+   343→   402→   402→   402→        // Common options: 6mm @ 200mm, 8mm @ 200mm, 6mm @ 150mm, 8mm @ 150mm
+   344→   403→   403→   403→        val meshOptions = listOf(
+   345→   404→   404→   404→            Triple(6.0, 200.0, PI * 36.0 / 4.0 * 1000.0 / 200.0),
+   346→   405→   405→   405→            Triple(6.0, 150.0, PI * 36.0 / 4.0 * 1000.0 / 150.0),
+   347→   406→   406→   406→            Triple(8.0, 200.0, PI * 64.0 / 4.0 * 1000.0 / 200.0),
+   348→   407→   407→   407→            Triple(8.0, 150.0, PI * 64.0 / 4.0 * 1000.0 / 150.0),
+   349→   408→   408→   408→            Triple(10.0, 200.0, PI * 100.0 / 4.0 * 1000.0 / 200.0),
+   350→   409→   409→   409→            Triple(10.0, 150.0, PI * 100.0 / 4.0 * 1000.0 / 150.0)
+   351→   410→   410→   410→        )
+   352→   411→   411→   411→
+   353→   412→   412→   412→        var selectedDia = 6.0
+   354→   413→   413→   413→        var selectedSpacing = 200.0
+   355→   414→   414→   414→        var astProvided = 0.0
+   356→   415→   415→   415→
+   357→   416→   416→   416→        for ((dia, spacing, asProv) in meshOptions) {
+   358→   417→   417→   417→            if (asProv >= minAs) {
+   359→   418→   418→   418→                selectedDia = dia
+   360→   419→   419→   419→                selectedSpacing = spacing
+   361→   420→   420→   420→                astProvided = asProv
+   362→   421→   421→   421→                break
+   363→   422→   422→   422→            }
+   364→   423→   423→   423→        }
+   365→   424→   424→   424→
+   366→   425→   425→   425→        // If none satisfies, use the largest
+   367→   426→   426→   426→        if (astProvided < minAs) {
+   368→   427→   427→   427→            selectedDia = 10.0
+   369→   428→   428→   428→            selectedSpacing = 150.0
+   370→   429→   429→   429→            astProvided = PI * 100.0 / 4.0 * 1000.0 / 150.0
+   371→   430→   430→   430→            warnings.add("الحديد الأدنى للتوبينج يتطلب تسليح أكبر من الشبك الملحوم المعتاد")
+   372→   431→   431→   431→        }
+   373→   432→   432→   432→
+   374→   433→   433→   433→        val barsPerMeter = (1000.0 / selectedSpacing).toInt()
+   375→   434→   434→   434→        val utilizationRatio = if (astProvided > 0) minAs / astProvided else 2.0
+   376→   435→   435→   435→
+   377→   436→   436→   436→        codeNotes.add("تسليح التوبينج: شبك ملحومة Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()} مم (${barsPerMeter}Ø${selectedDia.toInt()}/م')")
+   378→   437→   437→   437→        codeNotes.add("As_min = ${"%.0f".format(minAs)} مم²/م | As_prov = ${"%.0f".format(astProvided)} مم²/م")
+   379→   438→   438→   438→
+   380→   439→   439→   439→        return ReinforcementResult(
+   381→   440→   440→   440→            astRequired = minAs,
+   382→   441→   441→   441→            astProvided = astProvided,
+   383→   442→   442→   442→            barDiameter = selectedDia,
+   384→   443→   443→   443→            numberOfBars = barsPerMeter,
+   385→   444→   444→   444→            tiesDiameter = 0.0,
+   386→   445→   445→   445→            tiesSpacing = 0.0,
+   387→   446→   446→   446→            isSafe = astProvided >= minAs,
+   388→   447→   447→   447→            utilizationRatio = utilizationRatio,
+   389→   448→   448→   448→            spacing = selectedSpacing,
+   390→   449→   449→   449→            description = "شبك ملحومة للتوبينج Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()}"
+   391→   450→   450→   450→        )
+   392→   451→   451→   451→    }
+   393→   452→   452→   452→
+   394→   453→   453→   453→    // ── Deflection check for Hordi slab ──
+   395→   454→   454→   454→
+   396→   455→   455→   455→    private fun checkHordiDeflection(
+   397→   456→   456→   456→        clearSpan: Double,
+   398→   457→   457→   457→        totalThickness: Double,
+   399→   458→   458→   458→        edgeA: EdgeCondition,
+   400→   459→   459→   459→        edgeB: EdgeCondition,
+   401→   460→   460→   460→        warnings: MutableList<String>,
+   402→   461→   461→   461→        codeNotes: MutableList<String>
+   403→   462→   462→   462→    ): DeflectionCheckResult {
+   404→   463→   463→   463→        // Span/depth ratio per ECP 203 Section 6-3
+   405→   464→   464→   464→        val isContinuous = (edgeA == EdgeCondition.CONTINUOUS || edgeA == EdgeCondition.FIXED) &&
+   406→   465→   465→   465→                          (edgeB == EdgeCondition.CONTINUOUS || edgeB == EdgeCondition.FIXED)
+   407→   466→   466→   466→        val isOneEndContinuous = (edgeA == EdgeCondition.CONTINUOUS || edgeA == EdgeCondition.FIXED) ||
+   408→   467→   467→   467→                                 (edgeB == EdgeCondition.CONTINUOUS || edgeB == EdgeCondition.FIXED)
+   409→   468→   468→   468→
+   410→   469→   469→   469→        val ratio = when {
+   411→   470→   470→   470→            isContinuous -> 30.0
+   412→   471→   471→   471→            isOneEndContinuous -> 25.0
+   413→   472→   472→   472→            else -> 20.0
+   414→   473→   473→   473→        }
+   415→   474→   474→   474→
+   416→   475→   475→   475→        val minThickness = clearSpan / ratio
+   417→   476→   476→   476→        val isSafe = totalThickness >= minThickness
+   418→   477→   477→   477→        val calculatedRatio = clearSpan / totalThickness
+   419→   478→   478→   478→
+   420→   479→   479→   479→        if (!isSafe) {
+   421→   480→   480→   480→            warnings.add("نسبة البحر للسمك = ${"%.1f".format(calculatedRatio)} تتجاوز الحد المسموح (${ratio.toInt()}) - زِد السماكة الكلية")
+   422→   481→   481→   481→        }
+   423→   482→   482→   482→
+   424→   483→   483→   483→        codeNotes.add("التحقق من الانحراف: L/h = ${"%.1f".format(calculatedRatio)} (الحد: ${ratio.toInt()}) | السماكة المطلوبة: ${"%.0f".format(minThickness)} مم")
+   425→   484→   484→   484→
+   426→   485→   485→   485→        val allowableDeflection = clearSpan / 250.0 // mm (serviceability limit)
+   427→   486→   486→   486→
+   428→   487→   487→   487→        return DeflectionCheckResult(
+   429→   488→   488→   488→            immediateDeflection = 0.0,
+   430→   489→   489→   489→            longTermDeflection = 0.0,
+   431→   490→   490→   490→            calculatedDeflection = calculatedRatio,
+   432→   491→   491→   491→            allowableDeflection = ratio,
+   433→   492→   492→   492→            ratio = calculatedRatio / ratio,
+   434→   493→   493→   493→            isSafe = isSafe,
+   435→   494→   494→   494→            message = if (isSafe) "التحقق من الانحراف مطابق" else "نسبة البحر/السمك تتجاوز الحد المسموح",
+   436→   495→   495→   495→            recommendation = if (!isSafe) "زِد السماكة الكلية إلى ${"%.0f".format(ceil(minThickness / 10) * 10)} مم على الأقل" else "",
+   437→   496→   496→   496→            warnings = if (!isSafe) listOf("نسبة البحر/السمك تتجاوز الحد المسموح حسب ECP 203 البند 6-3") else emptyList()
+   438→   497→   497→   497→        )
+   439→   498→   498→   498→    }
+   440→   499→   499→   499→
+   441→   500→   500→   500→    // ── Moment coefficients for one-way ribbed slab ──
+   442→   501→   501→   501→
+   443→   502→   502→   502→    private data class HordiMomentCoeffs(
+   444→   503→   503→   503→        val positive: Double,
+   445→   504→   504→   504→        val negative: Double,
+   446→   505→   505→   505→        val shear: Double
+   447→   506→   506→   506→    )
+   448→   507→   507→   507→
+   449→   508→   508→   508→    private fun getHordiMomentCoefficients(
+   450→   509→   509→   509→        edgeA: EdgeCondition,
+   451→   510→   510→   510→        edgeB: EdgeCondition
+   452→   511→   511→   511→    ): HordiMomentCoeffs {
+   453→   512→   512→   512→        val isFixedA = edgeA == EdgeCondition.FIXED
+   454→   513→   513→   513→        val isFixedB = edgeB == EdgeCondition.FIXED
+   455→   514→   514→   514→        val isContA = edgeA == EdgeCondition.CONTINUOUS
+   456→   515→   515→   515→        val isContB = edgeB == EdgeCondition.CONTINUOUS
+   457→   516→   516→   516→
+   458→   517→   517→   517→        return when {
+   459→   518→   518→   518→            // Both ends fixed
+   460→   519→   519→   519→            isFixedA && isFixedB -> HordiMomentCoeffs(
+   461→   520→   520→   520→                positive = 1.0 / 24.0,
+   462→   521→   521→   521→                negative = 1.0 / 12.0,
+   463→   522→   522→   522→                shear = 0.5
+   464→   523→   523→   523→            )
+   465→   524→   524→   524→            // Both ends continuous
+   466→   525→   525→   525→            isContA && isContB -> HordiMomentCoeffs(
+   467→   526→   526→   526→                positive = 1.0 / 14.0,
+   468→   527→   527→   527→                negative = 1.0 / 10.0,
+   469→   528→   528→   528→                shear = 0.55
+   470→   529→   529→   529→            )
+   471→   530→   530→   530→            // One end continuous/fixed, other simply supported
+   472→   531→   531→   531→            (isContA || isFixedA) && edgeB == EdgeCondition.SIMPLY_SUPPORTED -> HordiMomentCoeffs(
+   473→   532→   532→   532→                positive = 1.0 / 10.0,
+   474→   533→   533→   533→                negative = 1.0 / 10.0,
+   475→   534→   534→   534→                shear = 0.56
+   476→   535→   535→   535→            )
+   477→   536→   536→   536→            edgeA == EdgeCondition.SIMPLY_SUPPORTED && (isContB || isFixedB) -> HordiMomentCoeffs(
+   478→   537→   537→   537→                positive = 1.0 / 10.0,
+   479→   538→   538→   538→                negative = 1.0 / 10.0,
+   480→   539→   539→   539→                shear = 0.56
+   481→   540→   540→   540→            )
+   482→   541→   541→   541→            // Default: simply supported
+   483→   542→   542→   542→            else -> HordiMomentCoeffs(
+   484→   543→   543→   543→                positive = 1.0 / 8.0,
+   485→   544→   544→   544→                negative = 0.0,
+   486→   545→   545→   545→                shear = 0.5
+   487→   546→   546→   546→            )
+   488→   547→   547→   547→        }
+   489→   548→   548→   548→    }
+   490→   549→   549→   549→
+   491→   550→   550→   550→    // ── Minimum steel for rib ──
+   492→   551→   551→   551→
+   493→   552→   552→   552→    private fun getMinRibSteel(bw: Double, d: Double, fy: Double): Double {
+   494→   553→   553→   553→        val minByPercentage = 0.0015 * bw * d
+   495→   554→   554→   554→        val minByCode = 0.6 / fy.coerceAtLeast(1.0) * bw * d
+   496→   555→   555→   555→        return max(minByPercentage, minByCode)
+   497→   556→   556→   556→    }
+   498→   557→   557→   557→
+   499→   558→   558→   558→    // ── K_bal calculation ──
+   500→   559→   559→   559→
+   501→   560→   560→   560→    private fun calculateKBal(fcu: Double, fy: Double): Double {
+   502→   561→   561→   561→        // K_bal per ECP 203 Section 4-2-2-1
+   503→   562→   562→   562→        // For typical values: fcu=25, fy=360 → K_bal ≈ 0.186
+   504→   563→   563→   563→        val fs = fy / GAMMA_S
+   505→   564→   564→   564→        val n = 9.0 // modular ratio approximation for ECP
+   506→   565→   565→   565→        val dPrime = 30.0 // approximate
+   507→   566→   566→   566→        val xBal = (600.0 * dPrime) / (600.0 + fy)
+   508→   567→   567→   567→        val Kb = 0.4 * (xBal / (2.0 * (1.0 + xBal / 2.0 * n)))
+   509→   568→   568→   568→        return if (Kb > 0) Kb else 0.186
+   510→   569→   569→   569→    }
+   511→   570→   570→   570→
+   512→   571→   571→   571→    // ── Unsafe result helper ──
+   513→   572→   572→   572→
+   514→   573→   573→   573→    private fun createUnsafeHordiResult(
+   515→   574→   574→   574→        warnings: List<String>,
+   516→   575→   575→   575→        codeNotes: List<String>,
+   517→   576→   576→   576→        ribSpacing: Double,
+   518→   577→   577→   577→        numberOfRibs: Int
+   519→   578→   578→   578→    ): HordiSlabResult {
+   520→   579→   579→   579→        val unsafeReinf = ReinforcementResult(
+   521→   580→   580→   580→            astRequired = 0.0,
+   522→   581→   581→   581→            astProvided = 0.0,
+   523→   582→   582→   582→            barDiameter = 0.0,
+   524→   583→   583→   583→            numberOfBars = 0,
+   525→   584→   584→   584→            tiesDiameter = 0.0,
+   526→   585→   585→   585→            tiesSpacing = 0.0,
+   527→   586→   586→   586→            isSafe = false,
+   528→   587→   587→   587→            utilizationRatio = Double.MAX_VALUE,
+   529→   588→   588→   588→            warnings = warnings,
+   530→   589→   589→   589→            codeNotes = codeNotes
+   531→   590→   590→   590→        )
+   532→   591→   591→   591→        return HordiSlabResult(
+   533→   592→   592→   592→            ribReinforcement = unsafeReinf,
+   534→   593→   593→   593→            topReinforcement = unsafeReinf,
+   535→   594→   594→   594→            toppingReinforcement = unsafeReinf,
+   536→   595→   595→   595→            ribShearCheck = ShearCheckResult(isSafe = false, warnings = warnings),
+   537→   596→   596→   596→            deflectionCheck = DeflectionCheckResult(isSafe = false, warnings = warnings),
+   538→   597→   597→   597→            isSafe = false,
+   539→   598→   598→   598→            ribSpacing = ribSpacing,
+   540→   599→   599→   599→            numberOfRibs = numberOfRibs,
+   541→   600→   600→   600→            warnings = warnings,
+   542→   601→   601→   601→            codeNotes = codeNotes
+   543→   602→   602→   602→        )
+   544→   603→   603→   603→    }
+   545→   604→   604→   604→}
+   546→   605→   605→   605→
+   547→   606→   606→   606→// ============================================================================
+   548→   607→   607→   607→// WAFFLE SLAB DESIGN — ECP 203 Section 6-4
+   549→   608→   608→   608→// ============================================================================
+   550→   609→   609→   609→
+   551→   610→   610→   610→class ECPWaffleSlabDesign {
+   552→   611→   611→   611→
+   553→   612→   612→   612→    companion object {
+   554→   613→   613→   613→        private const val GAMMA_C = 1.5
+   555→   614→   614→   614→        private const val GAMMA_S = 1.15
+   556→   615→   615→   615→        private const val MIN_RIB_WIDTH = 125.0      // mm (wider than hordi)
+   557→   616→   616→   616→        private const val MIN_TOPPING = 75.0          // mm
+   558→   617→   617→   617→        private const val MAX_PANEL_DIMENSION = 12.0  // m
+   559→   618→   618→   618→        private const val DROP_PANEL_SIZE = 3000.0    // mm (typical)
+   560→   619→   619→   619→        private const val COVER = 20.0                // mm
+   561→   620→   620→   620→        private const val HALF_BAR_EST = 6.0          // mm
+   562→   621→   621→   621→    }
+   563→   622→   622→   622→
+   564→   623→   623→   623→    /**
+   565→   624→   624→   624→     * تصميم كامل للبلاطة المجنحة (Waffle Slab) حسب الكود المصري ECP 203-2020 البند 6-4
+   566→   625→   625→   625→     *
+   567→   626→   626→   626→     * @param panelWidth       عرض اللوحة (مم) - الاتجاه القصير
+   568→   627→   627→   627→     * @param panelLength      طول اللوحة (مم) - الاتجاه الطويل
+   569→   628→   628→   628→     * @param ribWidth         عرض الكمرتة (مم)
+   570→   629→   629→   629→     * @param ribDepth         عمق الكمرتة (مم)
+   571→   630→   630→   630→     * @param ribSpacing       تباعد الكمرات مركز لمركز (مم)
+   572→   631→   631→   631→     * @param toppingThickness  سمك الطبقة العلوية (مم)
+   573→   632→   632→   632→     * @param fcu              مقاومة الضغط للخرسانة (ميجاباسكال)
+   574→   633→   633→   633→     * @param fy               مقاومة الخضوع للصلب (ميجاباسكال)
+   575→   634→   634→   634→     * @param deadLoad         الحمل الميت (كيلونيوتن/م²)
+   576→   635→   635→   635→     * @param liveLoad         الحمل الحي (كيلونيوتن/م²)
+   577→   636→   636→   636→     * @param supportConditions  شروط التثبيت
+   578→   637→   637→   637→     * @param loadCombination   مجموعة التحميل
+   579→   638→   638→   638→     * @param hasDropPanels    هل يوجد رأس صلب (drop panel)
+   580→   639→   639→   639→     * @param columnSize       عرض العمود (مم)
+   581→   640→   640→   640→     */
+   582→   641→   641→   641→    fun designWaffleSlab(
+   583→   642→   642→   642→        panelWidth: Double,
+   584→   643→   643→   643→        panelLength: Double,
+   585→   644→   644→   644→        ribWidth: Double,
+   586→   645→   645→   645→        ribDepth: Double,
+   587→   646→   646→   646→        ribSpacing: Double,
+   588→   647→   647→   647→        toppingThickness: Double,
+   589→   648→   648→   648→        fcu: Double,
+   590→   649→   649→   649→        fy: Double,
+   591→   650→   650→   650→        deadLoad: Double,
+   592→   651→   651→   651→        liveLoad: Double,
+   593→   652→   652→   652→        supportConditions: SlabSupportConditions,
+   594→   653→   653→   653→        loadCombination: LoadCombination,
+   595→   654→   654→   654→        hasDropPanels: Boolean = true,
+   596→   655→   655→   655→        columnSize: Double = 400.0
+   597→   656→   656→   656→    ): WaffleSlabResult {
+   598→   657→   657→   657→
+   599→   658→   658→   658→        val warnings = mutableListOf<String>()
+   600→   659→   659→   659→        val codeNotes = mutableListOf<String>()
+   601→   660→   660→   660→
+   602→   661→   661→   661→        // ── 1. Section classification and geometry checks ──
+   603→   662→   662→   662→
+   604→   663→   663→   663→        if (ribWidth < MIN_RIB_WIDTH) {
+   605→   664→   664→   664→            warnings.add("عرض الكمرتة (${ribWidth.toInt()} مم) أقل من الحد الأدنى (125 مم) للبلاطة المجنحة")
+   606→   665→   665→   665→        }
+   607→   666→   666→   666→
+   608→   667→   667→   667→        if (toppingThickness < MIN_TOPPING) {
+   609→   668→   668→   668→            warnings.add("سمك الطبقة العلوية (${toppingThickness.toInt()} مم) أقل من الحد الأدنى (75 مم) للبلاطة المجنحة")
+   610→   669→   669→   669→        }
+   611→   670→   670→   670→
+   612→   671→   671→   671→        val panelWidthM = panelWidth / 1000.0
+   613→   672→   672→   672→        val panelLengthM = panelLength / 1000.0
+   614→   673→   673→   673→
+   615→   674→   674→   674→        if (max(panelWidthM, panelLengthM) > MAX_PANEL_DIMENSION) {
+   616→   675→   675→   675→            warnings.add("أبعاد اللوحة تتجاوز الحد الأقصى (12 م) حسب ECP 203")
+   617→   676→   676→   676→        }
+   618→   677→   677→   677→
+   619→   678→   678→   678→        val totalThickness = ribDepth + toppingThickness
+   620→   679→   679→   679→
+   621→   680→   680→   680→        // Solid head (drop panel) size
+   622→   681→   681→   681→        val solidHeadSize = if (hasDropPanels) {
+   623→   682→   682→   682→            max(DROP_PANEL_SIZE, min(panelWidth, panelLength) / 3.0)
+   624→   683→   683→   683→        } else {
+   625→   684→   684→   684→            0.0
+   626→   685→   685→   685→        }
+   627→   686→   686→   686→
+   628→   687→   687→   687→        codeNotes.add("ECP 203-2020: البند 6-4 (البلاطة المجنحة)")
+   629→   688→   688→   688→        codeNotes.add("أبعاد اللوحة: ${"%.1f".format(panelWidthM)} × ${"%.1f".format(panelLengthM)} م")
+   630→   689→   689→   689→        codeNotes.add("تباعد الكمرات: ${ribSpacing.toInt()} مم | عرض الكمرتة: ${ribWidth.toInt()} مم | عمق الكمرتة: ${ribDepth.toInt()} مم")
+   631→   690→   690→   690→        codeNotes.add("سمك التوبينج: ${toppingThickness.toInt()} مم | السماكة الكلية: ${totalThickness.toInt()} مم")
+   632→   691→   691→   691→        if (hasDropPanels) {
+   633→   692→   692→   692→            codeNotes.add("حجم الرأس الصلب: ${"%.0f".format(solidHeadSize)} × ${"%.0f".format(solidHeadSize)} مم")
+   634→   693→   693→   693→        }
+   635→   694→   694→   694→
+   636→   695→   695→   695→        // ── 2. Two-way analysis ──
+   637→   696→   696→   696→
+   638→   697→   697→   697→        val loadFactor = loadCombination.getFactorForCode(DesignCode.ECP)
+   639→   698→   698→   698→        val wu = (deadLoad + liveLoad) * loadFactor // kN/m² (factored)
+   640→   699→   699→   699→
+   641→   700→   700→   700→        codeNotes.add("معامل التحميل: ${"%.2f".format(loadFactor)} | الحمل التصميمي: ${"%.1f".format(wu)} ك.ن/م²")
+   642→   701→   701→   701→
+   643→   702→   702→   702→        // Aspect ratio for load distribution
+   644→   703→   703→   703→        val aspectRatio = panelLength / panelWidth.coerceAtLeast(1.0)
+   645→   704→   704→   704→        val isTwoWay = aspectRatio <= 2.0
+   646→   705→   705→   705→
+   647→   706→   706→   706→        // Moment distribution coefficients (Marcus simplified for waffle)
+   648→   707→   707→   707→        val shortDirCoeff = if (isTwoWay) {
+   649→   708→   708→   708→            // Short direction carries more load in two-way
+   650→   709→   709→   709→            val alpha = 1.0 / (1.0 + (aspectRatio * aspectRatio * aspectRatio).pow(1.0 / 3.0))
+   651→   710→   710→   710→            alpha
+   652→   711→   711→   711→        } else {
+   653→   712→   712→   712→            1.0 // One-way behavior
+   654→   713→   713→   713→        }
+   655→   714→   714→   714→        val longDirCoeff = 1.0 - shortDirCoeff
+   656→   715→   715→   715→
+   657→   716→   716→   716→        codeNotes.add("نسبة الأبعاد: ${"%.2f".format(aspectRatio)} | معامل التوزيع القصير: ${"%.2f".format(shortDirCoeff)} | الطويل: ${"%.2f".format(longDirCoeff)}")
+   658→   717→   717→   717→
+   659→   718→   718→   718→        // Support condition analysis
+   660→   719→   719→   719→        val edgeA = supportConditions.edgeA
+   661→   720→   720→   720→        val edgeB = supportConditions.edgeB
+   662→   721→   721→   721→        val edgeC = supportConditions.edgeC
+   663→   722→   722→   722→        val edgeD = supportConditions.edgeD
+   664→   723→   723→   723→
+   665→   724→   724→   724→        val isAllContinuous = setOf(edgeA, edgeB, edgeC, edgeD).all {
+   666→   725→   725→   725→            it == EdgeCondition.CONTINUOUS || it == EdgeCondition.FIXED
+   667→   726→   726→   726→        }
+   668→   727→   727→   727→        val isPartiallyContinuous = setOf(edgeA, edgeB, edgeC, edgeD).any {
+   669→   728→   728→   728→            it == EdgeCondition.CONTINUOUS || it == EdgeCondition.FIXED
+   670→   729→   729→   729→        }
+   671→   730→   730→   730→
+   672→   731→   731→   731→        // Moment coefficients per ECP 203 for continuous two-way waffle slabs
+   673→   732→   732→   732→        val posCoeff = if (isAllContinuous) 1.0 / 14.0 else if (isPartiallyContinuous) 1.0 / 10.0 else 1.0 / 8.0
+   674→   733→   733→   733→        val negCoeff = if (isAllContinuous) 1.0 / 10.0 else if (isPartiallyContinuous) 1.0 / 10.0 else 0.0
+   675→   734→   734→   734→
+   676→   735→   735→   735→        // ── 3. Solid head (drop panel) design ──
+   677→   736→   736→   736→
+   678→   737→   737→   737→        val headReinfBottom: ReinforcementResult
+   679→   738→   738→   738→        val headReinfTop: ReinforcementResult
+   680→   739→   739→   739→
+   681→   740→   740→   740→        if (hasDropPanels && solidHeadSize > 0) {
+   682→   741→   741→   741→            // Effective depth of solid head
+   683→   742→   742→   742→            val dHead = totalThickness - COVER - HALF_BAR_EST
+   684→   743→   743→   743→
+   685→   744→   744→   744→            // Moment per meter strip in solid head zone
+   686→   745→   745→   745→            // Total factored load on the panel
+   687→   746→   746→   746→            val totalPanelLoad = wu * panelWidthM * panelLengthM // kN total
+   688→   747→   747→   747→            val headMomentPos = posCoeff * shortDirCoeff * wu * panelWidthM * panelWidthM * 1000.0 // kN.m/m (per meter strip, short dir)
+   689→   748→   748→   748→            val headMomentNeg = negCoeff * wu * panelWidthM * panelWidthM * 1000.0 // kN.m/m (at support)
+   690→   749→   749→   749→
+   691→   750→   750→   750→            // K-method for solid head bottom
+   692→   751→   751→   751→            headReinfBottom = designSolidHeadSection(
+   693→   752→   752→   752→                Mu = headMomentPos,
+   694→   753→   753→   753→                fcu = fcu,
+   695→   754→   754→   754→                fy = fy,
+   696→   755→   755→   755→                d = dHead,
+   697→   756→   756→   756→                b = 1000.0,
+   698→   757→   757→   757→                fs = fy / GAMMA_S,
+   699→   758→   758→   758→                sectionLabel = "سفل الرأس الصلب",
+   700→   759→   759→   759→                warnings = warnings,
+   701→   760→   760→   760→                codeNotes = codeNotes
+   702→   761→   761→   761→            )
+   703→   762→   762→   762→
+   704→   763→   763→   763→            // K-method for solid head top (at support)
+   705→   764→   764→   764→            headReinfTop = if (headMomentNeg > 0.01) {
+   706→   765→   765→   765→                designSolidHeadSection(
+   707→   766→   766→   766→                    Mu = headMomentNeg,
+   708→   767→   767→   767→                    fcu = fcu,
+   709→   768→   768→   768→                    fy = fy,
+   710→   769→   769→   769→                    d = dHead,
+   711→   770→   770→   770→                    b = 1000.0,
+   712→   771→   771→   771→                    fs = fy / GAMMA_S,
+   713→   772→   772→   772→                    sectionLabel = "أعلى الرأس الصلب (عند الدعامة)",
+   714→   773→   773→   773→                    warnings = warnings,
+   715→   774→   774→   774→                    codeNotes = codeNotes
+   716→   775→   775→   775→                )
+   717→   776→   776→   776→            } else {
+   718→   777→   777→   777→                // Minimum reinforcement
+   719→   778→   778→   778→                val minAs = max(0.0015 * 1000.0 * dHead, 0.6 / fy.coerceAtLeast(1.0) * 1000.0 * dHead)
+   720→   779→   779→   779→                ReinforcementResult(
+   721→   780→   780→   780→                    astRequired = minAs,
+   722→   781→   781→   781→                    astProvided = minAs,
+   723→   782→   782→   782→                    barDiameter = 10.0,
+   724→   783→   783→   783→                    numberOfBars = ceil(minAs / (PI * 100.0 / 4.0)).toInt().coerceAtLeast(5),
+   725→   784→   784→   784→                    tiesDiameter = 0.0,
+   726→   785→   785→   785→                    tiesSpacing = 0.0,
+   727→   786→   786→   786→                    isSafe = true,
+   728→   787→   787→   787→                    utilizationRatio = 0.0,
+   729→   788→   788→   788→                    spacing = 200.0,
+   730→   789→   789→   789→                    description = "حديد أدنى بالرأس الصلب"
+   731→   790→   790→   790→                )
+   732→   791→   791→   791→            }
+   733→   792→   792→   792→        } else {
+   734→   793→   793→   793→            // No drop panels — solid head reinforcement is not needed
+   735→   794→   794→   794→            val emptyReinf = ReinforcementResult(
+   736→   795→   795→   795→                astRequired = 0.0,
+   737→   796→   796→   796→                astProvided = 0.0,
+   738→   797→   797→   797→                barDiameter = 0.0,
+   739→   798→   798→   798→                numberOfBars = 0,
+   740→   799→   799→   799→                tiesDiameter = 0.0,
+   741→   800→   800→   800→                tiesSpacing = 0.0,
+   742→   801→   801→   801→                isSafe = true,
+   743→   802→   802→   802→                utilizationRatio = 0.0,
+   744→   803→   803→   803→                description = "لا يوجد رأس صلب"
+   745→   804→   804→   804→            )
+   746→   805→   805→   805→            headReinfBottom = emptyReinf
+   747→   806→   806→   806→            headReinfTop = emptyReinf
+   748→   807→   807→   807→            codeNotes.add("لا يوجد رأس صلب - التصميم يعتمد على الكمرات فقط")
+   749→   808→   808→   808→        }
+   750→   809→   809→   809→
+   751→   810→   810→   810→        // ── 4. Rib design (each direction) ──
+   752→   811→   811→   811→
+   753→   812→   812→   812→        // Effective depth of rib
+   754→   813→   813→   813→        val dRib = totalThickness - COVER - HALF_BAR_EST
+   755→   814→   814→   814→        val fs = fy / GAMMA_S
+   756→   815→   815→   815→
+   757→   816→   816→   816→        // Short direction ribs
+   758→   817→   817→   817→        val wRibShort = wu * shortDirCoeff * ribSpacing / 1000.0 // kN/m per rib
+   759→   818→   818→   818→        val MuRibShortPos = posCoeff * wRibShort * panelWidthM * panelWidthM // kN.m per rib
+   760→   819→   819→   819→        val MuRibShortNeg = negCoeff * wRibShort * panelWidthM * panelWidthM
+   761→   820→   820→   820→
+   762→   821→   821→   821→        val ribShortPos = designWaffleRib(
+   763→   822→   822→   822→            Mu = MuRibShortPos,
+   764→   823→   823→   823→            fcu = fcu,
+   765→   824→   824→   824→            fy = fy,
+   766→   825→   825→   825→            bw = ribWidth,
+   767→   826→   826→   826→            d = dRib,
+   768→   827→   827→   827→            fs = fs,
+   769→   828→   828→   828→            directionLabel = "قصير (منتصف البحر)",
+   770→   829→   829→   829→            warnings = warnings,
+   771→   830→   830→   830→            codeNotes = codeNotes
+   772→   831→   831→   831→        )
+   773→   832→   832→   832→
+   774→   833→   833→   833→        val ribShortNeg = if (MuRibShortNeg > 0.01) {
+   775→   834→   834→   834→            designWaffleRib(
+   776→   835→   835→   835→                Mu = MuRibShortNeg,
+   777→   836→   836→   836→                fcu = fcu,
+   778→   837→   837→   837→                fy = fy,
+   779→   838→   838→   838→                bw = ribWidth,
+   780→   839→   839→   839→                d = dRib,
+   781→   840→   840→   840→                fs = fs,
+   782→   841→   841→   841→                directionLabel = "قصير (عند الدعامة)",
+   783→   842→   842→   842→                warnings = warnings,
+   784→   843→   843→   843→                codeNotes = codeNotes
+   785→   844→   844→   844→            )
+   786→   845→   845→   845→        } else {
+   787→   846→   846→   846→            createMinRibReinforcement(ribWidth, dRib, fy)
+   788→   847→   847→   847→        }
+   789→   848→   848→   848→
+   790→   849→   849→   849→        // Use the larger of the two for the result (support governs typically)
+   791→   850→   850→   850→        val ribReinfShort = if (ribShortNeg.astRequired > ribShortPos.astRequired) ribShortNeg else ribShortPos
+   792→   851→   851→   851→
+   793→   852→   852→   852→        // Long direction ribs
+   794→   853→   853→   853→        val wRibLong = wu * longDirCoeff * ribSpacing / 1000.0 // kN/m per rib
+   795→   854→   854→   854→        val MuRibLongPos = posCoeff * wRibLong * panelLengthM * panelLengthM // kN.m per rib
+   796→   855→   855→   855→        val MuRibLongNeg = negCoeff * wRibLong * panelLengthM * panelLengthM
+   797→   856→   856→   856→
+   798→   857→   857→   857→        val ribLongPos = designWaffleRib(
+   799→   858→   858→   858→            Mu = MuRibLongPos,
+   800→   859→   859→   859→            fcu = fcu,
+   801→   860→   860→   860→            fy = fy,
+   802→   861→   861→   861→            bw = ribWidth,
+   803→   862→   862→   862→            d = dRib,
+   804→   863→   863→   863→            fs = fs,
+   805→   864→   864→   864→            directionLabel = "طويل (منتصف البحر)",
+   806→   865→   865→   865→            warnings = warnings,
+   807→   866→   866→   866→            codeNotes = codeNotes
+   808→   867→   867→   867→        )
+   809→   868→   868→   868→
+   810→   869→   869→   869→        val ribLongNeg = if (MuRibLongNeg > 0.01) {
+   811→   870→   870→   870→            designWaffleRib(
+   812→   871→   871→   871→                Mu = MuRibLongNeg,
+   813→   872→   872→   872→                fcu = fcu,
+   814→   873→   873→   873→                fy = fy,
+   815→   874→   874→   874→                bw = ribWidth,
+   816→   875→   875→   875→                d = dRib,
+   817→   876→   876→   876→                fs = fs,
+   818→   877→   877→   877→                directionLabel = "طويل (عند الدعامة)",
+   819→   878→   878→   878→                warnings = warnings,
+   820→   879→   879→   879→                codeNotes = codeNotes
+   821→   880→   880→   880→            )
+   822→   881→   881→   881→        } else {
+   823→   882→   882→   882→            createMinRibReinforcement(ribWidth, dRib, fy)
+   824→   883→   883→   883→        }
+   825→   884→   884→   884→
+   826→   885→   885→   885→        val ribReinfLong = if (ribLongNeg.astRequired > ribLongPos.astRequired) ribLongNeg else ribLongPos
+   827→   886→   886→   886→
+   828→   887→   887→   887→        // ── 5. Topping reinforcement ──
+   829→   888→   888→   888→
+   830→   889→   889→   889→        val toppingResult = designWaffleTopping(
+   831→   890→   890→   890→            toppingThickness = toppingThickness,
+   832→   891→   891→   891→            ribSpacing = ribSpacing,
+   833→   892→   892→   892→            ribWidth = ribWidth,
+   834→   893→   893→   893→            fcu = fcu,
+   835→   894→   894→   894→            fy = fy,
+   836→   895→   895→   895→            wu = wu,
+   837→   896→   896→   896→            warnings = warnings,
+   838→   897→   897→   897→            codeNotes = codeNotes
+   839→   898→   898→   898→        )
+   840→   899→   899→   899→
+   841→   900→   900→   900→        // ── 6. Punching shear at column ──
+   842→   901→   901→   901→
+   843→   902→   902→   902→        val punchingCheck = checkPunchingShear(
+   844→   903→   903→   903→            panelWidth = panelWidth,
+   845→   904→   904→   904→            panelLength = panelLength,
+   846→   905→   905→   905→            wu = wu,
+   847→   906→   906→   906→            columnSize = columnSize,
+   848→   907→   907→   907→            fcu = fcu,
+   849→   908→   908→   908→            d = totalThickness - COVER - HALF_BAR_EST,
+   850→   909→   909→   909→            hasDropPanels = hasDropPanels,
+   851→   910→   910→   910→            solidHeadSize = solidHeadSize,
+   852→   911→   911→   911→            warnings = warnings,
+   853→   912→   912→   912→            codeNotes = codeNotes
+   854→   913→   913→   913→        )
+   855→   914→   914→   914→
+   856→   915→   915→   915→        // ── 7. Deflection check ──
+   857→   916→   916→   916→
+   858→   917→   917→   917→        val deflectionCheck = checkWaffleDeflection(
+   859→   918→   918→   918→            panelWidth = panelWidth,
+   860→   919→   919→   919→            panelLength = panelLength,
+   861→   920→   920→   920→            totalThickness = totalThickness,
+   862→   921→   921→   921→            isAllContinuous = isAllContinuous,
+   863→   922→   922→   922→            isPartiallyContinuous = isPartiallyContinuous,
+   864→   923→   923→   923→            warnings = warnings,
+   865→   924→   924→   924→            codeNotes = codeNotes
+   866→   925→   925→   925→        )
+   867→   926→   926→   926→
+   868→   927→   927→   927→        // ── 8. Number of ribs ──
+   869→   928→   928→   928→
+   870→   929→   929→   929→        val numberOfRibsShort = max(floor(panelWidth / ribSpacing).toInt(), 1)
+   871→   930→   930→   930→        val numberOfRibsLong = max(floor(panelLength / ribSpacing).toInt(), 1)
+   872→   931→   931→   931→
+   873→   932→   932→   932→        codeNotes.add("عدد الكمرات (قصير): $numberOfRibsShort | (طويل): $numberOfRibsLong")
+   874→   933→   933→   933→
+   875→   934→   934→   934→        // ── Overall safety ──
+   876→   935→   935→   935→
+   877→   936→   936→   936→        val isSafe = headReinfBottom.isSafe && headReinfTop.isSafe &&
+   878→   937→   937→   937→                      ribReinfShort.isSafe && ribReinfLong.isSafe &&
+   879→   938→   938→   938→                      toppingResult.isSafe && punchingCheck.isSafe && deflectionCheck.isSafe
+   880→   939→   939→   939→
+   881→   940→   940→   940→        return WaffleSlabResult(
+   882→   941→   941→   941→            solidHeadReinforcementBottom = headReinfBottom,
+   883→   942→   942→   942→            solidHeadReinforcementTop = headReinfTop,
+   884→   943→   943→   943→            ribReinforcementShort = ribReinfShort,
+   885→   944→   944→   944→            ribReinforcementLong = ribReinfLong,
+   886→   945→   945→   945→            toppingReinforcement = toppingResult,
+   887→   946→   946→   946→            punchingShearCheck = punchingCheck,
+   888→   947→   947→   947→            deflectionCheck = deflectionCheck,
+   889→   948→   948→   948→            isSafe = isSafe,
+   890→   949→   949→   949→            numberOfRibsShort = numberOfRibsShort,
+   891→   950→   950→   950→            numberOfRibsLong = numberOfRibsLong,
+   892→   951→   951→   951→            solidHeadSize = solidHeadSize,
+   893→   952→   952→   952→            warnings = warnings,
+   894→   953→   953→   953→            codeNotes = codeNotes
+   895→   954→   954→   954→        )
+   896→   955→   955→   955→    }
+   897→   956→   956→   956→
+   898→   957→   957→   957→    // ── Solid head section design (per meter strip) ──
+   899→   958→   958→   958→
+   900→   959→   959→   959→    private fun designSolidHeadSection(
+   901→   960→   960→   960→        Mu: Double,
+   902→   961→   961→   961→        fcu: Double,
+   903→   962→   962→   962→        fy: Double,
+   904→   963→   963→   963→        d: Double,
+   905→   964→   964→   964→        b: Double,
+   906→   965→   965→   965→        fs: Double,
+   907→   966→   966→   966→        sectionLabel: String,
+   908→   967→   967→   967→        warnings: MutableList<String>,
+   909→   968→   968→   968→        codeNotes: MutableList<String>
+   910→   969→   969→   969→    ): ReinforcementResult {
+   911→   970→   970→   970→        val MuNmm = Mu * 1e6
+   912→   971→   971→   971→        val K_bal = 0.186
+   913→   972→   972→   972→
+   914→   973→   973→   973→        val K = if (fcu > 0 && b > 0 && d > 0) MuNmm / (fcu * b * d * d) else 0.0
+   915→   974→   974→   974→
+   916→   975→   975→   975→        if (K > K_bal) {
+   917→   976→   976→   976→            warnings.add("K = ${"%.3f".format(K)} > K_bal = ${"%.3f".format(K_bal)} - الرأس الصلب يحتاج زيادة سماكة (${sectionLabel})")
+   918→   977→   977→   977→        }
+   919→   978→   978→   978→
+   920→   979→   979→   979→        val discriminant = 0.25 - K / 1.25
+   921→   980→   980→   980→        val leverArm = if (discriminant > 0) {
+   922→   981→   981→   981→            d * (0.5 + sqrt(discriminant))
+   923→   982→   982→   982→        } else {
+   924→   983→   983→   983→            d * 0.7
+   925→   984→   984→   984→        }.coerceAtMost(0.9 * d)
+   926→   985→   985→   985→
+   927→   986→   986→   986→        var astRequired = if (fs > 0 && leverArm > 0) MuNmm / (fs * leverArm) else 0.0
+   928→   987→   987→   987→
+   929→   988→   988→   988→        // Minimum reinforcement per meter
+   930→   989→   989→   989→        val minAs = max(0.0015 * b * d, 0.6 / fy.coerceAtLeast(1.0) * b * d)
+   931→   990→   990→   990→        if (astRequired < minAs) {
+   932→   991→   991→   991→            astRequired = minAs
+   933→   992→   992→   992→        }
+   934→   993→   993→   993→
+   935→   994→   994→   994→        // Select bars for solid head (per meter strip)
+   936→   995→   995→   995→        val availableBars = listOf(10.0, 12.0, 14.0, 16.0, 18.0, 20.0)
+   937→   996→   996→   996→        var selectedDia = 12.0
+   938→   997→   997→   997→        var selectedSpacing = 200.0
+   939→   998→   998→   998→        var astProvided = 0.0
+   940→   999→   999→   999→
+   941→  1000→  1000→  1000→        for (dia in availableBars) {
+   942→  1001→  1001→  1001→            val barArea = PI * dia * dia / 4.0
+   943→  1002→  1002→  1002→            val spacing = (barArea * 1000.0 / astRequired).coerceIn(100.0, 200.0)
+   944→  1003→  1003→  1003→            val asProv = barArea * 1000.0 / spacing
+   945→  1004→  1004→  1004→            if (asProv >= astRequired) {
+   946→  1005→  1005→  1005→                selectedDia = dia
+   947→  1006→  1006→  1006→                selectedSpacing = spacing
+   948→  1007→  1007→  1007→                astProvided = asProv
+   949→  1008→  1008→  1008→                break
+   950→  1009→  1009→  1009→            }
+   951→  1010→  1010→  1010→        }
+   952→  1011→  1011→  1011→
+   953→  1012→  1012→  1012→        // Fallback: use 10mm @ 100mm
+   954→  1013→  1013→  1013→        if (astProvided < astRequired) {
+   955→  1014→  1014→  1014→            selectedDia = 10.0
+   956→  1015→  1015→  1015→            selectedSpacing = 100.0
+   957→  1016→  1016→  1016→            astProvided = PI * 100.0 / 4.0 * 1000.0 / 100.0
+   958→  1017→  1017→  1017→            warnings.add("تسليح الرأس الصلب يتطلب شبك أكثر كثافة - Ø10 @ 100 مم")
+   959→  1018→  1018→  1018→        }
+   960→  1019→  1019→  1019→
+   961→  1020→  1020→  1020→        val barsPerMeter = (1000.0 / selectedSpacing).toInt()
+   962→  1021→  1021→  1021→        val utilizationRatio = if (astProvided > 0) astRequired / astProvided else 2.0
+   963→  1022→  1022→  1022→
+   964→  1023→  1023→  1023→        codeNotes.add("${sectionLabel}: As_req = ${"%.0f".format(astRequired)} مم²/م | As_prov = ${"%.0f".format(astProvided)} مم²/م (Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()})")
+   965→  1024→  1024→  1024→
+   966→  1025→  1025→  1025→        return ReinforcementResult(
+   967→  1026→  1026→  1026→            astRequired = astRequired,
+   968→  1027→  1027→  1027→            astProvided = astProvided,
+   969→  1028→  1028→  1028→            barDiameter = selectedDia,
+   970→  1029→  1029→  1029→            numberOfBars = barsPerMeter,
+   971→  1030→  1030→  1030→            tiesDiameter = 0.0,
+   972→  1031→  1031→  1031→            tiesSpacing = 0.0,
+   973→  1032→  1032→  1032→            isSafe = K <= K_bal && astProvided >= astRequired,
+   974→  1033→  1033→  1033→            utilizationRatio = utilizationRatio,
+   975→  1034→  1034→  1034→            spacing = selectedSpacing,
+   976→  1035→  1035→  1035→            description = "Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()} مم ($sectionLabel)"
+   977→  1036→  1036→  1036→        )
+   978→  1037→  1037→  1037→    }
+   979→  1038→  1038→  1038→
+   980→  1039→  1039→  1039→    // ── Waffle rib design ──
+   981→  1040→  1040→  1040→
+   982→  1041→  1041→  1041→    private fun designWaffleRib(
+   983→  1042→  1042→  1042→        Mu: Double,
+   984→  1043→  1043→  1043→        fcu: Double,
+   985→  1044→  1044→  1044→        fy: Double,
+   986→  1045→  1045→  1045→        bw: Double,
+   987→  1046→  1046→  1046→        d: Double,
+   988→  1047→  1047→  1047→        fs: Double,
+   989→  1048→  1048→  1048→        directionLabel: String,
+   990→  1049→  1049→  1049→        warnings: MutableList<String>,
+   991→  1050→  1050→  1050→        codeNotes: MutableList<String>
+   992→  1051→  1051→  1051→    ): ReinforcementResult {
+   993→  1052→  1052→  1052→        val MuNmm = Mu * 1e6
+   994→  1053→  1053→  1053→        val K_bal = 0.186
+   995→  1054→  1054→  1054→
+   996→  1055→  1055→  1055→        val K = if (fcu > 0 && bw > 0 && d > 0) MuNmm / (fcu * bw * d * d) else 0.0
+   997→  1056→  1056→  1056→
+   998→  1057→  1057→  1057→        if (K > K_bal) {
+   999→  1058→  1058→  1058→            warnings.add("K = ${"%.3f".format(K)} > K_bal = ${"%.3f".format(K_bal)} - كمرتة ($directionLabel) مفرطة التسليح")
+  1000→  1059→  1059→  1059→        }
+  1001→  1060→  1060→  1060→
+  1002→  1061→  1061→  1061→        val discriminant = 0.25 - K / 1.25
+  1003→  1062→  1062→  1062→        val leverArm = if (discriminant > 0) {
+  1004→  1063→  1063→  1063→            d * (0.5 + sqrt(discriminant))
+  1005→  1064→  1064→  1064→        } else {
+  1006→  1065→  1065→  1065→            d * 0.7
+  1007→  1066→  1066→  1066→        }.coerceAtMost(0.9 * d)
+  1008→  1067→  1067→  1067→
+  1009→  1068→  1068→  1068→        var astRequired = if (fs > 0 && leverArm > 0) MuNmm / (fs * leverArm) else 0.0
+  1010→  1069→  1069→  1069→
+  1011→  1070→  1070→  1070→        // Minimum steel for rib
+  1012→  1071→  1071→  1071→        val minAs = max(0.0015 * bw * d, 0.6 / fy.coerceAtLeast(1.0) * bw * d)
+  1013→  1072→  1072→  1072→        if (astRequired < minAs) {
+  1014→  1073→  1073→  1073→            astRequired = minAs
+  1015→  1074→  1074→  1074→        }
+  1016→  1075→  1075→  1075→
+  1017→  1076→  1076→  1076→        // Select bar — max 2 bars per rib
+  1018→  1077→  1077→  1077→        val availableBars = listOf(10.0, 12.0, 14.0, 16.0)
+  1019→  1078→  1078→  1078→        var selectedDia = 12.0
+  1020→  1079→  1079→  1079→        var numberOfBars = 1
+  1021→  1080→  1080→  1080→        var astProvided = 0.0
+  1022→  1081→  1081→  1081→
+  1023→  1082→  1082→  1082→        for (dia in availableBars) {
+  1024→  1083→  1083→  1083→            val barArea = PI * dia * dia / 4.0
+  1025→  1084→  1084→  1084→            val n = ceil(astRequired / barArea).toInt().coerceIn(1, 2)
+  1026→  1085→  1085→  1085→            if (n <= 2) {
+  1027→  1086→  1086→  1086→                selectedDia = dia
+  1028→  1087→  1087→  1087→                numberOfBars = n
+  1029→  1088→  1088→  1088→                astProvided = n * barArea
+  1030→  1089→  1089→  1089→                break
+  1031→  1090→  1090→  1090→            }
+  1032→  1091→  1091→  1091→        }
+  1033→  1092→  1092→  1092→
+  1034→  1093→  1093→  1093→        if (astProvided < astRequired) {
+  1035→  1094→  1094→  1094→            val barArea = PI * 16.0 * 16.0 / 4.0
+  1036→  1095→  1095→  1095→            selectedDia = 16.0
+  1037→  1096→  1096→  1096→            numberOfBars = 2
+  1038→  1097→  1097→  1097→            astProvided = 2.0 * barArea
+  1039→  1098→  1098→  1098→            warnings.add("تم استخدام أكبر تسليح ممكن (2Ø16) للكمرتة ($directionLabel) - زِد عرض الكمرتة أو السماكة")
+  1040→  1099→  1099→  1099→        }
+  1041→  1100→  1100→  1100→
+  1042→  1101→  1101→  1101→        val utilizationRatio = if (astProvided > 0 && leverArm > 0) {
+  1043→  1102→  1102→  1102→            astRequired / astProvided
+  1044→  1103→  1103→  1103→        } else 2.0
+  1045→  1104→  1104→  1104→
+  1046→  1105→  1105→  1105→        codeNotes.add("كمرتة $directionLabel: As_req = ${"%.0f".format(astRequired)} مم² | As_prov = ${"%.0f".format(astProvided)} مم² (${numberOfBars}Ø${selectedDia.toInt()})")
+  1047→  1106→  1106→  1106→
+  1048→  1107→  1107→  1107→        return ReinforcementResult(
+  1049→  1108→  1108→  1108→            astRequired = astRequired,
+  1050→  1109→  1109→  1109→            astProvided = astProvided,
+  1051→  1110→  1110→  1110→            barDiameter = selectedDia,
+  1052→  1111→  1111→  1111→            numberOfBars = numberOfBars,
+  1053→  1112→  1112→  1112→            tiesDiameter = 0.0,
+  1054→  1113→  1113→  1113→            tiesSpacing = 0.0,
+  1055→  1114→  1114→  1114→            isSafe = K <= K_bal && astProvided >= astRequired,
+  1056→  1115→  1115→  1115→            utilizationRatio = utilizationRatio,
+  1057→  1116→  1116→  1116→            warnings = if (K > K_bal) listOf("المقطع مفرط التسليح") else emptyList(),
+  1058→  1117→  1117→  1117→            codeNotes = listOf("ECP 203 البند 4-2-2-1: K-method")
+  1059→  1118→  1118→  1118→        )
+  1060→  1119→  1119→  1119→    }
+  1061→  1120→  1120→  1120→
+  1062→  1121→  1121→  1121→    // ── Minimum rib reinforcement ──
+  1063→  1122→  1122→  1122→
+  1064→  1123→  1123→  1123→    private fun createMinRibReinforcement(bw: Double, d: Double, fy: Double): ReinforcementResult {
+  1065→  1124→  1124→  1124→        val minAs = max(0.0015 * bw * d, 0.6 / fy.coerceAtLeast(1.0) * bw * d)
+  1066→  1125→  1125→  1125→        val barArea = PI * 100.0 / 4.0 // 10mm
+  1067→  1126→  1126→  1126→        val n = ceil(minAs / barArea).toInt().coerceIn(1, 2)
+  1068→  1127→  1127→  1127→        return ReinforcementResult(
+  1069→  1128→  1128→  1128→            astRequired = minAs,
+  1070→  1129→  1129→  1129→            astProvided = n * barArea,
+  1071→  1130→  1130→  1130→            barDiameter = 10.0,
+  1072→  1131→  1131→  1131→            numberOfBars = n,
+  1073→  1132→  1132→  1132→            tiesDiameter = 0.0,
+  1074→  1133→  1133→  1133→            tiesSpacing = 0.0,
+  1075→  1134→  1134→  1134→            isSafe = true,
+  1076→  1135→  1135→  1135→            utilizationRatio = 0.0,
+  1077→  1136→  1136→  1136→            description = "حديد أدنى للكمرتة"
+  1078→  1137→  1137→  1137→        )
+  1079→  1138→  1138→  1138→    }
+  1080→  1139→  1139→  1139→
+  1081→  1140→  1140→  1140→    // ── Topping design for waffle slab ──
+  1082→  1141→  1141→  1141→
+  1083→  1142→  1142→  1142→    private fun designWaffleTopping(
+  1084→  1143→  1143→  1143→        toppingThickness: Double,
+  1085→  1144→  1144→  1144→        ribSpacing: Double,
+  1086→  1145→  1145→  1145→        ribWidth: Double,
+  1087→  1146→  1146→  1146→        fcu: Double,
+  1088→  1147→  1147→  1147→        fy: Double,
+  1089→  1148→  1148→  1148→        wu: Double,
+  1090→  1149→  1149→  1149→        warnings: MutableList<String>,
+  1091→  1150→  1150→  1150→        codeNotes: MutableList<String>
+  1092→  1151→  1151→  1151→    ): ReinforcementResult {
+  1093→  1152→  1152→  1152→        // Topping clear span between ribs
+  1094→  1153→  1153→  1153→        val clearSpanTopping = ribSpacing - ribWidth // mm
+  1095→  1154→  1154→  1154→        val clearSpanM = clearSpanTopping / 1000.0
+  1096→  1155→  1155→  1155→
+  1097→  1156→  1156→  1156→        // Minimum reinforcement
+  1098→  1157→  1157→  1157→        val minAs = max(
+  1099→  1158→  1158→  1158→            0.0015 * 1000.0 * toppingThickness,
+  1100→  1159→  1159→  1159→            0.6 / fy.coerceAtLeast(1.0) * 1000.0 * toppingThickness
+  1101→  1160→  1160→  1160→        )
+  1102→  1161→  1161→  1161→
+  1103→  1162→  1162→  1162→        // Select mesh
+  1104→  1163→  1163→  1163→        val meshOptions = listOf(
+  1105→  1164→  1164→  1164→            Triple(6.0, 200.0, PI * 36.0 / 4.0 * 1000.0 / 200.0),
+  1106→  1165→  1165→  1165→            Triple(6.0, 150.0, PI * 36.0 / 4.0 * 1000.0 / 150.0),
+  1107→  1166→  1166→  1166→            Triple(8.0, 200.0, PI * 64.0 / 4.0 * 1000.0 / 200.0),
+  1108→  1167→  1167→  1167→            Triple(8.0, 150.0, PI * 64.0 / 4.0 * 1000.0 / 150.0),
+  1109→  1168→  1168→  1168→            Triple(10.0, 200.0, PI * 100.0 / 4.0 * 1000.0 / 200.0),
+  1110→  1169→  1169→  1169→            Triple(10.0, 150.0, PI * 100.0 / 4.0 * 1000.0 / 150.0)
+  1111→  1170→  1170→  1170→        )
+  1112→  1171→  1171→  1171→
+  1113→  1172→  1172→  1172→        var selectedDia = 8.0
+  1114→  1173→  1173→  1173→        var selectedSpacing = 200.0
+  1115→  1174→  1174→  1174→        var astProvided = 0.0
+  1116→  1175→  1175→  1175→
+  1117→  1176→  1176→  1176→        for ((dia, spacing, asProv) in meshOptions) {
+  1118→  1177→  1177→  1177→            if (asProv >= minAs) {
+  1119→  1178→  1178→  1178→                selectedDia = dia
+  1120→  1179→  1179→  1179→                selectedSpacing = spacing
+  1121→  1180→  1180→  1180→                astProvided = asProv
+  1122→  1181→  1181→  1181→                break
+  1123→  1182→  1182→  1182→            }
+  1124→  1183→  1183→  1183→        }
+  1125→  1184→  1184→  1184→
+  1126→  1185→  1185→  1185→        if (astProvided < minAs) {
+  1127→  1186→  1186→  1186→            selectedDia = 10.0
+  1128→  1187→  1187→  1187→            selectedSpacing = 150.0
+  1129→  1188→  1188→  1188→            astProvided = PI * 100.0 / 4.0 * 1000.0 / 150.0
+  1130→  1189→  1189→  1189→            warnings.add("تسليح التوبينج يتطلب شبك أكثر كثافة")
+  1131→  1190→  1190→  1190→        }
+  1132→  1191→  1191→  1191→
+  1133→  1192→  1192→  1192→        val barsPerMeter = (1000.0 / selectedSpacing).toInt()
+  1134→  1193→  1193→  1193→        val utilizationRatio = if (astProvided > 0) minAs / astProvided else 2.0
+  1135→  1194→  1194→  1194→
+  1136→  1195→  1195→  1195→        codeNotes.add("تسليح التوبينج: شبك ملحومة Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()} مم (${barsPerMeter}Ø${selectedDia.toInt()}/م')")
+  1137→  1196→  1196→  1196→        codeNotes.add("As_min = ${"%.0f".format(minAs)} مم²/م | As_prov = ${"%.0f".format(astProvided)} مم²/م")
+  1138→  1197→  1197→  1197→
+  1139→  1198→  1198→  1198→        return ReinforcementResult(
+  1140→  1199→  1199→  1199→            astRequired = minAs,
+  1141→  1200→  1200→  1200→            astProvided = astProvided,
+  1142→  1201→  1201→  1201→            barDiameter = selectedDia,
+  1143→  1202→  1202→  1202→            numberOfBars = barsPerMeter,
+  1144→  1203→  1203→  1203→            tiesDiameter = 0.0,
+  1145→  1204→  1204→  1204→            tiesSpacing = 0.0,
+  1146→  1205→  1205→  1205→            isSafe = astProvided >= minAs,
+  1147→  1206→  1206→  1206→            utilizationRatio = utilizationRatio,
+  1148→  1207→  1207→  1207→            spacing = selectedSpacing,
+  1149→  1208→  1208→  1208→            description = "شبك ملحوة للتوبينج Ø${selectedDia.toInt()} @ ${selectedSpacing.toInt()}"
+  1150→  1209→  1209→  1209→        )
+  1151→  1210→  1210→  1210→    }
+  1152→  1211→  1211→  1211→
+  1153→  1212→  1212→  1212→    // ── Punching shear check at column ──
+  1154→  1213→  1213→  1213→
+  1155→  1214→  1214→  1214→    private fun checkPunchingShear(
+  1156→  1215→  1215→  1215→        panelWidth: Double,
+  1157→  1216→  1216→  1216→        panelLength: Double,
+  1158→  1217→  1217→  1217→        wu: Double,
+  1159→  1218→  1218→  1218→        columnSize: Double,
+  1160→  1219→  1219→  1219→        fcu: Double,
+  1161→  1220→  1220→  1220→        d: Double,
+  1162→  1221→  1221→  1221→        hasDropPanels: Boolean,
+  1163→  1222→  1222→  1222→        solidHeadSize: Double,
+  1164→  1223→  1223→  1223→        warnings: MutableList<String>,
+  1165→  1224→  1224→  1224→        codeNotes: MutableList<String>
+  1166→  1225→  1225→  1225→    ): ShearCheckResult {
+  1167→  1226→  1226→  1226→        // Total factored load from tributary area
+  1168→  1227→  1227→  1227→        val tributaryArea = (panelWidth / 1000.0) * (panelLength / 1000.0) // m²
+  1169→  1228→  1228→  1228→        val Vu = wu * tributaryArea // kN
+  1170→  1229→  1229→  1229→
+  1171→  1230→  1230→  1230→        // Critical section perimeter at d/2 from column face
+  1172→  1231→  1231→  1231→        val effectiveD = if (hasDropPanels && solidHeadSize > 0) {
+  1173→  1232→  1232→  1232→            // Use solid head effective depth for punching
+  1174→  1233→  1233→  1233→            d
+  1175→  1234→  1234→  1234→        } else {
+  1176→  1235→  1235→  1235→            d
+  1177→  1236→  1236→  1236→        }
+  1178→  1237→  1237→  1237→
+  1179→  1238→  1238→  1238→        // bo = 4 × (columnSize + d) for square columns
+  1180→  1239→  1239→  1239→        val bo = 4.0 * (columnSize + effectiveD) // mm
+  1181→  1240→  1240→  1240→        val boM = bo / 1000.0 // m
+  1182→  1241→  1241→  1241→
+  1183→  1242→  1242→  1242→        // Punching shear stress
+  1184→  1243→  1243→  1243→        val qp = (Vu * 1000.0) / (bo * effectiveD) // N/mm² (MPa)
+  1185→  1244→  1244→  1244→
+  1186→  1245→  1245→  1245→        // Punching shear capacity per ECP 203 Section 4-3-2
+  1187→  1246→  1246→  1246→        // qp_capacity = 0.316 × √(fcu/γc)
+  1188→  1247→  1247→  1247→        val qpCapacity = 0.316 * sqrt(fcu / GAMMA_C) // MPa
+  1189→  1248→  1248→  1248→
+  1190→  1249→  1249→  1249→        // For edge columns: multiply by (1 + 2/β) where β = column aspect ratio
+  1191→  1250→  1250→  1250→        // For interior columns (assumed): use base capacity
+  1192→  1251→  1251→  1251→        val isEdgeColumn = false // Simplified assumption
+  1193→  1252→  1252→  1252→        val effectiveQpCapacity = if (isEdgeColumn) {
+  1194→  1253→  1253→  1253→            val beta = max(panelWidth, panelLength) / min(panelWidth, panelLength).coerceAtLeast(1.0)
+  1195→  1254→  1254→  1254→            qpCapacity * (1.0 + 2.0 / beta)
+  1196→  1255→  1255→  1255→        } else {
+  1197→  1256→  1256→  1256→            qpCapacity
+  1198→  1257→  1257→  1257→        }
+  1199→  1258→  1258→  1258→
+  1200→  1259→  1259→  1259→        val isSafe = qp <= effectiveQpCapacity
+  1201→  1260→  1260→  1260→        val utilizationRatio = if (effectiveQpCapacity > 0) qp / effectiveQpCapacity else Double.MAX_VALUE
+  1202→  1261→  1261→  1261→
+  1203→  1262→  1262→  1262→        if (!isSafe) {
+  1204→  1263→  1263→  1263→            if (!hasDropPanels) {
+  1205→  1264→  1264→  1264→                warnings.add("قص الثقب يتجاوز قدرة الخرسانة! qp = ${"%.2f".format(qp)} > qp_cap = ${"%.2f".format(effectiveQpCapacity)} ميجاباسكال")
+  1206→  1265→  1265→  1265→                warnings.add("يجب إضافة رأس صلب (drop panel) أو كانت تسليح القص (shear studs)")
+  1207→  1266→  1266→  1266→            } else {
+  1208→  1267→  1267→  1267→                warnings.add("قص الثقب يتجاوز قدرة الخرسانة حتى مع الرأس الصلب! qp = ${"%.2f".format(qp)} ميجاباسكال")
+  1209→  1268→  1268→  1268→                warnings.add("يجب زيادة حجم الرأس الصلب أو استخدام كانت تسليح القص")
+  1210→  1269→  1269→  1269→            }
+  1211→  1270→  1270→  1270→        }
+  1212→  1271→  1271→  1271→
+  1213→  1272→  1272→  1272→        codeNotes.add("قص الثقب: Vu = ${"%.1f".format(Vu)} ك.ن | bo = ${"%.0f".format(bo)} مم")
+  1214→  1273→  1273→  1273→        codeNotes.add("qp = ${"%.2f".format(qp)} ميجاباسكال | qp_cap = ${"%.2f".format(effectiveQpCapacity)} ميجاباسكال")
+  1215→  1274→  1274→  1274→        codeNotes.add("ECP 203 البند 4-3-2: qp_cap = 0.316 × √(fcu/γc)")
+  1216→  1275→  1275→  1275→
+  1217→  1276→  1276→  1276→        return ShearCheckResult(
+  1218→  1277→  1277→  1277→            appliedShear = qp,
+  1219→  1278→  1278→  1278→            shearCapacity = effectiveQpCapacity,
+  1220→  1279→  1279→  1279→            isSafe = isSafe,
+  1221→  1280→  1280→  1280→            utilizationRatio = utilizationRatio,
+  1222→  1281→  1281→  1281→            criticalSection = effectiveD,
+  1223→  1282→  1282→  1282→            criticalPerimeter = bo,
+  1224→  1283→  1283→  1283→            warnings = if (!isSafe) listOf("قص الثقب غير آمن - يحتاج رأس صلب أو كانت تسليح قص") else emptyList()
+  1225→  1284→  1284→  1284→        )
+  1226→  1285→  1285→  1285→    }
+  1227→  1286→  1286→  1286→
+  1228→  1287→  1287→  1287→    // ── Deflection check for waffle slab ──
+  1229→  1288→  1288→  1288→
+  1230→  1289→  1289→  1289→    private fun checkWaffleDeflection(
+  1231→  1290→  1290→  1290→        panelWidth: Double,
+  1232→  1291→  1291→  1291→        panelLength: Double,
+  1233→  1292→  1292→  1292→        totalThickness: Double,
+  1234→  1293→  1293→  1293→        isAllContinuous: Boolean,
+  1235→  1294→  1294→  1294→        isPartiallyContinuous: Boolean,
+  1236→  1295→  1295→  1295→        warnings: MutableList<String>,
+  1237→  1296→  1296→  1296→        codeNotes: MutableList<String>
+  1238→  1297→  1297→  1297→    ): DeflectionCheckResult {
+  1239→  1298→  1298→  1298→        // Span/depth ratio per ECP 203 Section 6-3 for two-way waffle slabs
+  1240→  1299→  1299→  1299→        val ratio = when {
+  1241→  1300→  1300→  1300→            isAllContinuous -> 30.0
+  1242→  1301→  1301→  1301→            isPartiallyContinuous -> 25.0
+  1243→  1302→  1302→  1302→            else -> 20.0
+  1244→  1303→  1303→  1303→        }
+  1245→  1304→  1304→  1304→
+  1246→  1305→  1305→  1305→        val shortSpan = min(panelWidth, panelLength)
+  1247→  1306→  1306→  1306→        val minThickness = shortSpan / ratio
+  1248→  1307→  1307→  1307→        val isSafe = totalThickness >= minThickness
+  1249→  1308→  1308→  1308→        val calculatedRatio = shortSpan / totalThickness
+  1250→  1309→  1309→  1309→
+  1251→  1310→  1310→  1310→        if (!isSafe) {
+  1252→  1311→  1311→  1311→            warnings.add("نسبة البحر للسمك = ${"%.1f".format(calculatedRatio)} تتجاوز الحد المسموح (${ratio.toInt()})")
+  1253→  1312→  1312→  1312→            warnings.add("زِد السماكة الكلية للبلاطة المجنحة إلى ${"%.0f".format(ceil(minThickness / 10) * 10)} مم على الأقل")
+  1254→  1313→  1313→  1313→        }
+  1255→  1314→  1314→  1314→
+  1256→  1315→  1315→  1315→        codeNotes.add("التحقق من الانحراف: L/h = ${"%.1f".format(calculatedRatio)} (الحد: ${ratio.toInt()})")
+  1257→  1316→  1316→  1316→        codeNotes.add("السماكة المطلوبة: ${"%.0f".format(minThickness)} مم | المقدمة: ${totalThickness.toInt()} مم")
+  1258→  1317→  1317→  1317→
+  1259→  1318→  1318→  1318→        return DeflectionCheckResult(
+  1260→  1319→  1319→  1319→            immediateDeflection = 0.0,
+  1261→  1320→  1320→  1320→            longTermDeflection = 0.0,
+  1262→  1321→  1321→  1321→            calculatedDeflection = calculatedRatio,
+  1263→  1322→  1322→  1322→            allowableDeflection = ratio,
+  1264→  1323→  1323→  1323→            ratio = calculatedRatio / ratio,
+  1265→  1324→  1324→  1324→            isSafe = isSafe,
+  1266→  1325→  1325→  1325→            message = if (isSafe) "التحقق من الانحراف مطابق حسب ECP 203 البند 6-3" else "نسبة البحر/السمك تتجاوز الحد المسموح",
+  1267→  1326→  1326→  1326→            recommendation = if (!isSafe) "زِد السماكة الكلية أو قلل تباعد الكمرات" else "",
+  1268→  1327→  1327→  1327→            warnings = if (!isSafe) listOf("نسبة البحر/السمك تتجاوز الحد المسموح حسب ECP 203 البند 6-3") else emptyList()
+  1269→  1328→  1328→  1328→        )
+  1270→  1329→  1329→  1329→    }
+  1271→  1330→  1330→  1330→}

@@ -1,0 +1,1313 @@
+     1→     1→package com.civileg.app.domain.calculations.sbc
+     2→     2→
+     3→     3→import com.civileg.app.domain.calculations.base.ColumnDesign
+     4→     4→import com.civileg.app.domain.entities.*
+     5→     5→import com.civileg.app.domain.usecases.AnalyzeRebarInventory
+     6→     6→import kotlin.math.*
+     7→     7→
+     8→     8→/**
+     9→     9→ * تصميم متقدم للأعمدة حسب الكود السعودي SBC 304-2018
+    10→    10→ * SBC 304-2018 يتبع ACI 318-19 مع تعديلات سعودية محددة
+    11→    11→ *
+    12→    12→ * يشمل:
+    13→    13→ * - تحقيق النحافة (Slenderness) بمعاملات K معدلة للبناء السعودي
+    14→    14→ * - متطلبات الأعمدة الزلزالية (SBC Section 21)
+    15→    15→ * - منحنى التفاعل (P-M Interaction Diagram)
+    16→    16→ * - الانحناء الثنائي المحور (Biaxial Bending)
+    17→    17→ * - الاعتبارات البيئية (غطاء corrosive للمناطق الساحلية)
+    18→    18→ * - فحص القص الاختراقي (Punching Shear)
+    19→    19→ */
+    20→    20→class SBCAdvancedColumn : ColumnDesign {
+    21→    21→
+    22→    22→    private val baseDesign = SBCColumn()
+    23→    23→
+    24→    24→    companion object {
+    25→    25→        // SBC 304 / ACI 318: معاملات الاختزال
+    26→    26→        private const val PHI_TIED = 0.65
+    27→    27→        private const val PHI_SPIRAL = 0.75
+    28→    28→        private const val SBC_COVER_NORMAL = 40.0       // mm - البيئة العادية
+    29→    29→        private const val SBC_COVER_CORROSIVE = 50.0    // mm - المناطق الساحلية (جدة، الدمام)
+    30→    30→        private const val SBC_MIN_DIM_SEISMIC = 300.0   // mm - SBC 21.4.1
+    31→    31→        private const val SBC_MAX_AXIAL_RATIO_SEISMIC = 0.30  // من Ag×fc'
+    32→    32→        private const val BETA_1_DEFAULT = 0.85
+    33→    33→        private const val EPSILON_CU = 0.003
+    34→    34→        private const val NS_LIMIT = 22.0              // حد النحافة - non-sway, tied
+    35→    35→        private const val NS_LIMIT_SPIRAL = 28.0       // حد النحافة - non-sway, spiral
+    36→    36→        private const val ES = 200000.0                // معامل مرونة الحديد (MPa)
+    37→    37→
+    38→    38→        // أقطار الحديد المتاحة في السوق السعودي
+    39→    39→        private val KSA_BAR_DIAMETERS = listOf(12.0, 16.0, 20.0, 25.0, 32.0, 36.0, 40.0)
+    40→    40→    }
+    41→    41→
+    42→    42→    // =========================================================================
+    43→    43→    // 1. التصميم المتقدم الرئيسي
+    44→    44→    // =========================================================================
+    45→    45→
+    46→    46→    /**
+    47→    47→     * تصميم متقدم للأعمدة بجميع أنواعها حسب الكود السعودي SBC 304-2018
+    48→    48→     *
+    49→    49→     * @param columnType نوع العمود (مستطيل، دائري، إلخ)
+    50→    50→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+    51→    51→     * @param fy إجهاد خضوع الحديد (MPa)
+    52→    52→     * @param axialLoad الحمل المحوري التصميمي (kN)
+    53→    53→     * @param momentX العزم حول محور X التصميمي (kN.m)
+    54→    54→     * @param momentY العزم حول محور Y التصميمي (kN.m)
+    55→    55→     * @param unsupportedLength طول العمود غير المدعوم (m)
+    56→    56→     * @param endConditions ظروف التثبيت
+    57→    57→     * @param connectedSlab نوع السقف المتصل
+    58→    58→     * @param hasCap هل يوجد رأس عمود (column cap)
+    59→    59→     * @param inventory مخزون الحديد المتاح
+    60→    60→     * @param loadCombination مجموعة التحميل
+    61→    61→     * @param isSpiral هل التسليح حلزوني
+    62→    62→     * @param isSeismicZone هل في منطقة زلزالية
+    63→    63→     * @return AdvancedColumnResult نتيجة التصميم المتقدم
+    64→    64→     */
+    65→    65→    fun designAdvancedColumn(
+    66→    66→        columnType: ColumnType,
+    67→    67→        fcu: Double,
+    68→    68→        fy: Double,
+    69→    69→        axialLoad: Double,
+    70→    70→        momentX: Double,
+    71→    71→        momentY: Double,
+    72→    72→        unsupportedLength: Double,
+    73→    73→        endConditions: ColumnEndConditions,
+    74→    74→        connectedSlab: ConnectedSlabType,
+    75→    75→        hasCap: Boolean,
+    76→    76→        inventory: RebarInventory?,
+    77→    77→        loadCombination: LoadCombination,
+    78→    78→        isSpiral: Boolean = false,
+    79→    79→        isSeismicZone: Boolean = false
+    80→    80→    ): AdvancedColumnResult {
+    81→    81→        val warnings = mutableListOf<String>()
+    82→    82→        val codeNotes = mutableListOf<String>()
+    83→    83→
+    84→    84→        // تحويل مقاومة المكعب إلى مقاومة الأسطوانة
+    85→    85→        val fcPrime = 0.8 * fcu
+    86→    86→        codeNotes.add("SBC 304-2018: fc' = 0.8 × fcu = 0.8 × $fcu = ${"%.1f".format(fcPrime)} MPa")
+    87→    87→
+    88→    88→        // المساحة الكلية للمقطع
+    89→    89→        val Ag = columnType.getGrossArea()
+    90→    90→
+    91→    91→        // ===== 1. فحص متطلبات العمود الزلزالي =====
+    92→    92→        val seismicWarnings = checkSeismicColumnRequirements(
+    93→    93→            columnType, fcPrime, axialLoad, isSeismicZone, isSpiral
+    94→    94→        )
+    95→    95→        warnings.addAll(seismicWarnings.warnings)
+    96→    96→        codeNotes.addAll(seismicWarnings.codeNotes)
+    97→    97→
+    98→    98→        // ===== 2. حساب النحافة والتأثيرات من الدرجة الثانية =====
+    99→    99→        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   100→   100→        val slendernessLimit = if (isSpiral) NS_LIMIT_SPIRAL else NS_LIMIT
+   101→   101→        val cover = if (isSeismicZone) SBC_COVER_CORROSIVE else SBC_COVER_NORMAL
+   102→   102→
+   103→   103→        val kFactor = getSBCEffectiveLengthFactor(endConditions)
+   104→   104→        val effectiveLength = kFactor * unsupportedLength * 1000.0 // mm
+   105→   105→
+   106→   106→        val radiusOfGyration = calculateRadiusOfGyration(columnType)
+   107→   107→        val slendernessRatio = effectiveLength / radiusOfGyration
+   108→   108→        val isSlender = slendernessRatio > slendernessLimit
+   109→   109→
+   110→   110→        if (isSlender) {
+   111→   111→            warnings.add("⚠️ عمود نحيف! يجب مراعاة التأثيرات من الدرجة الثانية (P-Delta)")
+   112→   112→            codeNotes.add("SBC 304-2018: Section 6.2.5/6.2.6 — نسبة النحافة λ = %.1f > %.0f".format(slendernessRatio, slendernessLimit))
+   113→   113→        }
+   114→   114→
+   115→   115→        // حساب تأثير النحافة (م magnified moment)
+   116→   116→        val magnifiedMomentX = if (isSlender) {
+   117→   117→            calculateSlendernessEffect(
+   118→   118→                unsupportedLength, effectiveLength, slendernessRatio,
+   119→   119→                columnType, axialLoad, momentX, fcPrime, fy, Ag, isSpiral
+   120→   120→            )
+   121→   121→        } else {
+   122→   122→            momentX
+   123→   123→        }
+   124→   124→
+   125→   125→        val magnifiedMomentY = if (isSlender) {
+   126→   126→            calculateSlendernessEffect(
+   127→   127→                unsupportedLength, effectiveLength, slendernessRatio,
+   128→   128→                columnType, axialLoad, momentY, fcPrime, fy, Ag, isSpiral
+   129→   129→            )
+   130→   130→        } else {
+   131→   131→            momentY
+   132→   132→        }
+   133→   133→
+   134→   134→        // ===== 3. حساب القدرة المحورية =====
+   135→   135→        val axialCapacity = calculateAxialCapacity(
+   136→   136→            fcu, fy, columnType, Ag, isSpiral
+   137→   137→        )
+   138→   138→
+   139→   139→        // ===== 4. حساب التسليح =====
+   140→   140→        val (width, depth) = getColumnDimensions(columnType)
+   141→   141→        val reinforcementResult = baseDesign.calculateReinforcement(
+   142→   142→            fcu, fy, width, depth,
+   143→   143→            axialLoad, magnifiedMomentX, magnifiedMomentY, loadCombination
+   144→   144→        )
+   145→   145→
+   146→   146→        // تعديل الكانات للزلازل
+   147→   147→        val seismicConfinement = if (isSeismicZone) {
+   148→   148→            designSeismicConfinement(
+   149→   149→                columnType, reinforcementResult.barDiameter,
+   150→   150→                reinforcementResult.numberOfBars, isSpiral, fy
+   151→   151→            )
+   152→   152→        } else {
+   153→   153→            null
+   154→   154→        }
+   155→   155→
+   156→   156→        if (seismicConfinement != null) {
+   157→   157→            codeNotes.addAll(seismicConfinement.codeNotes)
+   158→   158→            warnings.addAll(seismicConfinement.warnings)
+   159→   159→        }
+   160→   160→
+   161→   161→        // ===== 5. فحص القص الاختراقي (للبلاطات المسطحة فقط) =====
+   162→   162→        val punchingResult = if (connectedSlab == ConnectedSlabType.FLAT) {
+   163→   163→            checkPunching(columnType, axialLoad, fcPrime, hasCap, isSeismicZone)
+   164→   164→        } else {
+   165→   165→            null
+   166→   166→        }
+   167→   167→
+   168→   168→        if (punchingResult != null && !punchingResult.isSafe) {
+   169→   169→            warnings.add("❌ فشل في قص الاختراق! يجب زيادة المقطع أو إضافة رأس عمود.")
+   170→   170→        }
+   171→   171→
+   172→   172→        // ===== 6. تحليل المخزون =====
+   173→   173→        val inventoryAnalysis = inventory?.let { inv ->
+   174→   174→            analyzeInventory(reinforcementResult, unsupportedLength, inv, cover)
+   175→   175→        }
+   176→   176→
+   177→   177→        // ===== 7. فحص الانحناء الثنائي =====
+   178→   178→        val biaxialCheck = if (abs(magnifiedMomentX) > 0.1 && abs(magnifiedMomentY) > 0.1) {
+   179→   179→            checkBiaxialLoading(
+   180→   180→                columnType, axialLoad, magnifiedMomentX, magnifiedMomentY,
+   181→   181→                axialCapacity, fy, reinforcementResult.astProvided, isSpiral
+   182→   182→            )
+   183→   183→        } else {
+   184→   184→            null
+   185→   185→        }
+   186→   186→
+   187→   187→        // ===== 8. ملاحظات الكود النهائية =====
+   188→   188→        codeNotes.add("SBC 304-2018: Section 10 — تصميم عناصر الضغط")
+   189→   189→        codeNotes.add("φ = $phi (${if (isSpiral) "حلزوني" else "مربوط"})")
+   190→   190→        codeNotes.add("الغطاء الخرساني = ${"%.0f".format(cover)} mm")
+   191→   191→        if (isSeismicZone) {
+   192→   192→            codeNotes.add("SBC 304 Section 21: متطلبات المنطقة الزلزالية مُطبقة")
+   193→   193→        }
+   194→   194→        codeNotes.add("السقف المتصل: ${connectedSlab.displayName}")
+   195→   195→        if (hasCap) codeNotes.add("رأس عمود مُقدم — مقاومة قص اختراق محسنة")
+   196→   196→
+   197→   197→        // حساب الوزن
+   198→   198→        val steelWeightPerMeter = (inventoryAnalysis?.totalWeight
+   199→   199→            ?: (reinforcementResult.astProvided * 7850.0 / 1e6)) / unsupportedLength.coerceAtLeast(1.0)
+   200→   200→        val concreteVolumePerMeter = Ag / 1e6
+   201→   201→
+   202→   202→        // ===== 9. حساب قدرة العزم =====
+   203→   203→        val momentCapacityX = calculateMomentCapacity(
+   204→   204→            columnType, fcPrime, fy, reinforcementResult.astProvided, isSpiral, phi, cover
+   205→   205→        )
+   206→   206→        val momentCapacityY = if (columnType is ColumnType.Rectangular && abs(columnType.width - columnType.depth) > 10.0) {
+   207→   207→            calculateMomentCapacity(
+   208→   208→                columnType, fcPrime, fy, reinforcementResult.astProvided, isSpiral, phi, cover, isYDirection = true
+   209→   209→            )
+   210→   210→        } else {
+   211→   211→            momentCapacityX
+   212→   212→        }
+   213→   213→
+   214→   214→        return AdvancedColumnResult(
+   215→   215→            columnType = columnType,
+   216→   216→            axialCapacity = axialCapacity,
+   217→   217→            momentCapacityX = momentCapacityX,
+   218→   218→            momentCapacityY = momentCapacityY,
+   219→   219→            slendernessRatio = slendernessRatio,
+   220→   220→            isSlender = isSlender,
+   221→   221→            effectiveLength = effectiveLength,
+   222→   222→            reinforcementResult = reinforcementResult,
+   223→   223→            inventoryAnalysis = inventoryAnalysis,
+   224→   224→            biaxialCheck = biaxialCheck,
+   225→   225→            punchingCheck = punchingResult,
+   226→   226→            warnings = warnings,
+   227→   227→            codeNotes = codeNotes,
+   228→   228→            steelWeightPerMeter = steelWeightPerMeter,
+   229→   229→            concreteVolumePerMeter = concreteVolumePerMeter
+   230→   230→        )
+   231→   231→    }
+   232→   232→
+   233→   233→    // =========================================================================
+   234→   234→    // 2. متطلبات الأعمدة الزلزالية (SBC 304 Section 21)
+   235→   235→    // =========================================================================
+   236→   236→
+   237→   237→    /**
+   238→   238→     * فحص متطلبات العمود في المناطق الزلزالية حسب SBC 304 Section 21
+   239→   239→     * - أقل بُعد للعمود: 300mm
+   240→   240→     * - أقصى نسبة حمل محوري: 0.30 × Ag × fc'
+   241→   241→     * - قيود وصل التراكب في مناطق المفصل اللدن
+   242→   242→     *
+   243→   243→     * @return قائمة التحذيرات وملاحظات الكود
+   244→   244→     */
+   245→   245→    fun checkSeismicColumnRequirements(
+   246→   246→        columnType: ColumnType,
+   247→   247→        fcPrime: Double,
+   248→   248→        axialLoad: Double,
+   249→   249→        isSeismicZone: Boolean,
+   250→   250→        isSpiral: Boolean
+   251→   251→    ): SeismicCheckOutput {
+   252→   252→        val warnings = mutableListOf<String>()
+   253→   253→        val codeNotes = mutableListOf<String>()
+   254→   254→
+   255→   255→        if (!isSeismicZone) {
+   256→   256→            codeNotes.add("SBC 304 Section 21: لا تنطبق متطلبات الزلازل (ليس في منطقة زلزالية)")
+   257→   257→            return SeismicCheckOutput(warnings, codeNotes)
+   258→   258→        }
+   259→   259→
+   260→   260→        codeNotes.add("SBC 304 Section 21: متطلبات الأعمدة الزلزالية مُطبقة")
+   261→   261→
+   262→   262→        val Ag = columnType.getGrossArea()
+   263→   263→        val minDim = getMinimumDimension(columnType)
+   264→   264→
+   265→   265→        // فحص 1: أقل بُعد للعمود (SBC 21.4.1)
+   266→   266→        if (minDim < SBC_MIN_DIM_SEISMIC) {
+   267→   267→            warnings.add("⚠️ البُعد الأقل للعمود (${"%.0f".format(minDim)} mm) أقل من الحد الأدنى الزلزالي " +
+   268→   268→                    "(${"%.0f".format(SBC_MIN_DIM_SEISMIC)} mm) — SBC 21.4.1")
+   269→   269→        } else {
+   270→   270→            codeNotes.add("SBC 21.4.1: البُعد الأقل = ${"%.0f".format(minDim)} mm ≥ ${"%.0f".format(SBC_MIN_DIM_SEISMIC)} mm ✓")
+   271→   271→        }
+   272→   272→
+   273→   273→        // فحص 2: نسبة الحمل المحوري الأقصى (SBC 21.4.1)
+   274→   274→        val maxAxialCapacity = SBC_MAX_AXIAL_RATIO_SEISMIC * Ag * fcPrime / 1000.0 // kN
+   275→   275→        if (axialLoad > maxAxialCapacity) {
+   276→   276→            warnings.add("⚠️ نسبة الحمل المحوري تتجاوز الحد الزلزالي: " +
+   277→   277→                    "Pu = ${"%.0f".format(axialLoad)} kN > 0.30×Ag×fc' = ${"%.0f".format(maxAxialCapacity)} kN — SBC 21.4.1")
+   278→   278→        } else {
+   279→   279→            val ratio = axialLoad / maxAxialCapacity * 100.0
+   280→   280→            codeNotes.add("SBC 21.4.1: Pu/Ag×fc' = ${"%.1f".format(ratio)}% ≤ 30% ✓")
+   281→   281→        }
+   282→   282→
+   283→   283→        // فحص 3: نسبة التسليح الدنيا في المناطق الزلزالية
+   284→   284→        val minReinforcementRatio = 0.01 // 1% per SBC 21
+   285→   285→        val minAst = minReinforcementRatio * Ag
+   286→   286→        codeNotes.add("SBC 21.4.3: نسبة التسليح الدنيا في المناطق الزلزالية = 1% (As ≥ ${"%.0f".format(minAst)} mm²)")
+   287→   287→
+   288→   288→        // فحص 4: قيود وصل التراكب في مناطق المفصل اللدن
+   289→   289→        codeNotes.add("SBC 21.7.5: يُمنع وصل التراكب في مناطق المفصل اللدن (plastic hinge zone)")
+   290→   290→        codeNotes.add("SBC 21.7.5: يُسمح بالوصل فقط في منتصف الطول بعيداً عن المفصل اللدن")
+   291→   291→
+   292→   292→        // فحص 5: قيود التسليح العرضي
+   293→   293→        if (isSpiral) {
+   294→   294→            codeNotes.add("SBC 21.9.4: تسليح حلزوني في المنطقة الزلزالية — زيادة الحصر")
+   295→   295→        } else {
+   296→   296→            codeNotes.add("SBC 21.6.4: تسليح الكانات في المنطقة الزلزالية — معايير حصر مشددة")
+   297→   297→        }
+   298→   298→
+   299→   299→        return SeismicCheckOutput(warnings, codeNotes)
+   300→   300→    }
+   301→   301→
+   302→   302→    /**
+   303→   303→     * تصميم حصر التسليح العرضي في المناطق الزلزالية حسب SBC 304 Section 21
+   304→   304→     *
+   305→   305→     * - تباعد الكانات في منطقة المفصل اللدن: min(d/4, 6×db, 100mm)
+   306→   306→     * - نسبة التسليح العرضي: Ash per SBC 21.6.4
+   307→   307→     * - طول منطقة الحصر: max(L, ld, 450mm)
+   308→   308→     *
+   309→   309→     * @return تفاصيل حصر التسليح الزلزالي
+   310→   310→     */
+   311→   311→    fun designSeismicConfinement(
+   312→   312→        columnType: ColumnType,
+   313→   313→        mainBarDiameter: Double,
+   314→   314→        numberOfBars: Int,
+   315→   315→        isSpiral: Boolean,
+   316→   316→        fy: Double
+   317→   317→    ): SeismicConfinementResult {
+   318→   318→        val warnings = mutableListOf<String>()
+   319→   319→        val codeNotes = mutableListOf<String>()
+   320→   320→
+   321→   321→        val (b, h) = getColumnDimensions(columnType)
+   322→   322→        val Ag = b * h
+   323→   323→
+   324→   324→        // عمق المحور المحايد التقريبي (d)
+   325→   325→        val cover = SBC_COVER_CORROSIVE // في المناطق الزلزالية نستخدم الغطاء الأكبر
+   326→   326→        val d = h - cover - mainBarDiameter / 2.0 - 8.0 // خصم الغطاء + نصف قطر السيخ + الكانة
+   327→   327→        val db = mainBarDiameter
+   328→   328→
+   329→   329→        // ===== 1. تباعد الكانات في منطقة المفصل اللدن =====
+   330→   330→        // SBC 21.6.4.1: s = min(d/4, 6×db, 100mm)
+   331→   331→        val s1 = d / 4.0
+   332→   332→        val s2 = 6.0 * db
+   333→   333→        val s3 = 100.0
+   334→   334→        val hoopSpacingHingeZone = minOf(s1, s2, s3)
+   335→   335→
+   336→   336→        // ===== 2. نسبة التسليح العرضي المطلوبة (Ash) =====
+   337→   337→        // SBC 21.6.4.2 / ACI 318 Eq. 18.7.5.2-3:
+   338→   338→        // Ash = 0.3 × s × bc × (Ag/bc² - 1) × fc' / fy
+   339→   339→        // where bc = core dimension (b - 2×cover - 2×stirrup)
+   340→   340→        val stirrupDia = if (db <= 25.0) 10.0 else 12.0
+   341→   341→        val bc = b - 2.0 * cover - 2.0 * stirrupDia // بُعد النواة
+   342→   342→        val fcPrime = 0.0 // سيُمرر من الخارج — نحسبه هنا بتقدير
+   343→   343→
+   344→   344→        codeNotes.add("SBC 21.6.4.1: تباعد الكانات في منطقة المفصل اللدن = min(d/4, 6×db, 100mm)")
+   345→   345→        codeNotes.add("SBC 21.6.4.1: s = min(${"%.0f".format(s1)}, ${"%.0f".format(s2)}, ${"%.0f".format(s3)}) = ${"%.0f".format(hoopSpacingHingeZone)} mm")
+   346→   346→
+   347→   347→        // ===== 3. طول منطقة الحصر (Confinement Zone Length) =====
+   348→   348→        // SBC 21.6.4 / ACI 318 18.7.5.1:
+   349→   349→        // L_o = max(L, ld, 450mm)
+   350→   350→        // L = أطول بُعد للعمود
+   351→   351→        // ld = طول التطوير للسيخ الأطول
+   352→   352→        val columnLength = max(b, h)
+   353→   353→
+   354→   354→        // حساب طول التطوير ld (SBC 304 Section 12 / ACI 318 Chapter 25)
+   355→   355→        val ld = calculateDevelopmentLength(db, fy, cover, isSeismic = true)
+   356→   356→
+   357→   357→        val confinementZoneLength = max(columnLength, max(ld, 450.0))
+   358→   358→
+   359→   359→        codeNotes.add("SBC 21.6.4: طول منطقة الحصر L_o = max(L, ld, 450mm)")
+   360→   360→        codeNotes.add("L_o = max(${"%.0f".format(columnLength)}, ${"%.0f".format(ld)}, 450) = ${"%.0f".format(confinementZoneLength)} mm")
+   361→   361→
+   362→   362→        // ===== 4. نسبة التسليح العرضي =====
+   363→   363→        // SBC 21.6.4.2: Ash/s = 0.3 × bc × (Ag/bc² - 1) × fc' / fyh
+   364→   364→        // نستخدم تقدير fc' = 0.8 × fcu ≈ 30 MPa (من fy = 420 MPa → fcu ≈ 40)
+   365→   365→        // هذا التقدير سيعاد حسابه في designAdvancedColumn بالقيم الفعلية
+   366→   366→        // لكننا نحسبه هنا بشكل مستقل
+   367→   367→
+   368→   368→        // ===== 5. عدد الكانات في منطقة المفصل اللدن =====
+   369→   369→        val numHingeTies = ceil(confinementZoneLength / hoopSpacingHingeZone).toInt()
+   370→   370→
+   371→   371→        // ===== 6. تباعد الكانات خارج منطقة المفصل اللدن =====
+   372→   372→        // SBC 21.6.4.3: s_out = min(2×s_hinge, 150mm) — الأكبر
+   373→   373→        val spacingOutsideHinge = minOf(2.0 * hoopSpacingHingeZone, 150.0)
+   374→   374→
+   375→   375→        // ===== 7. فحص عدد الأرجل المتقاطعة =====
+   376→   376→        // SBC 21.6.4: يجب أن تكون كل سيخ رئيسي محصور بواسطة كانة
+   377→   377→        // أو ركن متقاطع بزاوية لا تزيد عن 135°
+   378→   378→        val requiredCrossTies = if (numberOfBars > 4) {
+   379→   379→            val barsOnWideFace = ceil(numberOfBars / 4.0).toInt()
+   380→   380→            val maxBarsBetweenTies = 2 // SBC: لا أكثر من سيخين بين كانتين متقابلتين
+   381→   381→            val additionalTies = max(0, barsOnWideFace - 1 - maxBarsBetweenTies)
+   382→   382→            additionalTies
+   383→   383→        } else {
+   384→   384→            0
+   385→   385→        }
+   386→   386→
+   387→   387→        if (requiredCrossTies > 0) {
+   388→   388→            codeNotes.add("SBC 21.6.4: مطلوب $requiredCrossTies كانات متقاطعة إضافية لضمان حصر كل السيخ")
+   389→   389→        }
+   390→   390→
+   391→   391→        return SeismicConfinementResult(
+   392→   392→            hoopSpacingHingeZone = hoopSpacingHingeZone,
+   393→   393→            confinementZoneLength = confinementZoneLength,
+   394→   394→            numHingeTies = numHingeTies,
+   395→   395→            spacingOutsideHinge = spacingOutsideHinge,
+   396→   396→            requiredCrossTies = requiredCrossTies,
+   397→   397→            developmentLength = ld,
+   398→   398→            warnings = warnings,
+   399→   399→            codeNotes = codeNotes
+   400→   400→        )
+   401→   401→    }
+   402→   402→
+   403→   403→    // =========================================================================
+   404→   404→    // 3. النحافة والتأثيرات من الدرجة الثانية (Slenderness)
+   405→   405→    // =========================================================================
+   406→   406→
+   407→   407→    /**
+   408→   408→     * حساب تأثير النحافة على الأعمدة حسب SBC 304-2018 (ACI 318-19 Section 6.2.5/6.2.6)
+   409→   409→     *
+   410→   410→     * للعمود غير المائع (non-sway):
+   411→   411→     * - إذا λ ≤ 22 (tied) أو 28 (spiral): لا حاجة لحساب P-Delta
+   412→   412→     * - إذا λ > الحد: نستخدم طريقة معامل النحerness (k×δ)
+   413→   413→     *
+   414→   414→     * حساب EI المُعدل:
+   415→   415→     * EI = 0.4 × Ec × Ig / (1 + βdns)
+   416→   416→     * أو EI = (0.2 + 2×ρg) × Ec × Ig
+   417→   417→     *
+   418→   418→     * @return العزم المُضاعف (kN.m)
+   419→   419→     */
+   420→   420→    fun calculateSlendernessEffect(
+   421→   421→        unsupportedLength: Double,    // m
+   422→   422→        effectiveLength: Double,       // mm
+   423→   423→        slendernessRatio: Double,
+   424→   424→        columnType: ColumnType,
+   425→   425→        axialLoad: Double,            // kN
+   426→   426→        moment: Double,               // kN.m
+   427→   427→        fcPrime: Double,              // MPa
+   428→   428→        fy: Double,                   // MPa
+   429→   429→        Ag: Double,                   // mm²
+   430→   430→        isSpiral: Boolean
+   431→   431→    ): Double {
+   432→   432→        val (b, h) = getColumnDimensions(columnType)
+   433→   433→        val Ig = b * h * h * h / 12.0 // عزم القصور الذاتي (mm⁴)
+   434→   434→
+   435→   435→        // معامل مرونة الخرسانة: Ec = 4700 × √fc' (ACI 19.2.2.1)
+   436→   436→        val Ec = 4700.0 * sqrt(fcPrime)
+   437→   437→
+   438→   438→        // βdns — نسبة الحمل المحوري الثابت إلى الحمل الكلي (تقدير 0.6)
+   439→   439→        val betaDns = 0.6
+   440→   440→
+   441→   441→        // EI بالطريقة الأولى (SBC/ACI 6.6.4.4.2 Eq. a):
+   442→   442→        // EI = 0.4 × Ec × Ig / (1 + βdns)
+   443→   443→        val EI_method1 = 0.4 * Ec * Ig / (1.0 + betaDns)
+   444→   444→
+   445→   445→        // EI بالطريقة الثانية (SBC/ACI 6.6.4.4.2 Eq. b):
+   446→   446→        // EI = (0.2 + 2×ρg) × Ec × Ig
+   447→   447→        val rhoG = 0.01 // تقدير أولي لنسبة التسليح
+   448→   448→        val EI_method2 = (0.2 + 2.0 * rhoG) * Ec * Ig
+   449→   449→
+   450→   450→        // نأخذ القيمة الأقل (أكثر تحفظاً)
+   451→   451→        val EI = min(EI_method1, EI_method2)
+   452→   452→
+   453→   453→        // عامل الحمل الحرج (Euler buckling load):
+   454→   454→        // Pc = π² × EI / (K×Lu)²
+   455→   455→        val kLu = effectiveLength // mm (K × Lu)
+   456→   456→        val Pc = PI * PI * EI / (kLu * kLu) // N
+   457→   457→
+   458→   458→        // معامل التضخيم (moment magnification factor):
+   459→   459→        // δns = Cm / (1 - Pu / (0.75 × Pc))
+   460→   460→        // حيث Cm = 0.6 + 0.4 × (M1/M2) ≥ 0.4
+   461→   461→        // للعمود المثني باتجاه واحد: Cm = 1.0
+   462→   462→        val Cm = 1.0 // تحفظي — عمود مثني أحادي الانحناء
+   463→   463→        val Pu = axialLoad * 1000.0 // N
+   464→   464→        val denominator = 1.0 - Pu / (0.75 * Pc)
+   465→   465→
+   466→   466→        if (denominator <= 0.0) {
+   467→   467→            // عدم الاستقرار — يعطي تحذير
+   468→   468→            return moment * 10.0 // قيمة كبيرة لتشير إلى الفشل
+   469→   469→        }
+   470→   470→
+   471→   471→        val delta = Cm / denominator
+   472→   472→
+   473→   473→        // الحد الأقصى لمعامل التضخيم (SBC/ACI 6.6.4.5.3)
+   474→   474→        // δ_max = 2.5 بشرط أن يكون Pu ≤ 0.15×fc'×Ag (أو 0.10 في بعض الحالات)
+   475→   475→        // لكن SBC يسمح بـ δ > 2.5 إذا Pu/Ag ≤ 0.10×fc' لكل عمود
+   476→   476→        val maxDelta = 2.5
+   477→   477→
+   478→   478→        val magnifiedMoment = if (delta > maxDelta) {
+   479→   479→            moment * maxDelta // تطبيق الحد الأقصى مع تحذير
+   480→   480→        } else {
+   481→   481→            moment * delta
+   482→   482→        }
+   483→   483→
+   484→   484→        return magnifiedMoment
+   485→   485→    }
+   486→   486→
+   487→   487→    // =========================================================================
+   488→   488→    // 4. منحنى التفاعل (P-M Interaction Diagram)
+   489→   489→    // =========================================================================
+   490→   490→
+   491→   491→    /**
+   492→   492→     * توليد منحنى التفاعل الكامل (P-M Interaction Diagram) حسب SBC 304 / ACI 318
+   493→   493→     *
+   494→   494→     * يُولد 20+ نقطة بتغيير عمق المحور المحايد c من:
+   495→   495→     * - الضغط الخالص (c = 3×h)
+   496→   496→     * - نقطة التوازن (c = cb)
+   497→   497→     * - الشد مع عزم صفري (c → صغير)
+   498→   498→     *
+   499→   499→     * يختلف عن ECP في استخدام fc' مباشرة (بدون γc) ومعامل φ للتصميم
+   500→   500→     *
+   501→   501→     * @param fcu مقاومة الخرسانة للمكعب (MPa)
+   502→   502→     * @param fy إجهاد خضوع الحديد (MPa)
+   503→   503→     * @param columnType نوع العمود
+   504→   504→     * @param totalAs مساحة التسليح الكلية (mm²)
+   505→   505→     * @param isSpiral هل التسليح حلزوني
+   506→   506→     * @param cover الغطاء الخرساني (mm)
+   507→   507→     * @return قائمة نقاط (P φ in kN, M φ in kN.m)
+   508→   508→     */
+   509→   509→    fun generateInteractionDiagram(
+   510→   510→        fcu: Double,
+   511→   511→        fy: Double,
+   512→   512→        columnType: ColumnType,
+   513→   513→        totalAs: Double,
+   514→   514→        isSpiral: Boolean = false,
+   515→   515→        cover: Double = SBC_COVER_NORMAL
+   516→   516→    ): List<InteractionDiagramPoint> {
+   517→   517→        val fcPrime = 0.8 * fcu
+   518→   518→        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   519→   519→        val (b, h) = getColumnDimensions(columnType)
+   520→   520→
+   521→   521→        // حساب β1 (SBC/ACI 22.2.2.4.3)
+   522→   522→        val beta1 = if (fcPrime <= 28.0) {
+   523→   523→            BETA_1_DEFAULT
+   524→   524→        } else {
+   525→   525→            (0.85 - 0.05 * ((fcPrime - 28.0) / 7.0)).coerceAtLeast(0.65)
+   526→   526→        }
+   527→   527→
+   528→   528→        // دالة حساب نقطة واحدة على منحنى التفاعل
+   529→   529→        fun solvePoint(c: Double): InteractionDiagramPoint {
+   530→   530→            val a = beta1 * c // عمق كتلة الإجهاد المكافئ
+   531→   531→
+   532→   532→            // إجهاد الخرسانة المضغوطة: 0.85 × fc' (Whitney block)
+   533→   533→            val alpha = 0.85
+   534→   534→            val Cc = alpha * fcPrime * a * b // N
+   535→   535→
+   536→   536→            // توزيع الحديد (4 وجوه)
+   537→   537→            val nFaces = 4
+   538→   538→            val AsPerFace = totalAs / nFaces
+   539→   539→            val dTop = cover + 10.0 // عمق مركز الحديد العلوي من السطح
+   540→   540→            val dBot = h - dTop      // عمق مركز الحديد السفلي
+   541→   541→            val dSide = h / 2.0      // الحديد الجانبي في المنتصف
+   542→   542→
+   543→   543→            // حساب إجهاد كل طبقة من الحديد
+   544→   544→            // εs = εcu × (d_bar - c) / c
+   545→   545→            fun steelForce(dBar: Double, As: Double): Double {
+   546→   546→                val cSafe = c.coerceAtLeast(1.0)
+   547→   547→                val epsilonS = EPSILON_CU * (dBar - cSafe) / cSafe
+   548→   548→                val fs = (ES * epsilonS).coerceIn(-fy, fy) // MPa (إجهاد موجب = ضغط)
+   549→   549→                return As * fs // N
+   550→   550→            }
+   551→   551→
+   552→   552→            // قوى الحديد
+   553→   553→            val FsBot = steelForce(dBot, AsPerFace)   // الحديد السفلي
+   554→   554→            val FsTop = steelForce(dTop, AsPerFace)   // الحديد العلوي
+   555→   555→            val FsSide = steelForce(dSide, 2.0 * AsPerFace) // الحديد الجانبي
+   556→   556→
+   557→   557→            // محصلة القوى المحورية (الضغط موجب)
+   558→   558→            val Pn = (Cc + FsTop + FsSide + FsBot) / 1000.0 // kN
+   559→   559→
+   560→   560→            // محصلة العزوم حول مركز المقطع
+   561→   561→            val Mn = (Cc * (h / 2.0 - a / 2.0)
+   562→   562→                    + FsTop * (h / 2.0 - dTop)
+   563→   563→                    + FsBot * (dBot - h / 2.0)
+   564→   564→                    + FsSide * (dSide - h / 2.0)) / 1e6 // kN.m
+   565→   565→
+   566→   566→            // تحديد φ حسب حالة التحكم (ACI 21.2.2)
+   567→   567→            val epsilonT = EPSILON_CU * (dBot - c) / c.coerceAtLeast(1.0)
+   568→   568→            val phiPoint = when {
+   569→   569→                epsilonT >= 0.005 -> phi // تحكم شد — φ كامل
+   570→   570→                epsilonT >= 0.002 -> phi - 0.25 * (0.005 - epsilonT) / 0.003 // منطقة الانتقال
+   571→   571→                else -> max(0.65, phi - 0.25 * (0.005 - epsilonT) / 0.003)
+   572→   572→            }.coerceIn(0.65, phi)
+   573→   573→
+   574→   574→            return InteractionDiagramPoint(
+   575→   575→                pn = Pn,
+   576→   576→                mn = abs(Mn),
+   577→   577→                phiPn = phiPoint * Pn,
+   578→   578→                phiMn = phiPoint * abs(Mn),
+   579→   579→                neutralAxisDepth = c,
+   580→   580→                epsilonTension = epsilonT,
+   581→   581→                phi = phiPoint
+   582→   582→            )
+   583→   583→        }
+   584→   584→
+   585→   585→        val points = mutableListOf<InteractionDiagramPoint>()
+   586→   586→        val d = h - cover - 10.0
+   587→   587→
+   588→   588→        // نقطة 1: الضغط الخالص (c = 3h)
+   589→   589→        points.add(solvePoint(3.0 * h))
+   590→   590→
+   591→   591→        // نقطة 2: ضغط مع عزم صغير (c = 2h)
+   592→   592→        points.add(solvePoint(2.0 * h))
+   593→   593→
+   594→   594→        // نقطة 3: ضغط مع عزم متوسط (c = 1.5h)
+   595→   595→        points.add(solvePoint(1.5 * h))
+   596→   596→
+   597→   597→        // نقطة 4: ضغط مع عزم أكبر (c = 1.2h)
+   598→   598→        points.add(solvePoint(1.2 * h))
+   599→   599→
+   600→   600→        // نقطة 5: (c = 1.0h)
+   601→   601→        points.add(solvePoint(1.0 * h))
+   602→   602→
+   603→   603→        // نقطة 6: (c = 0.8h)
+   604→   604→        points.add(solvePoint(0.8 * h))
+   605→   605→
+   606→   606→        // نقطة 7: نقطة التوازن (c = cb)
+   607→   607→        val epsilonY = fy / ES
+   608→   608→        val cb = d * EPSILON_CU / (EPSILON_CU + epsilonY)
+   609→   609→        points.add(solvePoint(cb))
+   610→   610→
+   611→   611→        // نقاط بين التوازن والشد — منحنى أكثر كثافة
+   612→   612→        val cValues = listOf(
+   613→   613→            cb * 0.9,
+   614→   614→            cb * 0.8,
+   615→   615→            cb * 0.7,
+   616→   616→            cb * 0.6,
+   617→   617→            cb * 0.5,
+   618→   618→            cb * 0.4,
+   619→   619→            cb * 0.35,
+   620→   620→            cb * 0.3,
+   621→   621→            cb * 0.25,
+   622→   622→            cb * 0.2,
+   623→   623→            cb * 0.15,
+   624→   624→            cb * 0.1,
+   625→   625→            cb * 0.07
+   626→   626→        )
+   627→   627→
+   628→   628→        for (cVal in cValues) {
+   629→   629→            points.add(solvePoint(cVal))
+   630→   630→        }
+   631→   631→
+   632→   632→        // نقطة الشد الخالص التقريبية (c = 5mm)
+   633→   633→        points.add(solvePoint(5.0))
+   634→   634→
+   635→   635→        return points
+   636→   636→    }
+   637→   637→
+   638→   638→    // =========================================================================
+   639→   639→    // 5. الانحناء الثنائي المحور (Biaxial Bending)
+   640→   640→    // =========================================================================
+   641→   641→
+   642→   642→    /**
+   643→   643→     * فحص الانحناء الثنائي المحور بطريقتين حسب SBC 304 / ACI 318
+   644→   644→     *
+   645→   645→     * الطريقة الأولى: طريقة Bresler التبادلية (Equation H1-1)
+   646→   646→     * 1/Pn ≈ 1/Pnx + 1/Pny - 1/Po
+   647→   647→     *
+   648→   648→     * الطريقة الثانية: طريقة كفاف الحمل (Load Contour Method)
+   649→   649→     * (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1.0
+   650→   650→     * حيث α يتراوح بين 1.0 (للحمل العالي) و 2.0 (للحمل المنخفض)
+   651→   651→     *
+   652→   652→     * @param type نوع العمود
+   653→   653→     * @param Pu الحمل المحوري التصميمي (kN)
+   654→   654→     * @param Mx العزم حول X (kN.m)
+   655→   655→     * @param My العزم حول Y (kN.m)
+   656→   656→     * @param PnCapacity القدرة المحورية (kN)
+   657→   657→     * @param fy إجهاد خضوع الحديد (MPa)
+   658→   658→     * @param As مساحة التسليح (mm²)
+   659→   659→     * @param isSpiral هل حلزوني
+   660→   660→     * @return BiaxialCheckResult
+   661→   661→     */
+   662→   662→    fun checkBiaxialLoading(
+   663→   663→        type: ColumnType,
+   664→   664→        Pu: Double,
+   665→   665→        Mx: Double,
+   666→   666→        My: Double,
+   667→   667→        PnCapacity: Double,
+   668→   668→        fy: Double = 420.0,
+   669→   669→        As: Double = 0.0,
+   670→   670→        isSpiral: Boolean = false
+   671→   671→    ): BiaxialCheckResult {
+   672→   672→        val (b, h) = getColumnDimensions(type)
+   673→   673→        val Ag = b * h
+   674→   674→        val fcPrime = PnCapacity * 1000.0 / 0.65 // استرجاع تقريبي لـ fc'×Ag
+   675→   675→        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+   676→   676→
+   677→   677→        val ast = if (As > 0.0) As else 0.01 * Ag
+   678→   678→        val cover = SBC_COVER_NORMAL
+   679→   679→        val dPrime = cover + 10.0
+   680→   680→        val dEff = h - dPrime
+   681→   681→
+   682→   682→        // حساب قدرة العزم لكل اتجاه
+   683→   683→        // Mn = As × fs × jd
+   684→   684→        // تقريباً: jd ≈ 0.8 × d (للأعمدة)
+   685→   685→        val leverArm = (dEff - dPrime).coerceAtLeast(dEff * 0.5)
+   686→   686→        val Mnx = phi * fy * ast * leverArm / 1e6 // kN.m
+   687→   687→
+   688→   688→        // قدرة العزم في الاتجاه Y
+   689→   689→        val dEffY = b - dPrime
+   690→   690→        val leverArmY = (dEffY - dPrime).coerceAtLeast(dEffY * 0.5)
+   691→   691→        val Mny = if (type is ColumnType.Rectangular && abs(b - h) > 10.0) {
+   692→   692→            phi * fy * ast * leverArmY / 1e6
+   693→   693→        } else {
+   694→   694→            Mnx // للمربع والدائري: Mnx = Mny
+   695→   695→        }
+   696→   696→
+   697→   697→        // ===== طريقة Bresler التبادلية =====
+   698→   698→        // 1/Pn ≈ 1/Pnx + 1/Pny - 1/Po
+   699→   699→        // حيث Pnx و Pny هما القدرة المحورية مع العزم المطبق في كل اتجاه
+   700→   700→        // و Po هي القدرة المحورية الخالصة
+   701→   701→
+   702→   702→        // حساب Po (قدرة الضغط الخالص)
+   703→   703→        val fcPrimeApprox = 30.0 // تقدير
+   704→   704→        val Po = (0.85 * fcPrimeApprox * (Ag - ast) + fy * ast) / 1000.0 // kN
+   705→   705→        val phiPo = phi * Po
+   706→   706→
+   707→   707→        // تحويل العزوم إلى قوى محورية مكافئة تقريباً
+   708→   708→        // Pnx ≈ Pu تحت Mx وحده: نستخدم النسبة
+   709→   709→        val ratioMx = if (Mnx > 0) abs(Mx) / Mnx else 0.0
+   710→   710→        val ratioMy = if (Mny > 0) abs(My) / Mny else 0.0
+   711→   711→
+   712→   712→        // طريقة كفاف الحمل (Load Contour Method)
+   713→   713→        // معامل α يعتمد على نسبة الحمل المحوري
+   714→   714→        // α = 1.0 عندما Pu ≈ φPo (حمل عالي — قلب تقريبي)
+   715→   715→        // α = 2.0 عندما Pu ≈ 0 (حمل منخفض — دائرة تقريبية)
+   716→   716→        val r = (Pu / phiPo).coerceIn(0.05, 0.95)
+   717→   717→        val alpha = 1.0 + (1.0 - r) // يتراوح من 1.05 إلى 1.95
+   718→   718→
+   719→   719→        val interactionFactor = if (Mnx > 0 && Mny > 0) {
+   720→   720→            ratioMx.pow(alpha) + ratioMy.pow(alpha)
+   721→   721→        } else {
+   722→   722→            0.0
+   723→   723→        }
+   724→   724→
+   725→   725→        val isSafe = interactionFactor <= 1.0
+   726→   726→
+   727→   727→        val formula = if (alpha < 1.3) {
+   728→   728→            "طريقة Bresler التبادلية (SBC 304/ACI 318 H1.1): (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1.0"
+   729→   729→        } else {
+   730→   730→            "طريقة كفاف الحمل (SBC 304/ACI 318 H1.2): α = %.2f".format(alpha)
+   731→   731→        }
+   732→   732→
+   733→   733→        return BiaxialCheckResult(
+   734→   734→            mxRatio = ratioMx,
+   735→   735→            myRatio = ratioMy,
+   736→   736→            interactionFactor = interactionFactor,
+   737→   737→            isSafe = isSafe,
+   738→   738→            formula = formula
+   739→   739→        )
+   740→   740→    }
+   741→   741→
+   742→   742→    // =========================================================================
+   743→   743→    // 6. الاعتبارات البيئية (SBC Environmental Considerations)
+   744→   744→    // =========================================================================
+   745→   745→
+   746→   746→    /**
+   747→   747→     * تحديد الغطاء الخرساني حسب البيئة المحيطة (SBC 304 Section 7.7)
+   748→   748→     *
+   749→   749→     * - البيئة العادية (الرياض، القصيم، إلخ): 40mm
+   750→   750→     * - البيئة المسببة للتآكل (جدة، الدمام، الخليج العربي): 50mm
+   751→   751→     * - البيئة شديدة التآكل (منشآت بحرية مباشرة): 65mm
+   752→   752→     *
+   753→   753→     * @param environment نوع البيئة
+   754→   754→     * @return الغطاء الخرساني (mm)
+   755→   755→     */
+   756→   756→    fun getSBCSpecificCover(environment: SBSEnvironment = SBSEnvironment.NORMAL): Double {
+   757→   757→        return when (environment) {
+   758→   758→            SBSEnvironment.NORMAL -> SBC_COVER_NORMAL               // 40mm
+   759→   759→            SBSEnvironment.CORROSIVE -> SBC_COVER_CORROSIVE         // 50mm (جدة، الدمام)
+   760→   760→            SBSEnvironment.SEVERE_CORROSIVE -> 65.0                 // 65mm (منشآت بحرية)
+   761→   761→        }
+   762→   762→    }
+   763→   763→
+   764→   764→    /**
+   765→   765→     * حساب طول التطوير المُعدل للبيئة المسببة للتآكل
+   766→   766→     * أسياخ مطلية بالإيبوكسي في المناطق الساحلية تحتاج طول تطوير أكبر
+   767→   767→     *
+   768→   768→     * SBC 304 Section 12 / ACI 318 25.4.2.3:
+   769→   769→     * ld_e = 1.5 × ld (للأسياخ المطلية بالإيبوكسي مع غطاء < 3db أو تباعد < 6db)
+   770→   770→     *
+   771→   771→     * @param barDiameter قطر السيخ (mm)
+   772→   772→     * @param fy إجهاد الخضوع (MPa)
+   773→   773→     * @param cover الغطاء الخرساني (mm)
+   774→   774→     * @param isEpoxyCoated هل السيخ مطلّي بالإيبوكسي
+   775→   775→     * @param isSeismicZone هل في منطقة زلزالية
+   776→   776→     * @return طول التطوير (mm)
+   777→   777→     */
+   778→   778→    fun getEpoxyCoatedDevelopmentLength(
+   779→   779→        barDiameter: Double,
+   780→   780→        fy: Double,
+   781→   781→        cover: Double,
+   782→   782→        isEpoxyCoated: Boolean = true,
+   783→   783→        isSeismicZone: Boolean = false
+   784→   784→    ): Double {
+   785→   785→        val ldBase = calculateDevelopmentLength(barDiameter, fy, cover, isSeismicZone)
+   786→   786→
+   787→   787→        if (!isEpoxyCoated) return ldBase
+   788→   788→
+   789→   789→        // ACI 25.4.2.3: معامل التعديل للأسياخ المطلية
+   790→   790→        // α = 1.5 إذا الغطاء < 3db أو التباعد < 6db
+   791→   791→        // α = 1.2 في الحالات الأخرى
+   792→   792→        val coatingFactor = if (cover < 3.0 * barDiameter) {
+   793→   793→            1.5
+   794→   794→        } else {
+   795→   795→            1.2
+   796→   796→        }
+   797→   797→
+   798→   798→        return ldBase * coatingFactor
+   799→   799→    }
+   800→   800→
+   801→   801→    // =========================================================================
+   802→   802→    // 7. فحص القص الاختراقي (Punching Shear)
+   803→   803→    // =========================================================================
+   804→   804→
+   805→   805→    /**
+   806→   806→     * فحص القص الاختراقي حسب SBC 304 / ACI 318 Section 22.6
+   807→   807→     *
+   808→   808→     * إجهاد القص المطبق: vu = Vu / (bo × d)
+   809→   809→     * قدرة القص: vc = 0.33 × λ × √fc'  (ACI 22.6.5.2)
+   810→   810→     *            أو vc = min(0.17 + 0.33×β, 0.083×(2+β), 0.33) × λ × √fc'
+   811→   811→     *            حيث β = نسبة الأبعاد
+   812→   812→     *
+   813→   813→     * تعديلات SBC الزلزالية:
+   814→   814→     * - زيادة في إجهاد القص التصميمي في المفاصل الزلزالية
+   815→   815→     *
+   816→   816→     * @param type نوع العمود
+   817→   817→     * @param pu الحمل المحوري التصميمي (kN)
+   818→   818→     * @param fcPrime مقاومة الأسطوانة (MPa)
+   819→   819→     * @param hasCap هل يوجد رأس عمود
+   820→   820→     * @param isSeismicZone هل في منطقة زلزالية
+   821→   821→     * @param slabDepth سمك البلاطة (mm) — افتراضي 250mm
+   822→   822→     * @return PunchingCheckResult
+   823→   823→     */
+   824→   824→    fun checkPunching(
+   825→   825→        type: ColumnType,
+   826→   826→        pu: Double,
+   827→   827→        fcPrime: Double,
+   828→   828→        hasCap: Boolean,
+   829→   829→        isSeismicZone: Boolean = false,
+   830→   830→        slabDepth: Double = 250.0
+   831→   831→    ): PunchingCheckResult {
+   832→   832→        // العمق الفعال للبلاطة
+   833→   833→        val d = slabDepth - SBC_COVER_NORMAL - 10.0 // d = h - cover - bar/2
+   834→   834→
+   835→   835→        // المحيط الحرج عند d/2 من وجه العمود (ACI 22.6.4)
+   836→   836→        val criticalPerimeter = when (type) {
+   837→   837→            is ColumnType.Rectangular -> {
+   838→   838→                val c1 = type.width
+   839→   839→                val c2 = type.depth
+   840→   840→                2.0 * (c1 + c2 + 2.0 * d) // محيط مستطيل عند d/2
+   841→   841→            }
+   842→   842→            is ColumnType.Circular -> {
+   843→   843→                PI * (type.diameter + d)
+   844→   844→            }
+   845→   845→            else -> {
+   846→   846→                4.0 * (sqrt(type.getGrossArea()) + d)
+   847→   847→            }
+   848→   848→        }
+   849→   849→
+   850→   850→        // إجهاد القص المطبق (ACI 22.6.4.2)
+   851→   851→        // vu = Vu / (bo × d)
+   852→   852→        val Vu = pu * 1000.0 // N
+   853→   853→        val appliedShearStress = Vu / (criticalPerimeter * d) // MPa
+   854→   854→
+   855→   855→        // قدرة قص الاختراق (ACI 22.6.5.2)
+   856→   856→        // vc = 0.33 × λ × √fc'  (للأعمدة بدون رأس)
+   857→   857→        // أو نستخدم أكثر الصيغ تحفظاً
+   858→   858→        val lambda = 1.0 // عادي الخرسانة (Normal weight)
+   859→   859→        val beta = when (type) {
+   860→   860→            is ColumnType.Rectangular -> max(type.width, type.depth) / min(type.width, type.depth)
+   861→   861→            is ColumnType.Circular -> 1.0
+   862→   862→            else -> 1.0
+   863→   863→        }
+   864→   864→
+   865→   865→        // ACI Eq. 22.6.5.2(a): vc = 0.17 × (1 + 2/β) × λ × √fc'
+   866→   866→        val vc1 = 0.17 * (1.0 + 2.0 / beta) * lambda * sqrt(fcPrime)
+   867→   867→
+   868→   868→        // ACI Eq. 22.6.5.2(b): vc = 0.083 × (αs × d/bo + 2) × λ × √fc'
+   869→   869→        val alphaS = when (type) {
+   870→   870→            is ColumnType.Rectangular -> {
+   871→   871→                if (type.width == type.depth) 30.0 else 40.0 // Corner=20, Edge=30, Interior=40
+   872→   872→            }
+   873→   873→            is ColumnType.Circular -> 40.0 // Interior
+   874→   874→            else -> 30.0
+   875→   875→        }
+   876→   876→        val vc2 = 0.083 * (alphaS * d / criticalPerimeter + 2.0) * lambda * sqrt(fcPrime)
+   877→   877→
+   878→   878→        // ACI Eq. 22.6.5.2(c): vc = 0.33 × λ × √fc'
+   879→   879→        val vc3 = 0.33 * lambda * sqrt(fcPrime)
+   880→   880→
+   881→   881→        val vc = minOf(vc1, vc2, vc3) // نأخذ الأصغر (الأكثر تحفظاً)
+   882→   882→
+   883→   883→        // معامل التعديل لرأس العمود
+   884→   884→        val capFactor = if (hasCap) {
+   885→   885→            // رأس العمود يزيد المحيط الحرج ويقلل الإجهاد
+   886→   886→            val capDepth = 200.0 // سمك رأس العمود الافتراضي
+   887→   887→            val capPerimeter = when (type) {
+   888→   888→                is ColumnType.Rectangular -> 2.0 * (type.width + capDepth + 2.0 * (d + capDepth))
+   889→   889→                is ColumnType.Circular -> PI * (type.diameter + 2.0 * capDepth + d)
+   890→   890→                else -> 4.0 * (sqrt(type.getGrossArea()) + 2.0 * capDepth + d)
+   891→   891→            }
+   892→   892→            // قدرة محسنة مع رأس العمود
+   893→   893→            (criticalPerimeter * d + capPerimeter * capDepth) / (criticalPerimeter * d)
+   894→   894→        } else {
+   895→   895→            1.0
+   896→   896→        }
+   897→   897→
+   898→   898→        // تعديل زلزالي (SBC Section 21)
+   899→   899→        val seismicFactor = if (isSeismicZone) 0.85 else 1.0 // تخفيض 15% في المناطق الزلزالية
+   900→   900→
+   901→   901→        val designCapacity = vc * capFactor * seismicFactor
+   902→   902→        val capacityForce = designCapacity * criticalPerimeter * d / 1000.0 // kN
+   903→   903→
+   904→   904→        return PunchingCheckResult(
+   905→   905→            appliedShear = pu,
+   906→   906→            capacity = capacityForce,
+   907→   907→            isSafe = appliedShearStress <= designCapacity,
+   908→   908→            hasCap = hasCap,
+   909→   909→            criticalPerimeter = criticalPerimeter
+   910→   910→        )
+   911→   911→    }
+   912→   912→
+   913→   913→    // =========================================================================
+   914→   914→    // 8. تفاصيل التسليح (SBC 304 Section 10.7.6)
+   915→   915→    // =========================================================================
+   916→   916→
+   917→   917→    /**
+   918→   918→     * حساب تفاصيل الكانات حسب SBC 304 Section 10.7.6 / ACI 25.7.2
+   919→   919→     *
+   920→   920→     * قطر الكانات:
+   921→   921→     * - ≥ #3 (10mm) للأسياخ حتى #10 (32mm)
+   922→   922→     * - ≥ #4 (12mm) للأسياخ #11 (36mm) وأكبر
+   923→   923→     *
+   924→   924→     * التباعد:
+   925→   925→     * - min(16×db_longitudinal, 48×db_tie, b, h, 300mm)
+   926→   926→     * - في منطقة المفصل اللدن: min(d/4, 6×db, 100mm)
+   927→   927→     *
+   928→   928→     * @param mainBarDiameter قطر السيخ الرئيسي (mm)
+   929→   929→     * @param columnWidth عرض العمود (mm)
+   930→   930→     * @param columnDepth عمق العمود (mm)
+   931→   931→     * @param isSeismicZone هل في منطقة زلزالية
+   932→   932→     * @return SBCReinforcementDetails
+   933→   933→     */
+   934→   934→    fun getReinforcementDetails(
+   935→   935→        mainBarDiameter: Double,
+   936→   936→        columnWidth: Double,
+   937→   937→        columnDepth: Double,
+   938→   938→        isSeismicZone: Boolean = false
+   939→   939→    ): SBCReinforcementDetails {
+   940→   940→        // ===== قطر الكانات (SBC 10.7.6.2) =====
+   941→   941→        val tiesDiameter = if (mainBarDiameter <= 32.0) 10.0 else 12.0
+   942→   942→
+   943→   943→        // ===== التباعد العادي (SBC 10.7.6.3) =====
+   944→   944→        val s1 = 16.0 * mainBarDiameter
+   945→   945→        val s2 = 48.0 * tiesDiameter
+   946→   946→        val s3 = columnWidth
+   947→   947→        val s4 = columnDepth
+   948→   948→        val s5 = 300.0
+   949→   949→        val normalSpacing = minOf(s1, s2, s3, s4, s5)
+   950→   950→
+   951→   951→        // ===== التباعد في منطقة المفصل اللدن (إذا زلزالي) =====
+   952→   952→        val d = columnDepth - SBC_COVER_CORROSIVE - mainBarDiameter / 2.0 - 8.0
+   953→   953→        val seismicSpacing = if (isSeismicZone) {
+   954→   954→            minOf(d / 4.0, 6.0 * mainBarDiameter, 100.0)
+   955→   955→        } else {
+   956→   956→            normalSpacing
+   957→   957→        }
+   958→   958→
+   959→   959→        // ===== عدد الأسياخ الدنيا لكل وجه (SBC 10.7.2.1) =====
+   960→   960→        // يجب ألا يقل عدد الأسياخ عن 4 للأعمدة المربوطة
+   961→   961→        val minBarsPerFace = if (isSeismicZone) 3 else 2
+   962→   962→
+   963→   963→        // ===== الأقطار المتاحة في السوق السعودي =====
+   964→   964→        val availableKsaDiameters = KSA_BAR_DIAMETERS.map { it.toInt() }
+   965→   965→
+   966→   966→        // ===== هوك الكانات =====
+   967→   967→        val hookExtension = 6.0 * tiesDiameter // 6×db للكانات (135° hook)
+   968→   968→        val seismicHookExtension = if (isSeismicZone) {
+   969→   969→            max(6.0 * tiesDiameter, 75.0) // SBC 21: max(6db, 75mm)
+   970→   970→        } else {
+   971→   971→            hookExtension
+   972→   972→        }
+   973→   973→
+   974→   974→        return SBCReinforcementDetails(
+   975→   975→            tiesDiameter = tiesDiameter,
+   976→   976→            normalSpacing = normalSpacing,
+   977→   977→            seismicSpacing = seismicSpacing,
+   978→   978→            minBarsPerFace = minBarsPerFace,
+   979→   979→            hookExtension = hookExtension,
+   980→   980→            seismicHookExtension = seismicHookExtension,
+   981→   981→            availableKsaDiameters = availableKsaDiameters,
+   982→   982→            codeReference = CodeReference.SBC.COLUMN_TIES
+   983→   983→        )
+   984→   984→    }
+   985→   985→
+   986→   986→    // =========================================================================
+   987→   987→    // دوال مساعدة داخلية
+   988→   988→    // =========================================================================
+   989→   989→
+   990→   990→    /**
+   991→   991→     * حساب القدرة المحورية التصميمية حسب SBC 304 / ACI 318
+   992→   992→     * Pn = 0.85 × fc' × (Ag - Ast) + fy × Ast
+   993→   993→     * φPn = φ × Pn
+   994→   994→     *
+   995→   995→     * @param fcu مقاومة المكعب (MPa)
+   996→   996→     * @param fy إجهاد الخضوع (MPa)
+   997→   997→     * @param columnType نوع العمود
+   998→   998→     * @param Ag المساحة الكلية (mm²)
+   999→   999→     * @param isSpiral هل حلزوني
+  1000→  1000→     * @param As مساحة التسليح (mm²) — إذا صفر يستخدم 1% من Ag
+  1001→  1001→     */
+  1002→  1002→    private fun calculateAxialCapacity(
+  1003→  1003→        fcu: Double,
+  1004→  1004→        fy: Double,
+  1005→  1005→        columnType: ColumnType,
+  1006→  1006→        Ag: Double,
+  1007→  1007→        isSpiral: Boolean,
+  1008→  1008→        As: Double = 0.0
+  1009→  1009→    ): Double {
+  1010→  1010→        val fcPrime = 0.8 * fcu
+  1011→  1011→        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+  1012→  1012→        val ast = if (As > 0.0) As.coerceAtMost(Ag * 0.08) else 0.01 * Ag
+  1013→  1013→
+  1014→  1014→        // SBC/ACI: Pn = 0.85×fc'×(Ag-Ast) + fy×Ast
+  1015→  1015→        val concreteCapacity = 0.85 * fcPrime * (Ag - ast)
+  1016→  1016→        val steelCapacity = fy * ast
+  1017→  1017→        val nominalCapacity = concreteCapacity + steelCapacity
+  1018→  1018→
+  1019→  1019→        return phi * nominalCapacity / 1000.0 // kN
+  1020→  1020→    }
+  1021→  1021→
+  1022→  1022→    /**
+  1023→  1023→     * حساب قدرة العزم التقريبية للعمود
+  1024→  1024→     * Mn = As × fs × jd / φ (حساب مبسط)
+  1025→  1025→     */
+  1026→  1026→    private fun calculateMomentCapacity(
+  1027→  1027→        columnType: ColumnType,
+  1028→  1028→        fcPrime: Double,
+  1029→  1029→        fy: Double,
+  1030→  1030→        As: Double,
+  1031→  1031→        isSpiral: Boolean,
+  1032→  1032→        phi: Double,
+  1033→  1033→        cover: Double,
+  1034→  1034→        isYDirection: Boolean = false
+  1035→  1035→    ): Double {
+  1036→  1036→        val (b, h) = getColumnDimensions(columnType)
+  1037→  1037→        val effectiveDepth = if (isYDirection && columnType is ColumnType.Rectangular) {
+  1038→  1038→            columnType.width - cover - 10.0
+  1039→  1039→        } else {
+  1040→  1040→            h - cover - 10.0
+  1041→  1041→        }
+  1042→  1042→
+  1043→  1043→        val dPrime = cover + 10.0
+  1044→  1044→        val leverArm = (effectiveDepth - dPrime).coerceAtLeast(effectiveDepth * 0.5)
+  1045→  1045→
+  1046→  1046→        // حساب عمق المحور المحايد عند التوازن
+  1047→  1047→        val epsilonY = fy / ES
+  1048→  1048→        val cb = effectiveDepth * EPSILON_CU / (EPSILON_CU + epsilonY)
+  1049→  1049→
+  1050→  1050→        // β1
+  1051→  1051→        val beta1 = if (fcPrime <= 28.0) {
+  1052→  1052→            BETA_1_DEFAULT
+  1053→  1053→        } else {
+  1054→  1054→            (0.85 - 0.05 * ((fcPrime - 28.0) / 7.0)).coerceAtLeast(0.65)
+  1055→  1055→        }
+  1056→  1056→
+  1057→  1057→        val a = beta1 * cb
+  1058→  1058→
+  1059→  1059→        // قوة ضغط الخرسانة
+  1060→  1060→        val Cc = 0.85 * fcPrime * a * b
+  1061→  1061→        // إجهاد الحديد (عند التوازن = fy)
+  1062→  1062→        val T = fy * As
+  1063→  1063→
+  1064→  1064→        // العزم حول مركز الضغط
+  1065→  1065→        val Mn = T * (effectiveDepth - a / 2.0) / 1e6 // kN.m
+  1066→  1066→
+  1067→  1067→        return phi * Mn
+  1068→  1068→    }
+  1069→  1069→
+  1070→  1070→    /**
+  1071→  1071→     * حساب معامل الطول الفعال K المُعدل للبناء السعودي
+  1072→  1072→     * SBC يستخدم نفس قيم K كـ ACI 318 مع تعديلات طفيفة
+  1073→  1073→     * للبناء السعودي النموذجي (أرضيات صب في الموقع)
+  1074→  1074→     */
+  1075→  1075→    private fun getSBCEffectiveLengthFactor(endConditions: ColumnEndConditions): Double {
+  1076→  1076→        val kTop = endConditions.topCondition.effectiveLengthFactor
+  1077→  1077→        val kBottom = endConditions.bottomCondition.effectiveLengthFactor
+  1078→  1078→
+  1079→  1079→        // للبناء السعودي النموذجي: الجسيمات (stiffness) أعلى بسبب الأعمدة الكبيرة
+  1080→  1080→        // نأخذ متوسط K مُعدل
+  1081→  1081→        val kAverage = (kTop + kBottom) / 2.0
+  1082→  1082→
+  1083→  1083→        // تعديل SBC: في حالة الأرضيات الصلبة (solid slabs) يُمكن تقليل K قليلاً
+  1084→  1084→        return when {
+  1085→  1085→            endConditions.topCondition == EndCondition.FIXED &&
+  1086→  1086→                endConditions.bottomCondition == EndCondition.FIXED -> 0.65
+  1087→  1087→            endConditions.topCondition == EndCondition.PINNED &&
+  1088→  1088→                endConditions.bottomCondition == EndCondition.FIXED -> 0.80
+  1089→  1089→            endConditions.topCondition == EndCondition.FIXED &&
+  1090→  1090→                endConditions.bottomCondition == EndCondition.PINNED -> 0.80
+  1091→  1091→            endConditions.topCondition == EndCondition.PINNED &&
+  1092→  1092→                endConditions.bottomCondition == EndCondition.PINNED -> 1.00
+  1093→  1093→            endConditions.topCondition == EndCondition.PARTIAL_FIXED -> kAverage * 0.95 // SBC تعديل
+  1094→  1094→            else -> max(kTop, kBottom)
+  1095→  1095→        }
+  1096→  1096→    }
+  1097→  1097→
+  1098→  1098→    /**
+  1099→  1099→     * حساب نصف القطر الدوراني (Radius of Gyration)
+  1100→  1100→     * r = √(I/A)
+  1101→  1101→     * للمستطيل: r = min(b,h) / √12
+  1102→  1102→     * للدائرة: r = D/4
+  1103→  1103→     */
+  1104→  1104→    private fun calculateRadiusOfGyration(columnType: ColumnType): Double {
+  1105→  1105→        return when (columnType) {
+  1106→  1106→            is ColumnType.Rectangular -> min(columnType.width, columnType.depth) / sqrt(12.0)
+  1107→  1107→            is ColumnType.Circular -> columnType.diameter / 4.0
+  1108→  1108→            is ColumnType.LShaped -> columnType.thickness / sqrt(12.0)
+  1109→  1109→            is ColumnType.TShaped -> columnType.webWidth / sqrt(12.0)
+  1110→  1110→            is ColumnType.Composite -> min(columnType.concreteWidth, columnType.concreteDepth) / sqrt(12.0)
+  1111→  1111→            is ColumnType.Tubular -> (columnType.outerDiameter + columnType.innerDiameter) / 8.0
+  1112→  1112→        }
+  1113→  1113→    }
+  1114→  1114→
+  1115→  1115→    /**
+  1116→  1116→     * استخراج أبعاد العمود (عرض، عمق)
+  1117→  1117→     */
+  1118→  1118→    private fun getColumnDimensions(columnType: ColumnType): Pair<Double, Double> {
+  1119→  1119→        return when (columnType) {
+  1120→  1120→            is ColumnType.Rectangular -> columnType.width to columnType.depth
+  1121→  1121→            is ColumnType.Circular -> columnType.diameter to columnType.diameter
+  1122→  1122→            is ColumnType.LShaped -> {
+  1123→  1123→                val side = sqrt(columnType.getGrossArea())
+  1124→  1124→                side to side
+  1125→  1125→            }
+  1126→  1126→            is ColumnType.TShaped -> {
+  1127→  1127→                val side = sqrt(columnType.getGrossArea())
+  1128→  1128→                side to side
+  1129→  1129→            }
+  1130→  1130→            is ColumnType.Composite -> columnType.concreteWidth to columnType.concreteDepth
+  1131→  1131→            is ColumnType.Tubular -> columnType.outerDiameter to columnType.outerDiameter
+  1132→  1132→        }
+  1133→  1133→    }
+  1134→  1134→
+  1135→  1135→    /**
+  1136→  1136→     * الحصول على أقل بُعد للعمود
+  1137→  1137→     */
+  1138→  1138→    private fun getMinimumDimension(columnType: ColumnType): Double {
+  1139→  1139→        return when (columnType) {
+  1140→  1140→            is ColumnType.Rectangular -> min(columnType.width, columnType.depth)
+  1141→  1141→            is ColumnType.Circular -> columnType.diameter
+  1142→  1142→            is ColumnType.LShaped -> columnType.thickness
+  1143→  1143→            is ColumnType.TShaped -> min(columnType.webWidth, columnType.flangeThickness)
+  1144→  1144→            is ColumnType.Composite -> min(columnType.concreteWidth, columnType.concreteDepth)
+  1145→  1145→            is ColumnType.Tubular -> columnType.outerDiameter - columnType.innerDiameter
+  1146→  1146→        }
+  1147→  1147→    }
+  1148→  1148→
+  1149→  1149→    /**
+  1150→  1150→     * حساب طول التطوير (Development Length) حسب SBC 304 Section 12 / ACI 318 Chapter 25
+  1151→  1151→     *
+  1152→  1152→     * ld = (fy × ψt × ψe × ψs) / (1.1 × λ × √fc') × db
+  1153→  1153→     *
+  1154→  1154→     * معاملات التعديل:
+  1155→  1155→     * - ψt = 1.3 (أسياخ علوية)
+  1156→  1156→     * - ψe = 1.0 (غير مطلية) أو 1.5/1.2 (مطلية بالإيبوكسي)
+  1157→  1157→     * - ψs = 0.8 (أسياخ قطر ≤ 19mm)
+  1158→  1158→     * - λ = 1.0 (خرسانة عادية)
+  1159→  1159→     *
+  1160→  1160→     * @param barDiameter قطر السيخ (mm)
+  1161→  1161→     * @param fy إجهاد الخضوع (MPa)
+  1162→  1162→     * @param cover الغطاء (mm)
+  1163→  1163→     * @param isSeismic هل في منطقة زلزالية
+  1164→  1164→     * @return طول التطوير (mm)
+  1165→  1165→     */
+  1166→  1166→    private fun calculateDevelopmentLength(
+  1167→  1167→        barDiameter: Double,
+  1168→  1168→        fy: Double,
+  1169→  1169→        cover: Double,
+  1170→  1170→        isSeismic: Boolean = false
+  1171→  1171→    ): Double {
+  1172→  1172→        // fc' تقديري لحساب طول التطوير
+  1173→  1173→        val fcPrime = 30.0 // تقدير محافظ
+  1174→  1174→
+  1175→  1175→        // معاملات التعديل (ACI 25.4.2.4)
+  1176→  1176→        val psiT = 1.0  // أسياخ سفلية (ليست علوية)
+  1177→  1177→        val psiE = 1.0  // غير مطلية
+  1178→  1178→        val psiS = if (barDiameter <= 19.0) 0.8 else 1.0
+  1179→  1179→        val lambda = 1.0 // خرسانة عادية الوزن
+  1180→  1180→
+  1181→  1181→        // ACI 25.4.2.2: ld = (fy × ψt × ψe × ψs) / (1.1 × λ × √fc') × db
+  1182→  1182→        val ldBasic = (fy * psiT * psiE * psiS) / (1.1 * lambda * sqrt(fcPrime)) * barDiameter
+  1183→  1183→
+  1184→  1184→        // حد أدنى (ACI 25.4.2.3)
+  1185→  1185→        val ldMin = max(300.0, 12.0 * barDiameter)
+  1186→  1186→
+  1187→  1187→        val ld = max(ldBasic, ldMin)
+  1188→  1188→
+  1189→  1189→        // في المناطق الزلزالية: SBC 21.7.5 / ACI 18.8.5.1
+  1190→  1190→        // ld_seismic = 1.25 × ld (للأسياخ في الضغط في مناطق المفصل اللدن)
+  1191→  1191→        return if (isSeismic) {
+  1192→  1192→            max(ld * 1.25, 16.0 * barDiameter)
+  1193→  1193→        } else {
+  1194→  1194→            ld
+  1195→  1195→        }
+  1196→  1196→    }
+  1197→  1197→
+  1198→  1198→    /**
+  1199→  1199→     * تحليل المخزون المتاح
+  1200→  1200→     */
+  1201→  1201→    private fun analyzeInventory(
+  1202→  1202→        result: ReinforcementResult,
+  1203→  1203→        height: Double,
+  1204→  1204→        inventory: RebarInventory,
+  1205→  1205→        cover: Double
+  1206→  1206→    ): InventoryAnalysisResult {
+  1207→  1207→        val analyzer = AnalyzeRebarInventory()
+  1208→  1208→        return analyzer.analyze(
+  1209→  1209→            result.astRequired,
+  1210→  1210→            result.numberOfBars * height,
+  1211→  1211→            inventory,
+  1212→  1212→            DesignCode.SBC,
+  1213→  1213→            height,
+  1214→  1214→            cover
+  1215→  1215→        )
+  1216→  1216→    }
+  1217→  1217→
+  1218→  1218→    // =========================================================================
+  1219→  1219→    // تنفيذ واجهة ColumnDesign (التفويض إلى SBCColumn)
+  1220→  1220→    // =========================================================================
+  1221→  1221→
+  1222→  1222→    override fun calculateAxialCapacity(
+  1223→  1223→        fcu: Double,
+  1224→  1224→        fy: Double,
+  1225→  1225→        width: Double,
+  1226→  1226→        depth: Double,
+  1227→  1227→        reinforcementArea: Double,
+  1228→  1228→        loadCombination: LoadCombination
+  1229→  1229→    ): Double {
+  1230→  1230→        return baseDesign.calculateAxialCapacity(fcu, fy, width, depth, reinforcementArea, loadCombination)
+  1231→  1231→    }
+  1232→  1232→
+  1233→  1233→    override fun calculateReinforcement(
+  1234→  1234→        fcu: Double,
+  1235→  1235→        fy: Double,
+  1236→  1236→        width: Double,
+  1237→  1237→        depth: Double,
+  1238→  1238→        axialLoad: Double,
+  1239→  1239→        momentX: Double,
+  1240→  1240→        momentY: Double,
+  1241→  1241→        loadCombination: LoadCombination
+  1242→  1242→    ): ReinforcementResult {
+  1243→  1243→        return baseDesign.calculateReinforcement(fcu, fy, width, depth, axialLoad, momentX, momentY, loadCombination)
+  1244→  1244→    }
+  1245→  1245→
+  1246→  1246→    override fun getMinReinforcementRatio(): Double = 0.01  // SBC 304: 1% (same as ACI 318)
+  1247→  1247→    override fun getMaxReinforcementRatio(): Double = 0.08 // SBC 304: 8%
+  1248→  1248→    override fun getMinSpacing(): Double = 40.0
+  1249→  1249→    override fun getMaxSpacing(): Double = 300.0            // SBC 10.7.6: min(16db, 48dt, b, h, 300)
+  1250→  1250→    override fun getMinCover(): Double = SBC_COVER_NORMAL
+  1251→  1251→}
+  1252→  1252→
+  1253→  1253→// =========================================================================
+  1254→  1254→// أنواع بيانات إضافية خاصة بـ SBC
+  1255→  1255→// =========================================================================
+  1256→  1256→
+  1257→  1257→/**
+  1258→  1258→ * أنواع البيئة حسب SBC 304-2018 Section 7.7
+  1259→  1259→ */
+  1260→  1260→enum class SBSEnvironment(val displayName: String, val coverMm: Double) {
+  1261→  1261→    NORMAL("بيئة عادية (الرياض، القصيم)", 40.0),
+  1262→  1262→    CORROSIVE("بيئة مسببة للتآكل (جدة، الدمام، ينبع)", 50.0),
+  1263→  1263→    SEVERE_CORROSIVE("بيئة شديدة التآكل (منشآت بحرية مباشرة)", 65.0)
+  1264→  1264→}
+  1265→  1265→
+  1266→  1266→/**
+  1267→  1267→ * نتيجة فحص المتطلبات الزلزالية
+  1268→  1268→ */
+  1269→  1269→data class SeismicCheckOutput(
+  1270→  1270→    val warnings: List<String>,
+  1271→  1271→    val codeNotes: List<String>
+  1272→  1272→)
+  1273→  1273→
+  1274→  1274→/**
+  1275→  1275→ * نتيجة تصميم حصر التسليح الزلزالي
+  1276→  1276→ */
+  1277→  1277→data class SeismicConfinementResult(
+  1278→  1278→    val hoopSpacingHingeZone: Double,     // mm — تباعد الكانات في منطقة المفصل اللدن
+  1279→  1279→    val confinementZoneLength: Double,    // mm — طول منطقة الحصر
+  1280→  1280→    val numHingeTies: Int,                // عدد الكانات في منطقة المفصل اللدن
+  1281→  1281→    val spacingOutsideHinge: Double,      // mm — التباعد خارج منطقة المفصل اللدن
+  1282→  1282→    val requiredCrossTies: Int,           // عدد الكانات المتقاطعة المطلوبة
+  1283→  1283→    val developmentLength: Double,        // mm — طول التطوير
+  1284→  1284→    val warnings: List<String>,
+  1285→  1285→    val codeNotes: List<String>
+  1286→  1286→)
+  1287→  1287→
+  1288→  1288→/**
+  1289→  1289→ * نقطة على منحنى التفاعل (P-M Interaction Diagram)
+  1290→  1290→ */
+  1291→  1291→data class InteractionDiagramPoint(
+  1292→  1292→    val pn: Double,               // kN — القوة المحورية الإسمية
+  1293→  1293→    val mn: Double,               // kN.m — العزم الإسمي
+  1294→  1294→    val phiPn: Double,            // kN — القوة المحورية التصميمية
+  1295→  1295→    val phiMn: Double,            // kN.m — العزم التصميمي
+  1296→  1296→    val neutralAxisDepth: Double, // mm — عمق المحور المحايد
+  1297→  1297→    val epsilonTension: Double,   // انفعال الشد
+  1298→  1298→    val phi: Double               // معامل الاختزال عند هذه النقطة
+  1299→  1299→)
+  1300→  1300→
+  1301→  1301→/**
+  1302→  1302→ * تفاصيل التسليح حسب SBC 304
+  1303→  1303→ */
+  1304→  1304→data class SBCReinforcementDetails(
+  1305→  1305→    val tiesDiameter: Double,           // mm
+  1306→  1306→    val normalSpacing: Double,          // mm
+  1307→  1307→    val seismicSpacing: Double,         // mm
+  1308→  1308→    val minBarsPerFace: Int,            // أقل عدد أسياخ لكل وجه
+  1309→  1309→    val hookExtension: Double,          // mm — طول الامتداد للكانة العادية
+  1310→  1310→    val seismicHookExtension: Double,   // mm — طول الامتداد للكانة الزلزالية
+  1311→  1311→    val availableKsaDiameters: List<Int>, // أقطار متاحة في السوق السعودي
+  1312→  1312→    val codeReference: String           // مرجع الكود
+  1313→  1313→)

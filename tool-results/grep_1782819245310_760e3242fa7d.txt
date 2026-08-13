@@ -1,0 +1,252 @@
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/db/DesignRepository.kt:102:    suspend fun saveTankDesign(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/SlabDetailView.kt:19:    enum class SlabType { SOLID, FLAT, RIBBED, WAFFLE, HOLLOW_BLOCK, POST_TENSION }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/SlabDetailView.kt:21:    var type = SlabType.SOLID
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/SlabDetailView.kt:90:        type: SlabType, lx: Float, ly: Float, t: Float,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/SlabDetailView.kt:134:            SlabType.WAFFLE -> drawWafflePattern(canvas, left, top, right, bottom, scale)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/SlabDetailView.kt:135:            SlabType.RIBBED, SlabType.HOLLOW_BLOCK -> drawRibbedPattern(canvas, left, top, right, bottom, scale)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/SlabDetailView.kt:136:            SlabType.POST_TENSION -> drawPTPattern(canvas, left, top, right, bottom, scale)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:32:    var tankType: CalculatorEngine.TankType = CalculatorEngine.TankType.RECTANGULAR_GROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:108:        if (tankType == CalculatorEngine.TankType.UNDERGROUND) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:111:        } else if (tankType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || tankType == CalculatorEngine.TankType.CIRCULAR_ELEVATED) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:137:        val isCircular = tankType == CalculatorEngine.TankType.CIRCULAR_GROUND || 
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:138:                        tankType == CalculatorEngine.TankType.CIRCULAR_ELEVATED || 
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:139:                        tankType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/WaterTankSectionView.kt:336:    fun update(l: Float, h: Float, t: Float, bt: Float, wd: Float, type: CalculatorEngine.TankType, rebarText: String = "", baseRebar: String = "", safe: Boolean = true, optimal: Boolean = true) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankDrawingView.kt:19:    private var tankType: CalculatorEngine.TankType = CalculatorEngine.TankType.RECTANGULAR_GROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankDrawingView.kt:51:    fun setDetails(l: Float, h: Float, wallT: Float, baseT: Float, type: CalculatorEngine.TankType, reinf: String) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankDrawingView.kt:77:        if (tankType == CalculatorEngine.TankType.UNDERGROUND) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/ColumnSectionView.kt:21:    enum class ColumnType { RECTANGULAR, CIRCULAR }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/ColumnSectionView.kt:24:    var columnType: ColumnType = ColumnType.RECTANGULAR
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/ColumnSectionView.kt:123:            ColumnType.RECTANGULAR -> drawRectangularColumn(canvas, padding, availableWidth, availableHeight)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/ColumnSectionView.kt:124:            ColumnType.CIRCULAR -> drawCircularColumn(canvas, padding, availableWidth, availableHeight)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/views/ColumnSectionView.kt:285:        type: ColumnType, width: Float, height: Float, diameter: Float, coverValue: Float,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:18:import com.civileg.app.domain.calculations.base.TankType as DomainTankType
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:19:import com.civileg.app.domain.calculations.base.TankResult as DomainTankResult
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:47:    private var lastResult: DomainTankResult? = null
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:50:    private var selectedType = DomainTankType.RECTANGULAR_GROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:79:        binding.rgTankType.setOnCheckedChangeListener { _, checkedId ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:81:                R.id.rbCircular -> DomainTankType.CIRCULAR_GROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:82:                R.id.rbElevated -> DomainTankType.RECTANGULAR_ELEVATED
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:83:                R.id.rbUnderground -> DomainTankType.RECTANGULAR_UNDERGROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:84:                else -> DomainTankType.RECTANGULAR_GROUND
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:87:            if (selectedType == DomainTankType.CIRCULAR_GROUND || 
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:88:                selectedType == DomainTankType.CIRCULAR_ELEVATED ||
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:89:                selectedType == DomainTankType.CIRCULAR_UNDERGROUND) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:122:                code = settingsManager.defaultDesignCode.name,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:144:    private fun updateTankView(result: DomainTankResult) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:151:            type = if (selectedType.name.contains("CIRCULAR")) CalculatorEngine.TankType.CIRCULAR_GROUND else if (selectedType.name.contains("UNDERGROUND")) CalculatorEngine.TankType.UNDERGROUND else CalculatorEngine.TankType.RECTANGULAR_GROUND,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:158:    private fun showResults(result: DomainTankResult) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:195:    private fun saveToProject(projectId: Long, result: DomainTankResult) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/WaterTankFragment.kt:206:            isSafe = result.isSafe, codeUsed = settingsManager.defaultDesignCode.name,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:9:import com.civileg.app.databinding.ActivityTankResultBinding
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:15:class TankResultActivity : AppCompatActivity() {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:17:    private lateinit var binding: ActivityTankResultBinding
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:18:    private lateinit var result: CalculatorEngine.TankResult
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:23:        fun newIntent(context: Context, result: CalculatorEngine.TankResult): Intent {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:24:            return Intent(context, TankResultActivity::class.java).apply {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:32:        binding = ActivityTankResultBinding.inflate(layoutInflater)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:36:            intent.getParcelableExtra(EXTRA_TANK_RESULT, CalculatorEngine.TankResult::class.java)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankResultActivity.kt:39:            intent.getParcelableExtra<CalculatorEngine.TankResult>(EXTRA_TANK_RESULT)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/seismic/SeismicAnalysisFragment.kt:61:        binding.spinnerSoilType.adapter = soilAdapter
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/seismic/SeismicAnalysisFragment.kt:81:            val soil = binding.spinnerSoilType.selectedItem.toString()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankInputActivity.kt:47:        val codes = CalculatorEngine.DesignCode.values()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankInputActivity.kt:51:        val tankTypes = CalculatorEngine.TankType.values()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankInputActivity.kt:52:        binding.spinnerTankType.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, tankTypes.map { it.displayName })
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankInputActivity.kt:77:        binding.spinnerTankType.onItemSelectedListener = spinnerListener
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankInputActivity.kt:97:        val type = CalculatorEngine.TankType.values()[binding.spinnerTankType.selectedItemPosition]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/watertank/TankInputActivity.kt:98:        val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:54:        val defaultCode = settingsManager.defaultDesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:56:            com.civileg.app.domain.entities.DesignCode.ECP -> 0
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:57:            com.civileg.app.domain.entities.DesignCode.ACI -> 1
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:58:            com.civileg.app.domain.entities.DesignCode.SBC -> 2
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:72:        val selectedType = CalculatorEngine.SlabType.values().getOrNull(binding.spinnerSlabType.selectedItemPosition) ?: CalculatorEngine.SlabType.SOLID
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:73:        val selectedCode = CalculatorEngine.DesignCode.values().getOrNull(binding.spinnerCode.selectedItemPosition) ?: CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:94:        val slabTypes = CalculatorEngine.SlabType.values()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:96:        binding.spinnerSlabType.adapter = slabAdapter
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:99:        val codes = CalculatorEngine.DesignCode.values()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabInputActivity.kt:134:        binding.spinnerSlabType.onItemSelectedListener = spinnerListener
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:40:        code: CalculatorEngine.DesignCode,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:69:        calculateBeamPro(250.0, 600.0, span, load * 0.6, load * 0.4, fcu, fy, 16, CalculatorEngine.DesignCode.EGYPTIAN, CalculatorEngine.SupportType.HINGED_HINGED)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:88:                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:89:                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:90:                    else -> com.civileg.app.domain.entities.DesignCode.ECP
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:108:                    shearResult = com.civileg.app.domain.entities.ShearReinforcementResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/BeamViewModel.kt:114:                    deflectionCheck = com.civileg.app.domain.entities.DeflectionCheckResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/stairs/StaircaseDesignFragment.kt:135:                code = CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/stairs/StairInputActivity.kt:31:        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/stairs/StairInputActivity.kt:56:            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:20:import com.civileg.app.utils.CalculatorEngine.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:21:import com.civileg.app.utils.CalculatorEngine.SlabType
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:51:    private var selectedSlabTypeEnum = SlabType.SOLID
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:52:    private var selectedCodeEnum = DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:66:        setupSlabTypeSpinner()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:72:    private fun setupSlabTypeSpinner() {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:73:        val types = SlabType.values().map { it.displayName }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:74:        binding.spinnerSlabType.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, types))
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:75:        binding.spinnerSlabType.setOnItemClickListener { _, _, position, _ ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:76:            selectedSlabTypeEnum = SlabType.values()[position]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:84:                    R.id.btnAmericanCode -> DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:85:                    R.id.btnSaudiCode -> DesignCode.SAUDI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:86:                    else -> DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:136:            type = SlabDetailView.SlabType.SOLID,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:154:            val slabTypeDomain = com.civileg.app.domain.entities.SlabType.Solid(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:156:                supportConditions = SlabSupportConditions(EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:163:            val advResult = AdvancedSlabResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:165:                flexureResult = SlabDesignResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:173:                deflectionCheck = DeflectionCheckResult(2.0, 5.0, 7.0, 20.0, 0.35, true),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:175:                reinforcementLayout = ReinforcementLayout(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:176:                    topBars = BarLayout(10.0, 200.0, BarDirection.BOTH, 5.0, 50),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:177:                    bottomBars = BarLayout(result.reinforcementMain.diameter.toDouble(), result.reinforcementMain.spacing, BarDirection.BOTH, 5.0, 50),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:190:                designCode = com.civileg.app.domain.entities.DesignCode.ECP,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/footing/FootingDesignFragment.kt:118:                0 -> CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/footing/FootingDesignFragment.kt:119:                1 -> CalculatorEngine.DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/footing/FootingDesignFragment.kt:120:                2 -> CalculatorEngine.DesignCode.SAUDI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/footing/FootingDesignFragment.kt:121:                else -> CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SteelViewModel.kt:59:        code: CalculatorEngine.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SteelViewModel.kt:158:                val domainCode = DesignCode.ECP // Default, ideally should come from UI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SteelViewModel.kt:197:    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode): Double {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SteelViewModel.kt:201:    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode): Double {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/pile/PileFoundationFragment.kt:54:        setupSoilTypeSpinner()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/pile/PileFoundationFragment.kt:59:    private fun setupSoilTypeSpinner() {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/pile/PileFoundationFragment.kt:68:        binding.spinnerSoilType.adapter = adapter
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/pile/PileFoundationFragment.kt:81:            val soilType = binding.spinnerSoilType.selectedItem.toString()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnComposeViewModel.kt:6:import com.civileg.app.domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnComposeViewModel.kt:30:    val designCode: DesignCode = DesignCode.ECP,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnComposeViewModel.kt:70:    fun updateCode(code: DesignCode) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/retaining/RetainingWallFragment.kt:93:                code = CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamInputActivity.kt:38:        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamInputActivity.kt:46:        val defaultCode = settingsManager.defaultDesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamInputActivity.kt:48:            com.civileg.app.domain.entities.DesignCode.ECP -> 0
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamInputActivity.kt:49:            com.civileg.app.domain.entities.DesignCode.ACI -> 1
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamInputActivity.kt:50:            com.civileg.app.domain.entities.DesignCode.SBC -> 2
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamInputActivity.kt:63:            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/retaining/RetainingWallInputActivity.kt:31:        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/retaining/RetainingWallInputActivity.kt:53:            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:53:    private var selectedCode: DesignCode = DesignCode.ECP
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:128:                    R.id.btnAmericanCode -> DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:129:                    R.id.btnSaudiCode -> DesignCode.SBC
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:130:                    else -> DesignCode.ECP
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:167:                DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:168:                DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:169:                DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:315:                shearResult = ShearReinforcementResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:326:                deflectionCheck = DeflectionCheckResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:342:                designCode = DesignCode.ECP,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:18:import com.civileg.app.domain.entities.DesignCode as DomainDesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:20:import com.civileg.app.utils.CalculatorEngine.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:52:    private var selectedCode = DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:53:    private var colType = ColumnSectionView.ColumnType.RECTANGULAR
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:110:        binding.rgColumnType.setOnCheckedChangeListener { _, checkedId ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:115:                ColumnSectionView.ColumnType.CIRCULAR
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:120:                ColumnSectionView.ColumnType.RECTANGULAR
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:130:                    R.id.btnAmericanCode -> DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:131:                    R.id.btnSaudiCode -> DesignCode.SAUDI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:132:                    else -> DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:154:            this.columnWidth = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else width
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:180:                width = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else width,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:181:                depth = if (colType == ColumnSectionView.ColumnType.CIRCULAR) diameter else depth,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:186:                isCircular = colType == ColumnSectionView.ColumnType.CIRCULAR,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:195:                val n = ceil(result.reinforcementArea / areaOneBar).toInt().coerceAtLeast(if (colType == ColumnSectionView.ColumnType.CIRCULAR) 6 else 4)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:287:            // Convert CalculatorEngine result to AdvancedColumnResult for the exporter
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:288:            val columnType = if (result.columnType == "CIRCULAR") ColumnType.Circular(result.width) else ColumnType.Rectangular(result.width, result.depth)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:290:            val advResult = AdvancedColumnResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:310:                punchingCheck = PunchingCheckResult(result.pu, 1000.0, result.punchingSafe, false, 2000.0),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:322:                designCode = DomainDesignCode.ECP,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:352:                    put("isCircular", colType == ColumnSectionView.ColumnType.CIRCULAR)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:131:    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:142:                CalculatorEngine.DesignCode.EGYPTIAN -> DesignCode.ECP
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:143:                CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:144:                else -> DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:160:                        CalculatorEngine.DesignCode.entries.forEach { code ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:784:    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:990:                        CalculatorEngine.DesignCode.entries.forEach { code ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1065:    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1095:                CalculatorEngine.DesignCode.entries.forEach { code ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1135:    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1166:                CalculatorEngine.DesignCode.entries.forEach { code ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:31:        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:50:            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:63:            // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:65:                CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:66:                CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:67:                CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnInputActivity.kt:69:            viewModel.updateDesignCode(domainCode)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FootingScreen.kt:180:                            code = CalculatorEngine.DesignCode.EGYPTIAN,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/adapter/DesignHistoryAdapter.kt:33:            binding.tvDesignCode.text = design.codeUsed
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/BeamScreen.kt:160:                            CalculatorEngine.DesignCode.EGYPTIAN,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/RetainingWallScreen.kt:122:                        code = CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:40:        code: CalculatorEngine.DesignCode,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:41:        type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:84:        type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:85:        code: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:122:                // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:124:                    CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:125:                    CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:126:                    else -> com.civileg.app.domain.entities.DesignCode.ECP
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:129:                // Map CalculatorEngine.SlabType to domain.entities.SlabType
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:130:                val domainSlabType = when(res.type) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:131:                    CalculatorEngine.SlabType.FLAT -> com.civileg.app.domain.entities.SlabType.FlatPlate(res.thickness, 5.0, 5.0, 400.0)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:132:                    CalculatorEngine.SlabType.HOLLOW_BLOCK -> com.civileg.app.domain.entities.SlabType.Hordi(res.thickness, 100.0, 500.0, 400.0, 200.0, 5.0, com.civileg.app.domain.entities.SlabSupportConditions(com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED, com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED, com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED, com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED))
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:133:                    else -> com.civileg.app.domain.entities.SlabType.Solid(res.thickness, 5.0, 5.0, com.civileg.app.domain.entities.SlabSupportConditions(com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED, com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED, com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED, com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED))
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:136:                val advResult = com.civileg.app.domain.entities.AdvancedSlabResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:137:                    slabType = domainSlabType,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:138:                    flexureResult = com.civileg.app.domain.entities.SlabDesignResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:149:                    deflectionCheck = com.civileg.app.domain.entities.DeflectionCheckResult(isSafe = true, calculatedDeflection = 0.0, allowableDeflection = 0.0, ratio = 0.0),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:150:                    punchingShearCheck = if (res.type == CalculatorEngine.SlabType.FLAT) com.civileg.app.domain.entities.PunchingShearCheckResult(isSafe = res.punchingSafe, appliedShear = 0.0, shearCapacity = 0.0, utilizationRatio = 0.0) else null,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:151:                    reinforcementLayout = com.civileg.app.domain.entities.ReinforcementLayout(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:152:                        topBars = com.civileg.app.domain.entities.BarLayout(res.reinforcementSecondary.diameter.toDouble(), res.reinforcementSecondary.spacing, com.civileg.app.domain.entities.BarDirection.BOTH, 5.0, 5),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:153:                        bottomBars = com.civileg.app.domain.entities.BarLayout(res.reinforcementMain.diameter.toDouble(), res.reinforcementMain.spacing, com.civileg.app.domain.entities.BarDirection.BOTH, 5.0, 5),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:168:                    slabType = domainSlabType,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SlabViewModel.kt:201:    val type: CalculatorEngine.SlabType
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:26:    val designCode: DesignCode = DesignCode.ECP,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:49:        _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:103:    fun updateDesignCode(code: DesignCode) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:118:    fun calculateColumnPro(width: Double, depth: Double, height: Double, fcu: Double, fy: Double, load: Double, diameter: Int, code: CalculatorEngine.DesignCode) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:160:                    code = mapDesignCode(state.designCode),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:187:                val colType = if (res.columnType == "CIRCULAR") ColumnType.Circular(res.width) else ColumnType.Rectangular(res.width, res.depth)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:188:                val advResult = AdvancedColumnResult(
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:208:                    punchingCheck = PunchingCheckResult(res.pu, 1000.0, res.punchingSafe, false, 2000.0),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:259:    private fun mapDesignCode(code: DesignCode): CalculatorEngine.DesignCode = when(code) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:260:        DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:261:        DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ColumnViewModel.kt:262:        DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:62:    var selectedType by remember { mutableStateOf(CalculatorEngine.SlabType.SOLID) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:63:    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:120:                            CalculatorEngine.SlabType.values().forEach { type ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:147:                            CalculatorEngine.DesignCode.values().forEach { code ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:186:            if (selectedType == CalculatorEngine.SlabType.FLAT) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:195:            if (selectedType == CalculatorEngine.SlabType.POST_TENSION) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:453:            if (res.type == CalculatorEngine.SlabType.FLAT) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:477:            if (res.type == CalculatorEngine.SlabType.POST_TENSION) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/FootingViewModel.kt:44:        code: CalculatorEngine.DesignCode,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SettingsScreen.kt:14:import com.civileg.app.domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SettingsScreen.kt:47:                    DesignCode.entries.forEach { code ->
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:22:    private val _result = MutableLiveData<CalculatorEngine.TankResult?>()
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:23:    val result: LiveData<CalculatorEngine.TankResult?> = _result
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:35:        type: CalculatorEngine.TankType,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:41:        code: CalculatorEngine.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:58:    fun calculateTank(type: CalculatorEngine.TankType, capacity: Double, height: Double, fcu: Double, fy: Double) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:59:        calculateTankPro(type, capacity, height, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/TankViewModel.kt:62:    fun saveTank(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/di/DesignCodeModule.kt:7:import com.civileg.app.domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/di/DesignCodeModule.kt:18:object DesignCodeModule {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/di/DesignCodeModule.kt:39:    ): Map<DesignCode, ColumnDesign> {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/di/DesignCodeModule.kt:40:        return designs.mapKeys { DesignCode.valueOf(it.key) }
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:5:import com.civileg.app.domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:17:    val defaultCode: DesignCode = DesignCode.ECP,
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:38:                repository.getDefaultDesignCode(),
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:57:                    defaultCode = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP },
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:82:    fun setDefaultCode(code: DesignCode) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:84:            repository.setDefaultDesignCode(code.name)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/di/CalculationModule.kt:3:import com.civileg.app.domain.entities.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/StairViewModel.kt:41:        code: CalculatorEngine.DesignCode
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/StairViewModel.kt:70:        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/utils/SteelDictionary.kt:331:    fun getSectionByCode(code: DesignCodeType): Map<String, SectionInfo> = when(code) {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/utils/SteelDictionary.kt:332:        DesignCodeType.ECP -> egyptianSections
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/utils/SteelDictionary.kt:333:        DesignCodeType.ACI -> americanSections
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/utils/SteelDictionary.kt:334:        DesignCodeType.SBC -> saudiSections
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/utils/SteelDictionary.kt:345:    fun getAllSectionsByCode(code: DesignCodeType): List<SectionInfo> {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/utils/SteelDictionary.kt:360:    enum class DesignCodeType {
+/home/z/my-project/civileg2/app/src/main/java/com/civileg/app/viewmodel/ExportViewModel.kt:27:        designCode: DesignCode,
+
+[Showing results with pagination = limit: 250]

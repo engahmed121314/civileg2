@@ -1,0 +1,502 @@
+     1→     1→     1→package com.civileg.app.ui.compose.screens
+     2→     2→     2→
+     3→     3→     3→import androidx.compose.foundation.Canvas
+     4→     4→     4→import androidx.compose.foundation.background
+     5→     5→     5→import androidx.compose.foundation.layout.*
+     6→     6→     6→import androidx.compose.foundation.lazy.LazyColumn
+     7→     7→     7→import androidx.compose.foundation.shape.RoundedCornerShape
+     8→     8→     8→import androidx.compose.foundation.text.KeyboardOptions
+     9→     9→     9→import androidx.compose.material.icons.Icons
+    10→    10→    10→import androidx.compose.material.icons.automirrored.filled.ArrowBack
+    11→    11→    11→import androidx.compose.material.icons.filled.*
+    12→    12→    12→import androidx.compose.material3.*
+    13→    13→    13→import androidx.compose.runtime.collectAsState
+    14→    14→    14→import androidx.compose.runtime.livedata.observeAsState
+    15→    15→    15→import androidx.compose.ui.Alignment
+    16→    16→    16→import com.civileg.app.viewmodel.ProjectViewModel
+    17→    17→    17→import androidx.compose.material3.*
+    18→    18→    18→import androidx.compose.runtime.*
+    19→    19→    19→import androidx.compose.ui.platform.LocalContext
+    20→    20→    20→import com.civileg.app.db.Project
+    21→    21→    21→import androidx.compose.ui.Modifier
+    22→    22→    22→import androidx.compose.ui.geometry.Offset
+    23→    23→    23→import androidx.compose.ui.geometry.Size
+    24→    24→    24→import androidx.compose.ui.graphics.Color
+    25→    25→    25→import androidx.compose.ui.graphics.drawscope.Stroke
+    26→    26→    26→import androidx.compose.ui.graphics.nativeCanvas
+    27→    27→    27→import androidx.compose.ui.res.painterResource
+    28→    28→    28→import androidx.compose.ui.text.font.FontFamily
+    29→    29→    29→import androidx.compose.ui.text.font.FontWeight
+    30→    30→    30→import androidx.compose.ui.text.input.KeyboardType
+    31→    31→    31→import androidx.compose.ui.text.style.TextOverflow
+    32→    32→    32→import androidx.compose.ui.graphics.ColorFilter
+    33→    33→    33→import androidx.compose.foundation.clickable
+    34→    34→    34→import androidx.compose.animation.core.animateFloatAsState
+    35→    35→    35→import androidx.compose.animation.core.tween
+    36→    36→    36→import androidx.compose.ui.unit.dp
+    37→    37→    37→import androidx.compose.ui.unit.sp
+    38→    38→    38→import androidx.hilt.navigation.compose.hiltViewModel
+    39→    39→    39→import com.civileg.app.R
+    40→    40→    40→import com.civileg.app.domain.entities.DesignCode
+    41→    41→    41→import com.civileg.app.domain.entities.LoadCombination
+    42→    42→    42→import com.civileg.app.utils.CalculatorEngine
+    43→    43→    43→import com.civileg.app.viewmodel.ColumnViewModel
+    44→    44→    44→import kotlin.math.max
+    45→    45→    45→import kotlin.math.min
+    46→    46→    46→
+    47→    47→    47→@OptIn(ExperimentalMaterial3Api::class)
+    48→    48→    48→@Composable
+    49→    49→    49→fun ColumnScreen(
+    50→    50→    50→    viewModel: ColumnViewModel = hiltViewModel(),
+    51→    51→    51→    projectViewModel: ProjectViewModel = hiltViewModel(),
+    52→    52→    52→    onNavigateBack: () -> Unit = {}
+    53→    53→    53→) {
+    54→    54→    54→    val context = LocalContext.current
+    55→    55→    55→    val uiState by viewModel.uiState.collectAsState()
+    56→    56→    56→    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    57→    57→    57→
+    58→    58→    58→    var showSaveDialog by remember { mutableStateOf(false) }
+    59→    59→    59→    var selectedProjectId by remember { mutableLongStateOf(-1L) }
+    60→    60→    60→    var designName by remember { mutableStateOf("عمود الدور الأرضي") }
+    61→    61→    61→
+    62→    62→    62→    Scaffold(
+    63→    63→    63→        topBar = {
+    64→    64→    64→            TopAppBar(
+    65→    65→    65→                title = { Text("تصميم الأعمدة الخرسانية Pro", fontWeight = FontWeight.Bold) },
+    66→    66→    66→                navigationIcon = {
+    67→    67→    67→                    IconButton(onClick = onNavigateBack) {
+    68→    68→    68→                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+    69→    69→    69→                    }
+    70→    70→    70→                },
+    71→    71→    71→                actions = {
+    72→    72→    72→                    if (uiState.result != null) {
+    73→    73→    73→                        if (uiState.isExporting) {
+    74→    74→    74→                            CircularProgressIndicator(
+    75→    75→    75→                                modifier = Modifier.size(24.dp).padding(end = 8.dp),
+    76→    76→    76→                                strokeWidth = 2.dp,
+    77→    77→    77→                                color = MaterialTheme.colorScheme.primary
+    78→    78→    78→                            )
+    79→    79→    79→                        } else {
+    80→    80→    80→                            IconButton(onClick = { viewModel.exportToPdf(context) {} }) {
+    81→    81→    81→                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF", tint = MaterialTheme.colorScheme.primary)
+    82→    82→    82→                            }
+    83→    83→    83→                        }
+    84→    84→    84→                        IconButton(onClick = { showSaveDialog = true }) {
+    85→    85→    85→                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+    86→    86→    86→                        }
+    87→    87→    87→                    }
+    88→    88→    88→                    IconButton(onClick = { viewModel.reset() }) {
+    89→    89→    89→                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+    90→    90→    90→                    }
+    91→    91→    91→                }
+    92→    92→    92→            )
+    93→    93→    93→        }
+    94→    94→    94→    ) { padding ->
+    95→    95→    95→        LazyColumn(
+    96→    96→    96→            modifier = Modifier
+    97→    97→    97→                .fillMaxSize()
+    98→    98→    98→                .padding(padding)
+    99→    99→    99→                .background(MaterialTheme.colorScheme.background)
+   100→   100→   100→                .padding(horizontal = 16.dp),
+   101→   101→   101→            verticalArrangement = Arrangement.spacedBy(16.dp)
+   102→   102→   102→        ) {
+   103→   103→   103→            item {
+   104→   104→   104→                Card(
+   105→   105→   105→                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+   106→   106→   106→                    elevation = CardDefaults.cardElevation(2.dp),
+   107→   107→   107→                    shape = RoundedCornerShape(16.dp)
+   108→   108→   108→                ) {
+   109→   109→   109→                    Column(modifier = Modifier.padding(16.dp)) {
+   110→   110→   110→                        DesignCodeSelector(
+   111→   111→   111→                            selectedCode = uiState.designCode,
+   112→   112→   112→                            onCodeSelected = { viewModel.updateDesignCode(it) }
+   113→   113→   113→                        )
+   114→   114→   114→                        Spacer(modifier = Modifier.height(12.dp))
+   115→   115→   115→                        LoadCombinationSelector(
+   116→   116→   116→                            selected = uiState.loadCombination,
+   117→   117→   117→                            onSelected = { viewModel.updateLoadCombination(it) }
+   118→   118→   118→                        )
+   119→   119→   119→                        
+   120→   120→   120→                        Text(
+   121→   121→   121→                            text = if (uiState.loadCombination == LoadCombination.DEAD_ONLY) 
+   122→   122→   122→                                "💡 Dead Load Only: يستخدم عادة في المنشآت المؤقتة أو تحت ظروف خاصة حيث لا يوجد أحمال حية مؤثرة."
+   123→   123→   123→                                else "💡 Dead + Live: المزيج التصميمي الأكثر شيوعاً وأماناً، يشمل وزن المنشأ والأثاث والأشخاص.",
+   124→   124→   124→                            style = MaterialTheme.typography.labelSmall,
+   125→   125→   125→                            color = MaterialTheme.colorScheme.secondary,
+   126→   126→   126→                            modifier = Modifier.padding(top = 8.dp)
+   127→   127→   127→                        )
+   128→   128→   128→                    }
+   129→   129→   129→                }
+   130→   130→   130→            }
+   131→   131→   131→            
+   132→   132→   132→            item { SectionHeader("📐 أبعاد المقطع والخصائص", R.drawable.ic_column) }
+   133→   133→   133→            
+   134→   134→   134→            item {
+   135→   135→   135→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   136→   136→   136→                    ColumnInputField(uiState.width, "العرض b (mm)", { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
+   137→   137→   137→                    ColumnInputField(uiState.depth, "العمق t (mm)", { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
+   138→   138→   138→                }
+   139→   139→   139→            }
+   140→   140→   140→
+   141→   141→   141→            item {
+   142→   142→   142→                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   143→   143→   143→                    ColumnInputField(uiState.fcu, "fcu (MPa)", { viewModel.updateInputs(fcu = it) }, Modifier.weight(1f))
+   144→   144→   144→                    ColumnInputField(uiState.fy, "fy (MPa)", { viewModel.updateInputs(fy = it) }, Modifier.weight(1f))
+   145→   145→   145→                }
+   146→   146→   146→            }
+   147→   147→   147→
+   148→   148→   148→            item { SectionHeader("⚡ الأحمال المطبقة", R.drawable.ic_design) }
+   149→   149→   149→            
+   150→   150→   150→            item {
+   151→   151→   151→                ColumnInputField(uiState.axialLoad, "الحمل المحوري Pu (kN)", { viewModel.updateInputs(axialLoad = it) }, Modifier.fillMaxWidth())
+   152→   152→   152→            }
+   153→   153→   153→
+   154→   154→   154→            item {
+   155→   155→   155→                Button(
+   156→   156→   156→                    onClick = { viewModel.calculateManual() },
+   157→   157→   157→                    modifier = Modifier.fillMaxWidth(),
+   158→   158→   158→                    shape = RoundedCornerShape(12.dp),
+   159→   159→   159→                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+   160→   160→   160→                ) {
+   161→   161→   161→                    Icon(Icons.Default.Calculate, contentDescription = null)
+   162→   162→   162→                    Spacer(modifier = Modifier.width(8.dp))
+   163→   163→   163→                    Text("حساب المقطع (Design Now)", fontWeight = FontWeight.Bold)
+   164→   164→   164→                }
+   165→   165→   165→            }
+   166→   166→   166→
+   167→   167→   167→            uiState.result?.let { result ->
+   168→   168→   168→                item { SectionHeader("📊 نتائج التصميم ومؤشر التوفير", R.drawable.ic_calculator) }
+   169→   169→   169→                
+   170→   170→   170→                item {
+   171→   171→   171→                    val ecoColor = when {
+   172→   172→   172→                        result.utilizationRatio > 1.0 -> Color.Red
+   173→   173→   173→                        result.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+   174→   174→   174→                        result.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+   175→   175→   175→                        else -> Color(0xFF2196F3)
+   176→   176→   176→                    }
+   177→   177→   177→                    
+   178→   178→   178→                    Card(
+   179→   179→   179→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+   180→   180→   180→                        shape = RoundedCornerShape(16.dp)
+   181→   181→   181→                    ) {
+   182→   182→   182→                        Column(modifier = Modifier.padding(16.dp)) {
+   183→   183→   183→                            Row(
+   184→   184→   184→                                modifier = Modifier.fillMaxWidth(),
+   185→   185→   185→                                verticalAlignment = Alignment.CenterVertically,
+   186→   186→   186→                                horizontalArrangement = Arrangement.SpaceBetween
+   187→   187→   187→                            ) {
+   188→   188→   188→                                Column(modifier = Modifier.weight(1f)) {
+   189→   189→   189→                                    Row(verticalAlignment = Alignment.CenterVertically) {
+   190→   190→   190→                                        Icon(
+   191→   191→   191→                                            if (result.utilizationRatio <= 1.0) Icons.Default.Verified 
+   192→   192→   192→                                            else Icons.Default.Dangerous, 
+   193→   193→   193→                                            contentDescription = null, 
+   194→   194→   194→                                            tint = ecoColor
+   195→   195→   195→                                        )
+   196→   196→   196→                                        Spacer(Modifier.width(8.dp))
+   197→   197→   197→                                        Text(
+   198→   198→   198→                                            if (result.utilizationRatio > 1.0) "القطاع غير آمن إنشائياً! ❌"
+   199→   199→   199→                                            else if (result.utilizationRatio > 0.9) "تحميل عالي (حذر) ⚠️"
+   200→   200→   200→                                            else if (result.utilizationRatio > 0.4) "قطاع مثالي واقتصادي ✅"
+   201→   201→   201→                                            else "قطاع كبير جداً (غير اقتصادي) 🔵",
+   202→   202→   202→                                            fontWeight = FontWeight.Bold,
+   203→   203→   203→                                            color = ecoColor
+   204→   204→   204→                                        )
+   205→   205→   205→                                    }
+   206→   206→   206→                                    Text(
+   207→   207→   207→                                        "المستشار الإنشائي: نسبة الاستخدام",
+   208→   208→   208→                                        style = MaterialTheme.typography.labelSmall,
+   209→   209→   209→                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+   210→   210→   210→                                    )
+   211→   211→   211→                                }
+   212→   212→   212→                                
+   213→   213→   213→                                Box(contentAlignment = Alignment.Center) {
+   214→   214→   214→                                    val animatedRatio by animateFloatAsState(
+   215→   215→   215→                                        targetValue = result.utilizationRatio.toFloat(),
+   216→   216→   216→                                        animationSpec = tween(1000), label = ""
+   217→   217→   217→                                    )
+   218→   218→   218→                                    CircularProgressIndicator(
+   219→   219→   219→                                        progress = { animatedRatio },
+   220→   220→   220→                                        modifier = Modifier.size(60.dp),
+   221→   221→   221→                                        strokeWidth = 6.dp,
+   222→   222→   222→                                        color = ecoColor,
+   223→   223→   223→                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+   224→   224→   224→                                    )
+   225→   225→   225→                                    Text(
+   226→   226→   226→                                        "${(result.utilizationRatio * 100).toInt()}%",
+   227→   227→   227→                                        fontWeight = FontWeight.Bold,
+   228→   228→   228→                                        fontSize = 12.sp
+   229→   229→   229→                                    )
+   230→   230→   230→                                }
+   231→   231→   231→                            }
+   232→   232→   232→                        }
+   233→   233→   233→                    }
+   234→   234→   234→                }
+   235→   235→   235→
+   236→   236→   236→                item { ColumnResultCard(result) }
+   237→   237→   237→
+   238→   238→   238→                item {
+   239→   239→   239→                    Row(
+   240→   240→   240→                        modifier = Modifier.fillMaxWidth(),
+   241→   241→   241→                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+   242→   242→   242→                    ) {
+   243→   243→   243→                        Button(
+   244→   244→   244→                            onClick = { viewModel.applyEconomicalDesign() },
+   245→   245→   245→                            modifier = Modifier.weight(1f),
+   246→   246→   246→                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+   247→   247→   247→                            shape = RoundedCornerShape(8.dp)
+   248→   248→   248→                        ) {
+   249→   249→   249→                            Text("خيار موفر 💰", fontSize = 12.sp)
+   250→   250→   250→                        }
+   251→   251→   251→                        Button(
+   252→   252→   252→                            onClick = { viewModel.applySafetyDesign() },
+   253→   253→   253→                            modifier = Modifier.weight(1f),
+   254→   254→   254→                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+   255→   255→   255→                            shape = RoundedCornerShape(8.dp)
+   256→   256→   256→                        ) {
+   257→   257→   257→                            Text("الأكثر أماناً 🛡️", fontSize = 12.sp)
+   258→   258→   258→                        }
+   259→   259→   259→                    }
+   260→   260→   260→                }
+   261→   261→   261→
+   262→   262→   262→                item {
+   263→   263→   263→                    Card(
+   264→   264→   264→                        modifier = Modifier.fillMaxWidth(),
+   265→   265→   265→                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+   266→   266→   266→                        shape = RoundedCornerShape(16.dp)
+   267→   267→   267→                    ) {
+   268→   268→   268→                        Column(modifier = Modifier.padding(16.dp)) {
+   269→   269→   269→                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+   270→   270→   270→                                Text("تخصيص التسليح (لتحقيق التوفير)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+   271→   271→   271→                                Switch(
+   272→   272→   272→                                    checked = uiState.autoOptimize,
+   273→   273→   273→                                    onCheckedChange = { viewModel.updateAutoOptimize(it) },
+   274→   274→   274→                                    thumbContent = { if (uiState.autoOptimize) Icon(Icons.Default.Check, null, modifier = Modifier.size(12.dp)) }
+   275→   275→   275→                                )
+   276→   276→   276→                            }
+   277→   277→   277→                            Spacer(Modifier.height(12.dp))
+   278→   278→   278→                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+   279→   279→   279→                                ColumnInputField(
+   280→   280→   280→                                    value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (result.reinforcement.numBars.toString()) else uiState.manualNumBars,
+   281→   281→   281→                                    label = "عدد الأسياخ",
+   282→   282→   282→                                    onValueChange = { viewModel.updateInputs(manualNumBars = it) },
+   283→   283→   283→                                    modifier = Modifier.weight(1f),
+   284→   284→   284→                                    enabled = true
+   285→   285→   285→                                )
+   286→   286→   286→                                ColumnInputField(
+   287→   287→   287→                                    value = uiState.preferredDiameter,
+   288→   288→   288→                                    label = "القطر Ø (mm)",
+   289→   289→   289→                                    onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
+   290→   290→   290→                                    modifier = Modifier.weight(1f),
+   291→   291→   291→                                    enabled = true
+   292→   292→   292→                                )
+   293→   293→   293→                            }
+   294→   294→   294→                            if (!uiState.autoOptimize) {
+   295→   295→   295→                                Spacer(Modifier.height(8.dp))
+   296→   296→   296→                                Button(
+   297→   297→   297→                                    onClick = { viewModel.calculateManual() },
+   298→   298→   298→                                    modifier = Modifier.fillMaxWidth(),
+   299→   299→   299→                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   300→   300→   300→                                ) {
+   301→   301→   301→                                    Text("تحديث التسليح المخصص")
+   302→   302→   302→                                }
+   303→   303→   303→                            }
+   304→   304→   304→                        }
+   305→   305→   305→                    }
+   306→   306→   306→                }
+   307→   307→   307→
+   308→   308→   308→                item {
+   309→   309→   309→                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   310→   310→   310→                        Button(
+   311→   311→   311→                            onClick = { viewModel.exportToPdf(context) { /* Handle completion */ } },
+   312→   312→   312→                            modifier = Modifier.weight(1f),
+   313→   313→   313→                            shape = RoundedCornerShape(12.dp),
+   314→   314→   314→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+   315→   315→   315→                        ) {
+   316→   316→   316→                            Icon(painterResource(id = R.drawable.ic_pdf), contentDescription = null)
+   317→   317→   317→                            Spacer(modifier = Modifier.width(8.dp))
+   318→   318→   318→                            Text("تقرير PDF")
+   319→   319→   319→                        }
+   320→   320→   320→
+   321→   321→   321→                        Button(
+   322→   322→   322→                            onClick = { showSaveDialog = true },
+   323→   323→   323→                            modifier = Modifier.weight(1f),
+   324→   324→   324→                            shape = RoundedCornerShape(12.dp),
+   325→   325→   325→                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   326→   326→   326→                        ) {
+   327→   327→   327→                            Icon(Icons.Default.Save, contentDescription = null)
+   328→   328→   328→                            Spacer(modifier = Modifier.width(8.dp))
+   329→   329→   329→                            Text("حفظ")
+   330→   330→   330→                        }
+   331→   331→   331→                    }
+   332→   332→   332→                }
+   333→   333→   333→
+   334→   334→   334→                item {
+   335→   335→   335→                    Text("📝 المعادلات الهندسية (بدون نتائج)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   336→   336→   336→                    EngineeringFormulasCard()
+   337→   337→   337→                }
+   338→   338→   338→
+   339→   339→   339→                item {
+   340→   340→   340→                    Text("🎨 الرسم الهندسي للقطاع", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+   341→   341→   341→                    ColumnSectionCanvas(result)
+   342→   342→   342→                }
+   343→   343→   343→            }
+   344→   344→   344→        }
+   345→   345→   345→    }
+   346→   346→   346→
+   347→   347→   347→    if (showSaveDialog) {
+   348→   348→   348→        AlertDialog(
+   349→   349→   349→            onDismissRequest = { showSaveDialog = false },
+   350→   350→   350→            title = { Text("حفظ التصميم في مشروع") },
+   351→   351→   351→            text = {
+   352→   352→   352→                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+   353→   353→   353→                    OutlinedTextField(
+   354→   354→   354→                        value = designName,
+   355→   355→   355→                        onValueChange = { designName = it },
+   356→   356→   356→                        label = { Text("اسم العمود (مثلاً: C1)") },
+   357→   357→   357→                        modifier = Modifier.fillMaxWidth()
+   358→   358→   358→                    )
+   359→   359→   359→                    
+   360→   360→   360→                    Text("اختر المشروع:", style = MaterialTheme.typography.labelMedium)
+   361→   361→   361→                    if (projects.isEmpty()) {
+   362→   362→   362→                        Text("لا توجد مشاريع حالية. سيتم إنشاء مشروع افتراضي.", color = Color.Gray, fontSize = 12.sp)
+   363→   363→   363→                    } else {
+   364→   364→   364→                        projects.forEach { project ->
+   365→   365→   365→                            Row(
+   366→   366→   366→                                modifier = Modifier
+   367→   367→   367→                                    .fillMaxWidth()
+   368→   368→   368→                                    .padding(vertical = 4.dp),
+   369→   369→   369→                                verticalAlignment = Alignment.CenterVertically
+   370→   370→   370→                            ) {
+   371→   371→   371→                                RadioButton(
+   372→   372→   372→                                    selected = selectedProjectId == project.id,
+   373→   373→   373→                                    onClick = { selectedProjectId = project.id }
+   374→   374→   374→                                )
+   375→   375→   375→                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+   376→   376→   376→                            }
+   377→   377→   377→                        }
+   378→   378→   378→                    }
+   379→   379→   379→                }
+   380→   380→   380→            },
+   381→   381→   381→            confirmButton = {
+   382→   382→   382→                Button(onClick = {
+   383→   383→   383→                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+   384→   384→   384→                    uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
+   385→   385→   385→                    showSaveDialog = false
+   386→   386→   386→                }) {
+   387→   387→   387→                    Text("حفظ")
+   388→   388→   388→                }
+   389→   389→   389→            },
+   390→   390→   390→            dismissButton = {
+   391→   391→   391→                TextButton(onClick = { showSaveDialog = false }) { Text("إلغاء") }
+   392→   392→   392→            }
+   393→   393→   393→        )
+   394→   394→   394→    }
+   395→   395→   395→}
+   396→   396→   396→
+   397→   397→   397→@Composable
+   398→   398→   398→private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
+   399→   399→   399→    Card(
+   400→   400→   400→        colors = CardDefaults.cardColors(
+   401→   401→   401→            containerColor = if (result.isSafe) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+   402→   402→   402→        ),
+   403→   403→   403→        shape = RoundedCornerShape(16.dp),
+   404→   404→   404→        modifier = Modifier.fillMaxWidth()
+   405→   405→   405→    ) {
+   406→   406→   406→        Column(modifier = Modifier.padding(16.dp)) {
+   407→   407→   407→            Row(verticalAlignment = Alignment.CenterVertically) {
+   408→   408→   408→                Icon(
+   409→   409→   409→                    if (result.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+   410→   410→   410→                    contentDescription = null,
+   411→   411→   411→                    tint = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+   412→   412→   412→                )
+   413→   413→   413→                Spacer(modifier = Modifier.width(8.dp))
+   414→   414→   414→                Text(
+   415→   415→   415→                    if (result.isSafe) "المقطع آمن (SAFE)" else "المقطع غير آمن (UNSAFE)",
+   416→   416→   416→                    fontWeight = FontWeight.Bold,
+   417→   417→   417→                    color = if (result.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+   418→   418→   418→                )
+   419→   419→   419→            }
+   420→   420→   420→            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.Gray.copy(alpha = 0.2f))
+   421→   421→   421→            
+   422→   422→   422→            ResultDataRow("التسليح الموفر", result.reinforcement.barString)
+   423→   423→   423→            ResultDataRow("الكانات", result.stirrups.description)
+   424→   424→   424→            ResultDataRow("نسبة التسليح (μ)", String.format("%.2f %%", result.reinforcementRatio))
+   425→   425→   425→            
+   426→   426→   426→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
+   427→   427→   427→            
+   428→   428→   428→            Text("الكميات والتقديرات:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+   429→   429→   429→            ResultDataRow("حجم الخرسانة", String.format("%.3f m³", result.concreteVolume))
+   430→   430→   430→            ResultDataRow("وزن الحديد", String.format("%.2f kg", result.steelWeight))
+   431→   431→   431→            ResultDataRow("التكلفة التقديرية", String.format("%.2f", result.cost))
+   432→   432→   432→
+   433→   433→   433→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.Gray.copy(alpha = 0.1f))
+   434→   434→   434→            
+   435→   435→   435→            Text("التحقق من الكود (Safety Checks):", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+   436→   436→   436→            result.safetyChecks.forEach { check ->
+   437→   437→   437→                ResultCheckRow(check)
+   438→   438→   438→            }
+   439→   439→   439→        }
+   440→   440→   440→    }
+   441→   441→   441→}
+   442→   442→   442→
+   443→   443→   443→@Composable
+   444→   444→   444→private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
+   445→   445→   445→    Row(
+   446→   446→   446→        modifier = Modifier
+   447→   447→   447→            .fillMaxWidth()
+   448→   448→   448→            .padding(vertical = 4.dp),
+   449→   449→   449→        verticalAlignment = Alignment.CenterVertically
+   450→   450→   450→    ) {
+   451→   451→   451→        Text(
+   452→   452→   452→            if (check.isSafe) "آمن ✅" else "غير آمن ❌",
+   453→   453→   453→            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+   454→   454→   454→            fontWeight = FontWeight.Bold,
+   455→   455→   455→            fontSize = 14.sp
+   456→   456→   456→        )
+   457→   457→   457→        Spacer(modifier = Modifier.width(16.dp))
+   458→   458→   458→        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+   459→   459→   459→            Text(check.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+   460→   460→   460→            Text(
+   461→   461→   461→                "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
+   462→   462→   462→                fontSize = 11.sp,
+   463→   463→   463→                color = Color.Gray
+   464→   464→   464→            )
+   465→   465→   465→        }
+   466→   466→   466→    }
+   467→   467→   467→}
+   468→   468→   468→
+   469→   469→   469→@Composable
+   470→   470→   470→private fun EngineeringFormulasCard() {
+   471→   471→   471→    Card(
+   472→   472→   472→        modifier = Modifier.fillMaxWidth(),
+   473→   473→   473→        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+   474→   474→   474→    ) {
+   475→   475→   475→        Column(modifier = Modifier.padding(16.dp)) {
+   476→   476→   476→            FormulaItem("Pu_limit = 0.35 * fcu * Ac + 0.67 * fy * As")
+   477→   477→   477→            FormulaItem("Shear Check: q_u = Pu / (b * d) < q_cu")
+   478→   478→   478→            FormulaItem("Punching Check: q_p = Pu / (perimeter * d) < q_p_limit")
+   479→   479→   479→            FormulaItem("As_min = 0.008 * Ac")
+   480→   480→   480→        }
+   481→   481→   481→    }
+   482→   482→   482→}
+   483→   483→   483→
+   484→   484→   484→@Composable
+   485→   485→   485→private fun ColumnSectionCanvas(result: CalculatorEngine.ColumnResult) {
+   486→   486→   486→    Card(
+   487→   487→   487→        shape = RoundedCornerShape(16.dp),
+   488→   488→   488→        modifier = Modifier.fillMaxWidth().height(300.dp),
+   489→   489→   489→        elevation = CardDefaults.cardElevation(4.dp)
+   490→   490→   490→    ) {
+   491→   491→   491→        Canvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
+   492→   492→   492→            val padding = 60f
+   493→   493→   493→            val scale = minOf((size.width - 2*padding)/result.width, (size.height - 2*padding)/result.depth).toFloat()
+   494→   494→   494→            
+   495→   495→   495→            val w = (result.width * scale).toFloat()
+   496→   496→   496→            val h = (result.depth * scale).toFloat()
+   497→   497→   497→            val left = (size.width - w) / 2
+   498→   498→   498→            val top = (size.height - h) / 2
+   499→   499→   499→            
+   500→   500→   500→            // الخرسانة
+
+[showing lines 1-500 of 642; use offset=501 with limit to continue reading]

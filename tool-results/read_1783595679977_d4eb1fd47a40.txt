@@ -1,0 +1,390 @@
+     1→     1→     1→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/DrawingUtils.kt:613:28 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Float' was expected.
+     2→     2→     2→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:112:46 Unresolved reference 'x'.
+     3→     3→     3→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:112:46 Only expressions are allowed in this context.
+     4→     4→     4→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:112:112 Unresolved reference 'y'.
+     5→     5→     5→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:112:112 Only expressions are allowed in this context.
+     6→     6→     6→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/InteractiveDrawingScreen.kt:232:73 Unresolved reference 'InfoOutline'.
+     7→     7→     7→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/MomentShearForceDiagram.kt:77:17 No parameter with name 'verticalArrangement' found.
+     8→     8→     8→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:326:33 Unresolved reference 'x'.
+     9→     9→     9→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:326:33 Only expressions are allowed in this context.
+    10→    10→    10→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:326:79 Unresolved reference 'y'.
+    11→    11→    11→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:326:79 Only expressions are allowed in this context.
+    12→    12→    12→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:31 Unresolved reference 'x'.
+    13→    13→    13→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:31 Only expressions are allowed in this context.
+    14→    14→    14→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:77 Unresolved reference 'y'.
+    15→    15→    15→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:327:77 Only expressions are allowed in this context.
+    16→    16→    16→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:518:26 None of the following candidates is applicable:
+    17→    17→    17→fun max(a: Double, b: Double): Double
+    18→    18→    18→fun max(a: Float, b: Float): Float
+    19→    19→    19→fun max(a: Int, b: Int): Int
+    20→    20→    20→fun max(a: Long, b: Long): Long
+    21→    21→    21→fun max(a: UInt, b: UInt): UInt
+    22→    22→    22→fun max(a: ULong, b: ULong): ULong
+    23→    23→    23→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:577:28 None of the following candidates is applicable:
+    24→    24→    24→fun max(a: Double, b: Double): Double
+    25→    25→    25→fun max(a: Float, b: Float): Float
+    26→    26→    26→fun max(a: Int, b: Int): Int
+    27→    27→    27→fun max(a: Long, b: Long): Long
+    28→    28→    28→fun max(a: UInt, b: UInt): UInt
+    29→    29→    29→fun max(a: ULong, b: ULong): ULong
+    30→    30→    30→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:676:45 None of the following candidates is applicable:
+    31→    31→    31→fun max(a: Double, b: Double): Double
+    32→    32→    32→fun max(a: Float, b: Float): Float
+    33→    33→    33→fun max(a: Int, b: Int): Int
+    34→    34→    34→fun max(a: Long, b: Long): Long
+    35→    35→    35→fun max(a: UInt, b: UInt): UInt
+    36→    36→    36→fun max(a: ULong, b: ULong): ULong
+    37→    37→    37→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:711:16 None of the following candidates is applicable:
+    38→    38→    38→fun max(a: Double, b: Double): Double
+    39→    39→    39→fun max(a: Float, b: Float): Float
+    40→    40→    40→fun max(a: Int, b: Int): Int
+    41→    41→    41→fun max(a: Long, b: Long): Long
+    42→    42→    42→fun max(a: UInt, b: UInt): UInt
+    43→    43→    43→fun max(a: ULong, b: ULong): ULong
+    44→    44→    44→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1071:17 None of the following candidates is applicable:
+    45→    45→    45→fun max(a: Double, b: Double): Double
+    46→    46→    46→fun max(a: Float, b: Float): Float
+    47→    47→    47→fun max(a: Int, b: Int): Int
+    48→    48→    48→fun max(a: Long, b: Long): Long
+    49→    49→    49→fun max(a: UInt, b: UInt): UInt
+    50→    50→    50→fun max(a: ULong, b: ULong): ULong
+    51→    51→    51→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1084:20 None of the following candidates is applicable:
+    52→    52→    52→fun max(a: Double, b: Double): Double
+    53→    53→    53→fun max(a: Float, b: Float): Float
+    54→    54→    54→fun max(a: Int, b: Int): Int
+    55→    55→    55→fun max(a: Long, b: Long): Long
+    56→    56→    56→fun max(a: UInt, b: UInt): UInt
+    57→    57→    57→fun max(a: ULong, b: ULong): ULong
+    58→    58→    58→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1335:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+    59→    59→    59→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalBeamDrawing.kt:1359:17 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+    60→    60→    60→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:797:36 Unresolved reference 'pow'.
+    61→    61→    61→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:797:52 Unresolved reference 'pow'.
+    62→    62→    62→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:797:68 Unresolved reference 'pow'.
+    63→    63→    63→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:798:29 Unresolved reference 'pow'.
+    64→    64→    64→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalColumnDrawing.kt:798:45 Unresolved reference 'pow'.
+    65→    65→    65→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:76:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    66→    66→    66→val Canvas.nativeCanvas: Canvas
+    67→    67→    67→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:135:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    68→    68→    68→val Canvas.nativeCanvas: Canvas
+    69→    69→    69→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:136:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    70→    70→    70→val Canvas.nativeCanvas: Canvas
+    71→    71→    71→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:139:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    72→    72→    72→val Canvas.nativeCanvas: Canvas
+    73→    73→    73→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:145:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    74→    74→    74→val Canvas.nativeCanvas: Canvas
+    75→    75→    75→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:156:21 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+    76→    76→    76→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:157:21 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+    77→    77→    77→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:163:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    78→    78→    78→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:163:42 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    79→    79→    79→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:174:21 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+    80→    80→    80→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:175:21 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+    81→    81→    81→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:181:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    82→    82→    82→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:181:41 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    83→    83→    83→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:198:17 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    84→    84→    84→val Canvas.nativeCanvas: Canvas
+    85→    85→    85→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:199:17 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    86→    86→    86→val Canvas.nativeCanvas: Canvas
+    87→    87→    87→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:202:21 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    88→    88→    88→val Canvas.nativeCanvas: Canvas
+    89→    89→    89→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:208:17 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+    90→    90→    90→val Canvas.nativeCanvas: Canvas
+    91→    91→    91→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:218:17 None of the following candidates is applicable:
+    92→    92→    92→fun drawRect(brush: Brush, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+    93→    93→    93→fun drawRect(color: Color, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+    94→    94→    94→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:226:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    95→    95→    95→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:226:52 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    96→    96→    96→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:304:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    97→    97→    97→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:304:35 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    98→    98→    98→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:304:47 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+    99→    99→    99→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:304:55 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   100→   100→   100→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:305:9 None of the following candidates is applicable:
+   101→   101→   101→fun DrawScope.drawDimensionLineV(x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color): Unit
+   102→   102→   102→fun DrawScope.drawDimensionLineV(x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color): Unit
+   103→   103→   103→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:311:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   104→   104→   104→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:311:36 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   105→   105→   105→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:311:51 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   106→   106→   106→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:311:66 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   107→   107→   107→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:312:13 None of the following candidates is applicable:
+   108→   108→   108→fun DrawScope.drawDimensionLineV(x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color): Unit
+   109→   109→   109→fun DrawScope.drawDimensionLineV(x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color): Unit
+   110→   110→   110→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:320:48 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   111→   111→   111→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:320:75 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   112→   112→   112→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:321:49 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   113→   113→   113→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:321:96 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   114→   114→   114→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:325:26 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   115→   115→   115→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:325:39 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   116→   116→   116→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:333:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   117→   117→   117→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:333:39 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   118→   118→   118→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:334:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   119→   119→   119→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:334:39 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   120→   120→   120→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:344:48 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   121→   121→   121→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:347:25 None of the following candidates is applicable:
+   122→   122→   122→fun min(a: Double, b: Double): Double
+   123→   123→   123→fun min(a: Float, b: Float): Float
+   124→   124→   124→fun min(a: Int, b: Int): Int
+   125→   125→   125→fun min(a: Long, b: Long): Long
+   126→   126→   126→fun min(a: UInt, b: UInt): UInt
+   127→   127→   127→fun min(a: ULong, b: ULong): ULong
+   128→   128→   128→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:363:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   129→   129→   129→val Canvas.nativeCanvas: Canvas
+   130→   130→   130→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:364:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   131→   131→   131→val Canvas.nativeCanvas: Canvas
+   132→   132→   132→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:366:20 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/text/compareTo' in 'compareTo'.
+   133→   133→   133→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:367:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   134→   134→   134→val Canvas.nativeCanvas: Canvas
+   135→   135→   135→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:373:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   136→   136→   136→val Canvas.nativeCanvas: Canvas
+   137→   137→   137→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:398:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   138→   138→   138→val Canvas.nativeCanvas: Canvas
+   139→   139→   139→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:399:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   140→   140→   140→val Canvas.nativeCanvas: Canvas
+   141→   141→   141→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:401:21 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/text/compareTo' in 'compareTo'.
+   142→   142→   142→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:402:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   143→   143→   143→val Canvas.nativeCanvas: Canvas
+   144→   144→   144→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:408:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   145→   145→   145→val Canvas.nativeCanvas: Canvas
+   146→   146→   146→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:425:61 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   147→   147→   147→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:437:38 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   148→   148→   148→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:455:53 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   149→   149→   149→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:468:62 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   150→   150→   150→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:475:63 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   151→   151→   151→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:486:47 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   152→   152→   152→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:497:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   153→   153→   153→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:498:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   154→   154→   154→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:499:33 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   155→   155→   155→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:500:33 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   156→   156→   156→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:507:55 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   157→   157→   157→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:508:56 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   158→   158→   158→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:532:39 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   159→   159→   159→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:550:87 Cannot access 'constructor(packedValue: Long): CornerRadius': it is internal in 'androidx/compose/ui/geometry/CornerRadius'.
+   160→   160→   160→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:555:53 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   161→   161→   161→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:582:61 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   162→   162→   162→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:594:9 Unresolved reference 'cx'.
+   163→   163→   163→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:596:13 Unresolved reference 'cx'.
+   164→   164→   164→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:597:49 Unresolved reference 'cx'.
+   165→   165→   165→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:597:93 Unresolved reference 'cx'.
+   166→   166→   166→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:610:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   167→   167→   167→val Canvas.nativeCanvas: Canvas
+   168→   168→   168→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalFootingDrawing.kt:628:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   169→   169→   169→val Canvas.nativeCanvas: Canvas
+   170→   170→   170→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:194:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   171→   171→   171→val Canvas.nativeCanvas: Canvas
+   172→   172→   172→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:195:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   173→   173→   173→val Canvas.nativeCanvas: Canvas
+   174→   174→   174→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:204:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   175→   175→   175→val Canvas.nativeCanvas: Canvas
+   176→   176→   176→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:210:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   177→   177→   177→val Canvas.nativeCanvas: Canvas
+   178→   178→   178→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:382:26 Unresolved reference 'cover'.
+   179→   179→   179→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:398:31 Unresolved reference 'sin'.
+   180→   180→   180→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:398:67 Unresolved reference 'sin'.
+   181→   181→   181→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:413:5 None of the following candidates is applicable:
+   182→   182→   182→fun drawLine(brush: Brush, start: Offset, end: Offset, strokeWidth: Float = ..., cap: StrokeCap = ..., pathEffect: PathEffect? = ..., alpha: Float = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+   183→   183→   183→fun drawLine(color: Color, start: Offset, end: Offset, strokeWidth: Float = ..., cap: StrokeCap = ..., pathEffect: PathEffect? = ..., alpha: Float = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+   184→   184→   184→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:661:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   185→   185→   185→val Canvas.nativeCanvas: Canvas
+   186→   186→   186→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:662:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   187→   187→   187→val Canvas.nativeCanvas: Canvas
+   188→   188→   188→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:665:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   189→   189→   189→val Canvas.nativeCanvas: Canvas
+   190→   190→   190→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:671:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   191→   191→   191→val Canvas.nativeCanvas: Canvas
+   192→   192→   192→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:676:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   193→   193→   193→val Canvas.nativeCanvas: Canvas
+   194→   194→   194→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:678:10 Unresolved reference 'asAndroidPath'.
+   195→   195→   195→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:678:26 Cannot infer type for this parameter. Please specify it explicitly.
+   196→   196→   196→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:678:30 Cannot infer type for this parameter. Please specify it explicitly.
+   197→   197→   197→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:679:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   198→   198→   198→val Canvas.nativeCanvas: Canvas
+   199→   199→   199→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:682:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   200→   200→   200→val Canvas.nativeCanvas: Canvas
+   201→   201→   201→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:688:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   202→   202→   202→val Canvas.nativeCanvas: Canvas
+   203→   203→   203→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalRetainingWallDrawing.kt:735:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+   204→   204→   204→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:74:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   205→   205→   205→val Canvas.nativeCanvas: Canvas
+   206→   206→   206→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:89:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   207→   207→   207→val Canvas.nativeCanvas: Canvas
+   208→   208→   208→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:150:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   209→   209→   209→val Canvas.nativeCanvas: Canvas
+   210→   210→   210→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:151:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   211→   211→   211→val Canvas.nativeCanvas: Canvas
+   212→   212→   212→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:155:13 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   213→   213→   213→val Canvas.nativeCanvas: Canvas
+   214→   214→   214→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:161:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   215→   215→   215→val Canvas.nativeCanvas: Canvas
+   216→   216→   216→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:263:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   217→   217→   217→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:263:45 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   218→   218→   218→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:276:28 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   219→   219→   219→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:276:44 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   220→   220→   220→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:334:25 None of the following candidates is applicable:
+   221→   221→   221→fun drawRect(brush: Brush, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+   222→   222→   222→fun drawRect(color: Color, topLeft: Offset = ..., size: Size = ..., alpha: Float = ..., style: DrawStyle = ..., colorFilter: ColorFilter? = ..., blendMode: BlendMode = ...): Unit
+   223→   223→   223→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:341:40 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   224→   224→   224→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:341:59 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   225→   225→   225→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:357:13 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   226→   226→   226→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:357:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   227→   227→   227→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:357:38 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   228→   228→   228→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:357:49 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   229→   229→   229→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:360:9 Cannot access 'fun DrawScope.drawDimensionLineV(x1: Float, y1: Float, x2: Float, y2: Float, text: String, color: Color): Unit': it is private in file.
+   230→   230→   230→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:366:26 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   231→   231→   231→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:366:42 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   232→   232→   232→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:381:29 None of the following candidates is applicable:
+   233→   233→   233→fun min(a: Double, b: Double): Double
+   234→   234→   234→fun min(a: Float, b: Float): Float
+   235→   235→   235→fun min(a: Int, b: Int): Int
+   236→   236→   236→fun min(a: Long, b: Long): Long
+   237→   237→   237→fun min(a: UInt, b: UInt): UInt
+   238→   238→   238→fun min(a: ULong, b: ULong): ULong
+   239→   239→   239→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:402:24 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/text/compareTo' in 'compareTo'.
+   240→   240→   240→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:499:28 Cannot infer type for this parameter. Please specify it explicitly.
+   241→   241→   241→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:499:35 Cannot infer type for this parameter. Please specify it explicitly.
+   242→   242→   242→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:511:28 Cannot infer type for this parameter. Please specify it explicitly.
+   243→   243→   243→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:511:35 Cannot infer type for this parameter. Please specify it explicitly.
+   244→   244→   244→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:549:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   245→   245→   245→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:549:39 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   246→   246→   246→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:550:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   247→   247→   247→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:550:40 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   248→   248→   248→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:567:87 Cannot access 'constructor(packedValue: Long): CornerRadius': it is internal in 'androidx/compose/ui/geometry/CornerRadius'.
+   249→   249→   249→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:633:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   250→   250→   250→val Canvas.nativeCanvas: Canvas
+   251→   251→   251→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalSlabDrawing.kt:651:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   252→   252→   252→val Canvas.nativeCanvas: Canvas
+   253→   253→   253→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:241:19 Unresolved reference 'stairWidth'.
+   254→   254→   254→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:468:9 Cannot access 'fun DrawScope.drawTextWithBackground(text: String, x: Float, y: Float, textColor: Color, bgColor: Color, textSize: Float = ...): Unit': it is private in file.
+   255→   255→   255→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:666:20 None of the following candidates is applicable:
+   256→   256→   256→fun max(a: Double, b: Double): Double
+   257→   257→   257→fun max(a: Float, b: Float): Float
+   258→   258→   258→fun max(a: Int, b: Int): Int
+   259→   259→   259→fun max(a: Long, b: Long): Long
+   260→   260→   260→fun max(a: UInt, b: UInt): UInt
+   261→   261→   261→fun max(a: ULong, b: ULong): ULong
+   262→   262→   262→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:697:20 None of the following candidates is applicable:
+   263→   263→   263→fun max(a: Double, b: Double): Double
+   264→   264→   264→fun max(a: Float, b: Float): Float
+   265→   265→   265→fun max(a: Int, b: Int): Int
+   266→   266→   266→fun max(a: Long, b: Long): Long
+   267→   267→   267→fun max(a: UInt, b: UInt): UInt
+   268→   268→   268→fun max(a: ULong, b: ULong): ULong
+   269→   269→   269→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:726:21 None of the following candidates is applicable:
+   270→   270→   270→fun max(a: Double, b: Double): Double
+   271→   271→   271→fun max(a: Float, b: Float): Float
+   272→   272→   272→fun max(a: Int, b: Int): Int
+   273→   273→   273→fun max(a: Long, b: Long): Long
+   274→   274→   274→fun max(a: UInt, b: UInt): UInt
+   275→   275→   275→fun max(a: ULong, b: ULong): ULong
+   276→   276→   276→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1515:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+   277→   277→   277→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1538:17 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+   278→   278→   278→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1588:33 Unresolved reference 'x'.
+   279→   279→   279→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1588:33 Only expressions are allowed in this context.
+   280→   280→   280→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1588:82 Unresolved reference 'y'.
+   281→   281→   281→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1588:82 Only expressions are allowed in this context.
+   282→   282→   282→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1589:31 Unresolved reference 'x'.
+   283→   283→   283→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1589:31 Only expressions are allowed in this context.
+   284→   284→   284→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1589:80 Unresolved reference 'y'.
+   285→   285→   285→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalStairDrawing.kt:1589:80 Only expressions are allowed in this context.
+   286→   286→   286→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:318:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   287→   287→   287→val Canvas.nativeCanvas: Canvas
+   288→   288→   288→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:319:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   289→   289→   289→val Canvas.nativeCanvas: Canvas
+   290→   290→   290→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:322:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   291→   291→   291→val Canvas.nativeCanvas: Canvas
+   292→   292→   292→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:328:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   293→   293→   293→val Canvas.nativeCanvas: Canvas
+   294→   294→   294→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:480:9 None of the following candidates is applicable:
+   295→   295→   295→fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color = ..., size: Float = ..., center: Boolean = ..., bold: Boolean = ..., rotation: Float = ...): Unit
+   296→   296→   296→fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float, center: Boolean = ...): Unit
+   297→   297→   297→fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float): Unit
+   298→   298→   298→fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float): Unit
+   299→   299→   299→fun DrawScope.drawTextAnnotated(text: String, x: Float, y: Float, color: Color, size: Float): Unit
+   300→   300→   300→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:510:33 Unresolved reference 'insetWidth'.
+   301→   301→   301→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:726:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   302→   302→   302→val Canvas.nativeCanvas: Canvas
+   303→   303→   303→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:727:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   304→   304→   304→val Canvas.nativeCanvas: Canvas
+   305→   305→   305→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:730:9 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   306→   306→   306→val Canvas.nativeCanvas: Canvas
+   307→   307→   307→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:736:5 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+   308→   308→   308→val Canvas.nativeCanvas: Canvas
+   309→   309→   309→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/drawings/ProfessionalTankDrawing.kt:785:26 Assignment type mismatch: actual type is 'androidx.compose.ui.graphics.Color', but 'kotlin.Int' was expected.
+   310→   310→   310→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ArchiveScreen.kt:64:48 Unresolved reference 'deleteProject'.
+   311→   311→   311→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:466:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   312→   312→   312→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:468:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   313→   313→   313→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:475:36 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   314→   314→   314→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:477:36 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   315→   315→   315→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:480:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   316→   316→   316→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:482:32 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   317→   317→   317→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:519:75 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   318→   318→   318→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:520:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   319→   319→   319→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:520:95 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   320→   320→   320→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:521:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   321→   321→   321→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:525:87 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   322→   322→   322→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:528:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   323→   323→   323→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:528:90 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   324→   324→   324→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:534:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   325→   325→   325→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:534:95 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   326→   326→   326→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:541:87 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   327→   327→   327→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:543:34 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   328→   328→   328→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:543:90 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   329→   329→   329→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:564:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   330→   330→   330→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:566:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   331→   331→   331→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:595:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   332→   332→   332→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:596:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   333→   333→   333→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:598:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   334→   334→   334→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:599:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   335→   335→   335→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:629:21 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   336→   336→   336→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:629:34 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   337→   337→   337→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:630:21 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   338→   338→   338→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:630:34 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   339→   339→   339→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:632:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   340→   340→   340→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:633:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   341→   341→   341→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:635:38 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   342→   342→   342→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:640:21 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   343→   343→   343→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:640:34 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   344→   344→   344→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:641:21 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   345→   345→   345→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:641:34 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   346→   346→   346→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:643:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   347→   347→   347→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:644:23 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   348→   348→   348→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:646:58 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   349→   349→   349→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:648:52 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   350→   350→   350→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:656:25 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   351→   351→   351→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:656:38 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   352→   352→   352→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:657:25 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   353→   353→   353→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:657:40 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   354→   354→   354→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:660:62 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   355→   355→   355→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:662:45 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   356→   356→   356→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:671:25 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   357→   357→   357→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:671:38 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   358→   358→   358→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:672:25 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   359→   359→   359→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:672:41 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   360→   360→   360→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:674:27 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   361→   361→   361→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:675:27 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   362→   362→   362→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:677:45 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   363→   363→   363→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:694:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   364→   364→   364→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:695:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   365→   365→   365→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:697:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   366→   366→   366→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:698:17 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   367→   367→   367→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:703:64 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   368→   368→   368→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:705:46 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   369→   369→   369→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:726:82 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   370→   370→   370→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:729:46 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   371→   371→   371→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:733:34 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   372→   372→   372→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:739:77 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
+   373→   373→   373→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:742:58 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   374→   374→   374→e: file:///home/z/my-project/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/StairScreen.kt:746:35 Argument type mismatch: actual type is 'kotlin.Double', but 'kotlin.Float' was expected.
+   375→   375→   375→
+   376→   376→   376→FAILURE: Build failed with an exception.
+   377→   377→   377→
+   378→   378→   378→* What went wrong:
+   379→   379→   379→Execution failed for task ':app:compileDebugKotlin'.
+   380→   380→   380→> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   381→   381→   381→   > Compilation error. See log for more details
+   382→   382→   382→
+   383→   383→   383→* Try:
+   384→   384→   384→> Run with --stacktrace option to get the stack trace.
+   385→   385→   385→> Run with --info or --debug option to get more log output.
+   386→   386→   386→> Run with --scan to get full insights.
+   387→   387→   387→> Get more help at https://help.gradle.org.
+   388→   388→   388→
+   389→   389→   389→BUILD FAILED in 1m 33s
+   390→   390→   390→EXIT: 1

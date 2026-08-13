@@ -1,0 +1,502 @@
+     1→     1→     1→package com.civileg.app.ui.compose.screens
+     2→     2→     2→
+     3→     3→     3→import android.content.Context
+     4→     4→     4→import android.content.Intent
+     5→     5→     5→import android.graphics.Bitmap
+     6→     6→     6→import android.graphics.Canvas
+     7→     7→     7→import android.graphics.Paint
+     8→     8→     8→import android.net.Uri
+     9→     9→     9→import android.widget.Toast
+    10→    10→    10→import androidx.compose.foundation.BorderStroke
+    11→    11→    11→import androidx.compose.foundation.Canvas as ComposeCanvas
+    12→    12→    12→import androidx.compose.foundation.background
+    13→    13→    13→import androidx.compose.foundation.layout.*
+    14→    14→    14→import androidx.compose.foundation.lazy.LazyColumn
+    15→    15→    15→import androidx.compose.foundation.lazy.items
+    16→    16→    16→import androidx.compose.foundation.shape.RoundedCornerShape
+    17→    17→    17→import androidx.compose.foundation.text.KeyboardOptions
+    18→    18→    18→import androidx.compose.material.icons.Icons
+    19→    19→    19→import androidx.compose.material.icons.automirrored.filled.ArrowBack
+    20→    20→    20→import androidx.compose.material.icons.filled.*
+    21→    21→    21→import androidx.compose.material3.*
+    22→    22→    22→import androidx.compose.runtime.*
+    23→    23→    23→import androidx.compose.runtime.livedata.observeAsState
+    24→    24→    24→import androidx.compose.ui.Alignment
+    25→    25→    25→import androidx.compose.ui.Modifier
+    26→    26→    26→import androidx.compose.ui.geometry.Offset
+    27→    27→    27→import androidx.compose.ui.geometry.Size
+    28→    28→    28→import androidx.compose.ui.graphics.Color
+    29→    29→    29→import androidx.compose.ui.graphics.Path
+    30→    30→    30→import androidx.compose.ui.graphics.nativeCanvas
+    31→    31→    31→import androidx.compose.ui.platform.LocalContext
+    32→    32→    32→import androidx.compose.ui.res.painterResource
+    33→    33→    33→import androidx.compose.ui.text.font.FontWeight
+    34→    34→    34→import androidx.compose.ui.text.input.KeyboardType
+    35→    35→    35→import androidx.compose.ui.unit.dp
+    36→    36→    36→import androidx.compose.ui.unit.sp
+    37→    37→    37→import androidx.core.content.FileProvider
+    38→    38→    38→import androidx.hilt.navigation.compose.hiltViewModel
+    39→    39→    39→import com.civileg.app.R
+    40→    40→    40→import com.civileg.app.domain.entities.*
+    41→    41→    41→import com.civileg.app.utils.CalculatorEngine
+    42→    42→    42→import com.civileg.app.utils.PdfGenerator
+    43→    43→    43→import com.civileg.app.viewmodel.SteelViewModel
+    44→    44→    44→import java.io.File
+    45→    45→    45→import kotlin.math.PI
+    46→    46→    46→import kotlin.math.ceil
+    47→    47→    47→import kotlin.math.max
+    48→    48→    48→import kotlin.math.min
+    49→    49→    49→import kotlin.math.atan2
+    50→    50→    50→import kotlin.math.cos
+    51→    51→    51→import kotlin.math.sin
+    52→    52→    52→import kotlin.math.abs
+    53→    53→    53→import kotlin.math.pow
+    54→    54→    54→import kotlin.math.sqrt
+    55→    55→    55→
+    56→    56→    56→@OptIn(ExperimentalMaterial3Api::class)
+    57→    57→    57→@Composable
+    58→    58→    58→fun SteelDesignScreen(
+    59→    59→    59→    viewModel: SteelViewModel = hiltViewModel(),
+    60→    60→    60→    onNavigateBack: () -> Unit = {}
+    61→    61→    61→) {
+    62→    62→    62→    val result by viewModel.result.observeAsState()
+    63→    63→    63→    val warehouseResult by viewModel.warehouseResult.observeAsState()
+    64→    64→    64→    val isLoading by viewModel.isLoading.observeAsState(false)
+    65→    65→    65→    val errorMessage by viewModel.errorMessage.observeAsState()
+    66→    66→    66→    
+    67→    67→    67→    val context = LocalContext.current
+    68→    68→    68→    var selectedTab by remember { mutableIntStateOf(0) }
+    69→    69→    69→    val tabs = listOf("المستودعات", "القطاعات", "اللحام", "المسامير")
+    70→    70→    70→
+    71→    71→    71→    // Handle error messages from ViewModel
+    72→    72→    72→    LaunchedEffect(errorMessage) {
+    73→    73→    73→        errorMessage?.let {
+    74→    74→    74→            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+    75→    75→    75→        }
+    76→    76→    76→    }
+    77→    77→    77→
+    78→    78→    78→    Scaffold(
+    79→    79→    79→        topBar = {
+    80→    80→    80→            TopAppBar(
+    81→    81→    81→                title = { Text("Steel Structure Design Pro", fontWeight = FontWeight.Bold) },
+    82→    82→    82→                navigationIcon = {
+    83→    83→    83→                    IconButton(onClick = onNavigateBack) {
+    84→    84→    84→                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+    85→    85→    85→                    }
+    86→    86→    86→                },
+    87→    87→    87→                actions = {
+    88→    88→    88→                    IconButton(onClick = { viewModel.resetResult() }) {
+    89→    89→    89→                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+    90→    90→    90→                    }
+    91→    91→    91→                }
+    92→    92→    92→            )
+    93→    93→    93→        }
+    94→    94→    94→    ) { padding ->
+    95→    95→    95→        Column(modifier = Modifier.padding(padding)) {
+    96→    96→    96→            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 0.dp) {
+    97→    97→    97→                tabs.forEachIndexed { index, title ->
+    98→    98→    98→                    Tab(
+    99→    99→    99→                        selected = selectedTab == index, 
+   100→   100→   100→                        onClick = { 
+   101→   101→   101→                            if (selectedTab != index) {
+   102→   102→   102→                                viewModel.resetResult()
+   103→   103→   103→                                selectedTab = index 
+   104→   104→   104→                            }
+   105→   105→   105→                        }, 
+   106→   106→   106→                        text = { Text(title) }
+   107→   107→   107→                    )
+   108→   108→   108→                }
+   109→   109→   109→            }
+   110→   110→   110→
+   111→   111→   111→            when (selectedTab) {
+   112→   112→   112→                0 -> SteelWarehouseTab(viewModel, warehouseResult, isLoading)
+   113→   113→   113→                1 -> SteelSectionTab(viewModel, result, isLoading)
+   114→   114→   114→                2 -> WeldDesignTab(viewModel)
+   115→   115→   115→                3 -> BoltDesignTab(viewModel)
+   116→   116→   116→            }
+   117→   117→   117→        }
+   118→   118→   118→    }
+   119→   119→   119→}
+   120→   120→   120→
+   121→   121→   121→@OptIn(ExperimentalMaterial3Api::class)
+   122→   122→   122→@Composable
+   123→   123→   123→fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisResult?, isLoading: Boolean) {
+   124→   124→   124→    val context = LocalContext.current
+   125→   125→   125→    var span by remember { mutableStateOf("12") }
+   126→   126→   126→    var length by remember { mutableStateOf("30") }
+   127→   127→   127→    var eaveHeight by remember { mutableStateOf("6") }
+   128→   128→   128→    var ridgeHeight by remember { mutableStateOf("7.5") }
+   129→   129→   129→    var baySpacing by remember { mutableStateOf("6") }
+   130→   130→   130→    var floors by remember { mutableStateOf("1") }
+   131→   131→   131→    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+   132→   132→   132→
+   133→   133→   133→    val currentInputs = remember(span, length, eaveHeight, ridgeHeight, baySpacing, floors, selectedCode) {
+   134→   134→   134→        SteelWarehouseInputs(
+   135→   135→   135→            span = span.toDoubleOrNull() ?: 12.0,
+   136→   136→   136→            length = length.toDoubleOrNull() ?: 30.0,
+   137→   137→   137→            eaveHeight = eaveHeight.toDoubleOrNull() ?: 6.0,
+   138→   138→   138→            ridgeHeight = ridgeHeight.toDoubleOrNull() ?: 7.5,
+   139→   139→   139→            baySpacing = baySpacing.toDoubleOrNull() ?: 6.0,
+   140→   140→   140→            numberOfStories = floors.toIntOrNull() ?: 1,
+   141→   141→   141→            code = when(selectedCode) {
+   142→   142→   142→                CalculatorEngine.DesignCode.EGYPTIAN -> DesignCode.ECP
+   143→   143→   143→                CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+   144→   144→   144→                else -> DesignCode.ACI
+   145→   145→   145→            }
+   146→   146→   146→        )
+   147→   147→   147→    }
+   148→   148→   148→
+   149→   149→   149→    LazyColumn(
+   150→   150→   150→        modifier = Modifier.fillMaxSize().padding(16.dp),
+   151→   151→   151→        verticalArrangement = Arrangement.spacedBy(16.dp)
+   152→   152→   152→    ) {
+   153→   153→   153→        item { SectionHeader("🏢 مدخلات تصميم المنشأ المعدني", R.drawable.ic_tools) }
+   154→   154→   154→
+   155→   155→   155→        item {
+   156→   156→   156→            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+   157→   157→   157→                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   158→   158→   158→                    Text("الكود المعتمد", fontWeight = FontWeight.Bold)
+   159→   159→   159→                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+   160→   160→   160→                        CalculatorEngine.DesignCode.entries.forEach { code ->
+   161→   161→   161→                            FilterChip(
+   162→   162→   162→                                selected = selectedCode == code,
+   163→   163→   163→                                onClick = { selectedCode = code },
+   164→   164→   164→                                label = { Text(code.name, fontSize = 12.sp) }
+   165→   165→   165→                            )
+   166→   166→   166→                        }
+   167→   167→   167→                    }
+   168→   168→   168→                }
+   169→   169→   169→            }
+   170→   170→   170→        }
+   171→   171→   171→
+   172→   172→   172→        item {
+   173→   173→   173→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   174→   174→   174→                SteelInputField(span, "البحر Span (m)", { span = it }, Modifier.weight(1f))
+   175→   175→   175→                SteelInputField(length, "الطول (m)", { length = it }, Modifier.weight(1f))
+   176→   176→   176→            }
+   177→   177→   177→        }
+   178→   178→   178→
+   179→   179→   179→        item {
+   180→   180→   180→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   181→   181→   181→                SteelInputField(eaveHeight, "الارتفاع (m)", { eaveHeight = it }, Modifier.weight(1f))
+   182→   182→   182→                SteelInputField(ridgeHeight, "ارتفاع القمة (m)", { ridgeHeight = it }, Modifier.weight(1f))
+   183→   183→   183→            }
+   184→   184→   184→        }
+   185→   185→   185→
+   186→   186→   186→        item {
+   187→   187→   187→            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+   188→   188→   188→                SteelInputField(baySpacing, "الباكية Bay (m)", { baySpacing = it }, Modifier.weight(1f))
+   189→   189→   189→                SteelInputField(floors, "الأدوار", { floors = it }, Modifier.weight(1f))
+   190→   190→   190→            }
+   191→   191→   191→        }
+   192→   192→   192→
+   193→   193→   193→        item {
+   194→   194→   194→            Button(
+   195→   195→   195→                onClick = { viewModel.calculateWarehouse(currentInputs) },
+   196→   196→   196→                modifier = Modifier.fillMaxWidth(),
+   197→   197→   197→                enabled = !isLoading
+   198→   198→   198→            ) {
+   199→   199→   199→                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+   200→   200→   200→                else Text("تحليل وتصميم المنشأ")
+   201→   201→   201→            }
+   202→   202→   202→        }
+   203→   203→   203→
+   204→   204→   204→        result?.let { res ->
+   205→   205→   205→            item { WarehouseResultSummary(res) }
+   206→   206→   206→            
+   207→   207→   207→            item { 
+   208→   208→   208→                Text("📐 تفاصيل المنظور الإنشائي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+   209→   209→   209→                SteelWarehouseVisualizer(currentInputs, res)
+   210→   210→   210→            }
+   211→   211→   211→
+   212→   212→   212→            item {
+   213→   213→   213→                Text("📊 تحليل الإجهادات والأحمال", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+   214→   214→   214→                StructuralAnalysisVisualizer(currentInputs, res)
+   215→   215→   215→            }
+   216→   216→   216→
+   217→   217→   217→            item {
+   218→   218→   218→                Button(
+   219→   219→   219→                    onClick = {
+   220→   220→   220→                        viewModel.exportWarehouseProToPdf(
+   221→   221→   221→                            context = context,
+   222→   222→   222→                            clientAr = "عميل افتراضي",
+   223→   223→   223→                            clientEn = "Default Client",
+   224→   224→   224→                            projAr = "مشروع مستودع معدني",
+   225→   225→   225→                            projEn = "Steel Warehouse Project"
+   226→   226→   226→                        ) { /* handled by VM */ }
+   227→   227→   227→                    },
+   228→   228→   228→                    modifier = Modifier.fillMaxWidth(),
+   229→   229→   229→                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+   230→   230→   230→                ) {
+   231→   231→   231→                    Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+   232→   232→   232→                    Spacer(modifier = Modifier.width(8.dp))
+   233→   233→   233→                    Text("إصدار التقرير الفني الهندسي (Pro Drawings)")
+   234→   234→   234→                }
+   235→   235→   235→            }
+   236→   236→   236→
+   237→   237→   237→            item { Text("📈 نتائج التحليل الحسابي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+   238→   238→   238→            item { AnalysisDetailCard(res.mainFrame) }
+   239→   239→   239→
+   240→   240→   240→            item { Text("🏗️ تفاصيل القطاعات", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+   241→   241→   241→            item { SectionResultCard("الأعمدة الرئيسية", res.mainFrame.columnSection) }
+   242→   242→   242→            item { SectionResultCard("الكمرات (Rafters)", res.mainFrame.rafterSection) }
+   243→   243→   243→            item { SecondaryMembersCard(res.secondaryMembers) }
+   244→   244→   244→            
+   245→   245→   245→            item { Text("🔗 وصلات الربط (Connections)", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+   246→   246→   246→            items(res.connections) { conn ->
+   247→   247→   247→                ConnectionDetailCard(conn)
+   248→   248→   248→            }
+   249→   249→   249→
+   250→   250→   250→            item { RecommendationsCard(res.recommendations) }
+   251→   251→   251→        }
+   252→   252→   252→    }
+   253→   253→   253→}
+   254→   254→   254→
+   255→   255→   255→@Composable
+   256→   256→   256→fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
+   257→   257→   257→    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
+   258→   258→   258→        Column(modifier = Modifier.padding(16.dp)) {
+   259→   259→   259→            Text("💰 دراسة الجدوى الاقتصادية", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   260→   260→   260→            Spacer(modifier = Modifier.height(8.dp))
+   261→   261→   261→            SummaryLine("إجمالي وزن الحديد", "%.2f Ton".format(res.totalWeight), isBold = true)
+   262→   262→   262→            SummaryLine("التكلفة التقديرية", "%,.0f EGP".format(res.estimatedTotalCost), isBold = true)
+   263→   263→   263→            SummaryLine("تكلفة المتر المسطح", "%.0f EGP/m²".format(res.costPerM2))
+   264→   264→   264→            SummaryLine("صافي الربح المتوقع", "%,.0f EGP".format(res.netProfit))
+   265→   265→   265→            SummaryLine("العائد على الاستثمار (ROI)", "%.1f %%".format(res.roi), isBold = true)
+   266→   266→   266→            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+   267→   267→   267→            Text(res.resultsByCode, fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+   268→   268→   268→        }
+   269→   269→   269→    }
+   270→   270→   270→}
+   271→   271→   271→
+   272→   272→   272→@Composable
+   273→   273→   273→fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+   274→   274→   274→    Card(
+   275→   275→   275→        modifier = Modifier.fillMaxWidth().height(220.dp).padding(vertical = 8.dp),
+   276→   276→   276→        border = BorderStroke(1.dp, Color.LightGray)
+   277→   277→   277→    ) {
+   278→   278→   278→        ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA))) {
+   279→   279→   279→            val padding = 40.dp.toPx()
+   280→   280→   280→            val w = size.width - 2 * padding
+   281→   281→   281→            val h = size.height - 2 * padding
+   282→   282→   282→            val baseY = size.height - padding
+   283→   283→   283→            
+   284→   284→   284→            // Scale calculations
+   285→   285→   285→            val scale = (w / inputs.span).toFloat()
+   286→   286→   286→            val eh = (inputs.eaveHeight * scale).toFloat()
+   287→   287→   287→            val rh = (inputs.ridgeHeight * scale).toFloat()
+   288→   288→   288→            val midX = padding + w / 2
+   289→   289→   289→            
+   290→   290→   290→            // Draw Main Frame Outline
+   291→   291→   291→            val framePath = Path().apply {
+   292→   292→   292→                moveTo(padding, baseY)
+   293→   293→   293→                lineTo(padding, baseY - eh)
+   294→   294→   294→                lineTo(midX, baseY - rh)
+   295→   295→   295→                lineTo(padding + w, baseY - eh)
+   296→   296→   296→                lineTo(padding + w, baseY)
+   297→   297→   297→            }
+   298→   298→   298→            drawPath(framePath, Color.Gray, style = androidx.compose.ui.graphics.drawscope.Stroke(1f))
+   299→   299→   299→            
+   300→   300→   300→            // Draw Distributed Load Arrows
+   301→   301→   301→            val loadColor = Color(0xFFE53935)
+   302→   302→   302→            for (i in 0..12) {
+   303→   303→   303→                val x = padding + (i * w / 12)
+   304→   304→   304→                val y = if (x <= midX) {
+   305→   305→   305→                    baseY - eh - (x - padding) / (midX - padding) * (rh - eh)
+   306→   306→   306→                } else {
+   307→   307→   307→                    baseY - rh + (x - midX) / (padding + w - midX) * (rh - eh)
+   308→   308→   308→                }
+   309→   309→   309→                drawLine(loadColor, Offset(x, y - 25f), Offset(x, y), strokeWidth = 2f)
+   310→   310→   310→                // Arrow heads
+   311→   311→   311→                drawLine(loadColor, Offset(x - 4f, y - 6f), Offset(x, y), strokeWidth = 2f)
+   312→   312→   312→                drawLine(loadColor, Offset(x + 4f, y - 6f), Offset(x, y), strokeWidth = 2f)
+   313→   313→   313→            }
+   314→   314→   314→            
+   315→   315→   315→            // Draw Moment Diagram (Simplified)
+   316→   316→   316→            val momentColor = Color(0xFF1E88E5)
+   317→   317→   317→            val momentPath = Path().apply {
+   318→   318→   318→                moveTo(padding, baseY - eh)
+   319→   319→   319→                // Simulated parabolic curve for moment
+   320→   320→   320→                cubicTo(
+   321→   321→   321→                    padding + w * 0.25f, baseY - eh + 50f,
+   322→   322→   322→                    padding + w * 0.75f, baseY - eh + 50f,
+   323→   323→   323→                    padding + w, baseY - eh
+   324→   324→   324→                )
+   325→   325→   325→            }
+   326→   326→   326→            drawPath(momentPath, momentColor.copy(alpha = 0.15f))
+   327→   327→   327→            drawPath(momentPath, momentColor, style = androidx.compose.ui.graphics.drawscope.Stroke(2f))
+   328→   328→   328→            
+   329→   329→   329→            // Labels
+   330→   330→   330→            // Note: NativeCanvas is used for text if needed, but we'll keep it simple
+   331→   331→   331→        }
+   332→   332→   332→    }
+   333→   333→   333→}
+   334→   334→   334→
+   335→   335→   335→@Composable
+   336→   336→   336→private fun SummaryLine(label: String, value: String, isBold: Boolean = false) {
+   337→   337→   337→    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+   338→   338→   338→        Text(label, fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal)
+   339→   339→   339→        Text(value, fontWeight = FontWeight.ExtraBold, color = if (isBold) MaterialTheme.colorScheme.primary else Color.Unspecified)
+   340→   340→   340→    }
+   341→   341→   341→}
+   342→   342→   342→
+   343→   343→   343→@Composable
+   344→   344→   344→fun AnalysisDetailCard(res: MainFrameResult) {
+   345→   345→   345→    Card(modifier = Modifier.fillMaxWidth()) {
+   346→   346→   346→        Column(modifier = Modifier.padding(12.dp)) {
+   347→   347→   347→            Text("إجهادات التصميم القصوى", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   348→   348→   348→            ResultRow("أقصى عزم (M_max)", "%.1f kN.m".format(res.maxMoment))
+   349→   349→   349→            ResultRow("أقصى قص (V_max)", "%.1f kN".format(res.maxShear))
+   350→   350→   350→            ResultRow("حمل محوري (P_max)", "%.1f kN".format(res.maxAxial))
+   351→   351→   351→            ResultRow("الترخيم (Deflection)", "%.1f mm".format(res.maxDeflection))
+   352→   352→   352→            Text(if (res.isSafe) "تحليل الأمان: آمن ✅" else "تحليل الأمان: تجاوز الحدود ❌", 
+   353→   353→   353→                fontWeight = FontWeight.Bold, 
+   354→   354→   354→                color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
+   355→   355→   355→                modifier = Modifier.padding(top = 8.dp)
+   356→   356→   356→            )
+   357→   357→   357→        }
+   358→   358→   358→    }
+   359→   359→   359→}
+   360→   360→   360→
+   361→   361→   361→@Composable
+   362→   362→   362→fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+   363→   363→   363→    var viewMode by remember { mutableStateOf(0) } // 0: Front, 1: Plan, 2: Side, 3: 3D
+   364→   364→   364→    val views = listOf("Front Elevation", "Plan View", "Side View", "3D Sketch")
+   365→   365→   365→
+   366→   366→   366→    Column {
+   367→   367→   367→        ScrollableTabRow(selectedTabIndex = viewMode, edgePadding = 0.dp, containerColor = Color.Transparent) {
+   368→   368→   368→            views.forEachIndexed { index, title ->
+   369→   369→   369→                Tab(selected = viewMode == index, onClick = { viewMode = index }, text = { Text(title, fontSize = 10.sp) })
+   370→   370→   370→            }
+   371→   371→   371→        }
+   372→   372→   372→
+   373→   373→   373→        Card(
+   374→   374→   374→            modifier = Modifier.fillMaxWidth().height(350.dp).padding(vertical = 8.dp),
+   375→   375→   375→            border = BorderStroke(1.dp, Color.LightGray)
+   376→   376→   376→        ) {
+   377→   377→   377→            ComposeCanvas(modifier = Modifier.fillMaxSize().background(Color.White)) {
+   378→   378→   378→                val padding = 50.dp.toPx()
+   379→   379→   379→                val scale = minOf(
+   380→   380→   380→                    (size.width - 2 * padding) / max(inputs.span, inputs.length),
+   381→   381→   381→                    (size.height - 2 * padding) / max(inputs.ridgeHeight, inputs.span)
+   382→   382→   382→                )
+   383→   383→   383→                val startX = padding
+   384→   384→   384→                val baseY = size.height - padding
+   385→   385→   385→
+   386→   386→   386→                when (viewMode) {
+   387→   387→   387→                    0 -> { // Front Elevation
+   388→   388→   388→                        drawFrontElevation(inputs, scale, startX, baseY)
+   389→   389→   389→                    }
+   390→   390→   390→                    1 -> { // Plan View
+   391→   391→   391→                        drawPlanView(inputs, scale, startX, baseY)
+   392→   392→   392→                    }
+   393→   393→   393→                    2 -> { // Side View
+   394→   394→   394→                        drawSideElevation(inputs, scale, startX, baseY)
+   395→   395→   395→                    }
+   396→   396→   396→                    3 -> { // 3D Perspective
+   397→   397→   397→                        draw3DView(inputs, scale, startX, baseY)
+   398→   398→   398→                    }
+   399→   399→   399→                }
+   400→   400→   400→            }
+   401→   401→   401→        }
+   402→   402→   402→    }
+   403→   403→   403→}
+   404→   404→   404→
+   405→   405→   405→private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFrontElevation(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
+   406→   406→   406→    val colLX = startX
+   407→   407→   407→    val colRX = startX + (inputs.span * scale).toFloat()
+   408→   408→   408→    val eaveY = baseY - (inputs.eaveHeight * scale).toFloat()
+   409→   409→   409→    val ridgeY = baseY - (inputs.ridgeHeight * scale).toFloat()
+   410→   410→   410→    val midX = startX + (inputs.span * scale / 2).toFloat()
+   411→   411→   411→
+   412→   412→   412→    // Columns
+   413→   413→   413→    drawLine(Color.Black, Offset(colLX, baseY), Offset(colLX, eaveY), strokeWidth = 8f)
+   414→   414→   414→    drawLine(Color.Black, Offset(colRX, baseY), Offset(colRX, eaveY), strokeWidth = 8f)
+   415→   415→   415→    // Rafters
+   416→   416→   416→    drawLine(Color.Black, Offset(colLX, eaveY), Offset(midX, ridgeY), strokeWidth = 8f)
+   417→   417→   417→    drawLine(Color.Black, Offset(colRX, eaveY), Offset(midX, ridgeY), strokeWidth = 8f)
+   418→   418→   418→    
+   419→   419→   419→    // Foundations
+   420→   420→   420→    drawRect(Color.Gray, Offset(colLX - 15f, baseY), Size(30f, 15f))
+   421→   421→   421→    drawRect(Color.Gray, Offset(colRX - 15f, baseY), Size(30f, 15f))
+   422→   422→   422→}
+   423→   423→   423→
+   424→   424→   424→private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPlanView(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
+   425→   425→   425→    val planW = (inputs.span * scale).toFloat()
+   426→   426→   426→    val planL = (inputs.length * scale).toFloat()
+   427→   427→   427→    val planTop = baseY - planL
+   428→   428→   428→    
+   429→   429→   429→    // Boundary
+   430→   430→   430→    drawRect(Color.Black, Offset(startX, planTop), Size(planW, planL), style = androidx.compose.ui.graphics.drawscope.Stroke(4f))
+   431→   431→   431→    
+   432→   432→   432→    // Grid Lines (Bays)
+   433→   433→   433→    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
+   434→   434→   434→    for (i in 0..numBays) {
+   435→   435→   435→        val y = planTop + (i * inputs.baySpacing * scale).toFloat()
+   436→   436→   436→        drawLine(Color.LightGray, Offset(startX, y), Offset(startX + planW, y), strokeWidth = 1f)
+   437→   437→   437→        // Columns markers
+   438→   438→   438→        drawCircle(Color.Black, 4f, Offset(startX, y))
+   439→   439→   439→        drawCircle(Color.Black, 4f, Offset(startX + planW, y))
+   440→   440→   440→    }
+   441→   441→   441→}
+   442→   442→   442→
+   443→   443→   443→private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSideElevation(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
+   444→   444→   444→    val planL = (inputs.length * scale).toFloat()
+   445→   445→   445→    val eaveH = (inputs.eaveHeight * scale).toFloat()
+   446→   446→   446→    val eaveY = baseY - eaveH
+   447→   447→   447→    
+   448→   448→   448→    // Ground
+   449→   449→   449→    drawLine(Color.Gray, Offset(startX, baseY), Offset(startX + planL, baseY), strokeWidth = 2f)
+   450→   450→   450→    
+   451→   451→   451→    // Columns
+   452→   452→   452→    val numBays = ceil(inputs.length / inputs.baySpacing).toInt()
+   453→   453→   453→    for (i in 0..numBays) {
+   454→   454→   454→        val x = startX + (i * inputs.baySpacing * scale).toFloat()
+   455→   455→   455→        drawLine(Color.Black, Offset(x, baseY), Offset(x, eaveY), strokeWidth = 6f)
+   456→   456→   456→    }
+   457→   457→   457→    // Eave Line
+   458→   458→   458→    drawLine(Color.Black, Offset(startX, eaveY), Offset(startX + planL, eaveY), strokeWidth = 6f)
+   459→   459→   459→}
+   460→   460→   460→
+   461→   461→   461→private fun androidx.compose.ui.graphics.drawscope.DrawScope.draw3DView(inputs: SteelWarehouseInputs, scale: Double, startX: Float, baseY: Float) {
+   462→   462→   462→    val s = scale.toFloat() * 0.65f
+   463→   463→   463→    val depthOff = 35f
+   464→   464→   464→    
+   465→   465→   465→    // Draw from back to front for better perspective look
+   466→   466→   466→    for (i in 4 downTo 0) {
+   467→   467→   467→        val off = i * depthOff
+   468→   468→   468→        val x0 = startX + off
+   469→   469→   469→        val y0 = baseY - off
+   470→   470→   470→        val spanW = (inputs.span * s).toFloat()
+   471→   471→   471→        val eaveH = (inputs.eaveHeight * s).toFloat()
+   472→   472→   472→        val ridgeH = (inputs.ridgeHeight * s).toFloat()
+   473→   473→   473→        
+   474→   474→   474→        val color = if (i == 0) Color.Black else Color.Gray.copy(alpha = 0.4f)
+   475→   475→   475→        val stroke = if (i == 0) 3f else 1.5f
+   476→   476→   476→        
+   477→   477→   477→        // Sections of the frame
+   478→   478→   478→        drawLine(color, Offset(x0, y0), Offset(x0, y0 - eaveH), strokeWidth = stroke)
+   479→   479→   479→        drawLine(color, Offset(x0 + spanW, y0), Offset(x0 + spanW, y0 - eaveH), strokeWidth = stroke)
+   480→   480→   480→        drawLine(color, Offset(x0, y0 - eaveH), Offset(x0 + spanW / 2, y0 - ridgeH), strokeWidth = stroke)
+   481→   481→   481→        drawLine(color, Offset(x0 + spanW, y0 - eaveH), Offset(x0 + spanW / 2, y0 - ridgeH), strokeWidth = stroke)
+   482→   482→   482→        
+   483→   483→   483→        // Purlins/Girts connections (longitudinal)
+   484→   484→   484→        if (i > 0) {
+   485→   485→   485→            val px = x0 - depthOff
+   486→   486→   486→            val py = y0 + depthOff
+   487→   487→   487→            val lineCol = Color.LightGray.copy(alpha = 0.5f)
+   488→   488→   488→            drawLine(lineCol, Offset(x0, y0 - eaveH), Offset(px, py - eaveH), strokeWidth = 1f)
+   489→   489→   489→            drawLine(lineCol, Offset(x0 + spanW, y0 - eaveH), Offset(px + spanW, py - eaveH), strokeWidth = 1f)
+   490→   490→   490→            drawLine(lineCol, Offset(x0 + spanW / 2, y0 - ridgeH), Offset(px + spanW / 2, py - ridgeH), strokeWidth = 1f)
+   491→   491→   491→        }
+   492→   492→   492→    }
+   493→   493→   493→}
+   494→   494→   494→
+   495→   495→   495→fun createWarehouseBitmap(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult): Bitmap {
+   496→   496→   496→    val bitmap = Bitmap.createBitmap(1200, 1600, Bitmap.Config.ARGB_8888)
+   497→   497→   497→    val canvas = Canvas(bitmap)
+   498→   498→   498→    canvas.drawColor(android.graphics.Color.WHITE)
+   499→   499→   499→    
+   500→   500→   500→    val p = Paint().apply { color = android.graphics.Color.BLACK; strokeWidth = 4f; style = Paint.Style.STROKE }
+
+[showing lines 1-500 of 1304; use offset=501 with limit to continue reading]

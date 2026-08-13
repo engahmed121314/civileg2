@@ -1,0 +1,1311 @@
+     1→     1→package com.civileg.app.domain.calculations.ecp
+     2→     2→
+     3→     3→import com.civileg.app.domain.entities.BoltConnectionType
+     4→     4→import com.civileg.app.domain.entities.BoltGrade
+     5→     5→import com.civileg.app.domain.entities.BoltPattern
+     6→     6→import com.civileg.app.domain.entities.ConnectionType
+     7→     7→import com.civileg.app.domain.entities.ElectrodeType
+     8→     8→import com.civileg.app.domain.entities.SteelGrade
+     9→     9→import com.civileg.app.domain.entities.WeldType
+    10→    10→import kotlin.math.*
+    11→    11→
+    12→    12→/**
+    13→    13→ * ============================
+    14→    14→ * تصميم الوصلات المعدنية (Steel Connection Design)
+    15→    15→ * ============================
+    16→    16→ *
+    17→    17→ * فحص الوصلات المساميرية والملحومة حسب:
+    18→    18→ * - الكود المصري ECP 205 (الفصل الخامس والسادس)
+    19→    19→ * - الكود الأمريكي AISC 360 (الفصل J2 للوصلة الملحومة، الفصل J3 للوصلة المساميرية، الفصل J4 للقص الكتلي)
+    20→    20→ *
+    21→    21→ * يغطي الملف:
+    22→    22→ * - حساب مقاومة القص للمسمار (Bolt Shear Capacity)
+    23→    23→ * - حساب مقاومة التحمل (Bearing Capacity)
+    24→    24→ * - حساب مقاومة الشد للمسمار (Bolt Tension Capacity)
+    25→    25→ * - فحص القص المشترك مع الشد (Combined Shear-Tension)
+    26→    26→ * - فحص الوصلات الانزلاقية (Slip-Critical Connections)
+    27→    27→ * - فحص القص الكتلي (Block Shear)
+    28→    28→ * - حساب مقاومة اللحام التفريغي (Fillet Weld Capacity)
+    29→    29→ * - المسافات الدنيا والعظمى (Minimum/Maximum Edge Distance & Spacing)
+    30→    30→ * - أحجام اللحام الدنيا والعظمى (Min/Max Fillet Weld Size)
+    31→    31→ */
+    32→    32→
+    33→    33→// ===================== كيانات النتائج =====================
+    34→    34→
+    35→    35→/**
+    36→    36→ * نتيجة تصميم وصلة مساميرية
+    37→    37→ * تحتوي على كل المعطيات الحسابية والمخرجات لفحص الوصلة
+    38→    38→ */
+    39→    39→data class BoltDesignResult(
+    40→    40→    val boltDiameter: Double,         // قطر المسمار (مم)
+    41→    41→    val boltGrade: BoltGrade,         // درجة المسمار
+    42→    42→    val numberOfBolts: Int,           // عدد المسامير
+    43→    43→    val boltPattern: BoltPattern,     // نمط توزيع المسامير
+    44→    44→    val shearCapacity: Double,        // مقاومة القص لكل مسمار (كيلونيوتن)
+    45→    45→    val bearingCapacity: Double,      // مقاومة التحمل لكل مسمار (كيلونيوتن)
+    46→    46→    val tensionCapacity: Double,      // مقاومة الشد لكل مسمار (كيلونيوتن)
+    47→    47→    val controllingCapacity: Double,  // المقاومة الحاكمة (كيلونيوتن) - أقل مقاومة
+    48→    48→    val isSafe: Boolean,              // هل الوصلة آمنة؟
+    49→    49→    val utilizationRatio: Double,     // نسبة الإجهاد المستخدم (Utilization Ratio)
+    50→    50→    val edgeDistance: Double,         // المسافة من حافة القطاع لمركز المسمار (مم)
+    51→    51→    val boltSpacing: Double,          // المسافة بين مراكز المسامير (مم)
+    52→    52→    val gaugeDistance: Double,        // المسافة عرضية بين صفوف المسامير (مم)
+    53→    53→    val blockShearCheck: BlockShearResult?, // نتيجة فحص القص الكتلي
+    54→    54→    val warnings: List<String>,       // تحذيرات التصميم
+    55→    55→    val codeNotes: List<String>       // ملاحظات الكود
+    56→    56→)
+    57→    57→
+    58→    58→/**
+    59→    59→ * نتيجة تصميم وصلة ملحومة
+    60→    60→ * تحتوي على كل المعطيات الحسابية والمخرجات لفحص اللحام
+    61→    61→ */
+    62→    62→data class WeldDesignResult(
+    63→    63→    val weldType: WeldType,           // نوع اللحام (تفريغي / خيط / إسفنجي / خاني)
+    64→    64→    val weldSize: Double,             // حجم اللحام (مم) - طول ضلع اللحام التفريغي
+    65→    65→    val weldLength: Double,           // الطول الفعال لللحام (مم)
+    66→    66→    val electrodeType: ElectrodeType, // نوع القطب الملحوم
+    67→    67→    val capacity: Double,             // مقاومة اللحام (كيلونيوتن)
+    68→    68→    val throatArea: Double,           // مساحة الحلق الفعالة (مم²)
+    69→    69→    val isSafe: Boolean,              // هل اللحام آمن؟
+    70→    70→    val utilizationRatio: Double,     // نسبة الإجهاد المستخدم
+    71→    71→    val warnings: List<String>,       // تحذيرات التصميم
+    72→    72→    val codeNotes: List<String>       // ملاحظات الكود
+    73→    73→)
+    74→    74→
+    75→    75→/**
+    76→    76→ * نتيجة فحص القص الكتلي (Block Shear)
+    77→    77→ * حسب AISC 360 القسم J4.3 و ECP 205
+    78→    78→ */
+    79→    79→data class BlockShearResult(
+    80→    80→    val ruptureStrength: Double,      // مقاومة التمزق (كيلونيوتن)
+    81→    81→    val yieldStrength: Double,        // مقاومة الخضوع (كيلونيوتن)
+    82→    82→    val capacity: Double,             // المقاومة التصميمية (كيلونيوتن)
+    83→    83→    val isSafe: Boolean,              // هل يحقق متطلبات الأمان؟
+    84→    84→    val utilizationRatio: Double      // نسبة الإجهاد المستخدم
+    85→    85→)
+    86→    86→
+    87→    87→/**
+    88→    88→ * ============================
+    89→    89→ * الفئة الرئيسية لتصميم الوصلات المعدنية
+    90→    90→ * ============================
+    91→    91→ */
+    92→    92→class SteelConnectionDesign {
+    93→    93→
+    94→    94→    companion object {
+    95→    95→        // ===================== معاملات المقاومة (Resistance Factors) =====================
+    96→    96→
+    97→    97→        // معامل المقاومة للوصلة المساميرية (تحمل / قص / شد) - AISC 360-J3 و ECP 205-5
+    98→    98→        private const val PHI_BEARING_CONNECTION = 0.75
+    99→    99→        // معامل المقاومة للوصلة الانزلاقية عند أحمال الخدمة - AISC 360-J3.8
+   100→   100→        private const val PHI_SLIP_CRITICAL = 1.0
+   101→   101→        // معامل المقاومة للقص الكتلي - AISC 360-J4
+   102→   102→        private const val PHI_BLOCK_SHEAR = 0.75
+   103→   103→        // معامل المقاومة لللحام التفريغي - AISC 360-J2 و ECP 205-6
+   104→   104→        private const val PHI_WELD = 0.75
+   105→   105→        // معامل ثبات الاحتكاك للوصلة الانزلاقية - AISC 360-J3.8
+   106→   106→        // (معامل الاحتكاك μ مضروب في معامل الثبات Du)
+   107→   107→        private const val DU_SLIP_FACTOR = 1.13  // Du = 1.13 for standard holes
+   108→   108→
+   109→   109→        // ===================== جدول معاملات الاحتكاك للوصلات الانزلاقية =====================
+   110→   110→        // حسب AISC 360 الجدول J3.8 - معامل الاحتكاك (μ)
+   111→   111→        private val FRICTION_COEFFICIENTS = mapOf(
+   112→   112→            "CLASS_A" to 0.35,   // سطح فولاذي نظيف (طريقة الشد بالزيت)
+   113→   113→            "CLASS_B" to 0.50,   // سطح فولاذي منزوع الصدأ (طريقة الشد بالرمل)
+   114→   114→            "CLASS_C" to 0.40    // سطح فولاذي مُعالج بالجلفنة
+   115→   115→        )
+   116→   116→
+   117→   117→        // ===================== جدول أقطار المسامير القياسية (مم) =====================
+   118→   118→        // المساحات الاسمية والمساحات المقطوعة المسمارية
+   119→   119→        private val BOLT_DATA = mapOf(
+   120→   120→            // المفتاح: قطر المسمار (مم)، القيمة: مصفوفة [المساحة الاسمية (مم²)، المساحة المقطوعة (مم²)]
+   121→   121→            12.0 to arrayOf(113.1, 84.3),
+   122→   122→            14.0 to arrayOf(153.9, 115.0),
+   123→   123→            16.0 to arrayOf(201.1, 157.0),
+   124→   124→            18.0 to arrayOf(254.5, 192.0),
+   125→   125→            20.0 to arrayOf(314.2, 245.0),
+   126→   126→            22.0 to arrayOf(380.1, 303.0),
+   127→   127→            24.0 to arrayOf(452.4, 353.0),
+   128→   128→            27.0 to arrayOf(572.6, 459.0),
+   129→   129→            30.0 to arrayOf(706.9, 561.0),
+   130→   130→            33.0 to arrayOf(855.3, 694.0),
+   131→   131→            36.0 to arrayOf(1017.9, 817.0)
+   132→   132→        )
+   133→   133→
+   134→   134→        // ===================== جدول المسافات الدنيا من الحافة (مم) =====================
+   135→   135→        // حسب AISC 360 الجدول J3.4 و ECP 205 جدول (5.1)
+   136→   136→        // القيمة: المسافة الدنيا من حافة القطاع لمركز المسمار
+   137→   137→        private val MIN_EDGE_DISTANCE = mapOf(
+   138→   138→            12.0 to 22.0,
+   139→   139→            14.0 to 25.0,
+   140→   140→            16.0 to 28.0,
+   141→   141→            18.0 to 31.0,
+   142→   142→            20.0 to 34.0,
+   143→   143→            22.0 to 38.0,
+   144→   144→            24.0 to 41.0,
+   145→   145→            27.0 to 44.0,
+   146→   146→            30.0 to 47.0,
+   147→   147→            33.0 to 51.0,
+   148→   148→            36.0 to 54.0
+   149→   149→        )
+   150→   150→
+   151→   151→        // ===================== جدول أحجام اللحام التفريغي الدنيا (مم) =====================
+   152→   152→        // حسب AISC 360 الجدول J2.4 و ECP 205 جدول (6.2)
+   153→   153→        // المفتاح: أقصى سماكة للجزء الأرفع (مم)، القيمة: الحجم الأدنى لللحام التفريغي (مم)
+   154→   154→        // الطول الفعال للقيم في النطاقات: الحد الأدنى ≤ السماكة < الحد الأعلى
+   155→   155→        private val MIN_FILLET_WELD_SIZE = arrayOf(
+   156→   156→            // زوج: [الحد الأعلى للسماكة (مم)، الحجم الأدنى لللحام (مم)]
+   157→   157→            doubleArrayOf(6.0, 3.0),
+   158→   158→            doubleArrayOf(13.0, 5.0),
+   159→   159→            doubleArrayOf(19.0, 6.0),
+   160→   160→            doubleArrayOf(38.0, 8.0),
+   161→   161→            doubleArrayOf(57.0, 10.0),
+   162→   162→            doubleArrayOf(Double.MAX_VALUE, 13.0)
+   163→   163→        )
+   164→   164→
+   165→   165→        // ===================== معامل إجهاد القص الاسمي للمسمار (MPa) =====================
+   166→   166→        // حسب AISC 360-J3.6 و ECP 205-5.3
+   167→   167→        // Fn = إجهاد القص الاسمي - يعتمد على درجة المسمار وحالة السطح
+   168→   168→        // للحساب: φ * Fn * Ab (قص بسيط) أو φ * Fn * Ab * 2 (قص مزدوج)
+   169→   169→        private fun getBoltShearStress(boltGrade: BoltGrade): Double {
+   170→   170→            // إجهاد القص الاسمي Fn - يكون تقريباً 0.4 * Fu للمسمار
+   171→   171→            // أو يمكن أخذه من جداول AISC Table J3.6
+   172→   172→            return when (boltGrade) {
+   173→   173→                BoltGrade.GRADE_4_6 -> boltGrade.fu * 0.40    // Fn ≈ 160 MPa
+   174→   174→                BoltGrade.GRADE_8_8 -> boltGrade.fu * 0.40    // Fn ≈ 320 MPa
+   175→   175→                BoltGrade.GRADE_10_9 -> boltGrade.fu * 0.35   // Fn ≈ 350 MPa
+   176→   176→                BoltGrade.A325 -> 372.0                         // AISC Table J3.6 (السطح المسماري)
+   177→   177→                BoltGrade.A490 -> 457.0                         // AISC Table J3.6 (السطح المسماري)
+   178→   178→            }
+   179→   179→        }
+   180→   180→
+   181→   181→        // ===================== إجهاد الشد الاسمي للمسمار (MPa) =====================
+   182→   182→        // حسب AISC 360-J3.5 و ECP 205-5.4
+   183→   183→        // Ft = إجهاد الشد الاسمي
+   184→   184→        private fun getBoltTensionStress(boltGrade: BoltGrade): Double {
+   185→   185→            return when (boltGrade) {
+   186→   186→                BoltGrade.GRADE_4_6 -> boltGrade.fu * 0.60    // Ft ≈ 240 MPa
+   187→   187→                BoltGrade.GRADE_8_8 -> boltGrade.fu * 0.50    // Ft ≈ 400 MPa
+   188→   188→                BoltGrade.GRADE_10_9 -> boltGrade.fu * 0.50   // Ft ≈ 500 MPa
+   189→   189→                BoltGrade.A325 -> 620.0                         // AISC Table J3.5
+   190→   190→                BoltGrade.A490 -> 780.0                         // AISC Table J3.5
+   191→   191→            }
+   192→   192→        }
+   193→   193→
+   194→   194→        // ===================== معامل قوة الشد المسبق للمسمار (kN) =====================
+   195→   195→        // حسب AISC 360 الجدول J3.1 - قوة الشد المسبق Tb
+   196→   196→        // Note: getBoltPretension moved to member function to access getBoltThreadedArea
+   197→   197→    }
+   198→   198→
+   199→   199→    /** معامل قوة الشد المسبق للمسمار (kN) — حسب AISC 360 الجدول J3.1 */
+   200→   200→    private fun getBoltPretension(boltGrade: BoltGrade, boltDiameter: Double): Double {
+   201→   201→        val ab = getBoltThreadedArea(boltDiameter)
+   202→   202→        return 0.70 * boltGrade.fu * ab / 1000.0
+   203→   203→    }
+   204→   204→
+   205→   205→    // ===================== وظائف مساعدة =====================
+   206→   206→
+   207→   207→    /**
+   208→   208→     * حساب المساحة الاسمية للمسمار (مم²)
+   209→   209→     * المساحة الاسمية = π/4 × d²
+   210→   210→     * [مرجع: AISC 360-J3.6 / ECP 205-5]
+   211→   211→     *
+   212→   212→     * @param diameter قطر المسمار (مم)
+   213→   213→     * @return المساحة الاسمية للمسمار (مم²)
+   214→   214→     */
+   215→   215→    fun getBoltArea(diameter: Double): Double {
+   216→   216→        // البحث في الجدول القياسي أولاً
+   217→   217→        val standardEntry = BOLT_DATA.entries.minByOrNull {
+   218→   218→            abs(it.key - diameter)
+   219→   219→        }
+   220→   220→        if (standardEntry != null && abs(standardEntry.key - diameter) < 0.1) {
+   221→   221→            return standardEntry.value[0]
+   222→   222→        }
+   223→   223→        // حساب يدوي إذا لم يكن قياسياً
+   224→   224→        return (PI / 4.0) * diameter * diameter
+   225→   225→    }
+   226→   226→
+   227→   227→    /**
+   228→   228→     * حساب مساحة المقطع المسماري (المساحة الفعالة للمسمار المقطوع) (مم²)
+   229→   229→     * تُستخدم عند وجود القص في منطقة الخيوط
+   230→   230→     * [مرجع: AISC 360-J3.6 / ECP 205-5]
+   231→   231→     *
+   232→   232→     * @param diameter قطر المسمار (مم)
+   233→   233→     * @return مساحة المقطع المسماري (مم²)
+   234→   234→     */
+   235→   235→    fun getBoltThreadedArea(diameter: Double): Double {
+   236→   236→        // البحث في الجدول القياسي أولاً
+   237→   237→        val standardEntry = BOLT_DATA.entries.minByOrNull {
+   238→   238→            abs(it.key - diameter)
+   239→   239→        }
+   240→   240→        if (standardEntry != null && abs(standardEntry.key - diameter) < 0.1) {
+   241→   241→            return standardEntry.value[1]
+   242→   242→        }
+   243→   243→        // تقريب: المساحة المقطوعة ≈ 0.75 × المساحة الاسمية
+   244→   244→        return 0.75 * getBoltArea(diameter)
+   245→   245→    }
+   246→   246→
+   247→   247→    /**
+   248→   248→     * حساب المسافة الدنيا من حافة القطاع لمركز المسمار (مم)
+   249→   249→     * حسب AISC 360 الجدول J3.4 و ECP 205 جدول (5.1)
+   250→   250→     * تعتمد على قطر المسمار
+   251→   251→     *
+   252→   252→     * @param boltDiameter قطر المسمار (مم)
+   253→   253→     * @return المسافة الدنيا من الحافة (مم)
+   254→   254→     */
+   255→   255→    fun getMinEdgeDistance(boltDiameter: Double): Double {
+   256→   256→        // البحث في الجدول القياسي - أقرب قطر
+   257→   257→        val standardEntry = MIN_EDGE_DISTANCE.entries.minByOrNull {
+   258→   258→            abs(it.key - boltDiameter)
+   259→   259→        }
+   260→   260→        if (standardEntry != null && abs(standardEntry.key - boltDiameter) < 0.1) {
+   261→   261→            return standardEntry.value
+   262→   262→        }
+   263→   263→        // حساب تقريبي: 1.5 × قطر المسمار (لكن لا تقل عن 19 مم) - AISC J3.4
+   264→   264→        return max(1.5 * boltDiameter, 19.0)
+   265→   265→    }
+   266→   266→
+   267→   267→    /**
+   268→   268→     * حساب المسافة الدنيا بين مراكز المسامير (مم)
+   269→   269→     * حسب AISC 360-J3.3 و ECP 205-5.2
+   270→   270→     * المسافة الدنيا = 3 × قطر المسمار (من المركز للمركز)
+   271→   271→     *
+   272→   272→     * @param boltDiameter قطر المسمار (مم)
+   273→   273→     * @return المسافة الدنيا بين المسامير (مم)
+   274→   274→     */
+   275→   275→    fun getMinBoltSpacing(boltDiameter: Double): Double {
+   276→   276→        // 3 أضعاف قطر المسمار - AISC J3.3 و ECP 205-5.2
+   277→   277→        return 3.0 * boltDiameter
+   278→   278→    }
+   279→   279→
+   280→   280→    /**
+   281→   281→     * حساب الحجم الأدنى لللحام التفريغي (مم)
+   282→   282→     * حسب AISC 360 الجدول J2.4 و ECP 205 جدول (6.2)
+   283→   283→     * يعتمد على سماكة الجزء الأرفع من الوصلة
+   284→   284→     *
+   285→   285→     * @param plateThickness سماكة الجزء الأرفع (مم)
+   286→   286→     * @return الحجم الأدنى لللحام التفريغي (مم)
+   287→   287→     */
+   288→   288→    fun getMinFilletWeldSize(plateThickness: Double): Double {
+   289→   289→        // البحث في جدول الأحجام الدنيا حسب السماكة
+   290→   290→        for (entry in MIN_FILLET_WELD_SIZE) {
+   291→   291→            if (plateThickness <= entry[0]) {
+   292→   292→                return entry[1]
+   293→   293→            }
+   294→   294→        }
+   295→   295→        // إذا كانت السماكة أكبر من كل الحدود
+   296→   296→        return MIN_FILLET_WELD_SIZE.last()[1]
+   297→   297→    }
+   298→   298→
+   299→   299→    /**
+   300→   300→     * حساب الحجم الأقصى لللحام التفريغي (مم)
+   301→   301→     * حسب AISC 360-J2.2b و ECP 205-6.2
+   302→   302→     * - للقطاعات المعدنية: لا يتجاوز سماكة الجزء الأرفع
+   303→   303→     * - للألواح: سماكة الجزء الأرفح ناقص 1.5 مم
+   304→   304→     *
+   305→   305→     * @param plateThickness سماكة الجزء الأرفق (الجزء الأرفع المراد لحامه) (مم)
+   306→   306→     * @param isEdgeWeld هل اللحام على حافة لوح؟ (يُطبق الخصم 1.5 مم)
+   307→   307→     * @return الحجم الأقصى لللحام التفريغي (مم)
+   308→   308→     */
+   309→   309→    fun getMaxFilletWeldSize(plateThickness: Double, isEdgeWeld: Boolean = false): Double {
+   310→   310→        return if (isEdgeWeld) {
+   311→   311→            // عند لحام حافة لوح: السماكة ناقص 1.5 مم - AISC J2.2b
+   312→   312→            max(plateThickness - 1.5, 0.0)
+   313→   313→        } else {
+   314→   314→            // للحالات العادية: لا يتجاوز سماكة الجزء الأرفق
+   315→   315→            plateThickness
+   316→   316→        }
+   317→   317→    }
+   318→   318→
+   319→   319→    // ===================== حسابات الوصلات المساميرية =====================
+   320→   320→
+   321→   321→    /**
+   322→   322→     * حساب مقاومة القص لكل مسمار (كيلونيوتن)
+   323→   323→     * حسب AISC 360-J3.6 و ECP 205-5.3
+   324→   324→     *
+   325→   325→     * الصيغة (LRFD):
+   326→   326→     *   قص بسيط:  φRn = φ × Fn × Ab
+   327→   327→     *   قص مزدوج: φRn = φ × Fn × Ab × 2
+   328→   328→     *
+   329→   329→     * حيث:
+   330→   330→     *   φ = 0.75 (معامل المقاومة للوصلة المساميرية)
+   331→   331→     *   Fn = إجهاد القص الاسمي (MPa)
+   332→   332→     *   Ab = مساحة المسمار (مم²) - تُستخدم المساحة المقطوعة عند القص في منطقة الخيوط
+   333→   333→     *
+   334→   334→     * @param boltGrade درجة المسمار
+   335→   335→     * @param boltDiameter قطر المسمار (مم)
+   336→   336→     * @param isDoubleShear هل القص مزدوج؟
+   337→   337→     * @param includeThreadedArea هل القص في منطقة الخيوط؟ (الافتراضي: نعم)
+   338→   338→     * @return مقاومة القص لكل مسمار (كيلونيوتن)
+   339→   339→     */
+   340→   340→    fun calculateBoltShearCapacity(
+   341→   341→        boltGrade: BoltGrade,
+   342→   342→        boltDiameter: Double,
+   343→   343→        isDoubleShear: Boolean = false,
+   344→   344→        includeThreadedArea: Boolean = true
+   345→   345→    ): Double {
+   346→   346→        // اختيار المساحة المناسبة (مساحة الخيوط أو المساحة الاسمية)
+   347→   347→        val ab = if (includeThreadedArea) {
+   348→   348→            getBoltThreadedArea(boltDiameter)
+   349→   349→        } else {
+   350→   350→            getBoltArea(boltDiameter)
+   351→   351→        }
+   352→   352→
+   353→   353→        // إجهاد القص الاسمي Fn
+   354→   354→        val fn = getBoltShearStress(boltGrade)
+   355→   355→
+   356→   356→        // معامل القص (بسيط أو مزدوج)
+   357→   357→        val shearMultiplier = if (isDoubleShear) 2.0 else 1.0
+   358→   358→
+   359→   359→        // حساب مقاومة القص - AISC J3.6 / ECP 205-5.3
+   360→   360→        // φRn = φ × Fn × Ab × (معامل القص)
+   361→   361→        val rn = PHI_BEARING_CONNECTION * fn * ab * shearMultiplier
+   362→   362→
+   363→   363→        // التحويل من N إلى kN
+   364→   364→        return rn / 1000.0
+   365→   365→    }
+   366→   366→
+   367→   367→    /**
+   368→   368→     * حساب مقاومة التحمل لكل مسمار (كيلونيوتن)
+   369→   369→     * حسب AISC 360-J3.10 و ECP 205-5.5
+   370→   370→     *
+   371→   371→     * يتم أخذ الأقل من:
+   372→   372→     *   1) φRn = φ × 1.2 × Lc × t × Fu  (عند حافة الثقب)
+   373→   373→     *   2) φRn = φ × 2.4 × d × t × Fu   (عند المسافة بين المسامير)
+   374→   374→     *
+   375→   375→     * حيث:
+   376→   376→     *   φ = 0.75
+   377→   377→     *   Lc = المسافة الصافية بين حافة الثقب ومركز المسمار (مم)
+   378→   378→     *   t = سماكة الجزء المتصل (مم)
+   379→   379→     *   Fu = مقاومة الشد القصوى للجزء المتصل (MPa)
+   380→   380→     *   d = قطر المسمار (مم)
+   381→   381→     *
+   382→   382→     * @param boltDiameter قطر المسمار (مم)
+   383→   383→     * @param plateThickness سماكة الجزء المتصل (مم)
+   384→   384→     * @param fuPlate مقاومة الشد القصوى للوحة المتصلة (MPa)
+   385→   385→     * @param edgeDistance المسافة من الحافة لمركز المسمار (مم)
+   386→   386→     * @param spacing المسافة بين مراكز المسامير (مم) - تُستخدم لحساب Lc
+   387→   387→     * @param holeDiameter قطر الثقب (مم) - الافتراضي: قطر المسمار + 2 مم
+   388→   388→     * @return مقاومة التحمل لكل مسمار (كيلونيوتن)
+   389→   389→     */
+   390→   390→    fun calculateBearingCapacity(
+   391→   391→        boltDiameter: Double,
+   392→   392→        plateThickness: Double,
+   393→   393→        fuPlate: Double,
+   394→   394→        edgeDistance: Double,
+   395→   395→        spacing: Double,
+   396→   396→        holeDiameter: Double = boltDiameter + 2.0
+   397→   397→    ): Double {
+   398→   398→        // حساب المسافة الصافية Lc عند الحافة
+   399→   399→        // Lc = المسافة من الحافة لمركز المسمار - نصف قطر الثقب
+   400→   400→        val lcEdge = edgeDistance - holeDiameter / 2.0
+   401→   401→
+   402→   402→        // حساب المسافة الصافية Lc بين المسامير
+   403→   403→        // Lc = المسافة بين المراكز - قطر الثقب
+   404→   404→        val lcSpacing = spacing - holeDiameter
+   405→   405→
+   406→   406→        // الحالة الأولى: عند حافة الثقب - AISC J3.10(a)
+   407→   407→        // φRn = φ × 1.2 × Lc × t × Fu
+   408→   408→        val rnEdge = PHI_BEARING_CONNECTION * 1.2 * lcEdge * plateThickness * fuPlate
+   409→   409→
+   410→   410→        // الحالة الثانية: عند المسافة بين المسامير - AISC J3.10(b)
+   411→   411→        // φRn = φ × 2.4 × d × t × Fu
+   412→   412→        val rnSpacing = PHI_BEARING_CONNECTION * 2.4 * boltDiameter * plateThickness * fuPlate
+   413→   413→
+   414→   414→        // الحالة الثالثة: استخدام Lc عند المسافة بين المسامير أيضاً
+   415→   415→        val rnSpacingLc = PHI_BEARING_CONNECTION * 1.2 * lcSpacing * plateThickness * fuPlate
+   416→   416→
+   417→   417→        // أخذ الأقل من الحالات الثلاث
+   418→   418→        val controllingRn = minOf(rnEdge, rnSpacing, rnSpacingLc)
+   419→   419→
+   420→   420→        // التحويل من N إلى kN
+   421→   421→        return controllingRn / 1000.0
+   422→   422→    }
+   423→   423→
+   424→   424→    /**
+   425→   425→     * حساب مقاومة الشد لكل مسمار (كيلونيوتن)
+   426→   426→     * حسب AISC 360-J3.5 و ECP 205-5.4
+   427→   427→     *
+   428→   428→     * الصيغة (LRFD):
+   429→   429→     *   φRn = φ × Ft × Ab
+   430→   430→     *
+   431→   431→     * حيث:
+   432→   432→     *   φ = 0.75
+   433→   433→     *   Ft = إجهاد الشد الاسمي للمسمار (MPa)
+   434→   434→     *   Ab = مساحة المقطع المسماري (مم²)
+   435→   435→     *
+   436→   436→     * @param boltGrade درجة المسمار
+   437→   437→     * @param boltDiameter قطر المسمار (مم)
+   438→   438→     * @return مقاومة الشد لكل مسمار (كيلونيوتن)
+   439→   439→     */
+   440→   440→    fun calculateBoltTensionCapacity(
+   441→   441→        boltGrade: BoltGrade,
+   442→   442→        boltDiameter: Double
+   443→   443→    ): Double {
+   444→   444→        // مساحة المقطع المسماري (الخيوط)
+   445→   445→        val ab = getBoltThreadedArea(boltDiameter)
+   446→   446→
+   447→   447→        // إجهاد الشد الاسمي Ft
+   448→   448→        val ft = getBoltTensionStress(boltGrade)
+   449→   449→
+   450→   450→        // حساب مقاومة الشد - AISC J3.5 / ECP 205-5.4
+   451→   451→        // φRn = φ × Ft × Ab
+   452→   452→        val rn = PHI_BEARING_CONNECTION * ft * ab
+   453→   453→
+   454→   454→        // التحويل من N إلى kN
+   455→   455→        return rn / 1000.0
+   456→   456→    }
+   457→   457→
+   458→   458→    /**
+   459→   459→     * فحص القص المشترك مع الشد (Combined Shear and Tension)
+   460→   460→     * حسب AISC 360-J3.7 و ECP 205-5.6
+   461→   461→     *
+   462→   462→     * معادلة التفاعل:
+   463→   463→     *   (Vu / φVn)² + (Tu / φTn)² ≤ 1.0
+   464→   464→     *
+   465→   465→     * حيث:
+   466→   466→     *   Vu = القص المطبق
+   467→   467→     *   φVn = مقاومة القص التصميمية
+   468→   468→     *   Tu = الشد المطبق
+   469→   469→     *   φTn = مقاومة الشد التصميمية
+   470→   470→     *
+   471→   471→     * @param appliedShear قوة القص المطبقة (كيلونيوتن)
+   472→   472→     * @param appliedTension قوة الشد المطبقة (كيلونيوتن)
+   473→   473→     * @param shearCapacity مقاومة القص التصميمية لكل مسمار (كيلونيوتن)
+   474→   474→     * @param tensionCapacity مقاومة الشد التصميمية لكل مسمار (كيلونيوتن)
+   475→   475→     * @return زوج: (هل يحقق الأمان؟، نسبة معادلة التفاعل)
+   476→   476→     */
+   477→   477→    fun checkCombinedShearTension(
+   478→   478→        appliedShear: Double,
+   479→   479→        appliedTension: Double,
+   480→   480→        shearCapacity: Double,
+   481→   481→        tensionCapacity: Double
+   482→   482→    ): Pair<Boolean, Double> {
+   483→   483→        // حساب معادلة التفاعل - AISC J3.7
+   484→   484→        // (Vu / φVn)² + (Tu / φTn)² ≤ 1.0
+   485→   485→        val ratioV = if (shearCapacity > 0) appliedShear / shearCapacity else 0.0
+   486→   486→        val ratioT = if (tensionCapacity > 0) appliedTension / tensionCapacity else 0.0
+   487→   487→        val interactionRatio = ratioV * ratioV + ratioT * ratioT
+   488→   488→
+   489→   489→        return Pair(interactionRatio <= 1.0, interactionRatio)
+   490→   490→    }
+   491→   491→
+   492→   492→    /**
+   493→   493→     * حساب مقاومة الوصلة الانزلاقية (Slip-Critical Connection)
+   494→   494→     * حسب AISC 360-J3.8 و ECP 205-5.7
+   495→   495→     *
+   496→   496→     * الصيغة:
+   497→   497→     *   φRn = φ × μ × Du × Ns × Tb
+   498→   498→     *
+   499→   499→     * حيث:
+   500→   500→     *   φ = 1.0 (لأحمال الخدمة) أو 0.85 (لأحمال.factor)
+   501→   501→     *   μ = معامل الاحتكاك (0.35 للسطح A، 0.50 للسطح B، 0.40 للسطح C)
+   502→   502→     *   Du = 1.13 (معامل ثبات قوة الشد المسبق)
+   503→   503→     *   Ns = عدد أسطح القص (1 للقص البسيط، 2 للقص المزدوج)
+   504→   504→     *   Tb = قوة الشد المسبق لكل مسمار (kN)
+   505→   505→     *
+   506→   506→     * @param boltGrade درجة المسمار
+   507→   507→     * @param boltDiameter قطر المسمار (مم)
+   508→   508→     * @param frictionClass فئة سطح الاحتكاك ("CLASS_A" أو "CLASS_B" أو "CLASS_C")
+   509→   509→     * @param numberOfShearPlanes عدد أسطح القص (1 أو 2)
+   510→   510→     * @return مقاومة الوصلة الانزلاقية لكل مسمار (كيلونيوتن)
+   511→   511→     */
+   512→   512→    fun calculateSlipCriticalCapacity(
+   513→   513→        boltGrade: BoltGrade,
+   514→   514→        boltDiameter: Double,
+   515→   515→        frictionClass: String = "CLASS_A",
+   516→   516→        numberOfShearPlanes: Int = 1
+   517→   517→    ): Double {
+   518→   518→        // معامل الاحتكاك من الجدول - AISC Table J3.8
+   519→   519→        val mu = FRICTION_COEFFICIENTS[frictionClass] ?: 0.35
+   520→   520→
+   521→   521→        // قوة الشد المسبق Tb
+   522→   522→        val tb = getBoltPretension(boltGrade, boltDiameter)
+   523→   523→
+   524→   524→        // حساب مقاومة الوصلة الانزلاقية - AISC J3.8
+   525→   525→        // φRn = φ × μ × Du × Ns × Tb
+   526→   526→        val rn = PHI_SLIP_CRITICAL * mu * DU_SLIP_FACTOR * numberOfShearPlanes * tb
+   527→   527→
+   528→   528→        return rn
+   529→   529→    }
+   530→   530→
+   531→   531→    /**
+   532→   532→     * فحص القص الكتلي (Block Shear Strength)
+   533→   533→     * حسب AISC 360-J4.3 و ECP 205-5.8
+   534→   534→     *
+   535→   535→     * الصيغة (LRFD):
+   536→   536→     *   φRn = φ × [0.6 × Fu × Anv + Ubs × Fu × Ant]
+   537→   537→     *   أو
+   538→   538→     *   φRn = φ × [0.6 × Fy × Agv + Ubs × Fu × Ant]
+   539→   539→     *
+   540→   540→     * وتُؤخذ القيمة الأكبر
+   541→   541→     *
+   542→   542→     * حيث:
+   543→   543→     *   φ = 0.75
+   544→   544→     *   Fu = مقاومة الشد القصوى (MPa)
+   545→   545→     *   Fy = إجهاد الخضوع (MPa)
+   546→   546→     *   Anv = المساحة الصافية للقص (مم²)
+   547→   547→     *   Ant = المساحة الصافية للشد (مم²)
+   548→   548→     *   Agv = المساحة الإجمالية للقص (مم²)
+   549→   549→     *   Ubs = معامل القص الكتلي (1.0 للتوتير الموحد، 0.5 للتوتير غير الموحد)
+   550→   550→     *
+   551→   551→     * @param shearAreaGross المساحة الإجمالية لمنطقة القص (مم²)
+   552→   552→     * @param shearAreaNet المساحة الصافية لمنطقة القص (مم²) = المساحة الإجمالية - مساحة الثقوب
+   553→   553→     * @param tensionAreaNet المساحة الصافية لمنطقة الشد (مم²)
+   554→   554→     * @param fy إجهاد الخضوع للقطاع (MPa)
+   555→   555→     * @param fu مقاومة الشد القصوى للقطاع (MPa)
+   556→   556→     * @param ubs معامل القص الكتلي (الافتراضي: 1.0 للتوتير الموحد)
+   557→   557→     * @return كائن BlockShearResult يحتوي على النتائج
+   558→   558→     */
+   559→   559→    fun checkBlockShear(
+   560→   560→        shearAreaGross: Double,
+   561→   561→        shearAreaNet: Double,
+   562→   562→        tensionAreaNet: Double,
+   563→   563→        fy: Double,
+   564→   564→        fu: Double,
+   565→   565→        ubs: Double = 1.0
+   566→   566→    ): BlockShearResult {
+   567→   567→        // الحالة الأولى: التمزق في القص والشد - AISC J4.3(a)
+   568→   568→        // Rn = 0.6 × Fu × Anv + Ubs × Fu × Ant
+   569→   569→        val ruptureStrength = 0.6 * fu * shearAreaNet + ubs * fu * tensionAreaNet
+   570→   570→
+   571→   571→        // الحالة الثانية: الخضوع في القص والتمزق في الشد - AISC J4.3(b)
+   572→   572→        // Rn = 0.6 × Fy × Agv + Ubs × Fu × Ant
+   573→   573→        val yieldStrength = 0.6 * fy * shearAreaGross + ubs * fu * tensionAreaNet
+   574→   574→
+   575→   575→        // المقاومة التصميمية = φ × max(Case1, Case2)
+   576→   576→        val capacity = PHI_BLOCK_SHEAR * max(ruptureStrength, yieldStrength)
+   577→   577→
+   578→   578→        // حساب نسبة الاستخدام (يحتاج القوة المطبقة من خارج الدالة)
+   579→   579→        // هنا نُرجع المقاومة فقط - نسبة الاستخدام تُحسب عند الاستخدام
+   580→   580→        return BlockShearResult(
+   581→   581→            ruptureStrength = ruptureStrength / 1000.0,  // كيلونيوتن
+   582→   582→            yieldStrength = yieldStrength / 1000.0,       // كيلونيوتن
+   583→   583→            capacity = capacity / 1000.0,                 // كيلونيوتن
+   584→   584→            isSafe = true,  // يُحدد لاحقاً عند مقارنة مع القوة المطبقة
+   585→   585→            utilizationRatio = 0.0   // يُحدد لاحقاً
+   586→   586→        )
+   587→   587→    }
+   588→   588→
+   589→   589→    // ===================== وظيفة التصميم الشاملة للوصلة المساميرية =====================
+   590→   590→
+   591→   591→    /**
+   592→   592→     * تصميم وصلة مساميرية شاملة
+   593→   593→     * يجمع كل فحوصات الوصلة المساميرية في نتيجة واحدة
+   594→   594→     *
+   595→   595→     * [مرجع: ECP 205 الفصل الخامس / AISC 360 الفصل J3]
+   596→   596→     *
+   597→   597→     * @param boltDiameter قطر المسمار (مم)
+   598→   598→     * @param boltGrade درجة المسمار
+   599→   599→     * @param numberOfBolts عدد المسامير
+   600→   600→     * @param boltPattern نمط توزيع المسامير
+   601→   601→     * @param boltConnectionType نوع الوصلة (تحمل / انزلاقية / شد / مشترك)
+   602→   602→     * @param appliedShear قوة القص المطبقة (كيلونيوتن) - الافتراضي: 0
+   603→   603→     * @param appliedTension قوة الشد المطبقة (كيلونيوتن) - الافتراضي: 0
+   604→   604→     * @param plateThickness سماكة الجزء المتصل (مم) - للتحقق من التحمل
+   605→   605→     * @param fuPlate مقاومة الشد القصوى للوحة المتصلة (MPa)
+   606→   606→     * @param isDoubleShear هل القص مزدوج؟ - الافتراضي: لا
+   607→   607→     * @param edgeDistance المسافة من الحافة (مم) - الافتراضي: الحد الأدنى
+   608→   608→     * @param spacing المسافة بين المسامير (مم) - الافتراضي: الحد الأدنى
+   609→   609→     * @param gaugeDistance المسافة العرضية بين صفوف المسامير (مم) - الافتراضي: 0
+   610→   610→     * @param frictionClass فئة الاحتكاك للوصلات الانزلاقية - الافتراضي: CLASS_A
+   611→   611→     * @param checkBlockShear هل يتم فحص القص الكتلي؟ - الافتراضي: نعم
+   612→   612→     * @param shearAreaGross المساحة الإجمالية للقص (مم²) - للقص الكتلي
+   613→   613→     * @param shearAreaNet المساحة الصافية للقص (مم²) - للقص الكتلي
+   614→   614→     * @param tensionAreaNet المساحة الصافية للشد (مم²) - للقص الكتلي
+   615→   615→     * @param fyPlate إجهاد الخضوع للوحة (MPa) - للقص الكتلي
+   616→   616→     * @return كائن BoltDesignResult يحتوي على كل النتائج
+   617→   617→     */
+   618→   618→    fun designBoltedConnection(
+   619→   619→        boltDiameter: Double,
+   620→   620→        boltGrade: BoltGrade,
+   621→   621→        numberOfBolts: Int,
+   622→   622→        boltPattern: BoltPattern,
+   623→   623→        boltConnectionType: BoltConnectionType,
+   624→   624→        appliedShear: Double = 0.0,
+   625→   625→        appliedTension: Double = 0.0,
+   626→   626→        plateThickness: Double = 10.0,
+   627→   627→        fuPlate: Double = 400.0,
+   628→   628→        isDoubleShear: Boolean = false,
+   629→   629→        edgeDistance: Double? = null,
+   630→   630→        spacing: Double? = null,
+   631→   631→        gaugeDistance: Double = 0.0,
+   632→   632→        frictionClass: String = "CLASS_A",
+   633→   633→        checkBlockShear: Boolean = true,
+   634→   634→        shearAreaGross: Double = 0.0,
+   635→   635→        shearAreaNet: Double = 0.0,
+   636→   636→        tensionAreaNet: Double = 0.0,
+   637→   637→        fyPlate: Double = 250.0
+   638→   638→    ): BoltDesignResult {
+   639→   639→        // قائمة التحذيرات وملاحظات الكود
+   640→   640→        val warnings = mutableListOf<String>()
+   641→   641→        val codeNotes = mutableListOf<String>()
+   642→   642→
+   643→   643→        // ===================== التحقق من المسافات =====================
+   644→   644→
+   645→   645→        // حساب المسافات الدنيا
+   646→   646→        val minEdgeDist = getMinEdgeDistance(boltDiameter)
+   647→   647→        val minSpacing = getMinBoltSpacing(boltDiameter)
+   648→   648→
+   649→   649→        // استخدام المسافات المُدخلة أو القيم الدنيا
+   650→   650→        val finalEdgeDistance = edgeDistance ?: max(minEdgeDist, 1.5 * boltDiameter)
+   651→   651→        val finalSpacing = spacing ?: minSpacing
+   652→   652→
+   653→   653→        // التحقق من المسافة من الحافة - AISC J3.4 / ECP 205 جدول (5.1)
+   654→   654→        if (finalEdgeDistance < minEdgeDist) {
+   655→   655→            warnings.add("⚠️ المسافة من الحافة (${finalEdgeDistance.toInt()} مم) أقل من الحد الأدنى (${minEdgeDist.toInt()} مم) حسب AISC J3.4")
+   656→   656→        }
+   657→   657→
+   658→   658→        // التحقق من المسافة بين المسامير - AISC J3.3 / ECP 205-5.2
+   659→   659→        if (finalSpacing < minSpacing) {
+   660→   660→            warnings.add("⚠️ المسافة بين المسامير (${finalSpacing.toInt()} مم) أقل من الحد الأدنى (3×Ø = ${minSpacing.toInt()} مم) حسب AISC J3.3")
+   661→   661→        }
+   662→   662→
+   663→   663→        // المسافة العظمى بين المسامير = 24 × سمك أرفع جزء متصل أو 305 مم
+   664→   664→        val maxSpacing = min(24.0 * plateThickness, 305.0)
+   665→   665→        if (finalSpacing > maxSpacing) {
+   666→   666→            warnings.add("⚠️ المسافة بين المسامير (${finalSpacing.toInt()} مم) تتجاوز الحد الأقصى (${maxSpacing.toInt()} مم) حسب AISC J3.5")
+   667→   667→        }
+   668→   668→
+   669→   669→        codeNotes.add("📌 AISC 360-J3.4: المسافة الدنيا من الحافة = ${minEdgeDist.toInt()} مم")
+   670→   670→        codeNotes.add("📌 AISC 360-J3.3: المسافة الدنيا بين المسامير = 3×Ø = ${minSpacing.toInt()} مم")
+   671→   671→        codeNotes.add("📌 AISC 360-J3.5: المسافة القصوى = min(24t, 305) = ${maxSpacing.toInt()} مم")
+   672→   672→
+   673→   673→        // ===================== حساب مقاومة القص =====================
+   674→   674→
+   675→   675→        // مقاومة القص لكل مسمار - AISC J3.6 / ECP 205-5.3
+   676→   676→        var shearCapacity = calculateBoltShearCapacity(
+   677→   677→            boltGrade = boltGrade,
+   678→   678→            boltDiameter = boltDiameter,
+   679→   679→            isDoubleShear = isDoubleShear
+   680→   680→        )
+   681→   681→        codeNotes.add("📌 AISC 360-J3.6: مقاومة القص = φ × Fn × Ab = 0.75 × ${getBoltShearStress(boltGrade).toInt()} × ${getBoltThreadedArea(boltDiameter).toInt()} = ${(shearCapacity * 1000).toInt()} N${if (isDoubleShear) " × 2 (قص مزدوج)" else ""}")
+   682→   682→
+   683→   683→        // ===================== حساب مقاومة التحمل =====================
+   684→   684→
+   685→   685→        // مقاومة التحمل لكل مسمار - AISC J3.10 / ECP 205-5.5
+   686→   686→        val bearingCapacity = calculateBearingCapacity(
+   687→   687→            boltDiameter = boltDiameter,
+   688→   688→            plateThickness = plateThickness,
+   689→   689→            fuPlate = fuPlate,
+   690→   690→            edgeDistance = finalEdgeDistance,
+   691→   691→            spacing = finalSpacing
+   692→   692→        )
+   693→   693→        codeNotes.add("📌 AISC 360-J3.10: مقاومة التحمل = φ × min(1.2×Lc×t×Fu, 2.4×d×t×Fu) = ${(bearingCapacity * 1000).toInt()} N")
+   694→   694→
+   695→   695→        // ===================== حساب مقاومة الشد =====================
+   696→   696→
+   697→   697→        // مقاومة الشد لكل مسمار - AISC J3.5 / ECP 205-5.4
+   698→   698→        var tensionCapacity = calculateBoltTensionCapacity(
+   699→   699→            boltGrade = boltGrade,
+   700→   700→            boltDiameter = boltDiameter
+   701→   701→        )
+   702→   702→        codeNotes.add("📌 AISC 360-J3.5: مقاومة الشد = φ × Ft × Ab = 0.75 × ${getBoltTensionStress(boltGrade).toInt()} × ${getBoltThreadedArea(boltDiameter).toInt()} = ${(tensionCapacity * 1000).toInt()} N")
+   703→   703→
+   704→   704→        // ===================== فحص حسب نوع الوصلة =====================
+   705→   705→
+   706→   706→        var controllingCapacity = shearCapacity
+   707→   707→        var isSafe = true
+   708→   708→        var utilizationRatio = 0.0
+   709→   709→
+   710→   710→        when (boltConnectionType) {
+   711→   711→            BoltConnectionType.BEARING -> {
+   712→   712→                // وصلة تحمل - المقاومة الحاكمة = أقل من (القص، التحمل)
+   713→   713→                controllingCapacity = min(shearCapacity, bearingCapacity)
+   714→   714→                if (appliedShear > 0) {
+   715→   715→                    utilizationRatio = appliedShear / (controllingCapacity * numberOfBolts)
+   716→   716→                    isSafe = utilizationRatio <= 1.0
+   717→   717→                }
+   718→   718→                codeNotes.add("📌 AISC 360-J3: وصلة تحمل - المقاومة الحاكمة = min(القص، التحمل) = ${controllingCapacity * 1000} N/مسمار")
+   719→   719→            }
+   720→   720→
+   721→   721→            BoltConnectionType.SLIP_CRITICAL -> {
+   722→   722→                // وصلة انزلاقية - AISC J3.8 / ECP 205-5.7
+   723→   723→                val slipCapacity = calculateSlipCriticalCapacity(
+   724→   724→                    boltGrade = boltGrade,
+   725→   725→                    boltDiameter = boltDiameter,
+   726→   726→                    frictionClass = frictionClass,
+   727→   727→                    numberOfShearPlanes = if (isDoubleShear) 2 else 1
+   728→   728→                )
+   729→   729→                controllingCapacity = slipCapacity
+   730→   730→                if (appliedShear > 0) {
+   731→   731→                    utilizationRatio = appliedShear / (slipCapacity * numberOfBolts)
+   732→   732→                    isSafe = utilizationRatio <= 1.0
+   733→   733→                }
+   734→   734→                codeNotes.add("📌 AISC 360-J3.8: وصلة انزلاقية - مقاومة الانزلاق = φ × μ × Du × Ns × Tb = ${slipCapacity * 1000} N/مسمار")
+   735→   735→            }
+   736→   736→
+   737→   737→            BoltConnectionType.TENSION -> {
+   738→   738→                // وصلة شد فقط
+   739→   739→                controllingCapacity = tensionCapacity
+   740→   740→                if (appliedTension > 0) {
+   741→   741→                    utilizationRatio = appliedTension / (tensionCapacity * numberOfBolts)
+   742→   742→                    isSafe = utilizationRatio <= 1.0
+   743→   743→                }
+   744→   744→                codeNotes.add("📌 AISC 360-J3.5: وصلة شد - المقاومة = ${tensionCapacity * 1000} N/مسمار")
+   745→   745→            }
+   746→   746→
+   747→   747→            BoltConnectionType.COMBINED -> {
+   748→   748→                // وصلة مشتركة (قص + شد) - AISC J3.7 / ECP 205-5.6
+   749→   749→                val (combinedSafe, interactionRatio) = checkCombinedShearTension(
+   750→   750→                    appliedShear = appliedShear / numberOfBolts,
+   751→   751→                    appliedTension = appliedTension / numberOfBolts,
+   752→   752→                    shearCapacity = shearCapacity,
+   753→   753→                    tensionCapacity = tensionCapacity
+   754→   754→                )
+   755→   755→                isSafe = combinedSafe
+   756→   756→                utilizationRatio = interactionRatio
+   757→   757→                controllingCapacity = minOf(shearCapacity, tensionCapacity, bearingCapacity)
+   758→   758→                codeNotes.add("📌 AISC 360-J3.7: معادلة التفاعل = (Vu/φVn)² + (Tu/φTn)² = $interactionRatio ≤ 1.0")
+   759→   759→
+   760→   760→                // تعديل مقاومة الشد عند وجود قص مشترك - AISC J3.7
+   761→   761→                if (appliedShear > 0 && shearCapacity > 0) {
+   762→   762→                    val shearRatio = (appliedShear / numberOfBolts) / shearCapacity
+   763→   763→                    if (shearRatio > 0.0) {
+   764→   764→                        // Ft' = Ft × (1 - fv/Fn) - تعديل مقاومة الشد
+   765→   765→                        val fn = getBoltShearStress(boltGrade)
+   766→   766→                        val fv = shearRatio * fn
+   767→   767→                        val ftModified = getBoltTensionStress(boltGrade) * (1.0 - fv / fn)
+   768→   768→                        tensionCapacity = PHI_BEARING_CONNECTION * ftModified * getBoltThreadedArea(boltDiameter) / 1000.0
+   769→   769→                        codeNotes.add("📌 AISC 360-J3.7: مقاومة الشد المعدلة = Ft' = Ft × (1 - fv/Fn) = ${ftModified.toInt()} MPa")
+   770→   770→                    }
+   771→   771→                }
+   772→   772→            }
+   773→   773→        }
+   774→   774→
+   775→   775→        // ===================== فحص القص الكتلي =====================
+   776→   776→
+   777→   777→        var blockShearResult: BlockShearResult? = null
+   778→   778→        if (checkBlockShear && shearAreaGross > 0) {
+   779→   779→            blockShearResult = checkBlockShear(
+   780→   780→                shearAreaGross = shearAreaGross,
+   781→   781→                shearAreaNet = shearAreaNet,
+   782→   782→                tensionAreaNet = tensionAreaNet,
+   783→   783→                fy = fyPlate,
+   784→   784→                fu = fuPlate,
+   785→   785→                ubs = 1.0  // افتراض: توتير موحد
+   786→   786→            )
+   787→   787→
+   788→   788→            // حساب نسبة الاستخدام للقص الكتلي
+   789→   789→            val totalApplied = if (appliedTension > appliedShear) appliedTension else appliedShear
+   790→   790→            if (totalApplied > 0) {
+   791→   791→                val blockShearUtilization = totalApplied / blockShearResult.capacity
+   792→   792→                val bsResult = blockShearResult.copy(
+   793→   793→                    isSafe = blockShearUtilization <= 1.0,
+   794→   794→                    utilizationRatio = blockShearUtilization
+   795→   795→                )
+   796→   796→                blockShearResult = bsResult
+   797→   797→
+   798→   798→                if (!bsResult.isSafe) {
+   799→   799→                    warnings.add("⚠️ فحص القص الكتلي غير مُطابق - نسبة الاستخدام = ${String.format("%.2f", blockShearUtilization)} > 1.0 (AISC J4.3)")
+   800→   800→                }
+   801→   801→            }
+   802→   802→
+   803→   803→            codeNotes.add("📌 AISC 360-J4.3: مقاومة القص الكتلي = φ × [0.6×Fu×Anv + Ubs×Fu×Ant] = ${(blockShearResult.capacity * 1000).toInt()} N")
+   804→   804→        }
+   805→   805→
+   806→   806→        // ===================== التحقق من عدد المسامير =====================
+   807→   807→
+   808→   808→        if (numberOfBolts < 1) {
+   809→   809→            warnings.add("⚠️ عدد المسامير يجب أن يكون 1 على الأقل")
+   810→   810→        }
+   811→   811→
+   812→   812→        // التحقق من المسافة العرضية للأنماط متعددة الصفوف
+   813→   813→        if (boltPattern == BoltPattern.DOUBLE_ROW || boltPattern == BoltPattern.GRID) {
+   814→   814→            if (gaugeDistance < minSpacing) {
+   815→   815→                warnings.add("⚠️ المسافة العرضية (${gaugeDistance.toInt()} مم) أقل من الحد الأدنى (${minSpacing.toInt()} مم)")
+   816→   816→            }
+   817→   817→        }
+   818→   818→
+   819→   819→        // ===================== تحذيرات نهائية =====================
+   820→   820→
+   821→   821→        if (!isSafe) {
+   822→   822→            warnings.add("⚠️ الوصلة المساميرية غير آمنة - نسبة الاستخدام = ${String.format("%.2f", utilizationRatio)} > 1.0")
+   823→   823→        }
+   824→   824→
+   825→   825→        if (utilizationRatio > 0.9 && utilizationRatio <= 1.0) {
+   826→   826→            warnings.add("⚡ نسبة الاستخدام عالية (${String.format("%.2f", utilizationRatio)}) - يُنصح بزيادة عدد المسامير أو قطرها")
+   827→   827→        }
+   828→   828→
+   829→   829→        return BoltDesignResult(
+   830→   830→            boltDiameter = boltDiameter,
+   831→   831→            boltGrade = boltGrade,
+   832→   832→            numberOfBolts = numberOfBolts,
+   833→   833→            boltPattern = boltPattern,
+   834→   834→            shearCapacity = shearCapacity,
+   835→   835→            bearingCapacity = bearingCapacity,
+   836→   836→            tensionCapacity = tensionCapacity,
+   837→   837→            controllingCapacity = controllingCapacity,
+   838→   838→            isSafe = isSafe,
+   839→   839→            utilizationRatio = utilizationRatio,
+   840→   840→            edgeDistance = finalEdgeDistance,
+   841→   841→            boltSpacing = finalSpacing,
+   842→   842→            gaugeDistance = gaugeDistance,
+   843→   843→            blockShearCheck = blockShearResult,
+   844→   844→            warnings = warnings,
+   845→   845→            codeNotes = codeNotes
+   846→   846→        )
+   847→   847→    }
+   848→   848→
+   849→   849→    // ===================== حسابات الوصلات الملحومة =====================
+   850→   850→
+   851→   851→    /**
+   852→   852→     * حساب مقاومة اللحام التفريغي (كيلونيوتن)
+   853→   853→     * حسب AISC 360-J2.4 و ECP 205-6.3
+   854→   854→     *
+   855→   855→     * الصيغة (LRFD):
+   856→   856→     *   φRn = φ × Fw × Aw
+   857→   857→     *
+   858→   858→     * حيث:
+   859→   859→     *   φ = 0.75 (معامل المقاومة لللحام)
+   860→   860→     *   Fw = 0.60 × FEXX (إجهاد اللحام = 0.6 × مقاومة الشد للقطب)
+   861→   861→     *   Aw = المساحة الفعالة = الحلق (0.707 × حجم اللحام) × الطول الفعال
+   862→   862→     *
+   863→   863→     * @param weldSize حجم اللحام التفريغي (مم) - طول الضلع
+   864→   864→     * @param weldLength الطول الفعال لللحام (مم)
+   865→   865→     * @param electrodeType نوع القطب الملحوم
+   866→   866→     * @param isLongWeld هل اللحام طويل (> 300 مم)؟ - يُطبق معامل تخفيض
+   867→   867→     * @return مقاومة اللحام (كيلونيوتن)
+   868→   868→     */
+   869→   869→    fun calculateFilletWeldCapacity(
+   870→   870→        weldSize: Double,
+   871→   871→        weldLength: Double,
+   872→   872→        electrodeType: ElectrodeType,
+   873→   873→        isLongWeld: Boolean = false
+   874→   874→    ): Double {
+   875→   875→        // حساب سماكة الحلق الفعالة - AISC J2.2a
+   876→   876→        // throat = 0.707 × leg size (للحام بزاوية 90 درجة)
+   877→   877→        val throat = 0.707 * weldSize
+   878→   878→
+   879→   879→        // معامل تخفيض اللحام الطويل - AISC J2.2b
+   880→   880→        // لللحامات الطويلة (> 300 مم) يُطبق معامل تخفيض
+   881→   881→        val lengthReductionFactor = if (isLongWeld && weldLength > 300.0) {
+   882→   882→            1.0 - 0.002 * (weldLength - 300.0) / weldLength
+   883→   883→        } else {
+   884→   884→            1.0
+   885→   885→        }
+   886→   886→
+   887→   887→        // الطول الفعال مع معامل التخفيض
+   888→   888→        val effectiveLength = weldLength * lengthReductionFactor
+   889→   889→
+   890→   890→        // إجهاد اللحام الفعال - AISC J2.4
+   891→   891→        // Fw = 0.60 × FEXX
+   892→   892→        val fw = 0.60 * electrodeType.tensileStrength
+   893→   893→
+   894→   894→        // المساحة الفعالة لللحام
+   895→   895→        val aw = throat * effectiveLength
+   896→   896→
+   897→   897→        // حساب مقاومة اللحام - AISC J2.4 / ECP 205-6.3
+   898→   898→        // φRn = φ × Fw × Aw
+   899→   899→        val rn = PHI_WELD * fw * aw
+   900→   900→
+   901→   901→        // التحويل من N إلى kN
+   902→   902→        return rn / 1000.0
+   903→   903→    }
+   904→   904→
+   905→   905→    /**
+   906→   906→     * حساب مساحة الحلق الفعالة لللحام (مم²)
+   907→   907→     *
+   908→   908→     * @param weldSize حجم اللحام (مم) - طول الضلع
+   909→   909→     * @param weldLength الطول الفعال (مم)
+   910→   910→     * @return مساحة الحلق الفعالة (مم²)
+   911→   911→     */
+   912→   912→    fun calculateThroatArea(
+   913→   913→        weldSize: Double,
+   914→   914→        weldLength: Double
+   915→   915→    ): Double {
+   916→   916→        // الحلق = 0.707 × حجم اللحام (للحام بزاوية 90°) - AISC J2.2a
+   917→   917→        val throat = 0.707 * weldSize
+   918→   918→        return throat * weldLength
+   919→   919→    }
+   920→   920→
+   921→   921→    /**
+   922→   922→     * تصميم وصلة ملحومة شاملة
+   923→   923→     * يجمع كل فحوصات اللحام في نتيجة واحدة
+   924→   924→     *
+   925→   925→     * [مرجع: AISC 360 الفصل J2 / ECP 205 الفصل السادس]
+   926→   926→     *
+   927→   927→     * @param weldType نوع اللحام
+   928→   928→     * @param weldSize حجم اللحام (مم) - طول الضلع للتفريغي
+   929→   929→     * @param weldLength الطول الكلي لللحام (مم)
+   930→   930→     * @param electrodeType نوع القطب الملحوم
+   931→   931→     * @param appliedForce القوة المطبقة (كيلونيوتن)
+   932→   932→     * @param plateThickness سماكة الجزء الأرفق (مم) - للتحقق من الحجم الأدنى والأقصى
+   933→   933→     * @param isEdgeWeld هل اللحام على حافة؟
+   934→   934→     * @return كائن WeldDesignResult يحتوي على النتائج
+   935→   935→     */
+   936→   936→    fun designWeldedConnection(
+   937→   937→        weldType: WeldType,
+   938→   938→        weldSize: Double,
+   939→   939→        weldLength: Double,
+   940→   940→        electrodeType: ElectrodeType,
+   941→   941→        appliedForce: Double = 0.0,
+   942→   942→        plateThickness: Double = 10.0,
+   943→   943→        isEdgeWeld: Boolean = false
+   944→   944→    ): WeldDesignResult {
+   945→   945→        // قائمة التحذيرات وملاحظات الكود
+   946→   946→        val warnings = mutableListOf<String>()
+   947→   947→        val codeNotes = mutableListOf<String>()
+   948→   948→
+   949→   949→        if (weldType != WeldType.FILLET) {
+   950→   950→            warnings.add("⚠️ هذا الفحص مُصمم للحام التفريغي (Fillet Weld) فقط - لحامات أخرى تتطلب فحوصات مختلفة")
+   951→   951→        }
+   952→   952→
+   953→   953→        // ===================== التحقق من حجم اللحام =====================
+   954→   954→
+   955→   955→        // الحجم الأدنى لللحام التفريغي - AISC Table J2.4 / ECP 205 جدول (6.2)
+   956→   956→        val minWeldSize = getMinFilletWeldSize(plateThickness)
+   957→   957→        if (weldSize < minWeldSize) {
+   958→   958→            warnings.add("⚠️ حجم اللحام (${weldSize.toInt()} مم) أقل من الحد الأدنى (${minWeldSize.toInt()} مم) حسب AISC Table J2.4")
+   959→   959→        }
+   960→   960→
+   961→   961→        // الحجم الأقصى لللحام التفريغي - AISC J2.2b / ECP 205-6.2
+   962→   962→        val maxWeldSize = getMaxFilletWeldSize(plateThickness, isEdgeWeld)
+   963→   963→        if (weldSize > maxWeldSize) {
+   964→   964→            warnings.add("⚠️ حجم اللحام (${weldSize.toInt()} مم) يتجاوز الحد الأقصى (${maxWeldSize.toInt()} مم) حسب AISC J2.2b")
+   965→   965→        }
+   966→   966→
+   967→   967→        codeNotes.add("📌 AISC 360-Table J2.4: الحجم الأدنى لللحام = ${minWeldSize.toInt()} مم (لسماكة ${plateThickness.toInt()} مم)")
+   968→   968→        codeNotes.add("📌 AISC 360-J2.2b: الحجم الأقصى لللحام = ${maxWeldSize.toInt()} مم")
+   969→   969→
+   970→   970→        // ===================== حساب مقاومة اللحام =====================
+   971→   971→
+   972→   972→        // التحقق من اللحام الطويل
+   973→   973→        val isLongWeld = weldLength > 300.0
+   974→   974→        val lengthReductionFactor = if (isLongWeld) {
+   975→   975→            1.0 - 0.002 * (weldLength - 300.0) / weldLength
+   976→   976→        } else {
+   977→   977→            1.0
+   978→   978→        }
+   979→   979→
+   980→   980→        if (isLongWeld) {
+   981→   981→            codeNotes.add("📌 AISC 360-J2.2b: معامل تخفيض اللحام الطويل = ${String.format("%.3f", lengthReductionFactor)}")
+   982→   982→        }
+   983→   983→
+   984→   984→        // حساب المقاومة - AISC J2.4 / ECP 205-6.3
+   985→   985→        val capacity = calculateFilletWeldCapacity(
+   986→   986→            weldSize = weldSize,
+   987→   987→            weldLength = weldLength,
+   988→   988→            electrodeType = electrodeType,
+   989→   989→            isLongWeld = isLongWeld
+   990→   990→        )
+   991→   991→
+   992→   992→        // حساب مساحة الحلق الفعالة
+   993→   993→        val throatArea = calculateThroatArea(weldSize, weldLength)
+   994→   994→
+   995→   995→        // ===================== إجهاد اللحام =====================
+   996→   996→
+   997→   997→        val fw = 0.60 * electrodeType.tensileStrength
+   998→   998→        val throat = 0.707 * weldSize
+   999→   999→        codeNotes.add("📌 AISC 360-J2.4: إجهاد اللحام Fw = 0.60 × FEXX = 0.60 × ${electrodeType.tensileStrength.toInt()} = ${fw.toInt()} MPa")
+  1000→  1000→        codeNotes.add("📌 AISC 360-J2.2a: الحلق الفعال = 0.707 × ${weldSize.toInt()} = ${String.format("%.2f", throat)} مم")
+  1001→  1001→        codeNotes.add("📌 AISC 360-J2.4: مقاومة اللحام = φ × Fw × Aw = 0.75 × ${fw.toInt()} × ${throatArea.toInt()} = ${(capacity * 1000).toInt()} N")
+  1002→  1002→
+  1003→  1003→        // ===================== فحص الأمان =====================
+  1004→  1004→
+  1005→  1005→        var isSafe = true
+  1006→  1006→        var utilizationRatio = 0.0
+  1007→  1007→
+  1008→  1008→        if (appliedForce > 0) {
+  1009→  1009→            utilizationRatio = appliedForce / capacity
+  1010→  1010→            isSafe = utilizationRatio <= 1.0
+  1011→  1011→        }
+  1012→  1012→
+  1013→  1013→        if (!isSafe) {
+  1014→  1014→            warnings.add("⚠️ اللحام غير آمن - نسبة الاستخدام = ${String.format("%.2f", utilizationRatio)} > 1.0")
+  1015→  1015→        }
+  1016→  1016→
+  1017→  1017→        if (utilizationRatio > 0.9 && utilizationRatio <= 1.0) {
+  1018→  1018→            warnings.add("⚡ نسبة الاستخدام عالية (${String.format("%.2f", utilizationRatio)}) - يُنصح بزيادة حجم اللحام أو طوله")
+  1019→  1019→        }
+  1020→  1020→
+  1021→  1021→        // ===================== التحقق من الطول الأدنى =====================
+  1022→  1022→
+  1023→  1023→        // الطول الأدنى لللحام التفريغي = 4 أضعاف حجم اللحام - AISC J2.2b
+  1024→  1024→        val minWeldLength = 4.0 * weldSize
+  1025→  1025→        if (weldLength < minWeldLength) {
+  1026→  1026→            warnings.add("⚠️ طول اللحام (${weldLength.toInt()} مم) أقل من الحد الأدنى (4×w = ${minWeldLength.toInt()} مم) حسب AISC J2.2b")
+  1027→  1027→        }
+  1028→  1028→
+  1029→  1029→        return WeldDesignResult(
+  1030→  1030→            weldType = weldType,
+  1031→  1031→            weldSize = weldSize,
+  1032→  1032→            weldLength = weldLength,
+  1033→  1033→            electrodeType = electrodeType,
+  1034→  1034→            capacity = capacity,
+  1035→  1035→            throatArea = throatArea,
+  1036→  1036→            isSafe = isSafe,
+  1037→  1037→            utilizationRatio = utilizationRatio,
+  1038→  1038→            warnings = warnings,
+  1039→  1039→            codeNotes = codeNotes
+  1040→  1040→        )
+  1041→  1041→    }
+  1042→  1042→
+  1043→  1043→    // ===================== تحليل اللحامات المركبة (للوصلات اللامركزية) =====================
+  1044→  1044→
+  1045→  1045→    /**
+  1046→  1046→     * تحليل اللحامات المركبة تحت أحمال لامركزية
+  1047→  1047→     * يستخدم التحليل الشعاعي (Vector Analysis) - AISC 360-J2.4
+  1048→  1048→     *
+  1049→  1049→     * عند وجود لحامات متعددة تحت حمل لامركزي:
+  1050→  1050→     *   - يتم تقسيم الحمل إلى مركزي وعزم دوران
+  1051→  1051→     *   - يُحسب الإجهاد الناتج عن كل مكون
+  1052→  1052→     *   - يتم جمع الإجهادات شعاعياً
+  1053→  1053→     *
+  1054→  1054→     * @param appliedForce القوة المطبقة (كيلونيوتن)
+  1055→  1055→     * @param eccentricity اللامركزية (مم) - المسافة بين خط عمل القوة ومركز اللحام
+  1056→  1056→     * @param weldSize حجم اللحام التفريغي (مم)
+  1057→  1057→     * @param weldLength الطول الفعال الكلي لللحام (مم)
+  1058→  1058→     * @param electrodeType نوع القطب
+  1059→  1059→     * @return زوج: (هل آمن؟، الإجهاد المركب الفعلي MPa)
+  1060→  1060→     */
+  1061→  1061→    fun analyzeEccentricWeld(
+  1062→  1062→        appliedForce: Double,
+  1063→  1063→        eccentricity: Double,
+  1064→  1064→        weldSize: Double,
+  1065→  1065→        weldLength: Double,
+  1066→  1066→        electrodeType: ElectrodeType
+  1067→  1067→    ): Pair<Boolean, Double> {
+  1068→  1068→        // إجهاد اللحام المسموح - AISC J2.4
+  1069→  1069→        val fw = PHI_WELD * 0.60 * electrodeType.tensileStrength
+  1070→  1070→
+  1071→  1071→        // الحلق الفعال
+  1072→  1072→        val throat = 0.707 * weldSize
+  1073→  1073→
+  1074→  1074→        // المساحة الفعالة
+  1075→  1075→        val effectiveArea = throat * weldLength
+  1076→  1076→
+  1077→  1077→        // عزم القصور لللحام حول المحور المطلوب
+  1078→  1078→        // لوحظ أن اللحام يعامل كخط (لحام تفريغي)
+  1079→  1079→        val momentOfInertia = weldLength * weldLength * weldLength / 12.0 // I = L³/12
+  1080→  1080→
+  1081→  1081→        // تحويل القوة إلى نيوتن
+  1082→  1082→        val forceN = appliedForce * 1000.0
+  1083→  1083→
+  1084→  1084→        // الإجهاد المباشر (قص مباشر)
+  1085→  1085→        val directStress = forceN / effectiveArea
+  1086→  1086→
+  1087→  1087→        // العزم الدوراني
+  1088→  1088→        val moment = forceN * eccentricity
+  1089→  1089→
+  1090→  1090→        // الإجهاد الناتج عن العزم (أقصى إجهاد عند الأطراف)
+  1091→  1091→        // σ = M × c / I حيث c = L/2
+  1092→  1092→        val bendingStress = moment * (weldLength / 2.0) / (throat * momentOfInertia)
+  1093→  1093→
+  1094→  1094→        // الإجهاد المركب (جمع شعاعي)
+  1095→  1095→        // هنا نبسط: الإجهاد الكلي ≈ الجذر التربيعي لمجموع المربعات
+  1096→  1096→        val combinedStress = sqrt(directStress * directStress + bendingStress * bendingStress)
+  1097→  1097→
+  1098→  1098→        // مقارنة مع الإجهاد المسموح
+  1099→  1099→        return Pair(combinedStress <= fw, combinedStress)
+  1100→  1100→    }
+  1101→  1101→
+  1102→  1102→    // ===================== حساب العدد المطلوب من المسامير =====================
+  1103→  1103→
+  1104→  1104→    /**
+  1105→  1105→     * حساب الحد الأدنى لعدد المسامير المطلوب
+  1106→  1106→     *
+  1107→  1107→     * @param appliedForce القوة المطبقة (كيلونيوتن)
+  1108→  1108→     * @param capacityPerBolt مقاومة المسمار الواحد (كيلونيوتن)
+  1109→  1109→     * @return العدد الأدنى للمسامير (مُقرب لأعلى)
+  1110→  1110→     */
+  1111→  1111→    fun calculateRequiredBolts(appliedForce: Double, capacityPerBolt: Double): Int {
+  1112→  1112→        if (capacityPerBolt <= 0) return Int.MAX_VALUE
+  1113→  1113→        return ceil(appliedForce / capacityPerBolt).toInt()
+  1114→  1114→    }
+  1115→  1115→
+  1116→  1116→    // ===================== حساب الطول المطلوب لللحام =====================
+  1117→  1117→
+  1118→  1118→    /**
+  1119→  1119→     * حساب الطول الأدنى لللحام التفريغي المطلوب
+  1120→  1120→     *
+  1121→  1121→     * @param appliedForce القوة المطبقة (كيلونيوتن)
+  1122→  1122→     * @param weldSize حجم اللحام (مم)
+  1123→  1123→     * @param electrodeType نوع القطب
+  1124→  1124→     * @return الطول الأدنى لللحام (مم)
+  1125→  1125→     */
+  1126→  1126→    fun calculateRequiredWeldLength(
+  1127→  1127→        appliedForce: Double,
+  1128→  1128→        weldSize: Double,
+  1129→  1129→        electrodeType: ElectrodeType
+  1130→  1130→    ): Double {
+  1131→  1131→        val fw = 0.60 * electrodeType.tensileStrength
+  1132→  1132→        val throat = 0.707 * weldSize
+  1133→  1133→
+  1134→  1134→        // φRn = φ × Fw × throat × L
+  1135→  1135→        // L = φRn / (φ × Fw × throat)
+  1136→  1136→        val rn = appliedForce * 1000.0  // التحويل إلى نيوتن
+  1137→  1137→        val requiredLength = rn / (PHI_WELD * fw * throat)
+  1138→  1138→
+  1139→  1139→        // يجب ألا يقل الطول عن 4 أضعاف حجم اللحام - AISC J2.2b
+  1140→  1140→        return max(requiredLength, 4.0 * weldSize)
+  1141→  1141→    }
+  1142→  1142→
+  1143→  1143→    // ===================== فحص شامل للوصلة (مسامير أو لحام) =====================
+  1144→  1144→
+  1145→  1145→    /**
+  1146→  1146→     * فحص شامل لنوع الوصلة (مساميرية أو ملحومة)
+  1147→  1147→     * يُستخدم عند وجود كائن ConnectionType من الكيانات
+  1148→  1148→     *
+  1149→  1149→     * [مرجع: ECP 205 الفصل 5 و 6 / AISC 360 الفصل J]
+  1150→  1150→     *
+  1151→  1151→     * @param connectionType كائن نوع الوصلة
+  1152→  1152→     * @param appliedShear قوة القص المطبقة (كيلونيوتن)
+  1153→  1153→     * @param appliedTension قوة الشد المطبقة (كيلونيوتن)
+  1154→  1154→     * @param plateThickness سماكة الجزء المتصل (مم)
+  1155→  1155→     * @param fuPlate مقاومة الشد القصوى للوحة (MPa)
+  1156→  1156→     * @param fyPlate إجهاد الخضوع للوحة (MPa)
+  1157→  1157→     * @return خريطة تحتوي على نتائج الفحص
+  1158→  1158→     */
+  1159→  1159→    fun checkConnection(
+  1160→  1160→        connectionType: ConnectionType,
+  1161→  1161→        appliedShear: Double = 0.0,
+  1162→  1162→        appliedTension: Double = 0.0,
+  1163→  1163→        plateThickness: Double = 10.0,
+  1164→  1164→        fuPlate: Double = 400.0,
+  1165→  1165→        fyPlate: Double = 250.0
+  1166→  1166→    ): Map<String, Any> {
+  1167→  1167→        val results = mutableMapOf<String, Any>()
+  1168→  1168→
+  1169→  1169→        when (connectionType) {
+  1170→  1170→            is ConnectionType.Welded -> {
+  1171→  1171→                // فحص اللحام
+  1172→  1172→                val weldResult = designWeldedConnection(
+  1173→  1173→                    weldType = connectionType.weldType,
+  1174→  1174→                    weldSize = connectionType.weldSize,
+  1175→  1175→                    weldLength = connectionType.weldLength,
+  1176→  1176→                    electrodeType = connectionType.electrodeType,
+  1177→  1177→                    appliedForce = max(appliedShear, appliedTension),
+  1178→  1178→                    plateThickness = plateThickness
+  1179→  1179→                )
+  1180→  1180→                results["weldResult"] = weldResult
+  1181→  1181→                results["isSafe"] = weldResult.isSafe
+  1182→  1182→            }
+  1183→  1183→
+  1184→  1184→            is ConnectionType.Bolted -> {
+  1185→  1185→                // فحص المسامير
+  1186→  1186→                val isDoubleShear = plateThickness > connectionType.boltDiameter * 2
+  1187→  1187→                val boltResult = designBoltedConnection(
+  1188→  1188→                    boltDiameter = connectionType.boltDiameter,
+  1189→  1189→                    boltGrade = connectionType.boltGrade,
+  1190→  1190→                    numberOfBolts = connectionType.numberOfBolts,
+  1191→  1191→                    boltPattern = connectionType.boltPattern,
+  1192→  1192→                    boltConnectionType = connectionType.connectionType,
+  1193→  1193→                    appliedShear = appliedShear,
+  1194→  1194→                    appliedTension = appliedTension,
+  1195→  1195→                    plateThickness = plateThickness,
+  1196→  1196→                    fuPlate = fuPlate,
+  1197→  1197→                    isDoubleShear = isDoubleShear,
+  1198→  1198→                    fyPlate = fyPlate
+  1199→  1199→                )
+  1200→  1200→                results["boltResult"] = boltResult
+  1201→  1201→                results["isSafe"] = boltResult.isSafe
+  1202→  1202→            }
+  1203→  1203→
+  1204→  1204→            is ConnectionType.Hybrid -> {
+  1205→  1205→                // فحص وصلة مركبة (لحام + مسامير)
+  1206→  1206→                // فحص اللحام
+  1207→  1207→                val weldResult = designWeldedConnection(
+  1208→  1208→                    weldType = connectionType.welded.weldType,
+  1209→  1209→                    weldSize = connectionType.welded.weldSize,
+  1210→  1210→                    weldLength = connectionType.welded.weldLength,
+  1211→  1211→                    electrodeType = connectionType.welded.electrodeType,
+  1212→  1212→                    appliedForce = max(appliedShear, appliedTension) * 0.5,
+  1213→  1213→                    plateThickness = plateThickness
+  1214→  1214→                )
+  1215→  1215→                results["weldResult"] = weldResult
+  1216→  1216→
+  1217→  1217→                // فحص المسامير
+  1218→  1218→                val boltResult = designBoltedConnection(
+  1219→  1219→                    boltDiameter = connectionType.bolted.boltDiameter,
+  1220→  1220→                    boltGrade = connectionType.bolted.boltGrade,
+  1221→  1221→                    numberOfBolts = connectionType.bolted.numberOfBolts,
+  1222→  1222→                    boltPattern = connectionType.bolted.boltPattern,
+  1223→  1223→                    boltConnectionType = connectionType.bolted.connectionType,
+  1224→  1224→                    appliedShear = appliedShear * 0.5,
+  1225→  1225→                    appliedTension = appliedTension * 0.5,
+  1226→  1226→                    plateThickness = plateThickness,
+  1227→  1227→                    fuPlate = fuPlate,
+  1228→  1228→                    fyPlate = fyPlate
+  1229→  1229→                )
+  1230→  1230→                results["boltResult"] = boltResult
+  1231→  1231→
+  1232→  1232→                // الأمان الكلي: كلا الجزأين يجب أن يكونا آمنين
+  1233→  1233→                results["isSafe"] = weldResult.isSafe && boltResult.isSafe
+  1234→  1234→            }
+  1235→  1235→
+  1236→  1236→            is ConnectionType.Pressed -> {
+  1237→  1237→                // وصلة بالضغط - فحص بسيط
+  1238→  1238→                val bearingStress = connectionType.pressForce * 1000.0 / connectionType.contactArea
+  1239→  1239→                val isSafe = bearingStress <= fyPlate
+  1240→  1240→                results["isSafe"] = isSafe
+  1241→  1241→                results["bearingStress"] = bearingStress
+  1242→  1242→                results["message"] = if (isSafe) {
+  1243→  1243→                    "✅ وصلة الضغط آمنة - إجهاد التحمل = ${String.format("%.1f", bearingStress)} MPa ≤ Fy = $fyPlate MPa"
+  1244→  1244→                } else {
+  1245→  1245→                    "❌ وصلة الضغط غير آمنة - إجهاد التحمل = ${String.format("%.1f", bearingStress)} MPa > Fy = $fyPlate MPa"
+  1246→  1246→                }
+  1247→  1247→            }
+  1248→  1248→        }
+  1249→  1249→
+  1250→  1250→        return results
+  1251→  1251→    }
+  1252→  1252→
+  1253→  1253→    // ===================== جدول سريع: اختيار المسمار المناسب =====================
+  1254→  1254→
+  1255→  1255→    /**
+  1256→  1256→     * اختيار المسمار الأنسب بناءً على القوة المطلوبة
+  1257→  1257→     * يُرجع قائمة بالمسامير المُرتبة حسب الكفاءة (السعر/المقاومة)
+  1258→  1258→     *
+  1259→  1259→     * @param requiredCapacity المقاومة المطلوبة (كيلونيوتن)
+  1260→  1260→     * @param isDoubleShear هل القص مزدوج؟
+  1261→  1261→     * @param preferredGrades الدرجات المفضلة (الافتراضي: كل الدرجات)
+  1262→  1262→     * @return قائمة بالخيارات المتاحة مرتبة حسب الكفاءة
+  1263→  1263→     */
+  1264→  1264→    fun selectOptimalBolt(
+  1265→  1265→        requiredCapacity: Double,
+  1266→  1266→        isDoubleShear: Boolean = false,
+  1267→  1267→        preferredGrades: List<BoltGrade> = BoltGrade.entries
+  1268→  1268→    ): List<BoltOption> {
+  1269→  1269→        val options = mutableListOf<BoltOption>()
+  1270→  1270→
+  1271→  1271→        // الأقطار القياسية المتاحة
+  1272→  1272→        val standardDiameters = listOf(16.0, 20.0, 22.0, 24.0, 27.0, 30.0)
+  1273→  1273→
+  1274→  1274→        for (grade in preferredGrades) {
+  1275→  1275→            for (diameter in standardDiameters) {
+  1276→  1276→                val shearCap = calculateBoltShearCapacity(grade, diameter, isDoubleShear)
+  1277→  1277→                val bearingCap = shearCap * 1.2 // تقريب
+  1278→  1278→                val capacity = min(shearCap, bearingCap)
+  1279→  1279→                val requiredBolts = calculateRequiredBolts(requiredCapacity, capacity)
+  1280→  1280→
+  1281→  1281→                options.add(
+  1282→  1282→                    BoltOption(
+  1283→  1283→                        diameter = diameter,
+  1284→  1284→                        grade = grade,
+  1285→  1285→                        capacityPerBolt = capacity,
+  1286→  1286→                        requiredBolts = requiredBolts,
+  1287→  1287→                        totalCapacity = capacity * requiredBolts,
+  1288→  1288→                        efficiency = capacity / getBoltArea(diameter) // مقاومة لكل وحدة مساحة
+  1289→  1289→                    )
+  1290→  1290→                )
+  1291→  1291→            }
+  1292→  1292→        }
+  1293→  1293→
+  1294→  1294→        // ترتيب حسب الكفاءة (الأقل عدد مسامير أولاً، ثم الأعلى كفاءة)
+  1295→  1295→        return options.sortedWith(
+  1296→  1296→            compareBy({ it.requiredBolts }, { -it.efficiency })
+  1297→  1297→        )
+  1298→  1298→    }
+  1299→  1299→
+  1300→  1300→    /**
+  1301→  1301→     * خيار مسمار واحد للاستخدام في جدول الاختيار
+  1302→  1302→     */
+  1303→  1303→    data class BoltOption(
+  1304→  1304→        val diameter: Double,           // قطر المسمار (مم)
+  1305→  1305→        val grade: BoltGrade,           // درجة المسمار
+  1306→  1306→        val capacityPerBolt: Double,    // مقاومة المسمار الواحد (كيلونيوتن)
+  1307→  1307→        val requiredBolts: Int,         // عدد المسامير المطلوب
+  1308→  1308→        val totalCapacity: Double,      // المقاومة الكلية (كيلونيوتن)
+  1309→  1309→        val efficiency: Double          // الكفاءة (مقاومة / مساحة)
+  1310→  1310→    )
+  1311→  1311→}

@@ -1,0 +1,1302 @@
+     1→package com.civileg.app.domain.calculations.ecp
+     2→
+     3→import kotlin.math.*
+     4→
+     5→/**
+     6→ * تصميم القواعد المعدنية للمنشآت الحديدية
+     7→ * Design of Steel Base Plates for Steel Structures
+     8→ *
+     9→ * يغطي:
+    10→ * - القاعدة المركزية (Concentrically Loaded Base Plates)
+    11→ * - القواعد غير المركزية (Eccentric Base Plates)
+    12→ * - قواعد الجيب (Pocket Base Plates)
+    13→ *
+    14→ * المراجع:
+    15→ * - ECP 205 (الكود المصري للمنشآت المعدنية) - البنود الخاصة بالقواعد
+    16→ * - AISC 360-16 Chapter 14 (Base Plate Design)
+    17→ * - AISC Design Guide 1 (Base Plate and Anchor Rod Design, 2nd Ed.)
+    18→ *
+    19→ * @author Civileg Engineering Team
+    20→ */
+    21→class SteelBasePlateDesign {
+    22→
+    23→    companion object {
+    24→        // ===================== معاملات المقاومة (Resistance Factors) =====================
+    25→        // φ factors per AISC 360-16 / ECP 205 LRFD
+    26→        private const val PHI_BEARING_CONCRETE = 0.65  // معامل المقاومة لضغط الخرسانة (AISC 360-16 §J8)
+    27→        private const val PHI_BENDING_PLATE = 0.90     // معامل المقاومة لانحناء اللوح (AISC 360-16 §F)
+    28→        private const val PHI_TENSION_BOLT = 0.75      // معامل المقاومة لشد البراغي (AISC 360-16 Table J3.2)
+    29→
+    30→        // ===================== ثوابت التصميم (Design Constants) =====================
+    31→        private const val MIN_OVERHANG_C = 50.0       // أقل تبريز (mm) - الحد الأدنى
+    32→        private const val MAX_OVERHANG_C = 100.0      // أقصى تبريز (mm) - الحد الأقصى
+    33→        private const val DEFAULT_OVERHANG_C = 75.0   // التبريز الافتراضي (mm)
+    34→        private const val MIN_PLATE_THICKNESS = 12.0  // أقل سماكة للوحة القاعدة (mm)
+    35→
+    36→        // ===================== ثوابت المونة (Grout Constants) =====================
+    37→        private const val MIN_GROUT_THICKNESS = 25.0   // أقل سماكة للمونة (mm)
+    38→        private const val MAX_GROUT_THICKNESS = 75.0   // أقصى سماكة للمونة (mm)
+    39→        private const val DEFAULT_GROUT_THICKNESS = 50.0 // سماكة المونة الافتراضية (mm)
+    40→
+    41→        // ===================== ثوابت البراغي الارتكازية (Anchor Bolt Constants) =====================
+    42→        private const val MIN_EDGE_DISTANCE_BOLT = 40.0  // أقل مسافة حافة للبرغي (mm)
+    43→        private const val MIN_EMBEDMENT_HOOK = 12.0       // أقل طول تثبيت للبرغي المعقوف (× db)
+    44→        private const val MIN_EMBEDMENT_HEADED = 8.0      // أقل طول تثبيت للبرغي برأس (× db)
+    45→        private const val BOLT_SPACING_FACTOR = 3.0       // أقل مسافة بين البراغي (× db)
+    46→
+    47→        // ===================== درجات البراغي (Bolt Grades) =====================
+    48→        /**
+    49→         * خواص درجات البراغي حسب ISO 898-1 / ECP 205
+    50→         */
+    51→        enum class BoltGrade(
+    52→            val designation: String,
+    53→            val fu: Double,  // MPa - إجهاد الشد الأقصى
+    54→            val fy: Double   // MPa - إجهاد الخضوع
+    55→        ) {
+    56→            GRADE_4_6("4.6", 400.0, 240.0),
+    57→            GRADE_4_8("4.8", 400.0, 320.0),
+    58→            GRADE_5_6("5.6", 500.0, 300.0),
+    59→            GRADE_5_8("5.8", 500.0, 400.0),
+    60→            GRADE_6_8("6.8", 600.0, 480.0),
+    61→            GRADE_8_8("8.8", 800.0, 640.0),
+    62→            GRADE_10_9("10.9", 1000.0, 900.0);
+    63→
+    64→            fun getGradeName(): String = designation
+    65→        }
+    66→
+    67→        // ===================== أقطار البراغي القياسية (Standard Bolt Diameters) =====================
+    68→        val STANDARD_BOLT_DIAMETERS = listOf(
+    69→            12.0, 16.0, 20.0, 22.0, 24.0, 27.0, 30.0, 33.0, 36.0, 42.0, 48.0
+    70→        )
+    71→
+    72→        // ===================== سماكات اللوح القياسية (Standard Plate Thicknesses) =====================
+    73→        val STANDARD_PLATE_THICKNESSES = listOf(
+    74→            12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0, 28.0, 30.0,
+    75→            32.0, 35.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 90.0, 100.0
+    76→        )
+    77→    }
+    78→
+    79→    // ===================== كيانات البيانات (Data Classes) =====================
+    80→
+    81→    /**
+    82→     * نتيجة تصميم البراغي الارتكازية
+    83→     * Anchor Bolt Design Result
+    84→     */
+    85→    data class AnchorBoltResult(
+    86→        val numberOfBolts: Int,          // عدد البراغي
+    87→        val boltDiameter: Double,        // قطر البرغي (mm)
+    88→        val boltGrade: String,           // درجة البرغي ("4.6", "8.8", etc.)
+    89→        val boltSpacing: Double,         // المسافة بين البراغي (mm)
+    90→        val edgeDistance: Double,        // المسافة من الحافة (mm)
+    91→        val tensionCapacity: Double,     // سعة الشد لكل برغي (kN)
+    92→        val requiredTension: Double,     // الشد المطلوب لكل برغي (kN)
+    93→        val shearCapacity: Double,       // سعة القص لكل برغي (kN)
+    94→        val requiredShear: Double,       // القص المطلوب لكل برغي (kN)
+    95→        val embedmentLength: Double,     // طول التثبيت (mm)
+    96→        val boltArea: Double,            // مساحة البرغي (mm²)
+    97→        val isSafe: Boolean              // هل التصميم آمن؟
+    98→    )
+    99→
+   100→    /**
+   101→     * نتيجة تصميم المونة
+   102→     * Grout Design Result
+   103→     */
+   104→    data class GroutResult(
+   105→        val thickness: Double,           // سماكة المونة (mm)
+   106→        val requiredStrength: Double,    // مقاومة المونة المطلوبة (MPa)
+   107→        val providedStrength: Double,    // مقاومة المونة المتاحة (MPa)
+   108→        val isAdequate: Boolean          // هل المونة كافية؟
+   109→    )
+   110→
+   111→    /**
+   112→     * نتيجة تصميم قاعدة الجيب
+   113→     * Pocket Base Plate Design Result
+   114→     */
+   115→    data class PocketResult(
+   116→        val pocketDepth: Double,         // عمق الجيب (mm)
+   117→        val pocketWidth: Double,         // عرض الجيب (mm)
+   118→        val pocketLength: Double,        // طول الجيب (mm)
+   119→        val boltDiameter: Double,        // قطر البرغي (mm)
+   120→        concreteCover: Double,           // غطاء الخرسانة (mm)
+   121→        val isSafe: Boolean              // هل التصميم آمن؟
+   122→    )
+   123→
+   124→    /**
+   125→     * نتيجة التصميم الشاملة للقاعدة المعدنية
+   126→     * Comprehensive Base Plate Design Result
+   127→     */
+   128→    data class BasePlateResult(
+   129→        val plateWidth: Double,           // عرض اللوح (mm) - B
+   130→        val plateLength: Double,          // طول اللوح (mm) - L
+   131→        val plateThickness: Double,       // سماكة اللوح (mm) - tp
+   132→        val maxBearingPressure: Double,   // أقصى ضغط تحمل (MPa)
+   133→        val concreteCapacity: Double,     // سعة الخرسانة (MPa)
+   134→        val anchorBolts: AnchorBoltResult, // نتيجة تصميم البراغي
+   135→        val grout: GroutResult,           // نتيجة تصميم المونة
+   136→        val isSafe: Boolean,              // هل التصميم آمن؟
+   137→        val utilizationRatio: Double,     // معامل الاستغلال
+   138→        val warnings: List<String>,       // تحذيرات التصميم
+   139→        val codeNotes: List<String>       // ملاحظات الكود
+   140→    )
+   141→
+   142→    /**
+   143→     * نتيجة تصميم القاعدة غير المركزية
+   144→     * Eccentric Base Plate Design Result
+   145→     */
+   146→    data class EccentricBasePlateResult(
+   147→        val plateWidth: Double,           // عرض اللوح (mm) - B
+   148→        val plateLength: Double,          // طول اللوح (mm) - L
+   149→        val plateThickness: Double,       // سماكة اللوح (mm) - tp
+   150→        val maxBearingPressure: Double,   // أقصى ضغط تحمل (MPa)
+   151→        val minBearingPressure: Double,   // أقل ضغط تحمل (MPa) (قد يكون سالب = شد)
+   152→        val effectiveBearingLength: Double, // الطول الفعال للتحمل (mm)
+   153→        val anchorBolts: AnchorBoltResult, // نتيجة تصميم البراغي
+   154→        val grout: GroutResult,           // نتيجة تصميم المونة
+   155→        val isSafe: Boolean,              // هل التصميم آمن؟
+   156→        val tensionSide: Boolean,         // هل يوجد شد في أحد الجانبين؟
+   157→        val utilizationRatio: Double,     // معامل الاستغلال
+   158→        val warnings: List<String>,       // تحذيرات التصميم
+   159→        val codeNotes: List<String>       // ملاحظات الكود
+   160→    )
+   161→
+   162→    /**
+   163→     * نتيجة تصميم قاعدة الجيب
+   164→     * Pocket Base Plate Result
+   165→     */
+   166→    data class PocketBasePlateResult(
+   167→        val plateWidth: Double,           // عرض اللوح (mm) - B
+   168→        val plateLength: Double,          // طول اللوح (mm) - L
+   169→        val plateThickness: Double,       // سماكة اللوح (mm) - tp
+   170→        val pocket: PocketResult,         // تفاصيل الجيب
+   171→        val anchorBolts: AnchorBoltResult, // نتيجة تصميم البراغي
+   172→        val grout: GroutResult,           // نتيجة تصميم المونة
+   173→        val isSafe: Boolean,              // هل التصميم آمن؟
+   174→        val utilizationRatio: Double,     // معامل الاستغلال
+   175→        val warnings: List<String>,       // تحذيرات التصميم
+   176→        val codeNotes: List<String>       // ملاحظات الكود
+   177→    )
+   178→
+   179→    /**
+   180→     * مدخلات تصميم القاعدة المركزية
+   181→     * Concentric Base Plate Design Input
+   182→     */
+   183→    data class ConcentricInput(
+   184→        val Pu: Double,             // محصلة القوة المحورية (kN) - محصلة الأحمال
+   185→        val Mux: Double,            // العزم حول المحور X (kN.m)
+   186→        val Muy: Double,            // العزم حول المحور Y (kN.m)
+   187→        val Vu: Double,             // قوة القص (kN)
+   188→        val bf: Double,             // عرض شفة العمود (mm)
+   189→        val dc: Double,             // عمق العمود (mm)
+   190→        val Fy: Double,             // إجهاد الخضوع للصلب (MPa)
+   191→        val fpc: Double,            // مقاومة ضغط الخرسانة (MPa)
+   192→        val groutStrength: Double = 0.0, // مقاومة المونة (MPa) - إذا صفر = تساوي الخرسانة
+   193→        val overhangC: Double = DEFAULT_OVERHANG_C, // التبريز (mm)
+   194→        val numAnchorBolts: Int = 4,       // عدد البراغي
+   195→        val boltGrade: BoltGrade = BoltGrade.GRADE_4_6, // درجة البراغي
+   196→        val boltDiameter: Double = 20.0,   // قطر البرغي (mm)
+   197→        val isHookedBolt: Boolean = true   // هل البرغي معقوف؟
+   198→    )
+   199→
+   200→    /**
+   201→     * مدخلات تصميم القاعدة غير المركزية
+   202→     * Eccentric Base Plate Design Input
+   203→     */
+   204→    data class EccentricInput(
+   205→        val Pu: Double,             // القوة المحورية (kN) - موجبة للضغط
+   206→        val Mux: Double,            // العزم حول المحور X (kN.m)
+   207→        val Muy: Double,            // العزم حول المحور Y (kN.m)
+   208→        val Vu: Double,             // قوة القص (kN)
+   209→        val bf: Double,             // عرض شفة العمود (mm)
+   210→        val dc: Double,             // عمق العمود (mm)
+   211→        val Fy: Double,             // إجهاد الخضوع للصلب (MPa)
+   212→        val fpc: Double,            // مقاومة ضغط الخرسانة (MPa)
+   213→        val groutStrength: Double = 0.0, // مقاومة المونة (MPa)
+   214→        val overhangC: Double = DEFAULT_OVERHANG_C, // التبريز (mm)
+   215→        val boltGrade: BoltGrade = BoltGrade.GRADE_4_6, // درجة البراغي
+   216→        val boltDiameter: Double = 24.0,   // قطر البرغي (mm)
+   217→        val isHookedBolt: Boolean = true   // هل البرغي معقوف؟
+   218→    )
+   219→
+   220→    /**
+   221→     * مدخلات تصميم قاعدة الجيب
+   222→     * Pocket Base Plate Design Input
+   223→     */
+   224→    data class PocketInput(
+   225→        val Pu: Double,             // محصلة القوة المحورية (kN)
+   226→        val Mux: Double,            // العزم حول المحور X (kN.m)
+   227→        val Muy: Double,            // العزم حول المحور Y (kN.m)
+   228→        val Vu: Double,             // قوة القص (kN)
+   229→        val bf: Double,             // عرض شفة العمود (mm)
+   230→        val dc: Double,             // عمق العمود (mm)
+   231→        val Fy: Double,             // إجهاد الخضوع للصلب (MPa)
+   232→        val fpc: Double,            // مقاومة ضغط الخرسانة (MPa)
+   233→        val boltGrade: BoltGrade = BoltGrade.GRADE_4_6, // درجة البراغي
+   234→        val boltDiameter: Double = 20.0,   // قطر البرغي (mm)
+   235→        val concreteCover: Double = 50.0   // غطاء الخرسانة (mm)
+   236→    )
+   237→
+   238→    // ============================================================================
+   239→    // ==================== 1. القاعدة المركزية (Concentric Base Plate) ===========
+   240→    // ============================================================================
+   241→    // المرجع: AISC 360-16 Chapter 14 / ECP 205
+   242→    // ============================================================================
+   243→
+   244→    /**
+   245→     * تصميم القاعدة المركزية - الأحمال المركزة على العمود
+   246→     * Design of concentrically loaded base plates
+   247→     *
+   248→     * يتعامل مع:
+   249→     * - الأحمال المحورية فقط
+   250→     * - الأحمال المحورية مع عزوم صغيرة (انحراف مركزي صغير)
+   251→     *
+   252→     * المرجع: AISC 360-16 §14.1 / ECP 205 البند الخاص بالقواعد المركزية
+   253→     *
+   254→     * @param input مدخلات التصميم
+   255→     * @return نتيجة التصميم الشاملة
+   256→     */
+   257→    fun designConcentricBasePlate(input: ConcentricInput): BasePlateResult {
+   258→        val warnings = mutableListOf<String>()
+   259→        val codeNotes = mutableListOf<String>()
+   260→
+   261→        codeNotes.add("التصميم حسب AISC 360-16 الفصل 14 و ECP 205")
+   262→        codeNotes.add("طريقة التصميم: LRFD (Load and Resistance Factor Design)")
+   263→
+   264→        // ==================== 1.1 حساب الانحراف المركزي (Eccentricity) ====================
+   265→        // e = √(Mux² + Muy²) / Pu  - المعادلة (1)
+   266→        val Mu_resultant = sqrt(input.Mux.pow(2) + input.Muy.pow(2)) // kN.m
+   267→        val e_mm = if (input.Pu > 0.01) {
+   268→            (Mu_resultant * 1000.0) / input.Pu  // تحويل kN.m إلى kN.mm ثم قسمة على kN = mm
+   269→        } else {
+   270→            0.0
+   271→        }
+   272→
+   273→        codeNotes.add(String.format(
+   274→            "الانحراف المركزي e = √(Mux² + Muy²)/Pu = %.1f mm",
+   275→            e_mm
+   276→        ))
+   277→
+   278→        // ==================== 1.2 حساب المساحة المطلوبة للوح القاعدة ====================
+   279→        // A_req = Pu / (φ * f'c)  - المعادلة (2)
+   280→        // مع مراعاة معامل التركيز للخرسانة A2/A1
+   281→        val Pu_N = input.Pu * 1000.0 // تحويل kN إلى N
+   282→        val phi_fc = PHI_BEARING_CONCRETE * input.fpc // MPa - سعة ضغط الخرسانة المعدلة
+   283→
+   284→        // المساحة المطلوبة مع معامل تركيز مقدرة (A2/A1 ≈ 2)
+   285→        // √(A2/A1) ≤ 2 per AISC 360-16 §J8
+   286→        val concentrationFactor = min(sqrt(2.0), 2.0)
+   287→        val A_req = Pu_N / (phi_fc * concentrationFactor) // mm²
+   288→
+   289→        codeNotes.add(String.format(
+   290→            "المساحة المطلوبة A_req = Pu/(φ·f'c·√(A2/A1)) = %.0f mm²",
+   291→            A_req
+   292→        ))
+   293→
+   294→        // ==================== 1.3 حساب أبعاد اللوح (B و L) ====================
+   295→        // الحد الأدنى: B ≥ bf + 2c , L ≥ dc + 2c  - AISC 360-16 §14.1
+   296→        val c = input.overhangC.coerceIn(MIN_OVERHANG_C, MAX_OVERHANG_C)
+   297→
+   298→        // B: عرض اللوح (عمودي على الشفة) - AISC 360-16 Eq. 14.1
+   299→        var B = input.bf + 2 * c
+   300→        var L = input.dc + 2 * c
+   301→
+   302→        // التأكد من أن المساحة كافية
+   303→        var A_provided = B * L
+   304→        if (A_provided < A_req) {
+   305→            // زيادة الأبعاد بشكل متناسب لتغطية المساحة المطلوبة
+   306→            val scaleFactor = sqrt(A_req / A_provided)
+   307→            B *= scaleFactor
+   308→            L *= scaleFactor
+   309→            // تقريب للأعلى لأقرب 5 مم
+   310→            B = ceil(B / 5.0) * 5.0
+   311→            L = ceil(L / 5.0) * 5.0
+   312→        }
+   313→
+   314→        // التأكد من أن B ≥ bf + 2*c و L ≥ dc + 2*c بعد التعديل
+   315→        B = max(B, input.bf + 2 * c)
+   316→        L = max(L, input.dc + 2 * c)
+   317→
+   318→        A_provided = B * L
+   319→
+   320→        codeNotes.add(String.format(
+   321→            "أبعاد اللوح: B = %.0f mm, L = %.0f mm, المساحة = %.0f mm²",
+   322→            B, L, A_provided
+   323→        ))
+   324→
+   325→        // ==================== 1.4 فحص الانحراف المركزي (Small vs Large Eccentricity) ====================
+   326→        val isSmallEccentricity = e_mm < B / 6.0
+   327→
+   328→        if (!isSmallEccentricity) {
+   329→            warnings.add(String.format(
+   330→                "الانحراف المركزي (e=%.1f mm) أكبر من B/6 (%.1f mm) - يُنصح باستخدام تصميم القاعدة غير المركزية",
+   331→                e_mm, B / 6.0
+   332→            ))
+   333→        }
+   334→
+   335→        // ==================== 1.5 حساب ضغط التحمل الفعلي ====================
+   336→        // للحالة المركزية: f_pu = Pu / (B × L)
+   337→        // للحالة ذات الانحراف الصغير: f_pu = Pu / (B × L) × [1 + 6e/B]
+   338→        val f_pu_uniform = Pu_N / (B * L) // MPa - ضغط التحمل المنتظم
+   339→
+   340→        val maxBearingPressure = if (isSmallEccentricity) {
+   341→            // معادلة ضغط التحمل مع الانحراف: f_max = P/(BL) × (1 + 6e/B)
+   342→            // باستخدام e الناتج عن العزوم
+   343→            val e_normalized = if (B > 0) e_mm / B else 0.0
+   344→            f_pu_uniform * (1.0 + 6.0 * e_normalized)
+   345→        } else {
+   346→            // للحالة ذات الانحراف الكبير: استخدام طريقة الكابولي
+   347→            f_pu_uniform * 2.0  // تقريب محافظ
+   348→        }
+   349→
+   350→        // ==================== 1.6 فحص ضغط التحمل على الخرسانة ====================
+   351→        // φ·f'c·√(A2/A1) ≤ 2·φ·f'c  - AISC 360-16 §J8
+   352→        val concreteCapacity = phi_fc * concentrationFactor
+   353→        val bearingRatio = maxBearingPressure / concreteCapacity
+   354→
+   355→        if (bearingRatio > 1.0) {
+   356→            warnings.add(String.format(
+   357→                "ضغط التحمل (%.2f MPa) يتجاوز سعة الخرسانة (%.2f MPa) - يجب زيادة أبعاد القاعدة",
+   358→                maxBearingPressure, concreteCapacity
+   359→            ))
+   360→        }
+   361→
+   362→        // ==================== 1.7 حساب سماكة اللوح (Plate Thickness) ====================
+   363→        // المرجع: AISC 360-16 §14.1 / AISC Design Guide 1
+   364→
+   365→        // حساب أطوال الكابولي - AISC 360-16 Eq. 14.3, 14.4
+   366→        // m = (B - 0.8*bf) / 2  - مسافة تبريز من الشفة
+   367→        val m = (B - 0.8 * input.bf) / 2.0
+   368→        // n = (L - 0.95*dc) / 2  - مسافة تبريز من العمق
+   369→        val n = (L - 0.95 * input.dc) / 2.0
+   370→
+   371→        // λ = max(√(2m²), √(2n²), √(m² + n²))  - AISC 360-16 Eq. 14.5
+   372→        val lambda_m = sqrt(2.0 * m.pow(2))
+   373→        val lambda_n = sqrt(2.0 * n.pow(2))
+   374→        val lambda_mn = sqrt(m.pow(2) + n.pow(2))
+   375→        val lambda = maxOf(lambda_m, lambda_n, lambda_mn)
+   376→
+   377→        codeNotes.add(String.format(
+   378→            "أطوال الكابولي: m = %.1f mm, n = %.1f mm, λ = %.1f mm",
+   379→            m, n, lambda
+   380→        ))
+   381→
+   382→        // حساب سماكة اللوح المطلوبة - AISC 360-16 Eq. 14.6
+   383→        // tp = λ × √(2 × Pu / (0.9 × Fy × B × L))
+   384→        // Pu هنا بالنيوتن
+   385→        val tp_required = lambda * sqrt(2.0 * Pu_N / (PHI_BENDING_PLATE * input.Fy * B * L))
+   386→
+   387→        // حساب السماكة الأدنى البديلة - المعادلة المحافظة
+   388→        // tp_min = √(2 × Pu × m²) / (0.9 × Fy × B × L)
+   389→        val tp_min_from_m = sqrt(2.0 * Pu_N * m.pow(2)) / (PHI_BENDING_PLATE * input.Fy * B * L)
+   390→
+   391→        // السماكة المطلوبة هي الأكبر
+   392→        val tp_calc = max(tp_required, tp_min_from_m)
+   393→
+   394→        // تقريب لأقرب سماكة قياسية
+   395→        val tp = selectStandardThickness(tp_calc)
+   396→
+   397→        if (tp < MIN_PLATE_THICKNESS) {
+   398→            warnings.add(String.format(
+   399→                "السماكة المحسوبة (%.1f mm) أقل من الحد الأدنى (%.0f mm) - تم استخدام الحد الأدنى",
+   400→                tp_calc, MIN_PLATE_THICKNESS
+   401→            ))
+   402→        }
+   403→
+   404→        codeNotes.add(String.format(
+   405→            "سماكة اللوح المحسوبة = %.1f mm → السماكة القياسية = %.0f mm",
+   406→            tp_calc, tp
+   407→        ))
+   408→
+   409→        // ==================== 1.8 تصميم البراغي الارتكازية ====================
+   410→        val anchorBolts = designAnchorBolts(
+   411→            Pu = input.Pu,
+   412→            Mux = input.Mux,
+   413→            Muy = input.Muy,
+   414→            Vu = input.Vu,
+   415→            B = B,
+   416→            L = L,
+   417→            bf = input.bf,
+   418→            dc = input.dc,
+   419→            boltGrade = input.boltGrade,
+   420→            boltDiameter = input.boltDiameter,
+   421→            numBolts = input.numAnchorBolts,
+   422→            isHookedBolt = input.isHookedBolt
+   423→        )
+   424→
+   425→        // ==================== 1.9 تصميم المونة ====================
+   426→        val grout = designGrout(
+   427→            fpc = input.fpc,
+   428→            groutStrength = input.groutStrength,
+   429→            thickness = DEFAULT_GROUT_THICKNESS
+   430→        )
+   431→
+   432→        // ==================== 1.10 حساب معامل الاستغلال ====================
+   433→        // معامل الاستغلال = أقصى (نسبة ضغط التحمل، نسبة سماكة اللوح)
+   434→        val bearingUtilization = maxBearingPressure / concreteCapacity
+   435→        val thicknessUtilization = tp_calc / tp // tp هو السماكة القياسية ≥ tp_calc
+   436→        val boltUtilization = if (anchorBolts.tensionCapacity > 0) {
+   437→            anchorBolts.requiredTension / anchorBolts.tensionCapacity
+   438→        } else 0.0
+   439→
+   440→        val utilizationRatio = maxOf(bearingUtilization, thicknessUtilization, boltUtilization)
+   441→
+   442→        // ==================== 1.11 التحقق النهائي من الأمان ====================
+   443→        val isSafe = bearingUtilization <= 1.0 && thicknessUtilization <= 1.0 && anchorBolts.isSafe
+   444→
+   445→        return BasePlateResult(
+   446→            plateWidth = B,
+   447→            plateLength = L,
+   448→            plateThickness = tp,
+   449→            maxBearingPressure = maxBearingPressure,
+   450→            concreteCapacity = concreteCapacity,
+   451→            anchorBolts = anchorBolts,
+   452→            grout = grout,
+   453→            isSafe = isSafe,
+   454→            utilizationRatio = utilizationRatio,
+   455→            warnings = warnings,
+   456→            codeNotes = codeNotes
+   457→        )
+   458→    }
+   459→
+   460→    // ============================================================================
+   461→    // ========== 2. القاعدة غير المركزية (Eccentric Base Plate) =================
+   462→    // ============================================================================
+   463→    // المرجع: AISC 360-16 Chapter 14 / ECP 205 / AISC Design Guide 1
+   464→    // ============================================================================
+   465→
+   466→    /**
+   467→     * تصميم القاعدة غير المركزية - أحمال محورية مع عزوم كبيرة
+   468→     * Design of eccentrically loaded base plates
+   469→     *
+   470→     * حالات التصميم:
+   471→     * - ضغط كامل (Full Compression): لا يوجد شد في البراغي
+   472→     * - ضغط جزئي (Partial Compression): ضغط على جزء فقط + شد في البراغي
+   473→     * - رفع (Uplift): القوة المحورية صفر أو سحب
+   474→     *
+   475→     * المرجع: AISC 360-16 §14.3 / ECP 205 / AISC Design Guide 1 Sec. 3.3
+   476→     *
+   477→     * @param input مدخلات التصميم
+   478→     * @return نتيجة التصميم
+   479→     */
+   480→    fun designEccentricBasePlate(input: EccentricInput): EccentricBasePlateResult {
+   481→        val warnings = mutableListOf<String>()
+   482→        val codeNotes = mutableListOf<String>()
+   483→
+   484→        codeNotes.add("التصميم حسب AISC 360-16 الفصل 14 و ECP 205 - قاعدة غير مركزية")
+   485→        codeNotes.add("طريقة التصميم: LRFD")
+   486→
+   487→        // ==================== 2.1 تحويل الوحدات ====================
+   488→        val Pu_N = input.Pu * 1000.0 // kN → N
+   489→        val Mx_Nmm = input.Mux * 1e6  // kN.m → N.mm
+   490→        val My_Nmm = input.Muy * 1e6  // kN.m → N.mm
+   491→        val Mu_Nmm = sqrt(Mx_Nmm.pow(2) + My_Nmm.pow(2)) // العزم المحصلة
+   492→
+   493→        // ==================== 2.2 تحديد عدد البراغي حسب حجم العزوم ====================
+   494→        // 4 براغي للعزوم الصغيرة، 6 أو 8 للعزوم الكبيرة
+   495→        val e_total = if (input.Pu > 0.01) Mu_Nmm / Pu_N else 0.0
+   496→        val numBolts = when {
+   497→            e_total > 200.0 -> 8  // عزوم كبيرة جداً
+   498→            e_total > 100.0 -> 6  // عزوم متوسطة
+   499→            else -> 4             // عزوم صغيرة
+   500→        }
+   501→
+   502→        codeNotes.add(String.format(
+   503→            "الانحراف المركزي الكلي e = %.1f mm → عدد البراغي = %d",
+   504→            e_total, numBolts
+   505→        ))
+   506→
+   507→        // ==================== 2.3 حساب الأبعاد الأولية ====================
+   508→        // أبعاد أكبر للتعامل مع العزوم
+   509→        val c = input.overhangC.coerceIn(MIN_OVERHANG_C, MAX_OVERHANG_C)
+   510→        var B = input.bf + 2 * c
+   511→        var L = input.dc + 2 * c
+   512→
+   513→        // للقواعد غير المركزية، نزيد الأبعاد بنسبة تتناسب مع العزم
+   514→        if (input.Pu > 0.01) {
+   515→            val eccentricityFactor = 1.0 + (e_total / (max(B, L) / 6.0)).coerceAtMost(1.0)
+   516→            B *= sqrt(eccentricityFactor)
+   517→            L *= sqrt(eccentricityFactor)
+   518→        }
+   519→
+   520→        // تقريب
+   521→        B = ceil(B / 5.0) * 5.0
+   522→        L = ceil(L / 5.0) * 5.0
+   523→
+   524→        // التأكد من الحد الأدنى
+   525→        B = max(B, input.bf + 2 * MIN_OVERHANG_C)
+   526→        L = max(L, input.dc + 2 * MIN_OVERHANG_C)
+   527→
+   528→        codeNotes.add(String.format(
+   529→            "أبعاد اللوح المبدئية: B = %.0f mm, L = %.0f mm",
+   530→            B, L
+   531→        ))
+   532→
+   533→        // ==================== 2.4 حساب ضغط التحمل مع العزوم ====================
+   534→        // تحديد اتجاه العزم الرئيسي (نستخدم المحور الأطول)
+   535→        // f_max = P/(BL) + M×y/I = P/(BL) × (1 + 6e/L)
+   536→        // f_min = P/(BL) × (1 - 6e/L)
+   537→
+   538→        val f_uniform = if (B * L > 0) Pu_N / (B * L) else 0.0 // MPa
+   539→
+   540→        // حساب الانحراف حول المحورين
+   541→        val ex = if (input.Pu > 0.01) Mx_Nmm / Pu_N else 0.0
+   542→        val ey = if (input.Pu > 0.01) My_Nmm / Pu_N else 0.0
+   543→
+   544→        // نستخدم المحور الأكثر حرجاً
+   545→        val e_critical = maxOf(
+   546→            if (L > 0) ex / L else 0.0,
+   547→            if (B > 0) ey / B else 0.0
+   548→        )
+   549→
+   550→        val maxBearingPressure = f_uniform * (1.0 + 6.0 * e_critical)
+   551→        val minBearingPressure = f_uniform * (1.0 - 6.0 * e_critical)
+   552→
+   553→        val tensionSide = minBearingPressure < 0
+   554→
+   555→        codeNotes.add(String.format(
+   556→            "ضغط التحمل: أقصى = %.2f MPa، أدنى = %.2f MPa%s",
+   557→            maxBearingPressure, minBearingPressure,
+   558→            if (tensionSide) " (يوجد شد - يحتاج براغي)" else " (ضغط كامل)"
+   559→        ))
+   560→
+   561→        // ==================== 2.5 حساب الطول الفعال للتحمل ====================
+   562→        // إذا كان يوجد شد (tension side)، نحسب الطول الفعال للضغط
+   563→        val effectiveBearingLength = if (tensionSide && L > 0) {
+   564→            // للعزوم الكبيرة: ضغط على جزء فقط
+   565→            // y = L/2 - e, طول الضغط = 3y
+   566→            val y = L / 2.0 - ex
+   567→            if (y > 0 && y < L / 2.0) {
+   568→                3.0 * y
+   569→            } else {
+   570→                L // ضغط كامل
+   571→            }
+   572→        } else {
+   573→            L // ضغط كامل على كل المساحة
+   574→        }
+   575→
+   576→        // ==================== 2.6 فحص ضغط التحمل ====================
+   577→        val phi_fc = PHI_BEARING_CONCRETE * input.fpc
+   578→        val concentrationFactor = min(sqrt(2.0), 2.0)
+   579→        val concreteCapacity = phi_fc * concentrationFactor
+   580→
+   581→        if (maxBearingPressure > concreteCapacity) {
+   582→            warnings.add(String.format(
+   583→                "ضغط التحمل (%.2f MPa) يتجاوز سعة الخرسانة (%.2f MPa)",
+   584→                maxBearingPressure, concreteCapacity
+   585→            ))
+   586→
+   587→            // محاولة زيادة الأبعاد
+   588→            val scaleFactor = sqrt(maxBearingPressure / concreteCapacity)
+   589→            B = ceil(B * scaleFactor / 5.0) * 5.0
+   590→            L = ceil(L * scaleFactor / 5.0) * 5.0
+   591→            codeNotes.add(String.format(
+   592→                "تم زيادة الأبعاد إلى: B = %.0f mm, L = %.0f mm",
+   593→                B, L
+   594→            ))
+   595→        }
+   596→
+   597→        // ==================== 2.7 حساب سماكة اللوح ====================
+   598→        // للقواعد غير المركزية: استخدام طريقة الكابولي
+   599→        // AISC Design Guide 1, Section 3.4
+   600→        val m = (B - 0.8 * input.bf) / 2.0
+   601→        val n = (L - 0.95 * input.dc) / 2.0
+   602→        val lambda_m = sqrt(2.0 * m.pow(2))
+   603→        val lambda_n = sqrt(2.0 * n.pow(2))
+   604→        val lambda_mn = sqrt(m.pow(2) + n.pow(2))
+   605→        val lambda = maxOf(lambda_m, lambda_n, lambda_mn)
+   606→
+   607→        // معامل زيادة للعزوم
+   608→        val momentFactor = if (tensionSide) 1.5 else 1.2
+   609→
+   610→        // tp = λ × √(2 × Pu × momentFactor / (0.9 × Fy × B × L))
+   611→        val tp_required = lambda * sqrt(
+   612→            2.0 * Pu_N * momentFactor / (PHI_BENDING_PLATE * input.Fy * B * L)
+   613→        )
+   614→        val tp = selectStandardThickness(tp_required)
+   615→
+   616→        codeNotes.add(String.format(
+   617→            "سماكة اللوح: المحسوبة = %.1f mm → القياسية = %.0f mm (معامل عزوم = %.1f)",
+   618→            tp_required, tp, momentFactor
+   619→        ))
+   620→
+   621→        // ==================== 2.8 تصميم البراغي ====================
+   622→        val anchorBolts = designAnchorBolts(
+   623→            Pu = input.Pu,
+   624→            Mux = input.Mux,
+   625→            Muy = input.Muy,
+   626→            Vu = input.Vu,
+   627→            B = B,
+   628→            L = L,
+   629→            bf = input.bf,
+   630→            dc = input.dc,
+   631→            boltGrade = input.boltGrade,
+   632→            boltDiameter = input.boltDiameter,
+   633→            numBolts = numBolts,
+   634→            isHookedBolt = true
+   635→        )
+   636→
+   637→        // ==================== 2.9 تصميم المونة ====================
+   638→        val grout = designGrout(
+   639→            fpc = input.fpc,
+   640→            groutStrength = input.groutStrength,
+   641→            thickness = DEFAULT_GROUT_THICKNESS
+   642→        )
+   643→
+   644→        // ==================== 2.10 حساب معامل الاستغلال ====================
+   645→        val bearingUtil = maxBearingPressure / concreteCapacity
+   646→        val thickUtil = tp_required / tp
+   647→        val boltUtil = if (anchorBolts.tensionCapacity > 0) {
+   648→            anchorBolts.requiredTension / anchorBolts.tensionCapacity
+   649→        } else 0.0
+   650→
+   651→        val utilizationRatio = maxOf(bearingUtil, thickUtil, boltUtil)
+   652→        val isSafe = bearingUtil <= 1.0 && thickUtil <= 1.0 && anchorBolts.isSafe
+   653→
+   654→        if (tensionSide && !anchorBolts.isSafe) {
+   655→            warnings.add("يوجد شد في أحد الجانبين - البراغي المختارة غير كافية!")
+   656→        }
+   657→
+   658→        return EccentricBasePlateResult(
+   659→            plateWidth = B,
+   660→            plateLength = L,
+   661→            plateThickness = tp,
+   662→            maxBearingPressure = maxBearingPressure,
+   663→            minBearingPressure = minBearingPressure,
+   664→            effectiveBearingLength = effectiveBearingLength,
+   665→            anchorBolts = anchorBolts,
+   666→            grout = grout,
+   667→            isSafe = isSafe,
+   668→            tensionSide = tensionSide,
+   669→            utilizationRatio = utilizationRatio,
+   670→            warnings = warnings,
+   671→            codeNotes = codeNotes
+   672→        )
+   673→    }
+   674→
+   675→    // ============================================================================
+   676→    // =========== 3. قاعدة الجيب (Pocket Base Plate) ============================
+   677→    // ============================================================================
+   678→    // المرجع: AISC 360-16 / PCI Design Handbook / ECP 205
+   679→    // ============================================================================
+   680→
+   681→    /**
+   682→     * تصميم قاعدة الجيب للوصلات المسبقة الصب
+   683→     * Design of pocket base plates for precast connections
+   684→     *
+   685→     * يُستخدم في وصلات الأعمدة المسبقة الصب مع القواعد المصبوبة في الموقع
+   686→     *
+   687→     * المرجع: PCI Design Handbook / ECP 205 / ACI 318 Chapter 17
+   688→     *
+   689→     * @param input مدخلات التصميم
+   690→     * @return نتيجة التصميم
+   691→     */
+   692→    fun designPocketBasePlate(input: PocketInput): PocketBasePlateResult {
+   693→        val warnings = mutableListOf<String>()
+   694→        val codeNotes = mutableListOf<String>()
+   695→
+   696→        codeNotes.add("التصميم حسب ECP 205 و PCI Design Handbook - قاعدة جيب")
+   697→        codeNotes.add("يُستخدم في وصلات الأعمدة المسبقة الصب")
+   698→
+   699→        // ==================== 3.1 حساب أبعاد اللوح ====================
+   700→        val c = DEFAULT_OVERHANG_C
+   701→        val B = input.bf + 2 * c
+   702→        val L = input.dc + 2 * c
+   703→
+   704→        codeNotes.add(String.format(
+   705→            "أبعاد اللوح: B = %.0f mm, L = %.0f mm",
+   706→            B, L
+   707→        ))
+   708→
+   709→        // ==================== 3.2 حساب سماكة اللوح ====================
+   710→        val Pu_N = input.Pu * 1000.0
+   711→        val m = (B - 0.8 * input.bf) / 2.0
+   712→        val n = (L - 0.95 * input.dc) / 2.0
+   713→        val lambda = maxOf(sqrt(2.0 * m.pow(2)), sqrt(2.0 * n.pow(2)), sqrt(m.pow(2) + n.pow(2)))
+   714→
+   715→        val tp_required = lambda * sqrt(2.0 * Pu_N / (PHI_BENDING_PLATE * input.Fy * B * L))
+   716→        val tp = selectStandardThickness(tp_required)
+   717→
+   718→        // ==================== 3.3 تصميم الجيب (Pocket Design) ====================
+   719→        // المرجع: PCI Design Handbook / ACI 318 Chapter 17
+   720→        // عمق الجيب: 1.5 × قطر البرغي + 50 mm
+   721→        val pocketDepth = 1.5 * input.boltDiameter + 50.0
+   722→
+   723→        // عرض الجيب: قطر البرغي + 75 mm لكل جانب
+   724→        val pocketWidth = input.boltDiameter + 2 * 75.0
+   725→
+   726→        // طول الجيب يعتمد على عدد البراغي وتباعدها
+   727→        val boltSpacing = input.boltDiameter * BOLT_SPACING_FACTOR
+   728→        val pocketLength = if (boltSpacing > 0) {
+   729→            input.boltDiameter + 2 * 75.0 + (4 - 1) * boltSpacing
+   730→        } else {
+   731→            pocketWidth
+   732→        }
+   733→
+   734→        val pocket = PocketResult(
+   735→            pocketDepth = pocketDepth,
+   736→            pocketWidth = pocketWidth,
+   737→            pocketLength = pocketLength,
+   738→            boltDiameter = input.boltDiameter,
+   739→            concreteCover = input.concreteCover,
+   740→            isSafe = pocketDepth >= 1.5 * input.boltDiameter
+   741→        )
+   742→
+   743→        codeNotes.add(String.format(
+   744→            "أبعاد الجيب: عمق = %.0f mm, عرض = %.0f mm, طول = %.0f mm",
+   745→            pocketDepth, pocketWidth, pocketLength
+   746→        ))
+   747→        codeNotes.add(String.format(
+   748→            "عمق الجيب = 1.5×db + 50 = 1.5×%.0f + 50 = %.0f mm",
+   749→            input.boltDiameter, pocketDepth
+   750→        ))
+   751→
+   752→        // ==================== 3.4 تصميم البراغي ====================
+   753→        val anchorBolts = designAnchorBolts(
+   754→            Pu = input.Pu,
+   755→            Mux = input.Mux,
+   756→            Muy = input.Muy,
+   757→            Vu = input.Vu,
+   758→            B = B,
+   759→            L = L,
+   760→            bf = input.bf,
+   761→            dc = input.dc,
+   762→            boltGrade = input.boltGrade,
+   763→            boltDiameter = input.boltDiameter,
+   764→            numBolts = 4,
+   765→            isHookedBolt = true
+   766→        )
+   767→
+   768→        // ==================== 3.5 تصميم المونة ====================
+   769→        val grout = designGrout(
+   770→            fpc = input.fpc,
+   771→            groutStrength = 0.0,
+   772→            thickness = MIN_GROUT_THICKNESS
+   773→        )
+   774→
+   775→        // ==================== 3.6 حساب معامل الاستغلال ====================
+   776→        val boltUtil = if (anchorBolts.tensionCapacity > 0) {
+   777→            anchorBolts.requiredTension / anchorBolts.tensionCapacity
+   778→        } else 0.0
+   779→        val utilizationRatio = maxOf(tp_required / tp, boltUtil)
+   780→        val isSafe = utilizationRatio <= 1.0 && anchorBolts.isSafe && pocket.isSafe
+   781→
+   782→        return PocketBasePlateResult(
+   783→            plateWidth = B,
+   784→            plateLength = L,
+   785→            plateThickness = tp,
+   786→            pocket = pocket,
+   787→            anchorBolts = anchorBolts,
+   788→            grout = grout,
+   789→            isSafe = isSafe,
+   790→            utilizationRatio = utilizationRatio,
+   791→            warnings = warnings,
+   792→            codeNotes = codeNotes
+   793→        )
+   794→    }
+   795→
+   796→    // ============================================================================
+   797→    // =========== 4. تصميم البراغي الارتكازية (Anchor Bolt Design) ===============
+   798→    // ============================================================================
+   799→    // المرجع: AISC 360-16 Table 14-2 / ECP 205 / ACI 318 Chapter 17
+   800→    // ============================================================================
+   801→
+   802→    /**
+   803→     * تصميم البراغي الارتكازية
+   804→     * Design of anchor bolts for base plates
+   805→     *
+   806→     * @param Pu القوة المحورية (kN)
+   807→     * @param Mux العزم حول X (kN.m)
+   808→     * @param Muy العزم حول Y (kN.m)
+   809→     * @param Vu قوة القص (kN)
+   810→     * @param B عرض اللوح (mm)
+   811→     * @param L طول اللوح (mm)
+   812→     * @param bf عرض شفة العمود (mm)
+   813→     * @param dc عمق العمود (mm)
+   814→     * @param boltGrade درجة البرغي
+   815→     * @param boltDiameter قطر البرغي (mm)
+   816→     * @param numBolts عدد البراغي
+   817→     * @param isHookedBolt هل البرغي معقوف
+   818→     * @return نتيجة تصميم البراغي
+   819→     */
+   820→    private fun designAnchorBolts(
+   821→        Pu: Double,
+   822→        Mux: Double,
+   823→        Muy: Double,
+   824→        Vu: Double,
+   825→        B: Double,
+   826→        L: Double,
+   827→        bf: Double,
+   828→        dc: Double,
+   829→        boltGrade: BoltGrade,
+   830→        boltDiameter: Double,
+   831→        numBolts: Int,
+   832→        isHookedBolt: Boolean
+   833→    ): AnchorBoltResult {
+   834→        // ==================== 4.1 حساب مساحة البرغي ====================
+   835→        // Ab = π × db² / 4  (مساحة الاسمية)
+   836→        val Ab = PI * boltDiameter.pow(2) / 4.0 // mm²
+   837→
+   838→        // ==================== 4.2 حساب سعة الشد ====================
+   839→        // φRn = φ × Fu × Ab  - AISC 360-16 Table J3.2 / §14.3
+   840→        // φ = 0.75 for tension
+   841→        val tensionCapacity = PHI_TENSION_BOLT * boltGrade.fu * Ab / 1000.0 // kN
+   842→
+   843→        // ==================== 4.3 حساب سعة القص ====================
+   844→        // φRn = φ × 0.4 × Fu × Ab  (for threaded bolts in shear)
+   845→        // φ = 0.75 for shear (AISC 360-16)
+   846→        val shearCapacity = PHI_TENSION_BOLT * 0.4 * boltGrade.fu * Ab / 1000.0 // kN
+   847→
+   848→        // ==================== 4.4 حساب القوى المؤثرة على كل برغي ====================
+   849→        // الشد في البراغي ناتج عن العزوم
+   850→        // T_per_bolt = (M - P × L/2) / (n_bolt_tension × arm)
+   851→        // حيث arm = المسافة من مركز الضغط إلى مركز البرغي
+   852→
+   853→        val Mu_total = sqrt(Mux.pow(2) + Muy.pow(2)) * 1000.0 // kN.mm
+   854→
+   855→        // الذراع المؤثر (من مركز الضغط إلى مركز مجموعة البراغي المعرضة للشد)
+   856→        // للمربع الرباعي: arm ≈ 0.4 × L (تقريباً)
+   857→        val arm = 0.4 * min(B, L)
+   858→
+   859→        // عدد البراغي في جهة الشد (نصف العدد تقريباً)
+   860→        val numTensionBolts = max(numBolts / 2, 1)
+   861→
+   862→        // الشد المطلوب لكل برغي (kN)
+   863→        val tensionFromMoment = if (arm > 0) {
+   864→            Mu_total / (numTensionBolts * arm)
+   865→        } else 0.0
+   866→
+   867→        // الشد المطلوب لكل برغي (يُضاف تأثير الضغط المحوري)
+   868→        // إذا كان Pu موجب (ضغط)، يقلل الشد في البراغي
+   869→        // إذا كان Pu سالب (سحب)، يزيد الشد
+   870→        val axialTension = max(0.0, -Pu / numBolts) // فقط إذا كان هناك سحب
+   871→        val requiredTension = tensionFromMoment + axialTension // kN
+   872→
+   873→        // ==================== 4.5 حساب القص المطلوب لكل برغي ====================
+   874→        val requiredShear = Vu / numBolts // kN (توزيع متساوٍ)
+   875→
+   876→        // ==================== 4.6 فحص التفاعل بين الشد والقص ====================
+   877→        // AISC 360-16 Eq. J3-3a:
+   878→        // (Tu / φTn) + (Vu / φVn) ≤ 1.0
+   879→        val interactionRatio = if (tensionCapacity > 0 && shearCapacity > 0) {
+   880→            (requiredTension / tensionCapacity) + (requiredShear / shearCapacity)
+   881→        } else 0.0
+   882→
+   883→        // ==================== 4.7 حساب المسافات ====================
+   884→        // المسافة بين البراغي: 3×db (الحد الأدنى)
+   885→        val boltSpacing = (boltDiameter * BOLT_SPACING_FACTOR).coerceAtLeast(MIN_EDGE_DISTANCE_BOLT)
+   886→
+   887→        // المسافة من الحافة: أقل قيمة من 3×db و 40mm
+   888→        val edgeDistance = max(boltDiameter * 1.5, MIN_EDGE_DISTANCE_BOLT)
+   889→
+   890→        // ==================== 4.8 حساب طول التثبيت ====================
+   891→        // للبرغي المعقوف: 12 × db
+   892→        // للبرغي برأس: 8 × db
+   893→        val embedmentLength = if (isHookedBolt) {
+   894→            boltDiameter * MIN_EMBEDMENT_HOOK
+   895→        } else {
+   896→            boltDiameter * MIN_EMBEDMENT_HEADED
+   897→        }
+   898→
+   899→        // ==================== 4.9 التحقق النهائي ====================
+   900→        val isSafe = interactionRatio <= 1.0 && requiredTension <= tensionCapacity
+   901→
+   902→        return AnchorBoltResult(
+   903→            numberOfBolts = numBolts,
+   904→            boltDiameter = boltDiameter,
+   905→            boltGrade = boltGrade.getGradeName(),
+   906→            boltSpacing = boltSpacing,
+   907→            edgeDistance = edgeDistance,
+   908→            tensionCapacity = tensionCapacity,
+   909→            requiredTension = requiredTension,
+   910→            shearCapacity = shearCapacity,
+   911→            requiredShear = requiredShear,
+   912→            embedmentLength = embedmentLength,
+   913→            boltArea = Ab,
+   914→            isSafe = isSafe
+   915→        )
+   916→    }
+   917→
+   918→    // ============================================================================
+   919→    // =========== 5. تصميم المونة (Grout Design) =================================
+   920→    // ============================================================================
+   921→    // المرجع: AISC Design Guide 1 / ACI 318 / ECP 205
+   922→    // ============================================================================
+   923→
+   924→    /**
+   925→     * تصميم طبقة المونة تحت القاعدة المعدنية
+   926→     * Design of grout layer under the base plate
+   927→     *
+   928→     * @param fpc مقاومة ضغط الخرسانة (MPa)
+   929→     * @param groutStrength مقاومة المونة (MPa) - إذا صفر = تساوي الخرسانة
+   930→     * @param thickness سماكة المونة (mm)
+   931→     * @return نتيجة تصميم المونة
+   932→     */
+   933→    private fun designGrout(
+   934→        fpc: Double,
+   935→        groutStrength: Double,
+   936→        thickness: Double
+   937→    ): GroutResult {
+   938→        // مقاومة المونة يجب أن تكون ≥ مقاومة الخرسانة
+   939→        // ACI 351.3R / AISC Design Guide 1
+   940→        val requiredStrength = fpc
+   941→        val providedStrength = if (groutStrength > 0) groutStrength else fpc
+   942→        val isAdequate = providedStrength >= requiredStrength
+   943→
+   944→        // التأكد من أن السماكة ضمن الحدود المسموحة
+   945→        val finalThickness = thickness.coerceIn(MIN_GROUT_THICKNESS, MAX_GROUT_THICKNESS)
+   946→
+   947→        return GroutResult(
+   948→            thickness = finalThickness,
+   949→            requiredStrength = requiredStrength,
+   950→            providedStrength = providedStrength,
+   951→            isAdequate = isAdequate
+   952→        )
+   953→    }
+   954→
+   955→    // ============================================================================
+   956→    // =========== 6. دوال مساعدة (Utility Functions) ============================
+   957→    // ============================================================================
+   958→
+   959→    /**
+   960→     * اختيار أقرب سماكة قياسية أعلى من أو تساوي السماكة المحسوبة
+   961→     * Select the nearest standard plate thickness ≥ required thickness
+   962→     *
+   963→     * @param required السماكة المحسوبة (mm)
+   964→     * @return السماكة القياسية (mm)
+   965→     */
+   966→    private fun selectStandardThickness(required: Double): Double {
+   967→        return STANDARD_PLATE_THICKNESSES.firstOrNull { it >= required }
+   968→            ?: STANDARD_PLATE_THICKNESSES.last()
+   969→    }
+   970→
+   971→    /**
+   972→     * اختيار أقرب قطر قياسي للبرغي أعلى من أو يساوي القطر المطلوب
+   973→     * Select the nearest standard bolt diameter ≥ required diameter
+   974→     *
+   975→     * @param required القطر المطلوب (mm)
+   976→     * @return القطر القياسي (mm)
+   977→     */
+   978→    fun selectStandardBoltDiameter(required: Double): Double {
+   979→        return STANDARD_BOLT_DIAMETERS.firstOrNull { it >= required }
+   980→            ?: STANDARD_BOLT_DIAMETERS.last()
+   981→    }
+   982→
+   983→    /**
+   984→     * حساب مساحة البرغي الاسمية
+   985→     * Calculate nominal bolt area
+   986→     *
+   987→     * @param diameter قطر البرغي (mm)
+   988→     * @return المساحة (mm²)
+   989→     */
+   990→    fun calculateBoltArea(diameter: Double): Double {
+   991→        return PI * diameter.pow(2) / 4.0
+   992→    }
+   993→
+   994→    /**
+   995→     * حساب سعة الشد لبرغي واحد
+   996→     * Calculate tensile capacity of a single bolt
+   997→     *
+   998→     * المرجع: AISC 360-16 Table J3.2
+   999→     *
+  1000→     * @param diameter قطر البرغي (mm)
+  1001→     * @param fu إجهاد الشد الأقصى (MPa)
+  1002→     * @return سعة الشد (kN)
+  1003→     */
+  1004→    fun calculateBoltTensionCapacity(diameter: Double, fu: Double): Double {
+  1005→        val Ab = calculateBoltArea(diameter)
+  1006→        return PHI_TENSION_BOLT * fu * Ab / 1000.0 // kN
+  1007→    }
+  1008→
+  1009→    /**
+  1010→     * حساب سعة القص لبرغي واحد
+  1011→     * Calculate shear capacity of a single bolt
+  1012→     *
+  1013→     * المرجع: AISC 360-16 Table J3.2
+  1014→     *
+  1015→     * @param diameter قطر البرغي (mm)
+  1016→     * @param fu إجهاد الشد الأقصى (MPa)
+  1017→     * @return سعة القص (kN)
+  1018→     */
+  1019→    fun calculateBoltShearCapacity(diameter: Double, fu: Double): Double {
+  1020→        val Ab = calculateBoltArea(diameter)
+  1021→        return PHI_TENSION_BOLT * 0.4 * fu * Ab / 1000.0 // kN
+  1022→    }
+  1023→
+  1024→    /**
+  1025→     * فحص التفاعل بين الشد والقص للبراغي
+  1026→     * Check tension-shear interaction for anchor bolts
+  1027→     *
+  1028→     * المرجع: AISC 360-16 Eq. J3-3a
+  1029→     * (Tu/φTn) + (Vu/φVn) ≤ 1.0
+  1030→     *
+  1031→     * @param Tu الشد المؤثر (kN)
+  1032→     * @param Vu القص المؤثر (kN)
+  1033→     * @param phiTn سعة الشد المعدلة (kN)
+  1034→     * @param phiVn سعة القص المعدلة (kN)
+  1035→     * @return معامل التفاعل (≤ 1.0 آمن)
+  1036→     */
+  1037→    fun checkBoltInteraction(
+  1038→        Tu: Double,
+  1039→        Vu: Double,
+  1040→        phiTn: Double,
+  1041→        phiVn: Double
+  1042→    ): Double {
+  1043→        if (phiTn <= 0 || phiVn <= 0) return Double.MAX_VALUE
+  1044→        return (Tu / phiTn) + (Vu / phiVn)
+  1045→    }
+  1046→
+  1047→    /**
+  1048→     * حساب ضغط التحمل الأقصى على الخرسانة (مع العزوم)
+  1049→     * Calculate maximum bearing pressure on concrete (with moments)
+  1050→     *
+  1051→     * f_max = P/(B×L) × (1 + 6e/B)  - للعزم في اتجاه واحد
+  1052→     *
+  1053→     * @param Pu القوة المحورية (kN)
+  1054→     * @param Mu العزم (kN.m)
+  1055→     * @param B عرض القاعدة (mm)
+  1056→     * @param L طول القاعدة (mm)
+  1057→     * @param isMomentAlongB هل العزم في اتجاه B؟
+  1058→     * @return أقصى ضغط تحمل (MPa)
+  1059→     */
+  1060→    fun calculateMaxBearingPressure(
+  1061→        Pu: Double,
+  1062→        Mu: Double,
+  1063→        B: Double,
+  1064→        L: Double,
+  1065→        isMomentAlongB: Boolean = true
+  1066→    ): Double {
+  1067→        val Pu_N = Pu * 1000.0 // kN → N
+  1068→        val Mu_Nmm = Mu * 1e6  // kN.m → N.mm
+  1069→        val dimension = if (isMomentAlongB) B else L
+  1070→        val e = if (Pu > 0.01) Mu_Nmm / Pu_N else 0.0
+  1071→        val f_uniform = Pu_N / (B * L)
+  1072→
+  1073→        return if (dimension > 0 && e < dimension / 2.0) {
+  1074→            f_uniform * (1.0 + 6.0 * e / dimension)
+  1075→        } else {
+  1076→            Double.MAX_VALUE // فقدان التلامس - يحتاج تصميم مختلف
+  1077→        }
+  1078→    }
+  1079→
+  1080→    /**
+  1081→     * التحقق من سعة ضغط الخرسانة
+  1082→     * Check concrete bearing capacity
+  1083→     *
+  1084→     * المرجع: AISC 360-16 §J8
+  1085→     * φPp = φ × 0.85 × fc' × A1 × √(A2/A1) ≤ φ × 1.7 × fc' × A1
+  1086→     *
+  1087→     * @param Pu القوة المحورية (kN)
+  1088→     * @param fpc مقاومة الخرسانة (MPa)
+  1089→     * @param A1 مساحة اللوح (mm²)
+  1090→     * @param A2 مساحة الخرسانة المحيطة (mm²) - إذا صفر = A1
+  1091→     * @return زوج (سعة التحمل بـ kN، معامل الاستغلال)
+  1092→     */
+  1093→    fun checkConcreteBearing(
+  1094→        Pu: Double,
+  1095→        fpc: Double,
+  1096→        A1: Double,
+  1097→        A2: Double = 0.0
+  1098→    ): Pair<Double, Double> {
+  1099→        // معامل التركيز √(A2/A1) ≤ 2
+  1100→        val concentrationFactor = if (A2 > A1) {
+  1101→            min(sqrt(A2 / A1), 2.0)
+  1102→        } else {
+  1103→            1.0
+  1104→        }
+  1105→
+  1106→        // سعة التحمل: φ × 0.85 × fc' × A1 × √(A2/A1)
+  1107→        val capacity = PHI_BEARING_CONCRETE * 0.85 * fpc * A1 * concentrationFactor / 1000.0 // kN
+  1108→
+  1109→        // الحد الأقصى: φ × 1.7 × fc' × A1
+  1110→        val maxCapacity = PHI_BEARING_CONCRETE * 1.7 * fpc * A1 / 1000.0 // kN
+  1111→
+  1112→        val finalCapacity = min(capacity, maxCapacity)
+  1113→        val utilizationRatio = if (finalCapacity > 0) Pu / finalCapacity else Double.MAX_VALUE
+  1114→
+  1115→        return Pair(finalCapacity, utilizationRatio)
+  1116→    }
+  1117→
+  1118→    /**
+  1119→     * توليد تقرير نصي شامل لنتائج التصميم
+  1120→     * Generate a comprehensive text report for design results
+  1121→     *
+  1122→     * @param result نتيجة تصميم القاعدة
+  1123→     * @return التقرير النصي
+  1124→     */
+  1125→    fun generateDesignReport(result: BasePlateResult): String {
+  1126→        val sb = StringBuilder()
+  1127→
+  1128→        sb.appendLine("=" .repeat(60))
+  1129→        sb.appendLine("        تقرير تصميم القاعدة المعدنية")
+  1130→        sb.appendLine("        Steel Base Plate Design Report")
+  1131→        sb.appendLine("=".repeat(60))
+  1132→        sb.appendLine()
+  1133→
+  1134→        sb.appendLine("─── أبعاد اللوح (Plate Dimensions) ───")
+  1135→        sb.appendLine(String.format("  عرض اللوح B              = %.0f mm", result.plateWidth))
+  1136→        sb.appendLine(String.format("  طول اللوح L              = %.0f mm", result.plateLength))
+  1137→        sb.appendLine(String.format("  سماكة اللوح tp           = %.0f mm", result.plateThickness))
+  1138→        sb.appendLine()
+  1139→
+  1140→        sb.appendLine("─── ضغط التحمل (Bearing Pressure) ───")
+  1141→        sb.appendLine(String.format("  أقصى ضغط تحمل           = %.2f MPa", result.maxBearingPressure))
+  1142→        sb.appendLine(String.format("  سعة الخرسانة            = %.2f MPa", result.concreteCapacity))
+  1143→        sb.appendLine(String.format("  معامل الاستغلال          = %.2f", result.utilizationRatio))
+  1144→        sb.appendLine()
+  1145→
+  1146→        sb.appendLine("─── البراغي الارتكازية (Anchor Bolts) ───")
+  1147→        val bolt = result.anchorBolts
+  1148→        sb.appendLine(String.format("  عدد البراغي              = %d", bolt.numberOfBolts))
+  1149→        sb.appendLine(String.format("  قطر البرغي               = %.0f mm (%s)", bolt.boltDiameter, bolt.boltGrade))
+  1150→        sb.appendLine(String.format("  سعة الشد لكل برغي        = %.1f kN", bolt.tensionCapacity))
+  1151→        sb.appendLine(String.format("  الشد المطلوب لكل برغي    = %.1f kN", bolt.requiredTension))
+  1152→        sb.appendLine(String.format("  سعة القص لكل برغي        = %.1f kN", bolt.shearCapacity))
+  1153→        sb.appendLine(String.format("  القص المطلوب لكل برغي    = %.1f kN", bolt.requiredShear))
+  1154→        sb.appendLine(String.format("  طول التثبيت              = %.0f mm", bolt.embedmentLength))
+  1155→        sb.appendLine(String.format("  المسافة من الحافة         = %.0f mm", bolt.edgeDistance))
+  1156→        sb.appendLine()
+  1157→
+  1158→        sb.appendLine("─── المونة (Grout) ───")
+  1159→        sb.appendLine(String.format("  سماكة المونة              = %.0f mm", result.grout.thickness))
+  1160→        sb.appendLine(String.format("  مقاومة المونة المطلوبة    = %.0f MPa", result.grout.requiredStrength))
+  1161→        sb.appendLine(String.format("  مقاومة المونة المتاحة     = %.0f MPa", result.grout.providedStrength))
+  1162→        sb.appendLine()
+  1163→
+  1164→        sb.appendLine("─── النتيجة النهائية (Final Result) ───")
+  1165→        sb.appendLine(String.format("  الحالة: %s", if (result.isSafe) "آمن ✓" else "غير آمن ✗"))
+  1166→        sb.appendLine(String.format("  معامل الاستغلال الكلي     = %.2f", result.utilizationRatio))
+  1167→        sb.appendLine()
+  1168→
+  1169→        // التحذيرات
+  1170→        if (result.warnings.isNotEmpty()) {
+  1171→            sb.appendLine("─── تحذيرات (Warnings) ───")
+  1172→            result.warnings.forEachIndexed { index, warning ->
+  1173→                sb.appendLine("  ${index + 1}. $warning")
+  1174→            }
+  1175→            sb.appendLine()
+  1176→        }
+  1177→
+  1178→        // ملاحظات الكود
+  1179→        if (result.codeNotes.isNotEmpty()) {
+  1180→            sb.appendLine("─── ملاحظات الكود (Code Notes) ───")
+  1181→            result.codeNotes.forEachIndexed { index, note ->
+  1182→                sb.appendLine("  ${index + 1}. $note")
+  1183→            }
+  1184→        }
+  1185→
+  1186→        sb.appendLine()
+  1187→        sb.appendLine("=".repeat(60))
+  1188→        sb.appendLine("  ECP 205 / AISC 360-16 Chapter 14")
+  1189→        sb.appendLine("=".repeat(60))
+  1190→
+  1191→        return sb.toString()
+  1192→    }
+  1193→
+  1194→    /**
+  1195→     * توليد تقرير نصي شامل لنتائج تصميم القاعدة غير المركزية
+  1196→     * Generate a comprehensive text report for eccentric base plate results
+  1197→     *
+  1198→     * @param result نتيجة التصميم
+  1199→     * @return التقرير النصي
+  1200→     */
+  1201→    fun generateEccentricDesignReport(result: EccentricBasePlateResult): String {
+  1202→        val sb = StringBuilder()
+  1203→
+  1204→        sb.appendLine("=" .repeat(60))
+  1205→        sb.appendLine("    تقرير تصميم القاعدة المعدنية غير المركزية")
+  1206→        sb.appendLine("    Eccentric Steel Base Plate Design Report")
+  1207→        sb.appendLine("=".repeat(60))
+  1208→        sb.appendLine()
+  1209→
+  1210→        sb.appendLine("─── أبعاد اللوح (Plate Dimensions) ───")
+  1211→        sb.appendLine(String.format("  عرض اللوح B              = %.0f mm", result.plateWidth))
+  1212→        sb.appendLine(String.format("  طول اللوح L              = %.0f mm", result.plateLength))
+  1213→        sb.appendLine(String.format("  سماكة اللوح tp           = %.0f mm", result.plateThickness))
+  1214→        sb.appendLine()
+  1215→
+  1216→        sb.appendLine("─── ضغط التحمل (Bearing Pressure) ───")
+  1217→        sb.appendLine(String.format("  أقصى ضغط تحمل           = %.2f MPa", result.maxBearingPressure))
+  1218→        sb.appendLine(String.format("  أقل ضغط تحمل            = %.2f MPa", result.minBearingPressure))
+  1219→        sb.appendLine(String.format("  الطول الفعال للتحمل      = %.0f mm", result.effectiveBearingLength))
+  1220→        sb.appendLine(String.format("  يوجد شد في أحد الجوانب  = %s", if (result.tensionSide) "نعم" else "لا"))
+  1221→        sb.appendLine()
+  1222→
+  1223→        sb.appendLine("─── البراغي الارتكازية (Anchor Bolts) ───")
+  1224→        val bolt = result.anchorBolts
+  1225→        sb.appendLine(String.format("  عدد البراغي              = %d", bolt.numberOfBolts))
+  1226→        sb.appendLine(String.format("  قطر البرغي               = %.0f mm (%s)", bolt.boltDiameter, bolt.boltGrade))
+  1227→        sb.appendLine(String.format("  سعة الشد لكل برغي        = %.1f kN", bolt.tensionCapacity))
+  1228→        sb.appendLine(String.format("  الشد المطلوب لكل برغي    = %.1f kN", bolt.requiredTension))
+  1229→        sb.appendLine(String.format("  طول التثبيت              = %.0f mm", bolt.embedmentLength))
+  1230→        sb.appendLine()
+  1231→
+  1232→        sb.appendLine("─── النتيجة النهائية (Final Result) ───")
+  1233→        sb.appendLine(String.format("  الحالة: %s", if (result.isSafe) "آمن ✓" else "غير آمن ✗"))
+  1234→        sb.appendLine(String.format("  معامل الاستغلال الكلي     = %.2f", result.utilizationRatio))
+  1235→        sb.appendLine()
+  1236→
+  1237→        if (result.warnings.isNotEmpty()) {
+  1238→            sb.appendLine("─── تحذيرات (Warnings) ───")
+  1239→            result.warnings.forEachIndexed { index, warning ->
+  1240→                sb.appendLine("  ${index + 1}. $warning")
+  1241→            }
+  1242→            sb.appendLine()
+  1243→        }
+  1244→
+  1245→        if (result.codeNotes.isNotEmpty()) {
+  1246→            sb.appendLine("─── ملاحظات الكود (Code Notes) ───")
+  1247→            result.codeNotes.forEachIndexed { index, note ->
+  1248→                sb.appendLine("  ${index + 1}. $note")
+  1249→            }
+  1250→        }
+  1251→
+  1252→        sb.appendLine()
+  1253→        sb.appendLine("=".repeat(60))
+  1254→
+  1255→        return sb.toString()
+  1256→    }
+  1257→
+  1258→    /**
+  1259→     * توليد تقرير نصي لنتائج تصميم قاعدة الجيب
+  1260→     * Generate a text report for pocket base plate results
+  1261→     *
+  1262→     * @param result نتيجة التصميم
+  1263→     * @return التقرير النصي
+  1264→     */
+  1265→    fun generatePocketDesignReport(result: PocketBasePlateResult): String {
+  1266→        val sb = StringBuilder()
+  1267→
+  1268→        sb.appendLine("=" .repeat(60))
+  1269→        sb.appendLine("      تقرير تصميم قاعدة الجيب المعدنية")
+  1270→        sb.appendLine("      Pocket Steel Base Plate Design Report")
+  1271→        sb.appendLine("=".repeat(60))
+  1272→        sb.appendLine()
+  1273→
+  1274→        sb.appendLine("─── أبعاد اللوح (Plate Dimensions) ───")
+  1275→        sb.appendLine(String.format("  عرض اللوح B              = %.0f mm", result.plateWidth))
+  1276→        sb.appendLine(String.format("  طول اللوح L              = %.0f mm", result.plateLength))
+  1277→        sb.appendLine(String.format("  سماكة اللوح tp           = %.0f mm", result.plateThickness))
+  1278→        sb.appendLine()
+  1279→
+  1280→        sb.appendLine("─── أبعاد الجيب (Pocket Dimensions) ───")
+  1281→        sb.appendLine(String.format("  عمق الجيب                = %.0f mm", result.pocket.pocketDepth))
+  1282→        sb.appendLine(String.format("  عرض الجيب                = %.0f mm", result.pocket.pocketWidth))
+  1283→        sb.appendLine(String.format("  طول الجيب                = %.0f mm", result.pocket.pocketLength))
+  1284→        sb.appendLine()
+  1285→
+  1286→        sb.appendLine("─── البراغي (Anchor Bolts) ───")
+  1287→        val bolt = result.anchorBolts
+  1288→        sb.appendLine(String.format("  عدد البراغي              = %d", bolt.numberOfBolts))
+  1289→        sb.appendLine(String.format("  قطر البرغي               = %.0f mm (%s)", bolt.boltDiameter, bolt.boltGrade))
+  1290→        sb.appendLine(String.format("  سعة الشد لكل برغي        = %.1f kN", bolt.tensionCapacity))
+  1291→        sb.appendLine(String.format("  الشد المطلوب لكل برغي    = %.1f kN", bolt.requiredTension))
+  1292→        sb.appendLine()
+  1293→
+  1294→        sb.appendLine("─── النتيجة النهائية (Final Result) ───")
+  1295→        sb.appendLine(String.format("  الحالة: %s", if (result.isSafe) "آمن ✓" else "غير آمن ✗"))
+  1296→        sb.appendLine(String.format("  معامل الاستغلال الكلي     = %.2f", result.utilizationRatio))
+  1297→        sb.appendLine()
+  1298→        sb.appendLine("=".repeat(60))
+  1299→
+  1300→        return sb.toString()
+  1301→    }
+  1302→}

@@ -1,0 +1,1449 @@
+     1→package com.civileg.app.ui.compose.components.drawings
+     2→
+     3→import androidx.compose.foundation.Canvas
+     4→import androidx.compose.foundation.layout.fillMaxWidth
+     5→import androidx.compose.foundation.layout.height
+     6→import androidx.compose.runtime.Composable
+     7→import androidx.compose.ui.Modifier
+     8→import androidx.compose.ui.geometry.CornerRadius
+     9→import androidx.compose.ui.geometry.Offset
+    10→import androidx.compose.ui.geometry.Size
+    11→import androidx.compose.ui.graphics.Brush
+    12→import androidx.compose.ui.graphics.Color
+    13→import androidx.compose.ui.graphics.Path
+    14→import androidx.compose.ui.graphics.PathEffect
+    15→import androidx.compose.ui.graphics.StrokeCap
+    16→import androidx.compose.ui.graphics.StrokeJoin
+    17→import androidx.compose.ui.graphics.drawscope.DrawScope
+    18→import androidx.compose.ui.graphics.drawscope.Stroke
+    19→import androidx.compose.ui.graphics.drawscope.withTransform
+    20→import androidx.compose.ui.graphics.nativeCanvas
+    21→import androidx.compose.ui.graphics.toArgb
+    22→import androidx.compose.ui.unit.dp
+    23→import kotlin.math.max
+    24→import kotlin.math.min
+    25→
+    26→// ============================================================================
+    27→// COLOR PALETTE — matches the reference image exactly
+    28→// ============================================================================
+    29→
+    30→/** Main bottom rebar color — BLUE */
+    31→private val RebarBlue = Color(0xFF4A90D9)
+    32→
+    33→/** Top rebar / secondary steel — LIGHT BLUE */
+    34→private val TopRebarBlue = Color(0xFF7EC8E3)
+    35→
+    36→/** Stirrups — PURPLE */
+    37→private val StirrupPurple = Color(0xFF9B59B6)
+    38→
+    39→/** Secondary / extra bars — RED */
+    40→private val SecondaryRed = Color(0xFFE74C3C)
+    41→
+    42→/** Concrete fill — GRAY */
+    43→private val ConcreteGray = Color(0xFF6B6B6B)
+    44→
+    45→/** Concrete top face (lighter for 3D effect) */
+    46→private val ConcreteTopGray = Color(0xFF8A8A8A)
+    47→
+    48→/** Concrete side face (darker for 3D effect) */
+    49→private val ConcreteSideGray = Color(0xFF505050)
+    50→
+    51→/** Stress diagram color — PINK */
+    52→private val StressPink = Color(0xFFE91E8C)
+    53→
+    54→/** Dimension lines and text — WHITE */
+    55→private val DimensionWhite = Color(0xFFFFFFFF)
+    56→
+    57→/** Dimension extension lines — GRAY */
+    58→private val ExtensionGray = Color(0xFFAAAAAA)
+    59→
+    60→/** Table header background */
+    61→private val TableHeaderBg = Color(0x33FFFFFF)
+    62→
+    63→/** Table row alternate */
+    64→private val TableRowAlt = Color(0x1AFFFFFF)
+    65→
+    66→/** Development length highlight */
+    67→private val DevLengthColor = Color(0xFF4A90D9)
+    68→
+    69→/** Lap splice highlight */
+    70→private val LapSpliceColor = Color(0xFFE74C3C)
+    71→
+    72→/** Support color */
+    73→private val SupportColor = Color(0xFFCCCCCC)
+    74→
+    75→/** Hatch pattern for cut concrete */
+    76→private val HatchColor = Color(0x99AAAAAA)
+    77→
+    78→// ============================================================================
+    79→// COMPOSABLE ENTRY POINT
+    80→// ============================================================================
+    81→
+    82→/**
+    83→ * Professional 3D Beam Drawing with reinforcement detailing.
+    84→ *
+    85→ * Renders an isometric-like perspective beam with:
+    86→ * - 3D concrete body with shading
+    87→ * - Cutaway showing internal reinforcement (main rebar, stirrups, top steel)
+    88→ * - Pin / roller supports at beam ends
+    89→ * - Full dimensioning (span, section, cover, stirrup spacing)
+    90→ * - Development length (La) and lap splice annotations
+    91→ * - Inset cross-section view
+    92→ * - Reinforcement schedule table
+    93→ *
+    94→ * Background is transparent — the parent composable supplies the dark theme.
+    95→ */
+    96→@Composable
+    97→fun ProfessionalBeamDrawing(
+    98→    beamWidth: Double,         // mm  (b)
+    99→    beamDepth: Double,         // mm  (h)
+   100→    span: Double,              // mm  (L)
+   101→    mainRebarDia: Double,      // mm  (Ø)
+   102→    mainRebarCount: Int,       // n
+   103→    stirrupDia: Double,        // mm
+   104→    stirrupSpacing: Double,    // mm
+   105→    cover: Double,             // mm
+   106→    developmentLength: Double, // mm  (La)
+   107→    lapLength: Double,         // mm  (Lap)
+   108→    isContinuous: Boolean = false,
+   109→    hasTopSteel: Boolean = false,
+   110→    topRebarDia: Double = 0.0,
+   111→    topRebarCount: Int = 0,
+   112→    modifier: Modifier = Modifier
+   113→) {
+   114→    Canvas(
+   115→        modifier = modifier
+   116→            .fillMaxWidth()
+   117→            .height(560.dp)
+   118→    ) {
+   119→        // ---------------------------------------------------------------
+   120→        // Layout constants (in px)
+   121→        // ---------------------------------------------------------------
+   122→        val cw = size.width
+   123→        val ch = size.height
+   124→
+   125→        // 3D perspective angles
+   126→        val angleX = 0.30f          // horizontal skew factor
+   127→        val angleY = 0.20f          // vertical skew factor
+   128→
+   129→        // Main beam drawing area
+   130→        val mainLeft = 80f
+   131→        val mainRight = cw - 80f
+   132→        val mainTop = 50f
+   133→        val mainBottom = ch * 0.50f
+   134→
+   135→        // Scaling: fit span into horizontal space
+   136→        val availableW = mainRight - mainLeft - 60f   // leave room for La
+   137→        val availableH = mainBottom - mainTop - 40f
+   138→        val scaleW = availableW / span.toFloat()
+   139→        val scaleH = availableH / beamDepth.toFloat()
+   140→        val scale = min(scaleW, scaleH) * 0.75f
+   141→
+   142→        val beamDrawW = span.toFloat() * scale
+   143→        val beamDrawH = beamDepth.toFloat() * scale
+   144→        val beamDrawD = beamWidth.toFloat() * scale * 0.35f   // depth for 3D effect
+   145→
+   146→        val beamLeft = mainLeft + 40f
+   147→        val beamTop = mainTop + 40f + beamDrawD * angleY
+   148→        val beamRight = beamLeft + beamDrawW
+   149→        val beamBottom = beamTop + beamDrawH
+   150→
+   151→        // ---------------------------------------------------------------
+   152→        // Draw all layers in order (back-to-front)
+   153→        // ---------------------------------------------------------------
+   154→        draw3DBeamBody(
+   155→            left = beamLeft, top = beamTop,
+   156→            w = beamDrawW, h = beamDrawH, d = beamDrawD,
+   157→            angleX = angleX, angleY = angleY
+   158→        )
+   159→
+   160→        drawSupports(
+   161→            beamLeft = beamLeft, beamTop = beamTop,
+   162→            beamBottom = beamBottom, beamRight = beamRight,
+   163→            isContinuous = isContinuous
+   164→        )
+   165→
+   166→        drawCutawayReinforcement(
+   167→            beamLeft = beamLeft, beamTop = beamTop,
+   168→            beamRight = beamRight, beamBottom = beamBottom,
+   169→            beamDrawW = beamDrawW, beamDrawH = beamDrawH,
+   170→            beamDrawD = beamDrawD,
+   171→            scale = scale,
+   172→            angleX = angleX, angleY = angleY,
+   173→            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+   174→            stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
+   175→            cover = cover,
+   176→            hasTopSteel = hasTopSteel,
+   177→            topRebarDia = topRebarDia, topRebarCount = topRebarCount
+   178→        )
+   179→
+   180→        drawDevelopmentAndLap(
+   181→            beamLeft = beamLeft, beamTop = beamTop,
+   182→            beamRight = beamRight, beamBottom = beamBottom,
+   183→            beamDrawW = beamDrawW, beamDrawH = beamDrawH,
+   184→            scale = scale,
+   185→            developmentLength = developmentLength,
+   186→            lapLength = lapLength,
+   187→            mainRebarDia = mainRebarDia
+   188→        )
+   189→
+   190→        drawDimensionLines(
+   191→            beamLeft = beamLeft, beamTop = beamTop,
+   192→            beamRight = beamRight, beamBottom = beamBottom,
+   193→            beamDrawH = beamDrawH,
+   194→            scale = scale,
+   195→            beamWidth = beamWidth, beamDepth = beamDepth,
+   196→            span = span, cover = cover,
+   197→            stirrupSpacing = stirrupSpacing
+   198→        )
+   199→
+   200→        drawSectionInset(
+   201→            cw = cw, ch = ch,
+   202→            beamWidth = beamWidth, beamDepth = beamDepth,
+   203→            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+   204→            stirrupDia = stirrupDia,
+   205→            cover = cover,
+   206→            hasTopSteel = hasTopSteel,
+   207→            topRebarDia = topRebarDia, topRebarCount = topRebarCount
+   208→        )
+   209→
+   210→        drawReinforcementSchedule(
+   211→            cw = cw, ch = ch,
+   212→            beamWidth = beamWidth, beamDepth = beamDepth,
+   213→            span = span,
+   214→            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+   215→            stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
+   216→            hasTopSteel = hasTopSteel,
+   217→            topRebarDia = topRebarDia, topRebarCount = topRebarCount,
+   218→            developmentLength = developmentLength
+   219→        )
+   220→    }
+   221→}
+   222→
+   223→// ============================================================================
+   224→// 1. 3D BEAM BODY — isometric-like with top & side shading
+   225→// ============================================================================
+   226→
+   227→/**
+   228→ * Draws the 3D beam body with three visible faces:
+   229→ * - Front face (darker gray)
+   230→ * - Top face (lighter gray, parallelogram)
+   231→ * - Right side face (medium gray, parallelogram)
+   232→ */
+   233→private fun DrawScope.draw3DBeamBody(
+   234→    left: Float, top: Float, w: Float, h: Float,
+   235→    d: Float, angleX: Float, angleY: Float
+   236→) {
+   237→    val dx = d * angleX
+   238→    val dy = d * angleY
+   239→
+   240→    // --- Front face ---
+   241→    val frontPath = Path().apply {
+   242→        moveTo(left, top)
+   243→        lineTo(left + w, top)
+   244→        lineTo(left + w, top + h)
+   245→        lineTo(left, top + h)
+   246→        close()
+   247→    }
+   248→    drawPath(
+   249→        path = frontPath,
+   250→        color = ConcreteGray,
+   251→        style = Stroke(width = 2.dp.toPx(), join = StrokeJoin.Miter)
+   252→    )
+   253→    // Fill front with slight gradient
+   254→    drawPath(
+   255→        path = frontPath,
+   256→        brush = Brush.verticalGradient(
+   257→            colors = listOf(ConcreteGray, ConcreteSideGray),
+   258→            startY = top, endY = top + h
+   259→        )
+   260→    )
+   261→
+   262→    // --- Top face (lighter) ---
+   263→    val topPath = Path().apply {
+   264→        moveTo(left, top)
+   265→        lineTo(left + dx, top - dy)
+   266→        lineTo(left + w + dx, top - dy)
+   267→        lineTo(left + w, top)
+   268→        close()
+   269→    }
+   270→    drawPath(
+   271→        path = topPath,
+   272→        color = ConcreteTopGray,
+   273→        style = Stroke(width = 2.dp.toPx(), join = StrokeJoin.Miter)
+   274→    )
+   275→    drawPath(path = topPath, color = ConcreteTopGray)
+   276→
+   277→    // --- Right side face (medium) ---
+   278→    val rightPath = Path().apply {
+   279→        moveTo(left + w, top)
+   280→        lineTo(left + w + dx, top - dy)
+   281→        lineTo(left + w + dx, top + h - dy)
+   282→        lineTo(left + w, top + h)
+   283→        close()
+   284→    }
+   285→    drawPath(
+   286→        path = rightPath,
+   287→        color = ConcreteSideGray,
+   288→        style = Stroke(width = 2.dp.toPx(), join = StrokeJoin.Miter)
+   289→    )
+   290→    drawPath(path = rightPath, color = ConcreteSideGray)
+   291→
+   292→    // --- Hatching on front face for concrete texture ---
+   293→    drawConcreteHatching(left, top, w, h)
+   294→}
+   295→
+   296→/**
+   297→ * Subtle diagonal hatching lines across the front face to indicate concrete.
+   298→ */
+   299→private fun DrawScope.drawConcreteHatching(
+   300→    left: Float, top: Float, w: Float, h: Float
+   301→) {
+   302→    val step = 24f
+   303→    val paint = HatchColor
+   304→    for (offset in -h.toInt()..(w + h).toInt() step step.toInt()) {
+   305→        val x1 = left + offset.toFloat()
+   306→        val y1 = top
+   307→        val x2 = left + offset.toFloat() - h
+   308→        val y2 = top + h
+   309→        // Clip to front face bounds
+   310→        val clipX1 = max(left, min(x1, left + w))
+   311→        val clipY1 = when {
+   312→            x1 < left -> top + (left - x1)
+   313→            x1 > left + w -> top
+   314→            else -> top
+   315→        }
+   316→        val clipX2 = max(left, min(x2, left + w))
+   317→        val clipY2 = when {
+   318→            x2 < left -> top + (left - x2)
+   319→            x2 > left + w -> top + (x2 - (left + w))
+   320→            else -> top + h
+   321→        }
+   322→        if (clipX1 in left..(left + w) || clipX2 in left..(left + w)) {
+   323→            drawLine(
+   324→                color = paint,
+   325→                start = Offset(
+   326→                    x = max(left, min(left + w, x1)),
+   327→                    y = max(top, min(top + h, y1.coerceAtLeast(top)))
+   328→                ),
+   329→                end = Offset(
+   330→                    x = max(left, min(left + w, x2)),
+   331→                    y = min(top + h, y2.coerceAtMost(top + h))
+   332→                ),
+   333→                strokeWidth = 0.5f
+   334→            )
+   335→        }
+   336→    }
+   337→}
+   338→
+   339→// ============================================================================
+   340→// 2. SUPPORTS — pin (left) and roller (right)
+   341→// ============================================================================
+   342→
+   343→/**
+   344→ * Left support: pin support — triangle with a circle at the apex.
+   345→ * Right support: roller support — triangle with circles underneath.
+   346→ */
+   347→private fun DrawScope.drawSupports(
+   348→    beamLeft: Float, beamTop: Float,
+   349→    beamBottom: Float, beamRight: Float,
+   350→    isContinuous: Boolean
+   351→) {
+   352→    val supportH = 30f
+   353→    val supportW = 28f
+   354→    val circleR = 4f
+   355→    val lineW = 2.dp.toPx()
+   356→
+   357→    val supportPaint = SupportColor
+   358→    val groundY = beamBottom + supportH + circleR * 2 + 6f
+   359→
+   360→    // --- Left Pin Support ---
+   361→    if (!isContinuous) {
+   362→        // Triangle
+   363→        val triPath = Path().apply {
+   364→            moveTo(beamLeft, beamBottom)
+   365→            lineTo(beamLeft - supportW / 2, beamBottom + supportH)
+   366→            lineTo(beamLeft + supportW / 2, beamBottom + supportH)
+   367→            close()
+   368→        }
+   369→        drawPath(path = triPath, color = supportPaint)
+   370→        drawPath(
+   371→            path = triPath, color = supportPaint,
+   372→            style = Stroke(width = lineW, join = StrokeJoin.Miter)
+   373→        )
+   374→        // Pin circle at bottom
+   375→        drawCircle(
+   376→            color = supportPaint, radius = circleR,
+   377→            center = Offset(beamLeft, beamBottom + supportH + circleR + 2f)
+   378→        )
+   379→        // Ground line
+   380→        drawLine(
+   381→            color = supportPaint,
+   382→            start = Offset(beamLeft - supportW, groundY + circleR * 2 + 4f),
+   383→            end = Offset(beamLeft + supportW, groundY + circleR * 2 + 4f),
+   384→            strokeWidth = lineW
+   385→        )
+   386→        // Ground hatching
+   387→        for (i in 0..4) {
+   388→            val hx = beamLeft - supportW + i * (supportW * 2 / 4)
+   389→            drawLine(
+   390→                color = supportPaint,
+   391→                start = Offset(hx, groundY + circleR * 2 + 4f),
+   392→                end = Offset(hx - 6f, groundY + circleR * 2 + 12f),
+   393→                strokeWidth = 1.5f
+   394→            )
+   395→        }
+   396→    } else {
+   397→        // Continuous beam — fixed support indication
+   398→        drawLine(
+   399→            color = supportPaint,
+   400→            start = Offset(beamLeft, beamBottom),
+   401→            end = Offset(beamLeft, beamBottom + 20f),
+   402→            strokeWidth = lineW
+   403→        )
+   404→        // Small hatching for fixed
+   405→        for (i in 0..3) {
+   406→            val yy = beamBottom + i * 6f
+   407→            drawLine(
+   408→                color = supportPaint,
+   409→                start = Offset(beamLeft, yy),
+   410→                end = Offset(beamLeft - 8f, yy + 6f),
+   411→                strokeWidth = 1.5f
+   412→            )
+   413→        }
+   414→    }
+   415→
+   416→    // --- Right Roller Support ---
+   417→    // Triangle
+   418→    val triPathR = Path().apply {
+   419→        moveTo(beamRight, beamBottom)
+   420→        lineTo(beamRight - supportW / 2, beamBottom + supportH)
+   421→        lineTo(beamRight + supportW / 2, beamBottom + supportH)
+   422→        close()
+   423→    }
+   424→    drawPath(path = triPathR, color = supportPaint)
+   425→    drawPath(
+   426→        path = triPathR, color = supportPaint,
+   427→        style = Stroke(width = lineW, join = StrokeJoin.Miter)
+   428→    )
+   429→    // Roller circles
+   430→    drawCircle(
+   431→        color = supportPaint, radius = circleR,
+   432→        center = Offset(beamRight - 6f, beamBottom + supportH + circleR + 2f)
+   433→    )
+   434→    drawCircle(
+   435→        color = supportPaint, radius = circleR,
+   436→        center = Offset(beamRight + 6f, beamBottom + supportH + circleR + 2f)
+   437→    )
+   438→    // Ground line
+   439→    drawLine(
+   440→        color = supportPaint,
+   441→        start = Offset(beamRight - supportW, groundY + circleR * 2 + 4f),
+   442→        end = Offset(beamRight + supportW, groundY + circleR * 2 + 4f),
+   443→        strokeWidth = lineW
+   444→    )
+   445→    // Ground hatching
+   446→    for (i in 0..4) {
+   447→        val hx = beamRight - supportW + i * (supportW * 2 / 4)
+   448→        drawLine(
+   449→            color = supportPaint,
+   450→            start = Offset(hx, groundY + circleR * 2 + 4f),
+   451→            end = Offset(hx - 6f, groundY + circleR * 2 + 12f),
+   452→            strokeWidth = 1.5f
+   453→        )
+   454→    }
+   455→}
+   456→
+   457→// ============================================================================
+   458→// 3. CUTAWAY REINFORCEMENT — internal bars and stirrups
+   459→// ============================================================================
+   460→
+   461→/**
+   462→ * Reveals internal reinforcement through a cutaway in the middle of the beam.
+   463→ * Shows main bottom rebar (blue), stirrups (purple), and top steel (light blue).
+   464→ */
+   465→private fun DrawScope.drawCutawayReinforcement(
+   466→    beamLeft: Float, beamTop: Float,
+   467→    beamRight: Float, beamBottom: Float,
+   468→    beamDrawW: Float, beamDrawH: Float,
+   469→    beamDrawD: Float,
+   470→    scale: Float,
+   471→    angleX: Float, angleY: Float,
+   472→    mainRebarDia: Double, mainRebarCount: Int,
+   473→    stirrupDia: Double, stirrupSpacing: Double,
+   474→    cover: Double,
+   475→    hasTopSteel: Boolean,
+   476→    topRebarDia: Double, topRebarCount: Int
+   477→) {
+   478→    val dimLineW = 1.dp.toPx()
+   479→
+   480→    // Cover in pixels
+   481→    val coverPx = cover.toFloat() * scale
+   482→
+   483→    // Cutaway zone: middle 50% of the beam
+   484→    val cutLeft = beamLeft + beamDrawW * 0.25f
+   485→    val cutRight = beamLeft + beamDrawW * 0.75f
+   486→
+   487→    // Semi-transparent overlay to indicate cut zone
+   488→    drawRect(
+   489→        color = Color(0x33000000),
+   490→        topLeft = Offset(cutLeft, beamTop),
+   491→        size = Size(cutRight - cutLeft, beamDrawH)
+   492→    )
+   493→
+   494→    // "CUT" labels
+   495→    drawTextAnnotated(
+   496→        text = "قطع", x = cutLeft + 2f, y = beamTop - 4f,
+   497→        color = ExtensionGray, size = 22f
+   498→    )
+   499→    drawTextAnnotated(
+   500→        text = "قطع", x = cutRight - 30f, y = beamTop - 4f,
+   501→        color = ExtensionGray, size = 22f
+   502→    )
+   503→
+   504→    // Cut section dashed lines
+   505→    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 4f), 0f)
+   506→    drawLine(
+   507→        color = ExtensionGray,
+   508→        start = Offset(cutLeft, beamTop - 8f),
+   509→        end = Offset(cutLeft, beamBottom + 8f),
+   510→        strokeWidth = dimLineW,
+   511→        pathEffect = dashEffect
+   512→    )
+   513→    drawLine(
+   514→        color = ExtensionGray,
+   515→        start = Offset(cutRight, beamTop - 8f),
+   516→        end = Offset(cutRight, beamBottom + 8f),
+   517→        strokeWidth = dimLineW,
+   518→        pathEffect = dashEffect
+   519→    )
+   520→
+   521→    // --- Main bottom rebar (BLUE) ---
+   522→    val mainBarRadius = (mainRebarDia / 2f) * scale
+   523→    val mainBarClamped = max(mainBarRadius, 3.0).toFloat()
+   524→    val bottomBarY = beamBottom - coverPx - mainBarClamped
+   525→
+   526→    if (mainRebarCount > 0) {
+   527→        val usableW = beamDrawW - 2 * coverPx
+   528→        val spacing = if (mainRebarCount > 1) {
+   529→            (usableW - 2 * mainBarClamped) / (mainRebarCount - 1)
+   530→        } else 0f
+   531→
+   532→        for (i in 0 until mainRebarCount) {
+   533→            val barX = beamLeft + coverPx + mainBarClamped + i * spacing
+   534→            // Only draw bars in the cutaway zone with full visibility
+   535→            if (barX in cutLeft..cutRight) {
+   536→                drawCircle(
+   537→                    color = RebarBlue,
+   538→                    radius = mainBarClamped,
+   539→                    center = Offset(barX, bottomBarY)
+   540→                )
+   541→                // Highlight ring
+   542→                drawCircle(
+   543→                    color = RebarBlue.copy(alpha = 0.4f),
+   544→                    radius = mainBarClamped + 2f,
+   545→                    center = Offset(barX, bottomBarY),
+   546→                    style = Stroke(width = 1f)
+   547→                )
+   548→            } else {
+   549→                // Outside cutaway: draw as faded line (bar running through concrete)
+   550→                drawCircle(
+   551→                    color = RebarBlue.copy(alpha = 0.25f),
+   552→                    radius = mainBarClamped * 0.7f,
+   553→                    center = Offset(barX, bottomBarY)
+   554→                )
+   555→            }
+   556→        }
+   557→
+   558→        // Main rebar running lines (extend full length)
+   559→        if (mainRebarCount >= 2) {
+   560→            val firstBarX = beamLeft + coverPx + mainBarClamped
+   561→            val lastBarX = beamLeft + coverPx + mainBarClamped + (mainRebarCount - 1) * spacing
+   562→            // Draw the extreme bars as lines through concrete
+   563→            drawLine(
+   564→                color = RebarBlue.copy(alpha = 0.35f),
+   565→                start = Offset(beamLeft, bottomBarY),
+   566→                end = Offset(cutLeft, bottomBarY),
+   567→                strokeWidth = mainBarClamped * 1.2f,
+   568→                cap = StrokeCap.Round
+   569→            )
+   570→            drawLine(
+   571→                color = RebarBlue.copy(alpha = 0.35f),
+   572→                start = Offset(cutRight, bottomBarY),
+   573→                end = Offset(beamRight, bottomBarY),
+   574→                strokeWidth = mainBarClamped * 1.2f,
+   575→                cap = StrokeCap.Round
+   576→            )
+   577→        }
+   578→    }
+   579→
+   580→    // --- Top steel (LIGHT BLUE) ---
+   581→    if (hasTopSteel && topRebarCount > 0 && topRebarDia > 0) {
+   582→        val topBarRadius = max((topRebarDia / 2f) * scale, 2.5).toFloat()
+   583→        val topBarY = beamTop + coverPx + topBarRadius
+   584→        val topUsableW = beamDrawW - 2 * coverPx
+   585→        val topSpacing = if (topRebarCount > 1) {
+   586→            (topUsableW - 2 * topBarRadius) / (topRebarCount - 1)
+   587→        } else 0f
+   588→
+   589→        for (i in 0 until topRebarCount) {
+   590→            val barX = beamLeft + coverPx + topBarRadius + i * topSpacing
+   591→            if (barX in cutLeft..cutRight) {
+   592→                drawCircle(
+   593→                    color = TopRebarBlue,
+   594→                    radius = topBarRadius,
+   595→                    center = Offset(barX, topBarY)
+   596→                )
+   597→                drawCircle(
+   598→                    color = TopRebarBlue.copy(alpha = 0.4f),
+   599→                    radius = topBarRadius + 2f,
+   600→                    center = Offset(barX, topBarY),
+   601→                    style = Stroke(width = 1f)
+   602→                )
+   603→            } else {
+   604→                drawCircle(
+   605→                    color = TopRebarBlue.copy(alpha = 0.25f),
+   606→                    radius = topBarRadius * 0.7f,
+   607→                    center = Offset(barX, topBarY)
+   608→                )
+   609→            }
+   610→        }
+   611→
+   612→        // Top rebar lines outside cutaway
+   613→        drawLine(
+   614→            color = TopRebarBlue.copy(alpha = 0.25f),
+   615→            start = Offset(beamLeft, topBarY),
+   616→            end = Offset(cutLeft, topBarY),
+   617→            strokeWidth = topBarRadius * 1.0f,
+   618→            cap = StrokeCap.Round
+   619→        )
+   620→        drawLine(
+   621→            color = TopRebarBlue.copy(alpha = 0.25f),
+   622→            start = Offset(cutRight, topBarY),
+   623→            end = Offset(beamRight, topBarY),
+   624→            strokeWidth = topBarRadius * 1.0f,
+   625→            cap = StrokeCap.Round
+   626→        )
+   627→    }
+   628→
+   629→    // --- Stirrups (PURPLE) ---
+   630→    val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+   631→    val stirrupLineW = max(stirrupDia.toFloat() * scale * 0.15f, 1.5f)
+   632→
+   633→    if (stirrupSpacingPx > 5f) {
+   634→        var sx = cutLeft
+   635→        while (sx <= cutRight) {
+   636→            // Stirrup inner boundaries
+   637→            val stirrupInnerTop = beamTop + coverPx
+   638→            val stirrupInnerBottom = beamBottom - coverPx
+   639→
+   640→            // Draw vertical stirrup legs
+   641→            drawLine(
+   642→                color = StirrupPurple,
+   643→                start = Offset(sx, stirrupInnerTop),
+   644→                end = Offset(sx, stirrupInnerBottom),
+   645→                strokeWidth = stirrupLineW,
+   646→                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+   647→            )
+   648→
+   649→            // Bottom horizontal leg of stirrup
+   650→            drawLine(
+   651→                color = StirrupPurple,
+   652→                start = Offset(sx, stirrupInnerBottom),
+   653→                end = Offset(
+   654→                    sx + min(stirrupSpacingPx * 0.8f, cutRight - sx),
+   655→                    stirrupInnerBottom
+   656→                ),
+   657→                strokeWidth = stirrupLineW
+   658→            )
+   659→
+   660→            // Top hook (135° bend indication)
+   661→            val hookLen = 10f
+   662→            drawLine(
+   663→                color = StirrupPurple,
+   664→                start = Offset(sx, stirrupInnerTop),
+   665→                end = Offset(sx - hookLen, stirrupInnerTop - hookLen * 0.6f),
+   666→                strokeWidth = stirrupLineW,
+   667→                cap = StrokeCap.Round
+   668→            )
+   669→
+   670→            sx += stirrupSpacingPx
+   671→        }
+   672→    }
+   673→
+   674→    // --- Rebar label inside cutaway ---
+   675→    val labelX = cutLeft + (cutRight - cutLeft) / 2f - 40f
+   676→    val labelY = beamBottom - coverPx - mainBarClamped - 18f
+   677→    drawTextAnnotated(
+   678→        text = "${mainRebarCount}Ø${mainRebarDia.toInt()}",
+   679→        x = labelX, y = labelY,
+   680→        color = RebarBlue, size = 24f
+   681→    )
+   682→
+   683→    if (hasTopSteel && topRebarCount > 0) {
+   684→        val topLabelY = beamTop + coverPx + max(topRebarDia / 2f * scale, 2.5).toFloat() + 22f
+   685→        drawTextAnnotated(
+   686→            text = "${topRebarCount}Ø${topRebarDia.toInt()}",
+   687→            x = labelX, y = topLabelY,
+   688→            color = TopRebarBlue, size = 22f
+   689→        )
+   690→    }
+   691→
+   692→    // Stirrup label
+   693→    drawTextAnnotated(
+   694→        text = "Ø${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()}",
+   695→        x = cutRight - 80f, y = beamTop + coverPx + 18f,
+   696→        color = StirrupPurple, size = 20f
+   697→    )
+   698→}
+   699→
+   700→// ============================================================================
+   701→// 4. DEVELOPMENT LENGTH & LAP SPLICE
+   702→// ============================================================================
+   703→
+   704→/**
+   705→ * Shows La (development length) as annotated bar extending into left support.
+   706→ * Shows lap splice zone with overlapping bars at right side.
+   707→ */
+   708→private fun DrawScope.drawDevelopmentAndLap(
+   709→    beamLeft: Float, beamTop: Float,
+   710→    beamRight: Float, beamBottom: Float,
+   711→    beamDrawW: Float, beamDrawH: Float,
+   712→    scale: Float,
+   713→    developmentLength: Double,
+   714→    lapLength: Double,
+   715→    mainRebarDia: Double
+   716→) {
+   717→    val laPx = developmentLength.toFloat() * scale
+   718→    val lapPx = lapLength.toFloat() * scale
+   719→    val barR = max((mainRebarDia / 2f) * scale, 3.0).toFloat()
+   720→    val mainBarY = beamBottom - (beamDrawH * 0.15f)  // approximate bottom bar position
+   721→
+   722→    // --- Development Length (La) on LEFT side ---
+   723→    // The bar extends into the support
+   724→    val laEndX = beamLeft - laPx.coerceAtMost(80f)
+   725→
+   726→    // Draw the extended bar into support
+   727→    drawLine(
+   728→        color = DevLengthColor,
+   729→        start = Offset(laEndX, mainBarY),
+   730→        end = Offset(beamLeft, mainBarY),
+   731→        strokeWidth = barR * 2f,
+   732→        cap = StrokeCap.Round
+   733→    )
+   734→    // 90° hook at end
+   735→    drawLine(
+   736→        color = DevLengthColor,
+   737→        start = Offset(laEndX, mainBarY - barR),
+   738→        end = Offset(laEndX, mainBarY + barR),
+   739→        strokeWidth = barR * 2f,
+   740→        cap = StrokeCap.Round
+   741→    )
+   742→
+   743→    // La dimension bracket
+   744→    val bracketY = mainBarY + barR + 16f
+   745→    drawLine(
+   746→        color = DevLengthColor,
+   747→        start = Offset(laEndX, bracketY),
+   748→        end = Offset(beamLeft, bracketY),
+   749→        strokeWidth = 1.5.dp.toPx()
+   750→    )
+   751→    // Arrows
+   752→    drawArrowHead(laEndX, bracketY, direction = 1f, color = DevLengthColor)
+   753→    drawArrowHead(beamLeft, bracketY, direction = -1f, color = DevLengthColor)
+   754→    // Extension lines
+   755→    drawLine(
+   756→        color = ExtensionGray, start = Offset(laEndX, mainBarY + barR + 2f),
+   757→        end = Offset(laEndX, bracketY + 6f), strokeWidth = 1.dp.toPx()
+   758→    )
+   759→    drawLine(
+   760→        color = ExtensionGray, start = Offset(beamLeft, mainBarY + barR + 2f),
+   761→        end = Offset(beamLeft, bracketY + 6f), strokeWidth = 1.dp.toPx()
+   762→    )
+   763→    // Label
+   764→    drawTextAnnotated(
+   765→        text = "La = ${developmentLength.toInt()} mm",
+   766→        x = laEndX - 10f, y = bracketY + 22f,
+   767→        color = DevLengthColor, size = 22f
+   768→    )
+   769→
+   770→    // --- Lap Splice Zone on RIGHT side ---
+   771→    val lapZoneStart = beamRight - lapPx.coerceAtMost(beamDrawW * 0.15f)
+   772→    val lapZoneEnd = beamRight
+   773→
+   774→    // Highlight lap zone
+   775→    drawRect(
+   776→        color = LapSpliceColor.copy(alpha = 0.12f),
+   777→        topLeft = Offset(lapZoneStart, beamTop - 4f),
+   778→        size = Size(lapZoneEnd - lapZoneStart, beamDrawH + 8f)
+   779→    )
+   780→
+   781→    // Two overlapping bars
+   782→    drawLine(
+   783→        color = RebarBlue,
+   784→        start = Offset(lapZoneStart - 20f, mainBarY - 4f),
+   785→        end = Offset(lapZoneEnd, mainBarY - 4f),
+   786→        strokeWidth = barR * 1.6f,
+   787→        cap = StrokeCap.Round
+   788→    )
+   789→    drawLine(
+   790→        color = SecondaryRed,
+   791→        start = Offset(lapZoneStart, mainBarY + 4f),
+   792→        end = Offset(lapZoneEnd + 20f, mainBarY + 4f),
+   793→        strokeWidth = barR * 1.6f,
+   794→        cap = StrokeCap.Round
+   795→    )
+   796→
+   797→    // Lap dimension bracket (below beam)
+   798→    val lapBracketY = beamBottom + 50f
+   799→    drawLine(
+   800→        color = LapSpliceColor,
+   801→        start = Offset(lapZoneStart, lapBracketY),
+   802→        end = Offset(lapZoneEnd, lapBracketY),
+   803→        strokeWidth = 1.5.dp.toPx()
+   804→    )
+   805→    drawArrowHead(lapZoneStart, lapBracketY, direction = 1f, color = LapSpliceColor)
+   806→    drawArrowHead(lapZoneEnd, lapBracketY, direction = -1f, color = LapSpliceColor)
+   807→
+   808→    // Extension lines
+   809→    drawLine(
+   810→        color = ExtensionGray,
+   811→        start = Offset(lapZoneStart, beamBottom + 8f),
+   812→        end = Offset(lapZoneStart, lapBracketY + 6f),
+   813→        strokeWidth = 1.dp.toPx()
+   814→    )
+   815→    drawLine(
+   816→        color = ExtensionGray,
+   817→        start = Offset(lapZoneEnd, beamBottom + 8f),
+   818→        end = Offset(lapZoneEnd, lapBracketY + 6f),
+   819→        strokeWidth = 1.dp.toPx()
+   820→    )
+   821→
+   822→    // Label
+   823→    drawTextAnnotated(
+   824→        text = "Lap = ${lapLength.toInt()} mm",
+   825→        x = lapZoneStart + 5f, y = lapBracketY + 20f,
+   826→        color = LapSpliceColor, size = 22f
+   827→    )
+   828→}
+   829→
+   830→// ============================================================================
+   831→// 5. DIMENSION LINES — span, section, cover, stirrup spacing
+   832→// ============================================================================
+   833→
+   834→/**
+   835→ * Draws comprehensive dimensioning:
+   836→ * - Overall span at bottom
+   837→ * - Beam width × depth at side
+   838→ * - Cover dimension
+   839→ * - Stirrup spacing
+   840→ */
+   841→private fun DrawScope.drawDimensionLines(
+   842→    beamLeft: Float, beamTop: Float,
+   843→    beamRight: Float, beamBottom: Float,
+   844→    beamDrawH: Float,
+   845→    scale: Float,
+   846→    beamWidth: Double, beamDepth: Double,
+   847→    span: Double, cover: Double,
+   848→    stirrupSpacing: Double
+   849→) {
+   850→    val dimLineW = 1.dp.toPx()
+   851→    val extLineW = 0.8.dp.toPx()
+   852→    val arrowSize = 8f
+   853→
+   854→    // --- Overall SPAN dimension (bottom) ---
+   855→    val spanY = beamBottom + 80f
+   856→    drawLine(
+   857→        color = DimensionWhite,
+   858→        start = Offset(beamLeft, spanY),
+   859→        end = Offset(beamRight, spanY),
+   860→        strokeWidth = dimLineW
+   861→    )
+   862→    drawArrowHead(beamLeft, spanY, direction = 1f, color = DimensionWhite)
+   863→    drawArrowHead(beamRight, spanY, direction = -1f, color = DimensionWhite)
+   864→
+   865→    // Extension lines
+   866→    drawLine(
+   867→        color = ExtensionGray,
+   868→        start = Offset(beamLeft, beamBottom + 4f),
+   869→        end = Offset(beamLeft, spanY + 6f),
+   870→        strokeWidth = extLineW
+   871→    )
+   872→    drawLine(
+   873→        color = ExtensionGray,
+   874→        start = Offset(beamRight, beamBottom + 4f),
+   875→        end = Offset(beamRight, spanY + 6f),
+   876→        strokeWidth = extLineW
+   877→    )
+   878→
+   879→    // Span label
+   880→    val spanLabel = "L = ${span.toInt()} mm"
+   881→    val spanLabelX = beamLeft + (beamRight - beamLeft) / 2f
+   882→    drawTextAnnotated(
+   883→        text = spanLabel, x = spanLabelX - 50f, y = spanY + 22f,
+   884→        color = DimensionWhite, size = 26f
+   885→    )
+   886→
+   887→    // --- Beam DEPTH dimension (right side) ---
+   888→    val depthX = beamRight + 40f
+   889→    drawLine(
+   890→        color = DimensionWhite,
+   891→        start = Offset(depthX, beamTop),
+   892→        end = Offset(depthX, beamBottom),
+   893→        strokeWidth = dimLineW
+   894→    )
+   895→    drawArrowHead(depthX, beamTop, direction = 1f, color = DimensionWhite, vertical = true)
+   896→    drawArrowHead(depthX, beamBottom, direction = -1f, color = DimensionWhite, vertical = true)
+   897→
+   898→    // Extension lines
+   899→    drawLine(
+   900→        color = ExtensionGray,
+   901→        start = Offset(beamRight + 4f, beamTop),
+   902→        end = Offset(depthX + 6f, beamTop),
+   903→        strokeWidth = extLineW
+   904→    )
+   905→    drawLine(
+   906→        color = ExtensionGray,
+   907→        start = Offset(beamRight + 4f, beamBottom),
+   908→        end = Offset(depthX + 6f, beamBottom),
+   909→        strokeWidth = extLineW
+   910→    )
+   911→
+   912→    // Depth label (rotated)
+   913→    withTransform({
+   914→        rotate(degrees = -90f, pivot = Offset(depthX + 22f, beamTop + beamDrawH / 2f))
+   915→    }) {
+   916→        drawContext.canvas.nativeCanvas.apply {
+   917→            val paint = android.graphics.Paint().apply {
+   918→                textSize = 22f
+   919→                color = android.graphics.Color.WHITE
+   920→                isFakeBoldText = true
+   921→                typeface = android.graphics.Typeface.MONOSPACE
+   922→                textAlign = android.graphics.Paint.Align.CENTER
+   923→            }
+   924→            drawText(
+   925→                "h = ${beamDepth.toInt()}",
+   926→                depthX + 22f,
+   927→                beamTop + beamDrawH / 2f + 6f,
+   928→                paint
+   929→            )
+   930→        }
+   931→    }
+   932→
+   933→    // --- Section label (b × h) near depth dimension ---
+   934→    drawTextAnnotated(
+   935→        text = "${beamWidth.toInt()}×${beamDepth.toInt()}",
+   936→        x = beamRight + 60f, y = beamTop + beamDrawH / 2f + 6f,
+   937→        color = DimensionWhite, size = 24f
+   938→    )
+   939→
+   940→    // --- COVER dimension (left side, small) ---
+   941→    val coverPx = cover.toFloat() * scale
+   942→    val coverX = beamLeft - 30f
+   943→    val coverTopY = beamBottom - coverPx
+   944→    val coverBottomY = beamBottom
+   945→
+   946→    drawLine(
+   947→        color = ExtensionGray,
+   948→        start = Offset(coverX, coverTopY),
+   949→        end = Offset(coverX, coverBottomY),
+   950→        strokeWidth = 0.8.dp.toPx()
+   951→    )
+   952→    // Extension lines
+   953→    drawLine(
+   954→        color = ExtensionGray,
+   955→        start = Offset(beamLeft - 2f, coverTopY),
+   956→        end = Offset(coverX - 4f, coverTopY),
+   957→        strokeWidth = 0.6.dp.toPx()
+   958→    )
+   959→    drawLine(
+   960→        color = ExtensionGray,
+   961→        start = Offset(beamLeft - 2f, coverBottomY),
+   962→        end = Offset(coverX - 4f, coverBottomY),
+   963→        strokeWidth = 0.6.dp.toPx()
+   964→    )
+   965→    // Cover label
+   966→    withTransform({
+   967→        rotate(degrees = -90f, pivot = Offset(coverX - 14f, coverTopY + coverPx / 2f))
+   968→    }) {
+   969→        drawContext.canvas.nativeCanvas.apply {
+   970→            val paint = android.graphics.Paint().apply {
+   971→                textSize = 16f
+   972→                color = android.graphics.Color.parseColor("#AAAAAA")
+   973→                typeface = android.graphics.Typeface.MONOSPACE
+   974→                textAlign = android.graphics.Paint.Align.CENTER
+   975→            }
+   976→            drawText(
+   977→                "c=${cover.toInt()}",
+   978→                coverX - 14f,
+   979→                coverTopY + coverPx / 2f + 4f,
+   980→                paint
+   981→            )
+   982→        }
+   983→    }
+   984→
+   985→    // --- STIRRUP SPACING dimension (inside beam, in cutaway zone) ---
+   986→    val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+   987→    val ssY = beamTop + coverPx + 30f
+   988→    val ssLeft = beamLeft + (beamRight - beamLeft) * 0.35f
+   989→    val ssRight = ssLeft + stirrupSpacingPx.coerceAtMost(60f)
+   990→
+   991→    drawLine(
+   992→        color = StirrupPurple.copy(alpha = 0.7f),
+   993→        start = Offset(ssLeft, ssY),
+   994→        end = Offset(ssRight, ssY),
+   995→        strokeWidth = 0.8.dp.toPx()
+   996→    )
+   997→    drawArrowHead(ssLeft, ssY, direction = 1f, color = StirrupPurple.copy(alpha = 0.7f))
+   998→    drawArrowHead(ssRight, ssY, direction = -1f, color = StirrupPurple.copy(alpha = 0.7f))
+   999→
+  1000→    drawTextAnnotated(
+  1001→        text = "@${stirrupSpacing.toInt()}",
+  1002→        x = ssLeft + 2f, y = ssY - 6f,
+  1003→        color = StirrupPurple.copy(alpha = 0.8f), size = 18f
+  1004→    )
+  1005→}
+  1006→
+  1007→// ============================================================================
+  1008→// 6. SECTION VIEW INSET — cross-section in top-right corner
+  1009→// ============================================================================
+  1010→
+  1011→/**
+  1012→ * Draws a smaller inset cross-section view in the top-right area.
+  1013→ * Shows rectangular outline, rebar circles, stirrup rectangle, and cover dims.
+  1014→ */
+  1015→private fun DrawScope.drawSectionInset(
+  1016→    cw: Float, ch: Float,
+  1017→    beamWidth: Double, beamDepth: Double,
+  1018→    mainRebarDia: Double, mainRebarCount: Int,
+  1019→    stirrupDia: Double,
+  1020→    cover: Double,
+  1021→    hasTopSteel: Boolean,
+  1022→    topRebarDia: Double, topRebarCount: Int
+  1023→) {
+  1024→    // Inset position and size
+  1025→    val insetW = min(160f, cw * 0.22f)
+  1026→    val insetH = min(220f, ch * 0.40f)
+  1027→    val insetLeft = cw - insetW - 16f
+  1028→    val insetTop = 12f
+  1029→
+  1030→    // Background panel
+  1031→    drawRoundRect(
+  1032→        color = Color(0x22000000),
+  1033→        topLeft = Offset(insetLeft - 8f, insetTop - 8f),
+  1034→        size = Size(insetW + 16f, insetH + 16f),
+  1035→        cornerRadius = CornerRadius(8f, 8f)
+  1036→    )
+  1037→
+  1038→    // Title
+  1039→    drawTextAnnotated(
+  1040→        text = "المقطع", x = insetLeft, y = insetTop - 2f,
+  1041→        color = DimensionWhite, size = 20f
+  1042→    )
+  1043→
+  1044→    // Section drawing area inside inset
+  1045→    val padding = 16f
+  1046→    val secAvailW = insetW - 2 * padding
+  1047→    val secAvailH = insetH - 36f - 2 * padding  // leave room for title
+  1048→    val secScale = min(secAvailW / beamWidth.toFloat(), secAvailH / beamDepth.toFloat())
+  1049→
+  1050→    val secW = beamWidth.toFloat() * secScale
+  1051→    val secH = beamDepth.toFloat() * secScale
+  1052→    val secLeft = insetLeft + (insetW - secW) / 2f
+  1053→    val secTop = insetTop + 28f
+  1054→
+  1055→    // Concrete rectangle
+  1056→    drawRect(
+  1057→        color = ConcreteGray,
+  1058→        topLeft = Offset(secLeft, secTop),
+  1059→        size = Size(secW, secH)
+  1060→    )
+  1061→    drawRect(
+  1062→        color = DimensionWhite.copy(alpha = 0.5f),
+  1063→        topLeft = Offset(secLeft, secTop),
+  1064→        size = Size(secW, secH),
+  1065→        style = Stroke(width = 1.5.dp.toPx())
+  1066→    )
+  1067→
+  1068→    // Stirrup rectangle (dashed)
+  1069→    val covPx = cover.toFloat() * secScale
+  1070→    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 3f), 0f)
+  1071→    drawRect(
+  1072→        color = StirrupPurple,
+  1073→        topLeft = Offset(secLeft + covPx, secTop + covPx),
+  1074→        size = Size(secW - 2 * covPx, secH - 2 * covPx),
+  1075→        style = Stroke(width = 1.5f, pathEffect = dashEffect)
+  1076→    )
+  1077→
+  1078→    // Main bottom rebar circles (BLUE)
+  1079→    val mainR = max((mainRebarDia / 2f) * secScale, 2.5).toFloat()
+  1080→    val bottomY = secTop + secH - covPx - mainR
+  1081→    if (mainRebarCount > 0) {
+  1082→        val usableW = secW - 2 * covPx
+  1083→        val spacing = if (mainRebarCount > 1) (usableW - 2 * mainR) / (mainRebarCount - 1) else 0f
+  1084→        for (i in 0 until mainRebarCount) {
+  1085→            val bx = secLeft + covPx + mainR + i * spacing
+  1086→            drawCircle(color = RebarBlue, radius = mainR, center = Offset(bx, bottomY))
+  1087→        }
+  1088→    }
+  1089→
+  1090→    // Top rebar circles (LIGHT BLUE)
+  1091→    if (hasTopSteel && topRebarCount > 0 && topRebarDia > 0) {
+  1092→        val topR = max((topRebarDia / 2f) * secScale, 2.0).toFloat()
+  1093→        val topY = secTop + covPx + topR
+  1094→        val usableW = secW - 2 * covPx
+  1095→        val spacing = if (topRebarCount > 1) (usableW - 2 * topR) / (topRebarCount - 1) else 0f
+  1096→        for (i in 0 until topRebarCount) {
+  1097→            val bx = secLeft + covPx + topR + i * spacing
+  1098→            drawCircle(color = TopRebarBlue, radius = topR, center = Offset(bx, topY))
+  1099→        }
+  1100→    }
+  1101→
+  1102→    // Cover dimension (small, left side)
+  1103→    val cDimX = secLeft - 12f
+  1104→    drawLine(
+  1105→        color = ExtensionGray,
+  1106→        start = Offset(cDimX, secTop),
+  1107→        end = Offset(cDimX, secTop + covPx),
+  1108→        strokeWidth = 0.7.dp.toPx()
+  1109→    )
+  1110→    drawTextAnnotated(
+  1111→        text = "${cover.toInt()}", x = cDimX - 18f, y = secTop + covPx / 2f + 4f,
+  1112→        color = ExtensionGray, size = 14f
+  1113→    )
+  1114→
+  1115→    // Section label: b × h
+  1116→    drawTextAnnotated(
+  1117→        text = "${beamWidth.toInt()}×${beamDepth.toInt()}",
+  1118→        x = secLeft + secW / 2f - 28f, y = secTop + secH + 18f,
+  1119→        color = DimensionWhite, size = 18f
+  1120→    )
+  1121→}
+  1122→
+  1123→// ============================================================================
+  1124→// 7. REINFORCEMENT SCHEDULE TABLE — bottom area
+  1125→// ============================================================================
+  1126→
+  1127→/**
+  1128→ * Draws a small reinforcement schedule table at the bottom.
+  1129→ * Columns: Bar Mark | Diameter | Count | Length | Spacing
+  1130→ */
+  1131→private fun DrawScope.drawReinforcementSchedule(
+  1132→    cw: Float, ch: Float,
+  1133→    beamWidth: Double, beamDepth: Double,
+  1134→    span: Double,
+  1135→    mainRebarDia: Double, mainRebarCount: Int,
+  1136→    stirrupDia: Double, stirrupSpacing: Double,
+  1137→    hasTopSteel: Boolean,
+  1138→    topRebarDia: Double, topRebarCount: Int,
+  1139→    developmentLength: Double
+  1140→) {
+  1141→    val tableLeft = 16f
+  1142→    val tableTop = ch * 0.68f
+  1143→    val tableW = cw - 32f
+  1144→    val rowH = 26f
+  1145→    val headerH = 30f
+  1146→    val colWidths = floatArrayOf(
+  1147→        tableW * 0.14f,  // Mark
+  1148→        tableW * 0.16f,  // Diameter
+  1149→        tableW * 0.12f,  // Count
+  1150→        tableW * 0.28f,  // Length
+  1151→        tableW * 0.30f   // Spacing
+  1152→    )
+  1153→
+  1154→    // Table title
+  1155→    drawTextAnnotated(
+  1156→        text = "جدول التسليح",
+  1157→        x = tableLeft, y = tableTop - 8f,
+  1158→        color = DimensionWhite, size = 22f
+  1159→    )
+  1160→
+  1161→    // Header row background
+  1162→    drawRect(
+  1163→        color = TableHeaderBg,
+  1164→        topLeft = Offset(tableLeft, tableTop),
+  1165→        size = Size(tableW, headerH)
+  1166→    )
+  1167→
+  1168→    // Header texts
+  1169→    val headers = arrayOf("العلامة", "القطر", "العدد", "الطول", "المسافة")
+  1170→    var cx = tableLeft
+  1171→    for (i in headers.indices) {
+  1172→        drawTextAnnotated(
+  1173→            text = headers[i], x = cx + 6f, y = tableTop + headerH / 2f + 6f,
+  1174→            color = DimensionWhite, size = 18f
+  1175→        )
+  1176→        cx += colWidths[i]
+  1177→    }
+  1178→
+  1179→    // Row separator
+  1180→    drawLine(
+  1181→        color = ExtensionGray.copy(alpha = 0.3f),
+  1182→        start = Offset(tableLeft, tableTop + headerH),
+  1183→        end = Offset(tableLeft + tableW, tableTop + headerH),
+  1184→        strokeWidth = 0.5.dp.toPx()
+  1185→    )
+  1186→
+  1187→    // --- Row 1: Main bottom bars ---
+  1188→    val row1Y = tableTop + headerH
+  1189→    // Alternate row background
+  1190→    drawRect(
+  1191→        color = TableRowAlt,
+  1192→        topLeft = Offset(tableLeft, row1Y),
+  1193→        size = Size(tableW, rowH)
+  1194→    )
+  1195→
+  1196→    val mainBarLength = span + 2 * developmentLength
+  1197→    val row1Data = arrayOf(
+  1198→        "T1",
+  1199→        "Ø${mainRebarDia.toInt()}",
+  1200→        "${mainRebarCount}",
+  1201→        "${mainBarLength.toInt()} mm",
+  1202→        "—"
+  1203→    )
+  1204→    cx = tableLeft
+  1205→    for (i in row1Data.indices) {
+  1206→        drawTextAnnotated(
+  1207→            text = row1Data[i], x = cx + 6f, y = row1Y + rowH / 2f + 5f,
+  1208→            color = RebarBlue, size = 16f
+  1209→        )
+  1210→        cx += colWidths[i]
+  1211→    }
+  1212→
+  1213→    // Separator
+  1214→    drawLine(
+  1215→        color = ExtensionGray.copy(alpha = 0.2f),
+  1216→        start = Offset(tableLeft, row1Y + rowH),
+  1217→        end = Offset(tableLeft + tableW, row1Y + rowH),
+  1218→        strokeWidth = 0.5.dp.toPx()
+  1219→    )
+  1220→
+  1221→    // --- Row 2: Stirrups ---
+  1222→    val row2Y = row1Y + rowH
+  1223→    val stirrupCount = ((span / stirrupSpacing) + 1).toInt()
+  1224→    val stirrupLength = 2 * (beamWidth + beamDepth) - 8 * 25  // approximate
+  1225→    val row2Data = arrayOf(
+  1226→        "S1",
+  1227→        "Ø${stirrupDia.toInt()}",
+  1228→        "${stirrupCount}",
+  1229→        "${stirrupLength.toInt()} mm",
+  1230→        "@ ${stirrupSpacing.toInt()} mm"
+  1231→    )
+  1232→    cx = tableLeft
+  1233→    for (i in row2Data.indices) {
+  1234→        drawTextAnnotated(
+  1235→            text = row2Data[i], x = cx + 6f, y = row2Y + rowH / 2f + 5f,
+  1236→            color = StirrupPurple, size = 16f
+  1237→        )
+  1238→        cx += colWidths[i]
+  1239→    }
+  1240→
+  1241→    // Separator
+  1242→    drawLine(
+  1243→        color = ExtensionGray.copy(alpha = 0.2f),
+  1244→        start = Offset(tableLeft, row2Y + rowH),
+  1245→        end = Offset(tableLeft + tableW, row2Y + rowH),
+  1246→        strokeWidth = 0.5.dp.toPx()
+  1247→    )
+  1248→
+  1249→    // --- Row 3: Top bars (if present) ---
+  1250→    if (hasTopSteel && topRebarCount > 0 && topRebarDia > 0) {
+  1251→        val row3Y = row2Y + rowH
+  1252→        drawRect(
+  1253→            color = TableRowAlt,
+  1254→            topLeft = Offset(tableLeft, row3Y),
+  1255→            size = Size(tableW, rowH)
+  1256→        )
+  1257→        val topBarLength = span * 0.3  // top bars typically shorter
+  1258→        val row3Data = arrayOf(
+  1259→            "T2",
+  1260→            "Ø${topRebarDia.toInt()}",
+  1261→            "${topRebarCount}",
+  1262→            "${topBarLength.toInt()} mm",
+  1263→            "—"
+  1264→        )
+  1265→        cx = tableLeft
+  1266→        for (i in row3Data.indices) {
+  1267→            drawTextAnnotated(
+  1268→                text = row3Data[i], x = cx + 6f, y = row3Y + rowH / 2f + 5f,
+  1269→                color = TopRebarBlue, size = 16f
+  1270→            )
+  1271→            cx += colWidths[i]
+  1272→        }
+  1273→    }
+  1274→
+  1275→    // Column separators (vertical lines)
+  1276→    var sepX = tableLeft
+  1277→    for (i in 0 until colWidths.size - 1) {
+  1278→        sepX += colWidths[i]
+  1279→        drawLine(
+  1280→            color = ExtensionGray.copy(alpha = 0.15f),
+  1281→            start = Offset(sepX, tableTop),
+  1282→            end = Offset(sepX, tableTop + headerH + rowH * (if (hasTopSteel && topRebarCount > 0) 3 else 2)),
+  1283→            strokeWidth = 0.5.dp.toPx()
+  1284→        )
+  1285→    }
+  1286→
+  1287→    // Table border
+  1288→    val totalRows = if (hasTopSteel && topRebarCount > 0) 3 else 2
+  1289→    val tableTotalH = headerH + rowH * totalRows
+  1290→    drawRect(
+  1291→        color = ExtensionGray.copy(alpha = 0.4f),
+  1292→        topLeft = Offset(tableLeft, tableTop),
+  1293→        size = Size(tableW, tableTotalH),
+  1294→        style = Stroke(width = 1.dp.toPx())
+  1295→    )
+  1296→}
+  1297→
+  1298→// ============================================================================
+  1299→// DRAWING HELPERS
+  1300→// ============================================================================
+  1301→
+  1302→/**
+  1303→ * Draws an arrowhead at (x, y) pointing in [direction] (1 = right/down, -1 = left/up).
+  1304→ * Set [vertical] to true for vertical arrows.
+  1305→ */
+  1306→private fun DrawScope.drawArrowHead(
+  1307→    x: Float, y: Float,
+  1308→    direction: Float,
+  1309→    color: Color,
+  1310→    vertical: Boolean = false
+  1311→) {
+  1312→    val arrowSize = 7f
+  1313→    val path = Path()
+  1314→    if (!vertical) {
+  1315→        // Horizontal arrow
+  1316→        path.moveTo(x, y)
+  1317→        path.lineTo(x - direction * arrowSize, y - arrowSize * 0.5f)
+  1318→        path.lineTo(x - direction * arrowSize, y + arrowSize * 0.5f)
+  1319→        path.close()
+  1320→    } else {
+  1321→        // Vertical arrow
+  1322→        path.moveTo(x, y)
+  1323→        path.lineTo(x - arrowSize * 0.5f, y - direction * arrowSize)
+  1324→        path.lineTo(x + arrowSize * 0.5f, y - direction * arrowSize)
+  1325→        path.close()
+  1326→    }
+  1327→    drawPath(path = path, color = color)
+  1328→}
+  1329→
+  1330→/**
+  1331→ * Draws text using nativeCanvas for full control over alignment and typeface.
+  1332→ */
+  1333→private fun DrawScope.drawTextAnnotated(
+  1334→    text: String,
+  1335→    x: Float,
+  1336→    y: Float,
+  1337→    color: Color,
+  1338→    size: Float
+  1339→) {
+  1340→    drawContext.canvas.nativeCanvas.apply {
+  1341→        val paint = android.graphics.Paint().apply {
+  1342→            textSize = size
+  1343→            this.color = color.toArgb()
+  1344→            isFakeBoldText = true
+  1345→            typeface = android.graphics.Typeface.MONOSPACE
+  1346→            textAlign = android.graphics.Paint.Align.LEFT
+  1347→            // Add subtle shadow for readability
+  1348→            setShadowLayer(2f, 1f, 1f, 0x44000000)
+  1349→        }
+  1350→        drawText(text, x, y, paint)
+  1351→    }
+  1352→}
+  1353→
+  1354→/**
+  1355→ * Draws text with a semi-transparent background pill for labels.
+  1356→ */
+  1357→private fun DrawScope.drawTextWithBackground(
+  1358→    text: String,
+  1359→    x: Float,
+  1360→    y: Float,
+  1361→    textColor: Color,
+  1362→    bgColor: Color,
+  1363→    textSize: Float = 20f
+  1364→) {
+  1365→    val paint = android.graphics.Paint().apply {
+  1366→        this.textSize = textSize
+  1367→        color = textColor.toArgb()
+  1368→        isFakeBoldText = true
+  1369→        typeface = android.graphics.Typeface.MONOSPACE
+  1370→        textAlign = android.graphics.Paint.Align.LEFT
+  1371→    }
+  1372→    val metrics = paint.fontMetrics
+  1373→    val textW = paint.measureText(text)
+  1374→    val textH = metrics.descent - metrics.ascent
+  1375→
+  1376→    // Background pill
+  1377→    drawRoundRect(
+  1378→        color = bgColor,
+  1379→        topLeft = Offset(x - 4f, y + metrics.ascent - 2f),
+  1380→        size = Size(textW + 8f, textH + 4f),
+  1381→        cornerRadius = CornerRadius(4f, 4f)
+  1382→    )
+  1383→
+  1384→    drawContext.canvas.nativeCanvas.drawText(text, x, y, paint)
+  1385→}
+  1386→
+  1387→// ============================================================================
+  1388→// STRESS DIAGRAM (optional visual enhancement)
+  1389→// ============================================================================
+  1390→
+  1391→/**
+  1392→ * Draws a simplified stress distribution diagram above the beam
+  1393→ * (triangular compression zone + rectangular tension zone).
+  1394→ */
+  1395→private fun DrawScope.drawStressDiagram(
+  1396→    beamLeft: Float, beamTop: Float,
+  1397→    beamRight: Float, beamDrawW: Float,
+  1398→    neutralAxisDepth: Float = 0.2f  // fraction of depth
+  1399→) {
+  1400→    val diagramH = 30f
+  1401→    val diagramTop = beamTop - diagramH - 12f
+  1402→    val naX = beamLeft + beamDrawW * neutralAxisDepth
+  1403→
+  1404→    // Compression triangle (left side)
+  1405→    val compPath = Path().apply {
+  1406→        moveTo(beamLeft, diagramTop)
+  1407→        lineTo(naX, diagramTop)
+  1408→        lineTo(naX, diagramTop + diagramH)
+  1409→        close()
+  1410→    }
+  1411→    drawPath(path = compPath, color = StressPink.copy(alpha = 0.3f))
+  1412→    drawPath(
+  1413→        path = compPath, color = StressPink,
+  1414→        style = Stroke(width = 1.5.dp.toPx())
+  1415→    )
+  1416→
+  1417→    // Tension rectangle (right side)
+  1418→    drawRect(
+  1419→        color = StressPink.copy(alpha = 0.15f),
+  1420→        topLeft = Offset(naX, diagramTop),
+  1421→        size = Size(beamRight - naX, diagramH)
+  1422→    )
+  1423→    drawRect(
+  1424→        color = StressPink,
+  1425→        topLeft = Offset(naX, diagramTop),
+  1426→        size = Size(beamRight - naX, diagramH),
+  1427→        style = Stroke(width = 1.5.dp.toPx())
+  1428→    )
+  1429→
+  1430→    // Labels
+  1431→    drawTextAnnotated(
+  1432→        text = "ضغط", x = beamLeft + 4f, y = diagramTop + diagramH / 2f + 5f,
+  1433→        color = StressPink, size = 16f
+  1434→    )
+  1435→    drawTextAnnotated(
+  1436→        text = "شد", x = naX + (beamRight - naX) / 2f - 10f, y = diagramTop + diagramH / 2f + 5f,
+  1437→        color = StressPink.copy(alpha = 0.7f), size = 16f
+  1438→    )
+  1439→
+  1440→    // N.A. line
+  1441→    val naDash = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+  1442→    drawLine(
+  1443→        color = StressPink,
+  1444→        start = Offset(naX, diagramTop - 4f),
+  1445→        end = Offset(naX, diagramTop + diagramH + 4f),
+  1446→        strokeWidth = 1.dp.toPx(),
+  1447→        pathEffect = naDash
+  1448→    )
+  1449→}
