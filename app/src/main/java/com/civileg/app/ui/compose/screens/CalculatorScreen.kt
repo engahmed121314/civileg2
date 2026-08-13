@@ -91,8 +91,9 @@ fun CalculatorScreen(
                 }
             }
 
-            // History - compact single-line to avoid pushing buttons off-screen
+            // History - show last 5 operations in a scrollable list
             if (history.isNotEmpty()) {
+                val recentHistory = history.takeLast(5).reversed()
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -100,27 +101,24 @@ fun CalculatorScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
                         Text(
                             stringResource(R.string.calc_history),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            history.takeLast(1).last(),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(start = 8.dp)
-                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        recentHistory.forEach { entry ->
+                            Text(
+                                entry,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
