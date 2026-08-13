@@ -12,6 +12,7 @@ import javax.inject.Singleton
  * DesignRepository: المستودع المركزي لإدارة كافة التصميمات الإنشائية.
  * تم دمج الحفظ في الجداول المتخصصة (للحصر) والجدول العام (للمشروع).
  */
+@Deprecated("Use com.civileg.app.domain.repository.DesignRepository interface instead")
 @Singleton
 class DesignRepository @Inject constructor(
     private val designDao: DesignDao,

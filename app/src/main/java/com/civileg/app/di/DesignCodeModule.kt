@@ -13,6 +13,11 @@ import dagger.multibindings.IntoMap
 import dagger.multibindings.StringKey
 import javax.inject.Singleton
 
+/**
+ * @deprecated Use [CalculationModule] instead, which provides
+ * Map<DesignCode, *> for all element types (Column, Beam, Slab, Footing, Tank, RetainingWall, Staircase).
+ */
+@Deprecated("Use CalculationModule instead")
 @Module
 @InstallIn(SingletonComponent::class)
 object DesignCodeModule {

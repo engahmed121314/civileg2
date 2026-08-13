@@ -20,8 +20,8 @@ import androidx.room.TypeConverters
         Tank::class,
         InventoryItem::class
     ],
-    version = 6,
-    exportSchema = false
+    version = 7,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -49,7 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civil_eg_database"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(Migrations.MIGRATION_6_7)
                 .build()
                 INSTANCE = instance
                 instance

@@ -27,7 +27,7 @@ object AppModule {
             AppDatabase::class.java,
             "civil_eg_database"
         )
-        .fallbackToDestructiveMigration()
+        .addMigrations(Migrations.MIGRATION_6_7)
         .build()
     }
 
@@ -83,5 +83,24 @@ object AppModule {
     @Singleton
     fun provideComprehensivePdfExporter(@ApplicationContext context: Context): ComprehensivePdfExporter {
         return ComprehensivePdfExporter(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDesignRepository(
+        designDao: DesignDao,
+        footingDao: FootingDao,
+        columnDao: ColumnDao,
+        slabDao: SlabDao,
+        beamDao: BeamDao,
+        stairDao: StairDao,
+        retainingWallDao: RetainingWallDao,
+        tankDao: TankDao,
+        inventoryDao: InventoryDao
+    ): com.civileg.app.domain.repository.DesignRepository {
+        return com.civileg.app.data.repository.DesignRepositoryImpl(
+            designDao, footingDao, columnDao, slabDao, beamDao,
+            stairDao, retainingWallDao, tankDao, inventoryDao
+        )
     }
 }

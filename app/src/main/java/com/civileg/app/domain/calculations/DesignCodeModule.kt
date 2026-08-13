@@ -27,6 +27,12 @@ import javax.inject.Qualifier
 @Retention(AnnotationRetention.RUNTIME)
 annotation class DesignCodeType(val code: DesignCode)
 
+/**
+ * @deprecated Use [com.civileg.app.di.CalculationModule] instead.
+ * This module is superseded by the comprehensive CalculationModule that provides
+ * Map<DesignCode, *> for all element types.
+ */
+@Deprecated("Use com.civileg.app.di.CalculationModule instead")
 @Module
 @InstallIn(SingletonComponent::class)
 object DesignCodeModule {

@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     id("kotlin-parcelize")
 }
 
@@ -33,6 +35,7 @@ android {
             arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
             arg("dagger.fastInit", "enabled")
             arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
 
         // Developer info for Play Store
@@ -200,7 +203,49 @@ dependencies {
     // User Messaging Platform (consent for EU/EEA users — required by Google Play)
     implementation(libs.user.messaging.platform)
 
+    // Google Play Billing
+    implementation(libs.billing)
+    implementation(libs.billing.ktx)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
+
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+// JaCoCo Test Coverage
+apply(plugin = "jacoco")
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.withType<JacocoReport> {
+    dependsOn(tasks.named("testDebugUnitTest"))
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        html.outputLocation.set(file("${buildDir}/reports/jacoco/"))
+    }
+    sourceDirectories.setFrom(files("${projectDir}/src/main/java"))
+    classDirectories.setFrom(
+        fileTree("${buildDir}/tmp/kotlin-classes/debug") {
+            exclude(
+                "**/R.class",
+                "**/R$*.class",
+                "**/BuildConfig.*",
+                "**/Manifest*.*",
+                "**/di/**",
+                "**/Hilt_**"
+            )
+        }
+    )
+    executionData.setFrom(files("${buildDir}/jacoco/testDebugUnitTest.exec"))
 }
