@@ -1,6 +1,7 @@
 package com.civileg.app.utils
 
 import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.entities.*
 import kotlin.math.*
 import java.util.Locale
 
@@ -835,6 +836,376 @@ object DxfExportEngine {
             "Concrete Vol" to "%.3f m3".format(result.concreteVolume),
             "Steel Wt" to "%.1f kg".format(result.steelWeight),
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+        ))
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+        return sb.toString()
+    }
+
+    // ── 8. STEEL SECTION ────────────────────────────────────────────
+    /**
+     * Generates a steel member cross-section DXF drawing with section
+     * properties and design check results.
+     */
+    fun generateSteelSectionDxf(
+        result: SteelMemberResult,
+        memberLength: Double,
+        inputs: SteelInputs
+    ): String {
+        val sb = StringBuilder()
+        val sec = result.sectionType
+        val h = sec.depth      // mm
+        val b = sec.width      // mm
+        val tw = sec.webThickness
+        val tf = sec.flangeThickness
+        val lengthMm = memberLength  // already in mm from SteelInputs
+        val lengthM = memberLength / 1000.0  // for display in metres
+
+        val steelLayers = listOf(
+            LayerDef("STEEL", 7),
+            LayerDef("CENTER_LINE", 1),
+            LayerDef("DIMENSIONS", 5),
+            LayerDef("TEXT", 3),
+            LayerDef("LOADS", 6)
+        )
+
+        writeHeader(sb)
+        writeLayerTable(sb, steelLayers)
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        drawText(sb, 0.0, -1200.0, "STEEL MEMBER DESIGN", "TEXT", 250.0, 7)
+        drawText(sb, 0.0, -1600.0, "${sec.displayName}  |  L=${lengthM}m  |  ${result.memberType}", "TEXT", 140.0, 3)
+
+        // ── CROSS-SECTION VIEW ──
+        val csX = 2000.0
+        val csY = 0.0
+        drawText(sb, csX, csY - 800.0, "SECTION A-A", "TEXT", 200.0, 7)
+
+        // I-section (or rectangular for hollow sections)
+        when {
+            sec is SteelSectionType.ISection ||
+            sec.sectionName.startsWith("W") || sec.sectionName.startsWith("HEA") ||
+            sec.sectionName.startsWith("HEB") ||
+            sec.sectionName.startsWith("UB") || sec.sectionName.startsWith("UC") -> {
+                // I-beam profile
+                drawRect(sb, csX, csY, b, tf, "STEEL")                                  // Bottom flange
+                drawRect(sb, csX + (b - tw) / 2, csY + tf, tw, h - 2 * tf, "STEEL")     // Web
+                drawRect(sb, csX, csY + h - tf, b, tf, "STEEL")                          // Top flange
+            }
+            sec.sectionName.startsWith("CHS") || sec.sectionName.startsWith("PIPE") -> {
+                // Circular hollow section
+                drawCircle(sb, csX + b / 2, csY + h / 2, h / 2, "STEEL", 7)
+                drawCircle(sb, csX + b / 2, csY + h / 2, h / 2 - tw, "STEEL", 7)
+            }
+            sec.sectionName.startsWith("RHS") || sec.sectionName.startsWith("SHS") ||
+            sec.sectionName.startsWith("BOX") -> {
+                // Rectangular hollow section
+                drawRect(sb, csX, csY, b, h, "STEEL")
+                drawRect(sb, csX + tw, csY + tw, b - 2 * tw, h - 2 * tw, "STEEL")
+            }
+            else -> {
+                // Generic: draw as I-beam
+                drawRect(sb, csX, csY, b, tf, "STEEL")
+                drawRect(sb, csX + (b - tw) / 2, csY + tf, tw, h - 2 * tf, "STEEL")
+                drawRect(sb, csX, csY + h - tf, b, tf, "STEEL")
+            }
+        }
+
+        // Section dimensions
+        drawHorizontalDimension(sb, csX, csX + b, csY - 500.0, "b=${b.toInt()}", 5)
+        drawVerticalDimension(sb, csY, csY + h, csX - 600.0, "h=${h.toInt()}", 5)
+
+        // Center-lines
+        drawLine(sb, csX + b / 2, csY - 800.0, csX + b / 2, csY + h + 800.0, "CENTER_LINE", 1)
+        drawLine(sb, csX - 800.0, csY + h / 2, csX + b + 800.0, csY + h / 2, "CENTER_LINE", 1)
+
+        // ── ELEVATION VIEW ──
+        val elY = h + 5000.0
+        drawText(sb, 0.0, elY - 800.0, "ELEVATION", "TEXT", 200.0, 7)
+        // Member outline (simplified as rectangle)
+        val memberH = min(h, 400.0) // Cap display height for long members
+        drawRect(sb, 0.0, elY, lengthMm, memberH, "STEEL")
+        // Support symbols
+        drawSupportSymbol(sb, 0.0, elY + memberH, 200.0)
+        drawSupportSymbol(sb, lengthMm, elY + memberH, 200.0)
+        // Load arrows if applied loads exist
+        if (inputs.moment > 0 || inputs.shear > 0) {
+            val nArrows = 5
+            for (i in 0 until nArrows) {
+                val ax = lengthMm * (i + 1) / (nArrows + 1)
+                drawLine(sb, ax, elY - 400.0, ax, elY, "LOADS", 6)
+                drawLine(sb, ax, elY, ax - 80.0, elY + 80.0, "LOADS", 6)
+                drawLine(sb, ax, elY, ax + 80.0, elY + 80.0, "LOADS", 6)
+            }
+        }
+        // Length dimension
+        drawHorizontalDimension(sb, 0.0, lengthMm, elY - 800.0, "L = ${lengthMm.toInt()} mm (${lengthM}m)", 5)
+
+        // ── DESIGN TABLE ──
+        val tableX = csX + b + 8000.0
+        val tableY = 5000.0
+        val tableData = mutableListOf(
+            "Section" to sec.displayName,
+            "Member Type" to result.memberType.name,
+            "Length" to "${lengthM} m",
+            "Axial Capacity" to "%.1f kN".format(result.axialCapacity),
+            "Moment Capacity" to "%.1f kN.m".format(result.flexuralCapacity),
+            "Shear Capacity" to "%.1f kN".format(result.shearCapacity),
+            "Weight" to "%.2f kg/m".format(result.weight),
+            "Utilization Ratio" to "%.2f".format(result.utilizationRatio),
+            "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+        )
+        result.bucklingCheck?.let {
+            tableData.add("Buckling" to if (it.isSafe) "PASS (\u03bb=%.1f)".format(it.slendernessRatio) else "FAIL (\u03bb=%.1f)".format(it.slendernessRatio))
+        }
+        result.deflectionCheck?.let {
+            tableData.add("Deflection" to if (it.isSafe) "PASS (%.1f mm)".format(it.calculatedDeflection) else "FAIL (%.1f mm)".format(it.calculatedDeflection))
+        }
+        drawTitleBlock(sb, tableX, tableY, "STEEL DESIGN DATA", tableData)
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+        return sb.toString()
+    }
+
+    // ── 9. STEEL WAREHOUSE ────────────────────────────────────────────
+    /**
+     * Generates a steel warehouse portal frame DXF drawing.
+     */
+    fun generateSteelWarehouseDxf(
+        inputs: SteelWarehouseInputs,
+        result: SteelWarehouseAnalysisResult
+    ): String {
+        val sb = StringBuilder()
+        val span = inputs.span * 1000.0
+        val eh = inputs.eaveHeight * 1000.0
+        val rh = inputs.ridgeHeight * 1000.0
+        val midX = span / 2.0
+
+        val warehouseLayers = listOf(
+            LayerDef("FRAME", 7),
+            LayerDef("BRACING", 6),
+            LayerDef("PURLIN", 4),
+            LayerDef("DIMENSIONS", 5),
+            LayerDef("TEXT", 3),
+            LayerDef("LOADS", 2)
+        )
+
+        writeHeader(sb)
+        writeLayerTable(sb, warehouseLayers)
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        drawText(sb, 0.0, -1200.0, "STEEL WAREHOUSE DESIGN", "TEXT", 250.0, 7)
+        drawText(sb, 0.0, -1600.0, "Span: ${inputs.span}m  |  Eave: ${inputs.eaveHeight}m  |  Ridge: ${inputs.ridgeHeight}m", "TEXT", 140.0, 3)
+
+        // ── FRONT ELEVATION ──
+        val elY = 0.0
+        // Left column
+        drawRect(sb, 0.0, elY, 300.0, eh, "FRAME")
+        // Right column
+        drawRect(sb, span - 300.0, elY, 300.0, eh, "FRAME")
+        // Left rafter
+        drawLine(sb, 300.0, elY + eh, midX, elY + rh, "FRAME", 7)
+        // Right rafter
+        drawLine(sb, span - 300.0, elY + eh, midX, elY + rh, "FRAME", 7)
+        // Ridge beam
+        drawLine(sb, midX - 200.0, elY + rh, midX + 200.0, elY + rh, "FRAME", 7)
+
+        // Haunch triangles at eave connections
+        val haunchW = 600.0
+        val haunchH = 400.0
+        drawLine(sb, 300.0, elY + eh, 300.0 + haunchW, elY + eh + haunchH, "FRAME", 7)
+        drawLine(sb, 300.0 + haunchW, elY + eh, 300.0 + haunchW, elY + eh + haunchH, "FRAME", 7)
+        drawLine(sb, span - 300.0, elY + eh, span - 300.0 - haunchW, elY + eh + haunchH, "FRAME", 7)
+        drawLine(sb, span - 300.0 - haunchW, elY + eh, span - 300.0 - haunchW, elY + eh + haunchH, "FRAME", 7)
+
+        // Gable posts at ridge
+        drawRect(sb, midX - 75.0, elY + rh - 800.0, 150.0, 800.0, "FRAME")
+
+        // Purlins (simplified — dashed lines along rafters)
+        if (inputs.usePurlins) {
+            val purlinSp = inputs.purlinSpacing * 1000.0
+            val rafterLen = sqrt((midX - 300.0).pow(2) + (rh - eh).pow(2))
+            val numPurlins = (rafterLen / purlinSp).toInt().coerceIn(1, 12)
+            for (i in 1..numPurlins) {
+                val frac = i.toDouble() / (numPurlins + 1)
+                val px = 300.0 + frac * (midX - 300.0)
+                val py = eh + frac * (rh - eh)
+                // Left side purlin
+                drawLine(sb, px, py, px, py + 300.0, "PURLIN", 4)
+                // Right side purlin (mirrored)
+                drawLine(sb, span - px, py, span - px, py + 300.0, "PURLIN", 4)
+            }
+        }
+
+        // X-bracing in side wall
+        drawLine(sb, 150.0, elY + 500.0, 150.0 + (eh - 1000.0), elY + eh - 500.0, "BRACING", 6)
+        drawLine(sb, span - 150.0, elY + 500.0, span - 150.0 - (eh - 1000.0), elY + eh - 500.0, "BRACING", 6)
+
+        // Wind load arrows
+        val nWind = 6
+        for (i in 0 until nWind) {
+            val frac = (i + 1).toDouble() / (nWind + 1)
+            val wy = elY + frac * eh
+            val wLen = 300.0 + frac * 500.0
+            drawLine(sb, -wLen, wy, 0.0, wy, "LOADS", 2)
+            drawLine(sb, 0.0, wy, -80.0, wy + 60.0, "LOADS", 2)
+            drawLine(sb, 0.0, wy, -80.0, wy - 60.0, "LOADS", 2)
+        }
+        drawText(sb, -2000.0, elY + eh / 2, "Wind", "TEXT", 130.0, 2)
+
+        // Ground line
+        drawLine(sb, -1500.0, elY, span + 1500.0, elY, "DIMENSIONS", 5)
+        drawText(sb, span + 1800.0, elY + 100.0, "GL", "TEXT", 120.0, 5)
+
+        // Dimensions
+        drawHorizontalDimension(sb, 0.0, span, elY - 600.0, "Span = ${inputs.span} m", 5)
+        drawVerticalDimension(sb, elY, elY + eh, -800.0, "Eave = ${inputs.eaveHeight}m", 5)
+        drawVerticalDimension(sb, elY, elY + rh, midX + 800.0, "Ridge = ${inputs.ridgeHeight}m", 5)
+
+        // Column/rafter section labels
+        drawText(sb, 150.0, elY + eh / 2, result.mainFrame.columnSection.sectionName, "TEXT", 120.0, 7)
+        val labelFrac = 0.4
+        val labelX = 300.0 + labelFrac * (midX - 300.0)
+        val labelY = eh + labelFrac * (rh - eh)
+        drawText(sb, labelX + 200.0, labelY, result.mainFrame.rafterSection.sectionName, "TEXT", 120.0, 7)
+
+        // ── SIDE ELEVATION ──
+        val sideY = elY + rh + 6000.0
+        drawText(sb, 0.0, sideY - 800.0, "SIDE ELEVATION", "TEXT", 200.0, 7)
+        val sideLen = inputs.length * 1000.0
+        drawRect(sb, 0.0, sideY, 300.0, eh, "FRAME")
+        drawRect(sb, sideLen - 300.0, sideY, 300.0, eh, "FRAME")
+        drawLine(sb, 0.0, sideY + eh, midX, sideY + rh, "FRAME", 7)
+        drawLine(sb, sideLen, sideY + eh, midX, sideY + rh, "FRAME", 7)
+        // Side bracing
+        drawLine(sb, 300.0, sideY + 500.0, sideLen - 300.0, sideY + eh - 500.0, "BRACING", 6)
+        drawHorizontalDimension(sb, 0.0, sideLen, sideY - 600.0, "Length = ${inputs.length} m", 5)
+
+        // ── DESIGN TABLE ──
+        val tableX = sideLen + 6000.0
+        val tableY = 5000.0
+        drawTitleBlock(sb, tableX, tableY, "WAREHOUSE DESIGN DATA", listOf(
+            "Span" to "${inputs.span} m",
+            "Length" to "${inputs.length} m",
+            "Eave Height" to "${inputs.eaveHeight} m",
+            "Ridge Height" to "${inputs.ridgeHeight} m",
+            "Bay Spacing" to "${inputs.baySpacing} m",
+            "Column Section" to result.mainFrame.columnSection.sectionName,
+            "Rafter Section" to result.mainFrame.rafterSection.sectionName,
+            "Total Weight" to "%.2f Tons".format(result.totalWeight),
+            "Cladding Area" to "%.1f m2".format(result.totalCladdingArea),
+            "Weight/m2" to "%.1f kg/m2".format(result.weightPerM2),
+            "Safety Status" to if (result.safetyStatus) "SAFE" else "CHECK REQUIRED"
+        ))
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+        return sb.toString()
+    }
+
+    // ── 10. FRAME ANALYSIS ────────────────────────────────────────────
+    /**
+     * Generates a frame analysis DXF with geometry, BMD labels, and reactions.
+     */
+    fun generateFrameAnalysisDxf(
+        nodes: List<FrameNode>,
+        members: List<FrameMember>,
+        result: FrameAnalysisResult
+    ): String {
+        val sb = StringBuilder()
+        val scale = 500.0
+
+        val frameLayers = listOf(
+            LayerDef("GEOM", 7),
+            LayerDef("BMD", 1),
+            LayerDef("SFD", 2),
+            LayerDef("REACTIONS", 5),
+            LayerDef("TEXT", 3),
+            LayerDef("NODES", 4)
+        )
+
+        writeHeader(sb)
+        writeLayerTable(sb, frameLayers)
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        drawText(sb, 0.0, -1200.0, "FRAME ANALYSIS RESULTS", "TEXT", 250.0, 7)
+        drawText(sb, 0.0, -1600.0, "Nodes: ${nodes.size}  |  Members: ${members.size}", "TEXT", 140.0, 3)
+
+        // Draw members
+        members.forEach { m ->
+            val n1 = nodes.find { it.id == m.nodeI }
+            val n2 = nodes.find { it.id == m.nodeJ }
+            if (n1 != null && n2 != null) {
+                drawLine(sb, n1.x * scale, n1.y * scale, n2.x * scale, n2.y * scale, "GEOM", 7)
+            }
+        }
+
+        // Draw nodes
+        nodes.forEach { node ->
+            val nx = node.x * scale
+            val ny = node.y * scale
+            // Draw support symbols
+            when (node.support) {
+                SupportType.Pin,
+                SupportType.Hinge -> {
+                    drawSupportSymbol(sb, nx, ny, 200.0)
+                }
+                SupportType.Fixed -> {
+                    // Fixed support — hatched ground line
+                    drawLine(sb, nx - 250.0, ny, nx + 250.0, ny, "GEOM", 7)
+                    for (i in -2..2) {
+                        val hx = nx + i * 100.0
+                        drawLine(sb, hx, ny, hx - 50.0, ny - 80.0, "GEOM", 7)
+                    }
+                }
+                else -> { /* Free — just a dot */ }
+            }
+            // Node dot
+            drawCircle(sb, nx, ny, 40.0, "NODES", 4)
+            drawText(sb, nx + 60.0, ny - 60.0, "${node.id}", "TEXT", 100.0, 4)
+        }
+
+        // BMD labels on members
+        result.memberEndForces.forEach { f ->
+            val m = members.find { it.id == f.memberId } ?: return@forEach
+            val n1 = nodes.find { it.id == m.nodeI } ?: return@forEach
+            val n2 = nodes.find { it.id == m.nodeJ } ?: return@forEach
+            val mx = (n1.x + n2.x) / 2 * scale
+            val my = (n1.y + n2.y) / 2 * scale + 80.0
+            val maxM = max(abs(f.mi_z), abs(f.mj_z))
+            if (maxM > 0.01) {
+                drawText(sb, mx, my, "M=%.1f kN.m".format(maxM), "BMD", 130.0, 1)
+            }
+        }
+
+        // Reaction labels at supports
+        result.nodeResults.forEach { nr ->
+            val node = nodes.find { it.id == nr.nodeId } ?: return@forEach
+            if (node.support != SupportType.Free) {
+                val rx = node.x * scale
+                val ry = node.y * scale - 300.0
+                val hasReaction = abs(nr.reactionFx) > 0.01 || abs(nr.reactionFy) > 0.01
+                if (hasReaction) {
+                    drawText(sb, rx - 400.0, ry, "R=%.1f kN".format(nr.reactionFy), "REACTIONS", 110.0, 5)
+                }
+            }
+        }
+
+        // ── SUMMARY TABLE ──
+        val maxReaction = result.nodeResults.maxOfOrNull { abs(it.reactionFy) } ?: 0.0
+        val maxMoment = result.memberEndForces.maxOfOrNull {
+            max(abs(it.mi_z), abs(it.mj_z))
+        } ?: 0.0
+        val maxShear = result.memberEndForces.maxOfOrNull {
+            max(abs(it.vi_y), abs(it.vj_y))
+        } ?: 0.0
+
+        drawTitleBlock(sb, 10000.0, 5000.0, "FRAME ANALYSIS SUMMARY", listOf(
+            "Nodes" to "${nodes.size}",
+            "Members" to "${members.size}",
+            "Max Moment" to "%.1f kN.m".format(maxMoment),
+            "Max Shear" to "%.1f kN".format(maxShear),
+            "Max Reaction" to "%.1f kN".format(maxReaction),
+            "Status" to if (result.isSolved) "SOLVED" else "NOT SOLVED"
         ))
 
         sb.append("0\nENDSEC\n0\nEOF\n")

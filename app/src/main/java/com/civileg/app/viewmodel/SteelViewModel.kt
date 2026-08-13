@@ -296,6 +296,70 @@ class SteelViewModel @Inject constructor(
         }
     }
 
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        val res = _result.value ?: return
+        val stored = lastMemberInputs ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val fileName = "Steel_Section_${System.currentTimeMillis()}.dxf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
+
+                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateSteelSectionDxf(
+                    result = res,
+                    memberLength = stored.inputs.length,
+                    inputs = stored.inputs
+                )
+                file.writeText(dxfContent)
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
+                    onComplete(file)
+                    _isExporting.value = false
+                }
+            } catch (e: Throwable) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _errorMessage.value = "Steel DXF export failed: ${e.message ?: "Unknown error"}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    fun exportWarehouseToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        val res = _warehouseResult.value ?: return
+        val inputs = lastWarehouseInputs ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val fileName = "Steel_Warehouse_${System.currentTimeMillis()}.dxf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
+
+                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateSteelWarehouseDxf(inputs, res)
+                file.writeText(dxfContent)
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
+                    onComplete(file)
+                    _isExporting.value = false
+                }
+            } catch (e: Throwable) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _errorMessage.value = "Warehouse DXF export failed: ${e.message ?: "Unknown error"}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
     fun resetResult() {
         _result.value = null
         _warehouseResult.value = null

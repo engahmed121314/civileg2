@@ -316,6 +316,37 @@ class FrameAnalysisViewModel @Inject constructor(
         }
     }
 
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        val res = _result.value ?: return
+        val ns = _nodes.value ?: emptyList()
+        val ms = _members.value ?: emptyList()
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) { _isLoading.value = true }
+            try {
+                val fileName = "Frame_Analysis_${System.currentTimeMillis()}.dxf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, fileName)
+
+                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateFrameAnalysisDxf(ns, ms, res)
+                file.writeText(dxfContent)
+
+                withContext(Dispatchers.Main) {
+                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
+                    onComplete(file)
+                    _isLoading.value = false
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Frame DXF export failed: ${e.message ?: "Unknown error"}"
+                    _isLoading.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "FrameAnalysisVM"
     }
