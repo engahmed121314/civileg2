@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -121,10 +120,14 @@ fun ProfessionalBeamDrawing(
         // 1. COLUMN SUPPORTS (Schematic)
         val supW = 400.0f * scale
         val supH = 1200.0f * scale
-        drawRect(color = ConcreteGray, topLeft = Offset(beamLeft - supW, beamBottom), size = Size(supW, supH))
-        drawRect(color = ConcreteGray, topLeft = Offset(beamRight, beamBottom), size = Size(supW, supH))
-        drawRect(color = DimensionWhite.copy(alpha = 0.3f), topLeft = Offset(beamLeft - supW, beamBottom), size = Size(supW, supH), style = Stroke(1f))
-        drawRect(color = DimensionWhite.copy(alpha = 0.3f), topLeft = Offset(beamRight, beamBottom), size = Size(supW, supH), style = Stroke(1f))
+        if (!isContinuous) {
+            drawRect(color = ConcreteGray, topLeft = Offset(beamLeft - supW, beamBottom), size = Size(supW, supH))
+            drawRect(color = ConcreteGray, topLeft = Offset(beamRight, beamBottom), size = Size(supW, supH))
+        } else {
+            // Continuous: show adjacent spans schematically
+            drawRect(color = ConcreteGray, topLeft = Offset(beamLeft - supW, beamTop), size = Size(supW, beamDrawH))
+            drawRect(color = ConcreteGray, topLeft = Offset(beamRight, beamTop), size = Size(supW, beamDrawH))
+        }
 
         // ═══ ELEVATION VIEW ═══
         if (viewMode == 0 || viewMode == 1) {
@@ -165,7 +168,8 @@ fun ProfessionalBeamDrawing(
                 beamRight = beamRight, beamBottom = beamBottom,
                 beamDrawH = beamDrawH, scale = scale,
                 beamWidth = beamWidth, beamDepth = beamDepth,
-                span = span, cover = cover, stirrupSpacing = stirrupSpacing
+                span = span, cover = cover, stirrupSpacing = stirrupSpacing,
+                ld = developmentLength, lap = lapLength
             )
         }
 
@@ -209,9 +213,13 @@ private fun DrawScope.draw3DBeamBody(left: Float, top: Float, w: Float, h: Float
     drawHatchPattern(left, top, w, h, spacing = 20f, angleDeg = 45f, color = HatchColor.copy(alpha = 0.3f))
 }
 
-private fun DrawScope.drawDimensionLines(beamLeft: Float, beamTop: Float, beamRight: Float, beamBottom: Float, beamDrawH: Float, scale: Float, beamWidth: Double, beamDepth: Double, span: Double, cover: Double, stirrupSpacing: Double) {
+private fun DrawScope.drawDimensionLines(beamLeft: Float, beamTop: Float, beamRight: Float, beamBottom: Float, beamDrawH: Float, scale: Float, beamWidth: Double, beamDepth: Double, span: Double, cover: Double, stirrupSpacing: Double, ld: Double, lap: Double) {
     drawHorizontalDimension(beamLeft, beamRight, beamBottom + 60f, "Span L=${span.toInt()}mm", DimensionWhite, 14f * density)
     drawVerticalDimension(beamBottom, beamTop, beamRight + 60f, "h=${beamDepth.toInt()}mm", DimensionWhite, 14f * density)
+    
+    // Engineering notes
+    drawTextAnnotated("Ld = ${ld.toInt()}mm", beamLeft - 200f*scale, beamBottom + 30f, RebarBlue, 11f * density)
+    drawTextAnnotated("Lap = ${lap.toInt()}mm", beamRight, beamBottom + 30f, RebarBlue, 11f * density)
 }
 
 private fun DrawScope.drawSectionInset(cw: Float, ch: Float, zoneTop: Float, zoneBottom: Float, beamWidth: Double, beamDepth: Double, mainRebarDia: Double, mainRebarCount: Int, stirrupDia: Double, cover: Double, hasTopSteel: Boolean, topRebarDia: Double, topRebarCount: Int) {
@@ -231,6 +239,13 @@ private fun DrawScope.drawSectionInset(cw: Float, ch: Float, zoneTop: Float, zon
         drawCircle(color = RebarBlue, radius = 5f, center = Offset(ox + covPx + i*spBot, oy + secH - covPx))
     }
     
+    if (hasTopSteel && topRebarCount > 0) {
+        val spTop = (secW - 2*covPx)/(topRebarCount - 1).coerceAtLeast(1)
+        for (i in 0 until topRebarCount) {
+            drawCircle(color = TopRebarBlue, radius = 4f, center = Offset(ox + covPx + i*spTop, oy + covPx))
+        }
+    }
+    
     drawTextAnnotated("SECTION A-A", insetLeft, insetTop - 5f, DimensionWhite, 18f)
 }
 
@@ -239,7 +254,10 @@ private fun DrawScope.drawReinforcementSchedule(cw: Float, ch: Float, beamWidth:
     val tableW = cw - 40f
     val headers = listOf("Mark", "Dia.", "No.", "Length", "Spacing")
     val rows = mutableListOf<List<String>>()
-    rows.add(listOf("B1", "Ø${mainRebarDia.toInt()}", "$mainRebarCount", "${(span*1000 + 600).toInt()}", "Bottom"))
+    rows.add(listOf("B1", "Ø${mainRebarDia.toInt()}", "$mainRebarCount", "${(span*1000 + 600).toInt()} mm", "Bottom"))
+    if (hasTopSteel) {
+        rows.add(listOf("T1", "Ø${topRebarDia.toInt()}", "$topRebarCount", "${(span*1000*0.3).toInt()} mm", "Support"))
+    }
     rows.add(listOf("S1", "Ø${stirrupDia.toInt()}", "${((span*1000)/stirrupSpacing).toInt()}", "Cut L", "@${stirrupSpacing.toInt()}"))
     
     val colWidths = listOf(tableW * 0.15f, tableW * 0.15f, tableW * 0.15f, tableW * 0.25f, tableW * 0.30f)

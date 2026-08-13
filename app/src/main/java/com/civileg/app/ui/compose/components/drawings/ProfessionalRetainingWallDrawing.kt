@@ -17,7 +17,7 @@ import kotlin.math.tan
 
 /**
  * Professional Retaining Wall Engineering Drawing — Genius Edition.
- * matching inputs and stability calculations strictly.
+ * strictly data-driven for cantilver walls with stability checks.
  */
 @Composable
 fun ProfessionalRetainingWallDrawing(
@@ -42,8 +42,8 @@ fun ProfessionalRetainingWallDrawing(
     fsSliding: Double = 1.5,
     maxBearingPressure: Double = 0.0,
     allowableBearingPressure: Double = 200.0,
-    viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewMode: Int = 0
 ) {
     val palette = drawingColors()
 
@@ -54,8 +54,8 @@ fun ProfessionalRetainingWallDrawing(
 
         drawRect(color = Color(0xFF1A1A2E), size = size)
 
-        val totalH = wallHeight + baseThickness
-        val scale = min(w * 0.45f / baseWidth.toFloat(), h * 0.6f / totalH.toFloat())
+        val totalH = wallHeight + baseThickness + keyDepth
+        val scale = min(w * 0.45f / baseWidth.toFloat(), h * 0.55f / totalH.toFloat())
         val bh = baseThickness.toFloat() * scale
         val wh = wallHeight.toFloat() * scale
         val bw = baseWidth.toFloat() * scale
@@ -70,38 +70,44 @@ fun ProfessionalRetainingWallDrawing(
         if (viewMode == 0 || viewMode == 1) {
             // Base
             drawRect(color = Color(0xFF6B6B6B), topLeft = Offset(ox, oy + wh), size = Size(bw, bh))
+            // Key
+            if (hasKey && keyDepth > 0) {
+                drawRect(color = Color(0xFF4A4A4A), topLeft = Offset(ox + toe + wt/4, oy + wh + bh), size = Size(wt/2, keyDepth.toFloat()*scale))
+            }
             // Stem
             val stemPath = Path().apply {
                 moveTo(ox + toe, oy + wh)
-                lineTo(ox + toe + (wallBottomThickness.toFloat() - wallTopThickness.toFloat())*0.5f*scale, oy)
-                lineTo(ox + toe + (wallBottomThickness.toFloat() + wallTopThickness.toFloat())*0.5f*scale, oy)
+                lineTo(ox + toe, oy)
+                lineTo(ox + toe + wallTopThickness.toFloat()*scale, oy)
                 lineTo(ox + toe + wt, oy + wh)
                 close()
             }
             drawPath(path = stemPath, color = Color(0xFF8A8A8A))
             
-            // Rebar
-            drawLine(palette.rebarBlue, Offset(ox + toe + wt - cov, oy + wh - cov), Offset(ox + toe + wt*0.8f - cov, oy + cov), 3f)
-            drawTextWithBackground(mainRebarDia.toInt().toString(), ox + toe + wt - cov, oy + wh/2, palette.rebarBlue, Color.Black, 12f)
+            // Rebar Detroit
+            val mbX = ox + toe + wt - cov
+            drawLine(palette.rebarBlue, Offset(mbX, oy + wh - cov), Offset(mbX - (wt - wallTopThickness.toFloat()*scale), oy + cov), 3f)
+            drawTextWithBackground("v: @${mainRebarSpacing.toInt()}", mbX, oy + wh/2, palette.rebarBlue, Color.Black, 11f)
 
-            // Pressure diagram
-            val px = ox + bw + 150f
-            drawLine(Color(0xFFFF5722), Offset(px, oy), Offset(px + 80f, oy + wh), 2f)
-            drawLine(Color(0xFFFF5722), Offset(px, oy), Offset(px, oy + wh), 2f)
-            drawTextAnnotated("Pa resultant", px + 90f, oy + wh * 0.66f, Color(0xFFFF5722), 12f * density)
+            // Pressure
+            val px = ox + bw + 100f
+            drawLine(Color(0xFFFF5722), Offset(px, oy), Offset(px + 100f, oy + wh), 2f)
+            drawTextAnnotated("Ka=%.2f".format(tan(Math.toRadians(45.0 - backfillAngle/2.0)).let { it * it }), px + 110f, oy + wh, Color(0xFFFF5722), 12f * density)
 
-            drawVerticalDimension(oy, oy + wh + bh, ox - 35f, "H_tot=${(totalH*1000).toInt()}mm", Color.White, 12f * density)
+            drawVerticalDimension(oy, oy + wh + bh, ox - 35f, "H=${(totalH*1000).toInt()}", Color.White, 12f * density)
         }
 
         // 2. DATA TABLE
         if (viewMode == 0 || viewMode == 3) {
-            val headers = listOf("Check", "Factor of Safety", "Status")
+            val headers = listOf("Stability Check", "Value", "Status")
             val rows = listOf(
                 listOf("Overturning", "%.2f".format(fsOverturning), if(fsOverturning >= 1.5) "PASS" else "FAIL"),
                 listOf("Sliding", "%.2f".format(fsSliding), if(fsSliding >= 1.5) "PASS" else "FAIL"),
-                listOf("Soil Pressure", "%.1f kPa".format(maxBearingPressure), if(maxBearingPressure <= allowableBearingPressure) "PASS" else "FAIL")
+                listOf("Soil Stress", "%.1f kPa".format(maxBearingPressure), if(maxBearingPressure <= allowableBearingPressure) "OK" else "FAIL"),
+                listOf("Stem Steel", "Ø${mainRebarDia.toInt()}@${mainRebarSpacing.toInt()}", "Dist@${distRebarSpacing.toInt()}"),
+                listOf("Base Steel", "Ø${baseRebarDia.toInt()}@${baseRebarSpacing.toInt()}", "Heel=${heelLength}m")
             )
-            drawReinforcementTable(20f, h * 0.72f, listOf(w*0.35f, w*0.3f, w*0.25f), headers, rows, 30f, 35f, Color(0xFF1565C0), Color(0xFF222222), Color.White, 14f)
+            drawReinforcementTable(20f, h * 0.72f, listOf(w*0.35f, w*0.25f, w*0.30f), headers, rows, 30f, 35f, Color(0xFF1565C0), Color(0xFF222222), Color.White, 15f)
         }
     }
 }

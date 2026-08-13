@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
@@ -17,7 +16,6 @@ import kotlin.math.sin
 
 /**
  * Professional Staircase Engineering Drawing — Genius Edition.
- * strictly data-driven for single/multi flight stairs.
  */
 @Composable
 fun ProfessionalStairDrawing(
@@ -37,8 +35,8 @@ fun ProfessionalStairDrawing(
     distributionSpacing: Double = 0.0,
     cover: Double = 25.0,
     numberOfRisers: Int = 0,
-    viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewMode: Int = 0
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
@@ -60,9 +58,10 @@ fun ProfessionalStairDrawing(
         // 1. ELEVATION VIEW
         if (viewMode == 0 || viewMode == 1) {
             var curX = ox; var curY = oy
-            for (idx in 0 until nRisers) {
+            for (stepIdx in 0 until nRisers) {
                 drawLine(Color(0xFF6B6B6B), Offset(curX, curY), Offset(curX, curY + rh), 3f)
                 drawLine(Color(0xFF6B6B6B), Offset(curX, curY + rh), Offset(curX + rw, curY + rh), 3f)
+                if (stepIdx % 5 == 0) drawTextAnnotated("${stepIdx + 1}", curX + 5f, curY + rh - 5f, Color.White, 8f * density)
                 curX += rw; curY += rh
             }
             // Soffit
@@ -75,8 +74,7 @@ fun ProfessionalStairDrawing(
             val mbX2 = curX + dx - cov * sin(angle).toFloat(); val mbY2 = curY - dy + cov * cos(angle).toFloat()
             drawLine(Color(0xFF4A90D9), Offset(mbX1, mbY1), Offset(mbX2, mbY2), 3f)
             
-            drawTextAnnotated("ELEVATION DETAIL", ox, oy - 40f, Color.White, 16f * density)
-            drawHorizontalDimension(ox, curX, oy + totalHeight.toFloat() * scale + 60f, "L=${(totalLength).toInt()}mm", Color.White, 12f * density)
+            drawTextAnnotated("STAIR ELEVATION (B=%dmm)".format(stairWidth.toInt()), ox, oy - 40f, Color.White, 14f * density)
         }
 
         // 2. DATA TABLE
@@ -85,7 +83,7 @@ fun ProfessionalStairDrawing(
             val rows = listOf(
                 listOf("B1", "Ø${mainRebarDia.toInt()}", "@${mainRebarSpacing.toInt()} mm", "Main Steel"),
                 listOf("D1", "Ø${distributionDia.toInt()}", "@${distributionSpacing.toInt()} mm", "Dist Steel"),
-                listOf("ts", "${slabThickness.toInt()} mm", "-", "Waist Thick")
+                listOf("ts", "${slabThickness.toInt()} mm", "-", "Waist (L_land=%d)".format(landingLength.toInt()))
             )
             drawReinforcementTable(20f, h * 0.72f, listOf(w*0.15f, w*0.15f, w*0.30f, w*0.30f), headers, rows, 30f, 35f, Color(0xFF1565C0), Color(0xFF222222), Color.White, 15f)
         }

@@ -69,7 +69,7 @@ fun ProfessionalSlabDrawing(
             var curY = oy + mSp / 2
             while (curY < oy + dy) {
                 drawLine(palette.rebarBlue, Offset(ox + 10f, curY), Offset(ox + dx - 10f, curY), 2.5f)
-                curY += mSp * 5 // Plot subset for clarity in UI
+                curY += mSp * 5 // subset for clarity
             }
             
             // Dist Rebar Y strictly from data
@@ -95,17 +95,21 @@ fun ProfessionalSlabDrawing(
 
         // 3. DATA TABLE
         if (viewMode == 0 || viewMode == 3) {
-            val headers = listOf("Direction", "Required As", "Provided As", "Status")
+            val headers = listOf("Mark", "Required As", "Provided As", "Status")
             val effD = (slabThickness - cover).coerceAtLeast(50.0)
             val z = 0.87 * effD
             val asReqX = momentX * 1e6 / (fy * z)
+            val asReqY = momentY * 1e6 / (fy * z)
             val asProvX = (Math.PI * mainRebarDia * mainRebarDia / 4.0) * (1000.0 / mainRebarSpacing)
+            val asProvY = (Math.PI * distRebarDia * distRebarDia / 4.0) * (1000.0 / distRebarSpacing)
             
             val rows = listOf(
-                listOf("Main (X)", "%.0f".format(asReqX), "%.0f".format(asProvX), if(asProvX >= asReqX) "OK" else "FAIL"),
-                listOf("Thickness", "${slabThickness.toInt()} mm", "-", if(isSafe) "SAFE" else "UNSAFE")
+                listOf("Main X", "%.0f".format(asReqX), "%.0f".format(asProvX), if(asProvX >= asReqX) "OK" else "FAIL"),
+                listOf("Dist Y", "%.0f".format(asReqY), "%.0f".format(asProvY), if(asProvY >= asReqY) "OK" else "FAIL"),
+                listOf("Slab: $slabType", "${slabThickness.toInt()} mm", "-", if(isSafe) "SAFE" else "UNSAFE"),
+                listOf("U.Ratio", "${(utilizationRatio*100).toInt()}%", "-", "-")
             )
-            drawReinforcementTable(20f, h * 0.75f, listOf(w*0.25f, w*0.25f, w*0.25f, w*0.20f), headers, rows, 30f, 35f, palette.tableHeaderBg, palette.tableRowAltColor, palette.tableCellText, 14f)
+            drawReinforcementTable(20f, h * 0.72f, listOf(w*0.25f, w*0.25f, w*0.25f, w*0.20f), headers, rows, 30f, 35f, palette.tableHeaderBg, palette.tableRowAltColor, palette.tableCellText, 14f)
         }
     }
 }

@@ -96,15 +96,17 @@ fun ProfessionalColumnDrawing(
         if (viewMode == 0 || viewMode == 2) {
             val secX = W * 0.75f - cw / 2f
             val secY = H * 0.35f - cw / 2f
-            drawRect(color = C.Concrete, topLeft = Offset(secX, secY), size = Size(cw, cw)) // simplified depth for UI
-            drawRect(color = C.Tie, topLeft = Offset(secX + coverPx, secY + coverPx), size = Size(cw - 2*coverPx, cw - 2*coverPx), style = Stroke(2f))
+            val secW = cw
+            val secD = columnDepth.toFloat() * scale
+            drawRect(color = C.Concrete, topLeft = Offset(secX, secY), size = Size(secW, secD))
+            drawRect(color = C.Tie, topLeft = Offset(secX + coverPx, secY + coverPx), size = Size(secW - 2*coverPx, secD - 2*coverPx), style = Stroke(2f))
             
             longitudinalBars.forEach { bar ->
-                val bx = secX + (bar.x.toFloat() / columnWidth.toFloat()) * cw
-                val by = secY + (bar.y.toFloat() / columnDepth.toFloat()) * cw
+                val bx = secX + (bar.x.toFloat() / columnWidth.toFloat()) * secW
+                val by = secY + (bar.y.toFloat() / columnDepth.toFloat()) * secD
                 drawCircle(color = C.Bar, radius = 5f, center = Offset(bx, by))
             }
-            drawTextAnnotated("SECTION A-A", secX, secY - 20f, C.White, 16f * density)
+            drawTextAnnotated("SECTION A-A: ${tieDia.toInt()} mm ties", secX, secY - 20f, C.White, 14f * density)
         }
         
         // 3. TABLE

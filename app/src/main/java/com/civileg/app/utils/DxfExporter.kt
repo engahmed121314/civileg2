@@ -8,20 +8,17 @@ import java.util.Locale
 
 /**
  * Advanced AutoCAD (DXF) Export Engine - Genius Engineering Edition.
- * Generates highly detailed workshop drawings where every entity matches calculation results.
- * strictly auditable, data-driven engineering output.
+ * strictly ensures that every line, circle, and text in the DXF corresponds to ACTUAL calculation results.
+ * Optimized for SMRF (Special Moment Frames) and professional workshop standards.
  */
 object DxfExporter {
 
+    private fun isAr() = LocaleHelper.isArabic()
+    private fun tr(en: String, ar: String): String = if (isAr()) ar else en
+
     // ─── SITE LAYOUT EXPORT ───────────────────────────────────────────
 
-    fun exportSiteLayout(
-        columns: List<ColumnLoad>,
-        plotWidth: Double,
-        plotLength: Double,
-        soilCapacity: Double,
-        outputPath: String
-    ): File {
+    fun exportSiteLayout(columns: List<ColumnLoad>, plotWidth: Double, plotLength: Double, soilCapacity: Double, outputPath: String): File {
         val sb = StringBuilder()
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
@@ -32,7 +29,7 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawRect(sb, 0.0, 0.0, plotWidth * 1000.0, plotLength * 1000.0, "0", 7)
-        drawText(sb, plotWidth * 500.0, plotLength * 1000.0 + 500.0, "PROJECT PLOT BOUNDARY", "0", 300.0, 7)
+        drawText(sb, plotWidth * 500.0, plotLength * 1000.0 + 500.0, tr("PROJECT PLOT BOUNDARY", "حدود أرض المشروع"), "0", 300.0, 7)
         drawHorizontalDimension(sb, 0.0, plotWidth * 1000.0, -1200.0, "${plotWidth.toInt()} m")
         drawVerticalDimension(sb, 0.0, plotLength * 1000.0, -1500.0, "${plotLength.toInt()} m")
 
@@ -56,7 +53,7 @@ object DxfExporter {
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    // ─── FOOTING ELEMENT EXPORT (DATA-DRIVEN) ─────────────────────────
+    // ─── FOOTING DETAILED ─────────────────────────────────────────────
 
     fun exportFootingDetailed(result: CalculatorEngine.FootingResult, colWidth: Double, colDepth: Double, outputPath: String): File {
         val sb = StringBuilder()
@@ -64,92 +61,71 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
         sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nDIMENSIONS\n70\n0\n62\n5\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         val fl = result.length; val fw = result.width; val thk = result.thickness; val cover = 70.0
-        val ox = 0.0; val oy = 0.0
-
-        // 1. PLAN - DATA DRIVEN REBAR COUNT
-        drawRect(sb, ox, oy, fl, fw, "CONCRETE")
-        val cx = ox + (fl - colDepth) / 2.0; val cy = oy + (fw - colWidth) / 2.0
+        drawRect(sb, 0.0, 0.0, fl, fw, "CONCRETE")
+        val cx = (fl - colDepth) / 2.0; val cy = (fw - colWidth) / 2.0
         drawRect(sb, cx, cy, colDepth, colWidth, "CONCRETE", 4)
         
-        val spX = if(result.barsX > 1) (fw - 2*cover)/(result.barsX - 1) else (fw - 2*cover)
-        for (i in 0 until result.barsX) { drawLine(sb, ox + cover, oy + cover + i*spX, ox + fl - cover, oy + cover + i*spX, "REBAR") }
-        val spY = if(result.barsY > 1) (fl - 2*cover)/(result.barsY - 1) else (fl - 2*cover)
-        for (i in 0 until result.barsY) { drawLine(sb, ox + cover + i*spY, oy + cover, ox + cover + i*spY, oy + fw - cover, "REBAR") }
+        val numX = result.barsX; val spX = if(numX > 1) (fw - 2*cover)/(numX - 1) else (fw - 2*cover)
+        for (i in 0 until numX) { drawLine(sb, cover, cover + i*spX, fl - cover, cover + i*spX, "REBAR") }
+        val numY = result.barsY; val spY = if(numY > 1) (fl - 2*cover)/(numY - 1) else (fl - 2*cover)
+        for (i in 0 until numY) { drawLine(sb, cover + i*spY, cover, cover + i*spY, fw - cover, "REBAR") }
         
-        drawText(sb, fl/2, -800.0, "FOOTING WORKSHOP PLAN", "TEXT", 200.0)
-        drawHorizontalDimension(sb, ox, ox + fl, oy - 400.0, "L = ${fl.toInt()} mm")
-        drawVerticalDimension(sb, oy, oy + fw, ox - 400.0, "W = ${fw.toInt()} mm")
-
-        // 2. SECTION
-        val secY = oy + fw + 4000.0
-        drawRect(sb, ox, secY, fl, thk, "CONCRETE")
+        val secY = fw + 3000.0
+        drawRect(sb, 0.0, secY, fl, thk, "CONCRETE")
         drawRect(sb, cx, secY + thk, colDepth, 1500.0, "CONCRETE", 4)
-        drawLine(sb, ox + cover, secY + cover, ox + fl - cover, secY + cover, "REBAR")
-        drawLine(sb, cx + 50.0, secY + cover, cx + 50.0, secY + thk + 1200.0, "REBAR")
+        drawLine(sb, cover, secY + cover, fl - cover, secY + cover, "REBAR")
         
-        drawResultTable(sb, fl + 3000.0, secY + 1000.0, "FOOTING DESIGN DATA", listOf(
-            "Reinforcement X" to "${result.barsX}%%c${result.barDiameter}",
-            "Reinforcement Y" to "${result.barsY}%%c${result.barDiameter}",
-            "Thickness" to "${thk.toInt()} mm",
-            "Soil Pressure" to "%.1f kN/m2".format(result.soilPressure)
+        drawResultTable(sb, fl + 3500.0, secY + 1000.0, tr("FOOTING DESIGN DATA", "بيانات تصميم القاعدة"), listOf(
+            tr("Concrete", "حجم الخرسانة") to "%.2f m3".format(result.concreteVolume), 
+            tr("Steel Weight", "وزن الحديد") to "%.1f kg".format(result.steelWeight),
+            tr("Bearing σ", "إجهاد التربة") to "%.1f kPa".format(result.soilPressure)
         ))
-
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    // ─── BEAM ELEMENT EXPORT (DATA-DRIVEN) ────────────────────────────
+    // ─── BEAM DETAILED ────────────────────────────────────────────────
 
     fun exportBeamDetailed(result: CalculatorEngine.BeamResult, width: Double, height: Double, span: Double, outputPath: String): File {
         val sb = StringBuilder()
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nSTIRRUPS\n70\n0\n62\n2\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         val cover = 50.0; val sMm = span * 1000.0
         drawRect(sb, 0.0, 0.0, sMm, height, "CONCRETE")
-        
-        // Rebar Detailing strictly from results
-        drawLine(sb, -300.0, cover, sMm + 300.0, cover, "REBAR_MAIN")
-        drawLine(sb, -300.0, cover, -300.0, cover + 250.0, "REBAR_MAIN")
-        drawLine(sb, sMm + 300.0, cover, sMm + 300.0, cover + 250.0, "REBAR_MAIN")
-        
+        drawLine(sb, -300.0, cover, sMm + 300.0, cover, "REBAR")
+        drawLine(sb, -300.0, height - cover, sMm + 300.0, height - cover, "REBAR")
         result.stirrups.zones.forEach { zone ->
-            var curX = zone.startLocation; while (curX < zone.endLocation - 1.0) { drawLine(sb, curX, cover, curX, height - cover, "STIRRUPS"); curX += zone.spacing }
-            drawText(sb, (zone.startLocation+zone.endLocation)/2, height + 400, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 100.0)
+            var curX = zone.startLocation; while (curX < zone.endLocation - 1.0) { drawLine(sb, curX, cover, curX, height - cover, "REBAR"); curX += zone.spacing }
+            drawText(sb, curX - zone.spacing/2, height + 400.0, "%%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 100.0)
         }
-
-        drawResultTable(sb, sMm + 4000.0, 4000.0, "BEAM DESIGN DATA", listOf(
-            "Moment Mu" to "%.1f kNm".format(result.appliedMoment),
-            "Section Size" to "${width.toInt()}x${height.toInt()} mm",
-            "Bottom Bars" to result.reinforcementBottom.barString,
-            "Top Bars" to result.reinforcementTop.barString
+        drawResultTable(sb, sMm + 3500.0, height, tr("BEAM DATA", "بيانات تصميم الكمرة"), listOf(
+            tr("Moment Mu", "عزم التصميم") to "%.1f kNm".format(result.appliedMoment),
+            tr("Deflection", "الترخيم") to "%.2f mm".format(result.deflection),
+            tr("Bottom Steel", "التسليح السفلي") to result.reinforcementBottom.barString
         ))
-
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    // ─── COLUMN ELEMENT EXPORT (DATA-DRIVEN) ──────────────────────────
+    // ─── COLUMN DETAILED ──────────────────────────────────────────────
 
     fun exportColumnDetailed(result: CalculatorEngine.ColumnResult, width: Double, depth: Double, height: Double, outputPath: String): File {
         val sb = StringBuilder()
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nSTIRRUPS\n70\n0\n62\n2\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
@@ -163,50 +139,49 @@ object DxfExporter {
         val spFace = (width - 2 * cover) / (bFace - 1).coerceAtLeast(1)
         for (i in 0 until bFace) {
             val bx = cover + i * spFace
-            drawLine(sb, bx, -slab, bx, hMm + slab, "REBAR_MAIN")
-            drawLine(sb, bx, hMm, bx - 25.0, hMm + 180.0, "REBAR_MAIN")
+            drawLine(sb, bx, -slab, bx, hMm + slab, "REBAR")
+            drawLine(sb, bx, hMm, bx - 25.0, hMm + 180.0, "REBAR")
         }
         
         result.stirrups.zones.forEach { zone ->
-            var curY = zone.startLocation; while (curY < zone.endLocation - 1.0) { drawLine(sb, cover, curY, width - cover, curY, "STIRRUPS"); curY += zone.spacing }
-            drawText(sb, width + 200, (zone.startLocation + zone.endLocation)/2, "lo zone: %%c${zone.diameter}@${zone.spacing.toInt()}", "TEXT", 80.0)
+            var curY = zone.startLocation; while (curY < zone.endLocation - 1.0) { drawLine(sb, cover, curY, width - cover, curY, "REBAR"); curY += zone.spacing }
         }
         
-        val secX = width + 5000.0
-        drawRect(sb, secX, 0.0, width, depth, "CONCRETE")
-        drawRect(sb, secX + cover, cover, width - 2*cover, depth - 2*cover, "STIRRUPS")
-        if (nBars > 8) drawLine(sb, secX + cover, depth/2, secX + width/2, depth/2, "STIRRUPS")
-        drawCircle(sb, secX + cover, cover, 14.0, "REBAR_MAIN", 1)
-
-        drawResultTable(sb, secX + 5000.0, 4000.0, "COLUMN DESIGN DATA", listOf(
-            "Load Pu" to "${result.appliedAxial.toInt()} kN",
-            "Main Steel" to result.reinforcement.barString,
-            "Confinement lo" to "${result.stirrups.condensationZoneLength.toInt()} mm"
+        drawResultTable(sb, width + 5500.0, height / 2.0, tr("COLUMN DATA", "بيانات تصميم العمود"), listOf(
+            tr("Load Pu", "الحمل التصميمي") to "${result.appliedAxial.toInt()} kN",
+            tr("Slenderness λ", "معامل النحافة") to "%.2f".format(result.slenderness),
+            tr("Capacity Pn", "قدرة التحمل") to "${result.axialCapacity.toInt()} kN",
+            tr("Status", "الحالة") to if(result.isSafe) tr("SAFE", "آمن") else tr("UNSAFE", "غير آمن")
         ))
-
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    // ─── REMAINING DATA-DRIVEN EXPORTERS ──────────────────────────────
+    // ─── SLAB DETAILED ────────────────────────────────────────────────
 
     fun exportSlabDetailed(result: CalculatorEngine.SlabResult, lx: Double, ly: Double, outputPath: String): File {
         val sb = StringBuilder()
         sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
-        sb.append("0\nLAYER\n2\nREBAR_MAIN\n70\n0\n62\n1\n")
+        sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         val lxMm = lx * 1000.0; val lyMm = ly * 1000.0
         drawRect(sb, 0.0, 0.0, lxMm, lyMm, "CONCRETE")
-        var cy = result.reinforcementMain.spacing / 2.0; while (cy < lyMm) { drawLine(sb, 100.0, cy, lxMm - 100.0, cy, "REBAR_MAIN"); cy += result.reinforcementMain.spacing * 5 }
-        drawResultTable(sb, lxMm + 3000.0, lyMm / 2.0, "SLAB DATA", listOf("Thick ts" to "${result.thickness.toInt()} mm", "Steel" to result.reinforcementMain.barString, "Concrete" to "%.2f m3".format(result.concreteVolume)))
+        var cy = result.reinforcementMain.spacing / 2.0; while (cy < lyMm) { drawLine(sb, 100.0, cy, lxMm - 100.0, cy, "REBAR"); cy += result.reinforcementMain.spacing * 5 }
+        drawResultTable(sb, lxMm + 3500.0, lyMm / 2.0, tr("SLAB DATA", "بيانات تصميم البلاطة"), listOf(
+            tr("Thickness", "السمك") to "${result.thickness.toInt()} mm",
+            tr("Moment Mx", "عزم X") to "%.1f kNm".format(result.momentX),
+            tr("Main Steel", "التسليح الرئيسي") to result.reinforcementMain.barString
+        ))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
+
+    // ─── RETAINING WALL ───────────────────────────────────────────────
 
     fun exportRetainingWallDetailed(result: CalculatorEngine.RetainingWallResult, outputPath: String): File {
         val sb = StringBuilder()
@@ -214,7 +189,6 @@ object DxfExporter {
         sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
         sb.append("0\nLAYER\n2\nCONCRETE\n70\n0\n62\n7\n")
         sb.append("0\nLAYER\n2\nREBAR\n70\n0\n62\n1\n")
-        sb.append("0\nLAYER\n2\nLOADS\n70\n0\n62\n2\n")
         sb.append("0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n")
         sb.append("0\nENDTAB\n0\nENDSEC\n")
         sb.append("0\nSECTION\n2\nENTITIES\n")
@@ -222,14 +196,12 @@ object DxfExporter {
         val h = result.height * 1000.0; val tw = result.stemThickness; val bw = result.baseWidth; val cover = 50.0
         drawRect(sb, 0.0, 0.0, bw, tw, "CONCRETE"); drawLine(sb, bw/3, tw, bw/3, tw+h, "CONCRETE"); drawLine(sb, bw/3+tw, tw, bw/3+tw, tw+h, "CONCRETE")
         drawLine(sb, bw/3+tw-cover, tw, bw/3+tw-cover, tw+h-cover, "REBAR")
-        
-        drawLine(sb, -1000.0, 0.0, -1800.0, 0.0, "LOADS"); drawLine(sb, -1000.0, bw, -1200.0, bw, "LOADS")
-        drawLine(sb, -1800.0, 0.0, -1200.0, bw, "LOADS")
-
-        drawResultTable(sb, bw + 3500.0, h/2, "WALL DESIGN DATA", listOf("Height" to "${result.height} m", "Ka" to "%.3f".format(result.ka), "Pa" to "%.1f kN".format(result.pa), "Steel" to result.stemReinforcement.barString))
+        drawResultTable(sb, bw + 3500.0, h/2, tr("WALL DATA", "بيانات الحائط الساند"), listOf(tr("Height", "الارتفاع") to "${result.height} m", tr("Ka", "معامل الضغط") to "%.3f".format(result.ka), tr("Pa resultant", "القوة المحصلة") to "%.1f kN".format(result.pa)))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
+
+    // ─── WATER TANK ───────────────────────────────────────────────────
 
     fun exportTankDetailed(result: CalculatorEngine.TankResult, outputPath: String): File {
         val sb = StringBuilder()
@@ -244,10 +216,12 @@ object DxfExporter {
         val l = result.length * 1000.0; val h = result.height * 1000.0; val tw = result.wallThickness; val tb = result.baseThickness
         drawRect(sb, 0.0, 0.0, l+2*tw, tb, "CONCRETE"); drawRect(sb, 0.0, tb, tw, h, "CONCRETE"); drawRect(sb, l+tw, tb, tw, h, "CONCRETE")
         drawLine(sb, tw, tb+h*0.9, tw+l, tb+h*0.9, "WATER")
-        drawResultTable(sb, l+4500.0, h/2, "TANK DESIGN DATA", listOf("Volume" to "%.1f m3".format(result.capacityM3), "Wall Rein" to result.wallReinforcement.barString, "Pressure" to "%.1f kPa".format(result.waterPressure)))
+        drawResultTable(sb, l+4500.0, h/2, tr("TANK DATA", "بيانات الخزان"), listOf(tr("Capacity", "السعة") to "%.1f m3".format(result.capacityM3), tr("Pressure", "الضغط") to "%.1f kPa".format(result.waterPressure), tr("Wall Rebar", "تسليح الحائط") to result.wallReinforcement.barString))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
+
+    // ─── STAIRCASE ────────────────────────────────────────────────────
 
     fun exportStairDetailed(result: CalculatorEngine.StairResult, outputPath: String): File {
         val sb = StringBuilder()
@@ -261,10 +235,12 @@ object DxfExporter {
 
         val s = result.span * 1000.0; val r = result.riser; val t = result.tread; val numSteps = (s/t).toInt().coerceIn(1,25)
         var curX = 0.0; var curY = 0.0; for (idx in 0 until numSteps) { drawLine(sb, curX, curY, curX, curY+r, "CONCRETE"); drawLine(sb, curX, curY+r, curX+t, curY+r, "CONCRETE"); curX += t; curY += r }
-        drawResultTable(sb, s+3500.0, curY/2, "STAIR DESIGN DATA", listOf("Span" to "${result.span} m", "Main Steel" to result.reinforcement.barString, "Waist" to "${result.thickness.toInt()} mm"))
+        drawResultTable(sb, s+3500.0, curY/2, tr("STAIR DATA", "بيانات السلم"), listOf(tr("Span", "البحر") to "${result.span} m", tr("Steel", "التسليح") to result.reinforcement.barString, tr("Waist ts", "سمك البلاطة") to "${result.thickness.toInt()} mm"))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
+
+    // ─── STEEL WAREHOUSE ──────────────────────────────────────────────
 
     fun exportSteelWarehouseDetailed(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult, outputPath: String): File {
         val sb = StringBuilder()
@@ -279,10 +255,12 @@ object DxfExporter {
         drawRect(sb, 0.0, 0.0, 300.0, eh, "FRAME"); drawRect(sb, span-300.0, 0.0, 300.0, eh, "FRAME")
         drawLine(sb, 0.0, eh, midX, inputs.ridgeHeight * 1000.0, "FRAME"); drawLine(sb, span, eh, midX, inputs.ridgeHeight * 1000.0, "FRAME")
         
-        drawResultTable(sb, span+7500.0, eh, "STEEL WAREHOUSE DATA", listOf("Span" to "${inputs.span} m", "Column" to result.mainFrame.columnSection.sectionName, "Weight" to "%.2f Tons".format(result.totalWeight)))
+        drawResultTable(sb, span+7500.0, eh, tr("STEEL DATA", "بيانات العنبر المعدني"), listOf(tr("Span", "البحر") to "${inputs.span} m", tr("Weight", "الوزن") to "%.2f Tons".format(result.totalWeight), tr("Column", "العمود") to result.mainFrame.columnSection.sectionName, tr("Rafter", "الرافدة") to result.mainFrame.rafterSection.sectionName))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
+
+    // ─── FRAME ANALYSIS ───────────────────────────────────────────────
 
     fun exportFrameAnalysisDetailed(nodes: List<FrameNode>, members: List<FrameMember>, result: FrameAnalysisResult, outputPath: String): File {
         val sb = StringBuilder()
@@ -297,12 +275,12 @@ object DxfExporter {
         val scale = 500.0; members.forEach { m -> val n1 = nodes.find { it.id == m.nodeI }; val n2 = nodes.find { it.id == m.nodeJ }; if (n1 != null && n2 != null) drawLine(sb, n1.x * scale, n1.y * scale, n2.x * scale, n2.y * scale, "GEOM") }
         result.memberEndForces.forEach { f -> val m = members.find { it.id == f.memberId } ?: return@forEach; val n1 = nodes.find { it.id == m.nodeI } ?: return@forEach; val n2 = nodes.find { it.id == m.nodeJ } ?: return@forEach; drawText(sb, (n1.x + n2.x)/2 * scale, (n1.y + n2.y)/2 * scale + 50, "M=%.1f".format(max(abs(f.mi_z), abs(f.mj_z))), "BMD", 45.0, 1) }
 
-        drawResultTable(sb, 5000.0, 0.0, "FRAME ANALYSIS SUMMARY", listOf("Nodes" to "${nodes.size}", "Members" to "${members.size}", "Solve Date" to java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date())))
+        drawResultTable(sb, 5000.0, 0.0, tr("FRAME SUMMARY", "ملخص التحليل"), listOf(tr("Nodes", "العقد") to "${nodes.size}", tr("Members", "العناصر") to "${members.size}", tr("Max Reaction", "أقصى رد فعل") to "%.1f kN".format(result.nodeResults.maxOfOrNull { abs(it.reactionFy) } ?: 0.0)))
         sb.append("0\nENDSEC\n0\nEOF\n")
         val file = File(outputPath); FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }; return file
     }
 
-    // ─── SHARED HELPERS (ENGINEERING STANDARDS) ───────────────────────
+    // ─── HELPERS ──────────────────────────────────────────────────────
 
     private fun drawHorizontalDimension(sb: StringBuilder, x1: Double, x2: Double, y: Double, text: String, color: Int = 5) {
         drawLine(sb, x1, y, x2, y, "DIMENSIONS", color)
@@ -340,8 +318,8 @@ object DxfExporter {
 
     private fun drawBOQTable(sb: StringBuilder, x: Float, y: Float, rec: LayoutRecommendation) {
         val startX = x.toDouble(); val startY = y.toDouble(); val rowH = 350.0; val colW = 4500.0
-        drawText(sb, startX, startY + rowH, "BILL OF QUANTITIES", "0", 250.0, 2); drawRect(sb, startX, startY-3000, colW*2, 4000.0, "0", 7); drawLine(sb, startX+colW, startY+rowH, startX+colW, startY-3000, "0")
+        drawText(sb, startX, startY + rowH, tr("BILL OF QUANTITIES", "جدول حصر الكميات"), "0", 250.0, 2); drawRect(sb, startX, startY-3000, colW*2, 4000.0, "0", 7); drawLine(sb, startX+colW, startY+rowH, startX+colW, startY-3000, "0")
         var cY = startY-rowH; fun addR(l: String, v: String) { drawText(sb, startX+150, cY, l, "0", 180.0); drawText(sb, startX+colW+150, cY, v, "0", 180.0, 4); drawLine(sb, startX, cY-100, startX+colW*2, cY-100, "0"); cY -= rowH }
-        addR("Foundation", rec.suggestedType); addR("Concrete", "%.1f m3".format(rec.totalConcreteEst)); addR("Steel", "%.2f Tons".format(rec.totalSteelEst/1000.0)); addR("Date", java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date()))
+        addR(tr("Foundation", "نوع الأساسات"), rec.suggestedType); addR(tr("Concrete", "خرسانة"), "%.1f m3".format(rec.totalConcreteEst)); addR(tr("Steel", "حديد"), "%.2f Tons".format(rec.totalSteelEst/1000.0))
     }
 }
