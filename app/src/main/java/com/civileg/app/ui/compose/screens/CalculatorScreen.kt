@@ -1,18 +1,14 @@
 package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,11 +26,10 @@ import androidx.compose.ui.res.stringResource
 fun CalculatorScreen(
     onNavigateBack: () -> Unit = {}
 ) {
-    var expression by rememberSaveable { mutableStateOf("") }
-    var result by rememberSaveable { mutableStateOf("0") }
-    var history by rememberSaveable { mutableStateOf(listOf<String>()) }
-    var isNewCalculation by rememberSaveable { mutableStateOf(true) }
-    var expandedHistoryIndex by rememberSaveable { mutableIntStateOf(-1) }
+    var expression by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf("0") }
+    var history by remember { mutableStateOf(listOf<String>()) }
+    var isNewCalculation by remember { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
@@ -96,9 +91,8 @@ fun CalculatorScreen(
                 }
             }
 
-            // History - show last 5 operations in an expandable list
+            // History - compact single-line to avoid pushing buttons off-screen
             if (history.isNotEmpty()) {
-                val recentHistory = history.takeLast(5).reversed()
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -106,38 +100,27 @@ fun CalculatorScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     )
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
                             stringResource(R.string.calc_history),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        recentHistory.forEachIndexed { index, entry ->
-                            val isExpanded = expandedHistoryIndex == index
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { expandedHistoryIndex = if (isExpanded) -1 else index },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    entry,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                                    overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Icon(
-                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
+                        Text(
+                            history.takeLast(1).last(),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(start = 8.dp)
+                        )
                     }
                 }
             }

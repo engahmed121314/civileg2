@@ -315,23 +315,13 @@ fun TankScreen(
                             Text(stringResource(R.string.pdf_report))
                         }
 
-                        OutlinedButton(
-                            onClick = { viewModel.exportToDxf(context) { _ -> } },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Draw, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
-                        }
-
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
+                            Icon(Icons.Default.Save, null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }
@@ -367,15 +357,6 @@ fun TankScreen(
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                                 viewMode = tankViewMode,
-                                wallMoment = res.mu,
-                                baseMoment = res.baseMoment,
-                                hoopTension = res.hoopTension,
-                                shearCheck = res.shearCheck,
-                                slidingFactor = res.slidingFactor,
-                                isSafe = res.isSafe,
-                                fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0,
-                                isArabic = viewModel.isArabic,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

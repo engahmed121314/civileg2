@@ -62,17 +62,6 @@ fun ProfessionalTankDrawing(
     horizontalRebarSpacing: Double,
     foundationDepth: Double = 0.0,
     viewMode: Int = 0,
-    // Enhanced design values
-    wallMoment: Double = 0.0,
-    baseMoment: Double = 0.0,
-    hoopTension: Double = 0.0,
-    shearCheck: Double = 0.0,
-    slidingFactor: Double = 0.0,
-    isSafe: Boolean = true,
-    fcu: Double = 25.0,
-    fy: Double = 360.0,
-    cover: Double = 50.0,
-    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Canvas(
@@ -113,63 +102,17 @@ fun ProfessionalTankDrawing(
         )
 
         when (viewMode) {
-            1 -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
-                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
-            2 -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
-                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
-            3 -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+            1 -> drawPerspectiveView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
+            2 -> drawSectionDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
+            3 -> drawReinforcementDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
                 length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
                 verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
             else -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
                 length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
                 verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
         }
-
-        // ══════════════════════════════════════════════════════════
-        //  DESIGN VALUES OVERLAY (top-right)
-        // ══════════════════════════════════════════════════════════
-        val designRows = mutableListOf<Pair<String, String>>()
-        designRows.add("fcu" to "${"%.0f".format(fcu)} MPa")
-        designRows.add("fy" to "${"%.0f".format(fy)} MPa")
-        if (wallMoment > 0) designRows.add("Mu wall" to "${"%.1f".format(wallMoment)} kN.m")
-        if (baseMoment > 0) designRows.add("Mu base" to "${"%.1f".format(baseMoment)} kN.m")
-        if (hoopTension > 0) designRows.add("T hoop" to "${"%.1f".format(hoopTension)} kN")
-        if (shearCheck > 0) designRows.add("Vu" to "${"%.1f".format(shearCheck)} kN")
-        if (slidingFactor > 0) designRows.add("F.S. slide" to "${"%.2f".format(slidingFactor)}")
-
-        if (designRows.size > 2) {
-            val boxW = 150f
-            val boxH = 24f + designRows.size * 18f
-            val boxX = cw - boxW - 12f
-            val boxY = 40f
-            drawRoundRect(color = Color(0xCC222244), topLeft = Offset(boxX, boxY), size = Size(boxW, boxH), cornerRadius = CornerRadius(6f))
-            drawRoundRect(color = Color(0x66AAAAAA), topLeft = Offset(boxX, boxY), size = Size(boxW, boxH), cornerRadius = CornerRadius(6f), style = Stroke(1f))
-            drawTextAnnotated("Design Values", boxX + boxW / 2f, boxY + 14f, TextColor, 12f, center = true, bold = true)
-            designRows.forEachIndexed { idx, (label, value) ->
-                val ry = boxY + 28f + idx * 18f
-                drawTextAnnotated(label, boxX + 8f, ry + 10f, Color(0xFFAAAAAA), 10f)
-                drawTextAnnotated(value, boxX + boxW - 8f, ry + 10f, TextColor, 10f, center = true)
-            }
-        }
-
-        // SAFE / UNSAFE badge
-        val badgeColor = if (isSafe) DrawingColors.SafeGreen else DrawingColors.UnsafeRed
-        val badgeLabel = if (isSafe) "SAFE" else "UNSAFE"
-        val badgePaint = android.graphics.Paint().apply {
-            color = badgeColor.toArgb()
-            textSize = 14f
-            isAntiAlias = true
-            isFakeBoldText = true
-            textAlign = android.graphics.Paint.Align.CENTER
-            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-        }
-        val badgeX = cw - 60f
-        val badgeY = if (designRows.size > 2) 40f + 24f + designRows.size * 18f + 10f else 48f
-        drawRoundRect(color = badgeColor.copy(alpha = 0.25f), topLeft = Offset(badgeX, badgeY), size = Size(52f, 22f), cornerRadius = CornerRadius(11f))
-        drawRoundRect(color = badgeColor, topLeft = Offset(badgeX, badgeY), size = Size(52f, 22f), cornerRadius = CornerRadius(11f), style = Stroke(1.5f))
-        drawContext.canvas.nativeCanvas.drawText(badgeLabel, badgeX + 26f, badgeY + 16f, badgePaint)
     }
 }
 
@@ -182,7 +125,6 @@ private fun DrawScope.drawAllView(
     verticalRebarDia: Double, verticalRebarSpacing: Double,
     horizontalRebarDia: Double, horizontalRebarSpacing: Double
 ) {
-}
 
 // ============================================================================
 // RECTANGULAR TANK BODY — clear U-shape vessel
@@ -331,7 +273,7 @@ private fun DrawScope.drawCircularTankBody(
         Path().apply {
             addOval(androidx.compose.ui.geometry.Rect(left, top - 8f, left + l, top + 8f))
         },
-        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(1.5f, PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
     )
     drawTextAnnotated("(circular section)", cx - 40f, top - 14f, HoopGreen.copy(alpha = 0.6f), 11f)
 }

@@ -54,7 +54,6 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.SteelViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
-import com.civileg.app.ui.compose.components.drawings.ConnectionDetailDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import java.io.File
 import kotlin.math.PI
@@ -137,7 +136,7 @@ fun SteelDesignScreen(
                     2 -> WeldDesignTab(viewModel)
                     3 -> BoltDesignTab(viewModel)
                     4 -> BasePlateDesignTab()
-                    5 -> ConnectionDesignTab(viewModel)
+                    5 -> ConnectionDesignTab()
                 }
             }
         }
@@ -2324,9 +2323,19 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             }
                         }
                         ProfessionalSteelDrawing(
-                            section = res.sectionType,
+                            sectionType = res.sectionType.displayName,
+                            sectionName = res.sectionType.sectionName,
                             memberLength = (length.toDoubleOrNull() ?: 6.0) * 1000.0,
-                            memberType = res.memberType,
+                            depth = res.sectionType.depth,
+                            flangeWidth = res.sectionType.width,
+                            flangeThickness = res.sectionType.flangeThickness,
+                            webThickness = res.sectionType.webThickness,
+                            radius = res.sectionType.rootRadius,
+                            area = res.sectionType.area,
+                            ix = res.sectionType.ix,
+                            sx = res.sectionType.sx,
+                            zx = res.sectionType.zx,
+                            weightPerMeter = res.sectionType.weight,
                             boltDia = boltDia,
                             boltCount = boltCount,
                             boltGauge = boltGauge,
@@ -2334,10 +2343,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             endPlateThickness = endPlateThk,
                             hasStiffener = hasStiff,
                             weldSize = weldSz,
-                            isArabic = viewModel.isArabic,
-                            appliedMoment = moment.toDoubleOrNull() ?: 0.0,
-                            appliedShear = shear.toDoubleOrNull() ?: 0.0,
-                            appliedAxial = axialLoad.toDoubleOrNull() ?: 0.0,
+                            isColumn = res.memberType == SteelMemberType.COLUMN,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -2762,7 +2768,7 @@ fun BasePlateDesignTab() {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ConnectionDesignTab(viewModel: SteelViewModel) {
+fun ConnectionDesignTab() {
     var connectionType by remember { mutableIntStateOf(0) }
     val connTypes = listOf(stringResource(R.string.steel_conn_bolted_shear), stringResource(R.string.steel_conn_bolted_moment), stringResource(R.string.steel_conn_welded), stringResource(R.string.steel_conn_combined))
 
@@ -2974,24 +2980,6 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                 Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.steel_design_check_conn))
-            }
-        }
-
-        // Connection detail drawing (shows after calculation)
-        if (boltResult != null || weldResult != null) {
-            item {
-                Card(
-                    elevation = CardDefaults.cardElevation(2.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ConnectionDetailDrawing(
-                        boltResult = boltResult,
-                        weldResult = weldResult,
-                        connectionType = connectionType,
-                        isArabic = viewModel.isArabic,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             }
         }
 

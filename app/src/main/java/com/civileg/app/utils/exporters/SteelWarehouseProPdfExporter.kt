@@ -12,9 +12,6 @@ import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
-import android.graphics.Bitmap
-import com.itextpdf.io.image.ImageDataFactory
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -70,9 +67,6 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(AreaBreak())
 
         addMemberSchedule(document, inputs, result)
-        document.add(AreaBreak())
-
-        addSectionDrawings(document, inputs, result)
         document.add(AreaBreak())
 
         addConnectionSchedule(document, result)
@@ -284,151 +278,6 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         forces.addCell(dataCell(if (result.safetyStatus) "PASS" else "REVIEW", bold = true, color = if (result.safetyStatus) SUCCESS else ERROR))
         document.add(forces)
         document.add(Paragraph(" "))
-    }
-
-    // ==================== SECTION DRAWINGS ====================
-    private fun addSectionDrawings(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
-        document.add(Paragraph("Steel Cross-Section Drawings").setFontSize(12f).setBold().setFontColor(PRIMARY)
-            .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
-        document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
-
-        val sections = listOf(
-            Triple("C1", "Column Section", result.mainFrame.columnSection),
-            Triple("R1", "Rafter Section", result.mainFrame.rafterSection),
-            Triple("P1", "Purlin Section", result.secondaryMembers.purlinSection),
-            Triple("G1", "Girt Section", result.secondaryMembers.girtSection),
-            Triple("B1", "Bracing Section", result.secondaryMembers.bracingSection)
-        )
-
-        val gen = com.civileg.app.utils.PdfDrawingGenerator
-        var addedAny = false
-
-        sections.forEachIndexed { index, (mark, description, section) ->
-            try {
-                val bitmap = generateWarehouseSectionBitmap(gen, section)
-                if (bitmap != null) {
-                    if (index > 0) document.add(AreaBreak())
-                    addedAny = true
-
-                    document.add(Paragraph("$mark - $description: ${section.sectionName}")
-                        .setFontSize(10f).setBold().setFontColor(SECONDARY)
-                        .setTextAlignment(TextAlignment.CENTER).setFont(helvetica(true)))
-                    document.add(Paragraph(" "))
-
-                    val stream = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
-                    val imageData = ImageDataFactory.create(stream.toByteArray())
-                    val img = com.itextpdf.layout.element.Image(imageData)
-                    img.setMaxWidth(450f)
-                    img.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER)
-                    document.add(img)
-                    document.add(Paragraph(" "))
-
-                    // Properties mini-table under each drawing
-                    val propsTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-                    addPropRow(propsTable, "Area", "${"%.1f".format(section.area / 100.0)} cm2", 0)
-                    addPropRow(propsTable, "Ix", "${"%.0f".format(section.ix / 1e4)} cm4", 1)
-                    addPropRow(propsTable, "Weight", "${"%.1f".format(section.weight)} kg/m", 2)
-                    document.add(propsTable)
-                    document.add(Paragraph(" "))
-                    bitmap.recycle()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        if (!addedAny) {
-            document.add(Paragraph("[Section drawings generation skipped - no valid sections]")
-                .setFontSize(9f).setFontColor(WARNING).setTextAlignment(TextAlignment.CENTER).setFont(helvetica(false)))
-        }
-    }
-
-    private fun addPropRow(table: Table, label: String, value: String, idx: Int) {
-        val bg = if (idx % 2 == 0) LIGHT_BLUE else null
-        val lc = Cell().setPadding(3f)
-        lc.add(Paragraph(label).setFontSize(8f).setBold().setFont(helvetica(true)))
-        bg?.let { lc.setBackgroundColor(it) }
-        table.addCell(lc)
-        val vc = Cell().setPadding(3f)
-        vc.add(Paragraph(value).setFontSize(8f).setFont(helvetica(false)))
-        bg?.let { vc.setBackgroundColor(it) }
-        table.addCell(vc)
-    }
-
-    private fun generateWarehouseSectionBitmap(
-        gen: com.civileg.app.utils.PdfDrawingGenerator,
-        section: SteelSectionType
-    ): Bitmap? {
-        return when (section) {
-            is SteelSectionType.ISection -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.h, bf = section.bf, tw = section.tw, tf = section.tf,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight, rootR = section.rootRadius
-            )
-            is SteelSectionType.CSection -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.h, bf = section.bf, tw = section.tw, tf = section.tf,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight, rootR = section.rootRadius
-            )
-            is SteelSectionType.CHS -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.outerDiameter, bf = section.outerDiameter, tw = section.thickness, tf = section.thickness,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight, outerDia = section.outerDiameter
-            )
-            is SteelSectionType.RHS -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.height, bf = section.width, tw = section.thickness, tf = section.thickness,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight, rhsW = section.width, rhsH = section.height, rhsT = section.thickness
-            )
-            is SteelSectionType.LSection -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.legA, bf = section.legB, tw = section.thickness, tf = section.thickness,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight, legA = section.legA, legB = section.legB, angleThk = section.thickness
-            )
-            is SteelSectionType.TSection -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.webDepth + section.flangeThickness, bf = section.flangeWidth,
-                tw = section.webThickness, tf = section.flangeThickness,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight
-            )
-            is SteelSectionType.PlateGirder -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.h, bf = maxOf(section.bfTop, section.bfBot),
-                tw = section.tw, tf = maxOf(section.tfTop, section.tfBot),
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight,
-                bfTop = section.bfTop, bfBot = section.bfBot, tfTop = section.tfTop, tfBot = section.tfBot
-            )
-            is SteelSectionType.Pipe -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.outerDiameter, bf = section.outerDiameter,
-                tw = section.wallThickness, tf = section.wallThickness,
-                gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight, outerDia = section.outerDiameter
-            )
-            is SteelSectionType.BuiltUp -> gen.generateAccurateSteelSection(
-                sectionName = section.sectionName, sectionTypeName = section.displayName,
-                h = section.depth, bf = section.width, tw = 0.0, tf = 0.0,
-                gradeName = "Built-up", fy = 355.0, fu = 510.0,
-                area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
-                weight = section.weight
-            )
-        }
     }
 
     // ==================== CONNECTIONS ====================
