@@ -1,6 +1,7 @@
 package com.civileg.app.utils
 
 import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.entities.SteelSectionType
 import com.civileg.app.domain.entities.SteelMemberResult
 import com.civileg.app.domain.entities.SteelInputs
 import com.civileg.app.domain.entities.SteelWarehouseInputs
@@ -9,6 +10,10 @@ import com.civileg.app.domain.entities.FrameNode
 import com.civileg.app.domain.entities.FrameMember
 import com.civileg.app.domain.entities.FrameAnalysisResult
 import com.civileg.app.domain.entities.SupportType as FrameSupportType
+import com.civileg.app.domain.entities.depth
+import com.civileg.app.domain.entities.width
+import com.civileg.app.domain.entities.webThickness
+import com.civileg.app.domain.entities.flangeThickness
 import kotlin.math.*
 import java.util.Locale
 
@@ -1152,8 +1157,7 @@ object DxfExportEngine {
             val ny = node.y * scale
             // Draw support symbols
             when (node.support) {
-                FrameSupportType.Pin,
-                FrameSupportType.Hinge -> {
+                FrameSupportType.Pin -> {
                     drawSupportSymbol(sb, nx, ny, 200.0)
                 }
                 FrameSupportType.Fixed -> {
