@@ -2323,19 +2323,9 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             }
                         }
                         ProfessionalSteelDrawing(
-                            sectionType = res.sectionType.displayName,
-                            sectionName = res.sectionType.sectionName,
+                            section = res.sectionType,
                             memberLength = (length.toDoubleOrNull() ?: 6.0) * 1000.0,
-                            depth = res.sectionType.depth,
-                            flangeWidth = res.sectionType.width,
-                            flangeThickness = res.sectionType.flangeThickness,
-                            webThickness = res.sectionType.webThickness,
-                            radius = res.sectionType.rootRadius,
-                            area = res.sectionType.area,
-                            ix = res.sectionType.ix,
-                            sx = res.sectionType.sx,
-                            zx = res.sectionType.zx,
-                            weightPerMeter = res.sectionType.weight,
+                            memberType = res.memberType,
                             boltDia = boltDia,
                             boltCount = boltCount,
                             boltGauge = boltGauge,
@@ -2343,7 +2333,6 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             endPlateThickness = endPlateThk,
                             hasStiffener = hasStiff,
                             weldSize = weldSz,
-                            isColumn = res.memberType == SteelMemberType.COLUMN,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
