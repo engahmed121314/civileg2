@@ -89,6 +89,7 @@ jobs:
         run: ./gradlew testDebugUnitTest --no-daemon
 
       - name: Generate JaCoCo coverage report
+        continue-on-error: true
         run: ./gradlew jacocoTestDebugUnitTestReport --no-daemon
 
       - name: Upload JaCoCo report

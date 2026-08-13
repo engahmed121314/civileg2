@@ -228,8 +228,15 @@ dependencies {
 }
 
 // JaCoCo Test Coverage
-tasks.withType<JacocoReport> {
-    dependsOn(tasks.named("testDebugUnitTest"))
+tasks.withType<Test> {
+    jacoco {
+        includeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
+}
+
+tasks.register<JacocoReport>("jacocoTestDebugUnitTestReport") {
+    dependsOn("testDebugUnitTest")
     reports {
         xml.required.set(true)
         html.required.set(true)
@@ -247,5 +254,5 @@ tasks.withType<JacocoReport> {
             )
         }
     )
-    executionData.setFrom(files("${layout.buildDirectory.get()}/jacoco/testDebugUnitTest.exec"))
+    executionData.setFrom(files("${layout.buildDirectory.get()}/outputs/unit_test_code_coverage/testDebugUnitTest/testDebugUnitTest.exec"))
 }
