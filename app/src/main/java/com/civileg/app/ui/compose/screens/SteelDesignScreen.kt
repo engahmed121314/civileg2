@@ -54,6 +54,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.SteelViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
+import com.civileg.app.ui.compose.components.drawings.ConnectionDetailDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import java.io.File
 import kotlin.math.PI
@@ -136,7 +137,7 @@ fun SteelDesignScreen(
                     2 -> WeldDesignTab(viewModel)
                     3 -> BoltDesignTab(viewModel)
                     4 -> BasePlateDesignTab()
-                    5 -> ConnectionDesignTab()
+                    5 -> ConnectionDesignTab(viewModel)
                 }
             }
         }
@@ -2758,7 +2759,7 @@ fun BasePlateDesignTab() {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ConnectionDesignTab() {
+fun ConnectionDesignTab(viewModel: SteelViewModel) {
     var connectionType by remember { mutableIntStateOf(0) }
     val connTypes = listOf(stringResource(R.string.steel_conn_bolted_shear), stringResource(R.string.steel_conn_bolted_moment), stringResource(R.string.steel_conn_welded), stringResource(R.string.steel_conn_combined))
 
@@ -2970,6 +2971,24 @@ fun ConnectionDesignTab() {
                 Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.steel_design_check_conn))
+            }
+        }
+
+        // Connection detail drawing (shows after calculation)
+        if (boltResult != null || weldResult != null) {
+            item {
+                Card(
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    ConnectionDetailDrawing(
+                        boltResult = boltResult,
+                        weldResult = weldResult,
+                        connectionType = connectionType,
+                        isArabic = viewModel.isArabic,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 
