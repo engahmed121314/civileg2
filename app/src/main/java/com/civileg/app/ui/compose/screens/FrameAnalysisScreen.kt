@@ -208,7 +208,7 @@ fun FrameAnalysisScreen(
                 when (selectedTab) {
                     0 -> DrawingTab(
                         modifier = Modifier.fillMaxSize(),
-                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel, isLoading
                     )
                     1 -> NodesTab(nodes, members, viewModel)
                     2 -> MembersTab(nodes, members, settings, viewModel)
@@ -265,7 +265,8 @@ private fun DrawingTab(
     result: FrameAnalysisResult?,
     diagramType: DiagramType,
     selectedMemberId: Int?,
-    viewModel: FrameAnalysisViewModel
+    viewModel: FrameAnalysisViewModel,
+    isLoading: Boolean = false
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
     // FIX: Sync local viewMode with ViewModel so it survives tab switches

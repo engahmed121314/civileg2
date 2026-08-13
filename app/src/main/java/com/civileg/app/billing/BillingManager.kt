@@ -204,7 +204,7 @@ class BillingManager @Inject constructor(
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val details = productDetailsList.mapNotNull { detail ->
                     val offer = detail.subscriptionOfferDetails?.firstOrNull() ?: return@mapNotNull null
-                    val phaseList = offer.pricingPhases.pricingPhases
+                    val phaseList = offer.pricingPhases.pricingPhaseList
                     val lastPhase = phaseList.lastOrNull() ?: return@mapNotNull null
                     val firstPhase = phaseList.firstOrNull()
                     SubscriptionDetail(
