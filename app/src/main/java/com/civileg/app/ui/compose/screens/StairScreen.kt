@@ -296,8 +296,6 @@ fun StairScreen(
                             }
                         }
 
-                        Button(
-                            onClick = { showSaveDialog = true },
                         OutlinedButton(
                             onClick = { viewModel.exportToDxf(context) { _ -> } },
                             modifier = Modifier.weight(1f),
@@ -308,11 +306,14 @@ fun StairScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("DXF")
                         }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Icon(Icons.Default.Save, null)
+                            Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }

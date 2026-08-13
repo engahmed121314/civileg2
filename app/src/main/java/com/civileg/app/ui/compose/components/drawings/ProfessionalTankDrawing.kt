@@ -180,6 +180,7 @@ private fun DrawScope.drawAllView(
     verticalRebarDia: Double, verticalRebarSpacing: Double,
     horizontalRebarDia: Double, horizontalRebarSpacing: Double
 ) {
+}
 
 // ============================================================================
 // RECTANGULAR TANK BODY — clear U-shape vessel

@@ -451,8 +451,6 @@ fun FootingScreen(
                             Text(if (isExporting) stringResource(R.string.footing_exporting) else stringResource(R.string.pdf_report))
                         }
 
-                        Button(
-                            onClick = { showSaveDialog = true },
                         OutlinedButton(
                             onClick = { viewModel.exportToDxf(context) { _ -> } },
                             modifier = Modifier.weight(1f),
@@ -463,11 +461,14 @@ fun FootingScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("DXF")
                         }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Icon(Icons.Default.Save, null)
+                            Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }

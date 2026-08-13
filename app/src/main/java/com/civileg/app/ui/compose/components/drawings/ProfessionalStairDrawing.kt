@@ -216,12 +216,12 @@ fun ProfessionalStairDrawing(
             val valX = 16f
             drawTextAnnotated("DESIGN VALUES", valX, valY, DimensionWhite, 14f)
             var vy = valY + 20f
-            if (mu > 0) { drawTextAnnotated("Mu = "%.1f".format(mu) + " kN.m", valX, vy, TopRebarBlue.copy(alpha = 0.8f), 12f); vy += 16f }
-            if (vu > 0) { drawTextAnnotated("Vu = "%.1f".format(vu) + " kN", valX, vy, SecondaryRed.copy(alpha = 0.8f), 12f); vy += 16f }
-            if (wu > 0) { drawTextAnnotated("Wu = "%.1f".format(wu) + " kN/m", valX, vy, WarningOrange.copy(alpha = 0.8f), 12f); vy += 16f }
+            if (mu > 0) { drawTextAnnotated("Mu = " + "%.1f".format(mu) + " kN.m", valX, vy, TopRebarBlue.copy(alpha = 0.8f), 12f); vy += 16f }
+            if (vu > 0) { drawTextAnnotated("Vu = " + "%.1f".format(vu) + " kN", valX, vy, SecondaryRed.copy(alpha = 0.8f), 12f); vy += 16f }
+            if (wu > 0) { drawTextAnnotated("Wu = " + "%.1f".format(wu) + " kN/m", valX, vy, WarningOrange.copy(alpha = 0.8f), 12f); vy += 16f }
             if (deflectionLOver > 0 && deflectionLimit > 0) {
                 val defColor = if (isDeflectionOk) SafeGreen else UnsafeRed
-                drawTextAnnotated("L/d = "%.1f".format(deflectionLOver) + " / " + "%.0f".format(deflectionLimit) + (if (isDeflectionOk) " OK" else " NG"), valX, vy, defColor, 12f)
+                drawTextAnnotated("L/d = " + "%.1f".format(deflectionLOver) + " / " + "%.0f".format(deflectionLimit) + (if (isDeflectionOk) " OK" else " NG"), valX, vy, defColor, 12f)
             }
         }
 
