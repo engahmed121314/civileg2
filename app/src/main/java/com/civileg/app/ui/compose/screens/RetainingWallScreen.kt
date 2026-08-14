@@ -93,17 +93,7 @@ fun RetainingWallScreen(
                         }
                     }
                     IconButton(onClick = { showSaveDialog = true }, enabled = result != null) {
-                        OutlinedButton(
-                            onClick = { viewModel.exportToDxf(context) { _ -> } },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
-                        }
-                        Icon(Icons.Default.Save, contentDescription = "Save")
+                            Icon(Icons.Default.Save, contentDescription = "Save")
                     }
                 }
             )
@@ -306,7 +296,7 @@ fun RetainingWallScreen(
                 InteractiveDrawingScreen(
                     title = stringResource(R.string.rw_drawing_title),
                     subtitle = stringResource(R.string.rw_drawing_subtitle),
-                    viewModes = emptyList(), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
+                    viewModes = emptyList(),
                     drawingContent = {
                         ProfessionalRetainingWallDrawing(
                             wallHeight = res.height,

@@ -498,7 +498,7 @@ fun FootingScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.footing_drawing_title),
                         subtitle = stringResource(R.string.footing_reinforcement_detail),
-                        viewModes = emptyList(), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = emptyList(),
                         drawingContent = {
                             ProfessionalFootingDrawing(
                                 footingType = footingTypeEnglish,

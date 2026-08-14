@@ -322,7 +322,7 @@ fun BeamScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = "Beam Reinforcement Detail",
-                        viewModes = emptyList(), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = emptyList(),
                         drawingContent = {
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),

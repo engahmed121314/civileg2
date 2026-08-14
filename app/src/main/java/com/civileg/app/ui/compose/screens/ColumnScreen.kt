@@ -359,7 +359,7 @@ fun ColumnScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
-                        viewModes = emptyList(), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = emptyList(),
                         drawingContent = {
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
