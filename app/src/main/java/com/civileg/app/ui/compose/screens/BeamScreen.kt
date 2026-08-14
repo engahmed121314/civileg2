@@ -290,17 +290,6 @@ fun BeamScreen(
                             }
                         }
 
-                        Button(
-                            onClick = { showSaveDialog = true },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
-                        }
-
                         OutlinedButton(
                             onClick = {
                                 viewModel.exportToDxf(context) { file ->
@@ -313,7 +302,18 @@ fun BeamScreen(
                         ) {
                             Icon(Icons.Default.Draw, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
+                            Text("DXF", maxLines = 1, fontSize = 12.sp)
+                        }
+
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
                     }
                 }

@@ -1236,9 +1236,12 @@ object DxfExportEngine {
     private fun writeHeader(sb: StringBuilder) {
         sb.append("  0\nSECTION\n  2\nHEADER\n")
         sb.append("  9\n$ACADVER\n  1\nAC1015\n")
-        sb.append("  9\n$INSBASE\n  0\n0.0\n  1\n0.0\n")
-        sb.append("  9\n$EXTMIN\n  0\n0.0\n  1\n0.0\n  2\n0.0\n  3\n0.0\n")
-        sb.append("  9\n$EXTMAX\n  0\n1.0\n  1\n1.0\n  2\n1.0\n  3\n1.0\n")
+        // INSBASE is a 3D point — must use group codes 10/20/30
+        sb.append("  9\n$INSBASE\n 10\n0.0\n 20\n0.0\n 30\n0.0\n")
+        // EXTMIN is a 3D point
+        sb.append("  9\n$EXTMIN\n 10\n0.0\n 20\n0.0\n 30\n0.0\n")
+        // EXTMAX is a 3D point
+        sb.append("  9\n$EXTMAX\n 10\n1.0\n 20\n1.0\n 30\n1.0\n")
         sb.append("  0\nENDSEC\n")
     }
 

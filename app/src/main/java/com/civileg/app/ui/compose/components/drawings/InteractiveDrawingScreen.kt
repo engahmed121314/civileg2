@@ -25,7 +25,7 @@ fun InteractiveDrawingScreen(
     viewModes: List<String> = emptyList(),
     selectedViewMode: Int = 0,
     onViewModeChanged: (Int) -> Unit = {},
-    drawingHeightDp: Int = 780,
+    drawingHeightDp: Int = 950,
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
 ) {

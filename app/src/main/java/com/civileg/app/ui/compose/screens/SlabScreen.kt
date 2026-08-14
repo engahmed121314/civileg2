@@ -90,16 +90,6 @@ fun SlabScreen(
                 actions = {
                     if (result != null) {
                         IconButton(onClick = { showSaveDialog = true }) {
-                        OutlinedButton(
-                            onClick = { viewModel.exportToDxf(context) { _ -> } },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            Icon(Icons.Default.Draw, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
-                        }
                             Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save_to_project), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -434,7 +424,7 @@ fun SlabScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isExporting
                         ) {
@@ -447,6 +437,17 @@ fun SlabScreen(
                             }
                         }
 
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("DXF", maxLines = 1, fontSize = 12.sp)
+                        }
+
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
@@ -455,7 +456,7 @@ fun SlabScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save_in_project))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
                     }
                 }

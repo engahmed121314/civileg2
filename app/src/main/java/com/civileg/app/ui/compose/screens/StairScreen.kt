@@ -304,7 +304,7 @@ fun StairScreen(
                         ) {
                             Icon(Icons.Default.Draw, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
+                            Text("DXF", maxLines = 1, fontSize = 12.sp)
                         }
 
                         Button(

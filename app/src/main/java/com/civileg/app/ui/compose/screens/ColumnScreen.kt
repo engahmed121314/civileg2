@@ -314,16 +314,21 @@ fun ColumnScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = { viewModel.exportToPdf(context) { /* Handle completion */ } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !uiState.isExporting
                         ) {
-                            Icon(painterResource(id = R.drawable.ic_pdf), contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                            if (uiState.isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                            }
                         }
 
                         OutlinedButton(
@@ -334,7 +339,7 @@ fun ColumnScreen(
                         ) {
                             Icon(Icons.Default.Draw, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
+                            Text("DXF", maxLines = 1, fontSize = 12.sp)
                         }
 
                         Button(

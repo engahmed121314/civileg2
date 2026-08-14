@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Verified
@@ -79,21 +80,8 @@ fun RetainingWallScreen(
                     }
                 },
                 actions = {
-                    if (isExporting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp).padding(end = 8.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        IconButton(onClick = {
-                            viewModel.exportToPdf(context) { /* Handle completion if needed */ }
-                        }) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = "Export")
-                        }
-                    }
                     IconButton(onClick = { showSaveDialog = true }, enabled = result != null) {
-                            Icon(Icons.Default.Save, contentDescription = "Save")
+                        Icon(Icons.Default.Save, contentDescription = "Save")
                     }
                 }
             )
@@ -289,6 +277,51 @@ fun RetainingWallScreen(
                                 }
                             }
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Standardized export buttons row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(
+                        onClick = {
+                            viewModel.exportToPdf(context) { /* Handle completion if needed */ }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        enabled = !isExporting
+                    ) {
+                        if (isExporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.exportToDxf(context) { _ -> } },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isExporting
+                    ) {
+                        Icon(Icons.Default.Draw, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("DXF", maxLines = 1, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = { showSaveDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                     }
                 }
 

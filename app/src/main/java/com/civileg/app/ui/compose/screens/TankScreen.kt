@@ -303,16 +303,33 @@ fun TankScreen(
                 }
 
                 item {
+                    var isTankExporting by remember { mutableStateOf(false) }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isTankExporting
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, null)
+                            if (isTankExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) { _ -> } },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isTankExporting
+                        ) {
+                            Icon(Icons.Default.Draw, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                            Text("DXF", maxLines = 1, fontSize = 12.sp)
                         }
 
                         Button(
@@ -329,19 +346,10 @@ fun TankScreen(
                 }
 
                 item {
-                    var tankViewMode by remember { mutableIntStateOf(0) }
-                    val tankViewModes = listOf(
-                        stringResource(R.string.view_all),
-                        stringResource(R.string.view_perspective),
-                        stringResource(R.string.view_section),
-                        stringResource(R.string.view_reinforcement)
-                    )
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.tank_drawing_title),
                         subtitle = "Water Tank Detail",
-                        viewModes = tankViewModes,
-                        selectedViewMode = tankViewMode,
-                        onViewModeChanged = { tankViewMode = it },
+                        viewModes = emptyList(),
                         drawingContent = {
                             ProfessionalTankDrawing(
                                 tankType = selectedType.displayName,
