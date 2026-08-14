@@ -49,11 +49,10 @@ fun InteractiveDrawingScreen(
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.Icon(
-                        androidx.compose.material.icons.Icons.Default.StructureService,
-                        contentDescription = null,
-                        tint = Color(0xFF4A90D9),
-                        modifier = Modifier.size(18.dp)
+                    Text(
+                        "📐 ",
+                        color = Color(0xFF4A90D9),
+                        fontSize = 16.sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
