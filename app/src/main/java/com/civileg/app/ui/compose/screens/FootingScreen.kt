@@ -432,7 +432,7 @@ fun FootingScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = { 
                                 viewModel.exportToPdf(context) { file -> }
@@ -470,7 +470,7 @@ fun FootingScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
                     }
                 }
@@ -498,7 +498,7 @@ fun FootingScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.footing_drawing_title),
                         subtitle = stringResource(R.string.footing_reinforcement_detail),
-                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = emptyList(), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalFootingDrawing(
                                 footingType = footingTypeEnglish,
@@ -576,7 +576,7 @@ fun FootingScreen(
                     result?.let { viewModel.saveFooting(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {

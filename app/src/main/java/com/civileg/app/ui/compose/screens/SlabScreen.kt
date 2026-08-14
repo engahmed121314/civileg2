@@ -116,7 +116,7 @@ fun SlabScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ExposedDropdownMenuBox(
                         expanded = expandedType,
                         onExpandedChange = { expandedType = !expandedType },
@@ -210,7 +210,7 @@ fun SlabScreen(
 
             if (selectedType == CalculatorEngine.SlabType.FLAT) {
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         SlabInputField(columnSize, stringResource(R.string.slab_column_width_mm), { columnSize = it }, Modifier.weight(1f))
                         SlabInputField(dropPanelThickness, stringResource(R.string.slab_drop_thickness_mm), { dropPanelThickness = it }, Modifier.weight(1f))
                     }
@@ -422,7 +422,7 @@ fun SlabScreen(
                 
                 item {
                     val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = {
                                 viewModel.exportToPdf(context) { file ->
@@ -443,7 +443,7 @@ fun SlabScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
+                                Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
                             }
                         }
 
@@ -503,7 +503,7 @@ fun SlabScreen(
                     result?.let { viewModel.saveSlab(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {

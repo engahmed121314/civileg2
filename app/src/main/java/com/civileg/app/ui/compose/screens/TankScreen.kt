@@ -139,7 +139,7 @@ fun TankScreen(
                     }
                     
                     Text(stringResource(R.string.tank_section_shape), style = MaterialTheme.typography.labelMedium)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         val isRect = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.UNDERGROUND
                         
                         FilterChip(
@@ -303,7 +303,7 @@ fun TankScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
                             modifier = Modifier.weight(1f),
@@ -312,7 +312,7 @@ fun TankScreen(
                         ) {
                             Icon(Icons.Default.PictureAsPdf, null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report))
+                            Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
                         }
 
                         Button(
@@ -323,7 +323,7 @@ fun TankScreen(
                         ) {
                             Icon(Icons.Default.Save, null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
                     }
                 }
@@ -356,6 +356,7 @@ fun TankScreen(
                                 horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
+                                viewMode = tankViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -406,7 +407,7 @@ fun TankScreen(
                     result?.let { viewModel.saveTank(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {

@@ -3,23 +3,20 @@ package com.civileg.app.ui.compose.components.drawings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Drawing wrapper that adds:
- * - View mode tabs (Elevation / Section / Plan / All)
- * - Info overlay with drawing title
+ * Drawing wrapper that provides:
  * - Dark card background
+ * - Optional scrollable view mode tabs (only shown when viewModes is non-empty)
  *
  * Used to wrap ProfessionalBeamDrawing, ProfessionalColumnDrawing, etc.
+ * Pass viewModes = emptyList() to hide tabs when the drawing doesn't support multiple views.
  */
 @Composable
 fun InteractiveDrawingScreen(
@@ -28,20 +25,10 @@ fun InteractiveDrawingScreen(
     viewModes: List<String> = emptyList(),
     selectedViewMode: Int = 0,
     onViewModeChanged: (Int) -> Unit = {},
-    drawingHeightDp: Int = 620,
-    onExportPdf: (() -> Unit)? = null,
+    drawingHeightDp: Int = 780,
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
 ) {
-    var showInfo by remember { mutableStateOf(false) }
-
-    val resolvedViewModes = if (viewModes.isEmpty()) listOf(
-        "All",
-        "Longitudinal",
-        "Cross Section",
-        "Plan"
-    ) else viewModes
-
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -51,17 +38,41 @@ fun InteractiveDrawingScreen(
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Top toolbar
-            DrawingToolbar(
-                title = title,
-                subtitle = subtitle,
-                onToggleInfo = { showInfo = !showInfo },
-                showInfo = showInfo,
-                onExportPdf = onExportPdf
-            )
+            // Compact title bar (no duplicate buttons)
+            Surface(
+                color = Color(0x15FFFFFF),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.Icon(
+                        androidx.compose.material.icons.Icons.Default.Draw,
+                        contentDescription = null,
+                        tint = Color(0xFF4A90D9),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        title,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        subtitle,
+                        color = Color(0xAAFFFFFF),
+                        fontSize = 10.sp
+                    )
+                }
+            }
 
-            // View mode tabs
-            if (resolvedViewModes.size > 1) {
+            // View mode tabs — only shown when explicitly provided and non-empty
+            if (viewModes.isNotEmpty()) {
                 Surface(
                     color = Color(0x22FFFFFF),
                     modifier = Modifier.fillMaxWidth()
@@ -74,7 +85,7 @@ fun InteractiveDrawingScreen(
                         divider = {},
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        resolvedViewModes.forEachIndexed { index, mode ->
+                        viewModes.forEachIndexed { index, mode ->
                             Tab(
                                 selected = selectedViewMode == index,
                                 onClick = { onViewModeChanged(index) },
@@ -92,7 +103,7 @@ fun InteractiveDrawingScreen(
                 }
             }
 
-            // Drawing area — uses dynamic height (caller can pass larger value)
+            // Drawing area
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -101,96 +112,6 @@ fun InteractiveDrawingScreen(
             ) {
                 drawingContent()
             }
-
-            // Info overlay
-            if (showInfo) {
-                Surface(
-                    color = Color(0xCC000000),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        InfoRow("📌 ${"Title"}", title)
-                        InfoRow("📐 ${"Type"}", subtitle)
-                    }
-                }
-            }
         }
-    }
-}
-
-@Composable
-private fun DrawingToolbar(
-    title: String,
-    subtitle: String,
-    onToggleInfo: () -> Unit,
-    showInfo: Boolean,
-    onExportPdf: (() -> Unit)? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Default.Draw,
-                contentDescription = null,
-                tint = Color(0xFF4A90D9),
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Text(
-                    title,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    subtitle,
-                    color = Color(0xAAFFFFFF),
-                    fontSize = 10.sp
-                )
-            }
-        }
-
-        Row {
-            // PDF Export button (only shown if callback provided)
-            if (onExportPdf != null) {
-                IconButton(onClick = onExportPdf, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.PictureAsPdf,
-                        contentDescription = "Export PDF",
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            // Info toggle
-            IconButton(onClick = onToggleInfo, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = "Info",
-                    tint = if (showInfo) Color(0xFF4A90D9) else Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = Color(0xAAFFFFFF), fontSize = 12.sp)
-        Text(value, color = Color.White, fontSize = 12.sp)
     }
 }

@@ -279,7 +279,7 @@ fun StairScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
                             modifier = Modifier.weight(1f),
@@ -292,7 +292,7 @@ fun StairScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
+                                Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
                             }
                         }
 
@@ -315,7 +315,7 @@ fun StairScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
                     }
                 }
@@ -402,7 +402,7 @@ fun StairScreen(
                     result?.let { viewModel.saveStair(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {

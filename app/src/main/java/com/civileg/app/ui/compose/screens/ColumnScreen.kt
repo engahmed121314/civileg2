@@ -323,7 +323,7 @@ fun ColumnScreen(
                         ) {
                             Icon(painterResource(id = R.drawable.ic_pdf), contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report))
+                            Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
                         }
 
                         OutlinedButton(
@@ -345,7 +345,7 @@ fun ColumnScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
                     }
                 }
@@ -359,7 +359,7 @@ fun ColumnScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
-                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = emptyList(), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
@@ -428,7 +428,7 @@ fun ColumnScreen(
                     uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {

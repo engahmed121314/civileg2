@@ -306,7 +306,7 @@ fun RetainingWallScreen(
                 InteractiveDrawingScreen(
                     title = stringResource(R.string.rw_drawing_title),
                     subtitle = stringResource(R.string.rw_drawing_subtitle),
-                    viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
+                    viewModes = emptyList(), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
                     drawingContent = {
                         ProfessionalRetainingWallDrawing(
                             wallHeight = res.height,
@@ -389,7 +389,7 @@ fun RetainingWallScreen(
                     result?.let { viewModel.saveRetainingWall(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {

@@ -264,7 +264,7 @@ fun BeamScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         val beamPdfErrorMsg = stringResource(R.string.beam_pdf_error)
                         Button(
                             onClick = {
@@ -286,7 +286,7 @@ fun BeamScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
+                                Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
                             }
                         }
 
@@ -298,7 +298,7 @@ fun BeamScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
+                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                         }
 
                         OutlinedButton(
@@ -322,7 +322,7 @@ fun BeamScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = "Beam Reinforcement Detail",
-                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = emptyList(), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
                         drawingContent = {
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
@@ -433,7 +433,7 @@ fun BeamScreen(
                     result?.let { viewModel.saveBeam(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
                 }
             },
             dismissButton = {
