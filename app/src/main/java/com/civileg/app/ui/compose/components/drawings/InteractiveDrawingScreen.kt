@@ -50,7 +50,7 @@ fun InteractiveDrawingScreen(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     androidx.compose.material3.Icon(
-                        androidx.compose.material.icons.Icons.Default.Draw,
+                        androidx.compose.material.icons.Icons.Default.Brush,
                         contentDescription = null,
                         tint = Color(0xFF4A90D9),
                         modifier = Modifier.size(18.dp)
