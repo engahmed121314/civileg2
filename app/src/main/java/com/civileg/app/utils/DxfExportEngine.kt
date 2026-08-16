@@ -65,6 +65,7 @@ object DxfExportEngine {
     private var ucsTableHandle = ""
     private var appidTableHandle = ""
     private var vportTableHandle = ""
+    private var dimstyleTableHandle = ""
     private var dictHandle = ""
 
     // Bounding-box tracking for correct $EXTMIN / $EXTMAX
@@ -1277,11 +1278,14 @@ object DxfExportEngine {
         val emy = if (bbMaxY == -Double.MAX_VALUE) 1000.0 else bbMaxY + pad
         val enx = if (bbMinX == Double.MAX_VALUE) 0.0 else bbMinX - pad
         val eny = if (bbMinY == Double.MAX_VALUE) 0.0 else bbMinY - pad
+        // $HANDSEED must be > highest handle in the file
+        val handSeed = nextHandle.toString(16).uppercase()
         return sb.toString()
             .replace("__EXTMINX__", fmt(enx))
             .replace("__EXTMINY__", fmt(eny))
             .replace("__EXTMAXX__", fmt(emx))
             .replace("__EXTMAXY__", fmt(emy))
+            .replace("__HANDSEED__", handSeed)
             .replace("\n", "\r\n")
     }
 
@@ -1299,15 +1303,15 @@ object DxfExportEngine {
         nextHandle = 0x100L
         bbReset()
         val h = { nextH() }
-        layerTableHandle = h()
+        vportTableHandle = h()
         ltypeTableHandle = h()
+        layerTableHandle = h()
         styleTableHandle = h()
         viewTableHandle = h()
         ucsTableHandle = h()
         appidTableHandle = h()
-        vportTableHandle = h()
+        dimstyleTableHandle = h()
         dictHandle = h()
-        h() // root handle
 
         val d = "$"
         sb.append("0\nSECTION\n2\nHEADER\n")
@@ -1316,7 +1320,13 @@ object DxfExportEngine {
         sb.append("9\n${d}INSBASE\n10\n0.0\n20\n0.0\n30\n0.0\n")
         sb.append("9\n${d}EXTMIN\n10\n__EXTMINX__\n20\n__EXTMINY__\n30\n0.0\n")
         sb.append("9\n${d}EXTMAX\n10\n__EXTMAXX__\n20\n__EXTMAXY__\n30\n0.0\n")
-        sb.append("9\n${d}HANDSEED\n5\n${h()}\n")
+        // $HANDSEED placeholder – replaced in finalizeDxf with the actual next-handle value
+        sb.append("9\n${d}HANDSEED\n5\n__HANDSEED__\n")
+        // Additional required header variables
+        sb.append("9\n${d}MEASUREMENT\n70\n1\n")  // 1 = metric
+        sb.append("9\n${d}DIMSTYLE\n2\nStandard\n")
+        sb.append("9\n${d}CELTYPE\n6\nBYLAYER\n")
+        sb.append("9\n${d}TEXTSTYLE\n7\nSTANDARD\n")
         sb.append("0\nENDSEC\n")
     }
 
@@ -1340,6 +1350,13 @@ object DxfExportEngine {
         sb.append("0\nTABLE\n2\nSTYLE\n5\n$styleTableHandle\n100\nAcDbSymbolTable\n70\n1\n")
         sb.append("0\nSTYLE\n5\n${nextH()}\n100\nAcDbSymbolTableRecord\n100\nAcDbTextStyleTableRecord\n2\nSTANDARD\n70\n0\n40\n0.0\n41\n1.0\n50\n0.0\n71\n0\n42\n2.5\n3\ntxt\n4\n\n")
         sb.append("0\nENDTAB\n")
+        // DIMSTYLE table (required by many CAD readers)
+        sb.append("0\nTABLE\n2\nDIMSTYLE\n5\n$dimstyleTableHandle\n100\nAcDbSymbolTable\n70\n1\n")
+        sb.append("0\nDIMSTYLE\n105\n${nextH()}\n100\nAcDbSymbolTableRecord\n100\nAcDbDimStyleTableRecord\n2\nStandard\n70\n0\n")
+        sb.append("3\n\n4\n\n40\n1.0\n41\n3.0\n42\n0.0\n43\n0.0\n44\n1.0\n45\n0.0\n46\n0.0\n47\n0.0\n48\n0.0\n")
+        sb.append("140\n1.0\n141\n2.5\n142\n0.0\n143\n25.4\n144\n1.0\n145\n0.0\n146\n1.0\n147\n50.0\n148\n0.0\n")
+        sb.append("71\n0\n72\n0\n73\n0\n74\n0\n75\n0\n76\n0\n77\n1\n78\n0\n79\n0\n170\n0\n")
+        sb.append("0\nENDTAB\n")
         // VIEW, UCS, APPID tables
         sb.append("0\nTABLE\n2\nVIEW\n5\n$viewTableHandle\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n")
         sb.append("0\nTABLE\n2\nUCS\n5\n$ucsTableHandle\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n")
@@ -1362,9 +1379,15 @@ object DxfExportEngine {
     }
 
     private fun writeObjectsSection(sb: StringBuilder) {
+        // The root DICTIONARY must point to a real ACAD_GROUP sub-dictionary.
+        // Previously the handle was allocated but the dictionary object was never written,
+        // creating a dangling reference that caused CAD software to reject the file.
+        val acadGroupHandle = nextH()
         sb.append("0\nSECTION\n2\nOBJECTS\n")
-        sb.append("0\nDICTIONARY\n5\n$dictHandle\n100\nAcDbDictionary\n281\n1\n3\nACAD_GROUP\n350\n${nextH()}\n")
-        sb.append("0\nDICTIONARY\n5\n${nextH()}\n100\nAcDbDictionary\n281\n1\n")
+        // Root dictionary
+        sb.append("0\nDICTIONARY\n5\n$dictHandle\n100\nAcDbDictionary\n281\n1\n3\nACAD_GROUP\n350\n$acadGroupHandle\n")
+        // ACAD_GROUP sub-dictionary (empty but valid)
+        sb.append("0\nDICTIONARY\n5\n$acadGroupHandle\n100\nAcDbDictionary\n281\n0\n")
         sb.append("0\nENDSEC\n")
     }
 
