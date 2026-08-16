@@ -89,7 +89,9 @@ object DxfExportEngine {
         val cover = 50.0
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         // ── Title block ──
@@ -222,7 +224,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -240,7 +242,9 @@ object DxfExportEngine {
         val cover = 40.0
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         // Title
@@ -374,7 +378,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -391,7 +395,9 @@ object DxfExportEngine {
         val cover = 70.0
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "FOOTING REINFORCEMENT DETAIL", "TEXT", 250.0, 7)
@@ -475,7 +481,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -492,7 +498,9 @@ object DxfExportEngine {
         val cover = 20.0
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "SLAB REINFORCEMENT DETAIL", "TEXT", 250.0, 7)
@@ -579,7 +587,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -595,7 +603,9 @@ object DxfExportEngine {
         val numSteps = (span / tread).toInt().coerceIn(1, 25)
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "STAIRCASE REINFORCEMENT DETAIL", "TEXT", 250.0, 7)
@@ -677,7 +687,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -692,7 +702,9 @@ object DxfExportEngine {
         val tb = result.baseThickness
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS + LayerDef("WATER", 5))
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "WATER TANK REINFORCEMENT DETAIL", "TEXT", 250.0, 7)
@@ -763,7 +775,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -778,7 +790,9 @@ object DxfExportEngine {
         val cover = 50.0
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, STANDARD_LAYERS)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "RETAINING WALL REINFORCEMENT DETAIL", "TEXT", 250.0, 7)
@@ -863,7 +877,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -895,7 +909,9 @@ object DxfExportEngine {
         )
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, steelLayers)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "STEEL MEMBER DESIGN", "TEXT", 250.0, 7)
@@ -988,7 +1004,7 @@ object DxfExportEngine {
         }
         drawTitleBlock(sb, tableX, tableY, "STEEL DESIGN DATA", tableData)
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -1016,7 +1032,9 @@ object DxfExportEngine {
         )
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, warehouseLayers)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "STEEL WAREHOUSE DESIGN", "TEXT", 250.0, 7)
@@ -1123,7 +1141,7 @@ object DxfExportEngine {
             "Safety Status" to if (result.safetyStatus) "SAFE" else "CHECK REQUIRED"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -1149,7 +1167,9 @@ object DxfExportEngine {
         )
 
         writeHeader(sb)
+        writeClassesSection(sb)
         writeLayerTable(sb, frameLayers)
+        writeBlocksSection(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
 
         drawText(sb, 0.0, -1200.0, "FRAME ANALYSIS RESULTS", "TEXT", 250.0, 7)
@@ -1232,7 +1252,7 @@ object DxfExportEngine {
             "Status" to if (result.isSolved) "SOLVED" else "NOT SOLVED"
         ))
 
-        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
+        sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
         return sb.toString()
     }
 
@@ -1295,6 +1315,10 @@ object DxfExportEngine {
         sb.append("0\nTABLE\n2\nAPPID\n5\n$appidTableHandle\n100\nAcDbSymbolTable\n70\n1\n")
         sb.append("0\nAPPID\n5\n${nextH()}\n100\nAcDbSymbolTableRecord\n100\nAcDbRegAppTableRecord\n2\nACAD\n70\n0\n0\nENDTAB\n")
         sb.append("0\nENDSEC\n")
+    }
+
+    private fun writeClassesSection(sb: StringBuilder) {
+        sb.append("0\nSECTION\n2\nCLASSES\n0\nENDSEC\n")
     }
 
     private fun writeBlocksSection(sb: StringBuilder) {
