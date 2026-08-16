@@ -1267,16 +1267,6 @@ object DxfExportEngine {
         sb.append("9\n${d}EXTMAX\n10\n1.0\n20\n1.0\n30\n0.0\n")
         sb.append("9\n${d}HANDSEED\n5\n${h()}\n")
         sb.append("0\nENDSEC\n")
-    }   private fun writeHeader(sb: StringBuilder) {
-        sb.append("  0\nSECTION\n  2\nHEADER\n")
-        sb.append("  9\n$ACADVER\n  1\nAC1015\n")
-        // INSBASE is a 3D point — must use group codes 10/20/30
-        sb.append("  9\n$INSBASE\n 10\n0.0\n 20\n0.0\n 30\n0.0\n")
-        // EXTMIN is a 3D point
-        sb.append("  9\n$EXTMIN\n 10\n0.0\n 20\n0.0\n 30\n0.0\n")
-        // EXTMAX is a 3D point
-        sb.append("  9\n$EXTMAX\n 10\n1.0\n 20\n1.0\n 30\n1.0\n")
-        sb.append("  0\nENDSEC\n")
     }
 
     private fun writeLayerTable(sb: StringBuilder, layers: List<LayerDef>) {
@@ -1321,13 +1311,6 @@ object DxfExportEngine {
         sb.append("0\nDICTIONARY\n5\n$dictHandle\n100\nAcDbDictionary\n281\n1\n3\nACAD_GROUP\n350\n${nextH()}\n")
         sb.append("0\nDICTIONARY\n5\n${nextH()}\n100\nAcDbDictionary\n281\n1\n")
         sb.append("0\nENDSEC\n")
-    }   private fun writeLayerTable(sb: StringBuilder, layers: List<LayerDef>) {
-        sb.append("  0\nSECTION\n  2\nTABLES\n")
-        sb.append("  0\nTABLE\n  2\nLAYER\n  70\n${layers.size}\n")
-        layers.forEach { layer ->
-            sb.append("  0\nLAYER\n  2\n${layer.name}\n  70\n0\n  62\n${layer.color}\n  6\nCONTINUOUS\n")
-        }
-        sb.append("  0\nENDTAB\n  0\nENDSEC\n")
     }
 
     // ═══════════════════════════════════════════════════════════════
