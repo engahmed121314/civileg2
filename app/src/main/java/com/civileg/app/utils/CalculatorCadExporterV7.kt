@@ -135,7 +135,17 @@ object CalculatorCadExporterV7 {
         b.lapLocations.forEach{lp->val xx=x+lp.positionFromStartMm*sc;w.line(xx,y-6,xx,y+6,"LAP",1,13);w.text(xx+3.0,y+8.0,"LAP ${fmt(lp.lengthMm)}",3.0,"LAP",1)}
         if((b.anchorageLengthMm?:0.0)>0)w.text(x,y-14,"Ld ${fmt(b.anchorageLengthMm!!)}",3.2,"REBAR")
     }
-    private fun cutLength(b:CalculatorDetailingV4.BarDefinition):Double{var x=b.straightLengthMm?:b.segments.sumOf{it.length};x+=b.hookStartLengthMm?:0.0;x+=b.hookEndLengthMm?:0.0;x+=b.bendAllowanceMm;x+=b.anchorageLengthMm?:0.0;x+=b.lapLengthMm?:0.0;x-=(b.cutOffFromStartMm?:0.0);x-=(b.cutOffFromEndMm?:0.0);return max(0.0,x)}
+    private fun cutLength(b:CalculatorDetailingV4.BarDefinition): Double {
+        var x = b.straightLengthMm ?: b.segments.sumOf { it.length }
+        x += b.hookStartLengthMm ?: 0.0
+        x += b.hookEndLengthMm ?: 0.0
+        x += b.bendAllowanceMm
+        x += b.anchorageLengthMm ?: 0.0
+        x += b.lapLengthMm ?: 0.0
+        x -= (b.cutOffFromStartMm ?: 0.0)
+        x -= (b.cutOffFromEndMm ?: 0.0)
+        return kotlin.math.max(0.0, x)
+    }
 
     private fun section(w:W,p:CalculatorDetailingV4.DetailingPackage,x:Double,y:Double,ww:Double,hh:Double){w.text(x,y+hh+10,"SECTION",3.3);w.rect(x,y,ww,hh,"CONCRETE",7,25);val c=p.geometry["cover"]?:30.0;if(ww>2*c*.2&&hh>2*c*.2){w.rect(x+ww*.12,y+hh*.12,ww*.76,hh*.76,"STIRRUPS",2,13)};p.bars.take(8).forEachIndexed{i,b->val bx=x+ww*(.16+i*.68/max(1,p.bars.take(8).size-1));w.circle(bx,y+hh*.18,max(2.0,b.diameterMm/15),"REBAR",1,13)}}
     private fun sectionSteel(w:W,x:Double,y:Double,bf:Double,tf:Double,tw:Double,d:Double){val sc=min(80.0/max(bf,1.0),60.0/max(d,1.0));w.rect(x-bf*sc/2,y,bf*sc,tf*sc,"STEEL",7,25);w.rect(x-tw*sc/2,y+tf*sc,tw*sc,(d-2*tf)*sc,"STEEL",7,25);w.rect(x-bf*sc/2,y+(d-tf)*sc,bf*sc,tf*sc,"STEEL",7,25)}
@@ -177,6 +187,9 @@ object CalculatorCadExporterV7 {
     private fun title(t:CalculatorDetailingV4.MemberType)=when(t){CalculatorDetailingV4.MemberType.BEAM->"RC_BEAM";CalculatorDetailingV4.MemberType.COLUMN->"RC_COLUMN";CalculatorDetailingV4.MemberType.SLAB->"RC_SLAB";CalculatorDetailingV4.MemberType.FOOTING->"FOUNDATION";CalculatorDetailingV4.MemberType.WALL->"WALL";CalculatorDetailingV4.MemberType.TANK->"TANK";CalculatorDetailingV4.MemberType.STAIR->"STAIR";CalculatorDetailingV4.MemberType.STEEL_MEMBER->"STEEL";CalculatorDetailingV4.MemberType.CONNECTION->"CONNECTION"}
     private fun safe(s:String)=s.replace(Regex("[^A-Za-z0-9_-]+"),"_")
     private fun fmt(v:Double)=String.format(Locale.US,"%.2f",v)
-    private fun header(w:W){w.raw("0\nSECTION\n2\nHEADER\n9\n\$ACADVER\n1\nAC1027\n9\n\$INSUNITS\n70\n4\n9\n\$MEASUREMENT\n70\n1\n0\nENDSEC\n")}
+    private fun header(w: W) {
+        val dollar = "\$"
+        w.raw("0\nSECTION\n2\nHEADER\n9\n${dollar}ACADVER\n1\nAC1027\n9\n${dollar}INSUNITS\n70\n4\n9\n${dollar}MEASUREMENT\n70\n1\n0\nENDSEC\n")
+    }
     private fun tables(w:W){val defs=listOf("BORDER" to 7,"CONCRETE" to 8,"REBAR" to 1,"REBAR_TOP" to 5,"STIRRUPS" to 2,"STEEL" to 7,"BOLTS" to 4,"WELDS" to 2,"LOADS" to 6,"DIM" to 5,"TEXT" to 7,"NOTES" to 3,"BBS" to 7,"LAP" to 1,"PANEL" to 8,"WATER" to 5,"REVISION" to 1);w.raw("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n${defs.size}\n");defs.forEach{(n,c)->w.raw("0\nLAYER\n2\n$n\n70\n0\n62\n$c\n6\nContinuous\n370\n18\n")};w.raw("0\nENDTAB\n0\nENDSEC\n")}
 }
