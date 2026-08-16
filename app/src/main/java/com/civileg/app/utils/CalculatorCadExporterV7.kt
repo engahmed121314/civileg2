@@ -53,17 +53,18 @@ object CalculatorCadExporterV7 {
         fun h() = (handle++).toString(16).uppercase(Locale.US)
         fun raw(s:String){sb.append(s)}
         fun add(x:Double,y:Double){box[0]=min(box[0],x);box[1]=min(box[1],y);box[2]=max(box[2],x);box[3]=max(box[3],y)}
-        fun start(type:String,layer:String){raw("0\n${type}\n5\n${h()}\n100\nAcDbEntity\n8\n$layer\n");layers+=layer
+        fun start(type:String,layer:String,color:Int?=null,weight:Int?=null){raw("0\n${type}\n5\n${h()}\n100\nAcDbEntity\n8\n$layer\n");layers+=layer
+            color?.let{code(62,it)};weight?.let{code(370,it)}
             when(type){"LINE"->raw("100\nAcDbLine\n");"CIRCLE"->raw("100\nAcDbCircle\n");"ARC"->raw("100\nAcDbCircle\n100\nAcDbArc\n");"LWPOLYLINE"->raw("100\nAcDbPolyline\n");"TEXT"->raw("100\nAcDbText\n");"MTEXT"->raw("100\nAcDbMText\n")}
             entities++
         }
-        fun line(x1:Double,y1:Double,x2:Double,y2:Double,layer:String="TEXT",color:Int?=null,weight:Int=18){start("LINE",layer);color?.let{code(62,it)};code(370,weight);codeD(10,x1);codeD(20,y1);codeD(11,x2);codeD(21,y2);add(x1,y1);add(x2,y2);lines++}
-        fun circle(x:Double,y:Double,r:Double,layer:String="TEXT",color:Int?=null,weight:Int=18){start("CIRCLE",layer);color?.let{code(62,it)};code(370,weight);codeD(10,x);codeD(20,y);codeD(40,r);add(x-r,y-r);add(x+r,y+r);circles++}
-        fun arc(x:Double,y:Double,r:Double,a1:Double,a2:Double,layer:String="REBAR",color:Int?=null,weight:Int=18){start("ARC",layer);color?.let{code(62,it)};code(370,weight);codeD(10,x);codeD(20,y);codeD(40,r);codeD(50,a1);codeD(51,a2);add(x-r,y-r);add(x+r,y+r);arcs++}
+        fun line(x1:Double,y1:Double,x2:Double,y2:Double,layer:String="TEXT",color:Int?=null,weight:Int=18){start("LINE",layer,color,weight);codeD(10,x1);codeD(20,y1);codeD(30,0.0);codeD(11,x2);codeD(21,y2);codeD(31,0.0);add(x1,y1);add(x2,y2);lines++}
+        fun circle(x:Double,y:Double,r:Double,layer:String="TEXT",color:Int?=null,weight:Int=18){start("CIRCLE",layer,color,weight);codeD(10,x);codeD(20,y);codeD(30,0.0);codeD(40,r);add(x-r,y-r);add(x+r,y+r);circles++}
+        fun arc(x:Double,y:Double,r:Double,a1:Double,a2:Double,layer:String="REBAR",color:Int?=null,weight:Int=18){start("ARC",layer,color,weight);codeD(10,x);codeD(20,y);codeD(30,0.0);codeD(40,r);codeD(50,a1);codeD(51,a2);add(x-r,y-r);add(x+r,y+r);arcs++}
         fun rect(x:Double,y:Double,w:Double,h:Double,layer:String="TEXT",color:Int?=null,weight:Int=18)=poly(listOf(x to y,(x+w) to y,(x+w) to (y+h),x to (y+h)),layer,true,color,weight)
-        fun poly(points:List<Pair<Double,Double>>,layer:String="REBAR",closed:Boolean=false,color:Int?=null,weight:Int=18){if(points.size<2)return;start("LWPOLYLINE",layer);color?.let{code(62,it)};code(90,points.size);code(70,if(closed)1 else 0);code(370,weight);points.forEach{(x,y)->codeD(10,x);codeD(20,y);add(x,y)};polylines++}
-        fun text(x:Double,y:Double,s:String,h:Double=3.0,layer:String="TEXT",color:Int?=null){start("TEXT",layer);color?.let{code(62,it)};codeD(10,x);codeD(20,y);codeD(40,h);code(1,s.replace("\n"," "));add(x,y);add(x+s.length*h*.42,y+h);texts++}
-        fun mtext(x:Double,y:Double,lines:List<String>,h:Double=3.0,layer:String="TEXT"){start("MTEXT",layer);codeD(10,x);codeD(20,y);codeD(40,h);code(71,1);code(1,lines.joinToString("\\P").replace("\n"," "));add(x,y);add(x+100,y+lines.size*h);texts++}
+        fun poly(points:List<Pair<Double,Double>>,layer:String="REBAR",closed:Boolean=false,color:Int?=null,weight:Int=18){if(points.size<2)return;start("LWPOLYLINE",layer,color,weight);code(90,points.size);code(70,if(closed)1 else 0);codeD(38,0.0);points.forEach{(x,y)->codeD(10,x);codeD(20,y);add(x,y)};polylines++}
+        fun text(x:Double,y:Double,s:String,h:Double=3.0,layer:String="TEXT",color:Int?=null){start("TEXT",layer,color);codeD(10,x);codeD(20,y);codeD(30,0.0);codeD(40,h);code(1,s.replace("\n"," "));add(x,y);add(x+s.length*h*.42,y+h);texts++}
+        fun mtext(x:Double,y:Double,lines:List<String>,h:Double=3.0,layer:String="TEXT"){start("MTEXT",layer);codeD(10,x);codeD(20,y);codeD(30,0.0);codeD(40,h);code(71,1);code(1,lines.joinToString("\\P").replace("\n"," "));add(x,y);add(x+100,y+lines.size*h);texts++}
         fun dim(x1:Double,y1:Double,x2:Double,y2:Double,offset:Double,label:String){val dx=x2-x1;val dy=y2-y1;val l=hypot(dx,dy);if(l<=1e-9)return;val nx=-dy/l;val ny=dx/l;val ax=x1+nx*offset;val ay=y1+ny*offset;val bx=x2+nx*offset;val by=y2+ny*offset;line(x1,y1,ax,ay,"DIM",5,13);line(x2,y2,bx,by,"DIM",5,13);line(ax,ay,bx,by,"DIM",5,13);arrow(ax,ay,atan2(dy,dx));arrow(bx,by,atan2(dy,dx)+PI);text((ax+bx)/2+nx*3,(ay+by)/2+ny*3,label,2.6,"DIM",5);dimensions++}
         fun arrow(x:Double,y:Double,a:Double){val z=6.0;line(x,y,x-z*cos(a-PI/6),y-z*sin(a-PI/6),"DIM",5,13);line(x,y,x-z*cos(a+PI/6),y-z*sin(a+PI/6),"DIM",5,13)}
         fun code(k:Int,v:Any){raw("$k\n$v\n")}; fun codeD(k:Int,v:Double){raw("$k\n${fmt(v)}\n")}
@@ -188,10 +189,23 @@ object CalculatorCadExporterV7 {
     private fun safe(s:String)=s.replace(Regex("[^A-Za-z0-9_-]+"),"_")
     private fun fmt(v:Double)=String.format(Locale.US,"%.2f",v)
     private fun header(w: W) {
-        val dollar = "\$"
-        w.raw("0\nSECTION\n2\nHEADER\n9\n${dollar}ACADVER\n1\nAC1027\n9\n${dollar}DWGCODEPAGE\n3\nutf_8\n9\n${dollar}INSUNITS\n70\n4\n9\n${dollar}MEASUREMENT\n70\n1\n9\n${dollar}DIMSTYLE\n2\nStandard\n9\n${dollar}CELTYPE\n6\nBYLAYER\n9\n${dollar}TEXTSTYLE\n7\nSTANDARD\n9\n${dollar}HANDSEED\n5\n__HANDSEED__\n0\nENDSEC\n")
+        val d = "$"
+        w.raw("0\nSECTION\n2\nHEADER\n")
+        w.raw("9\n${d}ACADVER\n1\nAC1027\n")
+        w.raw("9\n${d}DWGCODEPAGE\n3\nutf_8\n")
+        w.raw("9\n${d}INSBASE\n10\n0.0\n20\n0.0\n30\n0.0\n")
+        w.raw("9\n${d}EXTMIN\n10\n__EXTMINX__\n20\n__EXTMINY__\n30\n0.0\n")
+        w.raw("9\n${d}EXTMAX\n10\n__EXTMAXX__\n20\n__EXTMAXY__\n30\n0.0\n")
+        w.raw("9\n${d}INSUNITS\n70\n4\n")
+        w.raw("9\n${d}MEASUREMENT\n70\n1\n")
+        w.raw("9\n${d}DIMSTYLE\n2\nStandard\n")
+        w.raw("9\n${d}CELTYPE\n6\nBYLAYER\n")
+        w.raw("9\n${d}TEXTSTYLE\n7\nSTANDARD\n")
+        w.raw("9\n${d}CLAYER\n7\nTEXT\n")
+        w.raw("9\n${d}HANDSEED\n5\n__HANDSEED__\n")
+        w.raw("0\nENDSEC\n")
     }
-    private fun tables(w:W){val defs=listOf("BORDER" to 7,"CONCRETE" to 8,"REBAR" to 1,"REBAR_TOP" to 5,"STIRRUPS" to 2,"STEEL" to 7,"BOLTS" to 4,"WELDS" to 2,"LOADS" to 6,"DIM" to 5,"TEXT" to 7,"NOTES" to 3,"BBS" to 7,"LAP" to 1,"PANEL" to 8,"WATER" to 5,"REVISION" to 1);w.raw("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLTYPE\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nLTYPE\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbLinetypeTableRecord\n2\nContinuous\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n0\nENDTAB\n0\nTABLE\n2\nLAYER\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n${defs.size}\n");defs.forEach{(n,c)->w.raw("0\nLAYER\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbLayerTableRecord\n2\n$n\n70\n0\n62\n$c\n6\nContinuous\n")};w.raw("0\nENDTAB\n0\nTABLE\n2\nSTYLE\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nSTYLE\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbTextStyleTableRecord\n2\nSTANDARD\n70\n0\n40\n0.0\n41\n1.0\n50\n0.0\n71\n0\n42\n2.5\n3\ntxt\n4\n\n0\nENDTAB\n0\nTABLE\n2\nVPORT\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n0\nTABLE\n2\nVIEW\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n0\nTABLE\n2\nUCS\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n0\nTABLE\n2\nAPPID\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nAPPID\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbRegAppTableRecord\n2\nACAD\n70\n0\n0\nENDTAB\n0\nENDSEC\n")}
+    private fun tables(w:W){val defs=listOf("BORDER" to 7,"CONCRETE" to 8,"REBAR" to 1,"REBAR_TOP" to 5,"STIRRUPS" to 2,"STEEL" to 7,"BOLTS" to 4,"WELDS" to 2,"LOADS" to 6,"DIM" to 5,"TEXT" to 7,"NOTES" to 3,"BBS" to 7,"LAP" to 1,"PANEL" to 8,"WATER" to 5,"REVISION" to 1);w.raw("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLTYPE\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nLTYPE\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbLinetypeTableRecord\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n0\nENDTAB\n0\nTABLE\n2\nLAYER\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n${defs.size}\n");defs.forEach{(n,c)->w.raw("0\nLAYER\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbLayerTableRecord\n2\n$n\n70\n0\n62\n$c\n6\nCONTINUOUS\n")};w.raw("0\nENDTAB\n0\nTABLE\n2\nSTYLE\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nSTYLE\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbTextStyleTableRecord\n2\nSTANDARD\n70\n0\n40\n0.0\n41\n1.0\n50\n0.0\n71\n0\n42\n2.5\n3\ntxt\n4\n\n0\nENDTAB\n0\nTABLE\n2\nDIMSTYLE\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nDIMSTYLE\n105\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbDimStyleTableRecord\n2\nStandard\n70\n0\n3\n\n4\n\n40\n1.0\n41\n3.0\n42\n0.0\n43\n0.0\n44\n1.0\n45\n0.0\n46\n0.0\n47\n0.0\n48\n0.0\n140\n1.0\n141\n2.5\n142\n0.0\n143\n25.4\n144\n1.0\n145\n0.0\n146\n1.0\n147\n50.0\n148\n0.0\n71\n0\n72\n0\n73\n0\n74\n0\n75\n0\n76\n0\n77\n1\n78\n0\n79\n0\n170\n0\n0\nENDTAB\n0\nTABLE\n2\nVPORT)}\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n0\nTABLE\n2\nVIEW\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n0\nTABLE\n2\nUCS\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n0\nTABLE\n2\nAPPID\n5\n${w.h()}\n100\nAcDbSymbolTable\n70\n1\n0\nAPPID\n5\n${w.h()}\n100\nAcDbSymbolTableRecord\n100\nAcDbRegAppTableRecord\n2\nACAD\n70\n0\n0\nENDTAB\n0\nENDSEC\n")}
     private fun classes(w:W){w.raw("0\nSECTION\n2\nCLASSES\n0\nENDSEC\n")}
     private fun blocksOnly(w:W){w.raw("0\nSECTION\n2\nBLOCKS\n0\nBLOCK\n5\n"+w.h()+"\n100\nAcDbEntity\n8\n0\n100\nAcDbBlockBegin\n2\n*MODEL_SPACE\n70\n0\n10\n0.0\n20\n0.0\n30\n0.0\n3\n*MODEL_SPACE\n1\n\n0\nENDBLK\n5\n"+w.h()+"\n100\nAcDbEntity\n8\n0\n100\nAcDbBlockEnd\n0\nBLOCK\n5\n"+w.h()+"\n100\nAcDbEntity\n67\n1\n8\n0\n100\nAcDbBlockBegin\n2\n*PAPER_SPACE\n70\n0\n10\n0.0\n20\n0.0\n30\n0.0\n3\n*PAPER_SPACE\n1\n\n0\nENDBLK\n5\n"+w.h()+"\n100\nAcDbEntity\n67\n1\n8\n0\n100\nAcDbBlockEnd\n0\nENDSEC\n")}
     private fun objectsOnly(w:W){
@@ -205,8 +219,17 @@ object CalculatorCadExporterV7 {
     /** Write DXF content to file with CRLF and HANDSEED replacement. */
     private fun writeDxfFile(w: W, file: File) {
         val handSeed = w.handle.toString(16).uppercase(Locale.US)
+        val bx = if (w.box[0] == Double.POSITIVE_INFINITY) 0.0 else w.box[0]
+        val by = if (w.box[1] == Double.POSITIVE_INFINITY) 0.0 else w.box[1]
+        val tx = if (w.box[2] == Double.NEGATIVE_INFINITY) 100.0 else w.box[2]
+        val ty = if (w.box[3] == Double.NEGATIVE_INFINITY) 100.0 else w.box[3]
+        val pad = 10.0
         val content = w.sb.toString()
             .replace("__HANDSEED__", handSeed)
+            .replace("__EXTMINX__", fmt(bx - pad))
+            .replace("__EXTMINY__", fmt(by - pad))
+            .replace("__EXTMAXX__", fmt(tx + pad))
+            .replace("__EXTMAXY__", fmt(ty + pad))
             .replace("\n", "\r\n")
         file.parentFile?.mkdirs()
         FileOutputStream(file).use { it.write(content.toByteArray(StandardCharsets.UTF_8)) }

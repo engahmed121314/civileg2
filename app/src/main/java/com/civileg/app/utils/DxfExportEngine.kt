@@ -1327,6 +1327,7 @@ object DxfExportEngine {
         sb.append("9\n${d}DIMSTYLE\n2\nStandard\n")
         sb.append("9\n${d}CELTYPE\n6\nBYLAYER\n")
         sb.append("9\n${d}TEXTSTYLE\n7\nSTANDARD\n")
+        sb.append("9\n${d}CLAYER\n7\n0\n")
         sb.append("0\nENDSEC\n")
     }
 
