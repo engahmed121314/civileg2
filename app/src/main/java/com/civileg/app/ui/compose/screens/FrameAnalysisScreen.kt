@@ -103,6 +103,34 @@ fun FrameAnalysisScreen(
                         val framePdfErrorMsg = stringResource(R.string.frame_pdf_error)
                         val scope = rememberCoroutineScope()
                         var isFrameExporting by remember { mutableStateOf(false) }
+                        var isDxfExporting by remember { mutableStateOf(false) }
+
+ // DXF Export
+ IconButton(enabled = !isDxfExporting, onClick = {
+     isDxfExporting = true
+     scope.launch(Dispatchers.IO) {
+         try {
+             viewModel.exportToDxf(context) { file ->
+                 scope.launch(Dispatchers.Main) {
+                     file?.let { com.civileg.app.utils.ExportUtils.openDxf(context, it) }
+                     isDxfExporting = false
+                 }
+             }
+         } catch (e: Throwable) {
+             scope.launch(Dispatchers.Main) {
+                 Toast.makeText(context, "DXF export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                 isDxfExporting = false
+             }
+         }
+     }
+ }) {
+     if (isDxfExporting) {
+         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2, color = Color.White)
+     } else {
+         Icon(Icons.Default.Draw, "Export DXF", tint = Color.White)
+     }
+ }
+
                         IconButton(enabled = !isFrameExporting, onClick = {
                             val inputs = viewModel.getStoredInputs()
                             isFrameExporting = true

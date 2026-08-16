@@ -2198,7 +2198,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
 
                 if (result != null) {
                     Button(
-                        onClick = { 
+                        onClick = {
                             viewModel.exportToPdf(context) { /* Handle completion */ }
                         },
                         modifier = Modifier.weight(1f),
@@ -2208,6 +2208,19 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.pdf_report))
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.exportToDxf(context) { /* Handle completion */ }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Draw, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("DXF", fontSize = 12.sp)
                     }
                 }
             }
