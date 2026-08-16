@@ -169,7 +169,7 @@ private fun DrawScope.drawAllView(
     drawPlanView(cw, tankType, length, width, isCircular, top + h + bt + 60f)
 
     // Rebar table
-    drawRebarTable(cw - 180f, top, verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing, isCircular)
+    drawRebarTable(cw, top, ch, tankType, verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing, height, length)
 }
 
 // ============================================================================

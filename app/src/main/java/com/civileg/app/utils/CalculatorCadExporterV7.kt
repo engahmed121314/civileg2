@@ -177,6 +177,6 @@ object CalculatorCadExporterV7 {
     private fun title(t:CalculatorDetailingV4.MemberType)=when(t){CalculatorDetailingV4.MemberType.BEAM->"RC_BEAM";CalculatorDetailingV4.MemberType.COLUMN->"RC_COLUMN";CalculatorDetailingV4.MemberType.SLAB->"RC_SLAB";CalculatorDetailingV4.MemberType.FOOTING->"FOUNDATION";CalculatorDetailingV4.MemberType.WALL->"WALL";CalculatorDetailingV4.MemberType.TANK->"TANK";CalculatorDetailingV4.MemberType.STAIR->"STAIR";CalculatorDetailingV4.MemberType.STEEL_MEMBER->"STEEL";CalculatorDetailingV4.MemberType.CONNECTION->"CONNECTION"}
     private fun safe(s:String)=s.replace(Regex("[^A-Za-z0-9_-]+"),"_")
     private fun fmt(v:Double)=String.format(Locale.US,"%.2f",v)
-    private fun header(w:W){w.raw("0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1027\n9\n$INSUNITS\n70\n4\n9\n$MEASUREMENT\n70\n1\n0\nENDSEC\n")}
+    private fun header(w:W){w.raw("0\nSECTION\n2\nHEADER\n9\n\$ACADVER\n1\nAC1027\n9\n\$INSUNITS\n70\n4\n9\n\$MEASUREMENT\n70\n1\n0\nENDSEC\n")}
     private fun tables(w:W){val defs=listOf("BORDER" to 7,"CONCRETE" to 8,"REBAR" to 1,"REBAR_TOP" to 5,"STIRRUPS" to 2,"STEEL" to 7,"BOLTS" to 4,"WELDS" to 2,"LOADS" to 6,"DIM" to 5,"TEXT" to 7,"NOTES" to 3,"BBS" to 7,"LAP" to 1,"PANEL" to 8,"WATER" to 5,"REVISION" to 1);w.raw("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n${defs.size}\n");defs.forEach{(n,c)->w.raw("0\nLAYER\n2\n$n\n70\n0\n62\n$c\n6\nContinuous\n370\n18\n")};w.raw("0\nENDTAB\n0\nENDSEC\n")}
 }
