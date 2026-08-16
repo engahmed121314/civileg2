@@ -54,6 +54,19 @@ object DxfExportEngine {
 
     private data class LayerDef(val name: String, val color: Int)
 
+    // Handle counter for valid DXF entity references
+    private var nextHandle = 0x100L
+    private fun nextH(): String = (nextHandle++).toString(16).uppercase()
+    private fun fmt(v: Double) = String.format(Locale.US, "%.4f", v)
+    private var layerTableHandle = ""
+    private var ltypeTableHandle = ""
+    private var styleTableHandle = ""
+    private var viewTableHandle = ""
+    private var ucsTableHandle = ""
+    private var appidTableHandle = ""
+    private var vportTableHandle = ""
+    private var dictHandle = ""
+
     // ═══════════════════════════════════════════════════════════════
     //  PUBLIC API  –  one method per element type, returns DXF String
     // ═══════════════════════════════════════════════════════════════
@@ -209,7 +222,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -361,7 +374,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -462,7 +475,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -566,7 +579,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -664,7 +677,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -750,7 +763,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -850,7 +863,7 @@ object DxfExportEngine {
             "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -975,7 +988,7 @@ object DxfExportEngine {
         }
         drawTitleBlock(sb, tableX, tableY, "STEEL DESIGN DATA", tableData)
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -1110,7 +1123,7 @@ object DxfExportEngine {
             "Safety Status" to if (result.safetyStatus) "SAFE" else "CHECK REQUIRED"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -1219,7 +1232,7 @@ object DxfExportEngine {
             "Status" to if (result.isSolved) "SOLVED" else "NOT SOLVED"
         ))
 
-        sb.append("0\nENDSEC\n0\nEOF\n")
+        writeBlocksSection(sb); writeObjectsSection(sb); sb.append("0\nENDSEC\n0\nEOF\n")
         return sb.toString()
     }
 
@@ -1234,6 +1247,27 @@ object DxfExportEngine {
     // ═══════════════════════════════════════════════════════════════
 
     private fun writeHeader(sb: StringBuilder) {
+        nextHandle = 0x100L
+        val h = { nextH() }
+        layerTableHandle = h()
+        ltypeTableHandle = h()
+        styleTableHandle = h()
+        viewTableHandle = h()
+        ucsTableHandle = h()
+        appidTableHandle = h()
+        vportTableHandle = h()
+        dictHandle = h()
+        h() // root handle
+
+        val d = "$"
+        sb.append("0\nSECTION\n2\nHEADER\n")
+        sb.append("9\n${d}ACADVER\n1\nAC1015\n")
+        sb.append("9\n${d}INSBASE\n10\n0.0\n20\n0.0\n30\n0.0\n")
+        sb.append("9\n${d}EXTMIN\n10\n0.0\n20\n0.0\n30\n0.0\n")
+        sb.append("9\n${d}EXTMAX\n10\n1.0\n20\n1.0\n30\n0.0\n")
+        sb.append("9\n${d}HANDSEED\n5\n${h()}\n")
+        sb.append("0\nENDSEC\n")
+    }   private fun writeHeader(sb: StringBuilder) {
         sb.append("  0\nSECTION\n  2\nHEADER\n")
         sb.append("  9\n$ACADVER\n  1\nAC1015\n")
         // INSBASE is a 3D point — must use group codes 10/20/30
@@ -1246,6 +1280,48 @@ object DxfExportEngine {
     }
 
     private fun writeLayerTable(sb: StringBuilder, layers: List<LayerDef>) {
+        sb.append("0\nSECTION\n2\nTABLES\n")
+        // VPORT table
+        sb.append("0\nTABLE\n2\nVPORT\n5\n$vportTableHandle\n100\nAcDbSymbolTable\n70\n0\n")
+        sb.append("0\nENDTAB\n")
+        // LTYPE table
+        sb.append("0\nTABLE\n2\nLTYPE\n5\n$ltypeTableHandle\n100\nAcDbSymbolTable\n70\n1\n")
+        sb.append("0\nLTYPE\n5\n${nextH()}\n100\nAcDbSymbolTableRecord\n100\nAcDbLinetypeTableRecord\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n")
+        sb.append("0\nENDTAB\n")
+        // LAYER table
+        sb.append("0\nTABLE\n2\nLAYER\n5\n$layerTableHandle\n100\nAcDbSymbolTable\n70\n${layers.size}\n")
+        layers.forEach { layer ->
+            val lh = nextH()
+            sb.append("0\nLAYER\n5\n$lh\n100\nAcDbSymbolTableRecord\n100\nAcDbLayerTableRecord\n2\n${layer.name}\n70\n0\n62\n${layer.color}\n6\nCONTINUOUS\n")
+        }
+        sb.append("0\nENDTAB\n")
+        // STYLE table
+        sb.append("0\nTABLE\n2\nSTYLE\n5\n$styleTableHandle\n100\nAcDbSymbolTable\n70\n1\n")
+        sb.append("0\nSTYLE\n5\n${nextH()}\n100\nAcDbSymbolTableRecord\n100\nAcDbTextStyleTableRecord\n2\nSTANDARD\n70\n0\n40\n0.0\n41\n1.0\n50\n0.0\n71\n0\n42\n2.5\n3\ntxt\n4\n\n")
+        sb.append("0\nENDTAB\n")
+        // VIEW, UCS, APPID tables
+        sb.append("0\nTABLE\n2\nVIEW\n5\n$viewTableHandle\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n")
+        sb.append("0\nTABLE\n2\nUCS\n5\n$ucsTableHandle\n100\nAcDbSymbolTable\n70\n0\n0\nENDTAB\n")
+        sb.append("0\nTABLE\n2\nAPPID\n5\n$appidTableHandle\n100\nAcDbSymbolTable\n70\n1\n")
+        sb.append("0\nAPPID\n5\n${nextH()}\n100\nAcDbSymbolTableRecord\n100\nAcDbRegAppTableRecord\n2\nACAD\n70\n0\n0\nENDTAB\n")
+        sb.append("0\nENDSEC\n")
+    }
+
+    private fun writeBlocksSection(sb: StringBuilder) {
+        sb.append("0\nSECTION\n2\nBLOCKS\n")
+        sb.append("0\nBLOCK\n5\n${nextH()}\n100\nAcDbEntity\n8\n0\n100\nAcDbBlockBegin\n2\n*MODEL_SPACE\n70\n0\n10\n0.0\n20\n0.0\n30\n0.0\n3\n*MODEL_SPACE\n1\n\n")
+        sb.append("0\nENDBLK\n5\n${nextH()}\n100\nAcDbEntity\n8\n0\n100\nAcDbBlockEnd\n")
+        sb.append("0\nBLOCK\n5\n${nextH()}\n100\nAcDbEntity\n67\n1\n8\n0\n100\nAcDbBlockBegin\n2\n*PAPER_SPACE\n70\n0\n10\n0.0\n20\n0.0\n30\n0.0\n3\n*PAPER_SPACE\n1\n\n")
+        sb.append("0\nENDBLK\n5\n${nextH()}\n100\nAcDbEntity\n67\n1\n8\n0\n100\nAcDbBlockEnd\n")
+        sb.append("0\nENDSEC\n")
+    }
+
+    private fun writeObjectsSection(sb: StringBuilder) {
+        sb.append("0\nSECTION\n2\nOBJECTS\n")
+        sb.append("0\nDICTIONARY\n5\n$dictHandle\n100\nAcDbDictionary\n281\n1\n3\nACAD_GROUP\n350\n${nextH()}\n")
+        sb.append("0\nDICTIONARY\n5\n${nextH()}\n100\nAcDbDictionary\n281\n1\n")
+        sb.append("0\nENDSEC\n")
+    }   private fun writeLayerTable(sb: StringBuilder, layers: List<LayerDef>) {
         sb.append("  0\nSECTION\n  2\nTABLES\n")
         sb.append("  0\nTABLE\n  2\nLAYER\n  70\n${layers.size}\n")
         layers.forEach { layer ->
@@ -1265,9 +1341,10 @@ object DxfExportEngine {
         layer: String,
         color: Int = -1
     ) {
-        sb.append("  0\nLINE\n  8\n$layer\n")
-        if (color > 0) sb.append("  62\n$color\n")
-        sb.append(" 10\n$x1\n 20\n$y1\n 30\n0.0\n 11\n$x2\n 21\n$y2\n 31\n0.0\n")
+        val h = nextH()
+        sb.append("0\nLINE\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
+        if (color > 0) sb.append("62\n$color\n")
+        sb.append("100\nAcDbLine\n10\n${fmt(x1)}\n20\n${fmt(y1)}\n30\n0.0\n11\n${fmt(x2)}\n21\n${fmt(y2)}\n31\n0.0\n")
     }
 
     /** Draw a line with explicit rebar diameter visual weight. */
@@ -1308,9 +1385,10 @@ object DxfExportEngine {
         layer: String,
         color: Int = -1
     ) {
-        sb.append("  0\nCIRCLE\n  8\n$layer\n")
-        if (color > 0) sb.append("  62\n$color\n")
-        sb.append(" 10\n$cx\n 20\n$cy\n 30\n0.0\n 40\n$radius\n")
+        val h = nextH()
+        sb.append("0\nCIRCLE\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
+        if (color > 0) sb.append("62\n$color\n")
+        sb.append("100\nAcDbCircle\n10\n${fmt(cx)}\n20\n${fmt(cy)}\n30\n0.0\n40\n${fmt(radius)}\n")
     }
 
     private fun drawText(
@@ -1321,9 +1399,10 @@ object DxfExportEngine {
         height: Double,
         color: Int = -1
     ) {
-        sb.append("  0\nTEXT\n  8\n$layer\n")
-        if (color > 0) sb.append("  62\n$color\n")
-        sb.append(" 10\n$x\n 20\n$y\n 30\n0.0\n 40\n$height\n  1\n$text\n")
+        val h = nextH()
+        sb.append("0\nTEXT\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
+        if (color > 0) sb.append("62\n$color\n")
+        sb.append("100\nAcDbText\n10\n${fmt(x)}\n20\n${fmt(y)}\n30\n0.0\n40\n${fmt(height)}\n1\n$text\n50\n0.0\n7\nSTANDARD\n")
     }
 
     /** Draw a polyline (open) for complex shapes. */
@@ -1334,12 +1413,13 @@ object DxfExportEngine {
         color: Int = -1,
         closed: Boolean = false
     ) {
+        if (points.size < 2) return
+        val h = nextH()
         val flag = if (closed) 1 else 0
-        sb.append("  0\nLWPOLYLINE\n  8\n$layer\n  90\n${points.size}\n  70\n$flag\n")
-        if (color > 0) sb.append("  62\n$color\n")
-        points.forEach { (px, py) ->
-            sb.append("  10\n$px\n 20\n$py\n")
-        }
+        sb.append("0\nLWPOLYLINE\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
+        if (color > 0) sb.append("62\n$color\n")
+        sb.append("100\nAcDbPolyline\n90\n${points.size}\n70\n$flag\n43\n0.0\n")
+        points.forEach { (px, py) -> sb.append("10\n${fmt(px)}\n20\n${fmt(py)}\n") }
     }
 
     /** Draw a solid-filled hatch pattern (simplified using SOLID entity). */
@@ -1352,12 +1432,13 @@ object DxfExportEngine {
         layer: String,
         color: Int = -1
     ) {
-        sb.append("  0\nSOLID\n  8\n$layer\n")
-        if (color > 0) sb.append("  62\n$color\n")
-        sb.append(" 10\n$x1\n 20\n$y1\n 30\n0.0\n")
-        sb.append(" 11\n$x2\n 21\n$y2\n 31\n0.0\n")
-        sb.append(" 12\n$x3\n 22\n$y3\n 32\n0.0\n")
-        sb.append(" 13\n$x4\n 23\n$y4\n 33\n0.0\n")
+        val h = nextH()
+        sb.append("0\nSOLID\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
+        if (color > 0) sb.append("62\n$color\n")
+        sb.append("10\n${fmt(x1)}\n20\n${fmt(y1)}\n30\n0.0\n")
+        sb.append("11\n${fmt(x2)}\n21\n${fmt(y2)}\n31\n0.0\n")
+        sb.append("12\n${fmt(x3)}\n22\n${fmt(y3)}\n32\n0.0\n")
+        sb.append("13\n${fmt(x4)}\n23\n${fmt(y4)}\n33\n0.0\n")
     }
 
     // ── DIMENSION HELPERS ────────────────────────────────────────────
