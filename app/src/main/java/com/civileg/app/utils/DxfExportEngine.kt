@@ -67,6 +67,20 @@ object DxfExportEngine {
     private var vportTableHandle = ""
     private var dictHandle = ""
 
+    // Bounding-box tracking for correct $EXTMIN / $EXTMAX
+    private var bbMinX = Double.MAX_VALUE
+    private var bbMinY = Double.MAX_VALUE
+    private var bbMaxX = -Double.MAX_VALUE
+    private var bbMaxY = -Double.MAX_VALUE
+    private fun bbReset() { bbMinX = Double.MAX_VALUE; bbMinY = Double.MAX_VALUE; bbMaxX = -Double.MAX_VALUE; bbMaxY = -Double.MAX_VALUE }
+    private fun bbTrack(x: Double, y: Double) {
+        bbMinX = min(bbMinX, x); bbMinY = min(bbMinY, y)
+        bbMaxX = max(bbMaxX, x); bbMaxY = max(bbMaxY, y)
+    }
+    private fun bbTrackCircle(cx: Double, cy: Double, r: Double) {
+        bbTrack(cx - r, cy - r); bbTrack(cx + r, cy + r)
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  PUBLIC API  –  one method per element type, returns DXF String
     // ═══════════════════════════════════════════════════════════════
@@ -225,7 +239,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 2. COLUMN ───────────────────────────────────────────────────
@@ -379,7 +393,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 3. FOOTING ──────────────────────────────────────────────────
@@ -482,7 +496,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 4. SLAB ─────────────────────────────────────────────────────
@@ -588,7 +602,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 5. STAIR ────────────────────────────────────────────────────
@@ -688,7 +702,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 6. WATER TANK ───────────────────────────────────────────────
@@ -776,7 +790,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 7. RETAINING WALL ────────────────────────────────────────────
@@ -878,7 +892,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 8. STEEL SECTION ────────────────────────────────────────────
@@ -1005,7 +1019,7 @@ object DxfExportEngine {
         drawTitleBlock(sb, tableX, tableY, "STEEL DESIGN DATA", tableData)
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 9. STEEL WAREHOUSE ────────────────────────────────────────────
@@ -1142,7 +1156,7 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
-        return sb.toString()
+        return finalizeDxf(sb)
     }
 
     // ── 10. FRAME ANALYSIS ────────────────────────────────────────────
@@ -1253,7 +1267,22 @@ object DxfExportEngine {
         ))
 
         sb.append("0\nENDSEC\n"); writeObjectsSection(sb); sb.append("0\nEOF\n")
+        return finalizeDxf(sb)
+    }
+
+    /** Convert internal LF to DXF-required CRLF and fill extent placeholders. */
+    private fun finalizeDxf(sb: StringBuilder): String {
+        val pad = 2000.0
+        val emx = if (bbMaxX == -Double.MAX_VALUE) 1000.0 else bbMaxX + pad
+        val emy = if (bbMaxY == -Double.MAX_VALUE) 1000.0 else bbMaxY + pad
+        val enx = if (bbMinX == Double.MAX_VALUE) 0.0 else bbMinX - pad
+        val eny = if (bbMinY == Double.MAX_VALUE) 0.0 else bbMinY - pad
         return sb.toString()
+            .replace("__EXTMINX__", fmt(enx))
+            .replace("__EXTMINY__", fmt(eny))
+            .replace("__EXTMAXX__", fmt(emx))
+            .replace("__EXTMAXY__", fmt(emy))
+            .replace("\n", "\r\n")
     }
 
     // DXF header variable names (with $ prefix as required by DXF format)
@@ -1268,6 +1297,7 @@ object DxfExportEngine {
 
     private fun writeHeader(sb: StringBuilder) {
         nextHandle = 0x100L
+        bbReset()
         val h = { nextH() }
         layerTableHandle = h()
         ltypeTableHandle = h()
@@ -1282,9 +1312,10 @@ object DxfExportEngine {
         val d = "$"
         sb.append("0\nSECTION\n2\nHEADER\n")
         sb.append("9\n${d}ACADVER\n1\nAC1015\n")
+        sb.append("9\n${d}DWGCODEPAGE\n3\nutf_8\n")
         sb.append("9\n${d}INSBASE\n10\n0.0\n20\n0.0\n30\n0.0\n")
-        sb.append("9\n${d}EXTMIN\n10\n0.0\n20\n0.0\n30\n0.0\n")
-        sb.append("9\n${d}EXTMAX\n10\n1.0\n20\n1.0\n30\n0.0\n")
+        sb.append("9\n${d}EXTMIN\n10\n__EXTMINX__\n20\n__EXTMINY__\n30\n0.0\n")
+        sb.append("9\n${d}EXTMAX\n10\n__EXTMAXX__\n20\n__EXTMAXY__\n30\n0.0\n")
         sb.append("9\n${d}HANDSEED\n5\n${h()}\n")
         sb.append("0\nENDSEC\n")
     }
@@ -1348,6 +1379,7 @@ object DxfExportEngine {
         layer: String,
         color: Int = -1
     ) {
+        bbTrack(x1, y1); bbTrack(x2, y2)
         val h = nextH()
         sb.append("0\nLINE\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
         if (color > 0) sb.append("62\n$color\n")
@@ -1392,6 +1424,7 @@ object DxfExportEngine {
         layer: String,
         color: Int = -1
     ) {
+        bbTrackCircle(cx, cy, radius)
         val h = nextH()
         sb.append("0\nCIRCLE\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
         if (color > 0) sb.append("62\n$color\n")
@@ -1406,6 +1439,7 @@ object DxfExportEngine {
         height: Double,
         color: Int = -1
     ) {
+        bbTrack(x, y); bbTrack(x + text.length * height * 0.5, y + height)
         val h = nextH()
         sb.append("0\nTEXT\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
         if (color > 0) sb.append("62\n$color\n")
@@ -1421,6 +1455,7 @@ object DxfExportEngine {
         closed: Boolean = false
     ) {
         if (points.size < 2) return
+        points.forEach { bbTrack(it.first, it.second) }
         val h = nextH()
         val flag = if (closed) 1 else 0
         sb.append("0\nLWPOLYLINE\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
@@ -1439,6 +1474,7 @@ object DxfExportEngine {
         layer: String,
         color: Int = -1
     ) {
+        bbTrack(x1,y1); bbTrack(x2,y2); bbTrack(x3,y3); bbTrack(x4,y4)
         val h = nextH()
         sb.append("0\nSOLID\n5\n$h\n100\nAcDbEntity\n8\n$layer\n")
         if (color > 0) sb.append("62\n$color\n")
