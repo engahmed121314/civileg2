@@ -101,18 +101,10 @@ fun ProfessionalTankDrawing(
             titleText, cw / 2f, 30f, paint
         )
 
-        when (viewMode) {
-            1 -> drawPerspectiveView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
-            2 -> drawSectionDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
-            3 -> drawReinforcementDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
-                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
-            else -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
-                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
-        }
+        // Draw tank cross-section (all view modes use same base drawing)
+        drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+            length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+            verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
     }
 }
 
@@ -125,6 +117,59 @@ private fun DrawScope.drawAllView(
     verticalRebarDia: Double, verticalRebarSpacing: Double,
     horizontalRebarDia: Double, horizontalRebarSpacing: Double
 ) {
+    val margin = 60f
+    val drawW = cw - margin * 2f
+    val drawH = ch - margin * 2f - 20f
+    val scale = min(drawW / length.toFloat(), drawH / (height + baseThickness).toFloat()) * 0.85f
+    val l = length.toFloat() * scale
+    val h = height.toFloat() * scale
+    val wt = wallThickness.toFloat() * scale
+    val bt = baseThickness.toFloat() * scale
+    val wl = waterLevel.toFloat() * scale
+    val left = (cw - l) / 2f
+    val top = margin + 30f
+
+    // Ground line
+    if (isElevated) {
+        val groundY = top + h + bt + 30f
+        drawLine(color = GroundColor, start = Offset(left - 40f, groundY), end = Offset(left + l + 40f, groundY), strokeWidth = 2f)
+        drawSoilRegion(left - 40f, groundY, l + 80f, 20f)
+        drawElevatedColumns(left + 20f, left + l - 20f, top + h + bt, groundY)
+    } else if (isUnderground) {
+        val groundY = top - 10f
+        drawLine(color = GroundColor, start = Offset(left - 40f, groundY), end = Offset(left + l + 40f, groundY), strokeWidth = 2f)
+        drawSoilRegion(left - 40f, groundY, l + 80f, 25f)
+    }
+
+    // Tank body
+    if (isCircular) {
+        drawCircularTankBody(left, top, l, h, wt, bt)
+    } else {
+        drawRectangularTankBody(left, top, l, h, wt, bt)
+    }
+
+    // Water
+    drawWaterFill(left, top, l, h, wt, wl, isCircular)
+
+    // Reinforcement
+    val cover = 15f
+    val tankBottom = top + h
+    val baseBottom = tankBottom + bt
+    drawReinforcement(left, top, left + l, tankBottom, baseBottom, wt, bt, wl, cover, scale,
+        verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing, isCircular)
+
+    // Dimensions
+    drawDimensions(left, top, left + l, tankBottom, baseBottom, wt, bt, l, h,
+        isCircular, length, height, wallThickness, baseThickness)
+
+    // Pressure diagram
+    drawPressureDiagram(left + l + 40f, top, h, wl, waterLevel, isElevated, baseBottom)
+
+    // Plan view inset
+    drawPlanView(cw, tankType, length, width, isCircular, top + h + bt + 60f)
+
+    // Rebar table
+    drawRebarTable(cw - 180f, top, verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing, isCircular)
 }
 
 // ============================================================================
@@ -274,7 +319,7 @@ private fun DrawScope.drawCircularTankBody(
         Path().apply {
             addOval(androidx.compose.ui.geometry.Rect(left, top - 8f, left + l, top + 8f))
         },
-        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(1.5f, PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
+        color = HoopGreen.copy(alpha = 0.4f), style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
     )
     drawTextAnnotated("(circular section)", cx - 40f, top - 14f, HoopGreen.copy(alpha = 0.6f), 11f)
 }

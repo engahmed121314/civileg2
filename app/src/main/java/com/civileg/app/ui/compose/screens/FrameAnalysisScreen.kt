@@ -125,7 +125,7 @@ fun FrameAnalysisScreen(
      }
  }) {
      if (isDxfExporting) {
-         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2, color = Color.White)
+         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
      } else {
          Icon(Icons.Default.Draw, "Export DXF", tint = Color.White)
      }
