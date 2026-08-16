@@ -147,7 +147,7 @@ object CalculatorCadExporterV7 {
         return kotlin.math.max(0.0, x)
     }
 
-    private fun section(w:W,p:CalculatorDetailingV4.DetailingPackage,x:Double,y:Double,ww:Double,hh:Double){w.text(x,y+hh+10,"SECTION",3.3);w.rect(x,y,ww,hh,"CONCRETE",7,25);val c=p.geometry["cover"]?:30.0;if(ww>2*c*.2&&hh>2*c*.2){w.rect(x+ww*.12,y+hh*.12,ww*.76,hh*.76,"STIRRUPS",2,13)};p.bars.take(8).forEachIndexed{i,b->val bx=x+ww*(.16+i*.68/max(1,p.bars.take(8).size-1));w.circle(bx,y+hh*.18,max(2.0,b.diameterMm/15),"REBAR",1,13)}}
+    private fun section(w:W,p:CalculatorDetailingV4.DetailingPackage,x:Double,y:Double,ww:Double,hh:Double){w.text(x,y+hh+10,"SECTION",3.3);w.rect(x,y,ww,hh,"CONCRETE",7,25);val c=p.geometry["cover"]?:30.0;if(ww>2*c*.2&&hh>2*c*.2){w.rect(x+ww*.12,y+hh*.12,ww*.76,hh*.76,"STIRRUPS",2,13)};p.bars.take(8).forEachIndexed{i,b->val bx=x+ww*(.16+i*.68/max(1,p.bars.take(8).size-1));w.circle(bx,y+hh*.18,max(2.0,b.diameterMm.toDouble()/15.0),"REBAR",1,13)}}
     private fun sectionSteel(w:W,x:Double,y:Double,bf:Double,tf:Double,tw:Double,d:Double){val sc=min(80.0/max(bf,1.0),60.0/max(d,1.0));w.rect(x-bf*sc/2,y,bf*sc,tf*sc,"STEEL",7,25);w.rect(x-tw*sc/2,y+tf*sc,tw*sc,(d-2*tf)*sc,"STEEL",7,25);w.rect(x-bf*sc/2,y+(d-tf)*sc,bf*sc,tf*sc,"STEEL",7,25)}
     private fun drawSoil(w:W,x:Double,y:Double,h:Double){w.line(x,y,x,y+h,"LOADS",6,13);w.poly(listOf(x to y+h,(x+45) to y,x to y),"LOADS",true,6,13);w.text(x+50,y+h*.5,"Pa",3.0,"LOADS",6)}
     private fun drawWater(w:W,x:Double,y:Double,h:Double){w.line(x,y,x,y+h,"LOADS",5,13);w.poly(listOf(x to y+h,(x+45) to y,x to y),"LOADS",true,5,13);w.text(x+50,y+h*.5,"Pw",3.0,"LOADS",5)}
