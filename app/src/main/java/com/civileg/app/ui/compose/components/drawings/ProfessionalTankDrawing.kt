@@ -102,6 +102,13 @@ fun ProfessionalTankDrawing(
         )
 
         when (viewMode) {
+            1 -> drawPerspectiveView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
+            2 -> drawSectionDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
+            3 -> drawReinforcementDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
             else -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
                 length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
                 verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
@@ -118,61 +125,134 @@ private fun DrawScope.drawAllView(
     verticalRebarDia: Double, verticalRebarSpacing: Double,
     horizontalRebarDia: Double, horizontalRebarSpacing: Double
 ) {
-    val margin = 60f
-    val drawW = cw - margin * 2f
-    val drawH = ch - margin * 2f - 20f
-    val scale = min(drawW / length.toFloat(), drawH / (height + baseThickness).toFloat()) * 0.85f
-    val l = length.toFloat() * scale
-    val h = height.toFloat() * scale
-    val wt = wallThickness.toFloat() * scale
-    val bt = baseThickness.toFloat() * scale
-    val wl = waterLevel.toFloat() * scale
-    val left = (cw - l) / 2f
-    val top = margin + 30f
+    // ── Layout: 70% elevation, 30% table ──
+    val margin = 40f
+    val tableBottom = ch
+    val tableTop = ch * 0.72f
+    val elevBottom = tableTop - 10f
+    val elevTop = 50f
+    val elevLeft = 80f
+    val elevRight = cw * 0.62f
 
-    // Ground line
+    // ── Scaling ──
+    val totalH = height + baseThickness / 1000.0 + (if (isUnderground) foundationDepth else 0.0)
+    val scaleX = (elevRight - elevLeft) / length.toFloat()
+    val scaleY = (elevBottom - elevTop) / totalH.toFloat()
+    val scale = min(scaleX, scaleY) * 0.82f
+
+    val drawL = length.toFloat() * scale
+    val drawH = height.toFloat() * scale
+    val drawWT = max((wallThickness / 1000.0 * scale).toFloat(), 22f)
+    val drawBT = max((baseThickness / 1000.0 * scale).toFloat(), 16f)
+    val drawWL = waterLevel.toFloat() * scale
+    val drawFD = foundationDepth.toFloat() * scale
+    val cover = max(50f * scale, 6f)
+
+    // Center tank in elevation area
+    val tankLeft = elevLeft + (elevRight - elevLeft - drawL) / 2f
+    val tankTop = elevTop + (elevBottom - elevTop - drawH - drawBT - (if (isUnderground) drawFD else 0f)) / 2f + (if (isUnderground) drawFD else 0f)
+    val tankRight = tankLeft + drawL
+    val tankBottom = tankTop + drawH
+    val baseBottom = tankBottom + drawBT
+
+    // ── Underground soil ──
+    if (isUnderground && drawFD > 0) {
+        drawSoilRegion(tankLeft - 60f, tankTop - drawFD, drawL + 120f, drawFD + 30f)
+        val glY = tankTop - drawFD
+        drawLine(
+            color = GroundColor,
+            start = Offset(tankLeft - 80f, glY),
+            end = Offset(tankRight + 80f, glY),
+            strokeWidth = 2f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 6f), 0f)
+        )
+        drawTextAnnotated("GL +/-0.00", tankLeft - 100f, glY - 6f, GroundColor, 14f)
+    }
+
+    // ── Elevated supports ──
     if (isElevated) {
-        val groundY = top + h + bt + 30f
-        drawLine(color = GroundColor, start = Offset(left - 40f, groundY), end = Offset(left + l + 40f, groundY), strokeWidth = 2f)
-        drawSoilRegion(left - 40f, groundY, l + 80f, 20f)
-        drawElevatedColumns(left + 20f, left + l - 20f, top + h + bt, groundY)
-    } else if (isUnderground) {
-        val groundY = top - 10f
-        drawLine(color = GroundColor, start = Offset(left - 40f, groundY), end = Offset(left + l + 40f, groundY), strokeWidth = 2f)
-        drawSoilRegion(left - 40f, groundY, l + 80f, 25f)
+        drawElevatedColumns(tankLeft, tankRight, baseBottom, ch * 0.72f)
     }
 
-    // Tank body
+    // ── Draw Tank Body ──
     if (isCircular) {
-        drawCircularTankBody(left, top, l, h, wt, bt)
+        drawCircularTankBody(tankLeft, tankTop, drawL, drawH, drawWT, drawBT)
     } else {
-        drawRectangularTankBody(left, top, l, h, wt, bt)
+        drawRectangularTankBody(tankLeft, tankTop, drawL, drawH, drawWT, drawBT)
     }
 
-    // Water
-    drawWaterFill(left, top, l, h, wt, wl, isCircular)
+    // ── Water Fill ──
+    if (drawWL > 2f) {
+        drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, isCircular)
+    }
 
-    // Reinforcement
-    val cover = 15f
-    val tankBottom = top + h
-    val baseBottom = tankBottom + bt
-    drawReinforcement(left, top, left + l, tankBottom, baseBottom, wt, bt, wl, cover, scale,
-        verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing, isCircular)
+    // ── Reinforcement ──
+    drawReinforcement(
+        tankLeft, tankTop, tankRight, tankBottom, baseBottom,
+        drawWT, drawBT, drawWL, cover, scale,
+        verticalRebarDia, verticalRebarSpacing,
+        horizontalRebarDia, horizontalRebarSpacing,
+        isCircular
+    )
 
-    // Dimensions
-    drawDimensions(left, top, left + l, tankBottom, baseBottom, wt, bt, l, h,
-        isCircular, length, height, wallThickness, baseThickness)
+    // ── Dimensions ──
+    drawDimensions(tankLeft, tankTop, tankRight, tankBottom, baseBottom,
+        drawWT, drawBT, drawL, drawH, isCircular, length, height, wallThickness, baseThickness)
 
-    // Pressure diagram
-    drawPressureDiagram(left + l + 40f, top, h, wl, waterLevel, isElevated, baseBottom)
+    // ── Pressure Diagram ──
+    if (drawWL > 2f) {
+        drawPressureDiagram(tankRight + 50f, tankTop, drawH, drawWL, waterLevel, isElevated, elevBottom)
+    }
 
-    // Plan view inset
-    drawPlanView(cw, tankType, length, width, isCircular, top + h + bt + 60f)
+    // ── Plan View ──
+    drawPlanView(cw, tankType, length, width, isCircular, tableTop)
 
-    // Rebar table
-    drawRebarTable(cw, top, ch, tankType, verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing, height, length)
+    // ── Reinforcement Table ──
+    drawRebarTable(cw, tableTop, ch, tankType,
+        verticalRebarDia, verticalRebarSpacing,
+        horizontalRebarDia, horizontalRebarSpacing, height, length)
 }
 
+// ==================== VIEW 1: PERSPECTIVE VIEW ====================
+private fun DrawScope.drawPerspectiveView(
+    cw: Float, ch: Float,
+    tankType: String, isCircular: Boolean, isElevated: Boolean, isUnderground: Boolean,
+    length: Double, width: Double, height: Double,
+    wallThickness: Double, baseThickness: Double, waterLevel: Double, foundationDepth: Double
+) {
+    // Perspective view - delegates to all-view for now
+    drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+        length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+        12.0, 200.0, 12.0, 200.0)
+}
+
+// ==================== VIEW 2: CROSS SECTION DETAIL ====================
+private fun DrawScope.drawSectionDetail(
+    cw: Float, ch: Float,
+    tankType: String, isCircular: Boolean, isElevated: Boolean, isUnderground: Boolean,
+    length: Double, width: Double, height: Double,
+    wallThickness: Double, baseThickness: Double, waterLevel: Double, foundationDepth: Double
+) {
+    // Section detail - delegates to all-view for now
+    drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+        length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+        12.0, 200.0, 12.0, 200.0)
+}
+
+// ==================== VIEW 3: REINFORCEMENT DETAIL ====================
+private fun DrawScope.drawReinforcementDetail(
+    cw: Float, ch: Float,
+    tankType: String, isCircular: Boolean, isElevated: Boolean, isUnderground: Boolean,
+    length: Double, width: Double, height: Double,
+    wallThickness: Double, baseThickness: Double, waterLevel: Double, foundationDepth: Double,
+    verticalRebarDia: Double, verticalRebarSpacing: Double,
+    horizontalRebarDia: Double, horizontalRebarSpacing: Double
+) {
+    // Reinforcement detail - delegates to all-view for now
+    drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+        length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+        verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
+}
 // ============================================================================
 // RECTANGULAR TANK BODY — clear U-shape vessel
 // ============================================================================

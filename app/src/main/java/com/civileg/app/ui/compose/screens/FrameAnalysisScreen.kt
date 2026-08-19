@@ -300,6 +300,7 @@ private fun DrawingTab(
     // FIX: Sync local viewMode with ViewModel so it survives tab switches
     val vmViewMode by viewModel.drawingViewMode.observeAsState(0)
     LaunchedEffect(vmViewMode) { viewMode = vmViewMode }
+    val isLoading by viewModel.isLoading.observeAsState(false)
     val viewModes = listOf(
         "Frame" to "الإطار",
         "Long. Section" to "قطاع طولي",

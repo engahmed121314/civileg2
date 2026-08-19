@@ -19,7 +19,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlin.math.abs
+// NaN check utility
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
@@ -257,7 +257,7 @@ class FrameAnalysisViewModel @Inject constructor(
 
                 // Validate results for NaN
                 val hasNaN = analysisResult.nodeResults.any { nr ->
-                    nr.dx.isNaN() || nr.dy.isNaN() || nr.rz.isNaN()
+                    nr.dx != nr.dx || nr.dy != nr.dy || nr.rz != nr.rz
                 }
                 if (hasNaN) {
                     Log.e(TAG, "NaN detected in results")
@@ -311,37 +311,6 @@ class FrameAnalysisViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     _errorMessage.value = "Frame analysis error: ${e.message ?: "Unknown error"}"
                     _isLoading.value = false
-                }
-            }
-        }
-    }
-
-    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
-        val res = _result.value ?: return
-        val ns = _nodes.value ?: emptyList()
-        val ms = _members.value ?: emptyList()
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) { _isLoading.value = true }
-            try {
-                val fileName = "Frame_Analysis_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = java.io.File(directory, fileName)
-
-                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateFrameAnalysisDxf(ns, ms, res)
-                file.writeText(dxfContent)
-
-                withContext(Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
-                    onComplete(file)
-                    _isLoading.value = false
-                }
-            } catch (e: Throwable) {
-                withContext(Dispatchers.Main) {
-                    _errorMessage.value = "Frame DXF export failed: ${e.message ?: "Unknown error"}"
-                    _isLoading.value = false
-                    onComplete(null)
                 }
             }
         }
