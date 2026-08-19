@@ -35,6 +35,7 @@ import com.civileg.app.viewmodel.BeamViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
+import com.civileg.app.ui.compose.components.beam.BeamComprehensiveResultsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +47,7 @@ fun BeamScreen(
 ) {
     val context = LocalContext.current
     val result by viewModel.result.observeAsState()
+    val compResult by viewModel.comprehensiveResult.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val error by viewModel.error.observeAsState()
@@ -383,6 +385,12 @@ fun BeamScreen(
                         designCode = diagramCode,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                // Comprehensive step-by-step results from PDFs 04-12
+                compResult?.let { comp ->
+                    item { SectionHeader("Comprehensive Design Results", R.drawable.ic_calculator) }
+                    item { BeamComprehensiveResultsCard(result = comp) }
                 }
 
                 item {

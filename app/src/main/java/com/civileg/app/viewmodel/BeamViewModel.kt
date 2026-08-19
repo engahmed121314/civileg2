@@ -9,10 +9,9 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.DxfExportEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.SettingsManager
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import com.civileg.app.domain.calculations.BeamDesignEngine
+import com.civileg.app.domain.entities.BeamDesignResult
+import com.civileg.app.domain.entities.DesignCode
 
 @HiltViewModel
 class BeamViewModel @Inject constructor(
@@ -25,6 +24,10 @@ class BeamViewModel @Inject constructor(
 
     private val _result = MutableLiveData<CalculatorEngine.BeamResult?>()
     val result: LiveData<CalculatorEngine.BeamResult?> = _result
+
+    // New comprehensive result
+    private val _comprehensiveResult = MutableLiveData<BeamDesignResult?>()
+    val comprehensiveResult: LiveData<BeamDesignResult?> = _comprehensiveResult
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -68,12 +71,37 @@ class BeamViewModel @Inject constructor(
                 lastFy = fy
                 lastSupportType = supportType
 
+                // 1. Run legacy calculator (for backward compat + exports)
                 val res = calculatorEngine.designBeam(
                     width = width, height = height, span = span,
                     fcu = fcu, fy = fy, deadLoad = deadLoad, liveLoad = liveLoad,
                     preferredDiameter = preferredDiameter, code = code, supportType = supportType
                 )
                 _result.value = res
+
+                // 2. Run comprehensive engine (step-by-step calculations)
+                val domainCode = when(code) {
+                    CalculatorEngine.DesignCode.EGYPTIAN -> DesignCode.ECP
+                    CalculatorEngine.DesignCode.ACI -> DesignCode.ACI
+                    CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+                }
+                val supportStr = when(supportType) {
+                    CalculatorEngine.SupportType.HINGED_HINGED -> "SS"
+                    CalculatorEngine.SupportType.FIXED_FIXED -> "FF"
+                    CalculatorEngine.SupportType.FIXED_HINGED -> "FH"
+                    CalculatorEngine.SupportType.CANTILEVER -> "CANTILEVER"
+                    else -> "SS"
+                }
+                val compResult = BeamDesignEngine.designBeam(
+                    b = width, h = height, span = span,
+                    deadLoad = deadLoad, liveLoad = liveLoad,
+                    fcu = fcu, fy = fy,
+                    preferredDia = preferredDiameter,
+                    code = domainCode,
+                    supportType = supportStr
+                )
+                _comprehensiveResult.value = compResult
+
                 lastSpan = span
                 _error.value = null
             } catch (e: Exception) {
