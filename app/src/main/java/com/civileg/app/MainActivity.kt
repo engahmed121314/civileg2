@@ -25,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.civileg.app.ui.compose.components.ProfessionalBottomNavBar
 import com.civileg.app.ui.compose.screens.*
+import com.civileg.app.ui.screens.*
 import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
@@ -245,6 +246,15 @@ fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
                 composable(AppScreen.FrameAnalysis.route) {
                     FrameAnalysisScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.PileFoundation.route) {
+                    PileFoundationScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.FlatSlab.route) {
+                    FlatSlabScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.ShearWall.route) {
+                    ShearWallScreen(onNavigateBack = { navController.popBackStack() })
+                }
 
                 // ═══ QUICK TOOLS ═══
                 composable(AppScreen.Calculator.route) {
@@ -261,6 +271,18 @@ fun AppNavigation(drawerState: DrawerState, designCount: Int = 0) {
                 }
                 composable(AppScreen.WaterLevel.route) {
                     WaterLevelScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.RebarTool.route) {
+                    RebarToolScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.ConcreteMix.route) {
+                    ConcreteMixScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.SoilBearing.route) {
+                    SoilBearingScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.WindLoad.route) {
+                    WindLoadScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
                 // ═══ PROJECT & SETTINGS ═══

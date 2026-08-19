@@ -8,9 +8,9 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [
-        Project::class, 
-        Design::class, 
-        MaterialItem::class, 
+        Project::class,
+        Design::class,
+        MaterialItem::class,
         Footing::class,
         ColumnEntity::class,
         Slab::class,
@@ -18,14 +18,17 @@ import androidx.room.TypeConverters
         Stair::class,
         RetainingWall::class,
         Tank::class,
-        InventoryItem::class
+        InventoryItem::class,
+        PileFoundationDesignEntity::class,
+        FlatSlabDesignEntity::class,
+        ShearWallDesignEntity::class
     ],
     version = 7,
-    exportSchema = true
+    exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-    
+
     abstract fun projectDao(): ProjectDao
     abstract fun designDao(): DesignDao
     abstract fun materialDao(): MaterialDao
@@ -37,11 +40,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun retainingWallDao(): RetainingWallDao
     abstract fun tankDao(): TankDao
     abstract fun inventoryDao(): InventoryDao
-    
+    abstract fun pileFoundationDao(): PileFoundationDao
+    abstract fun flatSlabDao(): FlatSlabDao
+    abstract fun shearWallDao(): ShearWallDao
+
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
-        
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(

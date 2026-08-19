@@ -45,6 +45,17 @@ import com.civileg.app.domain.calculations.aci.ACIStaircase
 import com.civileg.app.domain.calculations.sbc.SBCStaircase
 import com.civileg.app.domain.calculations.base.StaircaseDesign
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.calculations.base.PileFoundationDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign
+import com.civileg.app.domain.calculations.base.ShearWallDesign
+import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
+import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
+import com.civileg.app.domain.calculations.ecp.ECPShearWall
+import com.civileg.app.domain.calculations.aci.ACIFlatSlab
+import com.civileg.app.domain.calculations.aci.ACIShearWall
+import com.civileg.app.domain.calculations.sbc.SBCPileFoundation
+import com.civileg.app.domain.calculations.sbc.SBCFlatSlab
+import com.civileg.app.domain.calculations.sbc.SBCShearWall
 
 object CalculationFactory {
     
@@ -136,5 +147,29 @@ object CalculationFactory {
         DesignCode.ECP -> ECPStaircase()
         DesignCode.ACI -> ACIStaircase()
         DesignCode.SBC -> SBCStaircase()
+    }
+
+    // ========== الركائز (Pile Foundation) ==========
+
+    fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
+        DesignCode.ECP -> ECPPileFoundation()
+        DesignCode.ACI -> ECPPileFoundation()  // ACI uses same geotechnical approach
+        DesignCode.SBC -> SBCPileFoundation()
+    }
+
+    // ========== البلاطات المسطحة (Flat Slab) ==========
+
+    fun getFlatSlabDesign(code: DesignCode): FlatSlabDesign = when (code) {
+        DesignCode.ECP -> ECPFlatSlab()
+        DesignCode.ACI -> ACIFlatSlab()
+        DesignCode.SBC -> SBCFlatSlab()
+    }
+
+    // ========== حوائط القص (Shear Wall) ==========
+
+    fun getShearWallDesign(code: DesignCode): ShearWallDesign = when (code) {
+        DesignCode.ECP -> ECPShearWall()
+        DesignCode.ACI -> ACIShearWall()
+        DesignCode.SBC -> SBCShearWall()
     }
 }

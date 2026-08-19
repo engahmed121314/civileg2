@@ -26,4 +26,13 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object Calculator : AppScreen("calculator", R.string.home_calculator, R.drawable.ic_calculator)
     object SteelTables : AppScreen("steel_tables", R.string.home_steel_tables, R.drawable.ic_steel)
     object WaterLevel : AppScreen("water_level", R.string.home_water_level, R.drawable.ic_water)
+    // New Design Modules
+    object PileFoundation : AppScreen("pile_foundation", R.string.home_pile, R.drawable.ic_pile)
+    object FlatSlab : AppScreen("flat_slab", R.string.home_flat_slab, R.drawable.ic_slab)
+    object ShearWall : AppScreen("shear_wall", R.string.home_shear_wall, R.drawable.ic_wall)
+    // New Tools
+    object RebarTool : AppScreen("rebar_tool", R.string.home_rebar_tool, R.drawable.ic_steel)
+    object ConcreteMix : AppScreen("concrete_mix", R.string.home_concrete_mix, R.drawable.ic_calculator)
+    object SoilBearing : AppScreen("soil_bearing", R.string.home_soil_bearing, R.drawable.ic_footing)
+    object WindLoad : AppScreen("wind_load", R.string.home_wind_load, R.drawable.ic_frame)
 }

@@ -370,6 +370,21 @@
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <string name="hub_design_tank_sub">خزانات المياه</string>
     <string name="hub_design_frame_sub">تحليل الهياكل ثنائية الأبعاد</string>
+    <string name="home_pile">الركائز</string>
+    <string name="home_pile_sub">تصميم الركائز والكمرات الكابولية</string>
+    <string name="home_flat_slab">البلاطات المسطحة</string>
+    <string name="home_flat_slab_sub">البلاطات المسطحة وقص الثقب</string>
+    <string name="home_shear_wall">حوائط القص</string>
+    <string name="home_shear_wall_sub">تصميم حوائط القص الإنشائية</string>
+    <string name="home_rebar_tool">حاسبة الحديد</string>
+    <string name="home_concrete_mix">خلطات الخرسانة</string>
+    <string name="home_soil_bearing">قدرة التحمل</string>
+    <string name="home_wind_load">أحمال الرياح</string>
+    <string name="home_rebar_tool_sub">وزن الحديد وطول الترقيع</string>
+    <string name="tool_rebar_sub">الوزن، الوصلات، أطوال التثبيت</string>
+    <string name="tool_concrete_mix_sub">تصميم الخلطات ACI 211</string>
+    <string name="tool_soil_bearing_sub">تيرزاجي، مايرهوف، هانسن</string>
+    <string name="tool_wind_load_sub">ضغط الرياح والقوى</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Hub Screens – More Hub Card Subtitles -->

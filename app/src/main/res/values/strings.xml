@@ -277,7 +277,7 @@
     <string name="home_stat_codes">Codes Used</string>
     <string name="home_stat_types">Element Types</string>
     <string name="home_section_design_title">Structural Design</string>
-    <string name="home_section_design_sub">9 integrated design modules</string>
+    <string name="home_section_design_sub">12 integrated design modules</string>
     <string name="home_section_tools_title">Quick Tools</string>
     <string name="home_section_tools_sub">Utilities for civil engineers</string>
     <string name="home_section_recent_title">Recent Designs</string>
@@ -376,6 +376,21 @@
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <string name="hub_design_tank_sub">Water Tanks</string>
     <string name="hub_design_frame_sub">2D Structural Analysis</string>
+    <string name="home_pile">Pile Foundation</string>
+    <string name="home_pile_sub">Pile Capacity &amp; Pile Cap Design</string>
+    <string name="home_flat_slab">Flat Slab</string>
+    <string name="home_flat_slab_sub">Flat Slab &amp; Punching Shear</string>
+    <string name="home_shear_wall">Shear Wall</string>
+    <string name="home_shear_wall_sub">Structural Wall Design</string>
+    <string name="home_rebar_tool">Rebar Calculator</string>
+    <string name="home_concrete_mix">Concrete Mix</string>
+    <string name="home_soil_bearing">Soil Bearing</string>
+    <string name="home_wind_load">Wind Load</string>
+    <string name="home_rebar_tool_sub">Rebar Weight &amp; Development</string>
+    <string name="tool_rebar_sub">Weight, Lap, Dev. Length</string>
+    <string name="tool_concrete_mix_sub">ACI 211 Mix Design</string>
+    <string name="tool_soil_bearing_sub">Terzaghi, Meyerhof, Hansen</string>
+    <string name="tool_wind_load_sub">Wind Pressure &amp; Forces</string>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Hub Screens – More Hub Card Subtitles -->

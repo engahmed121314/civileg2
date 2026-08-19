@@ -101,10 +101,18 @@ fun ProfessionalTankDrawing(
             titleText, cw / 2f, 30f, paint
         )
 
-        // Draw tank cross-section (all view modes use same base drawing)
-        drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-            length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
-            verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
+        when (viewMode) {
+            1 -> drawPerspectiveView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
+            2 -> drawSectionDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
+            3 -> drawReinforcementDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
+            else -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
+                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
+                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
+        }
     }
 }
 
