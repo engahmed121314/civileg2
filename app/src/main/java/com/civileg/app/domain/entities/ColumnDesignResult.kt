@@ -40,65 +40,65 @@ data class ColumnDesignResult(
     val columnClassification: String, // "Short", "Long", "Unsafe_Slender"
 
     // ===== ADDITIONAL MOMENT (PDF 16: Long Columns) =====
-    deflectionIn: Double,         // mm - lateral deflection in-plane
-    deflectionOut: Double,        // mm - lateral deflection out-of-plane
-    MaddIn: Double,               // kN.m - additional moment in-plane
-    MaddOut: Double,              // kN.m - additional moment out-of-plane
-    MdesIn: Double,               // kN.m - design moment in-plane
-    MdesOut: Double,              // kN.m - design moment out-of-plane
-    eccentricityIn: Double,       // mm
-    eccentricityOut: Double,      // mm
+    val deflectionIn: Double,         // mm - lateral deflection in-plane
+    val deflectionOut: Double,        // mm - lateral deflection out-of-plane
+    val MaddIn: Double,               // kN.m - additional moment in-plane
+    val MaddOut: Double,              // kN.m - additional moment out-of-plane
+    val MdesIn: Double,               // kN.m - design moment in-plane
+    val MdesOut: Double,              // kN.m - design moment out-of-plane
+    val eccentricityIn: Double,       // mm
+    val eccentricityOut: Double,      // mm
 
     // ===== AXIAL CAPACITY =====
-    Phi: Double,                  // Strength reduction factor
-    alphaFactor: Double,         // Alpha factor
-    Pu0: Double,                  // kN - pure axial capacity (no moment)
-    axialCapacity: Double,       // kN - axial capacity with moment
-    utilizationRatio: Double,     // Pu / axialCapacity
+    val Phi: Double,                  // Strength reduction factor
+    val alphaFactor: Double,         // Alpha factor
+    val Pu0: Double,                  // kN - pure axial capacity (no moment)
+    val axialCapacity: Double,       // kN - axial capacity with moment
+    val utilizationRatio: Double,     // Pu / axialCapacity
 
     // ===== REINFORCEMENT =====
-    AsRequired: Double,           // mm²
-    AsMin: Double,                // mm² (code minimum)
-    AsMax: Double,                // mm² (code maximum)
-    AsProvided: Double,           // mm²
-    rhoActual: Double,            // %
-    rhoMin: Double,
-    rhoMax: Double,
-    finalBars: String,           // e.g. "8Ø22"
-    finalBarCount: Int,
-    finalBarDia: Int,
-    rebarAlternatives: List<RebarAlternative> = emptyList(),
+    val AsRequired: Double,           // mm²
+    val AsMin: Double,                // mm² (code minimum)
+    val AsMax: Double,                // mm² (code maximum)
+    val AsProvided: Double,           // mm²
+    val rhoActual: Double,            // %
+    val rhoMin: Double,
+    val rhoMax: Double,
+    val finalBars: String,           // e.g. "8Ø22"
+    val finalBarCount: Int,
+    val finalBarDia: Int,
+    val rebarAlternatives: List<RebarAlternative> = emptyList(),
 
     // ===== TIES / STIRRUPS =====
-    tieDia: Int = 8,
-    tieSpacingMax: Double,         // mm
-    tieSpacingDense: Double,      // mm (at condensation zone)
-    tieSpacingNormal: Double,    // mm (at mid-height)
-    condensationZoneLength: Double, // mm
-    tieDescription: String = "",
-    tieWeightKg: Double = 0.0,
+    val tieDia: Int = 8,
+    val tieSpacingMax: Double,         // mm
+    val tieSpacingDense: Double,      // mm (at condensation zone)
+    val tieSpacingNormal: Double,    // mm (at mid-height)
+    val condensationZoneLength: Double, // mm
+    val tieDescription: String = "",
+    val tieWeightKg: Double = 0.0,
 
     // ===== SHEAR =====
-    shearForce: Double = 0.0,
-    concreteShearCapacity: Double = 0.0,
-    shearIsSafe: Boolean = true,
-    shearVsRequired: Double = 0.0,
-    shearAvProvided: Double = 0.0,
-    shearDescription: String = "",
+    val shearForce: Double = 0.0,
+    val concreteShearCapacity: Double = 0.0,
+    val shearIsSafe: Boolean = true,
+    val shearVsRequired: Double = 0.0,
+    val shearAvProvided: Double = 0.0,
+    val shearDescription: String = "",
 
     // ===== SAFETY =====
-    isSafe: Boolean,
-    safetyChecks: List<SafetyCheckItem> = emptyList(),
-    warnings: List<String> = emptyList(),
-    codeNotes: List<String> = emptyList(),
+    val isSafe: Boolean,
+    val safetyChecks: List<SafetyCheckItem> = emptyList(),
+    val warnings: List<String> = emptyList(),
+    val codeNotes: List<String> = emptyList(),
 
     // ===== QUANTITIES =====
-    concreteVolume: Double = 0.0,
-    steelWeight: Double = 0.0,
-    cost: Double = 0.0,
+    val concreteVolume: Double = 0.0,
+    val steelWeight: Double = 0.0,
+    val cost: Double = 0.0,
 
     // ===== STEP-BY-STEP =====
-    calculationSteps: List<CalculationStep> = emptyList()
+    val calculationSteps: List<CalculationStep> = emptyList()
 ) : Parcelable
 
 @Parcelize

@@ -538,7 +538,6 @@ private fun ClassificationBanner(res: CalculatorEngine.SlabResult) {
     }
     val classText = if (res.isOneWay) "One-Way Slab / بلاطة اتجاه واحد (Ly/Lx = ${"%.2f".format(res.aspectRatio)} > 2)"
                      else "Two-Way Slab / بلاطة اتجاهين (Ly/Lx = ${"%.2f".format(res.aspectRatio)})"
-    }
     Card(colors = CardDefaults.cardColors(containerColor = bgColor), shape = RoundedCornerShape(12.dp)) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Category, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))

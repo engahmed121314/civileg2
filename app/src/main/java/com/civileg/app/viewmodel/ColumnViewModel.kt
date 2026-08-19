@@ -9,7 +9,6 @@ import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.domain.calculations.ColumnDesignEngine
-import com.civileg.app.domain.calculations.ColumnDesignEngine
 import com.civileg.app.utils.DxfExportEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator

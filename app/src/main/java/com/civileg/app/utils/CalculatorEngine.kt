@@ -1117,9 +1117,9 @@ class CalculatorEngine @Inject constructor(
         val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
         // Max spacing per code
         val maxSpacing = if (isECP) {
-            min(200.0, 2.0 * ts, 3.0 * dShort)  // ECP: min(200, 2h, 3d)
+            minOf(200.0, 2.0 * ts, 3.0 * dShort)  // ECP: min(200, 2h, 3d)
         } else {
-            min(450.0, 3.0 * ts)  // ACI/SBC: min(3h, 450)
+            minOf(450.0, 3.0 * ts)  // ACI/SBC: min(3h, 450)
         }
         val minSpacing = 75.0  // practical minimum
 
@@ -1202,11 +1202,11 @@ class CalculatorEngine @Inject constructor(
         }
         val volM3 = (lx * ly * ts) / 1e6 * voidRatio
         val barWtM = preferredDiameter.toDouble().pow(2.0) / 162.0
-        val numBarsX = ceil(ly * 1000.0 / finalSpacingX) + 1
-        val numBarsY = ceil(lx * 1000.0 / finalSpacingY) + 1
+        val numBarsX = ceil(ly * 1000.0 / finalSpacingX) + 1.0
+        val numBarsY = ceil(lx * 1000.0 / finalSpacingY) + 1.0
         // Bottom X + Bottom Y + Top X + Top Y
-        val topNumX = if (asTopX > 0) ceil(ly * 1000.0 / topSpacingX) + 1 else 0
-        val topNumY = if (asTopY > 0) ceil(lx * 1000.0 / topSpacingY) + 1 else 0
+        val topNumX = if (asTopX > 0) ceil(ly * 1000.0 / topSpacingX) + 1.0 else 0.0
+        val topNumY = if (asTopY > 0) ceil(lx * 1000.0 / topSpacingY) + 1.0 else 0.0
         val steelWeight = ((numBarsX + topNumX) * lx * barWtM + (numBarsY + topNumY) * ly * barWtM) * 1.05
         val efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100
         val utilizationRatio = if (finalAsX > 0) (asReqX / providedAsX).coerceIn(0.0, 1.2) else 0.0

@@ -29,6 +29,19 @@ object ColumnDesignEngine {
         val unbraced: Map<Pair<Int, Int>, Double>
     )
 
+    private data class SlenderDesign(
+        val deflIn: Double, val deflOut: Double,
+        val MaddIn: Double, val MaddOut: Double,
+        val MdesIn: Double, val MdesOut: Double
+    )
+
+    private data class ReinforcementReq(
+        val asReq: Double, val phi: Double, val alpha: Double,
+        val capacity: Double, val asMin: Double, val asMax: Double,
+        val rhoMin: Double, val rhoMax: Double, val pu0: Double,
+        val asProv: Pair<String, Double>
+    )
+
     private val kTables = KFactorTable(
         braced = mapOf(
             Pair(1,1) to 0.75, Pair(1,2) to 0.80, Pair(1,3) to 0.90,
@@ -73,13 +86,13 @@ object ColumnDesignEngine {
         val K_in = getKFactor(isBraced, topCond, botCond)
         val K_out = getKFactor(isBraced, topCond, botCond)
         val Ho_in = max(0.0, H - beamDepthIn)
-        val Ho_out = max(0.0, H - beamOut)
+        val Ho_out = max(0.0, H - beamDepthOut)
         steps_s.add(CalculationStep(
             stepNum, "Effective Length Factors (K)",
             codeReference = when(code) { DesignCode.ECP -> "ECP 203 §9-6"; DesignCode.ACI -> "ACI 318 Table 6.2.5"; else -> "SBC 304" },
             formula = "K from code tables based on end conditions",
-            formulaWithValues = "K_in = $K_in, K_out = $K_out\nHo_in = H - beam_depth_in = $H - $beamDepthIn = ${String.format("%.0f", Ho_in)} mm\nHo_out = H - beam_depth_out = $H - $beamOut = ${String.format("%.0f", Ho_out)} mm",
-            result = "K_in = $K_in, K_out = $K_out"", unit = "-"
+            formulaWithValues = "K_in = $K_in, K_out = $K_out\nHo_in = H - beam_depth_in = $H - $beamDepthIn = ${String.format("%.0f", Ho_in)} mm\nHo_out = H - beam_depth_out = $H - $beamDepthOut = ${String.format("%.0f", Ho_out)} mm",
+            result = "K_in = $K_in, K_out = $K_out", unit = "-"
         ))
 
         // ===== STEP 2: Slenderness Ratios =====
@@ -123,14 +136,17 @@ object ColumnDesignEngine {
                 MdesIn = 0.0, MdesOut = 0.0, eccentricityIn = 0.0, eccentricityOut = 0.0,
                 Phi = 0.0, alphaFactor = 0.0, Pu0 = 0.0, axialCapacity = 0.0,
                 utilizationRatio = 0.0, AsRequired = 0.0, AsMin = 0.0, AsMax = 0.0,
-                AsProvided = 0.0, rhoActual = 0.0, finalBars = "", finalBarCount = 0, finalBarDia = 0,
+                AsProvided = 0.0, rhoActual = 0.0, rhoMin = 0.0, rhoMax = 0.0,
+                finalBars = "", finalBarCount = 0, finalBarDia = 0,
+                tieSpacingMax = 0.0, tieSpacingDense = 0.0, tieSpacingNormal = 0.0,
+                condensationZoneLength = 0.0,
                 isSafe = false, calculationSteps = steps_s, warnings = warnings, codeNotes = codeNotes
             )
         }
 
         // ===== STEP 3: Additional Moment (Long Columns) =====
         stepNum++
-        val (deflIn, deflOut, MaddIn, MaddOut, MdesIn, MdesOut) = when (classification) {
+        val slenderResults = when (classification) {
             "Short" -> {
                 steps_s.add(CalculationStep(
                     stepNum, "Additional Moment (Short Column)",
@@ -139,7 +155,7 @@ object ColumnDesignEngine {
                     result = "No additional moment needed for short column.", unit = "kN.m",
                     status = StepStatus.CALCULATION
                 ))
-                Triple(0.0, 0.0, 0.0, 0.0, MextIn, MextOut)
+                SlenderDesign(0.0, 0.0, 0.0, 0.0, MextIn, MextOut)
             }
             else -> {
                 // δ = (λ² * dimension) / 2000  (dimension in meters)
@@ -156,15 +172,22 @@ object ColumnDesignEngine {
                     formulaWithValues = "defl_in = (${String.format("%.2f", lambdaIn)}^2 * ${(t/1000.0)}) / 2000 = ${String.format("%.4f", deflIn)} m\n" +
                         "defl_out = (${String.format("%.2f", lambdaOut)}^2 * ${(b/1000.0)}) / 2000 = ${String.format("%.4f", deflOut)} m\n" +
                         "M_add_in = $Pu * $deflIn = ${String.format("%.2f", mAddIn)} kN.m\n" +
-                        "M_add_out = $Pu * $deflOut = ${String.format(".2f", mAddOut)} kN.m\n" +
+                        "M_add_out = $Pu * $mAddOut = ${String.format(".2f", mAddOut)} kN.m\n" +
                         "M_des_in = ${String.format(".2f", MextIn)} + ${String.format(".2f", mAddIn)} = ${String.format(".2f", mDesIn)} kN.m\n" +
                         "M_des_out = ${String.format(".2f", MextOut)} + ${String.format(".2f", mAddOut)} = ${String.format(".2f", mDesOut)} kN.m",
                     result = "M_add_in = ${String.format(".2f", mAddIn)} kN.m, M_add_out = ${String.format(".2f", mAddOut)} kN.m",
                     unit = "kN.m"
                 ))
-                Quintuple(deflIn, deflOut, mAddIn, mAddOut, mDesIn, mDesOut)
+                SlenderDesign(deflIn, deflOut, mAddIn, mAddOut, mDesIn, mDesOut)
             }
         }
+
+        val deflIn = slenderResults.deflIn
+        val deflOut = slenderResults.deflOut
+        val mAddIn = slenderResults.MaddIn
+        val mAddOut = slenderResults.MaddOut
+        val MdesIn = slenderResults.MdesIn
+        val MdesOut = slenderResults.MdesOut
 
         val eccIn = if (Pu > 0) (MdesIn * 1000.0) / (Pu * 1000.0) * 1000.0 else 0.0
         val eccOut = if (Pu > 0) (MdesOut * 1000.0) / (Pu * 1000.0) * 1000.0 else 0.0
@@ -177,7 +200,7 @@ object ColumnDesignEngine {
         val MdesIn_Nmm = MdesIn * 1e6
         val MdesOut_Nmm = MdesOut * 1e6
 
-        val (AsReq, phi, alpha, capacity, asMin, asMax, rhoMin, rhoMax, pu0) = when (code) {
+        val reinf = when (code) {
             DesignCode.ECP -> {
                 val fcEff = fcu / GAMMA_C_ECP
                 val fs = fy / GAMMA_S_ECP
@@ -197,7 +220,7 @@ object ColumnDesignEngine {
                 val actualAs = asProv.second
                 // Recalculate capacity
                 val pu0 = (0.35 * fcu * (ag - actualAs) + 0.67 * fs * actualAs) / 1000.0
-                Tuple(asReqFinal, 0.0, 0.0, pu0, asMinECP, asMaxECP, asMinECP/ag*100, 8.0, actualAs/ag*100)
+                ReinforcementReq(asReqFinal, 0.0, 0.0, pu0, asMinECP, asMaxECP, asMinECP/ag*100, 8.0, actualAs/ag*100, asProv)
             }
             else -> {
                 val fcPrime = fcu * 0.8
@@ -218,9 +241,20 @@ object ColumnDesignEngine {
                 val asProv = calculateBarSelection(asReqFinal, preferredDia, min(b, t), 4)
                 val actualAs = asProv.second
                 val pu0 = (alphaVal * phiVal * (0.85 * fcPrime * (ag - actualAs) + fy * actualAs)) / 1000.0
-                Tuple(asReqFinal, phiVal, alphaVal, pu0, asMinACI, asMaxACI, asMinACI/ag*100, 8.0, actualAs/ag*100)
+                ReinforcementReq(asReqFinal, phiVal, alphaVal, pu0, asMinACI, asMaxACI, asMinACI/ag*100, 8.0, actualAs/ag*100, asProv)
             }
         }
+
+        val AsReq = reinf.asReq
+        val phi = reinf.phi
+        val alpha = reinf.alpha
+        val capacity = reinf.capacity
+        val asMin = reinf.asMin
+        val asMax = reinf.asMax
+        val rhoMin = reinf.rhoMin
+        val rhoMax = reinf.rhoMax
+        val pu0 = reinf.pu0
+        val asProv = reinf.asProv
 
         steps_s.add(CalculationStep(
             stepNum, "Reinforcement Design",
@@ -269,7 +303,9 @@ object ColumnDesignEngine {
         safetyChecks.add(SafetyCheckItem("Slenderness", lambdaMax, limitLong, "", lambdaMax <= limitLong, when(code) { DesignCode.ECP -> "ECP 203 §9-4"; else -> "ACI 318 §6.2" }))
 
         val vol = ag * H / 1e9
-        val mainWt = asProv.first * (H / 1000.0) * (preferredDia.toDouble().pow(2) / 162.0)
+        val barArea = PI * preferredDia.toDouble().pow(2) / 4.0
+        val barCount = (asProv.second / barArea).roundToInt()
+        val mainWt = barCount * (H / 1000.0) * (preferredDia.toDouble().pow(2) / 162.0)
         val totalWt = (mainWt + tieWeight) * 1.05
         codeNotes.add(when(code) { DesignCode.ECP -> "ECP 203-2020"; DesignCode.ACI -> "ACI 318-19"; else -> "SBC 304-2018" })
 
@@ -302,7 +338,7 @@ object ColumnDesignEngine {
             utilizationRatio = util, AsRequired = AsReq, AsMin = asMin, AsMax = asMax,
             AsProvided = asProv.second, rhoActual = asProv.second/ag*100,
             rhoMin = rhoMin, rhoMax = rhoMax,
-            finalBars = asProv.first, finalBarCount = asProv.first, finalBarDia = preferredDia,
+            finalBars = asProv.first, finalBarCount = barCount, finalBarDia = preferredDia,
             rebarAlternatives = listOf(12,14,16,18,20,22,25).map { d ->
                 val a = PI * d.toDouble().pow(2) / 4.0
                 RebarAlternative(ceil(AsReq / a).toInt().coerceAtLeast(4), d, a, "${ceil(AsReq/a).toInt().coerceAtLeast(4)}Ø$d")

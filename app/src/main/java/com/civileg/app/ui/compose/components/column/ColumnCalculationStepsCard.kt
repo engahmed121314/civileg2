@@ -1,6 +1,7 @@
 package com.civileg.app.ui.compose.components.column
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,9 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.entities.ColumnDesignResult
-import com.civleg.app.domain.entities.CalculationStep
+import com.civileg.app.domain.entities.CalculationStep
 import com.civileg.app.domain.entities.SafetyCheckItem
-import com.civleg.app.domain.entities.StepStatus
+import com.civileg.app.domain.entities.StepStatus
 
 /**
  * Comprehensive column design results with step-by-step calculations
@@ -37,7 +38,7 @@ fun ColumnCalculationStepsCard(
     ) {
         // SLENDERNESS
         ColumnExpandableSection(
-            "Slenderness Classification",", Icons.Default.Straighten,
+            "Slenderness Classification", Icons.Default.Straighten,
             if (result.lambdaMax > result.lambdaLimitLong) Color(0xFFE74C3C)
             else if (result.lambdaMax > result.lambdaLimitShort) Color(0xFFE67E22)
             else Color(0xFF27AE60),
@@ -116,19 +117,25 @@ fun ColumnCalculationStepsCard(
             Icons.Default.FormatListNumbered, Color(0xFF1ABC9C),
             expandedSection == 5, { expandedSection = if (expandedSection == 5) -1 else 5 }
         ) {
-            result.calculationSteps.forEach { step -> ColumnCalcStepItem(step) }
+            for (step in result.calculationSteps) {
+                ColumnCalcStepItem(step)
+            }
         }
 
         // SAFETY
         ColumnExpandableSection(
-            "Safety Checks Summary",
+            "Safety Checks Summary", Icons.Default.Shield,
             if (result.isSafe) Color(0xFF27AE60) else Color(0xFFE74C3C),
             expandedSection == 6, { expandedSection = if (expandedSection == 6) -1 else 6 }
         ) {
-            result.safetyChecks.forEach { check -> ColumnSafetyRow(check) }
+            for (check in result.safetyChecks) {
+                ColumnSafetyRow(check)
+            }
             if (result.warnings.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                result.warnings.forEach { Text("\u26A0 $it", color = Color(0xFFE67E22), fontSize = 11.sp, modifier = Modifier.padding(vertical = 2.dp)) }
+                for (warning in result.warnings) {
+                    Text("\u26A0 $warning", color = Color(0xFFE67E22), fontSize = 11.sp, modifier = Modifier.padding(vertical = 2.dp))
+                }
             }
         }
 
