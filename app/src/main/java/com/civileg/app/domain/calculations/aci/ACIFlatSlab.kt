@@ -2,6 +2,10 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.ReinforcementDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.DeflectionResult
 import kotlin.math.*
 
 /**
@@ -181,7 +185,7 @@ class ACIFlatSlab : FlatSlabDesign {
             columnWidth = input.columnWidth,
             columnDepth = input.columnDepth,
             cover = input.clearCover
-        )
+        ) as FlatSlabDesign.PunchingShearResult
 
         safetyChecks.add(SafetyCheckItem(
             "Punching Shear", punchingResult.vu, punchingResult.vc,
@@ -201,7 +205,7 @@ class ACIFlatSlab : FlatSlabDesign {
             serviceMoment = serviceMoment,
             effectiveDepth = dSlab,
             providedAs = colBotRebarX.providedArea
-        )
+        ) as FlatSlabDesign.DeflectionResult
 
         safetyChecks.add(SafetyCheckItem(
             "Deflection", deflectionResult.longTerm, deflectionResult.allowable,
@@ -339,18 +343,18 @@ class ACIFlatSlab : FlatSlabDesign {
 
     override fun getMomentCoefficients(
         panelType: PanelType, hasBeams: Boolean
-    ): MomentCoefficients {
+    ): FlatSlabDesign.MomentCoefficients {
         // ACI 318-19 Table 8.10.4.2 for flat slabs (α = 0, no beams)
         return when (panelType) {
-            PanelType.INTERIOR -> MomentCoefficients(
+            PanelType.INTERIOR -> FlatSlabDesign.MomentCoefficients(
                 colNegExterior = 0.75, colPositive = 0.60, colNegInterior = 0.75,
                 midNegExterior = 0.25, midPositive = 0.40, midNegInterior = 0.25
             )
-            PanelType.EDGE -> MomentCoefficients(
+            PanelType.EDGE -> FlatSlabDesign.MomentCoefficients(
                 colNegExterior = 1.00, colPositive = 0.60, colNegInterior = 0.75,
                 midNegExterior = 0.00, midPositive = 0.40, midNegInterior = 0.25
             )
-            PanelType.CORNER -> MomentCoefficients(
+            PanelType.CORNER -> FlatSlabDesign.MomentCoefficients(
                 colNegExterior = 1.00, colPositive = 0.60, colNegInterior = 1.00,
                 midNegExterior = 0.00, midPositive = 0.40, midNegInterior = 0.00
             )
@@ -374,7 +378,7 @@ class ACIFlatSlab : FlatSlabDesign {
         slabThickness: Double, dropThickness: Double,
         columnWidth: Double, columnDepth: Double,
         cover: Double
-    ): PunchingShearResult {
+    ): FlatSlabDesign.PunchingShearResult {
         val fc = fcu  // already f'c
         val d = if (dropThickness > 0) {
             slabThickness + dropThickness - cover - 6.0
@@ -439,7 +443,7 @@ class ACIFlatSlab : FlatSlabDesign {
             }
         }
 
-        return PunchingShearResult(
+        return FlatSlabDesign.PunchingShearResult(
             vu = vu, vc = Vc, bo = bo, d = d,
             isSafe = isSafe || (needsReinf && studDia > 0),
             utilizationRatio = utilizationRatio,
@@ -457,13 +461,13 @@ class ACIFlatSlab : FlatSlabDesign {
         moment: Double, fcu: Double, fy: Double,
         effectiveDepth: Double, stripWidth: Double,
         cover: Double
-    ): ReinforcementDesign {
+    ): FlatSlabDesign.ReinforcementDesign {
         val fc = fcu
         if (moment <= 0.001 || effectiveDepth <= 0) {
             val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
             val barArea = PI * 12.0 * 12.0 / 4.0
             val spacing = (barArea * stripWidth / minAs).coerceIn(50.0, getMaxBarSpacing())
-            return ReinforcementDesign(minAs, minAs, 12.0, spacing, 1, true)
+            return FlatSlabDesign.ReinforcementDesign(minAs, minAs, 12.0, spacing, 1, true)
         }
 
         val Mu = moment * 1e6 * PHI_FLEXURE  // factored N.mm (with φ)
@@ -497,7 +501,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val asProvided = PI * selectedDia * selectedDia / 4.0 * stripWidth / spacing
         val barsCount = (stripWidth / spacing).toInt().coerceAtLeast(1)
 
-        return ReinforcementDesign(
+        return FlatSlabDesign.ReinforcementDesign(
             asRequired = As, asProvided = asProvided,
             barDia = selectedDia, barSpacing = spacing,
             barsCount = barsCount, isMinSteel = isMinSteel
@@ -538,7 +542,7 @@ class ACIFlatSlab : FlatSlabDesign {
         fcu: Double, fy: Double,
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
-    ): DeflectionResult {
+    ): FlatSlabDesign.DeflectionResult {
         val fc = fcu
         val Ec = 4700.0 * sqrt(fc)
         val Ig = 1000.0 * slabThickness.pow(3) / 12.0
@@ -551,7 +555,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val Icr = n * providedAs * effectiveDepth * effectiveDepth * 0.5
         val Ma = serviceMoment
         val Ie = if (Ma > Mcr && Mcr > 0) {
-            val ratio = min((Mcr / Ma).pow(3), 1.0)
+            val ratio = minOf((Mcr / Ma).pow(3), 1.0)
             ratio * Ig + (1.0 - ratio) * Icr.coerceAtLeast(Ig * 0.3)
         } else Ig
 
@@ -568,7 +572,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val allowable = span / 240.0  // ACI Table 24.2.2
         val ratio = if (allowable > 0) longTerm / allowable else 0.0
 
-        return DeflectionResult(
+        return FlatSlabDesign.DeflectionResult(
             immediate = immediate, longTerm = longTerm,
             allowable = allowable, isSafe = longTerm <= allowable, ratio = ratio
         )

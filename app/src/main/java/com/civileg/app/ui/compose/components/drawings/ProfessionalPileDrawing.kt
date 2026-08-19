@@ -123,10 +123,10 @@ fun ProfessionalPileDrawing(
         val planScaleY = planMaxH / safeCapW
         val pScale = min(planScaleX, planScaleY) * 0.8f
 
-        val capDrawL = safeCapL * pScale
-        val capDrawW = safeCapW * pScale
-        val pCenterX = planLeft + planMaxW / 2f
-        val pCenterY = planTop + planMaxH / 2f + 4f
+        val capDrawL = (safeCapL * pScale).toFloat()
+        val capDrawW = (safeCapW * pScale).toFloat()
+        val pCenterX = (planLeft + planMaxW / 2f).toFloat()
+        val pCenterY = (planTop + planMaxH / 2f + 4f).toFloat()
         val capLeft = pCenterX - capDrawL / 2f
         val capTop = pCenterY - capDrawW / 2f
 
@@ -208,10 +208,10 @@ fun ProfessionalPileDrawing(
         drawTextAnnotated("PILE SECTION", secLeft, secTop - 4f, C.ExtensionGray, 9f * density, bold = true)
 
         // Scale pile section to fit
-        val secScale = (secMaxSize * 0.6f) / safeDia
+        val secScale = ((secMaxSize * 0.6f) / safeDia).toFloat()
         val pileDrawR = (safeDia / 2.0 * secScale).toFloat().coerceAtLeast(20f)
-        val pileCX = secLeft + secMaxSize / 2f
-        val pileCY = secTop + secMaxSize / 2f + 8f
+        val pileCX = (secLeft + secMaxSize / 2f).toFloat()
+        val pileCY = (secTop + secMaxSize / 2f + 8f).toFloat()
 
         // Pile circle (concrete)
         drawCircle(color = concreteFill, radius = pileDrawR, center = Offset(pileCX, pileCY))
@@ -229,8 +229,8 @@ fun ProfessionalPileDrawing(
         val barCircleR = pileDrawR - coverPx
         for (i in 0 until longitBars) {
             val angle = 2.0 * PI * i / longitBars
-            val bx = pileCX + (barCircleR * cos(angle)).toFloat()
-            val by = pileCY + (barCircleR * sin(angle)).toFloat()
+            val bx = (pileCX + (barCircleR * cos(angle))).toFloat()
+            val by = (pileCY + (barCircleR * sin(angle))).toFloat()
             drawRebarCircle(bx, by, longitDia.toFloat(), secScale * 0.5f, rebarColor)
         }
 
@@ -246,7 +246,7 @@ fun ProfessionalPileDrawing(
 
         // Rebar label
         drawTextAnnotated(
-            "$longitBarsØ$longitDia",
+            "${longitBars}Ø$longitDia",
             pileCX + pileDrawR + 14f, pileCY - 6f, rebarColor, 9f * density, bold = true
         )
         drawTextAnnotated(
@@ -266,11 +266,11 @@ fun ProfessionalPileDrawing(
 
         // Pile length to drawing height
         val pileDrawLength = (elevH - 50f) * 0.75f
-        val elevScale = pileDrawLength / pileLength.toFloat()
+        val elevScale = (pileDrawLength / pileLength).toFloat()
 
-        val eCenterX = elevLeft + elevW / 2f
-        val groundY = elevTop + 20f
-        val pileTopY = groundY + safeCapT * elevScale * 0.3f
+        val eCenterX = (elevLeft + elevW / 2f).toFloat()
+        val groundY = (elevTop + 20f).toFloat()
+        val pileTopY = groundY + (safeCapT * elevScale * 0.3f).toFloat()
         val pileBottomY = pileTopY + pileDrawLength
         val pileDrawW = (safeDia * elevScale).toFloat().coerceIn(10f, 30f)
 
@@ -328,12 +328,12 @@ fun ProfessionalPileDrawing(
         )
 
         // Pile cap
-        val capDrawW = safeCapL * elevScale * 0.25f
-        val capDrawH = safeCapT * elevScale * 0.3f
+        val capDrawW_elev = (safeCapL * elevScale * 0.25f).toFloat()
+        val capDrawH = (safeCapT * elevScale * 0.3f).toFloat()
         drawRect(
             color = concreteFill,
-            topLeft = Offset(eCenterX - capDrawW / 2f, pileTopY - capDrawH),
-            size = Size(capDrawW, capDrawH)
+            topLeft = Offset(eCenterX - capDrawW_elev / 2f, pileTopY - capDrawH),
+            size = Size(capDrawW_elev, capDrawH)
         )
         drawRect(
             color = capStroke,

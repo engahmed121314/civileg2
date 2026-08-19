@@ -15,8 +15,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.*
+import com.civileg.app.ui.compose.components.drawings.DrawingColors
 import kotlin.math.*
 
 // ─── Color Palette ───────────────────────────────────────────────
@@ -271,12 +273,12 @@ private fun DrawScope.drawWallSection(
     val availH = height - 2 * pad - 10f
 
     // Scale wall section to fit (wall is long and thin)
-    val scaleH = availW / wallLength
-    val scaleV = availH / wallThickness
+    val scaleH = (availW / wallLength).toFloat()
+    val scaleV = (availH / wallThickness).toFloat()
     val scale = min(scaleH, scaleV) * 0.85f
 
-    val drawLw = wallLength * scale
-    val drawTw = wallThickness * scale
+    val drawLw = (wallLength * scale).toFloat()
+    val drawTw = (wallThickness * scale).toFloat()
     val ox = left + pad + (availW - drawLw) / 2f
     val oy = top + pad + 30f + (availH - drawTw) / 2f
     val cover = 25f * scale
@@ -290,8 +292,8 @@ private fun DrawScope.drawWallSection(
 
     // ── Flange for L/T shapes ────────────────────────────────────
     if (wallShape == "L-shaped" || wallShape == "T-shaped") {
-        val flangeLen = wallThickness * 3 * scale
-        val flangeThk = wallThickness * 0.8 * scale
+        val flangeLen = (wallThickness * 3 * scale).toFloat()
+        val flangeThk = (wallThickness * 0.8 * scale).toFloat()
         if (wallShape == "L-shaped") {
             // Flange extends to the left
             drawRect(
@@ -307,8 +309,8 @@ private fun DrawScope.drawWallSection(
             )
         } else {
             // T-shape: flange at top
-            val flangeW = wallLength * 0.8 * scale
-            val flangeH = wallThickness * 0.8 * scale
+            val flangeW = (wallLength * 0.8 * scale).toFloat()
+            val flangeH = (wallThickness * 0.8 * scale).toFloat()
             drawRect(
                 color = C.ConcreteFill,
                 topLeft = Offset(ox + (drawLw - flangeW) / 2f, oy - flangeH),
@@ -502,7 +504,7 @@ private fun DrawScope.drawTextAnnotated(
             this.color = color.toArgb()
             this.textSize = textSize * density
             this.isFakeBoldText = bold
-            this.antiAlias = true
+            this.isAntiAlias = true
         }
         if (rotation != 0f) {
             save()

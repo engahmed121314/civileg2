@@ -2,6 +2,8 @@ package com.civileg.app.domain.calculations.base
 
 import com.civileg.app.domain.FlatSlabInput
 import com.civileg.app.domain.FlatSlabResult
+import com.civileg.app.domain.PanelType
+import com.civileg.app.domain.SafetyCheckItem
 
 /**
  * Interface for flat slab design per any design code.

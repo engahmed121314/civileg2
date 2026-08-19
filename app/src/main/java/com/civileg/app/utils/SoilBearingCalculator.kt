@@ -96,18 +96,18 @@ object NFactorTable {
      * is performed for Terzaghi Nγ; the others are computed exactly.
      */
     fun lookup(phi: Double): Triple<Double, Double, Double> {
-        val nq = bearingNq(phi)
-        val nc = bearingNc(phi, nq)
+        val nq = SoilBearingCalculator.bearingNq(phi)
+        val nc = SoilBearingCalculator.bearingNc(phi, nq)
         // Nγ – interpolate from table
         val keys = terzaghiTable.keys.sorted()
-        val lower = keys.lastOrNull { it <= phi.ceilToInt() } ?: 0
-        val upper = keys.firstOrNull { it >= phi.ceilToInt() } ?: 45
+        val lower = keys.lastOrNull { it <= ceil(phi).toInt() } ?: 0
+        val upper = keys.firstOrNull { it >= ceil(phi).toInt() } ?: 45
         val ngamma = if (lower == upper) {
             terzaghiTable[lower]!!.ngammaTerzaghi
         } else {
             val fL = terzaghiTable[lower]!!
             val fU = terzaghiTable[upper]!!
-            val t = (phi.ceilToInt() - lower).toDouble() / (upper - lower)
+            val t = (ceil(phi).toInt() - lower).toDouble() / (upper - lower)
             fL.ngammaTerzaghi + t * (fU.ngammaTerzaghi - fL.ngammaTerzaghi)
         }
         return Triple(nc, nq, ngamma)
@@ -134,6 +134,20 @@ class SoilBearingCalculator {
     companion object {
         private const val DEG2RAD = PI / 180.0
         private const val SUBMERGED_UNIT_WEIGHT = 9.81  // kN/m³ (γ_sub ≈ γ_w)
+
+        /** Nq = e^(π·tan φ) · tan²(π/4 + φ/2) */
+        internal fun bearingNq(phiDeg: Double): Double {
+            if (phiDeg == 0.0) return 1.0
+            val phi = phiDeg * (PI / 180.0)
+            return exp(PI * tan(phi)) * tan(PI / 4 + phi / 2).pow(2)
+        }
+
+        /** Nc = (Nq − 1) · cot φ  ;  Nc = 5.14 when φ = 0 */
+        internal fun bearingNc(phiDeg: Double, nq: Double): Double {
+            if (phiDeg == 0.0) return 5.14
+            val phi = phiDeg * (PI / 180.0)
+            return (nq - 1.0) * (1.0 / tan(phi))
+        }
     }
 
     // ----------------------------------------------------------
@@ -224,8 +238,8 @@ class SoilBearingCalculator {
     // ----------------------------------------------------------
 
     fun getBearingCapacityFactors(phiDeg: Double, method: BearingMethod): Triple<Double, Double, Double> {
-        val nq = bearingNq(phiDeg)
-        val nc = bearingNc(phiDeg, nq)
+        val nq = SoilBearingCalculator.bearingNq(phiDeg)
+        val nc = SoilBearingCalculator.bearingNc(phiDeg, nq)
         val ngamma = when (method) {
             BearingMethod.TERZAGHI -> nGammaTerzaghi(phiDeg)
             BearingMethod.MEYERHOF -> nGammaMeyerhof(phiDeg, nq)

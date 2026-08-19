@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.civileg.app.domain.PanelType
 import com.civileg.app.domain.RebarResult
-import kotlin.math.min
+import kotlin.math.*
 
 /**
  * Professional Flat Slab Plan Drawing
@@ -73,7 +73,7 @@ fun ProfessionalFlatSlabDrawing(
         val gridColor = Color(0x1AFFFFFF)
 
         // ── Background ───────────────────────────────────────────
-        drawRect(bgDark, Offset.Zero, size)
+        drawRect(color = bgDark, topLeft = Offset.Zero, size = size)
 
         // ── Layout calculations ──────────────────────────────────
         val margin = 40f * density
@@ -99,15 +99,15 @@ fun ProfessionalFlatSlabDrawing(
         val panelY = drawTop + (drawAreaH - panelH) / 2f
 
         // Scale factor: pixels per meter
-        val scale = panelW / lx.toFloat()
-        val colWPx = (columnWidth / 1000.0 * scale)
-        val colDPx = (columnDepth / 1000.0 * scale)
-        val dropXPx = (dropSizeX / 1000.0 * scale)
-        val dropYPx = (dropSizeY / 1000.0 * scale)
+        val scale = (panelW / lx).toFloat()
+        val colWPx = (columnWidth / 1000.0 * scale).toFloat()
+        val colDPx = (columnDepth / 1000.0 * scale).toFloat()
+        val dropXPx = (dropSizeX / 1000.0 * scale).toFloat()
+        val dropYPx = (dropSizeY / 1000.0 * scale).toFloat()
 
         // Column strip widths in pixels (convert from mm to m then to px)
-        val colStripXPx = (colStripWidthX / 1000.0 * scale)
-        val colStripYPx = (colStripWidthY / 1000.0 * scale)
+        val colStripXPx = (colStripWidthX / 1000.0 * scale).toFloat()
+        val colStripYPx = (colStripWidthY / 1000.0 * scale).toFloat()
 
         // ── Grid lines ───────────────────────────────────────────
         for (i in 1 until 4) {
@@ -123,8 +123,8 @@ fun ProfessionalFlatSlabDrawing(
         if (dropXPx > 0 && dropYPx > 0) {
             val dx = panelX + panelW / 2f - dropXPx / 2f
             val dy = panelY + panelH / 2f - dropYPx / 2f
-            drawRect(dropFill, Offset(dx, dy), Size(dropXPx, dropYPx))
-            drawRect(dropStroke, Offset(dx, dy), Size(dropXPx, dropYPx), style = Stroke(1.5f))
+            drawRect(color = dropFill, topLeft = Offset(dx, dy), size = Size(dropXPx, dropYPx))
+            drawRect(color = dropStroke, topLeft = Offset(dx, dy), size = Size(dropXPx, dropYPx), style = Stroke(1.5f))
             drawTextAnnotated(
                 "Drop Panel",
                 dx + dropXPx / 2f, dy + dropYPx / 2f - 8f,
@@ -160,7 +160,7 @@ fun ProfessionalFlatSlabDrawing(
         // Column strip label
         val csLabelX = panelX + panelW / 2f
         val csLabelY = panelY + 16f
-        drawRect(colStripColor.copy(alpha = 0.3f),
+        drawRoundRect(colStripColor.copy(alpha = 0.3f),
             Offset(csLabelX - 40f, csLabelY - 10f), Size(80f, 20f),
             cornerRadius = CornerRadius(4f))
         drawTextAnnotated("Column Strip", csLabelX, csLabelY - 4f, Color.White, 11f, center = true, bold = true)
@@ -172,7 +172,7 @@ fun ProfessionalFlatSlabDrawing(
         drawTextAnnotated("Mid", msLabelX2, panelY + panelH / 2f - 4f, midStripColor, 11f, center = true)
 
         // ── Panel outline ─────────────────────────────────────────
-        drawRect(panelStroke, Offset(panelX, panelY), Size(panelW, panelH), style = Stroke(2f))
+        drawRect(color = panelStroke, topLeft = Offset(panelX, panelY), size = Size(panelW, panelH), style = Stroke(2f))
 
         // ── Punching shear critical perimeter (dashed rectangle) ──
         val punchOffset = 15f  // approximate d/2 in pixels
@@ -180,7 +180,7 @@ fun ProfessionalFlatSlabDrawing(
         val py1 = panelY + panelH / 2f - colDPx / 2f - punchOffset
         val pW = colWPx + 2 * punchOffset
         val pH = colDPx + 2 * punchOffset
-        drawRect(shearPerimColor, Offset(px1, py1), Size(pW, pH), style = Stroke(1.5f,
+        drawRect(color = shearPerimColor, topLeft = Offset(px1, py1), size = Size(pW, pH), style = Stroke(1.5f,
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
         ))
         drawTextAnnotated("bo", px1 + pW + 4f, py1 + pH / 2f - 6f, shearPerimColor, 11f)
@@ -193,8 +193,8 @@ fun ProfessionalFlatSlabDrawing(
             Offset(panelX + panelW - colWPx, panelY + panelH - colDPx)  // bottom-right
         )
         colPositions.forEach { pos ->
-            drawRect(columnFill, pos, Size(colWPx, colDPx))
-            drawRect(columnStroke, pos, Size(colWPx, colDPx), style = Stroke(1.5f))
+            drawRect(color = columnFill, topLeft = pos, size = Size(colWPx, colDPx))
+            drawRect(color = columnStroke, topLeft = pos, size = Size(colWPx, colDPx), style = Stroke(1.5f))
             // Cross-hatch for column
             for (i in 1..3) {
                 val hx = pos.x + colWPx * i / 4f
@@ -255,7 +255,7 @@ fun ProfessionalFlatSlabDrawing(
         }
 
         // ── Title bar ────────────────────────────────────────────
-        drawRect(headerBg, Offset(panelX, margin), Size(panelW, titleH),
+        drawRoundRect(headerBg, Offset(panelX, margin), Size(panelW, titleH),
             cornerRadius = CornerRadius(6f))
         drawTextAnnotated(
             "FLAT SLAB — ${panelType.displayName} PANEL",
@@ -270,7 +270,7 @@ fun ProfessionalFlatSlabDrawing(
         val badgeH = 22f
         val badgeX = panelX + panelW - badgeW
         val badgeY = margin + titleH + 6f
-        drawRect(statusColor, Offset(badgeX, badgeY), Size(badgeW, badgeH),
+        drawRoundRect(statusColor, Offset(badgeX, badgeY), Size(badgeW, badgeH),
             cornerRadius = CornerRadius(4f))
         drawTextAnnotated(
             statusText, badgeX + badgeW / 2f, badgeY + badgeH / 2f - 4f,
@@ -283,7 +283,11 @@ fun ProfessionalFlatSlabDrawing(
         val legRowH = 16f
 
         drawTextAnnotated("LEGEND:", legX, legY, textColor, 12f, bold = true)
-        drawRect(columnFill, Offset(legX, legY + legRowH + 2f), Size(14f, 10f))
+        drawRect(
+            color = columnFill,
+            topLeft = Offset(legX, legY + legRowH + 2f),
+            size = Size(14f, 10f)
+        )
         drawTextAnnotated("Column", legX + 20f, legY + legRowH + 6f, textColor, 11f)
         drawLine(colStripColor, Offset(legX + 80f, legY + legRowH + 7f),
             Offset(legX + 94f, legY + legRowH + 7f), 2f,
@@ -306,8 +310,8 @@ fun ProfessionalFlatSlabDrawing(
         val tbH = 44f
         val tbX = panelX + panelW - tbW
         val tbY = legY + 3 * legRowH + 4f
-        drawRect(Color(0x11FFFFFF), Offset(tbX, tbY), Size(tbW, tbH))
-        drawRect(Color(0x55FFFFFF), Offset(tbX, tbY), Size(tbW, tbH), style = Stroke(1f))
+        drawRect(color = Color(0x11FFFFFF), topLeft = Offset(tbX, tbY), size = Size(tbW, tbH))
+        drawRect(color = Color(0x55FFFFFF), topLeft = Offset(tbX, tbY), size = Size(tbW, tbH), style = Stroke(1f))
         drawLine(Color(0x55FFFFFF), Offset(tbX, tbY + tbH * 0.5f),
             Offset(tbX + tbW, tbY + tbH * 0.5f), 0.5f)
         drawTextAnnotated("Project: Flat Slab Module", tbX + 6f, tbY + tbH * 0.3f, textColor, 11f)

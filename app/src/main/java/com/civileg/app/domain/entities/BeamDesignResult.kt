@@ -146,7 +146,7 @@ data class BeamDesignResult(
     val immediateDeflection: Double = 0.0,      // mm
     val longTermDeflection: Double = 0.0,       // mm (with creep + shrinkage)
     val allowableDeflection: Double = 0.0,      // mm
-    deflectionIsSafe: Boolean = true,
+    val deflectionIsSafe: Boolean = true,
     val deflectionSpanRatio: String = "",      // e.g. "L/250"
     val basicSpanDepthRatio: Double = 0.0,
     val modifiedSpanDepthRatio: Double = 0.0,
@@ -165,7 +165,7 @@ data class BeamDesignResult(
     val developmentLengthProvided: Double = 0.0, // mm
     val bondStress: Double = 0.0,              // MPa - fbd
     val lapLength: Double = 0.0,               // mm
-    developmentIsSafe: Boolean = true,
+    val developmentIsSafe: Boolean = true,
 
     // ===== 13. SAFETY & ECONOMY =====
     val isSafe: Boolean = true,

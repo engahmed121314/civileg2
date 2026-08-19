@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -20,11 +24,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,6 +40,7 @@ import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.SoilBearingResult
 import com.civileg.app.utils.SoilType
 import com.civileg.app.viewmodel.SoilBearingViewModel
+import kotlin.math.*
 
 // ============================================================
 // Color palette
@@ -54,13 +63,14 @@ private val UnsafeRed = Color(0xFFE53935)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SoilBearingScreen(
-    viewModel: SoilBearingViewModel = hiltViewModel()
+    viewModel: SoilBearingViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit
 ) {
-    val result by viewModel.result.collectAsState()
-    val isCalculating by viewModel.isCalculating.collectAsState()
-    val comparisonResults by viewModel.comparisonResults.collectAsState()
-    val selectedMethod by viewModel.method.collectAsState()
-    val selectedSoilType by viewModel.soilType.collectAsState()
+    val result by viewModel.result.observeAsState()
+    val isCalculating by viewModel.isCalculating.observeAsState(false)
+    val comparisonResults by viewModel.comparisonResults.observeAsState(emptyMap())
+    val selectedMethod by viewModel.method.observeAsState(BearingMethod.TERZAGHI)
+    val selectedSoilType by viewModel.soilType.observeAsState(SoilType.CLAY)
 
     // Local state for text fields (controlled by ViewModel)
     var foundationWidth by remember { mutableStateOf(viewModel.foundationWidth.value ?: "1.5") }
@@ -98,6 +108,11 @@ fun SoilBearingScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Soil Bearing Capacity", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -354,8 +369,8 @@ private fun InputRow(label: String, value: String, onValueChange: (String) -> Un
         onValueChange = onValueChange,
         label = { Text(label, fontSize = 13.sp) },
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.foundation.text.KeyboardType.Decimal
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal
         ),
         singleLine = true,
         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp)
@@ -599,10 +614,10 @@ private fun FoundationCrossSectionCanvas(
         val maxPhysHeight = maxOf(waterTableDepth, Df + B, 5.0)
         val scale = (h * 0.75f) / maxPhysHeight.toFloat()
         val groundY = h * 0.2f  // ground surface position
-        val foundationPixelW = (B * scale).coerceIn(40f, w * 0.7f)
-        val dfPixel = (Df * scale).coerceIn(20f, h * 0.4f)
+        val foundationPixelW = (B * scale).toFloat().coerceIn(40f, w * 0.7f)
+        val dfPixel = (Df * scale).toFloat().coerceIn(20f, h * 0.4f)
         val baseY = groundY + dfPixel
-        val wtPixel = ((waterTableDepth - Df) * scale).coerceAtLeast(0f)
+        val wtPixel = ((waterTableDepth - Df) * scale).toFloat().coerceAtLeast(0f)
         val waterY = baseY + wtPixel
 
         // --- Sky ---
@@ -640,11 +655,11 @@ private fun FoundationCrossSectionCanvas(
             // Label
             drawContext.canvas.nativeCanvas.drawText(
                 "WT (Dw=${waterTableDepth}m)",
-                12f, waterY - 8f,
+                12f, waterY.toFloat() - 8f,
                 android.graphics.Paint().apply {
-                    color = WaterBlue.toArgb()
-                    textSize = 28f
-                    isFakeBoldText = true
+                    this.setColor(WaterBlue.toArgb())
+                    this.textSize = 28f
+                    this.isFakeBoldText = true
                 }
             )
         }
@@ -711,19 +726,19 @@ private fun FoundationCrossSectionCanvas(
         for (i in 0 until arrowCount) {
             val ax = fLeft + (i + 0.5f) * foundationPixelW / arrowCount
             drawArrow(
-                from = Offset(ax, baseY - 50f),
-                to = Offset(ax, baseY - 14f),
+                from = Offset(ax, (baseY - 50f).toFloat()),
+                to = Offset(ax, (baseY - 14f).toFloat()),
                 color = AccentOrange,
                 strokeWidth = 2f
             )
         }
         drawContext.canvas.nativeCanvas.drawText(
             "Q",
-            cx - 10f, baseY - 56f,
+            cx - 10f, (baseY - 56f).toFloat(),
             android.graphics.Paint().apply {
-                color = AccentOrange.toArgb()
-                textSize = 32f
-                isFakeBoldText = true
+                this.setColor(AccentOrange.toArgb())
+                this.textSize = 32f
+                this.isFakeBoldText = true
             }
         )
 
@@ -735,9 +750,9 @@ private fun FoundationCrossSectionCanvas(
             soilType.name,
             12f, h - 12f,
             android.graphics.Paint().apply {
-                color = soilColor.toArgb()
-                textSize = 28f
-                isFakeBoldText = true
+                this.setColor(soilColor.toArgb())
+                this.textSize = 28f
+                this.isFakeBoldText = true
             }
         )
     }
@@ -753,8 +768,8 @@ private fun DrawScope.drawDimensionLine(x: Float, y1: Float, y2: Float, label: S
         label,
         x + 10f, (y1 + y2) / 2f + 6f,
         android.graphics.Paint().apply {
-            color = android.graphics.Color.DKGRAY
-            textSize = 24f
+            this.setColor(android.graphics.Color.DKGRAY)
+            this.textSize = 24f
         }
     )
 }
@@ -763,13 +778,13 @@ private fun DrawScope.drawDimensionLineH(y: Float, x1: Float, x2: Float, label: 
     drawLine(Color(0xFF424242), Offset(x1, y), Offset(x2, y), strokeWidth = 1.5f)
     drawLine(Color(0xFF424242), Offset(x1, y - 6f), Offset(x1, y + 6f), strokeWidth = 1.5f)
     drawLine(Color(0xFF424242), Offset(x2, y - 6f), Offset(x2, y + 6f), strokeWidth = 1.5f)
-    val textW = android.graphics.Paint().apply { textSize = 24f }.measureText(label)
+    val textW = android.graphics.Paint().apply { this.textSize = 24f }.measureText(label)
     drawContext.canvas.nativeCanvas.drawText(
         label,
         (x1 + x2) / 2f - textW / 2f, y + 22f,
         android.graphics.Paint().apply {
-            color = android.graphics.Color.DKGRAY
-            textSize = 24f
+            this.setColor(android.graphics.Color.DKGRAY)
+            this.textSize = 24f
         }
     )
 }

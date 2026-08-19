@@ -2,6 +2,10 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.ReinforcementDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.DeflectionResult
 import kotlin.math.*
 
 /**
@@ -317,7 +321,7 @@ class SBCFlatSlab : FlatSlabDesign {
 
     override fun getMomentCoefficients(
         panelType: PanelType, hasBeams: Boolean
-    ): MomentCoefficients {
+    ): FlatSlabDesign.MomentCoefficients {
         return when (panelType) {
             PanelType.INTERIOR -> MomentCoefficients(
                 colNegExterior = 0.75, colPositive = 0.60, colNegInterior = 0.75,
@@ -364,7 +368,7 @@ class SBCFlatSlab : FlatSlabDesign {
         slabThickness: Double, dropThickness: Double,
         columnWidth: Double, columnDepth: Double,
         cover: Double
-    ): PunchingShearResult {
+    ): FlatSlabDesign.PunchingShearResult {
         val d = if (dropThickness > 0) {
             slabThickness + dropThickness - cover - 6.0
         } else {
@@ -441,7 +445,7 @@ class SBCFlatSlab : FlatSlabDesign {
     override fun designReinforcement(
         moment: Double, fcu: Double, fy: Double,
         effectiveDepth: Double, stripWidth: Double, cover: Double
-    ): ReinforcementDesign {
+    ): FlatSlabDesign.ReinforcementDesign {
         if (moment <= 0.001 || effectiveDepth <= 0) {
             val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
             val barArea = PI * 12.0 * 12.0 / 4.0
@@ -530,7 +534,7 @@ class SBCFlatSlab : FlatSlabDesign {
         fcu: Double, fy: Double,
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
-    ): DeflectionResult {
+    ): FlatSlabDesign.DeflectionResult {
         // Ec = 4700 × √(fcu) MPa (SBC uses fcu directly)
         val Ec = 4700.0 * sqrt(fcu)
         val Ig = 1000.0 * slabThickness * slabThickness * slabThickness / 12.0

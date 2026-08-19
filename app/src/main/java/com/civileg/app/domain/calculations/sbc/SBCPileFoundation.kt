@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.SoilType
 import com.civileg.app.domain.calculations.base.*
 import kotlin.math.*
 
@@ -100,7 +101,7 @@ class SBCPileFoundation : PileFoundationDesign {
         ))
 
         // ── 4. Lateral capacity ───────────────────────────────────
-        val lateralResult = calculateLateralCapacity(input)
+        val lateralResult = calculateLateralCapacity(input) as com.civileg.app.domain.calculations.base.LateralLoadResult
         val lateralOk = input.lateralLoad <= lateralResult.allowableLateralCapacity
         codeNotes.add(String.format(
             "Lateral: Hu = %.0f kN, Ha = %.0f kN, M_max = %.1f kN.m (Vu = %.0f kN) → %s",
@@ -174,6 +175,10 @@ class SBCPileFoundation : PileFoundationDesign {
             numberOfPiles = input.numberOfPiles,
             fcu = input.fcu,
             fy = input.fy,
+            axialLoad = input.axialLoad,
+            lateralLoad = input.lateralLoad,
+            columnWidth = input.columnWidth,
+            columnLength = input.columnLength,
             capacityResult = capacity,
             groupResult = groupResult,
             settlementResult = settlement,
@@ -202,13 +207,13 @@ class SBCPileFoundation : PileFoundationDesign {
         var Qb = 0.0  // end bearing (kN)
 
         when (input.soilType) {
-            SoilType.CLAY -> {
+            com.civileg.app.domain.SoilType.CLAY -> {
                 // Alpha method — SBC 304 §7-3-2
                 val alpha = calculateAlphaFactor(input.cu, input.pileType)
                 Qs = alpha * input.cu * PI * D * L
                 Qb = 9.0 * input.cu * PI * D * D / 4.0  // Nc = 9
             }
-            SoilType.SAND -> {
+            com.civileg.app.domain.SoilType.SAND -> {
                 // Beta method — SBC 304 §7-3-3
                 val K = calculateKFactor(input.pileType)
                 val beta = K * tan(input.phi * PI / 180.0)
@@ -219,12 +224,12 @@ class SBCPileFoundation : PileFoundationDesign {
                          tan(PI / 4 + input.phi * PI / 360.0).pow(2)
                 Qb = Nq * input.gammaSoil * L * PI * D * D / 4.0
             }
-            SoilType.ROCK -> {
+            com.civileg.app.domain.SoilType.ROCK -> {
                 // Socket capacity — SBC 304 §7-3-5
                 Qs = 0.2 * input.cu * PI * D * input.embedmentDepth  // side friction in socket
                 Qb = input.cu * 5.0 * PI * D * D / 4.0  // end bearing on rock
             }
-            SoilType.MIXED -> {
+            com.civileg.app.domain.SoilType.MIXED -> {
                 // Split calculation: 40% clay, 60% sand
                 val clayDepth = L * 0.4
                 val sandDepth = L * 0.6
@@ -239,6 +244,7 @@ class SBCPileFoundation : PileFoundationDesign {
                 val Nq = exp(PI * tan(input.phi * PI / 180.0))
                 Qb = Nq * input.gammaSoil * L * PI * D * D / 4.0
             }
+            else -> {}
         }
 
         // Water table correction — SBC 304 §7-4
@@ -493,22 +499,22 @@ class SBCPileFoundation : PileFoundationDesign {
         val gamma = input.gammaSoil          // kN/m³
 
         // Broms method for cohesive soil (clay)
-        val HuClay = if (input.soilType == SoilType.CLAY || input.soilType == SoilType.MIXED) {
+        val HuClay = if (input.soilType == com.civileg.app.domain.SoilType.CLAY || input.soilType == com.civileg.app.domain.SoilType.MIXED) {
             val momentCapacity = 2.0 * cu * D * D  // kN.m/m
-            val depthToFixity = 1.5 * D + sqrt(max(0.0, (1.5 * D).pow(2) + 2.0 * momentCapacity / (9.0 * cu * D)))
+            val depthToFixity = 1.5 * D + sqrt(maxOf(0.0, (1.5 * D).pow(2) + 2.0 * momentCapacity / (9.0 * cu * D)))
             9.0 * cu * D * (depthToFixity + 1.5 * D) / (depthToFixity + 1.5 * D + L).coerceAtLeast(1.0)
         } else 0.0
 
         // Broms method for cohesionless soil (sand)
-        val HuSand = if (input.soilType == SoilType.SAND || input.soilType == SoilType.MIXED) {
+        val HuSand = if (input.soilType == com.civileg.app.domain.SoilType.SAND || input.soilType == com.civileg.app.domain.SoilType.MIXED) {
             val phi = input.phi * PI / 180.0
             val Kp = tan(PI / 4 + phi / 2).pow(2)
             val depthToFixitySand = (1.5 * D * Kp).pow(0.5) * (L / D).pow(0.33)
-            1.5 * gamma * D * D * Kp * min(depthToFixitySand, L * 0.3)
+            1.5 * gamma * D * D * Kp * minOf(depthToFixitySand, L * 0.3)
         } else 0.0
 
         // Rock: very high lateral capacity
-        val HuRock = if (input.soilType == SoilType.ROCK) {
+        val HuRock = if (input.soilType == com.civileg.app.domain.SoilType.ROCK) {
             3.0 * cu * D  // socket provides fixity
         } else 0.0
 
@@ -610,9 +616,9 @@ class SBCPileFoundation : PileFoundationDesign {
         val ratio = AsProvided / Ag
 
         // ── Ties design ───────────────────────────────────────────
-        val tieSpacing = min(
+        val tieSpacing = kotlin.math.min(
             MAX_TIE_SPACING,
-            max(MIN_TIE_SPACING, (16.0 * selDia).toInt()).toDouble()
+            kotlin.math.max(MIN_TIE_SPACING, (16.0 * selDia).toInt().toDouble())
         ).toInt()
 
         // ── Capacity check ────────────────────────────────────────

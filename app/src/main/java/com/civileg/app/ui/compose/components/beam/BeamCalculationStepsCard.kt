@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.entities.BeamDesignResult
 import com.civileg.app.domain.entities.CalculationStep
 import com.civileg.app.domain.entities.SafetyCheckItem
+import kotlin.math.max
 import com.civileg.app.domain.entities.StepStatus
 
 /**
@@ -74,7 +75,7 @@ fun BeamComprehensiveResultsCard(
             if (result.needsCompressionSteel) BeamDetailRow("Compression Steel", result.compressionBars, color = Color(0xFFE67E22))
             HorizontalDivider(color = Color(0x22FFFFFF))
             BeamDetailRow("MR (PDF-12)", "${String.format("%.2f", result.momentOfResistance)} kN.m", bold = true)
-            BeamDetailRow("MR/Mu", String.format("%.2f", result.momentOfResistance / max(result.maxMoment, 0.01)), color = if (result.momentOfResistance >= result.maxMoment) Color(0xFF27AE60) else Color(0xFFE74C3C))
+            BeamDetailRow("MR/Mu", String.format("%.2f", result.momentOfResistance / kotlin.math.max(result.maxMoment, 0.01)), color = if (result.momentOfResistance >= result.maxMoment) Color(0xFF27AE60) else Color(0xFFE74C3C))
         }
 
         // SHEAR DESIGN (PDF-09)

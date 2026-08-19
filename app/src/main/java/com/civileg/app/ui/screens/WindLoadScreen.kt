@@ -6,9 +6,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -18,17 +22,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import android.text.TextPaint
+import android.graphics.Paint
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.*
 import com.civileg.app.viewmodel.WindLoadViewModel
 import com.civileg.app.viewmodel.WindPreset
+import kotlin.math.*
 
 // ============================================================
 // Color palette
@@ -51,13 +62,14 @@ private val LightBg = Color(0xFFF5F5F5)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WindLoadScreen(
-    viewModel: WindLoadViewModel = hiltViewModel()
+    viewModel: WindLoadViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit
 ) {
-    val result by viewModel.result.collectAsState()
-    val isCalculating by viewModel.isCalculating.collectAsState()
-    val selectedTerrain by viewModel.terrainCategory.collectAsState()
-    val selectedShape by viewModel.buildingShape.collectAsState()
-    val selectedRoofType by viewModel.roofType.collectAsState()
+    val result by viewModel.result.observeAsState()
+    val isCalculating by viewModel.isCalculating.observeAsState(false)
+    val selectedTerrain by viewModel.terrainCategory.observeAsState(TerrainCategory.SUBURBAN)
+    val selectedShape by viewModel.buildingShape.observeAsState(BuildingShape.RECTANGULAR)
+    val selectedRoofType by viewModel.roofType.observeAsState(RoofType.FLAT)
 
     // Local text-field state
     var basicWindSpeed by remember { mutableStateOf(viewModel.basicWindSpeed.value ?: "30.0") }
@@ -92,6 +104,11 @@ fun WindLoadScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Wind Load Analysis", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
@@ -338,9 +355,9 @@ private fun LabeledTextField(label: String, value: String, onValueChange: (Strin
 }
 
 @Composable
-private fun ResultValueCard(label: String, value: String, unit: String, color: Color) {
+private fun ResultValueCard(label: String, value: String, unit: String, color: Color, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.weight(1f),
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f))
     ) {
         Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -364,11 +381,11 @@ private fun SummaryCards(result: WindLoadResult) {
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ResultValueCard("Design Wind Speed", "%.1f".format(result.designWindSpeed), "m/s", AccentOrange)
-        ResultValueCard("Design Pressure", "%.3f".format(result.designWindPressure), "kN/m²", PressureNegative)
-        ResultValueCard("Gust Factor (Gf)", "%.2f".format(result.gustFactor), "", MaterialTheme.colorScheme.primary)
-        ResultValueCard("Base Shear", "%.1f".format(result.totalBaseShear), "kN", PressurePositive)
-        ResultValueCard("OTM", "%.0f".format(result.overturningMoment), "kN·m", Color(0xFF6A1B9A))
+        ResultValueCard("Design Wind Speed", "%.1f".format(result.designWindSpeed), "m/s", AccentOrange, Modifier.weight(1f))
+        ResultValueCard("Design Pressure", "%.3f".format(result.designWindPressure), "kN/m²", PressureNegative, Modifier.weight(1f))
+        ResultValueCard("Gust Factor (Gf)", "%.2f".format(result.gustFactor), "", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+        ResultValueCard("Base Shear", "%.1f".format(result.totalBaseShear), "kN", PressurePositive, Modifier.weight(1f))
+        ResultValueCard("OTM", "%.0f".format(result.overturningMoment), "kN·m", Color(0xFF6A1B9A), Modifier.weight(1f))
     }
     Spacer(Modifier.height(8.dp))
     // Pressure coefficient cards
@@ -376,11 +393,11 @@ private fun SummaryCards(result: WindLoadResult) {
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ResultValueCard("Windward Pₑ", "%.3f".format(result.externalPressureWindward), "kN/m²", PressurePositive)
-        ResultValueCard("Leeward Pₑ", "%.3f".format(result.externalPressureLeeward), "kN/m²", PressureNegative)
-        ResultValueCard("Side Pₑ", "%.3f".format(result.externalPressureSide), "kN/m²", PressureNegative)
-        ResultValueCard("Roof Pₑ", "%.3f".format(result.externalPressureRoof), "kN/m²", PressureNegative)
-        ResultValueCard("Internal Pᵢ", "%.3f".format(result.internalPressure), "kN/m²", Color(0xFFFF8F00))
+        ResultValueCard("Windward Pₑ", "%.3f".format(result.externalPressureWindward), "kN/m²", PressurePositive, Modifier.weight(1f))
+        ResultValueCard("Leeward Pₑ", "%.3f".format(result.externalPressureLeeward), "kN/m²", PressureNegative, Modifier.weight(1f))
+        ResultValueCard("Side Pₑ", "%.3f".format(result.externalPressureSide), "kN/m²", PressureNegative, Modifier.weight(1f))
+        ResultValueCard("Roof Pₑ", "%.3f".format(result.externalPressureRoof), "kN/m²", PressureNegative, Modifier.weight(1f))
+        ResultValueCard("Internal Pᵢ", "%.3f".format(result.internalPressure), "kN/m²", Color(0xFFFF8F00), Modifier.weight(1f))
     }
 }
 
@@ -462,10 +479,10 @@ private fun ElevationCanvas(result: WindLoadResult) {
             // Scale: pixels per metre
             val scaleX = drawW / (totalHeight * 0.7)   // building width in drawing
             val scaleY = drawH / (totalHeight * 1.15)  // leave room for arrows above roof
-            val scale = minOf(scaleX, scaleY)
+            val scale = minOf(scaleX, scaleY).toFloat()
 
-            val bldgDrawW = totalHeight * 0.6 * scale  // representative building width in px
-            val bldgDrawH = totalHeight * scale
+            val bldgDrawW = (totalHeight * 0.6 * scale).toFloat()
+            val bldgDrawH = (totalHeight * scale).toFloat()
 
             val bldgLeft = leftM + (drawW - bldgDrawW) / 2
             val bldgRight = bldgLeft + bldgDrawW
@@ -520,47 +537,50 @@ private fun ElevationCanvas(result: WindLoadResult) {
             // --- Wind arrows (left side – windward) and pressure labels ---
             pressures.forEachIndexed { idx, p ->
                 val y = bldgBottom - (idx + 1) * floorHeightPx + floorHeightPx / 2
-                val arrowLen = (abs(p.netPressure) / maxAbsPressure) * maxArrowLen
+                val arrowLen = ((abs(p.netPressure) / maxAbsPressure) * maxArrowLen).toFloat()
 
                 // Wind direction arrows (pointing right, on the left of building)
-                val arrowStartX = bldgLeft - arrowLen - 8.dp.toPx()
-                val arrowEndX = bldgLeft - 4.dp.toPx()
-                drawWindArrow(arrowStartX, y, arrowEndX, y, WindArrowColor, 2f)
+                val arrowStartX = (bldgLeft - arrowLen - 8.dp.toPx())
+                val arrowEndX = (bldgLeft - 4.dp.toPx())
+                drawWindArrow(arrowStartX, y.toFloat(), arrowEndX, y.toFloat(), WindArrowColor, 2f)
 
                 // Pressure value on the left
+                val leftTextPaint = android.text.TextPaint().apply {
+                    color = (if (p.netPressure >= 0) PressurePositive.toArgb() else PressureNegative.toArgb())
+                    textSize = 9.sp.toPx()
+                    isFakeBoldText = true
+                    textAlign = android.graphics.Paint.Align.RIGHT
+                }
                 drawContext.canvas.nativeCanvas.drawText(
                     "%.2f".format(p.netPressure),
-                    arrowStartX - 2.dp.toPx(), y + 4.sp.toPx(),
-                    android.graphics.TextPaint().apply {
-                        color = if (p.netPressure >= 0) PressurePositive.toArgb() else PressureNegative.toArgb()
-                        textSize = 9.sp.toPx()
-                        isFakeBoldText = true
-                        textAlign = android.graphics.Paint.Align.RIGHT
-                    }
+                    arrowStartX - 2.dp.toPx(), y.toFloat() + 4.sp.toPx(),
+                    leftTextPaint
                 )
 
                 // Floor number on the right
+                val rightTextPaint = android.text.TextPaint().apply {
+                    color = BuildingStroke.toArgb()
+                    textSize = 9.sp.toPx()
+                    textAlign = android.graphics.Paint.Align.LEFT
+                }
                 drawContext.canvas.nativeCanvas.drawText(
                     "F${idx + 1}",
-                    bldgRight + 6.dp.toPx(), y + 4.sp.toPx(),
-                    android.graphics.TextPaint().apply {
-                        color = BuildingStroke.toArgb()
-                        textSize = 9.sp.toPx()
-                        textAlign = android.graphics.Paint.Align.LEFT
-                    }
+                    bldgRight + 6.dp.toPx(), y.toFloat() + 4.sp.toPx(),
+                    rightTextPaint
                 )
 
                 // Height label
                 if (idx == pressures.lastIndex) {
+                    val heightTextPaint = android.text.TextPaint().apply {
+                        color = BuildingStroke.toArgb()
+                        textSize = 10.sp.toPx()
+                        isFakeBoldText = true
+                        textAlign = android.graphics.Paint.Align.CENTER
+                    }
                     drawContext.canvas.nativeCanvas.drawText(
                         "H=${p.height}m",
                         bldgLeft + bldgDrawW / 2 - 16.dp.toPx(), bldgTop - 6.dp.toPx(),
-                        android.graphics.TextPaint().apply {
-                            color = BuildingStroke.toArgb()
-                            textSize = 10.sp.toPx()
-                            isFakeBoldText = true
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
+                        heightTextPaint
                     )
                 }
             }
@@ -569,33 +589,35 @@ private fun ElevationCanvas(result: WindLoadResult) {
             pressures.forEachIndexed { idx, p ->
                 val y = bldgBottom - (idx + 1) * floorHeightPx + floorHeightPx / 2
                 val leewardAbs = abs(result.externalPressureLeeward)
-                val arrowLen = (leewardAbs / maxAbsPressure) * maxArrowLen * 0.7f
-                val arrowStartX = bldgRight + 4.dp.toPx()
-                val arrowEndX = bldgRight + 4.dp.toPx() + arrowLen
-                drawWindArrow(arrowStartX, y, arrowEndX, y, PressureNegative.copy(alpha = 0.6f), 1.5f)
+                val arrowLen = ((leewardAbs / maxAbsPressure) * maxArrowLen * 0.7f).toFloat()
+                val arrowStartX = (bldgRight + 4.dp.toPx())
+                val arrowEndX = (bldgRight + 4.dp.toPx() + arrowLen)
+                drawWindArrow(arrowStartX, y.toFloat(), arrowEndX, y.toFloat(), PressureNegative.copy(alpha = 0.6f), 1.5f)
             }
 
             // --- Title annotations ---
+            val titleTextPaint = android.text.TextPaint().apply {
+                color = WindArrowColor.toArgb()
+                textSize = 10.sp.toPx()
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.LEFT
+            }
             drawContext.canvas.nativeCanvas.drawText(
                 "WIND →", 8.dp.toPx(), bldgTop - 6.dp.toPx(),
-                android.graphics.TextPaint().apply {
-                    color = WindArrowColor.toArgb()
-                    textSize = 10.sp.toPx()
-                    isFakeBoldText = true
-                    textAlign = android.graphics.Paint.Align.LEFT
-                }
+                titleTextPaint
             )
 
             // --- Base shear annotation ---
+            val baseShearTextPaint = android.text.TextPaint().apply {
+                color = PressurePositive.toArgb()
+                textSize = 10.sp.toPx()
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
             drawContext.canvas.nativeCanvas.drawText(
                 "V = %.1f kN".format(result.totalBaseShear),
                 canvasW / 2, bldgBottom + 20.dp.toPx(),
-                android.graphics.TextPaint().apply {
-                    color = PressurePositive.toArgb()
-                    textSize = 10.sp.toPx()
-                    isFakeBoldText = true
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
+                baseShearTextPaint
             )
         }
     }

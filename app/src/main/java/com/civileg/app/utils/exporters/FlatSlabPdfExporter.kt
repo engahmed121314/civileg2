@@ -342,7 +342,7 @@ class FlatSlabPdfExporter(private val context: Context) {
 
             // ── 1. Panel Data ──
             addSectionTitle(document, t("ب\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0644\u0648\u062D\u0629", "Panel Data"), "Panel Data")
-            addInfoTable(document, listOf(
+            addInfoTable(document, listOf<Pair<String, String>>(
                 t("ا\u0633\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639", "Project Name") to projectName,
                 t("ا\u0644\u0643\u0648\u062F \u0627\u0644\u062A\u0635\u0645\u064A\u0645\u064A", "Design Code") to designCode,
                 t("ن\u0648\u0639 \u0627\u0644\u0644\u0648\u062D\u0629", "Panel Type") to input.panelType.displayName,
@@ -363,16 +363,16 @@ class FlatSlabPdfExporter(private val context: Context) {
 
             // ── 2. Static Moment ──
             addSectionTitle(document, t("ا\u0644\u0639\u0632\u0645 \u0627\u0644\u0625\u0646\u062D\u062F\u0627\u0631\u064A", "Static Moment Analysis"), "Static Moment")
-            addInfoTable(document, listOf(
+            addInfoTable(document, listOf<Pair<String, String>>(
                 t("ا\u0644\u062D\u0645\u0644 \u0627\u0644\u0645\u064A\u062A", "Total Dead Load") to "${result.totalDeadLoad.format(2)} kN/m\u00B2",
-                t("ا\u0644\u062D\u0645\u0644 \u0627\u0644\u0645\u0635\u0645\u0645", "Total Factored Load") to "${result.totalFactoredLoad.format(2)} kN/m\u00B2",
-                t("ا\u0644\u0639\u0632\u0645 \u0627\u0644\u0625\u0646\u062D\u062F\u0627\u0631\u064A X (Mo)", "Static Moment X (Mo)") to "${result.panelMomentX.format(2)} kN.m",
-                t("ا\u0644\u0639\u0632\u0645 \u0627\u0644\u0625\u0646\u062D\u062F\u0627\u0631\u064A Y (Mo)", "Static Moment Y (Mo)") to "${result.panelMomentY.format(2)} kN.m"
+                t("ا\u0644\u0643\u0645\u0644 \u0627\u0644\u0645\u0635\u0645\u0645", "Total Factored Load") to "${result.totalFactoredLoad.format(2)} kN/m\u00B2",
+                t("العزم الإنحداري X (Mo)", "Static Moment X (Mo)") to "${result.panelMomentX.format(2)} kN.m",
+                t("العزم الإنحداري Y (Mo)", "Static Moment Y (Mo)") to "${result.panelMomentY.format(2)} kN.m"
             ), font)
 
             // ── 3. Strip Design + Moment Distribution ──
             addSectionTitle(document, t("ت\u0635\u0645\u064A\u0645 \u0627\u0644\u0634\u0631\u064A\u0637\u0627\u062A", "Strip Design"), "Strip Design")
-            addInfoTable(document, listOf(
+            addInfoTable(document, listOf<Pair<String, String>>(
                 t("ع\u0631\u0636 \u0634\u0631\u064A\u0637\u0629 \u0627\u0644\u0639\u0645\u0648\u062F X", "Col. Strip Width X") to "${result.columnStripWidthX.format(0)} mm",
                 t("ع\u0631\u0636 \u0634\u0631\u064A\u0637\u0629 \u0627\u0644\u0639\u0645\u0648\u062F Y", "Col. Strip Width Y") to "${result.columnStripWidthY.format(0)} mm"
             ), font)
@@ -381,24 +381,24 @@ class FlatSlabPdfExporter(private val context: Context) {
 
             // ── 4. Punching Shear ──
             addSectionTitle(document, t("ا\u0644\u062E\u0644\u0639 \u0627\u0644\u062A\u062E\u0633\u064A\u0633\u064A", "Punching Shear"), "Punching Shear")
-            addInfoTable(document, listOf(
+            addInfoTable(document, listOf<Pair<String, String>>(
                 t("ا\u0644\u0642\u0648\u0629 \u0627\u0644\u0642\u0635 (Vu)", "Shear Force (Vu)") to "${result.punchingShearVu.format(1)} kN",
                 t("ا\u0644\u0642\u062F\u0631\u0629 (Vc)", "Capacity (Vc)") to "${result.punchingShearVc.format(1)} kN",
                 t("ا\u0644\u0645\u062D\u0627\u0637 \u0627\u0644\u062D\u0631\u062C", "Critical Perimeter") to "${result.punchingPerimeter.format(0)} mm",
                 t("ت\u0633\u0644\u064A\u062D \u0627\u0644\u062E\u0644\u0639", "Punching Rebar") to
-                    result.punchingReinforcement?.barString
-                        ?: t("غ\u064A\u0631 \u0645\u0637\u0644\u0648\u0628", "Not Required"),
+                    (result.punchingReinforcement?.barString
+                        ?: t("غ\u064A\u0631 \u0645\u0637\u0644\u0648\u0628", "Not Required")),
                 t("ا\u0644\u062D\u0627\u0644\u0629", "Status") to
-                    if (result.punchingShearOk) t("آ\u0645\u0646 ✔", "OK ✔") else t("غ\u064A\u0631 آ\u0645\u0646 ✘", "NG ✘")
+                    (if (result.punchingShearOk) t("آ\u0645\u0646 ✔", "OK ✔") else t("غ\u064A\u0631 آ\u0645\u0646 ✘", "NG ✘"))
             ), font)
 
             // ── 5. Deflection ──
             addSectionTitle(document, t("ا\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0647\u0628\u0648\u0637", "Deflection Check"), "Deflection")
-            addInfoTable(document, listOf(
+            addInfoTable(document, listOf<Pair<String, String>>(
                 t("ا\u0644\u0647\u0628\u0648\u0637 \u0627\u0644\u0645\u062D\u0633\u0648\u0628", "Calculated Deflection") to "${result.deflection.format(2)} mm",
                 t("ا\u0644\u0647\u0628\u0648\u0637 \u0627\u0644\u0645\u0633\u0645\u0648\u062D", "Allowable Deflection") to "${result.allowableDeflection.format(2)} mm",
                 t("ا\u0644\u062D\u0627\u0644\u0629", "Status") to
-                    if (result.deflectionOk) t("م\u0637\u0627\u0628\u0642 ✔", "OK ✔") else t("غ\u064A\u0631 \u0645\u0637\u0627\u0628\u0642 ✘", "NG ✘")
+                    (if (result.deflectionOk) t("م\u0637\u0627\u0628\u0642 ✔", "OK ✔") else t("غ\u064A\u0631 \u0645\u0637\u0627\u0628\u0642 ✘", "NG ✘"))
             ), font)
 
             // ── 6. Reinforcement Schedule ──
@@ -407,7 +407,7 @@ class FlatSlabPdfExporter(private val context: Context) {
 
             // ── 7. Quantities ──
             addSectionTitle(document, t("ا\u0644\u0643\u0645\u064A\u0627\u062A", "Quantities"), "Quantities")
-            addInfoTable(document, listOf(
+            addInfoTable(document, listOf<Pair<String, String>>(
                 t("ح\u062C\u0645 \u0627\u0644\u062E\u0631\u0633\u0627\u0646\u0629 / \u0644\u0648\u062D\u0629", "Concrete Vol./Panel") to "${result.concreteVolumePerPanel.format(3)} m\u00B3",
                 t("و\u0632\u0646 \u0627\u0644\u062D\u062F\u064A\u062F / \u0644\u0648\u062D\u0629", "Steel Wt./Panel") to "${result.steelWeightPerPanel.format(1)} kg",
                 t("ت\u062F\u0644\u064A \u0645\u0637\u0644\u0648\u0628", "Drop Required") to

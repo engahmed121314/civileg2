@@ -42,19 +42,6 @@ data class ShearWallInput(
 )
 
 // ══════════════════════════════════════════════════════════════
-// REBAR RESULT — reusable for vertical and horizontal rebar
-// ══════════════════════════════════════════════════════════════
-
-data class RebarResult(
-    val bars: Int,
-    val diameter: Int,
-    val spacing: Int,
-    val providedArea: Double,   // mm²
-    val requiredArea: Double,   // mm²
-    val ratio: Double           // provided / required
-)
-
-// ══════════════════════════════════════════════════════════════
 // COUPLING BEAM RESULT
 // ══════════════════════════════════════════════════════════════
 

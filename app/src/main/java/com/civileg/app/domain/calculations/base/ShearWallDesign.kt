@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.base
 
+import com.civileg.app.domain.BoundaryElementType
 import com.civileg.app.domain.ShearWallInput
 import com.civileg.app.domain.ShearWallResult
 

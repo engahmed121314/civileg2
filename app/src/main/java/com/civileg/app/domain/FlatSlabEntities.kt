@@ -40,21 +40,6 @@ data class FlatSlabInput(
 )
 
 // ══════════════════════════════════════════════════════════════════
-// REBAR RESULT
-// ══════════════════════════════════════════════════════════════════
-
-data class RebarResult(
-    val bars: Int,
-    val diameter: Int,
-    val spacing: Int,
-    val providedArea: Double,
-    val requiredArea: Double,
-    val ratio: Double
-) {
-    val barString: String get() = "φ$diameter@$spacing mm"
-}
-
-// ══════════════════════════════════════════════════════════════════
 // COMPLETE FLAT SLAB RESULT
 // ══════════════════════════════════════════════════════════════════
 

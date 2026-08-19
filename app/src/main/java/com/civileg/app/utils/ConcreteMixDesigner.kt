@@ -192,7 +192,7 @@ object ConcreteMixDesigner {
         // Trial batch (0.05 m³)
         val tb = computeTrialBatch(
             0.05, cementContent, waterContent, faWeight, caWeight,
-            admixtureContent, input.fineAggMoistureContent(), input.coarseAggMoistureContent()
+            admixtureContent, fineAggMoistureContent(), coarseAggMoistureContent()
         )
 
         return MixResult(

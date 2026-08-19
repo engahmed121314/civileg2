@@ -151,28 +151,30 @@ class PileFoundationViewModel @Inject constructor(
                 )
 
                 val safetyChecks = res.warnings.map { w ->
-                    mapOf("name" to w, "isSafe" to false, "value" to 0.0, "limit" to 0.0, "unit" to "")
+                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                        name = w, passed = false, calculated = 0.0, limit = 0.0, unit = ""
+                    )
                 }.toMutableList()
-                safetyChecks.add(mapOf(
-                    "name" to "Punching Shear",
-                    "isSafe" to cap.punchingShearOk,
-                    "value" to cap.punchingShearStress,
-                    "limit" to cap.punchingShearCapacity,
-                    "unit" to "MPa"
+                safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    name = "Punching Shear",
+                    passed = cap.punchingShearOk,
+                    calculated = cap.punchingShearStress,
+                    limit = cap.punchingShearCapacity,
+                    unit = "MPa"
                 ))
-                safetyChecks.add(mapOf(
-                    "name" to "Beam Shear",
-                    "isSafe" to cap.beamShearOk,
-                    "value" to cap.beamShearStress,
-                    "limit" to cap.beamShearCapacity,
-                    "unit" to "MPa"
+                safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    name = "Beam Shear",
+                    passed = cap.beamShearOk,
+                    calculated = cap.beamShearStress,
+                    limit = cap.beamShearCapacity,
+                    unit = "MPa"
                 ))
-                safetyChecks.add(mapOf(
-                    "name" to "Settlement",
-                    "isSafe" to settlement.isOk,
-                    "value" to settlement.totalSettlement,
-                    "limit" to settlement.allowableSettlement,
-                    "unit" to "mm"
+                safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    name = "Settlement",
+                    passed = settlement.isOk,
+                    calculated = settlement.totalSettlement,
+                    limit = settlement.allowableSettlement,
+                    unit = "mm"
                 ))
 
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(

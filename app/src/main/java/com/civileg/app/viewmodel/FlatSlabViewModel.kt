@@ -138,7 +138,7 @@ class FlatSlabViewModel @Inject constructor() : ViewModel() {
 
                 val safetyChecks = res.safetyChecks.map {
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = it.name, calculated = it.value, limit = it.limit,
+                        name = it.name, calculated = it.calculated, limit = it.limit,
                         unit = it.unit, passed = it.passed
                     )
                 }

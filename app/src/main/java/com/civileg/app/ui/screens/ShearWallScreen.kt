@@ -30,6 +30,7 @@ import com.civileg.app.ui.components.drawings.ProfessionalShearWallDrawing
 import com.civileg.app.viewmodel.ShearWallViewModel
 import kotlin.math.max
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShearWallScreen(
     onNavigateBack: () -> Unit,

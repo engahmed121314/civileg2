@@ -2,6 +2,10 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.ReinforcementDesign
+import com.civileg.app.domain.calculations.base.FlatSlabDesign.DeflectionResult
 import kotlin.math.*
 
 /**
@@ -419,7 +423,7 @@ class ECPFlatSlab : FlatSlabDesign {
     override fun getMomentCoefficients(
         panelType: PanelType,
         hasBeams: Boolean
-    ): MomentCoefficients {
+    ): FlatSlabDesign.MomentCoefficients {
         // For flat slabs without beams (α = 0)
         // Column strip takes larger portion: 60-75% of total moment
         // Per ECP 203 / ACI 318 Table 8.10.4.2
@@ -488,7 +492,7 @@ class ECPFlatSlab : FlatSlabDesign {
         slabThickness: Double, dropThickness: Double,
         columnWidth: Double, columnDepth: Double,
         cover: Double
-    ): PunchingShearResult {
+    ): FlatSlabDesign.PunchingShearResult {
         // Effective depth at critical section
         val d = if (dropThickness > 0) {
             slabThickness + dropThickness - cover - 6.0
@@ -580,7 +584,7 @@ class ECPFlatSlab : FlatSlabDesign {
         moment: Double, fcu: Double, fy: Double,
         effectiveDepth: Double, stripWidth: Double,
         cover: Double
-    ): ReinforcementDesign {
+    ): FlatSlabDesign.ReinforcementDesign {
         if (moment <= 0.001 || effectiveDepth <= 0) {
             val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
             val barArea = PI * 12.0 * 12.0 / 4.0
@@ -689,7 +693,7 @@ class ECPFlatSlab : FlatSlabDesign {
         fcu: Double, fy: Double,
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
-    ): DeflectionResult {
+    ): FlatSlabDesign.DeflectionResult {
         // Ec = 4700 × √(fcu) MPa  (accepted by ECP 203)
         val Ec = 4700.0 * sqrt(fcu)
 

@@ -64,17 +64,21 @@ public class DxfExportEngine {
     // ------------------------------------------------------------------
 
     private fun pair(code: Int, value: String): String {
-        return String.format("  %d\r\n%s\r\n", code, value)
+        return "${code}\r\n${value}\r\n"
     }
 
-    private fun pairF(code: Int, value: Double): String {
+    private fun pair(code: Int, value: Int): String {
+        return "${code}\r\n${value}\r\n"
+    }
+
+    private fun pair(code: Int, value: Double): String {
         val formatted = if (value == value.toLong().toDouble()) {
             value.toLong().toString() + ".0"
         } else {
             val s = value.toString()
             if (s.contains('.')) s else "$s.0"
         }
-        return String.format("  %d\r\n%s\r\n", code, formatted)
+        return "${code}\r\n${formatted}\r\n"
     }
 
     // ------------------------------------------------------------------
@@ -87,15 +91,15 @@ public class DxfExportEngine {
         // ACADVER
         sb.append(pair(9, "\$ACADVER")).append(pair(1, "AC1015"))
         // INSBASE
-        sb.append(pair(9, "\$INSBASE")).append(pairF(10, 0.0)).append(pairF(20, 0.0)).append(pairF(30, 0.0))
+        sb.append(pair(9, "\$INSBASE")).append(pair(10, 0.0)).append(pair(20, 0.0)).append(pair(30, 0.0))
         // EXTMIN
-        sb.append(pair(9, "\$EXTMIN")).append(pairF(10, 0.0)).append(pairF(20, 0.0)).append(pairF(30, 0.0))
+        sb.append(pair(9, "\$EXTMIN")).append(pair(10, 0.0)).append(pair(20, 0.0)).append(pair(30, 0.0))
         // EXTMAX
-        sb.append(pair(9, "\$EXTMAX")).append(pairF(10, 500.0)).append(pairF(20, 500.0)).append(pairF(30, 0.0))
+        sb.append(pair(9, "\$EXTMAX")).append(pair(10, 500.0)).append(pair(20, 500.0)).append(pair(30, 0.0))
         // LIMMIN
-        sb.append(pair(9, "\$LIMMIN")).append(pairF(10, 0.0)).append(pairF(20, 0.0))
+        sb.append(pair(9, "\$LIMMIN")).append(pair(10, 0.0)).append(pair(20, 0.0))
         // LIMMAX
-        sb.append(pair(9, "\$LIMMAX")).append(pairF(10, 420.0)).append(pairF(20, 297.0))
+        sb.append(pair(9, "\$LIMMAX")).append(pair(10, 420.0)).append(pair(20, 297.0))
         // UNITMODE
         sb.append(pair(9, "\$UNITMODE")).append(pair(70, "0"))
         // DIMSTYLE
@@ -113,19 +117,19 @@ public class DxfExportEngine {
         // AUPREC
         sb.append(pair(9, "\$AUPREC")).append(pair(70, "2"))
         // DIMLFAC
-        sb.append(pair(9, "\$DIMLFAC")).append(pairF(40, 1.0))
+        sb.append(pair(9, "\$DIMLFAC")).append(pair(40, 1.0))
         // DIMSCALE
-        sb.append(pair(9, "\$DIMSCALE")).append(pairF(40, 1.0))
+        sb.append(pair(9, "\$DIMSCALE")).append(pair(40, 1.0))
         // DIMTXT
-        sb.append(pair(9, "\$DIMTXT")).append(pairF(40, 3.5))
+        sb.append(pair(9, "\$DIMTXT")).append(pair(40, 3.5))
         // DIMASZ
-        sb.append(pair(9, "\$DIMASZ")).append(pairF(40, 3.0))
+        sb.append(pair(9, "\$DIMASZ")).append(pair(40, 3.0))
         // DIMEXO
-        sb.append(pair(9, "\$DIMEXO")).append(pairF(40, 1.0))
+        sb.append(pair(9, "\$DIMEXO")).append(pair(40, 1.0))
         // DIMEXE
-        sb.append(pair(9, "\$DIMEXE")).append(pairF(40, 1.5))
+        sb.append(pair(9, "\$DIMEXE")).append(pair(40, 1.5))
         // DIMDLI
-        sb.append(pair(9, "\$DIMDLI")).append(pairF(40, 8.0))
+        sb.append(pair(9, "\$DIMDLI")).append(pair(40, 8.0))
         // DIMCLRD - dim line color (0=ByBlock)
         sb.append(pair(9, "\$DIMCLRD")).append(pair(70, "0"))
         // DIMCLRE - extension line color
@@ -135,7 +139,7 @@ public class DxfExportEngine {
         // PSLTSCALE
         sb.append(pair(9, "\$PSLTSCALE")).append(pair(70, "1"))
         // LTSCALE
-        sb.append(pair(9, "\$LTSCALE")).append(pairF(40, 1.0))
+        sb.append(pair(9, "\$LTSCALE")).append(pair(40, 1.0))
 
         sb.append(pair(0, "ENDSEC"))
     }
@@ -178,23 +182,23 @@ public class DxfExportEngine {
             .append(pair(100, "AcDbViewportTableRecord"))
             .append(pair(2, "*Active"))
             .append(pair(70, "0"))
-            .append(pairF(10, 0.0)).append(pairF(20, 0.0))
-            .append(pairF(11, 1.0)).append(pairF(21, 1.0))
-            .append(pairF(12, 0.0)).append(pairF(22, 0.0))
-            .append(pairF(13, 0.0)).append(pairF(23, 0.0))
-            .append(pairF(14, 10.0)).append(pairF(24, 10.0))
-            .append(pairF(15, 10.0)).append(pairF(25, 10.0))
-            .append(pairF(16, 0.0)).append(pairF(26, 0.0))
-            .append(pairF(36, 1.0))
-            .append(pairF(17, 0.0)).append(pairF(27, 0.0))
-            .append(pairF(37, 0.0))
-            .append(pairF(40, 50.0))
-            .append(pairF(41, 1.5))
-            .append(pairF(42, 50.0))
-            .append(pairF(43, 0.0))
-            .append(pairF(44, 0.0))
-            .append(pairF(50, 0.0))
-            .append(pairF(51, 0.0))
+            .append(pair(10, 0.0)).append(pair(20, 0.0))
+            .append(pair(11, 1.0)).append(pair(21, 1.0))
+            .append(pair(12, 0.0)).append(pair(22, 0.0))
+            .append(pair(13, 0.0)).append(pair(23, 0.0))
+            .append(pair(14, 10.0)).append(pair(24, 10.0))
+            .append(pair(15, 10.0)).append(pair(25, 10.0))
+            .append(pair(16, 0.0)).append(pair(26, 0.0))
+            .append(pair(36, 1.0))
+            .append(pair(17, 0.0)).append(pair(27, 0.0))
+            .append(pair(37, 0.0))
+            .append(pair(40, 50.0))
+            .append(pair(41, 1.5))
+            .append(pair(42, 50.0))
+            .append(pair(43, 0.0))
+            .append(pair(44, 0.0))
+            .append(pair(50, 0.0))
+            .append(pair(51, 0.0))
             .append(pair(71, "0"))
             .append(pair(72, "100"))
             .append(pair(73, "1"))
@@ -220,7 +224,7 @@ public class DxfExportEngine {
             .append(pair(100, "AcDbLinetypeTableRecord"))
             .append(pair(2, "CONTINUOUS")).append(pair(70, "0"))
             .append(pair(3, "Solid line"))
-            .append(pair(72, "65")).append(pair(73, "0")).append(pairF(40, 0.0))
+            .append(pair(72, "65")).append(pair(73, "0")).append(pair(40, 0.0))
 
         // DASHED
         sb.append(pair(0, "LTYPE")).append(pair(5, ltypeHandles[1]))
@@ -228,8 +232,8 @@ public class DxfExportEngine {
             .append(pair(100, "AcDbLinetypeTableRecord"))
             .append(pair(2, "DASHED")).append(pair(70, "0"))
             .append(pair(3, "Dashed line __  __  __"))
-            .append(pair(72, "65")).append(pair(73, "2")).append(pairF(40, 0.3))
-            .append(pairF(49, 0.15)).append(pairF(49, -0.1))
+            .append(pair(72, "65")).append(pair(73, "2")).append(pair(40, 0.3))
+            .append(pair(49, 0.15)).append(pair(49, -0.1))
 
         // CENTER
         sb.append(pair(0, "LTYPE")).append(pair(5, ltypeHandles[2]))
@@ -237,9 +241,9 @@ public class DxfExportEngine {
             .append(pair(100, "AcDbLinetypeTableRecord"))
             .append(pair(2, "CENTER")).append(pair(70, "0"))
             .append(pair(3, "Center line ____ _ ____ _"))
-            .append(pair(72, "65")).append(pair(73, "4")).append(pairF(40, 1.2))
-            .append(pairF(49, 0.6)).append(pairF(49, -0.15))
-            .append(pairF(49, 0.15)).append(pairF(49, -0.15))
+            .append(pair(72, "65")).append(pair(73, "4")).append(pair(40, 1.2))
+            .append(pair(49, 0.6)).append(pair(49, -0.15))
+            .append(pair(49, 0.15)).append(pair(49, -0.15))
 
         // PHANTOM
         sb.append(pair(0, "LTYPE")).append(pair(5, ltypeHandles[3]))
@@ -247,10 +251,10 @@ public class DxfExportEngine {
             .append(pair(100, "AcDbLinetypeTableRecord"))
             .append(pair(2, "PHANTOM")).append(pair(70, "0"))
             .append(pair(3, "Phantom line ______  ____  ______"))
-            .append(pair(72, "65")).append(pair(73, "6")).append(pairF(40, 2.0))
-            .append(pairF(49, 0.8)).append(pairF(49, -0.15))
-            .append(pairF(49, 0.15)).append(pairF(49, -0.15))
-            .append(pairF(49, 0.15)).append(pairF(49, -0.15))
+            .append(pair(72, "65")).append(pair(73, "6")).append(pair(40, 2.0))
+            .append(pair(49, 0.8)).append(pair(49, -0.15))
+            .append(pair(49, 0.15)).append(pair(49, -0.15))
+            .append(pair(49, 0.15)).append(pair(49, -0.15))
 
         // HIDDEN
         sb.append(pair(0, "LTYPE")).append(pair(5, ltypeHandles[4]))
@@ -258,8 +262,8 @@ public class DxfExportEngine {
             .append(pair(100, "AcDbLinetypeTableRecord"))
             .append(pair(2, "HIDDEN")).append(pair(70, "0"))
             .append(pair(3, "Hidden line __ __ __ __ __"))
-            .append(pair(72, "65")).append(pair(73, "2")).append(pairF(40, 0.25))
-            .append(pairF(49, 0.1)).append(pairF(49, -0.15))
+            .append(pair(72, "65")).append(pair(73, "2")).append(pair(40, 0.25))
+            .append(pair(49, 0.1)).append(pair(49, -0.15))
 
         sb.append(pair(0, "ENDTAB"))
     }
@@ -357,15 +361,15 @@ public class DxfExportEngine {
             .append(pair(70, "0"))
             .append(pair(3, ""))
             .append(pair(4, ""))
-            .append(pairF(40, 1.0))    // DIMSCALE
-            .append(pairF(41, 3.0))    // DIMASZ
-            .append(pairF(42, 0.0))    // DIMEXO
-            .append(pairF(43, 1.5))    // DIMEXE
-            .append(pairF(44, 8.0))    // DIMDLI
-            .append(pairF(45, 0.0))    // DIMRND
-            .append(pairF(46, 0.0))    // DIMDLE
-            .append(pairF(47, 0.0))    // DIMTP
-            .append(pairF(48, 0.0))    // DIMTM
+            .append(pair(40, 1.0))    // DIMSCALE
+            .append(pair(41, 3.0))    // DIMASZ
+            .append(pair(42, 0.0))    // DIMEXO
+            .append(pair(43, 1.5))    // DIMEXE
+            .append(pair(44, 8.0))    // DIMDLI
+            .append(pair(45, 0.0))    // DIMRND
+            .append(pair(46, 0.0))    // DIMDLE
+            .append(pair(47, 0.0))    // DIMTP
+            .append(pair(48, 0.0))    // DIMTM
             .append(pair(140, 3.5))    // DIMTXT
             .append(pair(141, 2.5))    // DIMCEN
             .append(pair(142, 0.0))    // DIMTSZ
@@ -429,7 +433,7 @@ public class DxfExportEngine {
         sb.append(pair(0, "BLOCK")).append(pair(8, "0"))
             .append(pair(2, "*Model_Space"))
             .append(pair(70, "0"))
-            .append(pairF(10, 0.0)).append(pairF(20, 0.0)).append(pairF(30, 0.0))
+            .append(pair(10, 0.0)).append(pair(20, 0.0)).append(pair(30, 0.0))
             .append(pair(3, "*Model_Space")).append(pair(1, ""))
         sb.append(pair(0, "ENDBLK")).append(pair(5, modelEnblkHandle)).append(pair(8, "0"))
 
@@ -437,7 +441,7 @@ public class DxfExportEngine {
         sb.append(pair(0, "BLOCK")).append(pair(8, "0"))
             .append(pair(2, "*Paper_Space"))
             .append(pair(70, "0"))
-            .append(pairF(10, 0.0)).append(pairF(20, 0.0)).append(pairF(30, 0.0))
+            .append(pair(10, 0.0)).append(pair(20, 0.0)).append(pair(30, 0.0))
             .append(pair(3, "*Paper_Space")).append(pair(1, ""))
         sb.append(pair(0, "ENDBLK")).append(pair(5, paperEnblkHandle)).append(pair(8, "0"))
 
@@ -485,8 +489,8 @@ public class DxfExportEngine {
         if (lineType != null) eb.append(pair(6, lineType))
         if (lineWeight != null) eb.append(pair(370, lineWeight.toString()))
         eb.append(pair(100, "AcDbLine"))
-        eb.append(pairF(10, x1)).append(pairF(20, y1)).append(pairF(30, 0.0))
-        eb.append(pairF(11, x2)).append(pairF(21, y2)).append(pairF(31, 0.0))
+        eb.append(pair(10, x1)).append(pair(20, y1)).append(pair(30, 0.0))
+        eb.append(pair(11, x2)).append(pair(21, y2)).append(pair(31, 0.0))
     }
 
     // --- LWPOLYLINE ---
@@ -511,10 +515,10 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbPolyline"))
         eb.append(pair(90, points.size.toString()))
         eb.append(pair(70, if (closed) 1 else 0))
-        if (lineWidth != 0.0) eb.append(pairF(43, lineWidth))
+        if (lineWidth != 0.0) eb.append(pair(43, lineWidth))
         for (pt in points) {
-            eb.append(pairF(10, pt.x)).append(pairF(20, pt.y))
-            if (pt.bulge != 0.0) eb.append(pairF(42, pt.bulge))
+            eb.append(pair(10, pt.x)).append(pair(20, pt.y))
+            if (pt.bulge != 0.0) eb.append(pair(42, pt.bulge))
         }
     }
 
@@ -530,8 +534,8 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbCircle"))
-        eb.append(pairF(10, cx)).append(pairF(20, cy)).append(pairF(30, 0.0))
-        eb.append(pairF(40, radius))
+        eb.append(pair(10, cx)).append(pair(20, cy)).append(pair(30, 0.0))
+        eb.append(pair(40, radius))
     }
 
     // --- ARC ---
@@ -547,10 +551,10 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbArc"))
-        eb.append(pairF(10, cx)).append(pairF(20, cy)).append(pairF(30, 0.0))
-        eb.append(pairF(40, radius))
-        eb.append(pairF(50, startAngleDeg))
-        eb.append(pairF(51, endAngleDeg))
+        eb.append(pair(10, cx)).append(pair(20, cy)).append(pair(30, 0.0))
+        eb.append(pair(40, radius))
+        eb.append(pair(50, startAngleDeg))
+        eb.append(pair(51, endAngleDeg))
     }
 
     // --- TEXT ---
@@ -570,15 +574,15 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbText"))
-        eb.append(pairF(10, x)).append(pairF(20, y)).append(pairF(30, 0.0))
-        eb.append(pairF(40, height))
+        eb.append(pair(10, x)).append(pair(20, y)).append(pair(30, 0.0))
+        eb.append(pair(40, height))
         eb.append(pair(1, text))
-        eb.append(pairF(50, rotationDeg))
+        eb.append(pair(50, rotationDeg))
         eb.append(pair(7, "Standard"))
         eb.append(pair(72, hJustify.toString()))
         // Second x point for horizontal justification
         if (hJustify != 0) {
-            eb.append(pairF(11, x)).append(pairF(21, y)).append(pairF(31, 0.0))
+            eb.append(pair(11, x)).append(pair(21, y)).append(pair(31, 0.0))
         }
         eb.append(pair(100, "AcDbText"))
         eb.append(pair(73, vJustify.toString()))
@@ -600,9 +604,9 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbMText"))
-        eb.append(pairF(10, x)).append(pairF(20, y)).append(pairF(30, 0.0))
-        eb.append(pairF(40, height))
-        eb.append(pairF(41, width))
+        eb.append(pair(10, x)).append(pair(20, y)).append(pair(30, 0.0))
+        eb.append(pair(40, height))
+        eb.append(pair(41, width))
         eb.append(pair(71, attachmentPoint.toString()))
         eb.append(pair(1, text))
         eb.append(pair(7, "Standard"))
@@ -628,9 +632,9 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbDimension"))
-        eb.append(pairF(10, dimLineX)).append(pairF(20, dimLineY)).append(pairF(30, 0.0))
+        eb.append(pair(10, dimLineX)).append(pair(20, dimLineY)).append(pair(30, 0.0))
         // Middle of dimension line for text
-        eb.append(pairF(11, (x1 + x2) / 2.0)).append(pairF(21, dimLineY)).append(pairF(31, 0.0))
+        eb.append(pair(11, (x1 + x2) / 2.0)).append(pair(21, dimLineY)).append(pair(31, 0.0))
         if (textOverride != null) {
             eb.append(pair(1, textOverride))
         } else {
@@ -641,14 +645,14 @@ public class DxfExportEngine {
 
         eb.append(pair(100, if (dimType == 1) "AcDb2LineAngularDimension" else "AcDbAlignedDimension"))
         // Definition point 1
-        eb.append(pairF(13, x1)).append(pairF(23, y1)).append(pairF(33, 0.0))
+        eb.append(pair(13, x1)).append(pair(23, y1)).append(pair(33, 0.0))
         // Definition point 2
-        eb.append(pairF(14, x2)).append(pairF(24, y2)).append(pairF(34, 0.0))
+        eb.append(pair(14, x2)).append(pair(24, y2)).append(pair(34, 0.0))
         // Rotation angle for linear dimensions (0 for aligned)
         val angle = Math.toDegrees(Math.atan2(dy, dx))
-        eb.append(pairF(50, angle))
+        eb.append(pair(50, angle))
         // Explicit dimension line position
-        eb.append(pairF(52, angle))
+        eb.append(pair(52, angle))
     }
 
     // --- HATCH ---
@@ -669,11 +673,11 @@ public class DxfExportEngine {
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbHatch"))
         // Elevation
-        eb.append(pairF(10, 0.0)).append(pairF(20, 0.0)).append(pairF(30, 0.0))
+        eb.append(pair(10, 0.0)).append(pair(20, 0.0)).append(pair(30, 0.0))
         // Scale
-        eb.append(pairF(41, scale))
+        eb.append(pair(41, scale))
         // Pattern angle
-        eb.append(pairF(52, angle))
+        eb.append(pair(52, angle))
         // Hatch style: 0=Nested, 1=Outer, 2=Ignore
         eb.append(pair(71, "0"))
         // Pattern type: 0=User-defined, 1=Predefined, 2=Custom
@@ -699,8 +703,8 @@ public class DxfExportEngine {
                 val p2 = if (isClosed) loopPts[(i + 1) % loopPts.size] else loopPts[i + 1]
                 // Edge type: 1=Line
                 eb.append(pair(72, "1"))
-                eb.append(pairF(10, p1.x)).append(pairF(20, p1.y))
-                eb.append(pairF(11, p2.x)).append(pairF(21, p2.y))
+                eb.append(pair(10, p1.x)).append(pair(20, p1.y))
+                eb.append(pair(11, p2.x)).append(pair(21, p2.y))
             }
         }
     }
@@ -720,10 +724,10 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbTrace"))
-        eb.append(pairF(10, x1)).append(pairF(20, y1)).append(pairF(30, 0.0))
-        eb.append(pairF(11, x2)).append(pairF(21, y2)).append(pairF(31, 0.0))
-        eb.append(pairF(12, x3)).append(pairF(22, y3)).append(pairF(32, 0.0))
-        eb.append(pairF(13, x4)).append(pairF(23, y4)).append(pairF(33, 0.0))
+        eb.append(pair(10, x1)).append(pair(20, y1)).append(pair(30, 0.0))
+        eb.append(pair(11, x2)).append(pair(21, y2)).append(pair(31, 0.0))
+        eb.append(pair(12, x3)).append(pair(22, y3)).append(pair(32, 0.0))
+        eb.append(pair(13, x4)).append(pair(23, y4)).append(pair(33, 0.0))
     }
 
     // --- POINT ---
@@ -738,7 +742,7 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbPoint"))
-        eb.append(pairF(10, x)).append(pairF(20, y)).append(pairF(30, 0.0))
+        eb.append(pair(10, x)).append(pair(20, y)).append(pair(30, 0.0))
     }
 
     // --- SPLINE ---
@@ -774,16 +778,16 @@ public class DxfExportEngine {
         }
         // Knot values (uniform)
         for (i in 0 until numKnots) {
-            eb.append(pairF(40, i.toDouble()))
+            eb.append(pair(40, i.toDouble()))
         }
         // Control points
         for ((cx, cy) in controlPoints) {
-            eb.append(pairF(10, cx)).append(pairF(20, cy)).append(pairF(30, 0.0))
+            eb.append(pair(10, cx)).append(pair(20, cy)).append(pair(30, 0.0))
         }
         // Fit points
         if (fitPoints != null) {
             for ((fx, fy) in fitPoints) {
-                eb.append(pairF(11, fx)).append(pairF(21, fy)).append(pairF(31, 0.0))
+                eb.append(pair(11, fx)).append(pair(21, fy)).append(pair(31, 0.0))
             }
         }
     }
@@ -804,11 +808,11 @@ public class DxfExportEngine {
         eb.append(pair(100, "AcDbEntity")).append(pair(8, layer))
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbEllipse"))
-        eb.append(pairF(10, cx)).append(pairF(20, cy)).append(pairF(30, 0.0))
-        eb.append(pairF(11, majorAxisX)).append(pairF(21, majorAxisY)).append(pairF(31, 0.0))
-        eb.append(pairF(40, minorAxisRatio))
-        eb.append(pairF(41, Math.toRadians(startAngleDeg)))
-        eb.append(pairF(42, Math.toRadians(endAngleDeg)))
+        eb.append(pair(10, cx)).append(pair(20, cy)).append(pair(30, 0.0))
+        eb.append(pair(11, majorAxisX)).append(pair(21, majorAxisY)).append(pair(31, 0.0))
+        eb.append(pair(40, minorAxisRatio))
+        eb.append(pair(41, startAngleDeg * 3.141592653589793 / 180.0))
+        eb.append(pair(42, endAngleDeg * 3.141592653589793 / 180.0))
     }
 
     // --- INSERT (block reference) ---
@@ -828,9 +832,9 @@ public class DxfExportEngine {
         if (color != null) eb.append(pair(62, color.toString()))
         eb.append(pair(100, "AcDbBlockReference"))
         eb.append(pair(2, blockName))
-        eb.append(pairF(10, x)).append(pairF(20, y)).append(pairF(30, 0.0))
-        eb.append(pairF(41, scaleX)).append(pairF(42, scaleY)).append(pairF(43, 1.0))
-        eb.append(pairF(50, rotationDeg))
+        eb.append(pair(10, x)).append(pair(20, y)).append(pair(30, 0.0))
+        eb.append(pair(41, scaleX)).append(pair(42, scaleY)).append(pair(43, 1.0))
+        eb.append(pair(50, rotationDeg))
     }
 
     // ============================================================

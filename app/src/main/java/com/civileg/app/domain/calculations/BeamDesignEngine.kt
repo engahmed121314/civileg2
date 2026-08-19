@@ -219,7 +219,7 @@ object BeamDesignEngine {
         safetyChecks.add(SafetyCheckItem("Shear (qu ≤ qu,max)", shearResult.appliedStress, shearResult.maxStress, "MPa", shearResult.appliedStress <= shearResult.maxStress, when(code) { DesignCode.ECP -> "ECP 203 §4-2-6" else -> "ACI 318 §22.5" }))
         safetyChecks.add(SafetyCheckItem("Min Reinforcement", flexureResult.asProvided, flexureResult.asMin, "mm²", flexureResult.asProvided >= flexureResult.asMin, when(code) { DesignCode.ECP -> "ECP 203 §4-2-1-1" else -> "ACI 318 §9.6.1" }))
         safetyChecks.add(SafetyCheckItem("Max Reinforcement %", flexureResult.rhoActual * 100, flexureResult.rhoMax * 100, "%", flexureResult.rhoActual <= flexureResult.rhoMax, when(code) { DesignCode.ECP -> "ECP 203 §4-2-1-1" else -> "ACI 318 §9.2.2" }))
-        safetyChecks.add(SafetyCheckItem("Deflection", deflResult.longTermDeflection, deflResult.allowable, "mm", deflResult.longTermDeflection <= deflResult.allowable, when(code) { DesignCode.ECP -> "ECP 203 §4-2-3" else -> "ACI 318 §24.2" }))
+        safetyChecks.add(SafetyCheckItem("Deflection", deflResult.longTerm, deflResult.allowable, "mm", deflResult.longTerm <= deflResult.allowable, when(code) { DesignCode.ECP -> "ECP 203 §4-2-3" else -> "ACI 318 §24.2" }))
         if (crackResult.calculated > 0) {
             safetyChecks.add(SafetyCheckItem("Crack Width", crackResult.calculated, crackResult.allowable, "mm", crackResult.calculated <= crackResult.allowable, when(code) { DesignCode.ECP -> "ECP 203 §4-2-4" else -> "ACI 318 §24.5" }))
         }
@@ -230,13 +230,13 @@ object BeamDesignEngine {
         val allWarnings = mutableListOf<String>()
         allWarnings.addAll(flexureResult.warnings)
         allWarnings.addAll(shearResult.warnings)
-        if (deflResult.longTermDeflection > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
+        if (deflResult.longTerm > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
         if (crackResult.calculated > crackResult.allowable) allWarnings.add("Crack width exceeds ${crackResult.allowable} mm")
 
         val isSafe = safetyChecks.all { it.isSafe }
         val flexUtil = mu / max(MR, 0.001)
         val shearUtil = shearResult.appliedStress / max(shearResult.maxStress, 0.001)
-        val deflUtil = deflResult.longTermDeflection / max(deflResult.allowable, 0.001)
+        val deflUtil = deflResult.longTerm / max(deflResult.allowable, 0.001)
         val overallUtil = maxOf(flexUtil, shearUtil, deflUtil, 0.0).coerceIn(0.0, 1.5)
 
         // Volume & Weight
@@ -333,10 +333,10 @@ object BeamDesignEngine {
     // ==================== STRUCTURAL ANALYSIS (PDF 04) ====================
 
     data class AnalysisResult(
-        val maxMoment: Double, maxMomentPos: Double, maxMomentNeg: Double,
-        val maxShear: Double, shearLeft: Double, shearRight: Double,
-        val reactionLeft: Double, reactionRight: Double,
-        val shearAtD: Double, zeroShearLocation: Double,
+        val maxMoment: Double, val maxMomentPos: Double, val maxMomentNeg: Double,
+        val maxShear: Double, val shearLeft: Double, val shearRight: Double,
+        val reactionLeft: Double, val reactionRight: Double,
+        val shearAtD: Double, val zeroShearLocation: Double,
         val midspanMoment: Double
     )
 
@@ -407,17 +407,17 @@ object BeamDesignEngine {
     // ==================== FLEXURE DESIGN - FIRST PRINCIPLES (PDF 07) ====================
 
     data class FlexureResult(
-        val K: Double, Kbal: Double, omega: Double, leverArm: Double,
-        val neutralAxisDepth: Double, stressBlockDepth: Double,
-        val Rn: Double, rhoActual: Double, rhoBalanced: Double, beta1: Double,
-        val asRequired: Double, asMin: Double, asMax: Double, asProvided: Double,
-        val rhoMin: Double, rhoMax: Double,
-        val barCount: Int, topBarCount: Int, topBarDia: Int, topAsProvided: Double,
+        val K: Double, val Kbal: Double, val omega: Double, val leverArm: Double,
+        val neutralAxisDepth: Double, val stressBlockDepth: Double,
+        val Rn: Double, val rhoActual: Double, val rhoBalanced: Double, val beta1: Double,
+        val asRequired: Double, val asMin: Double, val asMax: Double, val asProvided: Double,
+        val rhoMin: Double, val rhoMax: Double,
+        val barCount: Int, val topBarCount: Int, val topBarDia: Int, val topAsProvided: Double,
         val momentOfResistance: Double,
         val needsCompressionSteel: Boolean,
-        val compressionBars: String, compressionBarCount: Int, compressionBarDia: Int, compressionAsProvided: Double,
+        val compressionBars: String, val compressionBarCount: Int, val compressionBarDia: Int, val compressionAsProvided: Double,
         val steps: List<CalculationStep>,
-        val warnings: List<String>, codeNotes: List<String>
+        val warnings: List<String>, val codeNotes: List<String>
     )
 
     fun designFlexure(b: Double, d: Double, mu: Double, fcu: Double, fy: Double, code: DesignCode, preferredDia: Int): FlexureResult {
@@ -440,14 +440,14 @@ object BeamDesignEngine {
         val rhoMin = asMinVal / (b * d)
         val rhoMax = asMaxVal / (b * d)
 
-        val asRequired: Double
-        val leverArm: Double
-        val neutralAxisDepth: Double
-        val stressBlockDepth: Double
-        val omega: Double
-        val K: Double
-        val Rn: Double
-        val needsCompSteel: Boolean
+        var asRequired: Double = 0.0
+        var leverArm: Double = 0.0
+        var neutralAxisDepth: Double = 0.0
+        var stressBlockDepth: Double = 0.0
+        var omega: Double = 0.0
+        var K: Double = 0.0
+        var Rn: Double = 0.0
+        var needsCompSteel: Boolean = false
         var compBars = ""
         var compBarCount = 0
         var compBarDia = 0
@@ -472,14 +472,12 @@ object BeamDesignEngine {
                     needsCompSteel = false
                     omega = 1.0 * (1.0 - sqrt(max(0.0, 1.0 - 2.0 * K)))
                     leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.9)))
-                    neutralAxisDepth = (omega * (fcu / GAMMA_C_ECP) * b * d) / (BETA_WHITNEY * fcu / GAMMA_C_ECP * b) * d / d * 1.0
-                    // More accurate: x = (As*fs)/(0.67*fcu/γc*b) but we don't have As yet
+                    
                     // From K: a/d ratio
                     val adRatio = 1.0 - sqrt(max(0.0, 1.0 - 2.0 * K))
                     stressBlockDepth = adRatio * d // a = β*x, with β=0.8, and a/d = 1-√(1-2K)
                     neutralAxisDepth = stressBlockDepth / BETA_WHITNEY // x = a/β
-                    asRequired = (mu * 1e6) / (omega * (fcu / GAMMA_C_ECP) / (fy / GAMMA_S_ECP) * b * d * d) * b * d * omega
-                    // Simplified: As = Mu / (fs * z)
+                    
                     val fs = fy / GAMMA_S_ECP
                     asRequired = (mu * 1e6) / (fs * leverArm)
                     Rn = 0.0

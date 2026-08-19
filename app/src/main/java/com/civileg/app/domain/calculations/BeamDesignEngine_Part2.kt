@@ -18,15 +18,15 @@ object BeamDesignEnginePart2 {
     // ==================== SHEAR DESIGN (PDF 09) ====================
 
     data class ShearDesignResult(
-        val vc: Double, vcFormula: String,
-        val maxStress: Double, appliedStress: Double,
-        val vs: Double, avRequired: Double, avProvided: Double,
-        val stirrupDia: Int, legs: Int,
-        val spacingSupport: Double, spacingMidspan: Double,
+        val vc: Double, val vcFormula: String,
+        val maxStress: Double, val appliedStress: Double,
+        val vs: Double, val avRequired: Double, val avProvided: Double,
+        val stirrupDia: Int, val legs: Int,
+        val spacingSupport: Double, val spacingMidspan: Double,
         val condensationZone: Double,
-        val avMin: Double, maxSpacing: Double, minSpacing: Double,
+        val avMin: Double, val maxSpacing: Double, val minSpacing: Double,
         val steps: List<CalculationStep>,
-        val warnings: List<String>, codeNotes: List<String>
+        val warnings: List<String>, val codeNotes: List<String>
     )
 
     fun designShear(
@@ -88,9 +88,10 @@ object BeamDesignEnginePart2 {
             // Try 8mm stirrups first
             val av8 = legs * PI * 8.0.pow(2) / 4.0
             var s8 = (av8 * (fy / when(code) { DesignCode.ECP -> GAMMA_S_ECP else -> 1.0 }) * d) / (vs * b)
-            s8 = min(s8, when(code) { DesignCode.ECP -> min(d/2.0, 200.0) else -> min(d/2.0, 300.0) })
+            val limit8 = if (code == DesignCode.ECP) minOf(d / 2.0, 200.0) else minOf(d / 2.0, 300.0)
+            s8 = minOf(s8, limit8)
             s8 = floor(s8 / 25.0) * 25.0 // round down to 25mm
-            s8 = max(s8, 75.0)
+            s8 = maxOf(s8, 75.0)
 
             if (s8 >= 75.0) {
                 stirrupDia = 8
@@ -99,29 +100,31 @@ object BeamDesignEnginePart2 {
                 // Try 10mm
                 val av10 = legs * PI * 10.0.pow(2) / 4.0
                 var s10 = (av10 * (fy / when(code) { DesignCode.ECP -> GAMMA_S_ECP else -> 1.0 }) * d) / (vs * b)
-                s10 = min(s10, when(code) { DesignCode.ECP -> min(d/2.0, 200.0) else -> min(d/2.0, 300.0) })
+                val limit10 = if (code == DesignCode.ECP) minOf(d / 2.0, 200.0) else minOf(d / 2.0, 300.0)
+                s10 = minOf(s10, limit10)
                 s10 = floor(s10 / 25.0) * 25.0
-                s10 = max(s10, 75.0)
+                s10 = maxOf(s10, 75.0)
                 stirrupDia = 10
                 spacingSupport = s10
             }
         } else {
             // Minimum shear reinforcement
-            spacingSupport = when(code) { DesignCode.ECP -> min(d/2.0, 200.0) else -> min(d/2.0, 300.0) }
+            spacingSupport = if (code == DesignCode.ECP) minOf(d / 2.0, 200.0) else minOf(d / 2.0, 300.0)
         }
 
         // Midspan spacing (reduced shear at midspan for SS/FH)
-        spacingMidspan = min(spacingSupport * 1.5, when(code) { DesignCode.ECP -> 250.0 else -> 300.0 })
+        val limitMid = if (code == DesignCode.ECP) 250.0 else 300.0
+        spacingMidspan = minOf(spacingSupport * 1.5, limitMid)
         spacingMidspan = floor(spacingMidspan / 25.0) * 25.0
 
-        val condensationZone = min(d, span / 4.0 * 1000.0) // d or L/4
+        val condensationZone = minOf(d, span / 4.0 * 1000.0) // d or L/4
         val avProvided = legs * PI * stirrupDia.toDouble().pow(2) / 4.0
         val avMin = when(code) {
             DesignCode.ECP -> 0.4 * b / (fy / GAMMA_C_ECP)
             else -> 0.062 * sqrt(fcu * 0.8) * b / fy
         }
-        val maxSpacing = min(d / 2.0, when(code) { DesignCode.ECP -> 200.0 else -> 300.0 })
-        val minSpacing = max(75.0, when(code) { DesignCode.SBC -> 100.0 else -> 75.0 })
+        val maxSpacing = if (code == DesignCode.ECP) minOf(d / 2.0, 200.0) else minOf(d / 2.0, 300.0)
+        val minSpacing = maxOf(75.0, if (code == DesignCode.SBC) 100.0 else 75.0)
 
         val stirrupDesc = "${ceil(span*1000.0/spacingSupport).toInt()}Ø$stirrupDia @ ${spacingSupport.toInt()}mm c/c"
         codeNotes.add(when(code) { DesignCode.ECP -> "ECP 203 §4-2-6-2"; DesignCode.ACI -> "ACI 318 §25.5"; else -> "SBC 304" })
@@ -151,7 +154,7 @@ object BeamDesignEnginePart2 {
 
     data class TorsionDesignResult(
         val threshold: Double = 0.0,
-        val combinedStress: Double = 0.0, combinedCapacity: Double = 0.0,
+        val combinedStress: Double = 0.0, val combinedCapacity: Double = 0.0,
         val isSafe: Boolean = true,
         val reinforcementDesc: String = "",
         val stirrupSpacing: Double = 0.0,
@@ -199,10 +202,10 @@ object BeamDesignEnginePart2 {
         val Aoh = (b - 2*cover) * (d - 2*cover) // area inside stirrups
         val Ao = 0.85 * Aoh
         val theta = 45.0 // degrees
-        val AtOverS = (Tu * 1e6) / (2.0 * Ao * (fy / GAMMA_C_ECP) * sin(Math.toRadians(theta)))
+        val AtOverS = (Tu * 1e6) / (2.0 * Ao * (fy / GAMMA_C_ECP) * sin(theta * PI / 180.0))
         val Al = (AtOverS * 2.0 * (b + d) * (fy / GAMMA_C_ECP)) / (fy / GAMMA_C_ECP)
         val stirrupSpacingTorsion = (PI * 8.0.pow(2) / 4.0) / AtOverS
-        val clampedSpacing = max(75.0, min(stirrupSpacingTorsion, b / 4.0, 200.0))
+        val clampedSpacing = maxOf(75.0, minOf(stirrupSpacingTorsion, b / 4.0, 200.0))
 
         val longBarCount = max(4, ceil(Al / (PI * 12.0.pow(2) / 4.0)).toInt())
         val longBarDia = 12
@@ -231,10 +234,10 @@ object BeamDesignEnginePart2 {
     // ==================== DEFLECTION CHECK (Enhanced Ie Method) ====================
 
     data class DeflectionResult(
-        val Ig: Double, Icr: Double, Ie: Double,
-        val Ec: Double, Mcr: Double,
-        val immediate: Double, longTerm: Double, allowable: Double,
-        val basicRatio: Double, modifiedRatio: Double,
+        val Ig: Double, val Icr: Double, val Ie: Double,
+        val Ec: Double, val Mcr: Double,
+        val immediate: Double, val longTerm: Double, val allowable: Double,
+        val basicRatio: Double, val modifiedRatio: Double,
         val ratioDesc: String,
         val steps: List<CalculationStep>
     )
@@ -317,8 +320,8 @@ object BeamDesignEnginePart2 {
     // ==================== CRACK WIDTH CHECK ====================
 
     data class CrackWidthResult(
-        val calculated: Double, allowable: Double,
-        val avgStrain: Double, surfaceStrain: Double,
+        val calculated: Double, val allowable: Double,
+        val avgStrain: Double, val surfaceStrain: Double,
         val step: CalculationStep
     )
 
@@ -357,8 +360,8 @@ object BeamDesignEnginePart2 {
     // ==================== DEVELOPMENT LENGTH ====================
 
     data class DevLengthResult(
-        val required: Double, provided: Double,
-        val fbd: Double, lapLength: Double,
+        val required: Double, val provided: Double,
+        val fbd: Double, val lapLength: Double,
         val step: CalculationStep
     )
 

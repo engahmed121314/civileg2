@@ -5,7 +5,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -17,16 +19,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.ConcreteMixDesigner
-import com.civileg.app.utils.ConcreteMixDesigner.*
+import com.civileg.app.utils.ConcreteMixDesigner.CementType
+import com.civileg.app.utils.ConcreteMixDesigner.Exposure
+import com.civileg.app.utils.ConcreteMixDesigner.STANDARD_GRADES
+import com.civileg.app.utils.ConcreteMixDesigner.MixResult
 import com.civileg.app.viewmodel.ConcreteMixViewModel
+import kotlin.math.*
 
 // ============================================================
 // Color palette
@@ -47,7 +55,8 @@ private val HighlightAmber = Color(0xFFFFB300)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConcreteMixScreen(
-    viewModel: ConcreteMixViewModel = hiltViewModel()
+    viewModel: ConcreteMixViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit
 ) {
     val mixResult by viewModel.mixResult.collectAsState()
 
@@ -84,6 +93,11 @@ fun ConcreteMixScreen(
                         "Concrete Mix Design",
                         fontWeight = FontWeight.Bold
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -433,8 +447,8 @@ private fun InputRow(
         onValueChange = onValueChange,
         label = { Text(label, fontSize = 13.sp) },
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.foundation.text.KeyboardType.Decimal
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal
         ),
         singleLine = true,
         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp)
@@ -638,10 +652,10 @@ private fun MixProportionBarChart(result: MixResult) {
     if (total <= 0) return
 
     val segments = listOf(
-        "Cement" to (cement / total) to CementGray,
-        "Water"  to (water / total)  to WaterBlue,
-        "Fine Agg" to (fine / total) to FineSandBeige,
-        "Coarse Agg" to (coarse / total) to CoarseBrown
+        "Cement" to ((cement / total) to CementGray),
+        "Water"  to ((water / total)  to WaterBlue),
+        "Fine Agg" to ((fine / total) to FineSandBeige),
+        "Coarse Agg" to ((coarse / total) to CoarseBrown)
     )
 
     Column(
@@ -660,7 +674,8 @@ private fun MixProportionBarChart(result: MixResult) {
             var xOffset = 0f
 
             segments.forEachIndexed { index, (label, pair) ->
-                val (fraction, color) = pair
+                val (fractionDouble, color) = pair
+                val fraction = fractionDouble.toFloat()
                 val barWidth = (w * fraction).coerceAtLeast(1f)
                 val isLast = index == segments.lastIndex
 
@@ -668,17 +683,17 @@ private fun MixProportionBarChart(result: MixResult) {
                     color = color,
                     topLeft = Offset(xOffset, 0f),
                     size = Size(
-                        width = if (isLast) w - xOffset else barWidth,
-                        height = h
+                        if (isLast) w - xOffset else barWidth,
+                        h
                     ),
                     cornerRadius = if (xOffset <= 0f && isLast) cornerRadius
                     else if (xOffset <= 0f) CornerRadius(
-                        x = cornerRadius.x,
-                        y = cornerRadius.y
+                        cornerRadius.x,
+                        cornerRadius.y
                     )
                     else if (isLast) CornerRadius(
-                        x = cornerRadius.x,
-                        y = cornerRadius.y
+                        cornerRadius.x,
+                        cornerRadius.y
                     )
                     else CornerRadius.Zero
                 )
@@ -687,13 +702,13 @@ private fun MixProportionBarChart(result: MixResult) {
                 if (barWidth > 40.dp.toPx()) {
                     drawContext.canvas.nativeCanvas.drawText(
                         "${"%.0f".format(fraction * 100)}%",
-                        xOffset + barWidth / 2f,
+                        (xOffset + barWidth / 2f).toFloat(),
                         h / 2f + 10f,
                         android.graphics.Paint().apply {
-                            this.color = android.graphics.Color.WHITE
-                            textSize = 28f
-                            isFakeBoldText = true
-                            textAlign = android.graphics.Paint.Align.CENTER
+                            this.setColor(android.graphics.Color.WHITE)
+                            this.textSize = 28f
+                            this.isFakeBoldText = true
+                            this.textAlign = android.graphics.Paint.Align.CENTER
                         }
                     )
                 }
@@ -747,7 +762,7 @@ private fun MixProportionBarChart(result: MixResult) {
                             .weight(1f)
                             .height(20.dp)
                     ) {
-                        val barW = size.width * fraction
+                        val barW = (size.width * fraction.toFloat()).toFloat()
                         drawRoundRect(
                             color = color.copy(alpha = 0.7f),
                             size = Size(barW, size.height),

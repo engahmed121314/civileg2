@@ -2,7 +2,11 @@ package com.civileg.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.civileg.app.utils.ConcreteMixDesigner
-import com.civileg.app.utils.ConcreteMixDesigner.*
+import com.civileg.app.utils.ConcreteMixDesigner.CementType
+import com.civileg.app.utils.ConcreteMixDesigner.Exposure
+import com.civileg.app.utils.ConcreteMixDesigner.STANDARD_GRADES
+import com.civileg.app.utils.ConcreteMixDesigner.MixResult
+import com.civileg.app.utils.ConcreteMixDesigner.MixInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

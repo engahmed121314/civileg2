@@ -102,13 +102,6 @@ fun ProfessionalTankDrawing(
         )
 
         when (viewMode) {
-            1 -> drawPerspectiveView(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
-            2 -> drawSectionDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth)
-            3 -> drawReinforcementDetail(cw, ch, tankType, isCircular, isElevated, isUnderground,
-                length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
-                verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)
             else -> drawAllView(cw, ch, tankType, isCircular, isElevated, isUnderground,
                 length, width, height, wallThickness, baseThickness, waterLevel, foundationDepth,
                 verticalRebarDia, verticalRebarSpacing, horizontalRebarDia, horizontalRebarSpacing)

@@ -19,6 +19,10 @@ data class PileDesignResult(
     val numberOfPiles: Int,
     val fcu: Double,
     val fy: Double,
+    val axialLoad: Double = 0.0,
+    val lateralLoad: Double = 0.0,
+    val columnWidth: Double = 400.0,
+    val columnLength: Double = 400.0,
 
     // ── Single pile capacity ──
     val capacityResult: PileCapacityResult,
@@ -64,17 +68,6 @@ data class PileReinforcementResult(
 ) {
     val barString: String
         get() = if (longitudinalBars > 0) {
-            "$longitudinalBarsØ$longitudinalDiameter ties Ø$tiesDiameter @$tiesSpacing"
+            "${longitudinalBars}Ø$longitudinalDiameter ties Ø$tiesDiameter @$tiesSpacing"
         } else "N/A"
 }
-
-/**
- * Lateral load capacity result (Broms method).
- */
-data class LateralLoadResult(
-    val ultimateLateralCapacity: Double,  // kN
-    val allowableLateralCapacity: Double, // kN
-    val maxBendingMoment: Double,         // kN.m
-    val depthToFixity: Double,            // m
-    val deflectionAtHead: Double          // mm
-)

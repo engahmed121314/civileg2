@@ -9,9 +9,15 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.DxfExportEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.SettingsManager
 import com.civileg.app.domain.calculations.BeamDesignEngine
 import com.civileg.app.domain.entities.BeamDesignResult
 import com.civileg.app.domain.entities.DesignCode
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class BeamViewModel @Inject constructor(
@@ -122,8 +128,8 @@ class BeamViewModel @Inject constructor(
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
                 val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
@@ -186,14 +192,14 @@ class BeamViewModel @Inject constructor(
                     isSafe = res.isSafe, drawingBitmap = drawingBitmap, outputPath = file.absolutePath
                 )
 
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     _error.value = "PDF export failed: ${e.message}"
                     _isExporting.value = false
                     onComplete(null)
@@ -204,8 +210,8 @@ class BeamViewModel @Inject constructor(
 
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
                 val fileName = "Beam_Drawing_${System.currentTimeMillis()}.dxf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
@@ -214,13 +220,13 @@ class BeamViewModel @Inject constructor(
                 val file = java.io.File(directory, fileName)
                 val dxfContent = DxfExportEngine.generateBeamDxf(res, lastSpan, lastFcu, lastFy)
                 file.writeText(dxfContent)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     ExportUtils.openDxf(context, file)
                     onComplete(file)
                     _isExporting.value = false
                 }
             } catch (e: Throwable) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     _error.value = "DXF export failed: ${e.message}"
                     _isExporting.value = false
                     onComplete(null)

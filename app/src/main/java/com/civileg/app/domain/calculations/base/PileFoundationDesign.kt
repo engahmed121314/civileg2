@@ -98,7 +98,7 @@ data class RebarDetail(
     val ratio: Double
 ) {
     val barString: String
-        get() = if (bars > 0) "$barsØ$diameter @$spacing" else "N/A"
+        get() = if (bars > 0) "${bars}Ø$diameter @$spacing" else "N/A"
 }
 
 data class PileSettlementResult(

@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.SoilType
 import com.civileg.app.domain.calculations.base.*
 import kotlin.math.*
 
@@ -113,13 +114,13 @@ class ECPPileFoundation : PileFoundationDesign {
         val capResult = designPileCap(capInput)
 
         // 5. Lateral capacity (Broms)
-        val lateralResult = calculateLateralCapacity(input)
+        val lateralResult = calculateLateralCapacity(input) as com.civileg.app.domain.calculations.base.LateralLoadResult
 
         // 6. Negative skin friction
         val negFriction = calculateNegativeSkinFriction(input)
 
         // 7. Structural pile reinforcement design
-        val maxMomentOnPile = max(input.momentLoad / input.numberOfPiles, lateralResult.maxBendingMoment)
+        val maxMomentOnPile = kotlin.math.max(input.momentLoad / input.numberOfPiles, lateralResult.maxBendingMoment)
         val maxAxialOnPile = (input.axialLoad + negFriction) / input.numberOfPiles
         val pileReinforcement = designPileReinforcement(input, maxAxialOnPile, maxMomentOnPile)
 
@@ -133,7 +134,7 @@ class ECPPileFoundation : PileFoundationDesign {
                 && capResult.punchingShearOk
                 && capResult.beamShearOk
                 && pileReinforcement.isSafe
-                && lateralResult.allowableLateralCapacity >= input.lateralLoad
+                && (lateralResult as com.civileg.app.domain.calculations.base.LateralLoadResult).allowableLateralCapacity >= input.lateralLoad
 
         codeNotes.add("ECP 203-2020: Pile Foundation Design")
         codeNotes.add("Pile: ${input.pileType.displayName}, Ø${input.pileDiameter.toInt()}mm x ${input.pileLength}m")
@@ -155,6 +156,10 @@ class ECPPileFoundation : PileFoundationDesign {
             numberOfPiles = input.numberOfPiles,
             fcu = input.fcu,
             fy = input.fy,
+            axialLoad = input.axialLoad,
+            lateralLoad = input.lateralLoad,
+            columnWidth = input.columnWidth,
+            columnLength = input.columnLength,
             capacityResult = capacityResult,
             groupResult = groupResult,
             settlementResult = settlementResult,
@@ -181,30 +186,30 @@ class ECPPileFoundation : PileFoundationDesign {
         val area = PI * D * D / 4.0          // m²
 
         // Effective length below scour depth
-        val effectiveLength = max(L - input.scourDepth, 1.0)
+        val effectiveLength = kotlin.math.max(L - input.scourDepth, 1.0)
 
         // Shaft resistance and end bearing depend on soil type
         val (shaftResistance, endBearingResistance) = when (input.soilType) {
-            SoilType.CLAY -> calculateClayCapacity(
+            com.civileg.app.domain.SoilType.CLAY -> calculateClayCapacity(
                 input = input,
                 D = D,
                 L = effectiveLength,
                 perimeter = perimeter,
                 area = area
             )
-            SoilType.SAND -> calculateSandCapacity(
+            com.civileg.app.domain.SoilType.SAND -> calculateSandCapacity(
                 input = input,
                 D = D,
                 L = effectiveLength,
                 perimeter = perimeter,
                 area = area
             )
-            SoilType.ROCK -> calculateRockCapacity(
+            com.civileg.app.domain.SoilType.ROCK -> calculateRockCapacity(
                 input = input,
                 D = D,
                 area = area
             )
-            SoilType.MIXED -> {
+            com.civileg.app.domain.SoilType.MIXED -> {
                 // Split: upper half sand, lower half clay
                 val midLength = effectiveLength / 2.0
                 val (shaftSand, endSand) = calculateSandCapacity(
@@ -216,8 +221,9 @@ class ECPPileFoundation : PileFoundationDesign {
                     perimeter = perimeter, area = area
                 )
                 // End bearing uses the stronger layer
-                Pair(shaftSand + shaftClay, max(endSand, endClay))
+                Pair(shaftSand + shaftClay, kotlin.math.max(endSand, endClay))
             }
+            else -> Pair(0.0, 0.0)
         }
 
         val ultimateCapacity = shaftResistance + endBearingResistance
@@ -251,7 +257,7 @@ class ECPPileFoundation : PileFoundationDesign {
         val shaftResistance = alpha * cu * perimeter * L  // kN
 
         // End bearing: 9*cu for deep foundations (ECP 203/7-2)
-        val embedmentFactor = min(input.embedmentDepth / (5.0 * D), 1.0)
+        val embedmentFactor = kotlin.math.min(input.embedmentDepth / (5.0 * D), 1.0)
         val endBearing = Nc * cu * area * embedmentFactor  // kN
 
         return Pair(shaftResistance, endBearing)
@@ -274,7 +280,7 @@ class ECPPileFoundation : PileFoundationDesign {
             PileType.CFA -> 0.7 + 0.15 * (phi - 25.0) / 15.0   // K = 0.7 to 1.0
             PileType.MICROPILE -> 0.4 + 0.1 * (phi - 25.0) / 15.0
         }
-        val beta = K * tan(toRadians(phi)) * input.pileType.betaFactor
+        val beta = K * tan(phi * PI / 180.0) * input.pileType.betaFactor
 
         // Shaft resistance: integrate effective stress over length
         // Account for water table
@@ -311,7 +317,7 @@ class ECPPileFoundation : PileFoundationDesign {
             else -> 12.0
         }
 
-        val embedmentFactor = min(input.embedmentDepth / (5.0 * D), 1.0)
+        val embedmentFactor = kotlin.math.min(input.embedmentDepth / (5.0 * D), 1.0)
         val endBearing = Nq * sigmaVTIP * area * embedmentFactor  // kN
 
         return Pair(shaftResistance, endBearing)
@@ -328,7 +334,7 @@ class ECPPileFoundation : PileFoundationDesign {
         val cu = input.cu  // kPa (used as rock UCS proxy)
 
         // Shaft resistance in rock socket (typically 10-25% of rock UCS)
-        val rockSocketLength = min(input.embedmentDepth, 3.0 * D)
+        val rockSocketLength = kotlin.math.min(input.embedmentDepth, 3.0 * D)
         val shaftStress = 0.15 * cu * input.pileType.betaFactor  // kPa
         val shaftResistance = shaftStress * PI * D * rockSocketLength  // kN
 
@@ -367,7 +373,7 @@ class ECPPileFoundation : PileFoundationDesign {
         }.let { ceil(it / 50.0) * 50.0 }
 
         // 2. Cap thickness: max(spacing/3, 400mm) per ECP 203/7-2-4
-        val minThickness = max(spacing / 3.0, 400.0)
+        val minThickness = kotlin.math.max(spacing / 3.0, 400.0)
         val capThickness = ceil(minThickness / 50.0) * 50.0
         val d = capThickness - input.cover - 10.0  // effective depth
 
@@ -432,7 +438,7 @@ class ECPPileFoundation : PileFoundationDesign {
 
         // One-way shear capacity per ECP 203: qcu = 0.24 * sqrt(fcu/gamma_c)
         val qcu = 0.24 * sqrt(input.fcu / GAMMA_C)  // MPa
-        val beamShearStress = max(
+        val beamShearStress = kotlin.math.max(
             (Vu_x * 1000.0) / (capLength * d),
             (Vu_y * 1000.0) / (capWidth * d)
         )
@@ -467,7 +473,7 @@ class ECPPileFoundation : PileFoundationDesign {
             val asvRequired = vpExcess * 1000.0 / (input.fy / GAMMA_S * d)  // mm²
             val linksDia = selectLinksDiameter(asvRequired)
             val linksArea = PI * linksDia * linksDia / 4.0
-            val nLinks = max(4, ceil(asvRequired / linksArea).toInt())
+            val nLinks = kotlin.math.max(4, ceil(asvRequired / linksArea).toInt())
             val linksSpacing = 75  // mm (close spacing for punching)
             RebarDetail(
                 bars = nLinks,
@@ -483,7 +489,7 @@ class ECPPileFoundation : PileFoundationDesign {
         val concreteVolume = capWidth * capLength * capThickness / 1e9  // m³
         val totalRebarLength = (reinfX.bars * capLength + reinfY.bars * capWidth +
                 (reinfX.bars + reinfY.bars) * 50 * 2) / 1000.0  // m approx
-        val rebarDia = max(reinfX.diameter, reinfY.diameter)
+        val rebarDia = kotlin.math.max(reinfX.diameter, reinfY.diameter)
         val rebarAreaM = PI * (rebarDia.toDouble() / 1000.0).pow(2) / 4.0
         val steelWeight = totalRebarLength * rebarAreaM * STEEL_DENSITY
 
@@ -524,7 +530,7 @@ class ECPPileFoundation : PileFoundationDesign {
         // As = Mu / (fy/gamma_s * z)
         val asRequired = Mu / (fy / GAMMA_S * z)
         val asMin = 0.0015 * b * d  // 0.15% min for foundations
-        val asFinal = max(asRequired, asMin)
+        val asFinal = kotlin.math.max(asRequired, asMin)
 
         // Select bars
         val barDia = selectBarDiameter(asFinal)
@@ -580,7 +586,7 @@ class ECPPileFoundation : PileFoundationDesign {
     ): Int {
         if (shearSpan <= 0) return 0
         val dim = if (direction == 'x') nCols else nRows
-        return max(0, dim / 2)
+        return kotlin.math.max(0, dim / 2)
     }
 
     // ══════════════════════════════════════════════════════════
@@ -651,18 +657,18 @@ class ECPPileFoundation : PileFoundationDesign {
         // Simplified: η = 1 - (arctan(D/s) in degrees / 90) * (n-1)/(n) * correction
 
         val (nCols, nRows) = parsePattern(input.pattern, n)
-        val m = nCols
-        val nn = nRows
-        val totalPiles = m * nn
+        val m = nCols.toDouble()
+        val nn = nRows.toDouble()
+        val totalPilesCount = m * nn
 
-        val theta = toDegrees(atan(D / spacing))
-        val groupTerm1 = if (m > 1) (m - 1) else 0.0
-        val groupTerm2 = if (nn > 1) (nn - 1) else 0.0
+        val theta = (atan(D / spacing) * 180.0 / PI)
+        val groupTerm1 = if (m > 1.0) (m - 1.0) else 0.0
+        val groupTerm2 = if (nn > 1.0) (nn - 1.0) else 0.0
         val numerator = D * (groupTerm1 + groupTerm2) +
                 D * sqrt(2.0) * groupTerm1 * groupTerm2
-        val denominator = totalPiles * spacing
+        val denominator = totalPilesCount * spacing
 
-        val efficiency = if (denominator > 0) {
+        val efficiency = if (denominator > 0.0) {
             (1.0 - (theta / 90.0) * (numerator / denominator)).coerceIn(0.5, 1.0)
         } else {
             1.0
@@ -684,14 +690,14 @@ class ECPPileFoundation : PileFoundationDesign {
         )
         val singleCapacity = calculatePileCapacity(singlePileInput)
         val individualCapacity = singleCapacity.allowableCapacity
-        val groupCapacity = individualCapacity * totalPiles * efficiency
+        val groupCapacity = individualCapacity * totalPilesCount * efficiency
 
         return PileGroupResult(
             efficiencyFactor = efficiency,
             groupCapacity = groupCapacity,
             individualCapacity = individualCapacity,
             spacing = spacing * 1000.0,  // mm
-            numberOfPiles = totalPiles,
+            numberOfPiles = totalPilesCount.toInt(),
             pattern = input.pattern
         )
     }
@@ -734,7 +740,7 @@ class ECPPileFoundation : PileFoundationDesign {
         val f = 1.5 * D
         val Hu_long = p * L * L / (f + L / 2.0)  // long pile assumption
 
-        val Hu = min(Hu_short, Hu_long)
+        val Hu = kotlin.math.min(Hu_short, Hu_long)
         val allowableHu = Hu / 2.5  // FS = 2.5 for lateral
 
         // Maximum bending moment (at depth of zero shear)
@@ -743,7 +749,7 @@ class ECPPileFoundation : PileFoundationDesign {
         } else {
             sqrt(2.0 * H * f / p).coerceAtMost(L * 0.7)  // long pile
         }
-        val maxMoment = H * (input.momentLoad / max(H, 1.0) + depthToMaxMoment)
+        val maxMoment = H * (input.momentLoad / kotlin.math.max(H, 1.0) + depthToMaxMoment)
 
         // Depth to fixity
         val depthToFixity = 1.5 * D * sqrt(p / (H + 1.0))
@@ -777,7 +783,7 @@ class ECPPileFoundation : PileFoundationDesign {
     private fun bromsCohesionless(input: PileInput, D: Double, L: Double, H: Double): LateralLoadResult {
         val phi = input.phi
         val gamma = input.gammaSoil
-        val Kp = (1.0 + sin(toRadians(phi))) / (1.0 - sin(toRadians(phi)))  // passive earth pressure coeff
+        val Kp = (1.0 + sin(phi * PI / 180.0)) / (1.0 - sin(phi * PI / 180.0))  // passive earth pressure coeff
 
         // Soil resistance per unit length increases linearly: p = 3 * Kp * gamma * z * D
         // At depth z: p(z) = 3 * Kp * gamma * z * D
@@ -788,12 +794,12 @@ class ECPPileFoundation : PileFoundationDesign {
         val Hu_short = 1.5 * pAvg * L  // short pile
         val f = 1.5 * D
         val Hu_long = pAvg * L * L / (f + L / 2.0)
-        val Hu = min(Hu_short, Hu_long)
+        val Hu = kotlin.math.min(Hu_short, Hu_long)
         val allowableHu = Hu / 2.5
 
         // Maximum bending moment
         val depthToMaxMoment = L * 0.4
-        val maxMoment = H * (input.momentLoad / max(H, 1.0) + depthToMaxMoment)
+        val maxMoment = H * (input.momentLoad / kotlin.math.max(H, 1.0) + depthToMaxMoment)
 
         // Depth to fixity
         val depthToFixity = (2.0 * H / (3.0 * Kp * gamma * D)).pow(1.0 / 3.0)
@@ -827,7 +833,7 @@ class ECPPileFoundation : PileFoundationDesign {
         val perimeter = PI * D
 
         // Compressible layer depth (from ground surface to top of bearing layer)
-        val compressibleDepth = input.pileLength - input.embedmentDepth
+        val compressibleDepth = kotlin.math.max(input.pileLength - input.embedmentDepth, 0.0)
         if (compressibleDepth <= 0) return 0.0
 
         // Average effective vertical stress in compressible layer
@@ -853,10 +859,10 @@ class ECPPileFoundation : PileFoundationDesign {
 
         // Delta = friction angle between pile and soil
         val deltaFactor = when (input.soilType) {
-            SoilType.CLAY -> 0.5  // delta = 0.5 * cu approach
-            SoilType.SAND -> tan(toRadians(input.phi * 0.67))  // delta ≈ 2/3 * phi
-            SoilType.MIXED -> 0.4
-            SoilType.ROCK -> 0.0
+            com.civileg.app.domain.SoilType.CLAY -> 0.5  // delta = 0.5 * cu approach
+            com.civileg.app.domain.SoilType.SAND -> tan(input.phi * 0.67 * PI / 180.0)  // delta ≈ 2/3 * phi
+            com.civileg.app.domain.SoilType.MIXED -> 0.4
+            com.civileg.app.domain.SoilType.ROCK -> 0.0
         }
 
         // Unit negative skin friction (kN/m²)
@@ -919,12 +925,12 @@ class ECPPileFoundation : PileFoundationDesign {
         // Select longitudinal bars (minimum 6 for piles per ECP 203)
         val barDia = selectPileBarDiameter(asFinal, D)
         val barArea = PI * barDia * barDia / 4.0
-        val nBars = max(6, ceil(asFinal / barArea).toInt())
+        val nBars = kotlin.math.max(6, ceil(asFinal / barArea).toInt())
         val asProvided = nBars * barArea
 
         // Ties/spirals (ECP 203 Clause 7-2-3-2)
         // Ties diameter >= max(6mm, longitudinal/4)
-        val tiesDia = max(8, barDia / 4).toInt().coerceAtLeast(8)
+        val tiesDia = kotlin.math.max(8.0, barDia / 4).toInt().coerceAtLeast(8)
         // Ties spacing <= min(16*barDia, 48*tiesDia, 0.75*D)
         val tiesSpacing = minOf(
             (16 * barDia).toInt(),
