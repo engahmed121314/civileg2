@@ -207,7 +207,38 @@ class CalculatorEngine @Inject constructor(
         val effectiveDepthX: Double = 0.0,
         val effectiveDepthY: Double = 0.0,
         val shearCheck: Double = 0.0,
-        val suggestions: List<String> = emptyList()
+        val suggestions: List<String> = emptyList(),
+        // === Enhanced slab design fields ===
+        val isOneWay: Boolean = false,
+        val aspectRatio: Double = 1.0,
+        val selfWeight: Double = 0.0,
+        val totalDeadLoad: Double = 0.0,
+        val momentPositiveX: Double = 0.0,
+        val momentNegativeX: Double = 0.0,
+        val momentPositiveY: Double = 0.0,
+        val momentNegativeY: Double = 0.0,
+        val reinforcementBottomX: ReinforcementBar = reinforcementMain,
+        val reinforcementTopX: ReinforcementBar = ReinforcementBar(),
+        val reinforcementBottomY: ReinforcementBar = reinforcementSecondary,
+        val reinforcementTopY: ReinforcementBar = ReinforcementBar(),
+        val shearVcX: Double = 0.0,
+        val shearVuX: Double = 0.0,
+        val shearVcY: Double = 0.0,
+        val shearVuY: Double = 0.0,
+        val deflectionRatio: Double = 0.0,
+        val momentCoeffPosX: Double = 0.0,
+        val momentCoeffNegX: Double = 0.0,
+        val momentCoeffPosY: Double = 0.0,
+        val momentCoeffNegY: Double = 0.0,
+        val edgeA: String = "SS",
+        val edgeB: String = "SS",
+        val edgeC: String = "SS",
+        val edgeD: String = "SS",
+        val calculationSteps: List<String> = emptyList(),
+        val ribReinforcement: ReinforcementBar = ReinforcementBar(),
+        val topSteelReinforcement: ReinforcementBar = ReinforcementBar(),
+        val effectiveDepthShort: Double = 0.0,
+        val effectiveDepthLong: Double = 0.0
     ) : Parcelable
 
     @Parcelize
@@ -926,152 +957,401 @@ class CalculatorEngine @Inject constructor(
         dropPanelThickness: Double = 0.0,
         columnSize: Double = 400.0
     ): SlabResult {
-        val domainCode = when(code) {
-            DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
-            DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-            DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
-        }
-        val wu = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
-        
+        val steps = mutableListOf<String>()
+        val safetyChecks = mutableListOf<DesignSafetyCheck>()
+        val suggestions = mutableListOf<String>()
+
+        // ========== 1. CODE PARAMETERS ==========
+        val isECP = code == DesignCode.EGYPTIAN
+        val gammaC = if (isECP) 1.5 else 1.0  // ECP uses fcu/γc; ACI uses fc'=0.8fcu
+        val gammaS = if (isECP) 1.15 else 1.0
+        val phi = if (isECP) 1.0 else 0.9  // ACI/SBC φ=0.9 for flexure
+        val dlFactor = if (isECP) 1.4 else 1.2
+        val llFactor = if (isECP) 1.6 else 1.6
+
+        // ========== 2. SELF-WEIGHT ==========
+        val selfWeight = ts / 1000.0 * 25.0  // kN/m² (γ_concrete = 25 kN/m³)
+        val totalDL = deadLoad + selfWeight
+        val wu = dlFactor * totalDL + llFactor * liveLoad
+        steps.add("Step 1: Self-weight = ${"%.2f".format(selfWeight)} kN/m²")
+        steps.add("Step 2: Total DL = ${"%.2f".format(totalDL)} kN/m² (user DL ${"%.1f".format(deadLoad)} + self-wt ${"%.2f".format(selfWeight)})")
+        steps.add("Step 3: Wu = ${dlFactor}×${"%.2f".format(totalDL)} + ${llFactor}×${liveLoad} = ${"%.2f".format(wu)} kN/m²")
+
+        // ========== 3. SPAN CLASSIFICATION ==========
         val shortSpan = min(lx, ly)
         val longSpan = max(lx, ly)
         val r = longSpan / shortSpan
-        
-        var mx: Double
-        var my: Double
-        var minTs: Double
-        
-        // --- Specific Logic for Slab Types ---
-        var d = ts - 25.0
-        var voidRatio = 1.0
-        
-        when (type) {
-            SlabType.WAFFLE -> {
-                // Two-way ribbed behavior (reduced from simply supported due to two-way action)
-                mx = wu * lx.pow(2) / 12.0
-                my = wu * ly.pow(2) / 12.0
-                minTs = lx * 1000 / 30.0
-                voidRatio = 0.60  // 40% void reduction for waffle
-                }
-            SlabType.FLAT -> {
-                // Flat Slab Direct Design Method - improved moment coefficients
-                val totalMoment = (wu * ly * lx.pow(2)) / 8.0
-                mx = 0.50 * totalMoment  // Column strip negative moment (governs)
-                my = 0.10 * totalMoment  // Middle strip moment
-                minTs = lx * 1000 / 32.0
-                if (dropPanelThickness > 0) minTs *= 0.9
-                }
-            SlabType.POST_TENSION -> {
-                // PT Slab: improved drape and loss calculations
-                val sag = lx * 1000 / 25.0  // L/25 typical drape in mm
-                val effectiveP = prestressForce * 0.80  // 20% total losses
-                val balancedLoad = (8 * effectiveP * sag / 1000) / (lx * ly)
-                val netWu = max(0.0, wu - balancedLoad)
-                if (netWu <= 0) {
-                    // Fully balanced - minimal reinforcement needed
-                    mx = 0.0
-                    my = 0.0
-                    minTs = lx * 1000 / 45.0
-                    } else {
-                    mx = netWu * shortSpan.pow(2) / 10.0
-                    my = netWu * longSpan.pow(2) / 12.0
-                    minTs = shortSpan * 1000 / 45.0
-                    }
-                }
-            SlabType.HOLLOW_BLOCK -> {
-                // One-way ribbed (hollow block) slab
-                mx = wu * shortSpan.pow(2) / 8.0
-                my = wu * longSpan.pow(2) / 24.0
-                minTs = shortSpan * 1000 / 25.0
-                d = ts - 25.0 - (ts * 0.55) / 2.0  // ribs extend below blocks
-                voidRatio = 0.55  // hollow block void ratio
-                }
-            else -> {
-                // Solid Slab Grashoff
-                val alpha = if (r <= 2.0) r.pow(4) / (1 + r.pow(4)) else 1.0
-                val beta = if (r <= 2.0) 1 / (1 + r.pow(4)) else 0.0
-                mx = alpha * wu * shortSpan.pow(2) / 8.0
-                my = beta * wu * shortSpan.pow(2) / 8.0
-                minTs = shortSpan * 1000 / 35.0
-                }
-            }
-        
-        d = max(d, ts * 0.3)  // Ensure reasonable effective depth
-        
-        // Flexure Design
-        val asReqX = calculateAs(mx, fcu, fy, d, width = 1000.0, code = code)
-        val asReqY = calculateAs(my, fcu, fy, d, width = 1000.0, code = code)
-        
-        val asMin = when(type) {
-            SlabType.POST_TENSION -> 0.0012 * 1000.0 * ts
-            else -> 0.0018 * 1000.0 * ts
-            }
-        
-        val finalAsX = max(asReqX, asMin)
-        val finalAsY = max(asReqY, asMin)
-        
-        val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
-        val spacingX = (1000.0 * barArea) / finalAsX
-        val spacingY = (1000.0 * barArea) / finalAsY
-        
-        val finalSpacingX = min(200.0, floor(spacingX / 10.0) * 10.0).coerceAtLeast(100.0)
-        val finalSpacingY = min(200.0, floor(spacingY / 10.0) * 10.0).coerceAtLeast(100.0)
-        
-        val volM3 = (lx * ly * ts) / 1000.0 * voidRatio
-        
-        val barWeightPerMeter = (preferredDiameter.toDouble().pow(2.0) / 162.0)
-        val numBarsX = (ly * 1000.0 / finalSpacingX) + 1
-        val numBarsY = (lx * 1000.0 / finalSpacingY) + 1
-        val steelWeight = (numBarsX * lx * barWeightPerMeter + numBarsY * ly * barWeightPerMeter) * 1.05
-        
-        val safetyChecks = mutableListOf<DesignSafetyCheck>()
-        safetyChecks.add(DesignSafetyCheck("Min Thickness", ts, minTs, "mm", ts >= minTs))
-        
-        // Punching Shear (Crucial for Flat Slabs)
-        val punchingLoad = wu * (lx * ly - (columnSize + d).pow(2) / 1e6)
-        val critPerimeter = 4 * (columnSize + d)
-        val v_punch = punchingLoad * 1000 / (critPerimeter * d)
-        val v_limit = when(code) {
-            DesignCode.EGYPTIAN -> 0.316 * sqrt(fcu / 1.5)
-            else -> 0.33 * 0.75 * sqrt(fcu * 0.8) // ACI 318 punching limit with Phi=0.75
-            }
-        
-        if (type == SlabType.FLAT) {
-            safetyChecks.add(DesignSafetyCheck("Punching Shear", v_punch, v_limit, "MPa", v_punch <= v_limit))
-            }
+        val isOneWay = r > 2.0 && type == SlabType.SOLID
+        steps.add("Step 4: Ly/Lx = ${"%.2f".format(r)} → ${if (isOneWay) "One-Way Slab" else "Two-Way Slab"}")
 
-        val efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100
+        // ========== 4. MOMENT COEFFICIENTS (SOLID SLAB) ==========
+        var mxPos = 0.0; var mxNeg = 0.0
+        var myPos = 0.0; var myNeg = 0.0
+        var coeffPosX = 0.0; var coeffNegX = 0.0
+        var coeffPosY = 0.0; var coeffNegY = 0.0
+        var minTs = 0.0
+
+        if (type == SlabType.SOLID) {
+            if (isOneWay) {
+                // ONE-WAY SLAB: M = coeff × Wu × L²
+                // Simply Supported: M+ = Wu×L²/8, M- = 0
+                // Continuous one end: M+ = Wu×L²/10, M- = Wu×L²/14
+                // Fixed both ends: M+ = Wu×L²/24, M- = Wu×L²/12
+                coeffPosX = 1.0 / 8.0
+                coeffNegX = 0.0  // Simply supported default
+                mxPos = coeffPosX * wu * shortSpan.pow(2)
+                mxNeg = 0.0
+                myPos = 0.0
+                myNeg = 0.0
+                coeffPosY = 0.0
+                coeffNegY = 0.0
+                // Min thickness for one-way
+                minTs = if (isECP) shortSpan * 1000 / 25.0
+                        else { val fyAdj = min(1.0, 420.0 / fy.coerceAtLeast(200.0)); shortSpan * 1000 / 20.0 * fyAdj }
+                steps.add("Step 5: One-way SS slab: M+ = Wu×L²/8 = ${"%.2f".format(wu)}×${"%.2f".format(shortSpan)}²×${"%.4f".format(coeffPosX)} = ${"%.2f".format(mxPos)} kN.m/m")
+            } else {
+                // TWO-WAY SLAB: Marcus/Reynolds coefficients based on edge conditions
+                // Default: 4 edges simply supported (SS)
+                // Marcus coefficients (approximate, SS all edges)
+                val (cx_p, cx_n, cy_p, cy_n) = getTwoWayMomentCoefficients(r, "SS", "SS", "SS", "SS")
+                coeffPosX = cx_p; coeffNegX = cx_n
+                coeffPosY = cy_p; coeffNegY = cy_n
+
+                mxPos = coeffPosX * wu * shortSpan.pow(2)
+                mxNeg = coeffNegX * wu * shortSpan.pow(2)
+                myPos = coeffPosY * wu * shortSpan.pow(2)
+                myNeg = coeffNegY * wu * shortSpan.pow(2)
+
+                // Min thickness for two-way
+                minTs = if (isECP) shortSpan * 1000 / 35.0
+                        else { val fyAdj = min(1.0, 420.0 / fy.coerceAtLeast(200.0)); shortSpan * 1000 / 30.0 * fyAdj }
+                steps.add("Step 5: Two-way slab (Marcus): Ly/Lx=${"%.2f".format(r)}")
+                steps.add("  α+ = ${"%.4f".format(coeffPosX)}, α- = ${"%.4f".format(coeffNegX)} (short dir)")
+                steps.add("  β+ = ${"%.4f".format(coeffPosY)}, β- = ${"%.4f".format(coeffNegY)} (long dir)")
+                steps.add("  Mx+ = ${"%.4f".format(coeffPosX)} × ${"%.2f".format(wu)} × ${"%.2f".format(shortSpan)}² = ${"%.2f".format(mxPos)} kN.m/m")
+                steps.add("  Mx- = ${"%.2f".format(mxNeg)} kN.m/m, My+ = ${"%.2f".format(myPos)} kN.m/m, My- = ${"%.2f".format(myNeg)} kN.m/m")
+            }
+        } else if (type == SlabType.HOLLOW_BLOCK) {
+            // HOLLOW BLOCK: One-way ribbed slab
+            coeffPosX = 1.0 / 8.0
+            mxPos = coeffPosX * wu * shortSpan.pow(2)
+            mxNeg = 0.0
+            myPos = 0.0; myNeg = 0.0
+            coeffPosY = 0.0; coeffNegY = 0.0
+            minTs = shortSpan * 1000 / 25.0
+            steps.add("Step 5: Hollow block one-way: M+ = Wu×L²/8 = ${"%.2f".format(mxPos)} kN.m/m")
+        } else if (type == SlabType.WAFFLE) {
+            // WAFFLE: Two-way ribbed slab
+            val (cx_p, cx_n, cy_p, cy_n) = getTwoWayMomentCoefficients(r, "SS", "SS", "SS", "SS")
+            coeffPosX = cx_p; coeffNegX = cx_n
+            coeffPosY = cy_p; coeffNegY = cy_n
+            mxPos = coeffPosX * wu * shortSpan.pow(2)
+            mxNeg = coeffNegX * wu * shortSpan.pow(2)
+            myPos = coeffPosY * wu * shortSpan.pow(2)
+            myNeg = coeffNegY * wu * shortSpan.pow(2)
+            minTs = shortSpan * 1000 / 30.0
+            steps.add("Step 5: Waffle two-way: Mx+ = ${"%.2f".format(mxPos)}, Mx- = ${"%.2f".format(mxNeg)} kN.m/m")
+        } else if (type == SlabType.FLAT) {
+            // FLAT SLAB: ACI Direct Design Method
+            val totalMoment = (wu * longSpan * shortSpan.pow(2)) / 8.0
+            // Moment distribution: Column strip negative = 0.50Mo, positive = 0.20Mo
+            //                        Middle strip negative = 0.15Mo, positive = 0.05Mo
+            coeffNegX = 0.50; coeffPosX = 0.20
+            coeffNegY = 0.15; coeffPosY = 0.05
+            mxNeg = coeffNegX * totalMoment / shortSpan  // kN.m/m in column strip
+            mxPos = coeffPosX * totalMoment / shortSpan
+            myNeg = coeffNegY * totalMoment / longSpan
+            myPos = coeffPosY * totalMoment / longSpan
+            minTs = if (dropPanelThickness > 0) shortSpan * 1000 / 36.0 else shortSpan * 1000 / 30.0
+            steps.add("Step 5: Flat slab DDM: Total Mo = Wu×Ly×Lx²/8 = ${"%.2f".format(totalMoment)} kN.m")
+            steps.add("  Col strip: M- = 0.50Mo = ${"%.2f".format(mxNeg)}, M+ = 0.20Mo = ${"%.2f".format(mxPos)} kN.m/m")
+        } else { // POST_TENSION
+            val sag = shortSpan * 1000 / 25.0
+            val effectiveP = prestressForce * 0.80
+            val balancedLoad = (8 * effectiveP * sag / 1000) / (lx * ly)
+            val netWu = max(0.0, wu - balancedLoad)
+            coeffPosX = 1.0 / 10.0
+            mxPos = if (netWu > 0) netWu * shortSpan.pow(2) * coeffPosX else 0.0
+            myPos = if (netWu > 0) netWu * longSpan.pow(2) / 12.0 else 0.0
+            minTs = shortSpan * 1000 / 45.0
+            steps.add("Step 5: PT slab: Balanced load = ${"%.2f".format(balancedLoad)}, Net Wu = ${"%.2f".format(netWu)}")
+        }
+
+        // ========== 5. EFFECTIVE DEPTH ==========
+        val cover = 20.0
+        // Short direction: main bars (larger d because bars in long dir are on top)
+        val dShort = ts - cover - preferredDiameter / 2.0  // main bars bottom layer
+        val dLong = dShort - preferredDiameter - 2.0  // secondary bars top of main
+        steps.add("Step 6: d(short) = ${ts} - ${cover} - ${"%.1f".format(preferredDiameter/2.0)} = ${"%.0f".format(dShort)} mm")
+        steps.add("  d(long) = ${"%.0f".format(dShort)} - ${preferredDiameter} - 2 = ${"%.0f".format(dLong)} mm")
+
+        // ========== 6. FLEXURAL DESIGN ==========
+        // Design for the governing moment in each direction
+        val mxGoverning = max(mxPos, mxNeg)
+        val myGoverning = max(myPos, myNeg)
+
+        val asReqX = calculateAs(mxGoverning, fcu, fy, dShort, 1000.0, code)
+        val asReqY = calculateAs(myGoverning, fcu, fy, dLong, 1000.0, code)
+
+        // Min reinforcement per code
+        val asMinX = if (isECP) max(0.6 / fy * 1000.0 * dShort, 0.0015 * 1000.0 * ts)
+                     else max(0.0018 * 1000.0 * ts, 0.25 * sqrt(fcu * 0.8) / fy * 1000.0 * dShort)
+        val asMinY = if (isECP) max(0.6 / fy * 1000.0 * dLong, 0.0015 * 1000.0 * ts)
+                     else max(0.0018 * 1000.0 * ts, 0.25 * sqrt(fcu * 0.8) / fy * 1000.0 * dLong)
+
+        val finalAsX = max(asReqX, asMinX)
+        val finalAsY = max(asReqY, asMinY)
+        steps.add("Step 7: As_req(X) = ${"%.0f".format(asReqX)} mm²/m, As_min(X) = ${"%.0f".format(asMinX)} → As(X) = ${"%.0f".format(finalAsX)} mm²/m")
+        steps.add("  As_req(Y) = ${"%.0f".format(asReqY)} mm²/m, As_min(Y) = ${"%.0f".format(asMinY)} → As(Y) = ${"%.0f".format(finalAsY)} mm²/m")
+
+        // ========== 7. TOP STEEL (NEGATIVE MOMENT) ==========
+        val asReqTopX = if (mxNeg > 0.1) calculateAs(mxNeg, fcu, fy, dShort, 1000.0, code) else 0.0
+        val asReqTopY = if (myNeg > 0.1) calculateAs(myNeg, fcu, fy, dLong, 1000.0, code) else 0.0
+        val asTopX = max(asReqTopX, if (isECP) 0.0015 * 1000.0 * ts * 0.5 else 0.0018 * 1000.0 * ts * 0.25)
+        val asTopY = max(asReqTopY, if (isECP) 0.0015 * 1000.0 * ts * 0.5 else 0.0018 * 1000.0 * ts * 0.25)
+        if (mxNeg > 0.1 || myNeg > 0.1) {
+            steps.add("Step 8: Top steel (neg moment): As_top(X) = ${"%.0f".format(asTopX)}, As_top(Y) = ${"%.0f".format(asTopY)} mm²/m")
+        }
+
+        // ========== 8. BAR SELECTION ==========
+        val barArea = PI * preferredDiameter.toDouble().pow(2.0) / 4.0
+        // Max spacing per code
+        val maxSpacing = if (isECP) {
+            min(200.0, 2.0 * ts, 3.0 * dShort)  // ECP: min(200, 2h, 3d)
+        } else {
+            min(450.0, 3.0 * ts)  // ACI/SBC: min(3h, 450)
+        }
+        val minSpacing = 75.0  // practical minimum
+
+        val spacingX = (1000.0 * barArea / finalAsX).coerceIn(minSpacing, maxSpacing)
+        val spacingY = (1000.0 * barArea / finalAsY).coerceIn(minSpacing, maxSpacing)
+        // Round to nearest 10mm
+        val finalSpacingX = floor(spacingX / 10.0) * 10.0
+        val finalSpacingY = floor(spacingY / 10.0) * 10.0
         val providedAsX = (1000.0 / finalSpacingX) * barArea
-        val utilizationRatio = (asReqX / max(providedAsX, 1.0)).coerceIn(0.0, 1.2)
-        
-        val suggestions = mutableListOf<String>()
-        if (ts < minTs) suggestions.add("Increase slab thickness to satisfy deflection/code requirements.")
-        if (type == SlabType.FLAT && v_punch > v_limit) suggestions.add("Punching failure! Add drop panels or increase column size.")
-        if (type == SlabType.POST_TENSION && prestressForce < 200) suggestions.add("Prestress force seems low for this span.")
+        val providedAsY = (1000.0 / finalSpacingY) * barArea
+
+        // Top steel bar selection (use smaller diameter or wider spacing)
+        val topDiaX = if (asTopX < finalAsX * 0.5) max(8, preferredDiameter - 2) else preferredDiameter
+        val topDiaY = if (asTopY < finalAsY * 0.5) max(8, preferredDiameter - 2) else preferredDiameter
+        val topBarAreaX = PI * topDiaX.toDouble().pow(2.0) / 4.0
+        val topBarAreaY = PI * topDiaY.toDouble().pow(2.0) / 4.0
+        val topSpacingX = floor((1000.0 * topBarAreaX / asTopX).coerceIn(minSpacing, maxSpacing) / 10.0) * 10.0
+        val topSpacingY = floor((1000.0 * topBarAreaY / asTopY).coerceIn(minSpacing, maxSpacing) / 10.0) * 10.0
+
+        steps.add("Step 9: Bottom X: Ø${preferredDiameter}@${finalSpacingX.toInt()}mm → As = ${"%.0f".format(providedAsX)} mm²/m")
+        steps.add("  Bottom Y: Ø${preferredDiameter}@${finalSpacingY.toInt()}mm → As = ${"%.0f".format(providedAsY)} mm²/m")
+        if (asTopX > 0) steps.add("  Top X: Ø${topDiaX}@${topSpacingX.toInt()}mm, Top Y: Ø${topDiaY}@${topSpacingY.toInt()}mm")
+
+        // ========== 9. SHEAR CHECK ==========
+        val vuX = wu * shortSpan / 2.0  // kN/m (max shear at support for one-way)
+        val vuY = if (!isOneWay) wu * shortSpan / 3.0 else 0.0
+        val vcX = if (isECP) 0.16 * sqrt(fcu / gammaC) * 1000.0 * dShort / 1000.0  // kN/m
+                 else 0.17 * sqrt(fcu * 0.8) * 0.75 * 1000.0 * dShort / 1000.0
+        val vcY = if (isECP) 0.16 * sqrt(fcu / gammaC) * 1000.0 * dLong / 1000.0
+                 else 0.17 * sqrt(fcu * 0.8) * 0.75 * 1000.0 * dLong / 1000.0
+        val shearSafeX = vuX <= vcX
+        val shearSafeY = vuY <= vcY
+        safetyChecks.add(DesignSafetyCheck("Min Thickness", ts, minTs, "mm", ts >= minTs))
+        safetyChecks.add(DesignSafetyCheck("Shear (X)", vuX, vcX, "kN/m", shearSafeX))
+        if (!isOneWay) safetyChecks.add(DesignSafetyCheck("Shear (Y)", vuY, vcY, "kN/m", shearSafeY))
+        steps.add("Step 10: Shear X: Vu = ${"%.1f".format(vuX)} kN/m, Vc = ${"%.1f".format(vcX)} kN/m → ${if (shearSafeX) "OK" else "FAIL"}")
+
+        // ========== 10. DEFLECTION CHECK ==========
+        val deflRatio = if (ts > 0) minTs / ts else 2.0
+        val deflectionOK = ts >= minTs
+        steps.add("Step 11: Deflection: min h = ${"%.0f".format(minTs)} mm, provided = ${ts} mm → ${if (deflectionOK) "OK" else "FAIL"}")
+
+        // ========== 11. PUNCHING SHEAR (FLAT SLAB) ==========
+        var punchingSafe = true
+        var vPunch = 0.0
+        var vPunchLimit = 0.0
+        if (type == SlabType.FLAT) {
+            val colMm = columnSize
+            val punchingLoad = wu * (lx * ly - (colMm + dShort).pow(2) / 1e6)
+            val critPerimeter = 4 * (colMm + dShort)
+            vPunch = punchingLoad * 1000 / (critPerimeter * dShort)
+            vPunchLimit = if (isECP) 0.316 * sqrt(fcu / 1.5)
+                         else 0.33 * 0.75 * sqrt(fcu * 0.8)
+            punchingSafe = vPunch <= vPunchLimit
+            safetyChecks.add(DesignSafetyCheck("Punching Shear", vPunch, vPunchLimit, "MPa", punchingSafe))
+            steps.add("Step 12: Punching: vu = ${"%.2f".format(vPunch)} MPa, φvc = ${"%.2f".format(vPunchLimit)} MPa → ${if (punchingSafe) "OK" else "FAIL: add drop panels or increase col size"}")
+        }
+
+        // ========== 12. HOLLOW BLOCK RIB DESIGN ==========
+        var ribReinf = ReinforcementBar()
+        if (type == SlabType.HOLLOW_BLOCK) {
+            val ribDepth = ts - 50.0  // subtract topping
+            val dRib = ribDepth - 20.0 - 6.0  // cover + half bar
+            val ribMoment = mxPos * (lx * 1000.0 / 500.0) / 1000.0  // moment per rib (assume 500mm spacing)
+            val asRib = calculateAs(max(ribMoment, 0.5), fcu, fy, dRib, 100.0, code)
+            val asRibMin = if (isECP) max(0.6 / fy * 100.0 * dRib, 0.0015 * 100.0 * ribDepth)
+                           else 0.0018 * 100.0 * ribDepth
+            val asRibFinal = max(asRib, asRibMin)
+            val ribDia = if (asRibFinal < 200) 10 else if (asRibFinal < 400) 12 else 16
+            ribReinf = ReinforcementBar(diameter = ribDia, description = "Rib steel")
+            steps.add("Step 12: Rib: depth = ${"%.0f".format(ribDepth)} mm, M/rib = ${"%.2f".format(ribMoment)} kN.m, As/rib = ${"%.0f".format(asRibFinal)} mm² → ${ribDia}Ø")
+        }
+
+        // ========== 13. VOLUME & COST ==========
+        val voidRatio = when(type) {
+            SlabType.WAFFLE -> 0.60
+            SlabType.HOLLOW_BLOCK -> 0.55
+            SlabType.POST_TENSION -> 0.95
+            else -> 1.0
+        }
+        val volM3 = (lx * ly * ts) / 1e6 * voidRatio
+        val barWtM = preferredDiameter.toDouble().pow(2.0) / 162.0
+        val numBarsX = ceil(ly * 1000.0 / finalSpacingX) + 1
+        val numBarsY = ceil(lx * 1000.0 / finalSpacingY) + 1
+        // Bottom X + Bottom Y + Top X + Top Y
+        val topNumX = if (asTopX > 0) ceil(ly * 1000.0 / topSpacingX) + 1 else 0
+        val topNumY = if (asTopY > 0) ceil(lx * 1000.0 / topSpacingY) + 1 else 0
+        val steelWeight = ((numBarsX + topNumX) * lx * barWtM + (numBarsY + topNumY) * ly * barWtM) * 1.05
+        val efficiencyScore = (minTs / ts).coerceIn(0.0, 1.0) * 100
+        val utilizationRatio = if (finalAsX > 0) (asReqX / providedAsX).coerceIn(0.0, 1.2) else 0.0
+
+        if (ts < minTs) suggestions.add("Increase slab thickness to ${ceil(minTs/10)*10} mm for deflection control.")
+        if (!shearSafeX) suggestions.add("Shear capacity exceeded in X-direction. Increase thickness or add shear reinforcement.")
+        if (type == SlabType.FLAT && !punchingSafe) suggestions.add("Punching failure! Add drop panels or increase column size.")
+
+        val overallSafe = ts >= minTs && shearSafeX && (isOneWay || shearSafeY) && (type != SlabType.FLAT || punchingSafe)
 
         return SlabResult(
-            type = type, thickness = ts, 
-            reinforcementMain = ReinforcementBar(spacing = finalSpacingX, diameter = preferredDiameter, description = "Main (X)"), 
-            reinforcementSecondary = ReinforcementBar(spacing = finalSpacingY, diameter = preferredDiameter, description = "Sec (Y)"), 
-            isSafe = ts >= minTs && (type != SlabType.FLAT || v_punch <= v_limit),
-            concreteVolume = volM3, steelWeight = steelWeight,
+            type = type, thickness = ts,
+            reinforcementMain = ReinforcementBar(spacing = finalSpacingX, diameter = preferredDiameter, description = "Bot X"),
+            reinforcementSecondary = ReinforcementBar(spacing = finalSpacingY, diameter = preferredDiameter, description = "Bot Y"),
+            isSafe = overallSafe, concreteVolume = volM3, steelWeight = steelWeight,
             cost = volM3 * settingsManager.concretePrice + (steelWeight / 1000.0 * settingsManager.steelPrice),
-            code = code, momentX = mx, momentY = my, totalLoad = wu,
-            punchingSafe = v_punch <= v_limit, safetyChecks = safetyChecks,
-            minThickness = minTs,
-            efficiencyScore = efficiencyScore,
-            utilizationRatio = utilizationRatio,
-            suggestions = suggestions,
+            code = code, momentX = mxGoverning, momentY = myGoverning, totalLoad = wu,
+            punchingSafe = punchingSafe, safetyChecks = safetyChecks,
             steelWasteTons = steelWeight * 0.05 / 1000.0,
-            requiredAsX = asReqX,
-            providedAsX = providedAsX,
-            requiredAsY = asReqY,
-            providedAsY = (1000.0 / finalSpacingY) * barArea,
-            effectiveDepthX = d,
-            effectiveDepthY = d,
-            shearCheck = v_punch
+            minThickness = minTs, efficiencyScore = efficiencyScore,
+            utilizationRatio = utilizationRatio,
+            requiredAsX = finalAsX, providedAsX = providedAsX,
+            requiredAsY = finalAsY, providedAsY = providedAsY,
+            effectiveDepthX = dShort, effectiveDepthY = dLong,
+            shearCheck = vPunch, suggestions = suggestions,
+            isOneWay = isOneWay, aspectRatio = r,
+            selfWeight = selfWeight, totalDeadLoad = totalDL,
+            momentPositiveX = mxPos, momentNegativeX = mxNeg,
+            momentPositiveY = myPos, momentNegativeY = myNeg,
+            reinforcementBottomX = ReinforcementBar(spacing = finalSpacingX, diameter = preferredDiameter, description = "Bot X"),
+            reinforcementTopX = if (asTopX > 0) ReinforcementBar(spacing = topSpacingX, diameter = topDiaX, description = "Top X") else ReinforcementBar(),
+            reinforcementBottomY = ReinforcementBar(spacing = finalSpacingY, diameter = preferredDiameter, description = "Bot Y"),
+            reinforcementTopY = if (asTopY > 0) ReinforcementBar(spacing = topSpacingY, diameter = topDiaY, description = "Top Y") else ReinforcementBar(),
+            shearVcX = vcX, shearVuX = vuX, shearVcY = vcY, shearVuY = vuY,
+            deflectionRatio = deflRatio,
+            momentCoeffPosX = coeffPosX, momentCoeffNegX = coeffNegX,
+            momentCoeffPosY = coeffPosY, momentCoeffNegY = coeffNegY,
+            edgeA = "SS", edgeB = "SS", edgeC = "SS", edgeD = "SS",
+            calculationSteps = steps,
+            ribReinforcement = ribReinf,
+            effectiveDepthShort = dShort, effectiveDepthLong = dLong
         )
+    }
+
+    /**
+     * Two-way slab moment coefficients (Marcus/Reynolds simplified tables)
+     * Returns (alpha_pos_short, alpha_neg_short, beta_pos_long, beta_neg_long)
+     * Edge conditions: "SS" = Simply Supported, "F" = Fixed, "C" = Continuous, "FR" = Free
+     */
+    private fun getTwoWayMomentCoefficients(
+        r: Double,
+        edgeA: String, edgeB: String, edgeC: String, edgeD: String
+    ): Tuple4<Double, Double, Double, Double> {
+        // All edges SS (simply supported) - Marcus coefficients
+        // These are standard coefficients from Reynolds/Reynolds tables
+        val allSS = (edgeA == "SS" && edgeB == "SS" && edgeC == "SS" && edgeD == "SS")
+        val allFixed = (edgeA == "F" && edgeB == "F" && edgeC == "F" && edgeD == "F")
+
+        return if (allSS) {
+            // 4 edges simply supported - no negative moments
+            val ap = when {
+                r <= 1.0 -> 0.062
+                r <= 1.1 -> 0.074
+                r <= 1.2 -> 0.084
+                r <= 1.3 -> 0.093
+                r <= 1.4 -> 0.099
+                r <= 1.5 -> 0.104
+                r <= 1.6 -> 0.108
+                r <= 1.7 -> 0.111
+                r <= 1.8 -> 0.113
+                r <= 1.9 -> 0.115
+                r <= 2.0 -> 0.117
+                else -> 0.117
+            }
+            val bp = when {
+                r <= 1.0 -> 0.062
+                r <= 1.1 -> 0.049
+                r <= 1.2 -> 0.038
+                r <= 1.3 -> 0.030
+                r <= 1.4 -> 0.024
+                r <= 1.5 -> 0.019
+                r <= 1.6 -> 0.015
+                r <= 1.7 -> 0.013
+                r <= 1.8 -> 0.011
+                r <= 1.9 -> 0.009
+                r <= 2.0 -> 0.008
+                else -> 0.008
+            }
+            Tuple4(ap, 0.0, bp, 0.0)  // no negative moments for SS
+        } else if (allFixed) {
+            // 4 edges fixed (continuous)
+            val ap = when {
+                r <= 1.0 -> 0.024
+                r <= 1.1 -> 0.030
+                r <= 1.2 -> 0.035
+                r <= 1.3 -> 0.039
+                r <= 1.4 -> 0.042
+                r <= 1.5 -> 0.044
+                r <= 1.6 -> 0.045
+                r <= 1.7 -> 0.046
+                r <= 1.8 -> 0.047
+                r <= 1.9 -> 0.048
+                r <= 2.0 -> 0.048
+                else -> 0.048
+            }
+            val an = when {
+                r <= 1.0 -> 0.051
+                r <= 1.1 -> 0.058
+                r <= 1.2 -> 0.064
+                r <= 1.3 -> 0.068
+                r <= 1.4 -> 0.072
+                r <= 1.5 -> 0.074
+                r <= 1.6 -> 0.076
+                r <= 1.7 -> 0.078
+                r <= 1.8 -> 0.079
+                r <= 1.9 -> 0.080
+                r <= 2.0 -> 0.081
+                else -> 0.081
+            }
+            val bp = when {
+                r <= 1.0 -> 0.024
+                r <= 1.1 -> 0.019
+                r <= 1.2 -> 0.015
+                r <= 1.3 -> 0.012
+                r <= 1.4 -> 0.010
+                r <= 1.5 -> 0.008
+                r <= 1.6 -> 0.007
+                r <= 1.7 -> 0.006
+                r <= 1.8 -> 0.005
+                r <= 1.9 -> 0.004
+                r <= 2.0 -> 0.004
+                else -> 0.004
+            }
+            val bn = an  // symmetric for square/rectangular
+            Tuple4(ap, an, bp, bn)
+        } else {
+            // Mixed support conditions - use simplified Grashoff as fallback
+            val alpha = if (r <= 2.0) r.pow(4) / (1 + r.pow(4)) else 1.0
+            val beta = if (r <= 2.0) 1 / (1 + r.pow(4)) else 0.0
+            Tuple4(alpha / 8.0, alpha / 12.0, beta / 8.0, beta / 12.0)
         }
+    }
+
+    /** Simple tuple for moment coefficients */
+    private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     private fun calculateAs(mu: Double, fcu: Double, fy: Double, d: Double, width: Double, code: DesignCode): Double {
         return when(code) {
