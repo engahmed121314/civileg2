@@ -10,7 +10,8 @@ import kotlin.math.*
  *
  * الاختلافات عن ECP:
  * - f'c = 0.8 × fcu (تحويل مكعب لأسطوانة)
- * - φ = 0.90 للانحناء، φ = 0.75 للقص
+ * - φ = 0.65 للانحناء (ACI 350-06 §9.2.7 للمنشآت المائية)
+ * - φ = 0.75 للقص
  * - طريقة Rn-ρ بدلاً من K-method
  * - معامل تحميل السائل: 1.4F (ACI 350-06)
  * - أقصى عرض شق: 0.25mm (ACI 350 vs 0.2mm ECP)
@@ -18,7 +19,7 @@ import kotlin.math.*
 class ACITank : TankDesign {
 
     companion object {
-        private const val PHI_FLEXURE = 0.90
+        private const val PHI_FLEXURE = 0.65  // ACI 350-06 §9.2.7: environmental structures under fluid loads
         private const val PHI_SHEAR = 0.75
         private const val GAMMA_W = 9.81
         private const val CONCRETE_DENSITY = 25.0

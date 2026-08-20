@@ -5,21 +5,19 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
 class RetainingWallViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine,
-    private val settingsManager: SettingsManager
+    private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
-
-    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.RetainingWallResult?>()
     val result: LiveData<CalculatorEngine.RetainingWallResult?> = _result
@@ -32,6 +30,13 @@ class RetainingWallViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateRetainingWallPro(
         height: Double,
@@ -56,6 +61,11 @@ class RetainingWallViewModel @Inject constructor(
                     preferredDiameter = preferredDiameter,
                     code = code
                 )
+                
+                // Validate Retaining Wall
+                val report = CalculationValidator.validateRetainingWall(res)
+                _validationReport.value = report
+                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -90,7 +100,8 @@ class RetainingWallViewModel @Inject constructor(
                     directory.mkdirs()
                     val file = java.io.File(directory, fileName)
 
-                    val drawingBitmap = try {
+                    // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateRetainingWallDrawing(
                             wallHeight = currentResult.height,
                             wallTopThickness = currentResult.stemThickness * 0.6,
@@ -108,9 +119,14 @@ class RetainingWallViewModel @Inject constructor(
                             cover = 0.05,
                             backfillAngle = currentResult.backfillAngle,
                             hasKey = true,
-                            keyDepth = 0.15
+                            keyDepth = 0.15,
+                            fsOverturning = currentResult.factorOfSafetyOverturning,
+                            fsSliding = currentResult.factorOfSafetySliding,
+                            maxBearingPressure = currentResult.maxBearingPressure,
+                            allowableBearingPressure = 200.0
                         )
                     } catch (e: Exception) { null }
+                    pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
                         CalculatorEngine.DesignCode.ACI -> "ACI 318"
@@ -166,33 +182,4 @@ class RetainingWallViewModel @Inject constructor(
             }
         }
     }
-
-
-    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
-        val res = _result.value ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "RetainingWall_Drawing_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = java.io.File(directory, fileName)
-                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateRetainingWallDxf(res)
-                file.writeText(dxfContent)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
-                    _isExporting.value = false
-                    onComplete(file)
-                }
-            } catch (e: Throwable) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _error.value = "DXF export failed: ${e.message}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
 }

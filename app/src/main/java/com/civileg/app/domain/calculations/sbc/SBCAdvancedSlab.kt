@@ -9,7 +9,7 @@ import kotlin.math.*
  * Advanced Slab Design per Saudi Building Code 304-2018
  *
  * SBC 304 is based on ACI 318 with Saudi-specific modifications:
- * - f'c = 0.67 x fcu / gamma_c (gamma_c = 1.5) — NOT 0.8 x fcu like ACI
+ * - f'c = 0.8 x fcu (cube-to-cylinder, same as ACI 318)
  * - Enhanced cover requirements for hot/arid climate
  * - Saudi market bar diameters: 14, 16, 20, 25, 32 mm
  * - Seismic requirements per SBC 304 Section 21
@@ -34,11 +34,11 @@ class SBCAdvancedSlab {
         private const val MIN_REIN_RATIO = 0.0018
 
         // SBC 304 Material Conversion: f'c = 0.67 x fcu / gamma_c
-        private const val FCU_TO_FC_PRIME_FACTOR = 0.67 / 1.5  // = 0.4467
+        private const val FCU_TO_FC_PRIME_FACTOR = 0.8  // SBC 304 follows ACI 318: f'c = 0.8 x fcu
         private const val GAMMA_C = 1.5
 
         // SBC 304 Cover requirements (mm) — البند 8.2, Table 8.2
-        private const val COVER_NORMAL = 50.0      // Normal exposure (interior)
+        private const val COVER_NORMAL = 20.0      // Interior not exposed to weather (SBC 304 §7.7)
         private const val COVER_COASTAL = 65.0     // Corrosive / coastal zones
         private const val COVER_SEVERE = 75.0      // Severe / chemical exposure
 
@@ -127,7 +127,7 @@ class SBCAdvancedSlab {
 
         // SBC material conversion
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
-        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC: 0.67×fcu/γc, γc=1.5)", fcu, fcPrime))
+        codeNotes.add(String.format("fcu=%.0f MPa → fc'=%.1f MPa (SBC: 0.8×fcu)", fcu, fcPrime))
 
         val cover = exposure.cover
         val effectiveDepth = slabThickness - cover - 8.0  // cover + bar radius (estimated)

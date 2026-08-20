@@ -140,7 +140,7 @@ class SBCColumn : ColumnDesign {
         cover: Double = 40.0
     ): ColumnShearDesignResult {
         val b = width
-        val d = depth - cover
+        val d = depth - cover - 10.0 - 8.0  // deduct tie dia (~10mm) + half bar dia (~8mm) approximation
         // SBC 304: f'c = 0.8 × fcu (cube to cylinder, same as ACI 318)
         val fc = 0.8 * fcu
         val phi = 0.75
@@ -197,7 +197,7 @@ class SBCColumn : ColumnDesign {
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add("SBC 304: Column Shear Design")
-        codeNotes.add("f'c_sbc = 0.67×fcu/1.5 = ${String.format("%.0f", fc)} MPa")
+        codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
         codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
         codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=$phi)")
         if (needsStirrups) {

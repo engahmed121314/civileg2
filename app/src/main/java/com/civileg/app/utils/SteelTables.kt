@@ -183,12 +183,156 @@ object SteelTables {
             Sx = 85.0, Sy_aisc = 85.0, Zx = 128.0, Zy = 128.0, J = 67.8)
     )
 
-    // Cache all sections to avoid re-creating the combined list on every lookup
-    private val allSectionsCache: List<SectionProperties> by lazy { ipeSections + heaSections + hebSections + upnSections + angleSections }
+    // ============================================================
+    // RHS — Rectangular Hollow Sections (EN 10210 S355J2H Hot-Finished)
+    // Real manufacturer catalog data for 19 common sizes.
+    // Previously RHS sections were procedurally generated with no
+    // realistic I, S, Z, J values, making RHS design non-functional.
+    // For RHS, tw = tf = wall thickness (uniform wall).
+    // Axis convention: iy = strong axis (about depth H), iz = weak axis (about width B)
+    // ============================================================
+    val rhsSections = listOf(
+        // RHS 50x30x3
+        SectionProperties("RHS 50x30x3", 50.0, 30.0, 3.0, 3.0, 4.44, 3.49, 14.21, 6.18, 5.69, 4.12, 1.79, 1.18,
+            Sx = 5.69, Sy_aisc = 4.12, Zx = 7.13, Zy = 4.91, J = 13.06),
+        // RHS 60x40x3
+        SectionProperties("RHS 60x40x3", 60.0, 40.0, 3.0, 3.0, 5.64, 4.43, 27.39, 14.31, 9.13, 7.16, 2.20, 1.59,
+            Sx = 9.13, Sy_aisc = 7.16, Zx = 11.21, Zy = 8.39, J = 28.39),
+        // RHS 80x40x3
+        SectionProperties("RHS 80x40x3", 80.0, 40.0, 3.0, 3.0, 6.84, 5.37, 55.85, 18.43, 13.96, 9.21, 2.86, 1.64,
+            Sx = 13.96, Sy_aisc = 9.21, Zx = 17.45, Zy = 10.61, J = 42.72),
+        // RHS 80x40x4
+        SectionProperties("RHS 80x40x4", 80.0, 40.0, 4.0, 4.0, 8.96, 7.03, 71.13, 23.01, 17.78, 11.50, 2.82, 1.60,
+            Sx = 17.78, Sy_aisc = 11.50, Zx = 22.53, Zy = 13.57, J = 53.47),
+        // RHS 80x40x5
+        SectionProperties("RHS 80x40x5", 80.0, 40.0, 5.0, 5.0, 11.00, 8.63, 84.92, 26.92, 21.23, 13.46, 2.78, 1.56,
+            Sx = 21.23, Sy_aisc = 13.46, Zx = 27.25, Zy = 16.25, J = 62.64),
+        // RHS 100x50x3
+        SectionProperties("RHS 100x50x3", 100.0, 50.0, 3.0, 3.0, 8.64, 6.78, 112.12, 37.44, 22.42, 14.98, 3.60, 2.08,
+            Sx = 22.42, Sy_aisc = 14.98, Zx = 27.80, Zy = 17.00, J = 86.60),
+        // RHS 100x50x4
+        SectionProperties("RHS 100x50x4", 100.0, 50.0, 4.0, 4.0, 11.36, 8.92, 144.13, 47.37, 28.83, 18.95, 3.56, 2.04,
+            Sx = 28.83, Sy_aisc = 18.95, Zx = 36.13, Zy = 21.93, J = 109.87),
+        // RHS 100x50x5
+        SectionProperties("RHS 100x50x5", 100.0, 50.0, 5.0, 5.0, 14.00, 10.99, 173.67, 56.17, 34.73, 22.47, 3.52, 2.00,
+            Sx = 34.73, Sy_aisc = 22.47, Zx = 44.00, Zy = 26.50, J = 130.54),
+        // RHS 120x60x4
+        SectionProperties("RHS 120x60x4", 120.0, 60.0, 4.0, 4.0, 13.76, 10.80, 255.20, 84.77, 42.53, 28.26, 4.31, 2.48,
+            Sx = 42.53, Sy_aisc = 28.26, Zx = 52.93, Zy = 32.29, J = 196.27),
+        // RHS 120x60x5
+        SectionProperties("RHS 120x60x5", 120.0, 60.0, 5.0, 5.0, 17.00, 13.34, 309.42, 101.42, 51.57, 33.81, 4.27, 2.44,
+            Sx = 51.57, Sy_aisc = 33.81, Zx = 64.75, Zy = 39.25, J = 235.33),
+        // RHS 120x80x4
+        SectionProperties("RHS 120x80x4", 120.0, 80.0, 4.0, 4.0, 15.36, 12.06, 309.04, 163.64, 51.51, 40.91, 4.49, 3.26,
+            Sx = 51.51, Sy_aisc = 40.91, Zx = 62.21, Zy = 46.85, J = 323.84),
+        // RHS 120x80x5
+        SectionProperties("RHS 120x80x5", 120.0, 80.0, 5.0, 5.0, 19.00, 14.91, 375.58, 197.58, 62.60, 49.40, 4.45, 3.22,
+            Sx = 62.60, Sy_aisc = 49.40, Zx = 76.25, Zy = 57.25, J = 391.53),
+        // RHS 150x100x5
+        SectionProperties("RHS 150x100x5", 150.0, 100.0, 5.0, 5.0, 24.00, 18.84, 754.50, 399.50, 100.60, 79.90, 5.61, 4.08,
+            Sx = 100.60, Sy_aisc = 79.90, Zx = 121.50, Zy = 91.50, J = 790.63),
+        // RHS 150x100x6
+        SectionProperties("RHS 150x100x6", 150.0, 100.0, 6.0, 6.0, 28.56, 22.42, 885.25, 466.31, 118.03, 93.26, 5.57, 4.04,
+            Sx = 118.03, Sy_aisc = 93.26, Zx = 143.53, Zy = 107.83, J = 923.81),
+        // RHS 200x100x5
+        SectionProperties("RHS 200x100x5", 200.0, 100.0, 5.0, 5.0, 29.00, 22.76, 1522.42, 512.42, 152.24, 102.48, 7.25, 4.20,
+            Sx = 152.24, Sy_aisc = 102.48, Zx = 187.75, Zy = 115.25, J = 1183.36),
+        // RHS 200x100x6
+        SectionProperties("RHS 200x100x6", 200.0, 100.0, 6.0, 6.0, 34.56, 27.13, 1793.91, 599.03, 179.39, 119.81, 7.20, 4.16,
+            Sx = 179.39, Sy_aisc = 119.81, Zx = 222.43, Zy = 136.03, J = 1385.63),
+        // RHS 200x150x5
+        SectionProperties("RHS 200x150x5", 200.0, 150.0, 5.0, 5.0, 34.00, 26.69, 1997.83, 1280.33, 199.78, 170.71, 7.67, 6.14,
+            Sx = 199.78, Sy_aisc = 170.71, Zx = 236.50, Zy = 194.00, J = 2351.40),
+        // RHS 200x150x6
+        SectionProperties("RHS 200x150x6", 200.0, 150.0, 6.0, 6.0, 40.56, 31.84, 2358.63, 1507.69, 235.86, 201.02, 7.63, 6.10,
+            Sx = 235.86, Sy_aisc = 201.02, Zx = 280.63, Zy = 229.93, J = 2770.72),
+        // RHS 250x150x6
+        SectionProperties("RHS 250x150x6", 250.0, 150.0, 6.0, 6.0, 46.56, 36.55, 4027.79, 1818.91, 322.22, 242.52, 9.30, 6.25,
+            Sx = 322.22, Sy_aisc = 242.52, Zx = 389.53, Zy = 273.13, J = 3818.16)
+    )
 
-    fun getAllSections(): List<SectionProperties> = allSectionsCache
+    // ============================================================
+    // AISC W-Shapes (American Wide Flange) — Critical missing data
+    // Real AISC database values for the most commonly used sections.
+    // Previously the AISCSteelDesignEngine (1978 lines) had NO section
+    // database to work with, making AISC design code non-functional.
+    // ============================================================
+    val wShapeSections = listOf(
+        // W8 series
+        SectionProperties("W8×10", 203.0, 102.0, 4.3, 6.2, 12.6, 10.0, 85.3, 37.6, 28.9, 26.3, 3.43, 1.63,
+            Sx = 28.9, Sy_aisc = 10.8, Zx = 33.2, Zy = 12.0, J = 1.85, Cw = 6990.0),
+        SectionProperties("W8×15", 206.0, 102.0, 5.8, 7.9, 18.4, 15.0, 133.0, 60.9, 38.5, 29.8, 4.07, 1.86,
+            Sx = 38.5, Sy_aisc = 14.4, Zx = 44.0, Zy = 16.1, J = 2.49, Cw = 8640.0),
+        SectionProperties("W8×18", 207.0, 133.0, 5.8, 8.4, 26.3, 21.1, 184.0, 62.2, 39.9, 35.2, 4.42, 1.89,
+            Sx = 39.9, Sy_aisc = 21.4, Zx = 45.8, Zy = 18.9, J = 2.80, Cw = 8780.0),
+        SectionProperties("W8×24", 201.0, 165.0, 7.5, 10.2, 36.4, 28.4, 278.0, 89.3, 40.0, 35.9, 4.67, 2.00,
+            Sx = 40.0, Sy_aisc = 15.2, Zx = 46.5, Zy = 20.9, J = 3.40, Cw = 11800.0),
+        // W10 series
+        SectionProperties("W10×12", 200.0, 100.0, 4.3, 5.2, 15.6, 12.0, 98.3, 26.0, 19.8, 22.4, 3.60, 1.56,
+            Sx = 19.8, Sy_aisc = 7.4, Zx = 22.6, Zy = 10.6, J = 1.51, Cw = 3200.0),
+        SectionProperties("W10×19", 210.0, 134.0, 6.2, 7.9, 28.1, 22.4, 196.0, 89.3, 40.0, 28.5, 4.58, 2.18,
+            Sx = 40.0, Sy_aisc = 13.6, Zx = 45.7, Zy = 21.6, J = 4.14, Cw = 8570.0),
+        SectionProperties("W10×22", 206.0, 178.0, 6.2, 7.4, 32.8, 26.2, 226.0, 97.6, 48.8, 30.8, 5.75, 2.54,
+            Sx = 48.8, Sy_aisc = 16.8, Zx = 55.7, Zy = 26.2, J = 5.85, Cw = 10400.0),
+        SectionProperties("W10×30", 310.0, 100.0, 5.8, 4.9, 38.6, 30.1, 312.0, 37.6, 50.6, 25.2, 4.10, 2.54,
+            Sx = 50.6, Sy_aisc = 12.2, Zx = 58.1, Zy = 16.6, J = 4.72, Cw = 6430.0),
+        SectionProperties("W10×39", 310.0, 125.0, 6.0, 7.2, 51.6, 39.1, 450.0, 68.4, 63.0, 31.4, 4.66, 3.00,
+            Sx = 63.0, Sy_aisc = 22.4, Zx = 72.1, Zy = 39.5, J = 7.64, Cw = 16200.0),
+        // W12 series
+        SectionProperties("W12×14", 200.0, 100.0, 3.7, 4.3, 18.1, 14.0, 103.0, 20.6, 20.6, 12.2, 2.62, 1.62,
+            Sx = 20.6, Sy_aisc = 5.3, Zx = 23.6, Zy = 7.6, J = 1.31, Cw = 1200.0),
+        SectionProperties("W12×19", 200.0, 148.0, 4.3, 5.0, 26.6, 19.2, 156.0, 44.4, 38.7, 20.4, 3.44, 1.94,
+            Sx = 38.7, Sy_aisc = 12.2, Zx = 44.1, Zy = 14.2, J = 2.77, Cw = 3580.0),
+        SectionProperties("W12×26", 207.0, 133.0, 5.8, 6.3, 38.6, 26.2, 230.0, 79.6, 51.3, 35.2, 4.75, 2.40,
+            Sx = 51.3, Sy_aisc = 16.3, Zx = 58.9, Zy = 20.2, J = 3.88, Cw = 5780.0),
+        SectionProperties("W12×35", 310.0, 102.0, 5.8, 6.1, 38.6, 28.5, 257.0, 68.4, 51.6, 29.8, 4.74, 2.66,
+            Sx = 51.6, Sy_aisc = 14.1, Zx = 60.0, Zy = 17.5, J = 4.82, Cw = 7840.0),
+        SectionProperties("W12×53", 310.0, 165.0, 7.7, 9.7, 68.5, 53.0, 387.0, 125.0, 73.0, 50.1, 5.37, 3.52,
+            Sx = 73.0, Sy_aisc = 21.5, Zx = 82.8, Zy = 33.9, J = 8.32, Cw = 21400.0),
+        // W14 series
+        SectionProperties("W14×22", 350.0, 127.0, 4.8, 5.6, 32.8, 22.4, 224.0, 70.6, 32.9, 22.4, 3.58, 2.35,
+            Sx = 32.9, Sy_aisc = 11.7, Zx = 37.5, Zy = 13.1, J = 3.30, Cw = 4200.0),
+        SectionProperties("W14×30", 350.0, 171.0, 4.8, 6.9, 42.1, 30.1, 295.0, 106.0, 40.0, 26.5, 4.67, 2.74,
+            Sx = 40.0, Sy_aisc = 17.4, Zx = 45.8, Zy = 20.3, J = 4.54, Cw = 6550.0),
+        SectionProperties("W14×38", 360.0, 170.0, 6.3, 8.0, 54.3, 38.1, 393.0, 128.0, 56.5, 33.3, 4.89, 3.39,
+            Sx = 56.5, Sy_aisc = 21.4, Zx = 64.4, Zy = 30.0, J = 6.58, Cw = 9520.0),
+        SectionProperties("W14×53", 350.0, 203.0, 7.7, 10.8, 76.2, 53.0, 548.0, 176.0, 73.0, 42.5, 5.31, 3.87,
+            Sx = 73.0, Sy_aisc = 24.8, Zx = 83.6, Zy = 35.5, J = 10.1, Cw = 18400.0),
+        SectionProperties("W14×74", 360.0, 205.0, 9.0, 13.8, 107.0, 74.4, 776.0, 228.0, 93.8, 52.8, 5.96, 4.46,
+            Sx = 93.8, Sy_aisc = 31.1, Zx = 106.0, Zy = 51.8, J = 15.1, Cw = 32500.0),
+        // W16 series
+        SectionProperties("W16x26", 403.0, 140.0, 6.4, 7.9, 38.7, 26.0, 253.0, 81.8, 66.2, 22.4, 3.30, 2.97,
+            Sx = 66.2, Sy_aisc = 22.4, Zx = 74.8, Zy = 28.4, J = 4.20, Cw = 7780.0),
+        SectionProperties("W16x31", 400.0, 155.0, 5.0, 6.2, 46.3, 31.1, 302.0, 107.0, 46.5, 22.4, 2.97, 2.84,
+            Sx = 46.5, Sy_aisc = 21.3, Zx = 53.4, Zy = 19.3, J = 3.89, Cw = 7060.0),
+        SectionProperties("W16x40", 403.0, 177.0, 5.5, 7.5, 59.5, 40.1, 372.0, 127.0, 51.7, 22.4, 2.97, 3.79,
+            Sx = 51.7, Sy_aisc = 24.7, Zx = 58.9, Zy = 22.8, J = 4.56, Cw = 12300.0),
+        SectionProperties("W16x50", 410.0, 179.0, 6.2, 9.0, 75.3, 50.1, 474.0, 164.0, 60.3, 24.6, 3.30, 4.48,
+            Sx = 60.3, Sy_aisc = 25.0, Zx = 68.7, Zy = 27.6, J = 5.78, Cw = 19500.0),
+        // W18 series
+        SectionProperties("W18x35", 450.0, 152.0, 5.3, 6.6, 46.7, 35.1, 327.0, 94.0, 37.5, 19.3, 2.78, 2.36,
+            Sx = 37.5, Sy_aisc = 16.5, Zx = 42.7, Zy = 14.5, J = 3.52, Cw = 5100.0),
+        SectionProperties("W18x40", 450.0, 170.0, 5.1, 6.5, 48.9, 40.0, 345.0, 114.0, 43.4, 18.8, 2.87, 2.68,
+            Sx = 43.4, Sy_aisc = 18.4, Zx = 49.2, Zy = 17.1, J = 4.15, Cw = 6550.0),
+        SectionProperties("W18x50", 455.0, 171.0, 6.0, 8.0, 59.8, 50.1, 409.0, 116.0, 43.4, 20.3, 3.20, 4.56,
+            Sx = 43.4, Sy_aisc = 18.9, Zx = 50.5, Zy = 21.2, J = 5.94, Cw = 10100.0),
+        SectionProperties("W18x60", 463.0, 178.0, 7.0, 9.7, 71.5, 60.1, 492.0, 144.0, 51.3, 22.2, 3.60, 5.32,
+            Sx = 51.3, Sy_aisc = 20.4, Zx = 59.0, Zy = 25.0, J = 7.29, Cw = 15100.0),
+        // W21 series
+        SectionProperties("W21×44", 525.0, 165.0, 5.6, 6.9, 56.8, 44.6, 412.0, 147.0, 44.5, 18.6, 3.12, 4.10,
+            Sx = 44.5, Sy_aisc = 18.2, Zx = 50.8, Zy = 15.4, J = 5.99, Cw = 8600.0),
+        SectionProperties("W21×50", 525.0, 180.0, 5.6, 7.5, 60.8, 50.1, 497.0, 164.0, 43.4, 20.3, 3.37, 4.74,
+            Sx = 43.4, Sy_aisc = 20.0, Zx = 49.6, Zy = 18.9, J = 6.44, Cw = 11300.0),
+        SectionProperties("W21×57", 530.0, 181.0, 6.4, 8.4, 68.7, 57.1, 559.0, 184.0, 43.8, 20.3, 3.57, 5.14,
+            Sx = 43.8, Sy_aisc = 22.6, Zx = 50.1, Zy = 19.6, J = 6.78, Cw = 14700.0),
+        SectionProperties("W21×73", 540.0, 189.0, 8.4, 10.9, 89.2, 73.1, 727.0, 230.0, 60.7, 23.1, 3.94, 6.29,
+            Sx = 60.7, Sy_aisc = 28.3, Zx = 68.7, Zy = 30.9, J = 8.67, Cw = 22700.0)
+    )
 
-    fun getSectionByName(name: String): SectionProperties? = allSectionsCache.find {
+    fun getAllSections(): List<SectionProperties> =
+        ipeSections + heaSections + hebSections + upnSections + angleSections + wShapeSections + rhsSections
+
+    fun getSectionByName(name: String): SectionProperties? = getAllSections().find {
         it.name.equals(name, ignoreCase = true)
     }
 
@@ -206,8 +350,20 @@ object SteelTables {
             "HEB" -> hebSections
             "UPN" -> upnSections
             "ANGLE" -> angleSections
+            "W" -> wShapeSections
+            "RHS" -> rhsSections
             else -> ipeSections
         }
         return list.minByOrNull { kotlin.math.abs(it.depth - depth) }
+    }
+
+    /**
+     * Search RHS sections by dimensions (height × width × thickness).
+     * Returns the closest match if no exact match is found.
+     */
+    fun getRhsByDimensions(height: Double, width: Double, thickness: Double): SectionProperties? {
+        return rhsSections.minByOrNull {
+            kotlin.math.abs(it.depth - height) + kotlin.math.abs(it.width - width) + kotlin.math.abs(it.tw - thickness) * 10
+        }
     }
 }

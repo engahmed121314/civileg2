@@ -6,34 +6,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.DxfExportEngine
-import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.SettingsManager
-import com.civileg.app.domain.calculations.BeamDesignEngine
-import com.civileg.app.domain.entities.BeamDesignResult
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import android.graphics.Bitmap
+import javax.inject.Inject
 
 @HiltViewModel
 class BeamViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine,
-    private val settingsManager: SettingsManager
+    private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
-
-    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.BeamResult?>()
     val result: LiveData<CalculatorEngine.BeamResult?> = _result
-
-    // New comprehensive result
-    private val _comprehensiveResult = MutableLiveData<BeamDesignResult?>()
-    val comprehensiveResult: LiveData<BeamDesignResult?> = _comprehensiveResult
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -43,6 +30,13 @@ class BeamViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     private var lastSpan: Double = 5.0
     private var lastWidth: Double = 250.0
@@ -68,6 +62,7 @@ class BeamViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // Store all inputs for PDF export
                 lastWidth = width
                 lastHeight = height
                 lastSpan = span
@@ -77,37 +72,28 @@ class BeamViewModel @Inject constructor(
                 lastFy = fy
                 lastSupportType = supportType
 
-                // 1. Run legacy calculator (for backward compat + exports)
                 val res = calculatorEngine.designBeam(
-                    width = width, height = height, span = span,
-                    fcu = fcu, fy = fy, deadLoad = deadLoad, liveLoad = liveLoad,
-                    preferredDiameter = preferredDiameter, code = code, supportType = supportType
+                    width = width,
+                    height = height,
+                    span = span,
+                    fcu = fcu,
+                    fy = fy,
+                    deadLoad = deadLoad,
+                    liveLoad = liveLoad,
+                    preferredDiameter = preferredDiameter,
+                    code = code,
+                    supportType = supportType,
+                    autoIncludeSelfWeight = true
                 )
+                
+                // Validate results for consistency & dead load logic
+                val report = CalculationValidator.validateBeam(res)
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("BEAM", mapOf("width" to width, "depth" to height), deadLoad)
+                
+                val combinedWarnings = report.warnings + dlReport.warnings
+                _validationReport.value = report.copy(warnings = combinedWarnings)
+                
                 _result.value = res
-
-                // 2. Run comprehensive engine (step-by-step calculations)
-                val domainCode = when(code) {
-                    CalculatorEngine.DesignCode.EGYPTIAN -> DesignCode.ECP
-                    CalculatorEngine.DesignCode.ACI -> DesignCode.ACI
-                    CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
-                }
-                val supportStr = when(supportType) {
-                    CalculatorEngine.SupportType.HINGED_HINGED -> "SS"
-                    CalculatorEngine.SupportType.FIXED_FIXED -> "FF"
-                    CalculatorEngine.SupportType.FIXED_HINGED -> "FH"
-                    CalculatorEngine.SupportType.CANTILEVER -> "CANTILEVER"
-                    else -> "SS"
-                }
-                val compResult = BeamDesignEngine.designBeam(
-                    b = width, h = height, span = span,
-                    deadLoad = deadLoad, liveLoad = liveLoad,
-                    fcu = fcu, fy = fy,
-                    preferredDia = preferredDiameter,
-                    code = domainCode,
-                    supportType = supportStr
-                )
-                _comprehensiveResult.value = compResult
-
                 lastSpan = span
                 _error.value = null
             } catch (e: Exception) {
@@ -123,33 +109,66 @@ class BeamViewModel @Inject constructor(
     }
 
     fun saveBeam(projectId: Long, name: String, result: CalculatorEngine.BeamResult) {
-        viewModelScope.launch { repository.saveBeamDesign(projectId, name, result) }
+        viewModelScope.launch {
+            repository.saveBeamDesign(projectId, name, result, lastSpan, lastFcu, lastFy)
+        }
     }
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) { _isExporting.value = true }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
+                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                // instead of iText-based ComprehensivePdfExporter.
+                // iText 8 AGPL lacks pdfCalligraph → garbled Arabic text.
                 val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
                     ?: context.cacheDir
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                val drawingBitmap = try {
-                    PdfDrawingGenerator.generateBeamDrawing(
-                        beamWidth = res.width.toDouble(), beamDepth = res.depth.toDouble(),
+                // Generate moment/shear point arrays for PDF diagrams
+                // Simply supported beam with UDL: M(x) = w*x*(L-x)/2, V(x) = w*(L/2-x)
+                val L = lastSpan // span in meters
+                val maxM = res.appliedMoment  // kN.m
+                val maxV = res.appliedShear    // kN
+                // Derive UDL from max moment: M_max = w*L²/8 → w = 8*M_max/L²
+                val wUDL = if (L > 0) 8.0 * maxM / (L * L) else 0.0
+                val numPoints = 21
+                val momentPoints = (0..numPoints).map { i ->
+                    val x = L * i / numPoints
+                    val m = wUDL * x * (L - x) / 2.0
+                    Pair(x, m)
+                }
+                val shearPoints = (0..numPoints).map { i ->
+                    val x = L * i / numPoints
+                    val v = wUDL * (L / 2.0 - x)
+                    Pair(x, v)
+                }
+
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
+                    PdfDrawingGenerator.generateBeamDrawingWithDiagrams(
+                        beamWidth = res.width.toDouble(),
+                        beamDepth = res.depth.toDouble(),
                         span = lastSpan * 1000.0,
                         mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
                         mainRebarCount = res.reinforcementBottom.numBars,
                         stirrupDia = res.stirrups.diameter.toDouble(),
-                        stirrupSpacing = res.stirrups.spacing.toDouble(), cover = 50.0,
+                        stirrupSpacing = res.stirrups.spacing.toDouble(),
+                        cover = 50.0,
                         hasTopSteel = res.reinforcementTop.numBars > 0,
                         topRebarDia = res.reinforcementTop.diameter.toDouble(),
-                        topRebarCount = res.reinforcementTop.numBars
+                        topRebarCount = res.reinforcementTop.numBars,
+                        momentPoints = momentPoints,
+                        shearPoints = shearPoints,
+                        maxMoment = maxM,
+                        maxShear = maxV,
+                        isSafe = res.isSafe
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"
@@ -158,13 +177,17 @@ class BeamViewModel @Inject constructor(
                 }
 
                 val inputsMap = mapOf(
-                    "Span" to "${lastSpan} m", "Width" to "${res.width} mm",
-                    "Depth" to "${res.depth} mm", "Support" to lastSupportType.displayName,
-                    "f'cu" to "${lastFcu} MPa", "fy" to "${lastFy} MPa",
-                    "Dead Load" to "${lastDeadLoad} kN/m", "Live Load" to "${lastLiveLoad} kN/m",
+                    "Span" to "${lastSpan} m",
+                    "Width" to "${res.width} mm",
+                    "Depth" to "${res.depth} mm",
+                    "Support" to lastSupportType.displayName,
+                    "f'cu" to "${lastFcu} MPa",
+                    "fy" to "${lastFy} MPa",
+                    "Dead Load" to "${lastDeadLoad} kN/m",
+                    "Live Load" to "${lastLiveLoad} kN/m",
                     "Design Code" to codeName
                 )
-                val resultsMap = mapOf(
+                val resultsMap = mutableMapOf(
                     "Max Moment Mu" to "${String.format("%.2f", res.mu)} kN.m",
                     "Max Shear Vu" to "${String.format("%.2f", res.vu)} kN",
                     "Bottom Reinforcement" to res.reinforcementBottom.barString,
@@ -173,9 +196,15 @@ class BeamViewModel @Inject constructor(
                     "Deflection" to "${String.format("%.2f", res.deflection)} mm",
                     "Allowable Deflection" to "${String.format("%.2f", res.allowableDeflection)} mm",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m3",
+                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
+                
+                if (res.stirrups.zones.isNotEmpty()) {
+                    res.stirrups.zones.forEachIndexed { i, zone ->
+                         resultsMap["Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
+                    }
+                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
@@ -183,51 +212,29 @@ class BeamViewModel @Inject constructor(
                     )
                 }
 
+                // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "Beam Report - ${lastSupportType.displayName}",
-                    titleEn = "Beam Design Report - ${lastSupportType.displayName}",
-                    subtitle = "Code: $codeName  |  Span=${lastSpan}m, ${res.width}x${res.depth}mm",
+                    titleAr = "تقرير تصميم كمرات - ${lastSupportType.displayName}",
+                    titleEn = "Beam Design Report — ${lastSupportType.displayName}",
+                    subtitle = "Code: $codeName  •  Span=${lastSpan}m, ${res.width}×${res.depth}mm",
                     designType = "Beam (${lastSupportType.displayName})",
-                    inputs = inputsMap, results = resultsMap, safetyChecks = safetyChecks,
-                    isSafe = res.isSafe, drawingBitmap = drawingBitmap, outputPath = file.absolutePath
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
                 )
 
-                withContext(Dispatchers.Main) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    _error.value = "PDF export failed: ${e.message}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
-    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
-        val res = _result.value ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "Beam_Drawing_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = java.io.File(directory, fileName)
-                val dxfContent = DxfExportEngine.generateBeamDxf(res, lastSpan, lastFcu, lastFy)
-                file.writeText(dxfContent)
-                withContext(Dispatchers.Main) {
-                    ExportUtils.openDxf(context, file)
-                    onComplete(file)
-                    _isExporting.value = false
-                }
-            } catch (e: Throwable) {
-                withContext(Dispatchers.Main) {
-                    _error.value = "DXF export failed: ${e.message}"
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
                     _isExporting.value = false
                     onComplete(null)
                 }

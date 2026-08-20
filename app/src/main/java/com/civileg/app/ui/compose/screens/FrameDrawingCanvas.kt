@@ -856,8 +856,8 @@ private fun DrawScope.drawPlanView(
                 }
         }
         beamsAtLevel.forEach { beam ->
-            val ni = nodes.find { it.id == beam.nodeI } ?: return@forEach
-            val nj = nodes.find { it.id == beam.nodeJ } ?: return@forEach
+            val ni = nodes.find { it.id == beam.nodeI }!!
+            val nj = nodes.find { it.id == beam.nodeJ }!!
             val p1 = toScreen(ni.x, bandZ)
             val p2 = toScreen(nj.x, bandZ)
             drawLine(Color(0xFF42A5F5), p1, p2, strokeWidth = 8f, cap = StrokeCap.Round)

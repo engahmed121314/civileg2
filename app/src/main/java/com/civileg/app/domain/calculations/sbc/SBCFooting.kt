@@ -94,7 +94,7 @@ class SBCFooting : FootingDesign {
         val Vu_x = q_avg * (roundedLength / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
         val Vu_y = q_avg * (roundedWidth / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
         // One-way shear capacity: Vc = 0.17 × √f'c × b × d (ACI 318-22.5.5.1)
-        val fc_prime = 0.67 * fcu / GAMMA_C
+        val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val vc_oneWay = 0.17 * sqrt(fc_prime)  // MPa
         val phi = 0.75
         val Vc_x = phi * vc_oneWay * (roundedLength / 1000.0) * d / 1000.0 * 1000.0  // kN
@@ -204,12 +204,12 @@ class SBCFooting : FootingDesign {
         val b = 1000.0  // mm per meter width
         val d = effectiveDepth
         
-        // ACI/SBC: K = Mu / (f'c × b × d²) حيث f'c = 0.67×fcu/γc
-        val fc_prime = 0.67 * fcu / GAMMA_C
+        // ACI/SBC: K = Mu / (f'c × b × d²) where f'c = 0.8 × fcu
+        val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val K = Mu / (fc_prime * b * d * d)
         
         // K_bal calculated dynamically using Rn method (ACI/SBC tension-controlled max)
-        val fc = 0.67 * fcu / GAMMA_C
+        val fc = 0.8 * fcu
         val beta1 = if (fc <= 28.0) 0.85 else max(0.65, 0.85 - 0.05 * (fc - 28.0) / 7.0)
         val rho_bal = 0.85 * beta1 * (fc / fy) * (0.003 / (0.003 + fy / 200000.0))
         val K_bal = rho_bal * fy * (1.0 - 0.5 * rho_bal * fy / (0.85 * fc))
@@ -390,7 +390,7 @@ class SBCFooting : FootingDesign {
         val loadPerPile = columnLoads / numberOfPiles
         val pilePerimeter = PI * pileDiameter
         val pileShearStress = (loadPerPile * 1000.0) / (pilePerimeter * d)
-        val fc_prime = 0.67 * fcu / GAMMA_C
+        val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val pileShearCap = 0.75 * 0.33 * sqrt(fc_prime)
         
         if (pileShearStress > pileShearCap) {
@@ -435,7 +435,7 @@ class SBCFooting : FootingDesign {
     override fun getMinCover(): Double = 75.0
     override fun getPunchingShearCapacity(fcu: Double, perimeter: Double, effectiveDepth: Double): Double {
         // SBC 304 / ACI 318: φ × vc × bo × d
-        val fc_prime = 0.67 * fcu / GAMMA_C
+        val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val vc = 0.33 * sqrt(fc_prime)  // MPa
         val phi = 0.75
         return phi * vc * perimeter * effectiveDepth / 1000.0  // kN

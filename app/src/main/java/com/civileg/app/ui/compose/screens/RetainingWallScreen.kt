@@ -5,15 +5,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Verified
@@ -23,6 +22,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,6 +37,9 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.RetainingWallViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +53,14 @@ fun RetainingWallScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+
+    val configuration = LocalConfiguration.current
+    val screenW = configuration.screenWidthDp.dp
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -66,8 +77,13 @@ fun RetainingWallScreen(
     var inputError by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    
-    val scrollState = rememberScrollState()
+
+    // Validation messages (captured in composable scope for use in onClick)
+    val rwErrAllPositive = stringResource(R.string.rw_err_all_positive)
+    val rwErrFrictionAngle = stringResource(R.string.rw_err_friction_angle)
+    val rwErrSurcharge = stringResource(R.string.rw_err_surcharge)
+    val rwErrFcu = stringResource(R.string.rw_err_fcu)
+    val rwErrFy = stringResource(R.string.rw_err_fy)
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -78,95 +94,107 @@ fun RetainingWallScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                actions = {
-                    IconButton(onClick = { showSaveDialog = true }, enabled = result != null) {
-                        Icon(Icons.Default.Save, contentDescription = "Save")
-                    }
                 }
             )
         }
     ) { padding ->
-        Column(
+        Box(modifier = Modifier.padding(padding)) {
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(scrollState)
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Text(stringResource(R.string.rw_data_input), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text(stringResource(R.string.rw_soil_density)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { Text(stringResource(R.string.rw_friction_angle)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text(stringResource(R.string.rw_surcharge)) }, modifier = Modifier.fillMaxWidth())
-            
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text(stringResource(R.string.fcu_label)) }, modifier = Modifier.weight(1f))
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text(stringResource(R.string.fy_label)) }, modifier = Modifier.weight(1f))
+            item {
+                Text(stringResource(R.string.rw_data_input), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            item {
+                OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.fillMaxWidth())
+            }
+            item {
+                OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text(stringResource(R.string.rw_soil_density)) }, modifier = Modifier.fillMaxWidth())
+            }
+            item {
+                OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { Text(stringResource(R.string.rw_friction_angle)) }, modifier = Modifier.fillMaxWidth())
+            }
+            item {
+                OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text(stringResource(R.string.rw_surcharge)) }, modifier = Modifier.fillMaxWidth())
+            }
 
-            DesignCodeSelectorRow(
-                selectedCode = selectedCode,
-                onCodeSelected = { selectedCode = it }
-            )
+            item {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text(stringResource(R.string.rw_fcu_mpa)) }, modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text(stringResource(R.string.rw_fy_mpa)) }, modifier = Modifier.weight(1f))
+                }
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            item { Spacer(modifier = Modifier.height(24.dp)) }
 
-            Button(
-                onClick = {
-                    val h = height.toDoubleOrNull()
-                    val sd = soilDensity.toDoubleOrNull()
-                    val fa = frictionAngle.toDoubleOrNull()
-                    val sc = surcharge.toDoubleOrNull()
-                    val fcuVal = fcu.toDoubleOrNull()
-                    val fyVal = fy.toDoubleOrNull()
-                    
-                    val errorMsg = when {
-                        h == null || h <= 0 -> "Invalid: all fields must be positive"
-                        sd == null || sd <= 0 -> "Invalid: all fields must be positive"
-                        fa == null || fa <= 0 || fa >= 90 -> "Invalid: friction angle 0-90"
-                        sc == null || sc < 0 -> "Invalid: surcharge must be >= 0"
-                        fcuVal == null || fcuVal <= 0 -> "Invalid: fcu must be positive"
-                        fyVal == null || fyVal <= 0 -> "Invalid: fy must be positive"
-                        else -> null
+            item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
+                Button(
+                    onClick = {
+                        val h = height.toDoubleOrNull()
+                        val sd = soilDensity.toDoubleOrNull()
+                        val fa = frictionAngle.toDoubleOrNull()
+                        val sc = surcharge.toDoubleOrNull()
+                        val fcuVal = fcu.toDoubleOrNull()
+                        val fyVal = fy.toDoubleOrNull()
+
+                        val errorMsg = when {
+                            h == null || h <= 0 -> rwErrAllPositive
+                            sd == null || sd <= 0 -> rwErrAllPositive
+                            fa == null || fa <= 0 || fa >= 90 -> rwErrFrictionAngle
+                            sc == null || sc < 0 -> rwErrSurcharge
+                            fcuVal == null || fcuVal <= 0 -> rwErrFcu
+                            fyVal == null || fyVal <= 0 -> rwErrFy
+                            else -> null
+                        }
+
+                        if (errorMsg != null) {
+                            scope.launch { snackbarHostState.showSnackbar(errorMsg) }
+                            return@Button
+                        }
+
+                        viewModel.calculateRetainingWallPro(
+                            height = h!!,
+                            soilDensity = sd!!,
+                            frictionAngle = fa!!,
+                            surcharge = sc!!,
+                            fcu = fcuVal!!,
+                            fy = fyVal!!,
+                            preferredDiameter = 16,
+                            code = selectedCode
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Icon(Icons.Default.Calculate, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.rw_analyze))
                     }
-                    
-                    if (errorMsg != null) {
-                        scope.launch { snackbarHostState.showSnackbar(errorMsg) }
-                        return@Button
-                    }
-                    
-                    viewModel.calculateRetainingWallPro(
-                        height = h!!,
-                        soilDensity = sd!!,
-                        frictionAngle = fa!!,
-                        surcharge = sc!!,
-                        fcu = fcuVal!!,
-                        fy = fyVal!!,
-                        preferredDiameter = 16,
-                        code = selectedCode
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Icon(Icons.Default.Calculate, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.rw_analyze))
                 }
             }
 
             result?.let { res ->
-                Spacer(modifier = Modifier.height(24.dp))
+                item { Spacer(modifier = Modifier.height(24.dp)) }
+
                 val ecoColor = when {
                     res.utilizationRatio > 1.0 -> Color.Red
                     res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
@@ -174,198 +202,258 @@ fun RetainingWallScreen(
                     else -> Color(0xFF2196F3)
                 }
 
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        if (res.isSafe) Icons.Default.Verified else Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = ecoColor
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        if (res.isSafe) stringResource(R.string.rw_safe) else stringResource(R.string.rw_unsafe),
-                                        fontWeight = FontWeight.Bold,
-                                        color = ecoColor,
-                                        fontSize = 18.sp
-                                    )
-                                }
-                                Text(
-                                    stringResource(R.string.consultant_ratio),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Box(contentAlignment = Alignment.Center) {
-                                val animatedRatio by animateFloatAsState(
-                                    targetValue = res.utilizationRatio.toFloat(),
-                                    animationSpec = tween(1000), label = ""
-                                )
-                                CircularProgressIndicator(
-                                    progress = { animatedRatio.coerceIn(0f, 1.2f) },
-                                    modifier = Modifier.size(60.dp),
-                                    strokeWidth = 6.dp,
-                                    color = ecoColor,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                )
-                                Text(
-                                    "${(res.utilizationRatio * 100).toInt()}%",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        ResultRow(stringResource(R.string.rw_stem_thickness), "${res.stemThickness * 100} cm")
-                        ResultRow(stringResource(R.string.rw_base_width), "${res.baseWidth} m")
-                        ResultRow(stringResource(R.string.rw_stem_reinforcement), res.stemReinforcement.barString)
-                        ResultRow(stringResource(R.string.rw_base_reinforcement), res.baseReinforcement.barString)
-                    }
-                }
-
-                if (res.safetyChecks.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                stringResource(R.string.safety_checks),
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            res.safetyChecks.forEach { check ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        if (check.isSafe) Icons.Default.Verified else Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = if (check.isSafe) Color(0xFF2E7D32) else Color.Red,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            if (res.isSafe) Icons.Default.Verified else Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = ecoColor
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            if (res.isSafe) stringResource(R.string.rw_safe) else stringResource(R.string.rw_unsafe),
+                                            fontWeight = FontWeight.Bold,
+                                            color = ecoColor,
+                                            fontSize = 18.sp
+                                        )
+                                    }
                                     Text(
-                                        "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                                        stringResource(R.string.consultant_ratio),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                }
+
+                                Box(contentAlignment = Alignment.Center) {
+                                    val animatedRatio by animateFloatAsState(
+                                        targetValue = res.utilizationRatio.toFloat(),
+                                        animationSpec = tween(1000), label = ""
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { animatedRatio.coerceIn(0f, 1.2f) },
+                                        modifier = Modifier.size(60.dp),
+                                        strokeWidth = 6.dp,
+                                        color = ecoColor,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    Text(
+                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider()
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            ResultRow(stringResource(R.string.rw_stem_thickness), "${res.stemThickness.toInt()} mm")
+                            ResultRow(stringResource(R.string.rw_base_width), "${"%.2f".format(res.baseWidth / 1000.0)} m")
+                            ResultRow(stringResource(R.string.rw_stem_reinforcement), res.stemReinforcement.barString)
+                            ResultRow(stringResource(R.string.rw_base_reinforcement), res.baseReinforcement.barString)
+                        }
+                    }
+                }
+
+                if (res.safetyChecks.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    stringResource(R.string.safety_checks),
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                res.safetyChecks.forEach { check ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (check.isSafe) Icons.Default.Verified else Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = if (check.isSafe) Color(0xFF2E7D32) else Color.Red,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        Text(
+                                            "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Standardized export buttons row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(
-                        onClick = {
-                            viewModel.exportToPdf(context) { /* Handle completion if needed */ }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        enabled = !isExporting
-                    ) {
-                        if (isExporting) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                // Unified report button row — same position as all other pages
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { /* Handle completion */ }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isExporting
+                        ) {
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
                         }
-                    }
 
-                    OutlinedButton(
-                        onClick = { viewModel.exportToDxf(context) { _ -> } },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = !isExporting
-                    ) {
-                        Icon(Icons.Default.Draw, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("DXF", maxLines = 1, fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = { showSaveDialog = true },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
+                        Button(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.save))
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-                InteractiveDrawingScreen(
-                    title = stringResource(R.string.rw_drawing_title),
-                    subtitle = stringResource(R.string.rw_drawing_subtitle),
-                    viewModes = emptyList(),
-                    drawingContent = {
-                        ProfessionalRetainingWallDrawing(
-                            wallHeight = res.height,
-                            wallTopThickness = res.stemThickness * 0.6 / 1000,
-                            wallBottomThickness = res.stemThickness / 1000,
-                            baseWidth = res.baseWidth / 1000,
-                            baseThickness = res.stemThickness * 1.2 / 1000,
-                            toeLength = res.baseWidth * 0.25 / 1000,
-                            heelLength = res.baseWidth * 0.6 / 1000,
-                            mainRebarDia = res.stemReinforcement.diameter.toDouble() / 1000,
-                            mainRebarSpacing = res.stemReinforcement.spacing.toDouble() / 1000,
-                            distRebarDia = res.stemReinforcement.diameter.toDouble() * 0.7 / 1000,
-                            distRebarSpacing = res.stemReinforcement.spacing.toDouble() * 1.5 / 1000,
-                            baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
-                            baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
-                            cover = 0.05,
-                            backfillAngle = res.backfillAngle,
-                            hasKey = true,
-                            keyDepth = 0.15,
-                            fsOverturning = res.factorOfSafetyOverturning,
-                            fsSliding = res.factorOfSafetySliding,
-                            maxBearingPressure = res.maxBearingPressure,
-                            allowableBearingPressure = 200.0,
-                            activePressureCoeff = res.ka,
-                            stemMoment = res.muStem,
-                            heelMoment = res.heelMoment,
-                            toeMoment = res.toeMoment,
-                            isSafe = res.isSafe,
-                            fcu = fcu.toDoubleOrNull() ?: 25.0,
-                            fy = fy.toDoubleOrNull() ?: 360.0,
-                            isArabic = viewModel.isArabic,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (420 * wRatio).toInt().coerceIn(280, 550)
+                        2 -> (320 * wRatio).toInt().coerceIn(220, 450)
+                        3 -> (580 * wRatio).toInt().coerceIn(380, 750)
+                        else -> (780 * wRatio).toInt().coerceIn(500, 1000)
                     }
-                )
+                    InteractiveDrawingScreen(
+                        title = stringResource(R.string.rw_drawing_title),
+                        subtitle = stringResource(R.string.rw_drawing_subtitle),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeight,
+                        drawingContent = {
+                            val stemTopT = kotlin.math.max(200.0, res.stemThickness * 0.5)
+                            val baseWm = res.baseWidth / 1000.0
+                            val toeW = baseWm / 3.0
+                            val heelW = baseWm - toeW - (res.stemThickness / 1000.0)
+                            ProfessionalRetainingWallDrawing(
+                                wallHeight = res.height,
+                                wallTopThickness = stemTopT / 1000,
+                                wallBottomThickness = res.stemThickness / 1000,
+                                baseWidth = baseWm,
+                                baseThickness = res.stemThickness / 1000,
+                                toeLength = toeW,
+                                heelLength = heelW.coerceAtLeast(0.0),
+                                mainRebarDia = res.stemReinforcement.diameter.toDouble() / 1000,
+                                mainRebarSpacing = res.stemReinforcement.spacing.toDouble() / 1000,
+                                distRebarDia = 10.0 / 1000,
+                                distRebarSpacing = 200.0 / 1000,
+                                baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
+                                baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
+                                cover = when (selectedCode) {
+                                    CalculatorEngine.DesignCode.ACI -> 0.075
+                                    CalculatorEngine.DesignCode.SAUDI -> 0.065
+                                    else -> 0.05
+                                },
+                                backfillAngle = res.backfillAngle,
+                                hasKey = true,
+                                keyDepth = 0.15,
+                                fsOverturning = res.factorOfSafetyOverturning,
+                                fsSliding = res.factorOfSafetySliding,
+                                maxBearingPressure = res.maxBearingPressure,
+                                allowableBearingPressure = 200.0,
+                                viewMode = selectedViewMode,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    )
+                }
             }
+            item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            val stemTopT = kotlin.math.max(200.0, res.stemThickness * 0.5)
+            val baseWm = res.baseWidth / 1000.0
+            val toeW = baseWm / 3.0
+            val heelW = baseWm - toeW - (res.stemThickness / 1000.0)
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalRetainingWallDrawing(
+                        wallHeight = res.height,
+                        wallTopThickness = stemTopT / 1000,
+                        wallBottomThickness = res.stemThickness / 1000,
+                        baseWidth = baseWm,
+                        baseThickness = res.stemThickness / 1000,
+                        toeLength = toeW,
+                        heelLength = heelW.coerceAtLeast(0.0),
+                        mainRebarDia = res.stemReinforcement.diameter.toDouble() / 1000,
+                        mainRebarSpacing = res.stemReinforcement.spacing.toDouble() / 1000,
+                        distRebarDia = 10.0 / 1000,
+                        distRebarSpacing = 200.0 / 1000,
+                        baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
+                        baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
+                        cover = when (selectedCode) {
+                            CalculatorEngine.DesignCode.ACI -> 0.075
+                            CalculatorEngine.DesignCode.SAUDI -> 0.065
+                            else -> 0.05
+                        },
+                        backfillAngle = res.backfillAngle,
+                        hasKey = true,
+                        keyDepth = 0.15,
+                        fsOverturning = res.factorOfSafetyOverturning,
+                        fsSliding = res.factorOfSafetySliding,
+                        maxBearingPressure = res.maxBearingPressure,
+                        allowableBearingPressure = 200.0,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 
@@ -381,7 +469,7 @@ fun RetainingWallScreen(
                         label = { Text(stringResource(R.string.rw_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
+
                     Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
                         Text(stringResource(R.string.rw_no_projects), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
@@ -412,7 +500,7 @@ fun RetainingWallScreen(
                     result?.let { viewModel.saveRetainingWall(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {

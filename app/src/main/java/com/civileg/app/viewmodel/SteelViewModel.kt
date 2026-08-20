@@ -8,6 +8,7 @@ import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -49,9 +50,20 @@ class SteelViewModel @Inject constructor(
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
     val sectionLibrary: Map<String, List<SteelSectionType>> = calculatorEngine.getSteelSectionLibrary()
 
-    val isArabic: Boolean get() = settingsManager.language == "ar"
+    // Configurable connection design defaults (mm). Override via constructor or
+    // update from actual connection design results before PDF export.
+    var defaultBoltDia: Double = 20.0
+    var defaultBoltCount: Int = 4
+    var defaultBoltGauge: Double = 90.0
+    var defaultBoltPitch: Double = 75.0
+    var defaultEndPlateThickness: Double = 12.0
+    var defaultWeldSize: Double = 6.0
+    var defaultHasStiffener: Boolean = false
 
     private val _searchResults = MutableLiveData<List<SteelSectionType>>()
     val searchResults: LiveData<List<SteelSectionType>> = _searchResults
@@ -79,6 +91,11 @@ class SteelViewModel @Inject constructor(
             _errorMessage.value = null
             try {
                 val res = calculatorEngine.calculateSteelMember(section, memberType, inputs, code)
+                
+                // Validate Steel Member
+                val report = CalculationValidator.validate(res)
+                _validationReport.value = report
+                
                 _result.value = res
             } catch (e: Exception) {
                 _result.value = null
@@ -162,65 +179,79 @@ class SteelViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate steel drawing bitmap using actual section properties (V2 — all section types)
+                // Generate steel drawing bitmap using actual section properties
+                // 2026-08-04 v3: Pass all section properties to match ProfessionalSteelDrawing
                 val drawingBitmap = try {
-                    PdfDrawingGenerator.generateSteelDrawingV2(
-                        section = stored.section,
+                    PdfDrawingGenerator.generateSteelDrawing(
+                        sectionName = stored.section.sectionName,
+                        sectionHeight = stored.section.depth,
+                        flangeWidth = stored.section.width,
+                        webThickness = stored.section.webThickness,
+                        flangeThickness = stored.section.flangeThickness,
                         memberLength = stored.inputs.length,
-                        memberType = stored.memberType,
-                        appliedMoment = stored.inputs.moment,
-                        appliedShear = stored.inputs.shear,
-                        appliedAxial = stored.inputs.axialLoad,
                         isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio * 100
+                        utilizationRatio = res.utilizationRatio * 100,
+                        // New parameters matching on-screen ProfessionalSteelDrawing
+                        sectionType = stored.section.displayName,
+                        radius = stored.section.rootRadius,
+                        area = stored.section.area,
+                        ix = stored.section.ix,
+                        sx = stored.section.sx,
+                        zx = stored.section.zx,
+                        weightPerMeter = stored.section.weight,
+                        // Connection parameters — use configurable defaults (set from connection design if available)
+                        boltDia = defaultBoltDia,
+                        boltCount = defaultBoltCount,
+                        boltGauge = defaultBoltGauge,
+                        boltPitch = defaultBoltPitch,
+                        endPlateThickness = defaultEndPlateThickness,
+                        hasStiffener = defaultHasStiffener,
+                        weldSize = defaultWeldSize,
+                        isColumn = stored.memberType == com.civileg.app.domain.entities.SteelMemberType.COLUMN
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 
-                // FIX: ProfessionalEnglishPdfReporter uses Helvetica only (no Arabic support).
-                // Always pass English keys to avoid garbled text in PDF.
-                fun tEn(ar: String, en: String) = en
-
+                // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
+                // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when (stored.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
-                    else -> "ECP 203"
+                    CalculatorEngine.DesignCode.ACI -> "AISC 360-16"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 306"
+                    else -> "ECP 205-2007"
                 }
 
                 val inputsMap = mapOf(
-                    tEn("نوع القطاع", "Section Type") to stored.section.displayName,
-                    tEn("نوع العنصر", "Member Type") to when (stored.memberType) {
-                        com.civileg.app.domain.entities.SteelMemberType.COLUMN -> tEn("عمود", "Column")
-                        com.civileg.app.domain.entities.SteelMemberType.BEAM -> tEn("كمر", "Beam")
-                        com.civileg.app.domain.entities.SteelMemberType.BRACING -> tEn("ربط", "Bracing")
-                        com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> tEn("عنصر كمرة", "Truss")
-                        com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> tEn("كمر رئيسي", "Girder")
+                    "Section Type" to stored.section.displayName,
+                    "Member Type" to when (stored.memberType) {
+                        com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
+                        com.civileg.app.domain.entities.SteelMemberType.BEAM -> "Beam"
+                        com.civileg.app.domain.entities.SteelMemberType.BRACING -> "Bracing"
+                        com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> "Truss"
+                        com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> "Girder"
                     },
-                    tEn("كود التصميم", "Design Code") to codeName,
-                    tEn("الطول", "Length") to "${stored.inputs.length} m",
-                    tEn("الحمل المحوري", "Axial Load") to "${stored.inputs.axialLoad} kN",
-                    tEn("العزم", "Moment") to "${stored.inputs.moment} kN.m",
-                    tEn("قوة القص", "Shear Force") to "${stored.inputs.shear} kN"
+                    "Design Code" to codeName,
+                    "Length" to "${stored.inputs.length / 1000.0} m",
+                    "Axial Load" to "${stored.inputs.axialLoad} kN",
+                    "Moment" to "${stored.inputs.moment} kN.m",
+                    "Shear Force" to "${stored.inputs.shear} kN"
                 )
                 val resultsMap = mapOf(
-                    tEn("السعة المحورية", "Axial Capacity") to "${String.format("%.2f", res.axialCapacity)} kN",
-                    tEn("سعة العزم", "Moment Capacity") to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
-                    tEn("سعة القص", "Shear Capacity") to "${String.format("%.2f", res.shearCapacity)} kN",
-                    tEn("نسبة الاستغلال", "Utilization") to "${(res.utilizationRatio * 100).toInt()}%",
-                    tEn("الحالة", "Status") to if (res.isSafe) tEn("آمن", "SAFE") else tEn("غير آمن", "UNSAFE")
+                    "Axial Capacity" to "${String.format("%.2f", res.axialCapacity)} kN",
+                    "Moment Capacity" to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
+                    "Shear Capacity" to "${String.format("%.2f", res.shearCapacity)} kN",
+                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Status" to if (res.isSafe) "SAFE" else "UNSAFE"
                 )
-                // Build safety checks from available result data (SteelMemberResult doesn't have a
-                // dedicated safetyChecks list — derive from axial/bending/shear utilization)
                 val memberTypeLabel = when (stored.memberType) {
-                    com.civileg.app.domain.entities.SteelMemberType.COLUMN -> tEn("عمود", "Column")
-                    com.civileg.app.domain.entities.SteelMemberType.BEAM -> tEn("كمر", "Beam")
-                    com.civileg.app.domain.entities.SteelMemberType.BRACING -> tEn("ربط", "Bracing")
-                    com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> tEn("عنصر كمرة", "Truss")
-                    com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> tEn("كمر رئيسي", "Girder")
+                    com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
+                    com.civileg.app.domain.entities.SteelMemberType.BEAM -> "Beam"
+                    com.civileg.app.domain.entities.SteelMemberType.BRACING -> "Bracing"
+                    com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> "Truss"
+                    com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> "Girder"
                 }
                 val safetyChecks = mutableListOf<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck>()
                 if (stored.inputs.axialLoad > 0) {
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = tEn("السعة المحورية", "Axial Capacity"),
+                        name = "Axial Capacity",
                         calculated = stored.inputs.axialLoad,
                         limit = res.axialCapacity,
                         unit = "kN",
@@ -229,7 +260,7 @@ class SteelViewModel @Inject constructor(
                 }
                 if (stored.inputs.moment > 0) {
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = tEn("سعة العزم", "Flexural Capacity"),
+                        name = "Flexural Capacity",
                         calculated = stored.inputs.moment,
                         limit = res.flexuralCapacity,
                         unit = "kN.m",
@@ -238,7 +269,7 @@ class SteelViewModel @Inject constructor(
                 }
                 if (stored.inputs.shear > 0) {
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = tEn("سعة القص", "Shear Capacity"),
+                        name = "Shear Capacity",
                         calculated = stored.inputs.shear,
                         limit = res.shearCapacity,
                         unit = "kN",
@@ -247,7 +278,7 @@ class SteelViewModel @Inject constructor(
                 }
                 res.bucklingCheck?.let { buckling ->
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = tEn("الانبعاج", "Buckling Check"),
+                        name = "Buckling Check",
                         calculated = buckling.slendernessRatio,
                         limit = 200.0,
                         unit = "-",
@@ -256,7 +287,7 @@ class SteelViewModel @Inject constructor(
                 }
                 res.deflectionCheck?.let { defl ->
                     safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = tEn("الترخيم", "Deflection Check"),
+                        name = "Deflection Check",
                         calculated = defl.calculatedDeflection,
                         limit = defl.allowableDeflection,
                         unit = "mm",
@@ -264,9 +295,8 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
 
-                // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "Steel Member Design Report - ${stored.section.displayName}",
+                    titleAr = "تقرير تصميم قطاع معدني - ${stored.section.displayName}",
                     titleEn = "Steel Member Design Report — ${stored.section.displayName}",
                     subtitle = "Code: $codeName  •  $memberTypeLabel",
                     designType = "Steel — ${stored.section.displayName}",
@@ -289,70 +319,6 @@ class SteelViewModel @Inject constructor(
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _errorMessage.value = "Steel PDF export failed: ${e.message ?: "Unknown error"}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
-    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
-        val res = _result.value ?: return
-        val stored = lastMemberInputs ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "Steel_Section_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = java.io.File(directory, fileName)
-
-                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateSteelSectionDxf(
-                    result = res,
-                    memberLength = stored.inputs.length,
-                    inputs = stored.inputs
-                )
-                file.writeText(dxfContent)
-
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
-                    onComplete(file)
-                    _isExporting.value = false
-                }
-            } catch (e: Throwable) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _errorMessage.value = "Steel DXF export failed: ${e.message ?: "Unknown error"}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
-    fun exportWarehouseToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
-        val res = _warehouseResult.value ?: return
-        val inputs = lastWarehouseInputs ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "Steel_Warehouse_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = java.io.File(directory, fileName)
-
-                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateSteelWarehouseDxf(inputs, res)
-                file.writeText(dxfContent)
-
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
-                    onComplete(file)
-                    _isExporting.value = false
-                }
-            } catch (e: Throwable) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _errorMessage.value = "Warehouse DXF export failed: ${e.message ?: "Unknown error"}"
                     _isExporting.value = false
                     onComplete(null)
                 }

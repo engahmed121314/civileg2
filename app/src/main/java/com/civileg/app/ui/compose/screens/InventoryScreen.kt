@@ -26,6 +26,8 @@ import com.civileg.app.db.InventoryItem
 import com.civileg.app.db.InventoryType
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.InventoryViewModel
+import com.civileg.app.ui.compose.components.ResultDataCard
+import com.civileg.app.ui.compose.components.PremiumSectionHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -87,7 +89,12 @@ fun InventoryScreen(
                                         // Open share intent
                                         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                             type = "application/pdf"
-                                            putExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri.fromFile(pdfFile))
+                                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                pdfFile
+                                            )
+                                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
                                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
                                         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share PDF"))
@@ -118,6 +125,12 @@ fun InventoryScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
+            // Dashboard Card
+            InventoryDashboard(uiState.items)
+
+            // User Guide (Expandable)
+            InventoryUserGuide()
+
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
@@ -150,6 +163,7 @@ fun InventoryScreen(
                     items(filteredItems) { item ->
                         InventoryItemCard(
                             item = item,
+                            context = context,
                             onUpdateQuantity = { viewModel.updateQuantity(item, it) },
                             onDelete = { viewModel.deleteItem(item) }
                         )
@@ -167,6 +181,63 @@ fun InventoryScreen(
                 showAddDialog = false
             }
         )
+    }
+}
+
+@Composable
+fun InventoryDashboard(items: List<InventoryItem>) {
+    val lowStockCount = items.count { it.alertQuantity > 0 && it.quantity <= it.alertQuantity }
+    
+    Card(
+        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(stringResource(R.string.boq_feasibility_section), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                DashboardStat(label = "Total Items", value = "${items.size}", color = MaterialTheme.colorScheme.primary)
+                DashboardStat(label = "Low Stock", value = "$lowStockCount", color = if (lowStockCount > 0) Color.Red else Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+fun DashboardStat(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontSize = 24.sp, fontWeight = FontWeight.Black, color = color)
+        Text(label, fontSize = 12.sp, color = Color.Gray)
+    }
+}
+
+@Composable
+fun InventoryUserGuide() {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
+        onClick = { expanded = !expanded }
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.secondary)
+                Spacer(Modifier.width(8.dp))
+                Text("How to use Site Inventory?", fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Icon(if(expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+            }
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                Text("1. Add items like Cement, Sand, or Equipment.\n" +
+                     "2. Set an 'Alert Quantity' to get notified when stock is low.\n" +
+                     "3. Use the PDF button in the top bar to generate a report for the site manager.\n" +
+                     "4. Low stock items are highlighted in red.", 
+                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
+        }
     }
 }
 
@@ -192,7 +263,7 @@ fun TypeFilterRow(selectedType: InventoryType?, onTypeSelected: (InventoryType?)
 }
 
 @Composable
-fun InventoryItemCard(item: InventoryItem, onUpdateQuantity: (Double) -> Unit, onDelete: () -> Unit) {
+fun InventoryItemCard(item: InventoryItem, context: Context, onUpdateQuantity: (Double) -> Unit, onDelete: () -> Unit) {
     val isLowStock = item.quantity <= item.alertQuantity
     val dateFormat = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
 
@@ -224,6 +295,18 @@ fun InventoryItemCard(item: InventoryItem, onUpdateQuantity: (Double) -> Unit, o
                     }
                     IconButton(onClick = { onUpdateQuantity(item.quantity + 1) }) {
                         Icon(Icons.Default.Add, contentDescription = "Increase")
+                    }
+                    // Quick Action for Reorder
+                    if (isLowStock) {
+                        IconButton(onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, "Urgent Site Request: Need to reorder ${item.name}. Current stock is only ${item.quantity} ${item.unit}.")
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, "Request Reorder"))
+                        }) {
+                            Icon(Icons.Default.Send, contentDescription = "Request Reorder", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)

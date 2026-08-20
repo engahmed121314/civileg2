@@ -1,8 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -20,8 +19,10 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import com.civileg.app.domain.entities.StirrupZone
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 // ============================================================================
 // COLOR PALETTE — matches the reference image exactly
@@ -109,25 +110,12 @@ fun ProfessionalBeamDrawing(
     hasTopSteel: Boolean = false,
     topRebarDia: Double = 0.0,
     topRebarCount: Int = 0,
-    appliedMoment: Double = 0.0,    // Mu (kN.m)
-    appliedShear: Double = 0.0,     // Vu (kN)
-    utilizationRatio: Double = 0.0,  // UR
-    // Enhanced design value parameters
-    resistingMoment: Double = 0.0,       // MuR (kN.m)
-    concreteShearCapacity: Double = 0.0, // Vc (kN)
-    requiredAs: Double = 0.0,            // mm²
-    providedAs: Double = 0.0,            // mm²
-    effectiveDepth: Double = 0.0,        // d (mm)
-    steelRatio: Double = 0.0,            // ρ
-    fcu: Double = 25.0,
-    fy: Double = 360.0,
-    isArabic: Boolean = false,
-    modifier: Modifier = Modifier
+    zones: List<StirrupZone> = emptyList(),
+    modifier: Modifier = Modifier,
+    viewMode: Int = 0
 ) {
     Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(560.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // ---------------------------------------------------------------
         // Layout constants (in px)
@@ -139,12 +127,28 @@ fun ProfessionalBeamDrawing(
         val angleX = 0.30f          // horizontal skew factor
         val angleY = 0.20f          // vertical skew factor
 
+        // ── Layout zones (vertical) ────────────────────────────────────
+        // Elevation: 0–40%  |  Section inset: 46–62%  |  Table: 66–100%
+        // Adjust zones based on viewMode
+        val elevationFrac = when (viewMode) {
+            1 -> 0.88f  // Elevation-only: use most of the height
+            0 -> 0.40f  // All: normal split
+            else -> 0.08f // Other modes: minimal
+        }
+        val sectionFrac = when (viewMode) {
+            2 -> 0.88f  // Section-only: use most of the height
+            0 -> 0.16f  // All: normal split
+            else -> 0.08f // Other modes: minimal
+        }
+        val mainBottom = ch * elevationFrac
+        val sectionZoneTop = ch * (elevationFrac + 0.04f)
+        val sectionZoneBottom = ch * (elevationFrac + 0.04f + sectionFrac)
+
         // Main beam drawing area — symmetric margins for proper centering
         val sideMargin = 60f
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
         val mainTop = 50f
-        val mainBottom = ch * 0.55f
 
         // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
         val availableW = mainRight - mainLeft
@@ -166,154 +170,87 @@ fun ProfessionalBeamDrawing(
         // ---------------------------------------------------------------
         // Draw all layers in order (back-to-front)
         // ---------------------------------------------------------------
-        draw3DBeamBody(
-            left = beamLeft, top = beamTop,
-            w = beamDrawW, h = beamDrawH, d = beamDrawD,
-            angleX = angleX, angleY = angleY
-        )
 
-        drawSupports(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamBottom = beamBottom, beamRight = beamRight,
-            isContinuous = isContinuous
-        )
-
-        drawCutawayReinforcement(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamRight = beamRight, beamBottom = beamBottom,
-            beamDrawW = beamDrawW, beamDrawH = beamDrawH,
-            beamDrawD = beamDrawD,
-            scale = scale,
-            angleX = angleX, angleY = angleY,
-            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
-            stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
-            cover = cover,
-            hasTopSteel = hasTopSteel,
-            topRebarDia = topRebarDia, topRebarCount = topRebarCount
-        )
-
-        drawDevelopmentAndLap(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamRight = beamRight, beamBottom = beamBottom,
-            beamDrawW = beamDrawW, beamDrawH = beamDrawH,
-            scale = scale,
-            developmentLength = developmentLength,
-            lapLength = lapLength,
-            mainRebarDia = mainRebarDia
-        )
-
-        drawDimensionLines(
-            beamLeft = beamLeft, beamTop = beamTop,
-            beamRight = beamRight, beamBottom = beamBottom,
-            beamDrawH = beamDrawH,
-            scale = scale,
-            beamWidth = beamWidth, beamDepth = beamDepth,
-            span = span, cover = cover,
-            stirrupSpacing = stirrupSpacing
-        )
-
-        drawSectionInset(
-            cw = cw, ch = ch,
-            beamWidth = beamWidth, beamDepth = beamDepth,
-            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
-            stirrupDia = stirrupDia,
-            cover = cover,
-            hasTopSteel = hasTopSteel,
-            topRebarDia = topRebarDia, topRebarCount = topRebarCount
-        )
-
-        drawReinforcementSchedule(
-            cw = cw, ch = ch,
-            beamWidth = beamWidth, beamDepth = beamDepth,
-            span = span,
-            mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
-            stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
-            hasTopSteel = hasTopSteel,
-            topRebarDia = topRebarDia, topRebarCount = topRebarCount,
-            developmentLength = developmentLength
-        )
-
-        // ── Design Values Overlay (top-right corner) ──
-        if (appliedMoment > 0 || appliedShear > 0 || utilizationRatio > 0 ||
-            resistingMoment > 0 || concreteShearCapacity > 0 || requiredAs > 0 ||
-            providedAs > 0 || effectiveDepth > 0 || steelRatio > 0
-        ) {
-            // Count active rows to size the box
-            val rows = mutableListOf<String>()
-            if (appliedMoment > 0) rows.add("")
-            if (appliedShear > 0) rows.add("")
-            if (resistingMoment > 0) rows.add("")
-            if (concreteShearCapacity > 0) rows.add("")
-            if (requiredAs > 0) rows.add("")
-            if (providedAs > 0) rows.add("")
-            if (effectiveDepth > 0) rows.add("")
-            if (steelRatio > 0) rows.add("")
-            if (utilizationRatio > 0) rows.add("")
-            // Always show fcu and fy
-            rows.add("")
-            rows.add("")
-
-            val rowH = 18f
-            val boxW = 180f
-            val boxH = rows.size * rowH + 12f
-            val boxLeft = cw - boxW - 12f
-            val boxTop = 12f
-
-            drawRoundRect(
-                color = Color(0xCC1A1A2E),
-                topLeft = Offset(boxLeft, boxTop),
-                size = Size(boxW, boxH),
-                cornerRadius = CornerRadius(8f)
-            )
-            drawRoundRect(
-                color = Color(0xFF4A90D9).copy(alpha = 0.5f),
-                topLeft = Offset(boxLeft, boxTop),
-                size = Size(boxW, boxH),
-                cornerRadius = CornerRadius(8f),
-                style = Stroke(1f)
+        // ═══ ELEVATION VIEW (viewMode 0 or 1) ═══
+        if (viewMode == 0 || viewMode == 1) {
+            draw3DBeamBody(
+                left = beamLeft, top = beamTop,
+                w = beamDrawW, h = beamDrawH, d = beamDrawD,
+                angleX = angleX, angleY = angleY
             )
 
-            var ty = boxTop + 16f
-            if (appliedMoment > 0) {
-                drawTextAnnotated("Mu = ${"%.1f".format(appliedMoment)} kN.m", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (appliedShear > 0) {
-                drawTextAnnotated("Vu = ${"%.1f".format(appliedShear)} kN", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (resistingMoment > 0) {
-                drawTextAnnotated("MuR = ${"%.1f".format(resistingMoment)} kN.m", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (concreteShearCapacity > 0) {
-                drawTextAnnotated("Vc = ${"%.1f".format(concreteShearCapacity)} kN", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (requiredAs > 0) {
-                drawTextAnnotated("As req = ${"%.0f".format(requiredAs)} mm\u00B2", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (providedAs > 0) {
-                drawTextAnnotated("As prov = ${"%.0f".format(providedAs)} mm\u00B2", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (effectiveDepth > 0) {
-                drawTextAnnotated("d = ${"%.0f".format(effectiveDepth)} mm", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (steelRatio > 0) {
-                drawTextAnnotated("\u03C1 = ${"%.4f".format(steelRatio)}", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-                ty += rowH
-            }
-            if (utilizationRatio > 0) {
-                val urColor = if (utilizationRatio <= 1.0f) Color(0xFF2ECC71) else Color(0xFFE74C3C)
-                drawTextAnnotated("UR = ${"%.2f".format(utilizationRatio)}", boxLeft + 10f, ty, urColor, 14f, bold = true)
-                ty += rowH
-            }
-            drawTextAnnotated("fcu = ${"%.0f".format(fcu)} MPa", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
-            ty += rowH
-            drawTextAnnotated("fy = ${"%.0f".format(fy)} MPa", boxLeft + 10f, ty, DimensionWhite, 13f, bold = true)
+            drawSupports(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamBottom = beamBottom, beamRight = beamRight,
+                isContinuous = isContinuous
+            )
+
+            drawCutawayReinforcement(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                beamDrawW = beamDrawW, beamDrawH = beamDrawH,
+                beamDrawD = beamDrawD,
+                scale = scale,
+                angleX = angleX, angleY = angleY,
+                mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+                stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
+                cover = cover,
+                hasTopSteel = hasTopSteel,
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount,
+                zones = zones
+            )
+
+            drawDevelopmentAndLap(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                beamDrawW = beamDrawW, beamDrawH = beamDrawH,
+                scale = scale,
+                developmentLength = developmentLength,
+                lapLength = lapLength,
+                mainRebarDia = mainRebarDia
+            )
+
+            drawDimensionLines(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                beamDrawH = beamDrawH,
+                scale = scale,
+                beamWidth = beamWidth, beamDepth = beamDepth,
+                span = span, cover = cover,
+                stirrupSpacing = stirrupSpacing
+            )
+        }
+
+        // ═══ CROSS-SECTION VIEW (viewMode 0 or 2) ═══
+        if (viewMode == 0 || viewMode == 2) {
+            drawSectionInset(
+                cw = cw, ch = ch,
+                zoneTop = sectionZoneTop,
+                zoneBottom = sectionZoneBottom,
+                beamWidth = beamWidth, beamDepth = beamDepth,
+                mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+                stirrupDia = stirrupDia,
+                cover = cover,
+                hasTopSteel = hasTopSteel,
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount
+            )
+        }
+
+        // ═══ REINFORCEMENT TABLE (viewMode 0 or 3) ═══
+        if (viewMode == 0 || viewMode == 3) {
+            val tableZoneTop = if (viewMode == 3) ch * 0.06f else 0f
+            drawReinforcementSchedule(
+                cw = cw, ch = ch,
+                beamWidth = beamWidth, beamDepth = beamDepth,
+                span = span,
+                mainRebarDia = mainRebarDia, mainRebarCount = mainRebarCount,
+                stirrupDia = stirrupDia, stirrupSpacing = stirrupSpacing,
+                hasTopSteel = hasTopSteel,
+                topRebarDia = topRebarDia, topRebarCount = topRebarCount,
+                developmentLength = developmentLength,
+                cover = cover,
+                tableZoneTop = tableZoneTop
+            )
         }
     }
 }
@@ -394,43 +331,59 @@ private fun DrawScope.draw3DBeamBody(
 /**
  * Subtle diagonal hatching lines across the front face to indicate concrete.
  */
+/**
+ * Draws professional concrete hatching pattern for section cuts.
+ */
 private fun DrawScope.drawConcreteHatching(
     left: Float, top: Float, w: Float, h: Float
 ) {
-    val step = 24f
-    val paint = HatchColor
+    val step = 15f
+    val paint = HatchColor.copy(alpha = 0.6f)
     for (offset in -h.toInt()..(w + h).toInt() step step.toInt()) {
         val x1 = left + offset.toFloat()
         val y1 = top
         val x2 = left + offset.toFloat() - h
         val y2 = top + h
-        // Clip to front face bounds
-        val clipX1 = max(left, min(x1, left + w))
-        val clipY1 = when {
-            x1 < left -> top + (left - x1)
-            x1 > left + w -> top
-            else -> top
+        
+        // Main diagonal lines
+        drawLine(color = paint, start = Offset(max(left, x1), max(top, y1)), end = Offset(min(left + w, x2), min(top + h, y2)), strokeWidth = 0.5f)
+        
+        // Small stone/aggregate symbols for "Pro" look
+        if (offset % (step * 4) == 0f) {
+            drawCircle(color = paint, radius = 1.5f, center = Offset(left + (offset % w), top + (offset % h)))
         }
-        val clipX2 = max(left, min(x2, left + w))
-        val clipY2 = when {
-            x2 < left -> top + (left - x2)
-            x2 > left + w -> top + (x2 - (left + w))
-            else -> top + h
-        }
-        if (clipX1 in left..(left + w) || clipX2 in left..(left + w)) {
-            drawLine(
-                color = paint,
-                start = Offset(
-                    x = max(left, min(left + w, x1)),
-                    y = max(top, min(top + h, y1.coerceAtLeast(top)))
-                ),
-                end = Offset(
-                    x = max(left, min(left + w, x2)),
-                    y = min(top + h, y2.coerceAtMost(top + h))
-                ),
-                strokeWidth = 0.5f
-            )
-        }
+    }
+}
+
+private fun DrawScope.drawAutoDimensions(
+    left: Float, top: Float, w: Float, h: Float,
+    span: Double, depth: Double, width: Double
+) {
+    val dimPaint = DimensionWhite
+    val extPaint = ExtensionGray
+    val textS = 18f
+    
+    // Span Dimension (Bottom)
+    val spanY = top + h + 60f
+    drawLine(extPaint, Offset(left, top + h + 5f), Offset(left, spanY + 10f), 1f)
+    drawLine(extPaint, Offset(left + w, top + h + 5f), Offset(left + w, spanY + 10f), 1f)
+    drawLine(dimPaint, Offset(left, spanY), Offset(left + w, spanY), 1.5f)
+    drawArrowHead(left, spanY, 1f, dimPaint)
+    drawArrowHead(left + w, spanY, -1f, dimPaint)
+    drawTextAnnotated("L = ${span.toInt()} mm", left + w / 2f, spanY + 25f, dimPaint, textS, center = true)
+
+    // Depth Dimension (Left)
+    val depthX = left - 60f
+    drawLine(extPaint, Offset(left - 5f, top), Offset(depthX - 10f, top), 1f)
+    drawLine(extPaint, Offset(left - 5f, top + h), Offset(depthX - 10f, top + h), 1f)
+    drawLine(dimPaint, Offset(depthX, top), Offset(depthX, top + h), 1.5f)
+    drawArrowHead(depthX, top, 1f, dimPaint, vertical = true)
+    drawArrowHead(depthX, top + h, -1f, dimPaint, vertical = true)
+    
+    drawContext.canvas.nativeCanvas.apply {
+        save(); rotate(-90f, depthX - 15f, top + h / 2f)
+        drawText("h = ${depth.toInt()} mm", depthX - 15f, top + h / 2f, android.graphics.Paint().apply { color = dimPaint.toArgb(); textSize = textS })
+        restore()
     }
 }
 
@@ -447,9 +400,9 @@ private fun DrawScope.drawSupports(
     beamBottom: Float, beamRight: Float,
     isContinuous: Boolean
 ) {
-    val supportH = 30f
-    val supportW = 28f
-    val circleR = 4f
+    val supportH = 22f
+    val supportW = 22f
+    val circleR = 3f
     val lineW = 2.dp.toPx()
 
     val supportPaint = SupportColor
@@ -487,7 +440,7 @@ private fun DrawScope.drawSupports(
             drawLine(
                 color = supportPaint,
                 start = Offset(hx, groundY + circleR * 2 + 4f),
-                end = Offset(hx - 6f, groundY + circleR * 2 + 12f),
+                end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
                 strokeWidth = 1.5f
             )
         }
@@ -546,7 +499,7 @@ private fun DrawScope.drawSupports(
         drawLine(
             color = supportPaint,
             start = Offset(hx, groundY + circleR * 2 + 4f),
-            end = Offset(hx - 6f, groundY + circleR * 2 + 12f),
+            end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
             strokeWidth = 1.5f
         )
     }
@@ -571,7 +524,8 @@ private fun DrawScope.drawCutawayReinforcement(
     stirrupDia: Double, stirrupSpacing: Double,
     cover: Double,
     hasTopSteel: Boolean,
-    topRebarDia: Double, topRebarCount: Int
+    topRebarDia: Double, topRebarCount: Int,
+    zones: List<StirrupZone> = emptyList()
 ) {
     val dimLineW = 1.dp.toPx()
 
@@ -725,47 +679,92 @@ private fun DrawScope.drawCutawayReinforcement(
     }
 
     // --- Stirrups (PURPLE) ---
-    val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
     val stirrupLineW = max(stirrupDia.toFloat() * scale * 0.15f, 1.5f)
+    val stirrupInnerTop = beamTop + coverPx
+    val stirrupInnerBottom = beamBottom - coverPx
 
-    if (stirrupSpacingPx > 5f) {
-        var sx = cutLeft
-        while (sx <= cutRight) {
-            // Stirrup inner boundaries
-            val stirrupInnerTop = beamTop + coverPx
-            val stirrupInnerBottom = beamBottom - coverPx
+    if (zones.isNotEmpty()) {
+        zones.forEach { zone ->
+            val zoneStart = beamLeft + zone.startLocation.toFloat() * scale
+            val zoneEnd = beamLeft + zone.endLocation.toFloat() * scale
+            val zSpacing = (zone.spacing.toFloat() * scale).coerceAtLeast(5f)
+            
+            var sx = zoneStart
+            while (sx < zoneEnd - 1f) {
+                if (sx >= beamLeft && sx <= beamRight) {
+                    val isInCut = sx in cutLeft..cutRight
+                    
+                    // Draw vertical stirrup legs
+                    drawLine(
+                        color = if (isInCut) StirrupPurple else StirrupPurple.copy(alpha = 0.2f),
+                        start = Offset(sx, stirrupInnerTop),
+                        end = Offset(sx, stirrupInnerBottom),
+                        strokeWidth = stirrupLineW,
+                        pathEffect = if (isInCut) null else PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+                    )
 
-            // Draw vertical stirrup legs
-            drawLine(
-                color = StirrupPurple,
-                start = Offset(sx, stirrupInnerTop),
-                end = Offset(sx, stirrupInnerBottom),
-                strokeWidth = stirrupLineW,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+                    // Draw internal legs for multi-leg stirrups in cutaway
+                    if (zone.numLegs > 2 && isInCut) {
+                        val internalLegs = zone.numLegs - 2
+                        val dx = (beamDrawD * 0.8f) / (internalLegs + 1)
+                        for (i in 1..internalLegs) {
+                            val lx = sx + i * dx * angleX
+                            val ly_offset = i * dx * angleY
+                            drawLine(
+                                color = StirrupPurple.copy(alpha = 0.7f),
+                                start = Offset(lx, stirrupInnerTop - ly_offset),
+                                end = Offset(lx, stirrupInnerBottom - ly_offset),
+                                strokeWidth = stirrupLineW * 0.9f
+                            )
+                        }
+                    }
+                }
+                sx += zSpacing
+            }
+            
+            // Zone label
+            drawTextAnnotated(
+                text = zone.name,
+                x = zoneStart + 5f, y = beamTop - 35f,
+                color = ExtensionGray, size = 18f
             )
-
-            // Bottom horizontal leg of stirrup
-            drawLine(
-                color = StirrupPurple,
-                start = Offset(sx, stirrupInnerBottom),
-                end = Offset(
-                    sx + min(stirrupSpacingPx * 0.8f, cutRight - sx),
-                    stirrupInnerBottom
-                ),
-                strokeWidth = stirrupLineW
+            drawTextAnnotated(
+                text = zone.description,
+                x = zoneStart + 5f, y = beamTop - 15f,
+                color = StirrupPurple, size = 20f
             )
-
-            // Top hook (135° bend indication)
-            val hookLen = 10f
-            drawLine(
-                color = StirrupPurple,
-                start = Offset(sx, stirrupInnerTop),
-                end = Offset(sx - hookLen, stirrupInnerTop - hookLen * 0.6f),
-                strokeWidth = stirrupLineW,
-                cap = StrokeCap.Round
-            )
-
-            sx += stirrupSpacingPx
+        }
+    } else {
+        val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+        if (stirrupSpacingPx > 5f) {
+            var sx = cutLeft
+            while (sx <= cutRight) {
+                drawLine(
+                    color = StirrupPurple,
+                    start = Offset(sx, stirrupInnerTop),
+                    end = Offset(sx, stirrupInnerBottom),
+                    strokeWidth = stirrupLineW,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+                )
+                drawLine(
+                    color = StirrupPurple,
+                    start = Offset(sx, stirrupInnerBottom),
+                    end = Offset(
+                        sx + min(stirrupSpacingPx * 0.8f, cutRight - sx),
+                        stirrupInnerBottom
+                    ),
+                    strokeWidth = stirrupLineW
+                )
+                val hookLen = 10f
+                drawLine(
+                    color = StirrupPurple,
+                    start = Offset(sx, stirrupInnerTop),
+                    end = Offset(sx - hookLen, stirrupInnerTop - hookLen * 0.6f),
+                    strokeWidth = stirrupLineW,
+                    cap = StrokeCap.Round
+                )
+                sx += stirrupSpacingPx
+            }
         }
     }
 
@@ -787,12 +786,14 @@ private fun DrawScope.drawCutawayReinforcement(
         )
     }
 
-    // Stirrup label
-    drawTextAnnotated(
-        text = "Ø${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()}",
-        x = cutRight - 80f, y = beamTop + coverPx + 18f,
-        color = StirrupPurple, size = 20f
-    )
+    // Stirrup label (only if zones empty)
+    if (zones.isEmpty()) {
+        drawTextAnnotated(
+            text = "Ø${stirrupDia.toInt()} @ ${stirrupSpacing.toInt()}",
+            x = cutRight - 80f, y = beamTop + coverPx + 18f,
+            color = StirrupPurple, size = 20f
+        )
+    }
 }
 
 // ============================================================================
@@ -860,7 +861,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
     // Label
     drawTextAnnotated(
-        text = "La = ${developmentLength.toInt()} mm",
+        text = "La = ${developmentLength.roundToInt()} mm",
         x = laEndX - 10f, y = bracketY + 22f,
         color = DevLengthColor, size = 22f
     )
@@ -893,7 +894,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
 
     // Lap dimension bracket (below beam)
-    val lapBracketY = beamBottom + 50f
+    val lapBracketY = beamBottom + 40f
     drawLine(
         color = LapSpliceColor,
         start = Offset(lapZoneStart, lapBracketY),
@@ -919,7 +920,7 @@ private fun DrawScope.drawDevelopmentAndLap(
 
     // Label
     drawTextAnnotated(
-        text = "Lap = ${lapLength.toInt()} mm",
+        text = "Lap = ${lapLength.roundToInt()} mm",
         x = lapZoneStart + 5f, y = lapBracketY + 20f,
         color = LapSpliceColor, size = 22f
     )
@@ -950,7 +951,7 @@ private fun DrawScope.drawDimensionLines(
     val arrowSize = 8f
 
     // --- Overall SPAN dimension (bottom) ---
-    val spanY = beamBottom + 80f
+    val spanY = beamBottom + 60f
     drawLine(
         color = DimensionWhite,
         start = Offset(beamLeft, spanY),
@@ -1020,7 +1021,7 @@ private fun DrawScope.drawDimensionLines(
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             drawText(
-                "h = ${beamDepth.toInt()}",
+                "h = ${beamDepth.roundToInt()} mm",
                 depthX + 22f,
                 beamTop + beamDrawH / 2f + 6f,
                 paint
@@ -1072,7 +1073,7 @@ private fun DrawScope.drawDimensionLines(
                 textAlign = android.graphics.Paint.Align.CENTER
             }
             drawText(
-                "c=${cover.toInt()}",
+                "c = ${cover.roundToInt()} mm",
                 coverX - 14f,
                 coverTopY + coverPx / 2f + 4f,
                 paint
@@ -1112,18 +1113,20 @@ private fun DrawScope.drawDimensionLines(
  */
 private fun DrawScope.drawSectionInset(
     cw: Float, ch: Float,
+    zoneTop: Float, zoneBottom: Float,
     beamWidth: Double, beamDepth: Double,
     mainRebarDia: Double, mainRebarCount: Int,
     stirrupDia: Double,
     cover: Double,
     hasTopSteel: Boolean,
-    topRebarDia: Double, topRebarCount: Int
+    topRebarDia: Double, topRebarCount: Int,
+    zones: List<StirrupZone> = emptyList()
 ) {
-    // Inset position and size
-    val insetW = min(160f, cw * 0.22f)
-    val insetH = min(220f, ch * 0.40f)
-    val insetLeft = cw - insetW - 16f
-    val insetTop = 12f
+    // Inset position and size — centered in dedicated zone below elevation
+    val insetW = min(200f, cw * 0.28f)
+    val insetH = min(zoneBottom - zoneTop - 16f, 220f)
+    val insetLeft = (cw - insetW) / 2f
+    val insetTop = zoneTop + 8f
 
     // Background panel
     drawRoundRect(
@@ -1234,10 +1237,12 @@ private fun DrawScope.drawReinforcementSchedule(
     stirrupDia: Double, stirrupSpacing: Double,
     hasTopSteel: Boolean,
     topRebarDia: Double, topRebarCount: Int,
-    developmentLength: Double
+    developmentLength: Double,
+    cover: Double,
+    tableZoneTop: Float = 0f
 ) {
     val tableLeft = 16f
-    val tableTop = ch * 0.68f
+    val tableTop = if (tableZoneTop > 0f) tableZoneTop + 8f else ch * 0.66f
     val tableW = cw - 32f
     val rowH = 26f
     val headerH = 30f
@@ -1319,7 +1324,8 @@ private fun DrawScope.drawReinforcementSchedule(
     // --- Row 2: Stirrups ---
     val row2Y = row1Y + rowH
     val stirrupCount = ((span / stirrupSpacing) + 1).toInt()
-    val stirrupLength = 2 * (beamWidth + beamDepth) - 8 * 25  // approximate
+    val stirrupCutLength = 2 * (beamWidth + beamDepth) - 8 * cover + 2 * 10 * stirrupDia  // 10d hooks per ECP 203
+    val stirrupLength = stirrupCutLength
     val row2Data = arrayOf(
         "S1",
         "Ø${stirrupDia.toInt()}",

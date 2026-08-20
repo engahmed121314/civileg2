@@ -51,11 +51,11 @@ fun CalculatorScreen(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Display Area - compact height to leave room for keypad
+            // Display Area
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
+                    .height(180.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
             ) {
@@ -91,7 +91,7 @@ fun CalculatorScreen(
                 }
             }
 
-            // History - compact single-line to avoid pushing buttons off-screen
+            // History
             if (history.isNotEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -100,27 +100,21 @@ fun CalculatorScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                         Text(
                             stringResource(R.string.calc_history),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            history.takeLast(1).last(),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(start = 8.dp)
-                        )
+                        history.takeLast(3).reversed().forEach { h ->
+                            Text(
+                                h,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(vertical = 1.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -150,9 +144,9 @@ fun CalculatorScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Main keypad - fill remaining space so buttons don't get pushed off
+            // Main keypad - 5 rows x 4 columns
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Row 1: C, (, ), ÷

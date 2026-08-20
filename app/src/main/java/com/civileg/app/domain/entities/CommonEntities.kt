@@ -33,6 +33,17 @@ data class ShearCheckResult(
     val warnings: List<String> = emptyList()
 ) : Parcelable
 
+@Parcelize
+data class StirrupZone(
+    val name: String,
+    val startLocation: Double, // mm
+    val endLocation: Double,   // mm
+    val spacing: Double,       // mm
+    val numLegs: Int = 2,
+    val diameter: Int = 8,
+    val description: String = ""
+) : Parcelable
+
 /**
  * نتائج تسليح القص (للكمرات)
  */
@@ -45,6 +56,8 @@ data class ShearReinforcementResult(
     val providedShearReinforcement: Double = 0.0,
     val stirrupDiameter: Double = 0.0,
     val stirrupSpacing: Double = 0.0,
+    val numLegs: Int = 2,
+    val zones: List<StirrupZone> = emptyList(),
     val isSafe: Boolean = true,
     val utilizationRatio: Double = 0.0,
     val warnings: List<String> = emptyList(),
@@ -143,3 +156,16 @@ enum class CoatingType : Parcelable {
     EPOXY_COATED, 
     GALVANIZED 
 }
+
+/**
+ * ملخص المشروع (Project Summary)
+ */
+@Parcelize
+data class ProjectSummary(
+    val totalConcrete: Double = 0.0,
+    val totalSteel: Double = 0.0,
+    val totalCost: Double = 0.0,
+    val designCount: Int = 0,
+    val costEfficiencyIndex: Double = 1.0,
+    val costBreakdown: Map<String, Double> = emptyMap()
+) : Parcelable

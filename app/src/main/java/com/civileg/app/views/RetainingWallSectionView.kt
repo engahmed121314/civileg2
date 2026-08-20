@@ -11,6 +11,7 @@ import kotlin.math.min
  * Professional Retaining Wall Section View
  * Features: Engineering hatching, reinforcement detailing, soil visualization, and dimensioning.
  */
+@Deprecated("Use ProfessionalRetainingWallDrawing")
 class RetainingWallSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

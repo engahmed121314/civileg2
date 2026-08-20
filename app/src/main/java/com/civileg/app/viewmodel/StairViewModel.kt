@@ -5,21 +5,19 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
 class StairViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine,
-    private val settingsManager: SettingsManager
+    private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
-
-    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.StairResult?>()
     val result: LiveData<CalculatorEngine.StairResult?> = _result
@@ -32,6 +30,13 @@ class StairViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateStairPro(
         type: CalculatorEngine.StairType,
@@ -60,6 +65,11 @@ class StairViewModel @Inject constructor(
                     preferredDiameter = preferredDiameter,
                     code = code
                 )
+                
+                // Validate result for engineering consistency
+                val report = CalculationValidator.validateStair(res)
+                _validationReport.value = report
+                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -96,20 +106,29 @@ class StairViewModel @Inject constructor(
 
                     // Generate drawing for PDF
                     val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
-                    val drawingBitmap = try {
+                    val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
+                    val pdfCover = when(currentResult.code) {
+                        CalculatorEngine.DesignCode.ACI -> 38.0
+                        CalculatorEngine.DesignCode.SAUDI -> 40.0
+                        else -> 25.0
+                    }
+                    // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = totalHeight,
-                            totalLength = currentResult.span,
-                            stairWidth = 1000.0,
+                            totalLength = nRisers.toDouble() * currentResult.tread,
+                            stairWidth = 1200.0,
                             riserHeight = currentResult.riser,
                             treadWidth = currentResult.tread,
                             slabThickness = currentResult.thickness,
                             mainDia = currentResult.reinforcement.diameter.toDouble(),
                             mainSpacing = currentResult.reinforcement.spacing,
                             distDia = currentResult.distributionReinforcement.diameter.toDouble(),
-                            distSpacing = currentResult.distributionReinforcement.spacing
+                            distSpacing = currentResult.distributionReinforcement.spacing,
+                            cover = pdfCover
                         )
                     } catch (e: Exception) { e.printStackTrace(); null }
+                    pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
                         CalculatorEngine.DesignCode.ACI -> "ACI 318"
@@ -167,33 +186,13 @@ class StairViewModel @Inject constructor(
             }
         }
     }
-
-
-    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
-        val res = _result.value ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "Stair_Drawing_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = java.io.File(directory, fileName)
-                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateStairDxf(res)
-                file.writeText(dxfContent)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
-                    _isExporting.value = false
-                    onComplete(file)
-                }
-            } catch (e: Throwable) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _error.value = "DXF export failed: ${e.message}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
 }
+
+data class StairInputData(
+    val rise: Double,
+    val run: Double,
+    val width: Double,
+    val load: Double,
+    val fcu: Double,
+    val fy: Double
+)

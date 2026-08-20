@@ -46,9 +46,10 @@ class ECPSlab : SlabDesign {
             warnings.add(String.format("K=%.3f > K_bal=%.3f - Section is over-reinforced, increase slab thickness", K, K_bal))
         }
         
-        // ذراع القوة: z = d × (0.5 + √(0.25 - K/1.25)) حسب ECP 203
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / 1.25))
+        // ذراع القوة: z = d × (0.5 + √(0.25 - K/0.893)) حسب ECP 203 K-method
+        // 0.893 = γc/(2×0.67) = 1.5/1.34
+        val leverArm = if (0.25 - K / 0.893 > 0) {
+            effectiveDepth * (0.5 + sqrt(0.25 - K / 0.893))
         } else {
             effectiveDepth * 0.7  // تقريب آمن للحالات الحرجة
         }
@@ -57,7 +58,7 @@ class ECPSlab : SlabDesign {
         var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0 // mm²/m
         
         // الحد الأدنى للتسليح للبلاطات (0.6/fy * b * d or 0.15% Ag)
-        val minSteel = max(0.6 / fy.coerceAtLeast(1.0) * width * effectiveDepth, 0.0015 * width * slabThickness)
+        val minSteel = max(0.26 * sqrt(fcu) / fy * width * effectiveDepth, 0.0013 * width * effectiveDepth)  // ECP 203: based on d
         if (astRequired < minSteel) {
             astRequired = minSteel
             warnings.add("Minimum reinforcement applied")
@@ -77,7 +78,7 @@ class ECPSlab : SlabDesign {
         
         // التحقق من القص - ECP 203 البند 4-3-1-2
         // qcu = 0.24 × √(fcu) / γc per ECP 203 §4-3-1-2
-        val qcu = 0.24 * sqrt(fcu) / GAMMA_C  // MPa
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa — ECP 203 §4-3-1-2 (includes γc)
         val shearCapacity = qcu * width * effectiveDepth / 1000.0  // kN/m
         
         // designShear بالفعل هو القوة القصية التصميمية (kN/m)
@@ -207,7 +208,7 @@ class ECPSlab : SlabDesign {
         return max(span / ratio, 100.0)
     }
 
-    override fun getMinReinforcementRatio(): Double = 0.0015 // 0.15% Ag
+    override fun getMinReinforcementRatio(): Double = 0.0013 // 0.13% Ag
     override fun getMaxBarSpacing(): Double = 200.0
     override fun getMinCover(): Double = 20.0 // 20 مم للبلاطات المحمية
 }

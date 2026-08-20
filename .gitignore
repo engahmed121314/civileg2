@@ -42,6 +42,3 @@ keystore.properties
 # Sensitive CI/CD
 .env
 secrets.properties
-
-# Firebase — placeholder is committed for compilation; real key goes in CI secrets
-# app/google-services.json  (uncomment when real key is injected via CI)

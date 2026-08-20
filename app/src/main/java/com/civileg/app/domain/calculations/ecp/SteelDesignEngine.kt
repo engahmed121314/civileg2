@@ -126,7 +126,9 @@ class SteelDesignEngine {
         section: SectionProperties,
         grade: SteelGrade = SteelGrade.ST37
     ): SteelCheckResult {
-        val Aw = section.h * section.tw // mm² - مساحة الجذع
+        // [FIX] Shear area uses web depth (h - 2tf), not full depth
+        val hw = section.h - 2 * section.tf
+        val Aw = hw * section.tw // mm² - مساحة الجذع
         val Vn = 0.6 * grade.fy * Aw / 1000.0 // kN
         val phiVn = PHI_SHEAR * Vn
         val ratio = Vu / phiVn

@@ -44,9 +44,7 @@ class DesignHistoryAdapter(
                 DesignType.SEISMIC -> R.drawable.ic_search
                 DesignType.STEEL_MEMBER -> R.drawable.ic_steel
                 DesignType.STEEL_WAREHOUSE -> R.drawable.ic_steel
-                DesignType.PILE_FOUNDATION -> R.drawable.ic_pile
-                DesignType.FLAT_SLAB -> R.drawable.ic_slab
-                DesignType.SHEAR_WALL -> R.drawable.ic_wall
+                DesignType.FRAME_ANALYSIS -> R.drawable.ic_search
             }
             binding.ivDesignType.setImageResource(iconRes)
 

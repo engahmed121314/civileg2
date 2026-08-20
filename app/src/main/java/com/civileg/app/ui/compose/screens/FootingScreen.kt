@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.animation.core.animateFloatAsState
@@ -31,6 +32,10 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +49,12 @@ fun FootingScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -69,13 +80,6 @@ fun FootingScreen(
     var maxRight by remember { mutableStateOf("") }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
-    // Auto-design from soil parameters
-    var showAutoDesign by remember { mutableStateOf(false) }
-    var soilLengthM by remember { mutableStateOf("10.0") }
-    var soilWidthM by remember { mutableStateOf("8.0") }
-    var totalSoilLoad by remember { mutableStateOf("5000") }
-    var numberOfFootings by remember { mutableStateOf("4") }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -90,10 +94,10 @@ fun FootingScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -136,7 +140,7 @@ fun FootingScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(colLength, stringResource(R.string.footing_column_length_mm), { colLength = it }, Modifier.weight(1f))
-                    FootingInputField(colWidth, stringResource(R.string.slab_column_width_mm), { colWidth = it }, Modifier.weight(1f))
+                    FootingInputField(colWidth, stringResource(R.string.footing_column_width_mm), { colWidth = it }, Modifier.weight(1f))
                 }
             }
 
@@ -184,93 +188,6 @@ fun FootingScreen(
                     selectedCode = selectedCode,
                     onCodeSelected = { selectedCode = it }
                 )
-            }
-
-            // ── Auto-Design from Soil Parameters ──
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Auto-Design from Soil", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            }
-                            IconButton(onClick = { showAutoDesign = !showAutoDesign }) {
-                                Icon(
-                                    if (showAutoDesign) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = "Toggle"
-                                )
-                            }
-                        }
-
-                        if (showAutoDesign) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Enter soil area dimensions and total load to auto-design foundations",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(12.dp))
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                FootingInputField(soilLengthM, "Soil Length (m)", { soilLengthM = it }, Modifier.weight(1f))
-                                FootingInputField(soilWidthM, "Soil Width (m)", { soilWidthM = it }, Modifier.weight(1f))
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                FootingInputField(totalSoilLoad, "Total Load (kN)", { totalSoilLoad = it }, Modifier.weight(1f))
-                                FootingInputField(numberOfFootings, "No. of Footings", { numberOfFootings = it }, Modifier.weight(1f))
-                            }
-                            Spacer(Modifier.height(12.dp))
-
-                            val autoValid = soilLengthM.toDoubleOrNull()?.let { it > 0 } == true
-                                    && soilWidthM.toDoubleOrNull()?.let { it > 0 } == true
-                                    && totalSoilLoad.toDoubleOrNull()?.let { it > 0 } == true
-                                    && numberOfFootings.toIntOrNull()?.let { it > 0 } == true
-                                    && fcu.toDoubleOrNull()?.let { it > 0 } == true
-                                    && fy.toDoubleOrNull()?.let { it > 0 } == true
-                                    && soilCapacity.toDoubleOrNull()?.let { it > 0 } == true
-
-                            Button(
-                                onClick = {
-                                    if (!autoValid) return@Button
-                                    viewModel.autoDesignFromSoil(
-                                        soilLengthM = soilLengthM.toDouble()!!,
-                                        soilWidthM = soilWidthM.toDouble()!!,
-                                        totalSoilLoadKN = totalSoilLoad.toDouble()!!,
-                                        numberOfFootings = numberOfFootings.toInt()!!,
-                                        fcu = fcu.toDouble()!!,
-                                        fy = fy.toDouble()!!,
-                                        soilCapacity = soilCapacity.toDouble()!!,
-                                        colWidth = colWidth.toDouble()!!,
-                                        colDepth = colLength.toDouble()!!,
-                                        code = selectedCode
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                enabled = !isLoading && autoValid,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                            ) {
-                                if (isLoading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onTertiary)
-                                } else {
-                                    Icon(Icons.Default.AutoFixHigh, null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Auto-Design All Footings")
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             item {
@@ -432,10 +349,16 @@ fun FootingScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { 
-                                viewModel.exportToPdf(context) { file -> }
+                            onClick = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file -> }
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -443,23 +366,12 @@ fun FootingScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                             } else {
-                                Icon(Icons.Default.PictureAsPdf, null)
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
                             }
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (isExporting) stringResource(R.string.footing_exporting) else stringResource(R.string.pdf_report))
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.exportToDxf(context) { _ -> } },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            Icon(Icons.Default.Draw, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF")
                         }
 
                         Button(
@@ -468,14 +380,25 @@ fun FootingScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
+                            Icon(Icons.Default.Save, null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
 
                 item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val configuration = LocalConfiguration.current
+                    val screenW = configuration.screenWidthDp.dp
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (350 * wRatio).toInt().coerceIn(250, 450)
+                        2 -> (320 * wRatio).toInt().coerceIn(220, 420)
+                        3 -> (280 * wRatio).toInt().coerceIn(200, 380)
+                        else -> (700 * wRatio).toInt().coerceIn(500, 900)
+                    }
                     // Map footing type to English name expected by the drawing
                     val footingTypeEnglish = when (selectedType) {
                         CalculatorEngine.FootingType.ISOLATED -> "Isolated"
@@ -498,7 +421,10 @@ fun FootingScreen(
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.footing_drawing_title),
                         subtitle = stringResource(R.string.footing_reinforcement_detail),
-                        viewModes = emptyList(),
+                        drawingHeightDp = drawingHeight,
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             ProfessionalFootingDrawing(
                                 footingType = footingTypeEnglish,
@@ -511,21 +437,12 @@ fun FootingScreen(
                                 rebarXCount = res.barsX,
                                 rebarYDia = res.barDiameter.toDouble(),
                                 rebarYCount = res.barsY,
-                                cover = 75.0,
+                                cover = 70.0,
                                 col1X = col1XPos,
                                 col2X = col2XPos,
                                 soilPressureMax = res.soilPressure,
                                 soilPressureMin = res.soilPressure,
-                                axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
-                                punchingShear = res.punchingShear,
-                                punchingCapacity = res.punchingCapacity,
-                                bendingMoment = res.bendingMoment,
-                                netPressure = res.soilPressure,
-                                isSafe = res.isSafe,
-                                utilizationRatio = res.utilizationRatio,
-                                fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0,
-                                isArabic = viewModel.isArabic,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -533,6 +450,54 @@ fun FootingScreen(
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            val footingTypeEnglish = when (selectedType) {
+                CalculatorEngine.FootingType.ISOLATED -> "Isolated"
+                CalculatorEngine.FootingType.COMBINED -> "Combined"
+                CalculatorEngine.FootingType.RAFT -> "Raft"
+                CalculatorEngine.FootingType.STRIP -> "Isolated"
+                CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
+            }
+            val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                val dist = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0
+                val p1 = axialLoad.toDoubleOrNull() ?: 1200.0
+                val p2 = axialLoad2.toDoubleOrNull() ?: 1000.0
+                val xR = (p2 * dist) / (p1 + p2)
+                val s1 = 600.0
+                Pair(s1, s1 + dist)
+            } else {
+                Pair(0.0, 0.0)
+            }
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalFootingDrawing(
+                        footingType = footingTypeEnglish,
+                        footingLengthX = res.length.toDouble(),
+                        footingLengthY = res.width.toDouble(),
+                        footingThickness = res.thickness.toDouble(),
+                        columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                        columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                        rebarXDia = res.barDiameter.toDouble(),
+                        rebarXCount = res.barsX,
+                        rebarYDia = res.barDiameter.toDouble(),
+                        rebarYCount = res.barsY,
+                        cover = 70.0,
+                        col1X = col1XPos,
+                        col2X = col2XPos,
+                        soilPressureMax = res.soilPressure,
+                        soilPressureMin = res.soilPressure,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 
@@ -576,7 +541,7 @@ fun FootingScreen(
                     result?.let { viewModel.saveFooting(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {

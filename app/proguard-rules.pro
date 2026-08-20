@@ -91,29 +91,9 @@
 -keep class androidx.** { *; }
 -dontwarn androidx.**
 
+# --- SLF4J (used by some libraries transitively) ---
+-dontwarn org.slf4j.**
+-keep class org.slf4j.** { *; }
+
 # --- Security: Keep application and model classes ---
 -keep class com.civileg.app.** { *; }
-
-# ===== Firebase Crashlytics =====
--keepattributes *Annotation*
--keepattributes SourceFile,LineNumberTable
--keep public class * extends java.lang.Exception
-
-# ===== Google Play Billing =====
--keep class com.android.vending.billing.** { *; }
--dontwarn com.android.billingclient.**
-
-# ===== Gson (for DesignRepository serialization) =====
--keep class com.civileg.app.db.** { *; }
--keep class com.civileg.app.domain.entities.** { *; }
--keep class com.civileg.app.utils.CalculatorEngine$* { *; }
--keepclassmembers class com.civileg.app.utils.CalculatorEngine$* { *; }
--keepattributes Signature
--keepattributes *Annotation*
--keep class sun.misc.Unsafe { *; }
--dontwarn sun.misc.**
-
-# ===== Keep all strategy implementations (Room/Billing may need reflection) =====
--keep class com.civileg.app.domain.calculations.ecp.** { *; }
--keep class com.civileg.app.domain.calculations.aci.** { *; }
--keep class com.civileg.app.domain.calculations.sbc.** { *; }

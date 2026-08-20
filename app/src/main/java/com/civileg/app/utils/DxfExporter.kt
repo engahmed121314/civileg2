@@ -1,101 +1,84 @@
 package com.civileg.app.utils
 
-import com.civileg.app.domain.entities.*
-import java.util.Locale
+import java.io.File
+import java.io.FileOutputStream
 
-/**
- * Legacy DXF exporter — kept for backward-compat only.
- * All active DXF generation has been migrated to [DxfExportEngine].
- */
-@Deprecated("Use DxfExportEngine instead — this object is retained only for API compat.")
 object DxfExporter {
-    private fun isAr() = LocaleHelper.isArabic()
-    private fun tr(en: String, ar: String): String = if (isAr()) ar else en
 
-    // ─── FOOTING (legacy API) ─────────────────────────────────────────
-    fun exportFootingDetailed(
-        result: CalculatorEngine.FootingResult,
-        colWidth: Double,
-        colDepth: Double,
+    /**
+     * Exports site layout to a DXF file.
+     */
+    fun exportSiteLayout(
+        columns: List<ColumnLoad>,
+        plotWidth: Double,
+        plotLength: Double,
         outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateFootingDxf(result, colWidth, colDepth)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
+    ): File {
+        val sb = StringBuilder()
+        
+        // Header
+        sb.append("0\nSECTION\n2\nHEADER\n0\nENDSEC\n")
+        
+        // Tables (Layers)
+        sb.append("0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n")
+        sb.append("0\nLAYER\n2\nAXES\n70\n0\n62\n1\n") // Red
+        sb.append("0\nLAYER\n2\nCOLUMNS\n70\n0\n62\n4\n") // Cyan
+        sb.append("0\nLAYER\n2\nFOOTINGS\n70\n0\n62\n3\n") // Green
+        sb.append("0\nENDTAB\n0\nENDSEC\n")
+
+        // Entities
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+
+        // 1. Draw Plot Boundary
+        drawRect(sb, 0.0, 0.0, plotWidth * 1000.0, plotLength * 1000.0, "0")
+
+        // 2. Draw Axes
+        val axesX = columns.map { it.x }.distinct().sorted()
+        val axesY = columns.map { it.y }.distinct().sorted()
+        
+        axesX.forEach { x ->
+            drawLine(sb, x, -1000.0, x, plotLength * 1000.0 + 1000.0, "AXES")
+        }
+        axesY.forEach { y ->
+            drawLine(sb, -1000.0, y, plotWidth * 1000.0 + 1000.0, y, "AXES")
+        }
+
+        // 3. Draw Columns and Footings
+        columns.forEach { col ->
+            // Column
+            drawRect(sb, col.x - col.width/2.0, col.y - col.depth/2.0, col.width, col.depth, "COLUMNS")
+            
+            // Footing (Estimated size for DXF)
+            val footingSide = Math.sqrt((col.axialLoad * 1.1) / 200.0) * 1000.0
+            drawRect(sb, col.x - footingSide/2.0, col.y - footingSide/2.0, footingSide, footingSide, "FOOTINGS")
+            
+            // Label
+            drawText(sb, col.x + col.width/2.0, col.y + col.depth/2.0, col.id, "0", 150.0)
+        }
+
+        sb.append("0\nENDSEC\n0\nEOF\n")
+
+        val file = File(outputPath)
+        FileOutputStream(file).use { it.write(sb.toString().toByteArray()) }
         return file
     }
 
-    // ─── BEAM (legacy API) ─────────────────────────────────────────────
-    fun exportBeamDetailed(
-        result: CalculatorEngine.BeamResult,
-        width: Double,
-        height: Double,
-        span: Double,
-        outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateBeamDxf(result, span)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
-        return file
+    private fun drawLine(sb: StringBuilder, x1: Double, y1: Double, x2: Double, y2: Double, layer: String) {
+        sb.append("0\nLINE\n8\n$layer\n")
+        sb.append("10\n$x1\n20\n$y1\n30\n0.0\n")
+        sb.append("11\n$x2\n21\n$y2\n31\n0.0\n")
     }
 
-    // ─── COLUMN (legacy API) ───────────────────────────────────────────
-    fun exportColumnDetailed(
-        result: CalculatorEngine.ColumnResult,
-        width: Double,
-        depth: Double,
-        height: Double,
-        outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateColumnDxf(result, height / 1000.0)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
-        return file
+    private fun drawRect(sb: StringBuilder, x: Double, y: Double, w: Double, d: Double, layer: String) {
+        drawLine(sb, x, y, x + w, y, layer)
+        drawLine(sb, x + w, y, x + w, y + d, layer)
+        drawLine(sb, x + w, y + d, x, y + d, layer)
+        drawLine(sb, x, y + d, x, y, layer)
     }
 
-    // ─── SLAB (legacy API) ─────────────────────────────────────────────
-    fun exportSlabDetailed(
-        result: CalculatorEngine.SlabResult,
-        lx: Double,
-        ly: Double,
-        outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateSlabDxf(result, lx, ly)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
-        return file
-    }
-
-    // ─── STAIR (legacy API) ────────────────────────────────────────────
-    fun exportStairDetailed(
-        result: CalculatorEngine.StairResult,
-        outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateStairDxf(result)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
-        return file
-    }
-
-    // ─── TANK (legacy API) ─────────────────────────────────────────────
-    fun exportTankDetailed(
-        result: CalculatorEngine.TankResult,
-        outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateTankDxf(result)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
-        return file
-    }
-
-    // ─── RETAINING WALL (legacy API) ───────────────────────────────────
-    fun exportRetainingWallDetailed(
-        result: CalculatorEngine.RetainingWallResult,
-        outputPath: String
-    ): java.io.File {
-        val dxf = DxfExportEngine.generateRetainingWallDxf(result)
-        val file = java.io.File(outputPath)
-        file.writeText(dxf)
-        return file
+    private fun drawText(sb: StringBuilder, x: Double, y: Double, text: String, layer: String, height: Double) {
+        sb.append("0\nTEXT\n8\n$layer\n")
+        sb.append("10\n$x\n20\n$y\n30\n0.0\n")
+        sb.append("40\n$height\n1\n$text\n")
     }
 }

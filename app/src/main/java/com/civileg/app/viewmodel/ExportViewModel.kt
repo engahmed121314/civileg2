@@ -97,8 +97,8 @@ class ExportViewModel @Inject constructor(
                         beamWidth = inputs.width,
                         beamDepth = inputs.totalDepth,
                         span = inputs.span,
-                        mainRebarDia = 20.0, // default, should come from result
-                        mainRebarCount = 4,
+                        mainRebarDia = result.flexureResult.barDiameter,
+                        mainRebarCount = result.flexureResult.numberOfBars,
                         stirrupDia = 8.0,
                         stirrupSpacing = 200.0,
                         momentPoints = diagrams.momentPoints,
@@ -188,14 +188,29 @@ class ExportViewModel @Inject constructor(
                 val outputFile = File(outputDir, fileName)
                 
                 val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateSteelDrawing(
-                    sectionName = sectionType.displayName,
+                    sectionName = sectionType.sectionName,
                     sectionHeight = sectionType.depth,
                     flangeWidth = sectionType.width,
                     webThickness = sectionType.webThickness,
                     flangeThickness = sectionType.flangeThickness,
                     memberLength = inputs.length,
                     isSafe = result.isSafe,
-                    utilizationRatio = result.utilizationRatio * 100
+                    utilizationRatio = result.utilizationRatio * 100,
+                    sectionType = sectionType.displayName,
+                    radius = sectionType.rootRadius,
+                    area = sectionType.area,
+                    ix = sectionType.ix,
+                    sx = sectionType.sx,
+                    zx = sectionType.zx,
+                    weightPerMeter = sectionType.weight,
+                    boltDia = 20.0,
+                    boltCount = 4,
+                    boltGauge = 90.0,
+                    boltPitch = 75.0,
+                    endPlateThickness = 12.0,
+                    hasStiffener = false,
+                    weldSize = 6.0,
+                    isColumn = memberType == SteelMemberType.COLUMN
                 )
                 
                 val file = pdfExporter.exportSteelReport(
@@ -266,7 +281,7 @@ class ExportViewModel @Inject constructor(
             val distBars = result.reinforcementLayout.distributionBars
             
             PdfDrawingGenerator.generateSlabDrawing(
-                spanX = lx * 1000, spanY = ly * 1000, thickness = thickness,
+                spanX = lx, spanY = ly, thickness = thickness,
                 mainDia = bottomBars.diameter, mainSpacing = bottomBars.spacing,
                 distDia = distBars?.diameter ?: 12.0, distSpacing = distBars?.spacing ?: 200.0
             )

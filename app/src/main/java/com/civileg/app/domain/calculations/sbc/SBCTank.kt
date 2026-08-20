@@ -41,8 +41,8 @@ class SBCTank : TankDesign {
         val H = height / 1000.0
         val hW = waterDepth / 1000.0
 
-        // SBC 304: f'c = 0.67 × fcu / γc
-        val fcPrime = 0.67 * fcu / GAMMA_C
+        // SBC 304 follows ACI: f'c = 0.8 x fcu
+        val fcPrime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
 
         // 1. السعة
         val capacityM3 = L * B * hW

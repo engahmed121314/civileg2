@@ -143,8 +143,9 @@ class ECPStaircase : StaircaseDesign {
 
         codeNotes.add("K = ${String.format("%.4f", K)}, K_bal = ${String.format("%.4f", kBal)}")
 
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        val K_DIVISOR = 0.893  // γc/(2×0.67) per ECP 203 K-method
+        val leverArm = if (0.25 - K / K_DIVISOR > 0) {
+            d * (0.5 + sqrt(0.25 - K / K_DIVISOR))
         } else {
             d * 0.7
         }
@@ -153,8 +154,8 @@ class ECPStaircase : StaircaseDesign {
         var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0
 
         // الحد الأدنى للتسليح: 0.15% من b×d للبلاطات (ECP 203)
-        val minSteelRatio = 0.0015
-        val minSteelArea = max(minSteelRatio * b * d, 0.6 / input.fy.coerceAtLeast(1.0) * b * d)
+        val minSteelRatio = 0.0013
+        val minSteelArea = max(0.26 * sqrt(input.fcu) / input.fy * b * d, 0.0013 * b * d)
 
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
@@ -185,9 +186,9 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 6. تصميم القص ==========
         val Vu = adjustedShear * 1000.0
-        val qcu = 0.24 * sqrt(input.fcu) / GAMMA_C
+        val qcu = 0.24 * sqrt(input.fcu / GAMMA_C)  // ECP 203 §4-3-1-2
         val concreteShearCapacity = qcu * b * d / 1000.0
-        val maxShearStress = 0.7 * sqrt(input.fcu / GAMMA_C)
+        val maxShearStress = 0.7 * sqrt(input.fcu / GAMMA_C)  // ECP 203
         val maxShearCapacity = maxShearStress * b * d / 1000.0
 
         val shearSafe = (Vu / 1000.0) <= maxShearCapacity
@@ -309,7 +310,7 @@ class ECPStaircase : StaircaseDesign {
     private fun calculateKBal(fcu: Double, fy: Double): Double {
         val epsilonCu = 0.003
         val epsilonY = fy / (E_S * GAMMA_S)
-        val aOverD = 0.8 * epsilonCu / (epsilonCu + epsilonY)
+        val aOverD = 0.9 * epsilonCu / (epsilonCu + epsilonY)
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
 

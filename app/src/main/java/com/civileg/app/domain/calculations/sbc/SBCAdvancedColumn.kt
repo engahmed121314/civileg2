@@ -902,8 +902,8 @@ class SBCAdvancedColumn : ColumnDesign {
             1.0
         }
 
-        // تعديل زلزالي (SBC Section 21)
-        val seismicFactor = if (isSeismicZone) 0.85 else 1.0 // تخفيض 15% في المناطق الزلزالية
+        // No seismic reduction factor per SBC 304/ACI 318 — removed unfounded 0.85 factor
+        val seismicFactor = 1.0
 
         val designCapacity = vc * capFactor * seismicFactor
         val capacityForce = designCapacity * criticalPerimeter * d / 1000.0 // kN

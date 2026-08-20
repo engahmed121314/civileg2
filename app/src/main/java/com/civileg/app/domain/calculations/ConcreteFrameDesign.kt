@@ -130,11 +130,10 @@ object ConcreteFrameDesign {
 
         if (K <= Kbal) {
             // Singly reinforced
-            val discriminant = 0.25 - K / 1.5
-            val z = if (discriminant > 0) d * (0.5 + sqrt(discriminant)) else d * 0.825 // fallback to 0.825d
-            val zClamped = min(z, 0.95 * d).coerceAtLeast(0.5 * d) // ensure z is reasonable
+            val z = d * (0.5 + sqrt(0.25 - K / (1.5 * if (code == DesignCode.ECP) 1.0 else 1.0)))
+            val zClamped = min(z, 0.95 * d)
             val As = Mu * 1e6 / (0.87 * fy * zClamped)
-            return Triple(if (As.isNaN()) 0.0 else As, true, Kbal)
+            return Triple(As, true, Kbal)
         } else {
             // Need compression reinforcement (doubly reinforced)
             warnings.add("القسم يحتاج تسليح مضغوط (معادلة من درجتين)")

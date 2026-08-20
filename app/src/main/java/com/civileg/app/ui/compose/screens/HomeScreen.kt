@@ -144,6 +144,7 @@ private val quickTools = listOf(
     QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
     QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
     QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+    QuickTool(R.string.home_section_tools_title, R.string.home_footing_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
     QuickTool(R.string.home_inventory,     R.string.home_inventory_sub,     Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
 )
 
@@ -183,9 +184,7 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> stringResource(R.string.design_type_steel_member)
                 DesignType.PILE -> stringResource(R.string.design_type_pile)
                 DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
-                DesignType.PILE_FOUNDATION -> "Pile Foundation"
-                DesignType.FLAT_SLAB -> "Flat Slab"
-                DesignType.SHEAR_WALL -> "Shear Wall"
+                DesignType.FRAME_ANALYSIS -> "Frame Analysis"
             }
             val icon = when (design.type) {
                 DesignType.BEAM -> Icons.Default.AccountBalance

@@ -45,17 +45,6 @@ import com.civileg.app.domain.calculations.aci.ACIStaircase
 import com.civileg.app.domain.calculations.sbc.SBCStaircase
 import com.civileg.app.domain.calculations.base.StaircaseDesign
 import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.domain.calculations.base.PileFoundationDesign
-import com.civileg.app.domain.calculations.base.FlatSlabDesign
-import com.civileg.app.domain.calculations.base.ShearWallDesign
-import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
-import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
-import com.civileg.app.domain.calculations.ecp.ECPShearWall
-import com.civileg.app.domain.calculations.aci.ACIFlatSlab
-import com.civileg.app.domain.calculations.aci.ACIShearWall
-import com.civileg.app.domain.calculations.sbc.SBCPileFoundation
-import com.civileg.app.domain.calculations.sbc.SBCFlatSlab
-import com.civileg.app.domain.calculations.sbc.SBCShearWall
 
 object CalculationFactory {
     
@@ -113,17 +102,33 @@ object CalculationFactory {
 
     // ========== البلاطات المتخصصة (Specialized Slabs) ==========
 
-    fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = ECPHordiSlabDesign()
+    fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = when (code) {
+        DesignCode.ECP -> ECPHordiSlabDesign()
+        // Fallback: No ACI/SBC-specific hordi slab implementation exists yet; using ECP as default
+        DesignCode.ACI, DesignCode.SBC -> ECPHordiSlabDesign()
+    }
 
-    fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = ECPWaffleSlabDesign()
+    fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = when (code) {
+        DesignCode.ECP -> ECPWaffleSlabDesign()
+        // Fallback: No ACI/SBC-specific waffle slab implementation exists yet; using ECP as default
+        DesignCode.ACI, DesignCode.SBC -> ECPWaffleSlabDesign()
+    }
 
     // ========== كمرات مزدوجة التسليح (Doubly Reinforced Beams) ==========
 
-    fun getDoublyReinforcedBeamDesign(code: DesignCode): ECPDoublyReinforcedBeam = ECPDoublyReinforcedBeam()
+    fun getDoublyReinforcedBeamDesign(code: DesignCode): ECPDoublyReinforcedBeam = when (code) {
+        DesignCode.ECP -> ECPDoublyReinforcedBeam()
+        // Fallback: No ACI/SBC-specific doubly reinforced beam implementation exists yet; using ECP as default
+        DesignCode.ACI, DesignCode.SBC -> ECPDoublyReinforcedBeam()
+    }
 
     // ========== القواعد المركبة (Combined Footings) ==========
 
-    fun getCombinedFootingDesign(code: DesignCode): ECPCombinedFooting = ECPCombinedFooting()
+    fun getCombinedFootingDesign(code: DesignCode): ECPCombinedFooting = when (code) {
+        DesignCode.ECP -> ECPCombinedFooting()
+        // Fallback: No ACI/SBC-specific combined footing implementation exists yet; using ECP as default
+        DesignCode.ACI, DesignCode.SBC -> ECPCombinedFooting()
+    }
 
     // ========== البلاطات المتقدمة (Advanced Slab Design) ==========
 
@@ -147,29 +152,5 @@ object CalculationFactory {
         DesignCode.ECP -> ECPStaircase()
         DesignCode.ACI -> ACIStaircase()
         DesignCode.SBC -> SBCStaircase()
-    }
-
-    // ========== الركائز (Pile Foundation) ==========
-
-    fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
-        DesignCode.ECP -> ECPPileFoundation()
-        DesignCode.ACI -> ECPPileFoundation()  // ACI uses same geotechnical approach
-        DesignCode.SBC -> SBCPileFoundation()
-    }
-
-    // ========== البلاطات المسطحة (Flat Slab) ==========
-
-    fun getFlatSlabDesign(code: DesignCode): FlatSlabDesign = when (code) {
-        DesignCode.ECP -> ECPFlatSlab()
-        DesignCode.ACI -> ACIFlatSlab()
-        DesignCode.SBC -> SBCFlatSlab()
-    }
-
-    // ========== حوائط القص (Shear Wall) ==========
-
-    fun getShearWallDesign(code: DesignCode): ShearWallDesign = when (code) {
-        DesignCode.ECP -> ECPShearWall()
-        DesignCode.ACI -> ACIShearWall()
-        DesignCode.SBC -> SBCShearWall()
     }
 }

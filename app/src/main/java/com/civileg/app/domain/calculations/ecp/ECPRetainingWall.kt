@@ -12,6 +12,7 @@ class ECPRetainingWall : RetainingWallDesign {
         private const val LOAD_FACTOR_DEAD = 1.4
         private const val LOAD_FACTOR_LIVE = 1.6
         private const val COVER_EARTH = 50.0
+        // Lower bound only; actual minimum includes 0.26√fcu/fy term (applied at usage sites)
         private const val MIN_STEEL_RATIO = 0.0013
         private const val OT_FS_LIMIT = 1.5
         private const val SLIDE_FS_LIMIT = 1.5
@@ -82,35 +83,39 @@ class ECPRetainingWall : RetainingWallDesign {
         val stemMomentUnfactored = (Ka * gamma * stemH.pow(3) / 6) + (Ka * q * stemH.pow(2) / 2)
         val stemShearUnfactored = Ka * gamma * stemH.pow(2) / 2 + Ka * q * stemH
 
-        val Mu = LOAD_FACTOR_DEAD * stemMomentUnfactored
-        val Vu = LOAD_FACTOR_DEAD * stemShearUnfactored
+        val Mu = LOAD_FACTOR_LIVE * stemMomentUnfactored
+        val Vu = LOAD_FACTOR_LIVE * stemShearUnfactored
         val b = 1000.0
         val d = (tBase * 1000) - COVER_EARTH - 8.0
 
         val R = Mu * 1e6 / (fcu / GAMMA_C * b * d * d)
-        val z = 0.8 + sqrt(0.36 - 2 * R) * 0.45
-        val As = Mu * 1e6 / (fy / GAMMA_S * z * d)
-        val AsMin = MIN_STEEL_RATIO * b * d
+        val K = R / GAMMA_C
+        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
+        val As = Mu * 1e6 / (fy / GAMMA_S * z)
+        val AsMin = max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * d
         val AsReq = max(As, AsMin)
 
         val (numBars, barDia) = RetainingWallDesign.selectBars(AsReq)
         val AsProvided = numBars * PI * (barDia / 2.0).pow(2)
-        val distBars = RetainingWallDesign.selectBars(AsMin * 0.25).let { "${it.first}\u03A6${it.second}" }
+        // ECP 203: distribution steel = 0.25% of b×d (min for walls)
+        val distAsMin = 0.0025 * b * d
+        val distBars = RetainingWallDesign.selectBars(distAsMin).let { "${it.first}\u03A6${it.second}" }
 
         // Shear check
         val qu = Vu * 1000 / (b * d)
-        val qcu = 0.45 * sqrt(fcu / GAMMA_C)
-        val qcuLimit = 0.45 * sqrt(fcu)
-        val needStirrups = qu > 0.67 * qcu
+        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // ECP 203 §4-3-1-2
+        val qcuLimit = 0.45 * sqrt(fcu / GAMMA_C)  // ECP 203
+        val needStirrups = qu > qcu  // ECP 203: direct comparison
 
         // Toe design
         val toeMoment = max(0.0, maxBearing * toe * toe / 2 - minBearing * toe * toe / 6)
         val toeShear = max(0.0, (maxBearing + minBearing) / 2 * toe)
         val toeD = (tFooting * 1000) - COVER_EARTH - 8.0
         val toeR = toeMoment * 1e6 / (fcu / GAMMA_C * b * toeD * toeD)
-        val toeZ = 0.8 + sqrt(max(0.0, 0.36 - 2 * toeR)) * 0.45
-        val toeAs = toeMoment * 1e6 / (fy / GAMMA_S * toeZ * toeD)
-        val toeAsFinal = max(toeAs, MIN_STEEL_RATIO * b * toeD)
+        val toeK = toeR / GAMMA_C
+        val toeZ = toeD * (0.5 + sqrt(max(0.0, 0.25 - toeK / 0.893)))
+        val toeAs = toeMoment * 1e6 / (fy / GAMMA_S * toeZ)
+        val toeAsFinal = max(toeAs, max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * toeD)
         val toeBars = RetainingWallDesign.selectBars(toeAsFinal)
         val toeRebarStr = "${toeBars.first}\u03A6${toeBars.second}"
 
@@ -120,9 +125,10 @@ class ECPRetainingWall : RetainingWallDesign {
         val heelShear = heelLoad * heel * LOAD_FACTOR_DEAD
         val heelD = (tFooting * 1000) - COVER_EARTH - 8.0
         val heelR = heelMoment * 1e6 / (fcu / GAMMA_C * b * heelD * heelD)
-        val heelZ = 0.8 + sqrt(max(0.0, 0.36 - 2 * heelR)) * 0.45
-        val heelAs = heelMoment * 1e6 / (fy / GAMMA_S * heelZ * heelD)
-        val heelAsFinal = max(heelAs, MIN_STEEL_RATIO * b * heelD)
+        val heelK = heelR / GAMMA_C
+        val heelZ = heelD * (0.5 + sqrt(max(0.0, 0.25 - heelK / 0.893)))
+        val heelAs = heelMoment * 1e6 / (fy / GAMMA_S * heelZ)
+        val heelAsFinal = max(heelAs, max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * heelD)
         val heelBars = RetainingWallDesign.selectBars(heelAsFinal)
         val heelRebarStr = "${heelBars.first}\u03A6${heelBars.second}"
 

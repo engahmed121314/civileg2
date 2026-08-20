@@ -191,8 +191,8 @@ class ECPAdvancedColumn : ColumnDesign {
         // فحص K_bal
         val K_check = Mu_capacity * 1e6 / (fcu * b * h_eff * h_eff)
         val momentCapX = if (K_check <= 0.186) Mu_capacity else {
-            // إذا K > K_bal: نستخدم z = d*(0.5+√(0.25-K/1.25))
-            val z = h_eff * (0.5 + sqrt(max(0.001, 0.25 - 0.186 / 1.25)))
+            // ECP 203 K-method: z = d*(0.5+√(0.25-K/0.893))
+            val z = h_eff * (0.5 + sqrt(max(0.001, 0.25 - 0.186 / 0.893)))
             As * fs * z / 1e6
         }
 
@@ -468,17 +468,17 @@ class ECPAdvancedColumn : ColumnDesign {
             // Nominal moment about section centroid
             val Mn = sumMoment
 
-            // ECP 203 uses α = 0.8 always (unlike ACI's variable φ)
-            // φPn = α × Pn, φMn = α × Mn
-            val phiPn = ALPHA * Pn / 1000.0     // kN
-            val phiMn = ALPHA * Mn / 1e6          // kN.m
+            // α is already applied inside Pn (via 0.67*fcu/γc and fy/γs material factors)
+            // No additional α multiplier needed here
+            val phiPn = Pn / 1000.0     // kN
+            val phiMn = Mn / 1e6          // kN.m
 
             // Tension controlled: εt ≥ εy
             val epsilonYield = fy / ES
             val isTensionControlled = epsilonTensionExtreme >= epsilonYield
 
             // Pure compression point override
-            val finalPhiPn = if (i == 0) ALPHA * pureCompressionPn / 1000.0 else phiPn
+            val finalPhiPn = if (i == 0) pureCompressionPn / 1000.0 else phiPn
             val finalPhiMn = if (i == 0) 0.0 else phiMn
 
             points.add(InteractionDiagramPoint(
@@ -492,7 +492,7 @@ class ECPAdvancedColumn : ColumnDesign {
         }
 
         // ── إضافة نقطة الشد البحت (Pure Tension) ──
-        val pureTensionPn = -ALPHA * fsYield * totalAs / 1000.0  // kN (negative = tension)
+        val pureTensionPn = -fsYield * totalAs / 1000.0  // kN (negative = tension)
         points.add(InteractionDiagramPoint(
             phiPn = pureTensionPn,
             phiMn = 0.0,
@@ -676,10 +676,10 @@ class ECPAdvancedColumn : ColumnDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // معامل أمان أعلى للأعمدة الحلزونية: φ = 0.75
-        val PHI_SPIRAL = 0.75
+        // معامل أمان للأعمدة الحلزونية: α_spiral = 0.85 (ECP 203 — sole reduction, no separate φ)
+        val ALPHA_SPIRAL = 0.85
         codeNotes.add("ECP 203 البند 4-2-6: عمود حلزوني (Spiral Column)")
-        codeNotes.add(String.format("معامل التخفيض φ = %.2f (أعلى من 0.65 للأعمدة العادية)", PHI_SPIRAL))
+        codeNotes.add(String.format("معامل التخفيض α_spiral = %.2f (بدل 0.80 للأعمدة العادية)", ALPHA_SPIRAL))
 
         val Ag = PI * diameter * diameter / 4.0
         val cover = COVER
@@ -749,13 +749,13 @@ class ECPAdvancedColumn : ColumnDesign {
         }
 
         // ── Axial capacity with spiral φ ──
-        val axialCapacity = calculateAxialCapacityWithPhi(fcu, fy, Ag, reinforcementResult.astProvided, PHI_SPIRAL)
+        val axialCapacity = calculateAxialCapacityWithPhi(fcu, fy, Ag, reinforcementResult.astProvided, ALPHA_SPIRAL)
 
         // ── Moment capacity (approximate for circular) ──
         val dEff = diameter - cover - STIRRUP_DIA
         val muCap = reinforcementResult.astProvided * (fy / GAMMA_S) * 0.8 * dEff / 1e6
 
-        codeNotes.add(String.format("القدرة المحورية (مع φ=%.2f) = %.1f kN", PHI_SPIRAL, axialCapacity))
+        codeNotes.add(String.format("القدرة المحورية (مع α=%.2f) = %.1f kN", ALPHA_SPIRAL, axialCapacity))
         codeNotes.add(String.format("تباعد الكانات الحلزونية s = %.0f mm", sProvided))
 
         val inventoryAnalysis = inventory?.let { inv ->
@@ -783,8 +783,9 @@ class ECPAdvancedColumn : ColumnDesign {
     }
 
     /**
-     * حساب القدرة المحورية مع معامل تخفيض مخصص φ
-     * Axial capacity with a custom φ factor (used for spiral columns with φ=0.75)
+     * حساب القدرة المحورية مع معامل تخفيض مخصص
+     * Axial capacity with a custom reduction factor (α=0.80 tied, α=0.85 spiral)
+     * The factor is the SOLE reduction — material safety factors (γc, γs) are already inside.
      */
     private fun calculateAxialCapacityWithPhi(
         fcu: Double, fy: Double, Ag: Double, Ast: Double, phi: Double
@@ -792,8 +793,8 @@ class ECPAdvancedColumn : ColumnDesign {
         val ast = Ast.coerceAtMost(Ag * 0.08)
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
-        val nominalCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
-        return phi * nominalCapacity / 1000.0  // kN
+        val nominalCapacity = concreteStress * (Ag - ast) + steelStress * ast
+        return phi * nominalCapacity / 1000.0  // kN  (phi is the sole reduction: 0.80 or 0.85 spiral)
     }
 
     // ──────────────────────────────────────────────────────────────────────────────

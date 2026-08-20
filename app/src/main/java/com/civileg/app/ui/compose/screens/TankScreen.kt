@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -32,6 +33,10 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.TankViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +48,17 @@ fun TankScreen(
     val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+
+    val configuration = LocalConfiguration.current
+    val screenW = configuration.screenWidthDp.dp
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -64,6 +79,17 @@ fun TankScreen(
     var fcuError by remember { mutableStateOf("") }
     var fyError by remember { mutableStateOf("") }
 
+    // Validation messages (captured in composable scope)
+    val tankErrInvalid = stringResource(R.string.tank_err_invalid_number)
+    val tankErrGtZero = stringResource(R.string.tank_err_gt_zero)
+    val tankErrMax10000 = stringResource(R.string.tank_err_max_10000)
+    val tankErrMinH = stringResource(R.string.tank_err_min_height)
+    val tankErrMaxH = stringResource(R.string.tank_err_max_height)
+    val tankErrMinFcu = stringResource(R.string.tank_err_min_fcu)
+    val tankErrMaxFcu = stringResource(R.string.tank_err_max_fcu)
+    val tankErrMinFy = stringResource(R.string.tank_err_min_fy)
+    val tankErrMaxFy = stringResource(R.string.tank_err_max_fy)
+
     val validateInputs: () -> Boolean = {
         var valid = true
         val cap = capacity.toDoubleOrNull()
@@ -71,30 +97,30 @@ fun TankScreen(
         val f = fcu.toDoubleOrNull()
         val y = fy.toDoubleOrNull()
         capacityError = when {
-            cap == null -> "Invalid number"
-            cap <= 0 -> "Must be > 0"
-            cap > 10000 -> "Max 10000 m³"
+            cap == null -> tankErrInvalid
+            cap <= 0 -> tankErrGtZero
+            cap > 10000 -> tankErrMax10000
             else -> { valid = valid && true; "" }
         }
         if (capacityError.isNotEmpty()) valid = false
         heightError = when {
-            h == null -> "Invalid number"
-            h < 1.0 -> "Min 1.0 m"
-            h > 10.0 -> "Max 10.0 m"
+            h == null -> tankErrInvalid
+            h < 1.0 -> tankErrMinH
+            h > 10.0 -> tankErrMaxH
             else -> ""
         }
         if (heightError.isNotEmpty()) valid = false
         fcuError = when {
-            f == null -> "Invalid"
-            f < 20.0 -> "Min 20 MPa"
-            f > 60.0 -> "Max 60 MPa"
+            f == null -> tankErrInvalid
+            f < 20.0 -> tankErrMinFcu
+            f > 60.0 -> tankErrMaxFcu
             else -> ""
         }
         if (fcuError.isNotEmpty()) valid = false
         fyError = when {
-            y == null -> "Invalid"
-            y < 240.0 -> "Min 240 MPa"
-            y > 500.0 -> "Max 500 MPa"
+            y == null -> tankErrInvalid
+            y < 240.0 -> tankErrMinFy
+            y > 500.0 -> tankErrMaxFy
             else -> ""
         }
         if (fyError.isNotEmpty()) valid = false
@@ -115,10 +141,10 @@ fun TankScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -179,8 +205,8 @@ fun TankScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TankInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f), fcuError)
-                    TankInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f), fyError)
+                    TankInputField(fcu, stringResource(R.string.tank_fcu_mpa), { fcu = it }, Modifier.weight(1f), fcuError)
+                    TankInputField(fy, stringResource(R.string.tank_fy_mpa), { fy = it }, Modifier.weight(1f), fyError)
                 }
             }
 
@@ -305,25 +331,27 @@ fun TankScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { viewModel.exportToPdf(context) { /* Handle complete */ } },
+                            onClick = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { /* Handle complete */ }
+                                }
+                            },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = !isExporting
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report))
-                        }
-
-                        Button(
-                            onClick = { viewModel.exportToDxf(context) { /* Handle complete */ } },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-                        ) {
-                            Icon(Icons.Default.Draw, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("DXF", fontSize = 12.sp)
+                            if (isExporting) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
                         }
 
                         Button(
@@ -332,7 +360,7 @@ fun TankScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Icon(Icons.Default.Save, null)
+                            Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.save))
                         }
@@ -340,19 +368,22 @@ fun TankScreen(
                 }
 
                 item {
-                    var tankViewMode by remember { mutableIntStateOf(0) }
-                    val tankViewModes = listOf(
-                        stringResource(R.string.view_all),
-                        stringResource(R.string.view_perspective),
-                        stringResource(R.string.view_section),
-                        stringResource(R.string.view_reinforcement)
-                    )
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    // Responsive height: scale proportionally to screen width
+                    val wRatio = screenW.value / 360f  // baseline 360dp
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (480 * wRatio).toInt().coerceIn(300, 600)
+                        2 -> (320 * wRatio).toInt().coerceIn(220, 450)
+                        3 -> (580 * wRatio).toInt().coerceIn(380, 750)
+                        else -> (780 * wRatio).toInt().coerceIn(500, 1000)
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.tank_drawing_title),
-                        subtitle = "Water Tank Detail",
-                        viewModes = tankViewModes,
-                        selectedViewMode = tankViewMode,
-                        onViewModeChanged = { tankViewMode = it },
+                        subtitle = stringResource(R.string.tank_drawing_subtitle),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeight,
                         drawingContent = {
                             ProfessionalTankDrawing(
                                 tankType = selectedType.displayName,
@@ -367,7 +398,7 @@ fun TankScreen(
                                 horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
-                                viewMode = tankViewMode,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -375,6 +406,34 @@ fun TankScreen(
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalTankDrawing(
+                        tankType = selectedType.displayName,
+                        length = res.length,
+                        width = res.width,
+                        height = res.height,
+                        wallThickness = res.wallThickness,
+                        baseThickness = res.baseThickness,
+                        waterLevel = res.height * 0.85,
+                        verticalRebarDia = res.wallReinforcement.diameter.toDouble(),
+                        verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
+                        horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
+                        horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
+                        foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
         }
     }
 

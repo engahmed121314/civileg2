@@ -15,6 +15,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.db.Project
+import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.sqrt
 import androidx.compose.ui.Modifier
@@ -35,8 +36,12 @@ import com.civileg.app.viewmodel.BeamViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
-import com.civileg.app.ui.compose.components.beam.BeamComprehensiveResultsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,14 +52,18 @@ fun BeamScreen(
 ) {
     val context = LocalContext.current
     val result by viewModel.result.observeAsState()
-    val compResult by viewModel.comprehensiveResult.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val error by viewModel.error.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var pdfError by remember { mutableStateOf<String?>(null) }
-    var dxfError by remember { mutableStateOf<String?>(null) }
     // ... existing state vars ...
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -69,7 +78,6 @@ fun BeamScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
     var barDiameter by remember { mutableStateOf("16") }
-    var numBars by remember { mutableStateOf("4") }
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
@@ -86,10 +94,10 @@ fun BeamScreen(
             )
         }
     ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -138,8 +146,8 @@ fun BeamScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(deadLoad, "Dead Load (kN/m)", { deadLoad = it }, Modifier.weight(1f))
-                    BeamInputField(liveLoad, "Live Load (kN/m)", { liveLoad = it }, Modifier.weight(1f))
+                    BeamInputField(deadLoad, stringResource(R.string.beam_dead_load_kn_m), { deadLoad = it }, Modifier.weight(1f))
+                    BeamInputField(liveLoad, stringResource(R.string.beam_live_load_kn_m), { liveLoad = it }, Modifier.weight(1f))
                 }
             }
 
@@ -153,17 +161,14 @@ fun BeamScreen(
             item {
                 Text(stringResource(R.string.beam_material_props), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(fcu, "f'cu (MPa)", { fcu = it }, Modifier.weight(1f))
-                    BeamInputField(fy, "fy (MPa)", { fy = it }, Modifier.weight(1f))
+                    BeamInputField(fcu, stringResource(R.string.beam_fcu_mpa), { fcu = it }, Modifier.weight(1f))
+                    BeamInputField(fy, stringResource(R.string.beam_fy_mpa), { fy = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Text(stringResource(R.string.beam_rebar_selection), fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(numBars, stringResource(R.string.column_num_bars_label), { numBars = it }, Modifier.weight(1f))
-                    BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.weight(1f))
-                }
+                BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -266,15 +271,21 @@ fun BeamScreen(
                 }
 
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val beamPdfErrorMsg = stringResource(R.string.beam_pdf_error)
                         Button(
                             onClick = {
-                                viewModel.exportToPdf(context) { file ->
-                                    if (file == null) {
-                                        pdfError = beamPdfErrorMsg
-                                    } else {
-                                        pdfError = null
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file ->
+                                        if (file == null) {
+                                            pdfError = beamPdfErrorMsg
+                                        } else {
+                                            pdfError = null
+                                        }
                                     }
                                 }
                             },
@@ -288,23 +299,8 @@ fun BeamScreen(
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report), maxLines = 1, fontSize = 12.sp)
+                                Text(stringResource(R.string.pdf_report))
                             }
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.exportToDxf(context) { file ->
-                                    if (file == null) dxfError = "DXF export failed" else dxfError = null
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            Icon(Icons.Default.Draw, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("DXF", maxLines = 1, fontSize = 12.sp)
                         }
 
                         Button(
@@ -315,16 +311,31 @@ fun BeamScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
 
                 item {
+                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    BeamFormulasCard()
+                }
+
+                item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    val drawingHeightDp = when (selectedViewMode) {
+                        1 -> 400
+                        2 -> 350
+                        3 -> 300
+                        else -> 780
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.column_drawing_title),
-                        subtitle = "Beam Reinforcement Detail",
-                        viewModes = emptyList(),
+                        subtitle = stringResource(R.string.beam_drawing_subtitle),
+                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingHeightDp = drawingHeightDp,
                         drawingContent = {
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
@@ -352,18 +363,9 @@ fun BeamScreen(
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),
                                 topRebarCount = res.reinforcementTop.numBars,
-                                appliedMoment = res.appliedMoment,
-                                appliedShear = res.appliedShear,
-                                utilizationRatio = res.utilizationRatio,
-                                resistingMoment = res.momentCapacity,
-                                concreteShearCapacity = res.shearCapacity,
-                                requiredAs = res.requiredAs,
-                                providedAs = res.providedAs,
-                                effectiveDepth = res.effectiveDepth,
-                                steelRatio = res.steelRatio,
-                                fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0,
-                                isArabic = viewModel.isArabic
+                                zones = res.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
+                                viewMode = selectedViewMode,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     )
@@ -386,18 +388,49 @@ fun BeamScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-
-                // Comprehensive step-by-step results from PDFs 04-12
-                compResult?.let { comp ->
-                    item { SectionHeader("Comprehensive Design Results", R.drawable.ic_calculator) }
-                    item { BeamComprehensiveResultsCard(result = comp) }
-                }
-
-                item {
-                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    BeamFormulasCard()
+            }
+        }
+        // PDF drawing capture area (invisible, renders at viewMode=0)
+        result?.let { res ->
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalBeamDrawing(
+                        beamWidth = res.width.toDouble(),
+                        beamDepth = res.depth.toDouble(),
+                        span = (span.toDoubleOrNull() ?: 5.0) * 1000.0,
+                        mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
+                        mainRebarCount = res.reinforcementBottom.numBars,
+                        stirrupDia = res.stirrups.diameter.toDouble(),
+                        stirrupSpacing = res.stirrups.spacing.toDouble(),
+                        cover = 50.0,
+                        developmentLength = {
+                            val fcuVal = fcu.toDoubleOrNull() ?: 25.0
+                            val fyVal = fy.toDoubleOrNull() ?: 360.0
+                            val db = res.reinforcementBottom.diameter.toDouble()
+                            (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
+                        }(),
+                        lapLength = {
+                            val fcuVal = fcu.toDoubleOrNull() ?: 25.0
+                            val fyVal = fy.toDoubleOrNull() ?: 360.0
+                            val db = res.reinforcementBottom.diameter.toDouble()
+                            val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
+                            1.3 * ld
+                        }(),
+                        isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
+                        hasTopSteel = res.reinforcementTop.numBars > 0,
+                        topRebarDia = res.reinforcementTop.diameter.toDouble(),
+                        topRebarCount = res.reinforcementTop.numBars,
+                        zones = res.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
+                        viewMode = 0,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
+        }
         }
     }
 
@@ -441,7 +474,7 @@ fun BeamScreen(
                     result?.let { viewModel.saveBeam(pId, designName, it) }
                     showSaveDialog = false
                 }) {
-                    Text(stringResource(R.string.save), maxLines = 1, fontSize = 12.sp)
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
@@ -462,15 +495,16 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             Spacer(modifier = Modifier.height(8.dp))
             ResultRow(stringResource(R.string.beam_bottom_reinforcement), result.reinforcementBottom.barString)
             ResultRow(stringResource(R.string.beam_top_reinforcement), result.reinforcementTop.barString)
-            ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
-            // Code-based stirrup zoning
-            if (result.stirrups.spacingAtSupport > 0 && result.stirrups.spacingAtMidspan > 0) {
-                ResultRow("Stirrups (support zone)", "Ø${result.stirrups.diameter} @ ${result.stirrups.spacingAtSupport.toInt()}mm c/c")
-                ResultRow("Stirrups (midspan)", "Ø${result.stirrups.diameter} @ ${result.stirrups.spacingAtMidspan.toInt()}mm c/c")
-                ResultRow("Condensation Zone", "${result.stirrups.condensationZoneLength.toInt()}mm from supports")
-                if (result.stirrups.codeNotes.isNotEmpty()) {
-                    ResultRow("Code Ref", result.stirrups.codeNotes)
+            
+            if (result.stirrups.zones.isNotEmpty()) {
+                Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                result.stirrups.zones.forEach { zone ->
+                    ResultRow("${zone.name} (${String.format(Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
                 }
+                // [NEW] Display Multi-leg info
+                ResultRow(stringResource(R.string.stirrups) + " Legs", "${result.stirrups.numLegs} Branches")
+            } else {
+                ResultRow(stringResource(R.string.stirrups), result.stirrups.description)
             }
             ResultRow(stringResource(R.string.beam_max_moment), "${"%.1f".format(result.appliedMoment)} kN.m")
             ResultRow(stringResource(R.string.beam_max_shear), "${"%.1f".format(result.appliedShear)} kN")

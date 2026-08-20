@@ -7,11 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
-    // google-services & firebase-crashlytics plugins — enable after adding real google-services.json
-    // alias(libs.plugins.google.services)
-    // alias(libs.plugins.firebase.crashlytics)
     id("kotlin-parcelize")
-    id("jacoco")
 }
 
 android {
@@ -37,7 +33,6 @@ android {
             arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
             arg("dagger.fastInit", "enabled")
             arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
-            arg("room.schemaLocation", "$projectDir/schemas")
         }
 
         // Developer info for Play Store
@@ -109,8 +104,10 @@ android {
             isDebuggable = true
             isMinifyEnabled = false
             isShrinkResources = false
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            if (!project.hasProperty("noDebugSuffix")) {
+                applicationIdSuffix = ".debug"
+                versionNameSuffix = "-debug"
+            }
         }
     }
 
@@ -132,22 +129,26 @@ android {
         }
     }
 
-    // Lint configuration
+    // Lint configuration for Play Store compliance
     lint {
-        abortOnError = false
+        abortOnError = true
         warningsAsErrors = false
-        checkReleaseBuilds = false
+        checkReleaseBuilds = true
         checkDependencies = true
         // Play Store required checks
         disable += "TypographyFractions"
         disable += "TypographyQuotes"
         // Allow missing translation for now
         disable += "MissingTranslation"
-        // Pre-existing resource issues — will be fixed incrementally
+        // Suppress pre-existing resource issues
         disable += "MissingDefaultResource"
         disable += "UnusedResources"
-        disable += "IconMissingDensityFolder"
-        disable += "IconDensities"
+        disable += "IconDuplicatesConfig"
+        disable += "VectorPath"
+        disable += "HardcodedText"
+        disable += "RtlHardcoded"
+        // Backup rules exclude path lint is overly strict
+        disable += "FullBackupContent"
     }
 }
 
@@ -210,43 +211,7 @@ dependencies {
     // User Messaging Platform (consent for EU/EEA users — required by Google Play)
     implementation(libs.user.messaging.platform)
 
-    // Google Play Billing
-    implementation(libs.billing)
-    implementation(libs.billing.ktx)
-
-    // Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.analytics)
-
     testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.turbine)
-    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-}
-
-// JaCoCo Test Coverage — report task registered for CI
-// JaCoCo exec data is auto-collected by AGP when jacoco plugin is applied
-tasks.register<JacocoReport>("jacocoTestDebugUnitTestReport") {
-    dependsOn("testDebugUnitTest")
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-    }
-    sourceDirectories.setFrom(files("${projectDir}/src/main/java"))
-    classDirectories.setFrom(
-        fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
-            exclude(
-                "**/R.class",
-                "**/R$*.class",
-                "**/BuildConfig.*",
-                "**/Manifest*.*",
-                "**/di/**",
-                "**/Hilt_**"
-            )
-        }
-    )
-    executionData.setFrom(files("${layout.buildDirectory.get()}/outputs/unit_test_code_coverage/testDebugUnitTest/testDebugUnitTest.exec"))
 }

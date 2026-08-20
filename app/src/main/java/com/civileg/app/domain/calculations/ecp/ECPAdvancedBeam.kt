@@ -213,8 +213,8 @@ class ECPAdvancedBeam {
             codeNotes.add("Design as rectangular beam with b = b_eff = ${beff.toInt()} mm")
 
             val K = Mu / (fcu * beff * d * d)
-            val leverArm = if (0.25 - K / 1.25 > 0) {
-                d * (0.5 + sqrt(0.25 - K / 1.25))
+            val leverArm = if (0.25 - K / 0.893 > 0) {
+                d * (0.5 + sqrt(0.25 - K / 0.893))
             } else {
                 d * 0.7
             }
@@ -243,8 +243,8 @@ class ECPAdvancedBeam {
             } else {
                 // تصميم الجذع بطريقة K مع b = bw
                 val K_web = M_web / (fcu * webWidth * d * d)
-                val leverArm_web = if (0.25 - K_web / 1.25 > 0) {
-                    d * (0.5 + sqrt(0.25 - K_web / 1.25))
+                val leverArm_web = if (0.25 - K_web / 0.893 > 0) {
+                    d * (0.5 + sqrt(0.25 - K_web / 0.893))
                 } else {
                     warnings.add("تحذير: المقطع شبه مفرط التسليح - فكر في زيادة الأبعاد")
                     d * 0.7
@@ -259,7 +259,7 @@ class ECPAdvancedBeam {
 
         // ── تطبيق الحدود الدنيا والعليا ──
         val Ag = webWidth * d
-        val minSteel = 0.005 * Ag  // 0.5% للكمرات
+        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * Ag
         val maxSteel = 0.04 * Ag   // 4%
         val finalAst = astRequired.coerceIn(minSteel, maxSteel)
 
@@ -410,8 +410,8 @@ class ECPAdvancedBeam {
         if (neutralAxisInFlange) {
             codeNotes.add("Neutral axis in FLANGE (a=${"%.1f".format(a_trial)}mm ≤ hf=${"%.0f".format(flangeThickness)}mm)")
             val K = Mu_eccentric / (fcu * beff * d * d)
-            val leverArm = if (0.25 - K / 1.25 > 0) {
-                d * (0.5 + sqrt(0.25 - K / 1.25))
+            val leverArm = if (0.25 - K / 0.893 > 0) {
+                d * (0.5 + sqrt(0.25 - K / 0.893))
             } else {
                 d * 0.7
             }
@@ -427,8 +427,8 @@ class ECPAdvancedBeam {
                 As_flange
             } else {
                 val K_web = M_web / (fcu * webWidth * d * d)
-                val leverArm_web = if (0.25 - K_web / 1.25 > 0) {
-                    d * (0.5 + sqrt(0.25 - K_web / 1.25))
+                val leverArm_web = if (0.25 - K_web / 0.893 > 0) {
+                    d * (0.5 + sqrt(0.25 - K_web / 0.893))
                 } else {
                     warnings.add("تحذير: المقطع شبه مفرط التسليح - فكر في زيادة الأبعاد")
                     d * 0.7
@@ -440,7 +440,7 @@ class ECPAdvancedBeam {
 
         // حدود التسليح
         val Ag = webWidth * d
-        val minSteel = 0.005 * Ag
+        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * Ag
         val maxSteel = 0.04 * Ag
         val finalAst = astRequired.coerceIn(minSteel, maxSteel)
 
@@ -770,13 +770,12 @@ class ECPAdvancedBeam {
                 val K_bal = calculateKBal(fcu, fy)
                 val isTensionControlled = K <= K_bal
 
-                var redistributionFactor = 1.0
-                if (!isPositive && isTensionControlled && K > 0) {
-                    // δ = 1 - (K - K_bal) × (1 - 0.5×K_bal/K)
-                    // مع الحد الأقصى 20% إعادة توزيع
-                    val delta = 1.0 - (K - K_bal) * (1.0 - 0.5 * K_bal / K)
-                    redistributionFactor = delta.coerceIn(0.8, 1.0)
+                val delta = when {
+                    K <= 0.104 -> 0.8
+                    K <= K_bal -> 0.8 + 0.2 * (K_bal - K) / (K_bal - 0.104)
+                    else -> 1.0
                 }
+                val redistributionFactor = delta
 
                 val redistributedMoment = absMoment * redistributionFactor
 
@@ -1342,7 +1341,7 @@ class ECPAdvancedBeam {
     }
     
     private fun checkDevelopmentLength(result: ReinforcementResult, fcu: Double, fy: Double, availableLength: Double = 0.0): DevelopmentLengthCheckResult {
-        val fbd = 0.3 * sqrt(fcu / 1.5)
+        val fbd = 0.3 * sqrt(fcu)
         val fs = fy / 1.15
         val db = result.barDiameter
         val ld = if (fbd > 0) fs * db / (4.0 * fbd) else 0.0

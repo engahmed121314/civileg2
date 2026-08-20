@@ -20,7 +20,6 @@ class PreferencesManager(private val context: Context) {
         val UNIT_SYSTEM = stringPreferencesKey("unit_system")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val REPORT_LANGUAGE = stringPreferencesKey("report_language")
-        val IS_PREMIUM_KEY = booleanPreferencesKey("is_premium_user")
     }
     
     val concretePrice: Flow<Double> = context.dataStore.data
@@ -46,9 +45,6 @@ class PreferencesManager(private val context: Context) {
     
     val reportLanguage: Flow<String> = context.dataStore.data
         .map { it[REPORT_LANGUAGE] ?: "ar" }
-    
-    val isPremiumUser: Flow<Boolean> = context.dataStore.data
-        .map { it[IS_PREMIUM_KEY] ?: false }
     
     suspend fun setConcretePrice(price: Double) {
         context.dataStore.edit { it[CONCRETE_PRICE] = price }
@@ -80,9 +76,5 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setReportLanguage(lang: String) {
         context.dataStore.edit { it[REPORT_LANGUAGE] = lang }
-    }
-
-    suspend fun setPremiumUser(isPremium: Boolean) {
-        context.dataStore.edit { it[IS_PREMIUM_KEY] = isPremium }
     }
 }

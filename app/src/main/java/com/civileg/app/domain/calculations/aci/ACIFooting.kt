@@ -188,12 +188,14 @@ class ACIFooting : FootingDesign {
         val b0 = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         // ACI يستخدم f'c (اسطوانة) = 0.8 × fcu (مكعب)
         val fc_prime = 0.8 * fcu
-        // vn = min(0.33√f'c, 0.17(1+2/β)√f'c, 0.083(2+4d/bo)√f'c)
+        // ACI 22.6.5.2(b): vc = min(vc1, vc2, vc3) where vc3 = 0.083*(2+αs*d/bo)*λ*√f'c
+        // αs = 40 for interior, 30 for edge, 20 for corner columns
+        val alphaS = 40.0  // default interior column
         val beta = max(columnDepth, columnWidth) / min(columnDepth, columnWidth).coerceAtLeast(1.0)
         val vn = minOf(
             0.33 * sqrt(fc_prime),
             0.17 * (1.0 + 2.0 / beta) * sqrt(fc_prime),
-            0.083 * (2.0 + 4.0 * effectiveDepth / b0) * sqrt(fc_prime)
+            0.083 * (2.0 + alphaS * effectiveDepth / b0) * sqrt(fc_prime)
         )
         val capacity = PHI_SHEAR * vn * b0 * effectiveDepth / 1000.0
         val isSafe = punchingShearForce <= capacity

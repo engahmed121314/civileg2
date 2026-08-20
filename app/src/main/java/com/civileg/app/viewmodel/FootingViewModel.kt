@@ -8,25 +8,21 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.DxfExportEngine
-import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.SettingsManager
+import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
 class FootingViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine,
-    private val settingsManager: SettingsManager
+    private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
-
-    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.FootingResult?>()
     val result: LiveData<CalculatorEngine.FootingResult?> = _result
@@ -39,6 +35,17 @@ class FootingViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+    
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
+
+    // Store actual inputs for save
+    private var lastFcu: Double = 25.0
+    private var lastFy: Double = 360.0
 
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
@@ -59,6 +66,9 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                lastFcu = fcu
+                lastFy = fy
+
                 val res = calculatorEngine.calculateFooting(
                     type = type,
                     p = p,
@@ -75,6 +85,14 @@ class FootingViewModel @Inject constructor(
                     maxLeft = maxLeft,
                     maxRight = maxRight
                 )
+                
+                // Validate Footing
+                val report = CalculationValidator.validate(res)
+                val dlReport = CalculationValidator.inspectDeadLoadConsistency("FOOTING", mapOf("width" to colB, "depth" to colT), p)
+                
+                val combinedWarnings = report.warnings + dlReport.warnings
+                _validationReport.value = report.copy(warnings = combinedWarnings)
+                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -85,58 +103,9 @@ class FootingViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Auto-design foundations for multiple pieces given soil area dimensions and total soil load.
-     * Calculates individual footing loads based on tributary area or equal distribution,
-     * then designs each footing automatically.
-     */
-    fun autoDesignFromSoil(
-        soilLengthM: Double,   // soil area length in meters
-        soilWidthM: Double,    // soil area width in meters
-        totalSoilLoadKN: Double, // total load from superstructure on soil area in kN
-        numberOfFootings: Int,  // number of footings to distribute load to
-        fcu: Double,
-        fy: Double,
-        soilCapacity: Double,   // allowable soil bearing pressure kN/m2
-        colWidth: Double,
-        colDepth: Double,
-        code: CalculatorEngine.DesignCode,
-        preferredDiameter: Int = 16
-    ) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                // Distribute load equally among footings
-                val loadPerFooting = totalSoilLoadKN / numberOfFootings
-                // Also add self-weight estimate (10% of load)
-                val pu = loadPerFooting * 1.10
-
-                val res = calculatorEngine.calculateFooting(
-                    type = CalculatorEngine.FootingType.ISOLATED,
-                    p = pu,
-                    fcu = fcu,
-                    fy = fy,
-                    soil = soilCapacity,
-                    colB = colWidth,
-                    colT = colDepth,
-                    code = code,
-                    preferredDiameter = preferredDiameter,
-                    preferredSpacing = 150.0
-                )
-                // Store additional auto-design metadata
-                _result.value = res
-                _error.value = null
-            } catch (e: Exception) {
-                _error.value = "Auto-design error: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     fun saveFooting(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
         viewModelScope.launch {
-            repository.saveFootingDesign(projectId, name, result)
+            repository.saveFootingDesign(projectId, name, result, lastFcu, lastFy)
         }
     }
 
@@ -153,21 +122,27 @@ class FootingViewModel @Inject constructor(
                 val file = File(directory, fileName)
 
                 // Generate drawing for PDF
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateFootingDrawing(
-                        footingLX = res.width,
-                        footingLY = res.length,
+                        footingLX = res.length,
+                        footingLY = res.width,
                         footingThickness = res.thickness,
-                        colW = res.column1Size.first,
-                        colD = res.column1Size.second,
+                        colW = res.column1Size.second,
+                        colD = res.column1Size.first,
                         rebarXCount = res.barsX,
                         rebarXDia = res.barDiameter.toDouble(),
                         rebarXSpacing = res.reinforcementBottom.spacing,
                         rebarYCount = res.barsY,
                         rebarYDia = res.barDiameter.toDouble(),
-                        rebarYSpatial = res.reinforcementBottom.spacing
+                        rebarYSpatial = res.reinforcementBottom.spacing,
+                        footingType = res.type.displayName,
+                        cover = 70.0,
+                        soilPressureMax = res.soilPressure,
+                        soilPressureMin = res.soilPressure
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"
@@ -182,7 +157,8 @@ class FootingViewModel @Inject constructor(
                     "Column Size" to "${res.column1Size.first}×${res.column1Size.second} mm",
                     "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
                     "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
-                    "Design Code" to codeName
+                    "Design Code" to codeName,
+                    "Applied Load" to "${String.format("%.1f", res.soilPressure * res.width * res.length / 1e6)} kN"
                 )
                 val resultsMap = mapOf(
                     "Reinforcement" to res.reinforcementBottom.barString,
@@ -201,7 +177,11 @@ class FootingViewModel @Inject constructor(
                     designType = "Footing (${res.type.displayName})",
                     inputs = inputsMap,
                     results = resultsMap,
-                    safetyChecks = emptyList(),
+                    safetyChecks = res.safetyChecks.map {
+                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                            it.name, it.value, it.limit, it.unit, it.isSafe
+                        )
+                    },
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
                     outputPath = file.absolutePath
@@ -221,33 +201,4 @@ class FootingViewModel @Inject constructor(
             }
         }
     }
-
-
-    fun exportToDxf(context: Context, onComplete: (File?) -> Unit) {
-        val res = _result.value ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "Footing_Drawing_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = File(directory, fileName)
-                val dxfContent = DxfExportEngine.generateFootingDxf(res, res.column1Size.first, res.column1Size.second)
-                file.writeText(dxfContent)
-                withContext(Dispatchers.Main) {
-                    ExportUtils.openDxf(context, file)
-                    _isExporting.value = false
-                    onComplete(file)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _error.value = "DXF export failed: ${e.message}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
 }

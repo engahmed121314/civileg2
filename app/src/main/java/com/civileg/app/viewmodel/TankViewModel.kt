@@ -5,23 +5,21 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.SettingsManager
 import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.io.File
+import android.graphics.Bitmap
 import javax.inject.Inject
 
 @HiltViewModel
 class TankViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine,
-    private val settingsManager: SettingsManager
+    private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
-
-    val isArabic: Boolean get() = settingsManager.language == "ar"
 
     private val _result = MutableLiveData<CalculatorEngine.TankResult?>()
     val result: LiveData<CalculatorEngine.TankResult?> = _result
@@ -34,6 +32,13 @@ class TankViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
 
     fun calculateTankPro(
         type: CalculatorEngine.TankType,
@@ -48,6 +53,11 @@ class TankViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val res = calculatorEngine.designTank(type, capacity, height, fcu, fy, preferredDiameter, code)
+                
+                // Validate Tank Design
+                val report = CalculationValidator.validateTank(res)
+                _validationReport.value = report
+                
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -81,7 +91,8 @@ class TankViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = File(directory, fileName)
 
-                val drawingBitmap = try {
+                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateTankDrawing(
                         tankType = res.type.displayName,
                         length = res.length,
@@ -93,9 +104,11 @@ class TankViewModel @Inject constructor(
                         verticalRebarSpacing = res.wallReinforcement.spacing.toDouble(),
                         horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                         horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
-                        waterLevel = res.height * 0.85
+                        waterLevel = res.height * 0.85,
+                        foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0
                     )
                 } catch (e: Exception) { null }
+                pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"
@@ -154,33 +167,4 @@ class TankViewModel @Inject constructor(
             }
         }
     }
-
-
-    fun exportToDxf(context: Context, onComplete: (File?) -> Unit) {
-        val res = _result.value ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
-            try {
-                val fileName = "Tank_Drawing_${System.currentTimeMillis()}.dxf"
-                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: context.cacheDir
-                directory.mkdirs()
-                val file = File(directory, fileName)
-                val dxfContent = com.civileg.app.utils.DxfExportEngine.generateTankDxf(res)
-                file.writeText(dxfContent)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    com.civileg.app.utils.ExportUtils.openDxf(context, file)
-                    _isExporting.value = false
-                    onComplete(file)
-                }
-            } catch (e: Throwable) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _error.value = "DXF export failed: ${e.message}"
-                    _isExporting.value = false
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
 }

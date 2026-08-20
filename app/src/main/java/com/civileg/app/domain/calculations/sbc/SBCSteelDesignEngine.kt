@@ -270,8 +270,9 @@ class SBCSteelDesignEngine {
         var Mn_design = Mn_nominal
 
         // 3. فحص الالتواء البعرضي (LTB) - AISC 360-16 F2 / SBC 306 F2
-        val ltbResult = if (Lb > 0 && rx > 0) {
-            calculateLTBCheck(Lb, rx, bf, d, tw, tf, Sx, Zx, Mn_nominal, grade.fy, Cb)
+        // [FIX] LTB requires WEAK-axis radius of gyration (ry), not strong-axis (rx)
+        val ltbResult = if (Lb > 0 && section.ry > 0) {
+            calculateLTBCheck(Lb, section.ry, bf, d, tw, tf, Sx, Zx, Mn_nominal, grade.fy, Cb)
         } else null
 
         if (ltbResult != null && ltbResult.isGoverning) {
@@ -284,7 +285,7 @@ class SBCSteelDesignEngine {
         if (isCoastal) {
             coastalFactor = 1.0 / SBC_COASTAL_CORROSION_ALLOWANCE
             Mn_design *= coastalFactor
-            warnings.add("تم تطبيق معامل التآكل الساحلي SBC 306: تخفيض ${(SBC_COASTAL_CORROSION_ALLOWANCE - 1) * 100}%.0f في القدرة")
+            warnings.add("تم تطبيق معامل التآكل الساحلي SBC 306: تخفيض ${"%.0f".format((SBC_COASTAL_CORROSION_ALLOWANCE - 1) * 100)}% في القدرة")
             codeNotes.add("معامل التآكل الساحلي (SBC 306): ${SBC_COASTAL_CORROSION_ALLOWANCE}")
         }
 
@@ -292,7 +293,9 @@ class SBCSteelDesignEngine {
         val momentRatio = Mu / phiMn.coerceAtLeast(0.001)
 
         // 4. قدرة القص - AISC 360-16 G2 / SBC 306 G2
-        val Aw = d * tw  // mm² - مساحة الجذع
+        // [FIX] Shear area uses web depth (h - 2tf), not full depth
+        val hw = d - 2 * tf
+        val Aw = hw * tw  // mm² - مساحة الجذع
         val Vn = 0.6 * grade.fy * Aw / 1000.0  // kN
         var phiVn = PHI_SHEAR * Vn
         if (isCoastal) phiVn *= coastalFactor
@@ -406,17 +409,13 @@ class SBCSteelDesignEngine {
         val Ag = section.area
         val rx = section.rx
 
-        // حساب ry تقريبي (0.3 × d للمقاطع I)
-        val ry = when (section) {
-            is SteelSectionType.ISection -> sqrt((bf * bf * bf * tf * 2.0 + (d - 2 * tf) * tw * tw * tw / 12.0) / Ag)
-            is SteelSectionType.CHS -> section.outerDiameter / 4.0
-            is SteelSectionType.RHS -> min(section.width, section.height) / 4.0
-            else -> rx * 0.6
-        }
+        // [FIX] Use computed section.ry instead of crude approximations
+        val ry = section.ry
 
         val Zx = section.zx
+        // [FIX] Use computed section.zy instead of crude Zx * 0.35
         val Zy = when (section) {
-            is SteelSectionType.ISection -> Zx * 0.35
+            is SteelSectionType.ISection -> section.zy
             is SteelSectionType.RHS -> {
                 val Iy = min(section.width, section.height).let { w ->
                     val t = section.thickness

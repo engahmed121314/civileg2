@@ -433,7 +433,7 @@ object FrameAnalysisEngine {
             FrameMaterialType.Steel -> {
                 // Default IPE 300 if no section specified
                 val sec = com.civileg.app.utils.SteelTables.getSectionByName(member.steelSectionName ?: "IPE 300")
-                    ?: com.civileg.app.utils.SteelTables.ipeSections[10] // IPE 300 (index 10)
+                    ?: com.civileg.app.utils.SteelTables.ipeSections[13] // IPE 300
                 val A = sec.area * 1e-4      // cm² -> m²
                 val I = sec.iy * 1e-8         // cm⁴ -> m⁴ (European IPE: Iy = strong axis)
                 Pair(A, I)

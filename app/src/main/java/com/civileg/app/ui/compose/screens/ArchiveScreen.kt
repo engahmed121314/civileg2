@@ -400,9 +400,7 @@ private fun DesignTypeBadge(type: DesignType, count: Int) {
         DesignType.SEISMIC -> stringResource(R.string.archive_type_seismic) to Color(0xFFC62828)
         DesignType.STEEL_MEMBER -> stringResource(R.string.archive_type_steel_rebar) to Color(0xFF455A64)
         DesignType.STEEL_WAREHOUSE -> stringResource(R.string.archive_type_steel_structure) to Color(0xFF4E342E)
-        DesignType.PILE_FOUNDATION -> "Pile Found." to Color(0xFF37474F)
-        DesignType.FLAT_SLAB -> "Flat Slab" to Color(0xFF6A1B9A)
-        DesignType.SHEAR_WALL -> "Shear Wall" to Color(0xFFBF360C)
+        DesignType.FRAME_ANALYSIS -> "Frame" to Color(0xFF1A237E)
     }
     Surface(
         shape = RoundedCornerShape(6.dp),

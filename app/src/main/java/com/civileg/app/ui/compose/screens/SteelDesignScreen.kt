@@ -113,7 +113,7 @@ fun SteelDesignScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(modifier = Modifier.padding(padding)) {
             ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 0.dp) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -129,15 +129,13 @@ fun SteelDesignScreen(
                 }
             }
 
-            Box(modifier = Modifier.weight(1f)) {
-                when (selectedTab) {
-                    0 -> SteelWarehouseTab(viewModel, warehouseResult, isLoading)
-                    1 -> SteelSectionTab(viewModel, result, isLoading)
-                    2 -> WeldDesignTab(viewModel)
-                    3 -> BoltDesignTab(viewModel)
-                    4 -> BasePlateDesignTab()
-                    5 -> ConnectionDesignTab()
-                }
+            when (selectedTab) {
+                0 -> SteelWarehouseTab(viewModel, warehouseResult, isLoading)
+                1 -> SteelSectionTab(viewModel, result, isLoading)
+                2 -> WeldDesignTab(viewModel)
+                3 -> BoltDesignTab(viewModel)
+                4 -> BasePlateDesignTab()
+                5 -> ConnectionDesignTab()
             }
         }
     }
@@ -2118,12 +2116,38 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                         
                         if (section.area > 0) {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                            // [FIX] section.ix/sx are in mm⁴/mm³ — convert to cm⁴/cm³ for display
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    PropertyLine("Inertia Ix", "%.0f cm⁴".format(section.ix))
+                                    PropertyLine("Inertia Ix", "%.0f cm⁴".format(section.ix / 1e4))
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
-                                    PropertyLine("Modulus Sx", "%.1f cm³".format(section.sx))
+                                    PropertyLine("Modulus Sx", "%.1f cm³".format(section.sx / 1e3))
+                                }
+                            }
+                            // [FIX] Show additional critical properties (Iy, Sy, Zx, Zy, rx, ry)
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Inertia Iy", "%.0f cm⁴".format(section.iy / 1e4))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Modulus Sy", "%.1f cm³".format(section.sy / 1e3))
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Zx (plastic)", "%.0f cm³".format(section.zx / 1e3))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("Zy (plastic)", "%.0f cm³".format(section.zy / 1e3))
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("rx", "%.2f cm".format(section.rx / 10.0))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    PropertyLine("ry", "%.2f cm".format(section.ry / 10.0))
                                 }
                             }
                         }
@@ -2198,29 +2222,16 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
 
                 if (result != null) {
                     Button(
-                        onClick = {
+                        onClick = { 
                             viewModel.exportToPdf(context) { /* Handle completion */ }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.pdf_report))
-                    }
-
-                    Button(
-                        onClick = {
-                            viewModel.exportToDxf(context) { /* Handle completion */ }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Draw, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("DXF", fontSize = 12.sp)
                     }
                 }
             }
@@ -2336,9 +2347,19 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             }
                         }
                         ProfessionalSteelDrawing(
-                            section = res.sectionType,
+                            sectionType = res.sectionType.displayName,
+                            sectionName = res.sectionType.sectionName,
                             memberLength = (length.toDoubleOrNull() ?: 6.0) * 1000.0,
-                            memberType = res.memberType,
+                            depth = res.sectionType.depth,
+                            flangeWidth = res.sectionType.width,
+                            flangeThickness = res.sectionType.flangeThickness,
+                            webThickness = res.sectionType.webThickness,
+                            radius = res.sectionType.rootRadius,
+                            area = res.sectionType.area,
+                            ix = res.sectionType.ix,
+                            sx = res.sectionType.sx,
+                            zx = res.sectionType.zx,
+                            weightPerMeter = res.sectionType.weight,
                             boltDia = boltDia,
                             boltCount = boltCount,
                             boltGauge = boltGauge,
@@ -2346,6 +2367,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             endPlateThickness = endPlateThk,
                             hasStiffener = hasStiff,
                             weldSize = weldSz,
+                            isColumn = res.memberType == SteelMemberType.COLUMN,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
