@@ -164,12 +164,19 @@ fun ConcreteMixScreen(
                     modifier = Modifier.horizontalScroll(rememberScrollState())
                 ) {
                     Exposure.entries.forEach { exposure ->
+                        val labelRes = when (exposure) {
+                            Exposure.MILD -> R.string.exposure_mild
+                            Exposure.MODERATE -> R.string.exposure_moderate
+                            Exposure.SEVERE -> R.string.exposure_severe
+                            Exposure.VERY_SEVERE -> R.string.exposure_very_severe
+                            Exposure.EXTREME -> R.string.exposure_extreme
+                        }
                         FilterChip(
                             selected = exposure == selectedExposure,
                             onClick = { selectedExposure = exposure },
                             label = {
                                 Text(
-                                    exposure.name.replace("_", " "),
+                                    stringResource(labelRes),
                                     fontSize = 12.sp
                                 )
                             },
@@ -276,8 +283,13 @@ fun ConcreteMixScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                val cementLabel = when (selectedCementType) {
+                    CementType.OPC -> stringResource(R.string.cement_opc)
+                    CementType.SRC -> stringResource(R.string.cement_src)
+                    CementType.PPC -> stringResource(R.string.cement_ppc)
+                }
                 Text(
-                    text = "${selectedCementType.label}  (SG = ${selectedCementType.specificGravity})",
+                    text = "$cementLabel  (SG = ${selectedCementType.specificGravity})",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -618,8 +630,22 @@ private fun MixResultCard(result: MixResult) {
             }
 
             Spacer(modifier = Modifier.height(4.dp))
+            val resCementLabel = when (result.cementType) {
+                "Ordinary Portland Cement" -> stringResource(R.string.cement_opc)
+                "Sulfate Resisting Cement" -> stringResource(R.string.cement_src)
+                "Portland Pozzolana Cement" -> stringResource(R.string.cement_ppc)
+                else -> result.cementType
+            }
+            val resExposureLabel = when (result.exposure) {
+                "Mild (dry interior)" -> stringResource(R.string.exposure_mild)
+                "Moderate (sheltered)" -> stringResource(R.string.exposure_moderate)
+                "Severe (exposed)" -> stringResource(R.string.exposure_severe)
+                "Very Severe (aggressive)" -> stringResource(R.string.exposure_very_severe)
+                "Extreme (chemical attack)" -> stringResource(R.string.exposure_extreme)
+                else -> result.exposure
+            }
             Text(
-                "${result.cementType}  •  ${result.exposure}",
+                "$resCementLabel  •  $resExposureLabel",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

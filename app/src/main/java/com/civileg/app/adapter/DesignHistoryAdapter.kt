@@ -48,13 +48,16 @@ class DesignHistoryAdapter(
                 DesignType.PILE_FOUNDATION -> R.drawable.ic_pile
                 DesignType.FLAT_SLAB -> R.drawable.ic_slab
                 DesignType.SHEAR_WALL -> R.drawable.ic_wall
-                DesignType.CONCRETE_MIX -> R.drawable.ic_beam // TODO: Add specific icons if available
+                DesignType.CONCRETE_MIX -> R.drawable.ic_beam
                 DesignType.SOIL_BEARING -> R.drawable.ic_footing
                 DesignType.WIND_LOAD -> R.drawable.ic_search
             }
             binding.ivDesignType.setImageResource(iconRes)
 
-            binding.tvSafetyStatus.text = if (design.isSafe) "SAFE" else "UNSAFE"
+            binding.tvSafetyStatus.text = if (design.isSafe) 
+                binding.root.context.getString(R.string.design_status_safe) 
+            else 
+                binding.root.context.getString(R.string.design_status_unsafe)
             binding.tvSafetyStatus.setTextColor(
                 if (design.isSafe) binding.root.context.getColor(R.color.success)
                 else binding.root.context.getColor(R.color.danger)

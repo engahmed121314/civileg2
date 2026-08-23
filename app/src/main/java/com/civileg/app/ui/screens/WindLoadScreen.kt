@@ -419,11 +419,11 @@ private fun PressureTable(pressures: List<WindPressureAtHeight>) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Flr", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.seismic_floor), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
                 Text("z (m)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
                 Text("Vz (m/s)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
-                Text("pz (kN/m²)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.3f))
-                Text("Pnet", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
+                Text(stringResource(R.string.dynamic_pressure_pz), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.3f))
+                Text(stringResource(R.string.net_pressure_pnet), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
             }
             HorizontalDivider()
             pressures.forEachIndexed { idx, p ->

@@ -13,10 +13,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.db.PourLog
 import com.civileg.app.viewmodel.ExecutionViewModel
 import java.text.SimpleDateFormat
@@ -35,10 +37,10 @@ fun ExecutionLogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Field Execution Logs", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.execution_logs_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -49,11 +51,11 @@ fun ExecutionLogScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Concrete Pour Logs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.concrete_pour_logs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             if (pourLogs.isEmpty()) {
-                item { Text("No pours recorded yet.", color = Color.Gray, fontSize = 12.sp) }
+                item { Text(stringResource(R.string.no_pours_recorded), color = Color.Gray, fontSize = 12.sp) }
             }
 
             items(pourLogs) { log ->
@@ -61,11 +63,11 @@ fun ExecutionLogScreen(
             }
 
             item {
-                Text("Quality Inspections", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+                Text(stringResource(R.string.quality_inspections), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
             }
 
             if (inspections.isEmpty()) {
-                item { Text("No inspections recorded.", color = Color.Gray, fontSize = 12.sp) }
+                item { Text(stringResource(R.string.no_inspections_recorded), color = Color.Gray, fontSize = 12.sp) }
             }
             
             // inspections items...
@@ -81,7 +83,7 @@ fun PourLogItem(log: PourLog) {
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(log.elementId, fontWeight = FontWeight.Bold)
-                Text("Slump: ${log.slumpMm} mm | Vol: ${log.volumeM3} m³", fontSize = 12.sp)
+                Text(stringResource(R.string.execution_pour_log_format, log.slumpMm, log.volumeM3), fontSize = 12.sp)
             }
             Text(SimpleDateFormat("dd MMM", Locale.US).format(log.date), fontSize = 11.sp, color = Color.Gray)
         }

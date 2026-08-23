@@ -176,7 +176,7 @@ fun SoilBearingScreen(
 
             // ---- Safety factor ----
             SectionCard(title = stringResource(R.string.soil_fos_section)) {
-                InputRow("FOS", safetyFactor) { safetyFactor = it }
+                InputRow(stringResource(R.string.fos), safetyFactor) { safetyFactor = it }
             }
 
             // ---- Action buttons ----
@@ -560,8 +560,8 @@ private fun ComparisonTable(results: Map<BearingMethod, SoilBearingResult>) {
                 "Nc" to { r: SoilBearingResult -> "%.1f".format(r.nc) },
                 "Nq" to { r: SoilBearingResult -> "%.1f".format(r.nq) },
                 "Nγ" to { r: SoilBearingResult -> "%.1f".format(r.ngamma) },
-                "Settle. (mm)" to { r: SoilBearingResult -> "%.1f".format(r.settlement) },
-                "Safe?" to { r: SoilBearingResult -> if (r.isSafe) "✓" else "✗" }
+                stringResource(R.string.settlement_mm) to { r: SoilBearingResult -> "%.1f".format(r.settlement) },
+                stringResource(R.string.status) to { r: SoilBearingResult -> if (r.isSafe) "✓" else "✗" }
             )
 
             rows.forEach { (label, formatter) ->

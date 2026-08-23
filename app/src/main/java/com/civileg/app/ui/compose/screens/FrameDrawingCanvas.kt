@@ -21,8 +21,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.R
 import com.civileg.app.domain.entities.*
 import com.civileg.app.viewmodel.DiagramType
 import kotlin.math.*
@@ -51,6 +53,7 @@ fun FrameDrawingCanvas(
 ) {
     val showDiagrams = result?.hasResults == true && viewMode == 0
     val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -59,7 +62,6 @@ fun FrameDrawingCanvas(
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
         // Calculate scale to fit frame in canvas with padding (all in pixels)
-        // CRITICAL FIX: Reduce padding to use more screen space (was 16.dp, now 8.dp)
         val paddingPx = with(density) { 8.dp.toPx() }
         val drawW = canvasW - paddingPx * 2
         val drawH = canvasH - paddingPx * 2
@@ -69,7 +71,6 @@ fun FrameDrawingCanvas(
         val xSpan = max(xRange.endInclusive - xRange.start, 1.0)
         val ySpan = max(yRange.endInclusive - yRange.start, 1.0)
 
-        // CRITICAL FIX: Use 0.85 multiplier to use more of the canvas (was 1.0)
         val scale = (min(drawW / xSpan, drawH / ySpan) * 0.92f).toFloat()
 
         val offsetX = (paddingPx + (drawW - xSpan * scale) / 2 - xRange.start * scale).toFloat()
@@ -110,16 +111,16 @@ fun FrameDrawingCanvas(
                 0 -> drawFrameView(
                     nodes, members, memberLoads, nodalLoads, result, diagramType,
                     selectedMemberId, showDiagrams, toScreen, scale, offsetX, offsetY,
-                    xRange, yRange, textMeasurer, colorScheme
+                    xRange, yRange, textMeasurer, colorScheme, context
                 )
                 1 -> drawLongitudinalSection(
-                    nodes, members, result, scale, canvasW, canvasH, textMeasurer
+                    nodes, members, result, scale, canvasW, canvasH, textMeasurer, context
                 )
                 2 -> drawCrossSection(
-                    nodes, members, result, selectedMemberId, scale, canvasW, canvasH, textMeasurer
+                    nodes, members, result, selectedMemberId, scale, canvasW, canvasH, textMeasurer, context
                 )
                 3 -> drawPlanView(
-                    nodes, members, scale, canvasW, canvasH, textMeasurer
+                    nodes, members, scale, canvasW, canvasH, textMeasurer, context
                 )
             }
         }
@@ -145,12 +146,13 @@ private fun DrawScope.drawFrameView(
     xRange: ClosedFloatingPointRange<Double>,
     yRange: ClosedFloatingPointRange<Double>,
     textMeasurer: TextMeasurer,
-    colorScheme: androidx.compose.material3.ColorScheme
+    colorScheme: androidx.compose.material3.ColorScheme,
+    context: android.content.Context
 ) {
     if (nodes.isEmpty()) {
         drawText(
             textMeasurer = textMeasurer,
-            text = "أضف عقد وأعضاء لبدء التحليل",
+            text = context.getString(R.string.frame_add_nodes_to_start),
             topLeft = Offset(size.width / 2 - 120f, size.height / 2),
             style = TextStyle(color = Color.Gray, fontSize = 16.sp)
         )
@@ -164,7 +166,7 @@ private fun DrawScope.drawFrameView(
     if (showDiagrams) {
         drawDiagrams(
             members, result?.memberDiagrams ?: emptyList(),
-            nodes, toScreen, scale, diagramType, textMeasurer
+            nodes, toScreen, scale, diagramType, textMeasurer, context
         )
     }
 
@@ -212,7 +214,7 @@ private fun DrawScope.drawFrameView(
 
         drawText(
             textMeasurer = textMeasurer,
-            text = "#${member.id}",
+            text = context.getString(R.string.frame_member_id_format, member.id),
             topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
             style = TextStyle(color = Color.Gray, fontSize = 9.sp)
         )
@@ -223,14 +225,14 @@ private fun DrawScope.drawFrameView(
         val member = members.find { it.id == mLoad.memberId } ?: continue
         val ni = nodes.find { it.id == member.nodeI } ?: continue
         val nj = nodes.find { it.id == member.nodeJ } ?: continue
-        drawMemberLoadArrows(ni, nj, mLoad, toScreen, scale, textMeasurer)
+        drawMemberLoadArrows(ni, nj, mLoad, toScreen, scale, textMeasurer, context)
     }
 
     // === Draw Nodal Loads ===
     for (nLoad in nodalLoads) {
         val node = nodes.find { it.id == nLoad.nodeId } ?: continue
         val p = toScreen(node.x, node.y)
-        drawNodalLoadArrow(p, nLoad, textMeasurer)
+        drawNodalLoadArrow(p, nLoad, textMeasurer, context)
     }
 
     // === Draw Supports ===
@@ -264,7 +266,7 @@ private fun DrawScope.drawFrameView(
     }
 
     // === Scale Bar ===
-    drawScaleBar(size, scale, textMeasurer)
+    drawScaleBar(size, scale, textMeasurer, context)
 }
 
 // ============================================================================
@@ -278,12 +280,13 @@ private fun DrawScope.drawLongitudinalSection(
     scale: Float,
     canvasW: Float,
     canvasH: Float,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
     if (nodes.isEmpty()) {
         drawText(
             textMeasurer = textMeasurer,
-            text = "Longitudinal Section — No data",
+            text = context.getString(R.string.frame_longitudinal_no_data),
             topLeft = Offset(canvasW / 2 - 100f, canvasH / 2),
             style = TextStyle(color = Color.Gray, fontSize = 14.sp)
         )
@@ -293,7 +296,7 @@ private fun DrawScope.drawLongitudinalSection(
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "LONGITUDINAL SECTION (قطاع طولي)",
+        text = context.getString(R.string.frame_longitudinal_section_title),
         topLeft = Offset(canvasW / 2 - 130f, 20f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     )
@@ -388,7 +391,7 @@ private fun DrawScope.drawLongitudinalSection(
     drawLine(dimColor, Offset(rightX, groundY + 8f), Offset(rightX, dimY + 5f), strokeWidth = 1f)
     drawLine(dimColor, Offset(leftX, dimY), Offset(rightX, dimY), strokeWidth = 1.5f)
     drawContext.canvas.nativeCanvas.drawText(
-        "Span = ${String.format("%.2f", xSpan)} m",
+        context.getString(R.string.frame_span_format, xSpan),
         (leftX + rightX) / 2, dimY - 8f, dimTextPaint
     )
 
@@ -402,7 +405,7 @@ private fun DrawScope.drawLongitudinalSection(
     drawContext.canvas.nativeCanvas.save()
     drawContext.canvas.nativeCanvas.rotate(-90f, dimX - 12f, (bottomY + topY) / 2)
     drawContext.canvas.nativeCanvas.drawText(
-        "Height = ${String.format("%.2f", ySpan)} m",
+        context.getString(R.string.frame_height_format, ySpan),
         dimX - 12f, (bottomY + topY) / 2 + 8f, dimTextPaint
     )
     drawContext.canvas.nativeCanvas.restore()
@@ -419,11 +422,11 @@ private fun DrawScope.drawLongitudinalSection(
         val infoPaintSmall = android.graphics.Paint().apply {
             color = Color.White.toArgb(); textSize = 16f
         }
-        drawContext.canvas.nativeCanvas.drawText("Analysis Results", infoX + 10f, infoY + 22f, infoPaint)
+        drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_analysis_results_title), infoX + 10f, infoY + 22f, infoPaint)
         val maxM = res.memberDiagrams.maxOfOrNull { md -> md.momentDiagram.maxOfOrNull { it.value } ?: 0.0 } ?: 0.0
         val maxV = res.memberDiagrams.maxOfOrNull { md -> md.shearDiagram.maxOfOrNull { it.value } ?: 0.0 } ?: 0.0
-        drawContext.canvas.nativeCanvas.drawText("Max Moment: ${String.format("%.1f", maxM)} kN.m", infoX + 10f, infoY + 45f, infoPaintSmall)
-        drawContext.canvas.nativeCanvas.drawText("Max Shear: ${String.format("%.1f", maxV)} kN", infoX + 10f, infoY + 65f, infoPaintSmall)
+        drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_max_moment_format, maxM), infoX + 10f, infoY + 45f, infoPaintSmall)
+        drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_max_shear_format, maxV), infoX + 10f, infoY + 65f, infoPaintSmall)
     }
 }
 
@@ -439,12 +442,13 @@ private fun DrawScope.drawCrossSection(
     scale: Float,
     canvasW: Float,
     canvasH: Float,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "CROSS SECTION (قطاع عرضي)",
+        text = context.getString(R.string.frame_cross_section_title),
         topLeft = Offset(canvasW / 2 - 110f, 20f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     )
@@ -452,25 +456,21 @@ private fun DrawScope.drawCrossSection(
     if (members.isEmpty()) {
         drawText(
             textMeasurer = textMeasurer,
-            text = "No members to display",
+            text = context.getString(R.string.frame_no_members_display),
             topLeft = Offset(canvasW / 2 - 80f, canvasH / 2),
             style = TextStyle(color = Color.Gray, fontSize = 14.sp)
         )
         return
     }
 
-    // FIX: Use memberType enum instead of name heuristic — robust for all templates
-    // (previously the name contains("كمرة") failed for template beam name "كمر سقف")
     val columnMembers = members.filter { it.memberType == FrameMemberType.Column }
     val beamMembers = members.filter { it.memberType == FrameMemberType.Beam }
 
-    // Fallback: if memberType not set, classify by orientation (vertical = column, horizontal = beam)
     val (colMs, bmMs) = if (columnMembers.isEmpty() && beamMembers.isEmpty()) {
         val byOrientation = members.partition { m ->
             val ni = nodes.find { it.id == m.nodeI }
             val nj = nodes.find { it.id == m.nodeJ }
             if (ni != null && nj != null) {
-                // vertical if Y difference is much larger than X difference
                 abs(nj.y - ni.y) > abs(nj.x - ni.x) * 1.5
             } else false
         }
@@ -482,12 +482,12 @@ private fun DrawScope.drawCrossSection(
     // Draw column section on left
     val colCenterX = canvasW * 0.25f
     val colCenterY = canvasH * 0.5f
-    drawColumnSection(colCenterX, colCenterY, colMs.firstOrNull(), result, textMeasurer)
+    drawColumnSection(colCenterX, colCenterY, colMs.firstOrNull(), result, textMeasurer, context)
 
     // Draw beam section on right
     val beamCenterX = canvasW * 0.75f
     val beamCenterY = canvasH * 0.5f
-    drawBeamSection(beamCenterX, beamCenterY, bmMs.firstOrNull(), result, textMeasurer)
+    drawBeamSection(beamCenterX, beamCenterY, bmMs.firstOrNull(), result, textMeasurer, context)
 }
 
 // Draw column cross section with reinforcement — uses ACTUAL member section & design result
@@ -495,15 +495,14 @@ private fun DrawScope.drawColumnSection(
     cx: Float, cy: Float,
     member: FrameMember?,
     result: FrameAnalysisResult?,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
-    // Pull actual section dimensions from member.concreteSection (fallback to 300x300 if missing)
     val cs = member?.concreteSection
     val colW = cs?.width?.toInt() ?: 300
     val colD = cs?.depth?.toInt() ?: 300
     val cover = cs?.cover?.toInt() ?: 40
 
-    // Find the design result for this member — provides actual bars/diameters/stirrups
     val designRes = result?.concreteDesignResults?.firstOrNull { it.memberId == member?.id }
     val numBarsBot = designRes?.numBarsBot?.takeIf { it > 0 } ?: 4
     val numBarsTop = designRes?.numBarsTop?.takeIf { it > 0 } ?: 2
@@ -512,7 +511,6 @@ private fun DrawScope.drawColumnSection(
     val tieDia = designRes?.stirrupDia?.takeIf { it > 0 }?.toInt() ?: 8
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
 
-    // Section drawing — scale based on largest dimension so wide/tall columns fit
     val maxMm = maxOf(colW, colD)
     val sectionSize = 220f
     val drawW = if (colW >= colD) sectionSize else (colW.toFloat() / colD.toFloat() * sectionSize)
@@ -523,7 +521,7 @@ private fun DrawScope.drawColumnSection(
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "COLUMN SECTION — ${member?.name?.ifEmpty { "Column" } ?: "Column"}",
+        text = context.getString(R.string.frame_column_section_label, member?.name?.ifEmpty { context.getString(R.string.column) } ?: context.getString(R.string.column)),
         topLeft = Offset(cx - 100f, top - 30f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     )
@@ -532,7 +530,7 @@ private fun DrawScope.drawColumnSection(
     drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(drawW, drawH))
     drawRect(Color(0xFF555555), Offset(left, top), Size(drawW, drawH), style = Stroke(width = 2.5f))
 
-    // Cover boundary (dashed) — proportional to actual cover
+    // Cover boundary (dashed)
     val coverInset = (cover.toFloat() / maxMm.toFloat()) * sectionSize * 0.6f
     drawRect(
         Color(0xFF888888),
@@ -541,7 +539,7 @@ private fun DrawScope.drawColumnSection(
         style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)))
     )
 
-    // Stirrup (tie) - inside cover
+    // Stirrup
     val tieInset = coverInset + 4f
     drawRect(
         Color(0xFF4CAF50),
@@ -550,15 +548,12 @@ private fun DrawScope.drawColumnSection(
         style = Stroke(width = 2f)
     )
 
-    // Longitudinal bars: distribute actual count around perimeter (corners + evenly along faces)
     val barR = (barDia.toFloat() / maxMm.toFloat() * sectionSize * 0.5f).coerceIn(3.5f, 8f)
     val barPositions = mutableListOf<Offset>()
-    // 4 corner bars first
     barPositions.add(Offset(left + coverInset + 8f, top + coverInset + 8f))
     barPositions.add(Offset(left + drawW - coverInset - 8f, top + coverInset + 8f))
     barPositions.add(Offset(left + coverInset + 8f, top + drawH - coverInset - 8f))
     barPositions.add(Offset(left + drawW - coverInset - 8f, top + drawH - coverInset - 8f))
-    // Distribute remaining bars (if any) on the longer faces
     val remaining = (numBars - 4).coerceAtLeast(0)
     if (remaining > 0) {
         val alongW = maxOf(1, remaining / 2)
@@ -588,7 +583,7 @@ private fun DrawScope.drawColumnSection(
     drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left + drawW, top - 5f), Offset(left + drawW, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left, dimYTop), Offset(left + drawW, dimYTop), strokeWidth = 1.2f)
-    drawContext.canvas.nativeCanvas.drawText("b = $colW mm", left + drawW / 2, dimYTop - 4f, dimPaint)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_b_format, colW), left + drawW / 2, dimYTop - 4f, dimPaint)
 
     val dimXRight = left + drawW + 20f
     drawLine(dimColor, Offset(left + drawW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
@@ -596,21 +591,19 @@ private fun DrawScope.drawColumnSection(
     drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + drawH), strokeWidth = 1.2f)
     drawContext.canvas.nativeCanvas.save()
     drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + drawH / 2)
-    drawContext.canvas.nativeCanvas.drawText("h = $colD mm", dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, colD), dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
-    // Label — show ACTUAL reinforcement schedule
     val labelPaint = android.graphics.Paint().apply {
         color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
     drawContext.canvas.nativeCanvas.drawText(
-        "$numBars Ø$barDia mm + Ø$tieDia/@${stirrupSpacing}mm",
+        context.getString(R.string.frame_rebar_column_format, numBars, barDia, tieDia, stirrupSpacing),
         cx, top + drawH + 35f, labelPaint
     )
 
-    // As provided info if available
     designRes?.let { dr ->
-        val asProvText = "As provided: ${String.format("%.0f", dr.asProvided)} mm² | As req: ${String.format("%.0f", dr.asRequired)} mm²"
+        val asProvText = context.getString(R.string.frame_provided_req_format, dr.asProvided, dr.asRequired)
         drawContext.canvas.nativeCanvas.drawText(
             asProvText,
             cx, top + drawH + 55f, android.graphics.Paint().apply {
@@ -625,15 +618,14 @@ private fun DrawScope.drawBeamSection(
     cx: Float, cy: Float,
     member: FrameMember?,
     result: FrameAnalysisResult?,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
-    // Pull actual section dimensions from member.concreteSection (fallback to 250x500 if missing)
     val cs = member?.concreteSection
     val beamW = cs?.width?.toInt() ?: 250
     val beamD = cs?.depth?.toInt() ?: 500
     val cover = cs?.cover?.toInt() ?: 25
 
-    // Find the design result for this member — provides actual bars/diameters/stirrups
     val designRes = result?.concreteDesignResults?.firstOrNull { it.memberId == member?.id }
     val numBarsBottom = designRes?.numBarsBot?.takeIf { it > 0 } ?: 3
     val numBarsTop = designRes?.numBarsTop?.takeIf { it > 0 } ?: 2
@@ -641,7 +633,6 @@ private fun DrawScope.drawBeamSection(
     val stirrupDia = designRes?.stirrupDia?.takeIf { it > 0 }?.toInt() ?: 8
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
 
-    // Drawing area — proportional to actual b:h ratio (default ~250:500 = 1:2)
     val maxMm = maxOf(beamW, beamD)
     val drawSize = 220f
     val drawW = (beamW.toFloat() / maxMm.toFloat()) * drawSize
@@ -652,7 +643,7 @@ private fun DrawScope.drawBeamSection(
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "BEAM SECTION — ${member?.name?.ifEmpty { "Beam" } ?: "Beam"}",
+        text = context.getString(R.string.frame_beam_section_label, member?.name?.ifEmpty { context.getString(R.string.beam) } ?: context.getString(R.string.beam)),
         topLeft = Offset(cx - 100f, top - 30f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     )
@@ -661,7 +652,6 @@ private fun DrawScope.drawBeamSection(
     drawRect(Color(0xFFE0E0E0), Offset(left, top), Size(drawW, drawH))
     drawRect(Color(0xFF555555), Offset(left, top), Size(drawW, drawH), style = Stroke(width = 2.5f))
 
-    // Cover boundary (dashed) — proportional to actual cover
     val coverInset = (cover.toFloat() / maxMm.toFloat()) * drawSize * 0.6f
     drawRect(
         Color(0xFF888888),
@@ -681,7 +671,7 @@ private fun DrawScope.drawBeamSection(
 
     val barR = (barDia.toFloat() / maxMm.toFloat() * drawSize * 0.5f).coerceIn(3.5f, 8f)
 
-    // Bottom bars (tension steel for simply-supported beam)
+    // Bottom bars
     val bottomY = top + drawH - coverInset - 8f
     if (numBarsBottom > 0) {
         val bottomSpacing = if (numBarsBottom > 1)
@@ -694,7 +684,7 @@ private fun DrawScope.drawBeamSection(
         }
     }
 
-    // Top bars (compression steel)
+    // Top bars
     val topY = top + coverInset + 8f
     if (numBarsTop > 0) {
         val topSpacing = if (numBarsTop > 1)
@@ -716,7 +706,7 @@ private fun DrawScope.drawBeamSection(
     drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left + drawW, top - 5f), Offset(left + drawW, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left, dimYTop), Offset(left + drawW, dimYTop), strokeWidth = 1.2f)
-    drawContext.canvas.nativeCanvas.drawText("b = $beamW mm", left + drawW / 2, dimYTop - 4f, dimPaint)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_b_format, beamW), left + drawW / 2, dimYTop - 4f, dimPaint)
 
     val dimXRight = left + drawW + 20f
     drawLine(dimColor, Offset(left + drawW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
@@ -724,25 +714,23 @@ private fun DrawScope.drawBeamSection(
     drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + drawH), strokeWidth = 1.2f)
     drawContext.canvas.nativeCanvas.save()
     drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + drawH / 2)
-    drawContext.canvas.nativeCanvas.drawText("h = $beamD mm", dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, beamD), dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
-    // Label — show ACTUAL reinforcement schedule
     val labelPaint = android.graphics.Paint().apply {
         color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
     drawContext.canvas.nativeCanvas.drawText(
-        "$numBarsBottom Ø$barDia (bot) + $numBarsTop Ø$barDia (top)",
+        context.getString(R.string.frame_rebar_beam_bot_top_format, numBarsBottom, barDia, numBarsTop, barDia),
         cx, top + drawH + 35f, labelPaint
     )
     drawContext.canvas.nativeCanvas.drawText(
-        "+ Ø$stirrupDia/@$stirrupSpacing mm",
+        context.getString(R.string.frame_rebar_beam_stirrup_format, stirrupDia, stirrupSpacing),
         cx, top + drawH + 55f, labelPaint
     )
 
-    // As provided info if available
     designRes?.let { dr ->
-        val asProvText = "As provided: ${String.format("%.0f", dr.asProvided)} mm² | As req: ${String.format("%.0f", dr.asRequired)} mm² | Mu: ${String.format("%.1f", dr.maxMoment)} kN.m"
+        val asProvText = context.getString(R.string.frame_beam_provided_req_mu_format, dr.asProvided, dr.asRequired, dr.maxMoment)
         drawContext.canvas.nativeCanvas.drawText(
             asProvText,
             cx, top + drawH + 75f, android.graphics.Paint().apply {
@@ -762,12 +750,13 @@ private fun DrawScope.drawPlanView(
     scale: Float,
     canvasW: Float,
     canvasH: Float,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
     // Title
     drawText(
         textMeasurer = textMeasurer,
-        text = "PLAN VIEW (مسقط أفقي)",
+        text = context.getString(R.string.frame_plan_view_title),
         topLeft = Offset(canvasW / 2 - 100f, 20f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
     )
@@ -775,29 +764,21 @@ private fun DrawScope.drawPlanView(
     if (nodes.isEmpty()) {
         drawText(
             textMeasurer = textMeasurer,
-            text = "No nodes to display",
+            text = context.getString(R.string.frame_no_nodes_display),
             topLeft = Offset(canvasW / 2 - 80f, canvasH / 2),
             style = TextStyle(color = Color.Gray, fontSize = 14.sp)
         )
         return
     }
 
-    // FIX: Plan view now uses ACTUAL node geometry instead of synthetic 4m depth.
-    // For each unique Y (floor level), project onto plan showing:
-    //   - All columns at their X positions (sized by actual column section)
-    //   - All beams at that level as horizontal lines
-    //   - Dimension lines between extreme X coordinates
     val xMin = nodes.minOf { it.x }
     val xMax = nodes.maxOf { it.x }
     val xSpan = max(xMax - xMin, 1.0)
 
-    // Get unique Y levels (floor elevations) — each represents a different plan level
     val yLevels = nodes.map { it.y }.distinct().sorted()
     val nLevels = yLevels.size
-    // Depth axis: project each floor level as a separate horizontal band
-    val planDepth = max(nLevels * 3.0, 4.0)  // each floor gets ~3m of plan space
+    val planDepth = max(nLevels * 3.0, 4.0)
 
-    // Drawing area
     val padLeft = 80f
     val padRight = 80f
     val padTop = 80f
@@ -812,7 +793,6 @@ private fun DrawScope.drawPlanView(
     val originX = padLeft + (drawW - xSpan.toFloat() * s) / 2f
     val originY = padTop + planDepth.toFloat() * s + (drawH - planDepth.toFloat() * s) / 2f
 
-    // Map (x_meters, depth_index) to screen — depth_index is the floor's plan band
     val toScreen: (Double, Double) -> Offset = { x, z ->
         Offset(
             ((x - xMin).toFloat() * s + originX),
@@ -820,13 +800,11 @@ private fun DrawScope.drawPlanView(
         )
     }
 
-    // For each floor level, draw a band showing the plan at that elevation
     yLevels.forEachIndexed { levelIdx, yLevel ->
-        val bandZ = levelIdx * 3.0 + 1.5  // center of this floor's plan band
+        val bandZ = levelIdx * 3.0 + 1.5
         val bandTop = levelIdx * 3.0 + 0.2
         val bandBot = (levelIdx + 1) * 3.0 - 0.2
 
-        // Slab rectangle for this floor
         val slabColor = Color(0xFFBBDEFB).copy(alpha = 0.3f)
         val sl1 = toScreen(xMin, bandTop)
         val sl2 = toScreen(xMax, bandBot)
@@ -837,15 +815,13 @@ private fun DrawScope.drawPlanView(
             style = Stroke(width = 1f)
         )
 
-        // Floor label
         drawText(
             textMeasurer = textMeasurer,
-            text = "L${levelIdx + 1} (y=${String.format("%.2f", yLevel)}m)",
+            text = context.getString(R.string.frame_level_format, levelIdx + 1, yLevel),
             topLeft = Offset(sl1.x + 4f, sl2.y + 4f),
             style = TextStyle(color = Color(0xFF1565C0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         )
 
-        // Beams at this floor level — use memberType for robust detection
         val beamsAtLevel = members.filter {
             it.memberType == FrameMemberType.Beam &&
                 run {
@@ -863,20 +839,15 @@ private fun DrawScope.drawPlanView(
             drawLine(Color(0xFF42A5F5), p1, p2, strokeWidth = 8f, cap = StrokeCap.Round)
         }
 
-        // Columns at this floor level — draw as squares at each node X position
-        // Use actual column section size if available
         val columnsAtLevel = members.filter { it.memberType == FrameMemberType.Column }
-        // Get all nodes at this Y level that have a column member connected
         val nodesWithColumns = nodes.filter { n ->
             abs(n.y - yLevel) < 0.01 &&
                 columnsAtLevel.any { it.nodeI == n.id || it.nodeJ == n.id }
         }
         nodesWithColumns.forEach { node ->
             val p = toScreen(node.x, bandZ)
-            // Column size from section (fallback 300mm)
             val colMember = columnsAtLevel.firstOrNull { it.nodeI == node.id || it.nodeJ == node.id }
             val colW = colMember?.concreteSection?.width?.toInt() ?: 300
-            // Scale column square: 300mm = 14f, 600mm = 24f
             val colSize = (14f + (colW - 300) / 30f).coerceIn(12f, 28f)
             drawRect(
                 Color(0xFFFF9800),
@@ -892,7 +863,6 @@ private fun DrawScope.drawPlanView(
         }
     }
 
-    // Dimensions — overall span at bottom
     val dimColor = Color(0xFF8E24AA)
     val dimPaint = android.graphics.Paint().apply {
         color = dimColor.toArgb(); textSize = 22f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
@@ -905,7 +875,7 @@ private fun DrawScope.drawPlanView(
     drawLine(dimColor, Offset(rightX, originY + 5f), Offset(rightX, dimY + 5f), strokeWidth = 1f)
     drawLine(dimColor, Offset(leftX, dimY), Offset(rightX, dimY), strokeWidth = 1.5f)
     drawContext.canvas.nativeCanvas.drawText(
-        "L = ${String.format("%.2f", xSpan)} m  (${nLevels} floor${if (nLevels > 1) "s" else ""})",
+        context.getString(R.string.frame_plan_span_floors_format, xSpan, nLevels),
         (leftX + rightX) / 2, dimY - 8f, dimPaint
     )
 
@@ -916,13 +886,13 @@ private fun DrawScope.drawPlanView(
     drawRect(Color(0xFF4A90D9), Offset(legX, legY), Size(180f, 100f), style = Stroke(1f))
     val legTitle = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 16f; isFakeBoldText = true }
     val legItem = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 14f }
-    drawContext.canvas.nativeCanvas.drawText("LEGEND", legX + 8f, legY + 20f, legTitle)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_legend_title), legX + 8f, legY + 20f, legTitle)
     drawRect(Color(0xFFBBDEFB), Offset(legX + 8f, legY + 30f), Size(16f, 12f))
-    drawContext.canvas.nativeCanvas.drawText("Slab", legX + 32f, legY + 40f, legItem)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_legend_slab), legX + 32f, legY + 40f, legItem)
     drawLine(Color(0xFF42A5F5), Offset(legX + 8f, legY + 56f), Offset(legX + 24f, legY + 56f), strokeWidth = 6f)
-    drawContext.canvas.nativeCanvas.drawText("Beam", legX + 32f, legY + 60f, legItem)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_legend_beam), legX + 32f, legY + 60f, legItem)
     drawRect(Color(0xFFFF9800), Offset(legX + 12f, legY + 72f), Size(8f, 8f))
-    drawContext.canvas.nativeCanvas.drawText("Column", legX + 32f, legY + 80f, legItem)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_legend_column), legX + 32f, legY + 80f, legItem)
 }
 
 // ============================================================================
@@ -1042,9 +1012,7 @@ private fun DrawScope.drawSupportLarge(p: Offset, supportType: SupportType, text
                 close()
             }
             drawPath(path, color = Color(0xFF1565C0), style = Stroke(width = 2.5f))
-            // Foundation
             drawRect(Color(0xFF888888), Offset(p.x - size - 5, p.y + size * 1.2f), Size(2 * size + 10, 6f))
-            // Hatching
             for (i in -3..3) {
                 val hx = p.x + i * 8f
                 drawLine(Color(0xFF1565C0), Offset(hx, p.y + size * 1.2f + 6f), Offset(hx - 5, p.y + size * 1.2f + 12f), strokeWidth = 1f)
@@ -1087,7 +1055,8 @@ private fun DrawScope.drawMemberLoadArrows(
     mLoad: MemberLoad,
     toScreen: (Double, Double) -> Offset,
     scale: Float,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
     if (mLoad.loadType == MemberLoadType.UDL) {
         val numArrows = 8
@@ -1121,7 +1090,7 @@ private fun DrawScope.drawMemberLoadArrows(
         val midY = (p1.y + p2.y) / 2 + ny * (arrowLen + 8f)
         drawText(
             textMeasurer = textMeasurer,
-            text = "${mLoad.value} kN/m",
+            text = context.getString(R.string.frame_udl_format, mLoad.value),
             topLeft = Offset(midX - 20, midY - 6),
             style = TextStyle(color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         )
@@ -1150,14 +1119,14 @@ private fun DrawScope.drawMemberLoadArrows(
 
         drawText(
             textMeasurer = textMeasurer,
-            text = "${mLoad.value} kN",
+            text = context.getString(R.string.frame_point_load_format, mLoad.value),
             topLeft = Offset(tipX - 12, tipY + 4),
             style = TextStyle(color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         )
     }
 }
 
-private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasurer: TextMeasurer) {
+private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasurer: TextMeasurer, context: android.content.Context) {
     if (abs(load.fx) < 0.01 && abs(load.fy) < 0.01 && abs(load.mz) < 0.01) return
 
     val arrowColor = Color(0xFF4CAF50)
@@ -1172,7 +1141,7 @@ private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasure
         drawLine(arrowColor, start = Offset(p.x, tipY), end = Offset(p.x + 5f, tipY + headDir * 6f), strokeWidth = 2f)
         drawText(
             textMeasurer = textMeasurer,
-            text = "${abs(load.fy)} kN",
+            text = context.getString(R.string.frame_nodal_load_format, abs(load.fy)),
             topLeft = Offset(p.x + 6, tipY - 4),
             style = TextStyle(color = arrowColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         )
@@ -1188,7 +1157,7 @@ private fun DrawScope.drawNodalLoadArrow(p: Offset, load: NodalLoad, textMeasure
     if (abs(load.mz) > 0.01) {
         drawText(
             textMeasurer = textMeasurer,
-            text = "M=${load.mz} kN.m",
+            text = context.getString(R.string.frame_moment_load_format, load.mz),
             topLeft = Offset(p.x + 10, p.y - 20),
             style = TextStyle(color = Color(0xFF9C27B0), fontSize = 9.sp, fontWeight = FontWeight.Bold)
         )
@@ -1202,7 +1171,8 @@ private fun DrawScope.drawDiagrams(
     toScreen: (Double, Double) -> Offset,
     scale: Float,
     diagramType: DiagramType,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    context: android.content.Context
 ) {
     for (diagram in diagrams) {
         val member = members.find { it.id == diagram.memberId } ?: continue
@@ -1277,8 +1247,8 @@ private fun DrawScope.drawDiagrams(
             val annX = p1.x + dx * L * tMax + nx * offsetMax.toFloat()
             val annY = p1.y + dy * L * tMax + ny * offsetMax.toFloat()
             val unit = when (diagramType) {
-                DiagramType.BMD -> "kN.m"
-                DiagramType.SFD, DiagramType.AFD -> "kN"
+                DiagramType.BMD -> context.getString(R.string.frame_unit_kn_m)
+                DiagramType.SFD, DiagramType.AFD -> context.getString(R.string.frame_unit_kn)
             }
             val label = "${abs(maxPt.value).formatValue(2)} $unit"
             drawText(
@@ -1322,7 +1292,7 @@ private fun DrawScope.drawDeformedShape(
     }
 }
 
-private fun DrawScope.drawScaleBar(size: Size, scale: Float, textMeasurer: TextMeasurer) {
+private fun DrawScope.drawScaleBar(size: Size, scale: Float, textMeasurer: TextMeasurer, context: android.content.Context) {
     val barLength_m = 1.0
     val barLength_px = (barLength_m * scale).toFloat()
     val x = 20f
@@ -1333,7 +1303,7 @@ private fun DrawScope.drawScaleBar(size: Size, scale: Float, textMeasurer: TextM
     drawLine(Color.DarkGray, Offset(x + barLength_px, y - 5), Offset(x + barLength_px, y + 5), strokeWidth = 2f)
     drawText(
         textMeasurer = textMeasurer,
-        text = "${barLength_m.toInt()} m",
+        text = context.getString(R.string.frame_scale_bar_format, barLength_m.toInt()),
         topLeft = Offset(x + barLength_px / 2 - 10, y + 6),
         style = TextStyle(color = Color.DarkGray, fontSize = 10.sp)
     )

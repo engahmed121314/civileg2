@@ -114,16 +114,20 @@ fun ShearWallScreen(
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            listOf("Rectangular", "L-shaped", "T-shaped").forEach { shape ->
-                        FilterChip(
-                            selected = uiState.wallShape == shape,
-                            onClick = { viewModel.updateWallShape(shape) },
-                            label = { Text(shape, fontSize = 12.sp,
-                                fontWeight = if (uiState.wallShape == shape) FontWeight.Bold else FontWeight.Normal) },
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                            listOf(
+                                stringResource(R.string.rectangular) to "Rectangular",
+                                stringResource(R.string.l_shaped) to "L-shaped",
+                                stringResource(R.string.t_shaped) to "T-shaped"
+                            ).forEach { (label, value) ->
+                                FilterChip(
+                                    selected = uiState.wallShape == value,
+                                    onClick = { viewModel.updateWallShape(value) },
+                                    label = { Text(label, fontSize = 12.sp,
+                                        fontWeight = if (uiState.wallShape == value) FontWeight.Bold else FontWeight.Normal) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -287,13 +291,13 @@ fun ShearWallScreen(
                             "${"%.1f".format(result.momentCapacity)} kN.m")
                         DesignResultRow(stringResource(R.string.axial_capacity),
                             "${"%.1f".format(result.axialCapacity)} kN")
-                        DesignResultRow("Compression Depth (a)",
+                        DesignResultRow(stringResource(R.string.sw_bending_moment),
                             "${"%.1f".format(result.compressionDepth)} mm")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-                        Text(stringResource(R.string.sw_num_stories), style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.required_reinforcement), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        DesignResultRow("Provided",
+                        DesignResultRow(stringResource(R.string.status),
                             "${result.verticalReinforcement.bars}Φ${result.verticalReinforcement.diameter} @ ${result.verticalReinforcement.spacing} mm")
                         DesignResultRow("As Provided",
                             "${"%.0f".format(result.verticalReinforcement.providedArea)} mm²")
@@ -504,7 +508,7 @@ private fun ResultCard(isSafe: Boolean, content: @Composable () -> Unit) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (isSafe) "PASS" else "FAIL",
+                    if (isSafe) stringResource(R.string.pass) else stringResource(R.string.fail),
                     fontWeight = FontWeight.Bold,
                     color = if (isSafe) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.error
