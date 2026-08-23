@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.aci.ACIFlatSlab
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
@@ -14,7 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class FlatSlabViewModel @Inject constructor() : ViewModel() {
+class FlatSlabViewModel @Inject constructor(
+    private val repository: DesignRepository
+) : ViewModel() {
 
     private val _result = MutableLiveData<FlatSlabResult?>()
     val result: LiveData<FlatSlabResult?> = _result
@@ -172,5 +175,12 @@ class FlatSlabViewModel @Inject constructor() : ViewModel() {
     fun clearResult() {
         _result.value = null
         _error.value = null
+    }
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _result.value ?: return
+        viewModelScope.launch {
+            repository.saveFlatSlabDesign(projectId, name, res)
+        }
     }
 }

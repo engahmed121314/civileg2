@@ -11,7 +11,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class WindLoadViewModel @Inject constructor() : ViewModel() {
+class WindLoadViewModel @Inject constructor(
+    private val repository: com.civileg.app.db.DesignRepository
+) : ViewModel() {
 
     // ------------------------------------------------------------------
     // Output
@@ -22,6 +24,13 @@ class WindLoadViewModel @Inject constructor() : ViewModel() {
 
     private val _isCalculating = MutableLiveData(false)
     val isCalculating: LiveData<Boolean> = _isCalculating
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _result.value ?: return
+        viewModelScope.launch {
+            repository.saveWindLoadDesign(projectId, name, res)
+        }
+    }
 
     private val _k2Table = MutableLiveData<List<Pair<Double, Double>>>(emptyList())
     val k2Table: LiveData<List<Pair<Double, Double>>> = _k2Table

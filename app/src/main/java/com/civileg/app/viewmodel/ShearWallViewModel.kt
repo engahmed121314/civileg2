@@ -3,6 +3,7 @@ package com.civileg.app.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import com.civileg.app.domain.calculations.ecp.ECPShearWall
@@ -48,7 +49,9 @@ data class ShearWallUiState(
 )
 
 @HiltViewModel
-class ShearWallViewModel @Inject constructor() : ViewModel() {
+class ShearWallViewModel @Inject constructor(
+    private val repository: DesignRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShearWallUiState())
     val uiState: StateFlow<ShearWallUiState> = _uiState.asStateFlow()
@@ -270,5 +273,12 @@ class ShearWallViewModel @Inject constructor() : ViewModel() {
 
     fun reset() {
         _uiState.value = ShearWallUiState()
+    }
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _uiState.value.result ?: return
+        viewModelScope.launch {
+            repository.saveShearWallDesign(projectId, name, res)
+        }
     }
 }

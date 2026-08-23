@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.PileFoundationDesign
 import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
@@ -18,7 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PileFoundationViewModel @Inject constructor(
-    // Repository can be added later for saving designs
+    private val repository: DesignRepository
 ) : ViewModel() {
 
     private val designEngine: PileFoundationDesign = ECPPileFoundation()
@@ -211,5 +212,12 @@ class PileFoundationViewModel @Inject constructor(
     fun clearResult() {
         _result.value = null
         _error.value = null
+    }
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _result.value ?: return
+        viewModelScope.launch {
+            repository.savePileFoundationDesign(projectId, name, res)
+        }
     }
 }

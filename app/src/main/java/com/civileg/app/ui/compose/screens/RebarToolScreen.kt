@@ -16,12 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.civileg.app.R
 import com.civileg.app.utils.RebarCalculator
 import com.civileg.app.utils.RebarCalculator.STANDARD_DIAMETERS
 import com.civileg.app.utils.RebarCalculator.DesignCode
@@ -40,15 +42,21 @@ fun RebarToolScreen(
     viewModel: RebarToolViewModel = viewModel()
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
-    val tabTitles = listOf("Weight", "Dev. Length", "Lap Length", "Schedule", "Crack Width")
+    val tabTitles = listOf(
+        stringResource(R.string.rebar_tab_weight),
+        stringResource(R.string.rebar_tab_dev),
+        stringResource(R.string.rebar_tab_lap),
+        stringResource(R.string.rebar_tab_schedule),
+        stringResource(R.string.rebar_tab_crack)
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rebar Calculator", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.rebar_calculator_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -115,7 +123,7 @@ private fun WeightCalculatorTab(viewModel: RebarToolViewModel) {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Standard Bar Diameters", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.rebar_std_dia), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -134,10 +142,10 @@ private fun WeightCalculatorTab(viewModel: RebarToolViewModel) {
         // Inputs
         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Input Parameters", fontWeight = FontWeight.Bold)
-                InputField("Diameter (mm)", diameter, { diameter = it })
-                InputField("Bar Length (m)", length, { length = it })
-                InputField("Quantity", quantity, { quantity = it }, KeyboardType.Number)
+                Text(stringResource(R.string.rebar_input_params), fontWeight = FontWeight.Bold)
+                InputField(stringResource(R.string.rebar_dia_label), diameter, { diameter = it })
+                InputField(stringResource(R.string.rebar_bar_len_label), length, { length = it })
+                InputField(stringResource(R.string.rebar_qty_label), quantity, { quantity = it }, KeyboardType.Number)
 
                 Button(
                     onClick = {
@@ -149,7 +157,7 @@ private fun WeightCalculatorTab(viewModel: RebarToolViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Calculate")
+                    Text(stringResource(R.string.rebar_calc_button))
                 }
             }
         }
@@ -161,12 +169,12 @@ private fun WeightCalculatorTab(viewModel: RebarToolViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    ResultRow("Weight/m", "${formatWeight(r.weightPerMeter)} kg/m")
-                    ResultRow("Total Weight", "${formatWeight(r.totalWeight)} kg")
-                    ResultRow("Total Length", "${formatLength(r.totalLength)} m")
-                    ResultRow("Quantity", "${r.quantity} bars")
-                    ResultRow("Bundle Wt (20m)", "${formatWeight(weightPerMeter(r.diameter) * 20)} kg")
+                    Text(stringResource(R.string.results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    ResultRow(stringResource(R.string.rebar_weight_m), "${formatWeight(r.weightPerMeter)} kg/m")
+                    ResultRow(stringResource(R.string.rebar_total_weight_label), "${formatWeight(r.totalWeight)} kg")
+                    ResultRow(stringResource(R.string.rebar_total_len), "${formatLength(r.totalLength)} m")
+                    ResultRow(stringResource(R.string.rebar_qty_label), "${r.quantity} bars")
+                    ResultRow(stringResource(R.string.rebar_bundle_wt), "${formatWeight(weightPerMeter(r.diameter) * 20)} kg")
                 }
             }
         }
@@ -174,7 +182,7 @@ private fun WeightCalculatorTab(viewModel: RebarToolViewModel) {
         // Full table
         Card(shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Bar Reference Table", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.rebar_ref_table), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -225,12 +233,12 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
     ) {
         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Development Length", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.rebar_dev_len_title), fontWeight = FontWeight.Bold)
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = code, onValueChange = {}, readOnly = true,
-                        label = { Text("Code") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.rebar_code_label)) }, modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     DropdownSelector(
@@ -239,18 +247,18 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
                     )
                 }
 
-                InputField("Bar Diameter (mm)", diameter, { diameter = it })
-                InputField("fy (N/mm²)", fy, { fy = it })
-                InputField("fcu / f'c (N/mm²)", fcu, { fcu = it })
-                InputField("Excess Reinf. Ratio (As/As,req)", excessRatio, { excessRatio = it })
+                InputField(stringResource(R.string.rebar_dia_label), diameter, { diameter = it })
+                InputField(stringResource(R.string.rebar_fy_label), fy, { fy = it })
+                InputField(stringResource(R.string.rebar_fcu_label), fcu, { fcu = it })
+                InputField(stringResource(R.string.rebar_excess_ratio), excessRatio, { excessRatio = it })
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = isTopBar, onCheckedChange = { isTopBar = it })
-                    Text("Top bar (fresh concrete > 300mm below)")
+                    Text(stringResource(R.string.rebar_top_bar))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = isConfined, onCheckedChange = { isConfined = it })
-                    Text("Confined (tied/stirrups)")
+                    Text(stringResource(R.string.rebar_confined))
                 }
 
                 Button(
@@ -265,7 +273,7 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Calculate")
+                    Text(stringResource(R.string.rebar_calc_button))
                 }
             }
         }
@@ -276,13 +284,13 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Development Length Result", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    ResultRow("Code", r.code.name)
-                    ResultRow("Basic Ld", "${formatLength(r.basicLd)} mm")
-                    ResultRow("Modified Ld", "${formatLength(r.modifiedLd)} mm")
-                    ResultRow("Top Bar Modifier", "×${r.topBarModifier}")
-                    ResultRow("Confinement Modifier", "×${r.confinementModifier}")
-                    ResultRow("Excess Reinf. Modifier", "×${"%.2f".format(r.excessRebarModifier)}")
+                    Text(stringResource(R.string.rebar_dev_len_res), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    ResultRow(stringResource(R.string.rebar_code_label), r.code.name)
+                    ResultRow(stringResource(R.string.rebar_basic_ld), "${formatLength(r.basicLd)} mm")
+                    ResultRow(stringResource(R.string.rebar_modified_ld), "${formatLength(r.modifiedLd)} mm")
+                    ResultRow(stringResource(R.string.rebar_top_mod), "×${r.topBarModifier}")
+                    ResultRow(stringResource(R.string.rebar_conf_mod), "×${r.confinementModifier}")
+                    ResultRow(stringResource(R.string.rebar_excess_mod), "×${"%.2f".format(r.excessRebarModifier)}")
                     Spacer(Modifier.height(4.dp))
                     r.notes.forEach { note ->
                         Text(text = "• $note", fontSize = 12.sp, style = MaterialTheme.typography.bodySmall)
@@ -317,12 +325,12 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
     ) {
         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Lap Splice Length", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.rebar_lap_splice_title), fontWeight = FontWeight.Bold)
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = code, onValueChange = {}, readOnly = true,
-                        label = { Text("Code") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.rebar_code_label)) }, modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     DropdownSelector(
@@ -331,12 +339,12 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
                     )
                 }
 
-                InputField("Bar Diameter (mm)", diameter, { diameter = it })
-                InputField("fy (N/mm²)", fy, { fy = it })
-                InputField("fcu / f'c (N/mm²)", fcu, { fcu = it })
+                InputField(stringResource(R.string.rebar_dia_label), diameter, { diameter = it })
+                InputField(stringResource(R.string.rebar_fy_label), fy, { fy = it })
+                InputField(stringResource(R.string.rebar_fcu_label), fcu, { fcu = it })
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Lap Type:", modifier = Modifier.align(Alignment.CenterVertically))
+                    Text(stringResource(R.string.rebar_lap_type), modifier = Modifier.align(Alignment.CenterVertically))
                     listOf("Tension", "Compression").forEach { t ->
                         FilterChip(
                             selected = lapType == t, onClick = { lapType = t },
@@ -347,7 +355,7 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
 
                 if (lapType == "Tension") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Class:", modifier = Modifier.align(Alignment.CenterVertically))
+                        Text(stringResource(R.string.rebar_class), modifier = Modifier.align(Alignment.CenterVertically))
                         listOf("A", "B").forEach { c ->
                             FilterChip(
                                 selected = spliceClass == c, onClick = { spliceClass = c },
@@ -361,11 +369,11 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = isTopBar, onCheckedChange = { isTopBar = it })
-                    Text("Top bar")
+                    Text(stringResource(R.string.rebar_top_bar))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = isConfined, onCheckedChange = { isConfined = it })
-                    Text("Confined")
+                    Text(stringResource(R.string.rebar_confined))
                 }
 
                 Button(
@@ -380,7 +388,7 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Calculate")
+                    Text(stringResource(R.string.rebar_calc_button))
                 }
             }
         }
@@ -391,12 +399,12 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Lap Splice Result", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    ResultRow("Code", r.code.name)
-                    ResultRow("Lap Type", r.lapType.name)
-                    ResultRow("Based on Ld", "${formatLength(r.basicLd)} mm")
-                    ResultRow("Modifier", "×${r.modifier}")
-                    ResultRow("Lap Length", "${formatLength(r.lapLength)} mm", bold = true)
+                    Text(stringResource(R.string.rebar_lap_res), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    ResultRow(stringResource(R.string.rebar_code_label), r.code.name)
+                    ResultRow(stringResource(R.string.rebar_lap_type), r.lapType.name)
+                    ResultRow(stringResource(R.string.rebar_based_ld), "${formatLength(r.basicLd)} mm")
+                    ResultRow(stringResource(R.string.rebar_excess_mod), "×${r.modifier}")
+                    ResultRow(stringResource(R.string.rebar_lap_len), "${formatLength(r.lapLength)} mm", bold = true)
                 }
             }
         }
@@ -418,8 +426,8 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
     var spans by remember { mutableStateOf("3") }
     var topDia by remember { mutableStateOf("16") }
     var topCnt by remember { mutableStateOf("2") }
-    var botDia by remember { mutableStateOf("20") }
-    var botCnt by remember { mutableStateOf("3") }
+    var beamBotDia by remember { mutableStateOf("20") }
+    var beamBotCnt by remember { mutableStateOf("3") }
     var stirDia by remember { mutableStateOf("10") }
     var stirSp by remember { mutableStateOf("200") }
     var cover by remember { mutableStateOf("40") }
@@ -463,29 +471,29 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
 
         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("${elementType} Schedule Inputs", fontWeight = FontWeight.Bold)
+                Text("${elementType} ${stringResource(R.string.rebar_schedule_inputs)}", fontWeight = FontWeight.Bold)
 
                 when (elementType) {
                     "Beam" -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            InputField("Width (mm)", beamW, { beamW = it }, modifier = Modifier.weight(1f))
-                            InputField("Depth (mm)", beamD, { beamD = it }, modifier = Modifier.weight(1f))
+                            InputField(stringResource(R.string.beam_width_hint), beamW, { beamW = it }, modifier = Modifier.weight(1f))
+                            InputField(stringResource(R.string.beam_height_hint), beamD, { beamD = it }, modifier = Modifier.weight(1f))
                         }
-                        InputField("Span Length (mm)", beamL, { beamL = it })
+                        InputField(stringResource(R.string.beam_length_hint), beamL, { beamL = it })
                         InputField("No. of Spans", spans, { spans = it }, KeyboardType.Number)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             InputField("Top Ø (mm)", topDia, { topDia = it }, modifier = Modifier.weight(1f))
                             InputField("Top Count", topCnt, { topCnt = it }, modifier = Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            InputField("Bot Ø (mm)", botDia, { botDia = it }, modifier = Modifier.weight(1f))
-                            InputField("Bot Count", botCnt, { botCnt = it }, modifier = Modifier.weight(1f))
+                            InputField("Bot Ø (mm)", beamBotDia, { beamBotDia = it }, modifier = Modifier.weight(1f))
+                            InputField("Bot Count", beamBotCnt, { beamBotCnt = it }, modifier = Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             InputField("Stirrup Ø (mm)", stirDia, { stirDia = it }, modifier = Modifier.weight(1f))
                             InputField("Stirrup Sp. (mm)", stirSp, { stirSp = it }, modifier = Modifier.weight(1f))
                         }
-                        InputField("Cover (mm)", cover, { cover = it })
+                        InputField(stringResource(R.string.cover_label), cover, { cover = it })
 
                         Button(
                             onClick = {
@@ -496,8 +504,8 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                                     spans.toIntOrNull() ?: return@Button,
                                     topDia.toIntOrNull() ?: return@Button,
                                     topCnt.toIntOrNull() ?: return@Button,
-                                    botDia.toIntOrNull() ?: return@Button,
-                                    botCnt.toIntOrNull() ?: return@Button,
+                                    beamBotDia.toIntOrNull() ?: return@Button,
+                                    beamBotCnt.toIntOrNull() ?: return@Button,
                                     stirDia.toIntOrNull() ?: return@Button,
                                     stirSp.toDoubleOrNull() ?: return@Button,
                                     cover.toDoubleOrNull() ?: return@Button
@@ -505,14 +513,14 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
-                        ) { Text("Generate Schedule") }
+                        ) { Text(stringResource(R.string.rebar_gen_schedule)) }
                     }
                     "Slab" -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            InputField("Length (m)", slabL, { slabL = it }, modifier = Modifier.weight(1f))
-                            InputField("Width (m)", slabW, { slabW = it }, modifier = Modifier.weight(1f))
+                            InputField(stringResource(R.string.span_x_label), slabL, { slabL = it }, modifier = Modifier.weight(1f))
+                            InputField(stringResource(R.string.width_label), slabW, { slabW = it }, modifier = Modifier.weight(1f))
                         }
-                        InputField("Thickness (mm)", slabT, { slabT = it })
+                        InputField(stringResource(R.string.thickness_label), slabT, { slabT = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             InputField("Bot Short Ø", bsDia, { bsDia = it }, modifier = Modifier.weight(1f))
                             InputField("Bot Short Sp.", bsSp, { bsSp = it }, modifier = Modifier.weight(1f))
@@ -525,7 +533,7 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                             InputField("Top Short Ø", tsDia, { tsDia = it }, modifier = Modifier.weight(1f))
                             InputField("Top Short Sp.", tsSp, { tsSp = it }, modifier = Modifier.weight(1f))
                         }
-                        InputField("Cover (mm)", cover, { cover = it })
+                        InputField(stringResource(R.string.cover_label), cover, { cover = it })
 
                         Button(
                             onClick = {
@@ -544,14 +552,14 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
-                        ) { Text("Generate Schedule") }
+                        ) { Text(stringResource(R.string.rebar_gen_schedule)) }
                     }
                     "Column" -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            InputField("Width (mm)", colW, { colW = it }, modifier = Modifier.weight(1f))
-                            InputField("Depth (mm)", colD, { colD = it }, modifier = Modifier.weight(1f))
+                            InputField(stringResource(R.string.column_width_hint), colW, { colW = it }, modifier = Modifier.weight(1f))
+                            InputField(stringResource(R.string.column_height_hint), colD, { colD = it }, modifier = Modifier.weight(1f))
                         }
-                        InputField("Height (m)", colH, { colH = it })
+                        InputField(stringResource(R.string.height_m), colH, { colH = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             InputField("Main Ø (mm)", mainDia, { mainDia = it }, modifier = Modifier.weight(1f))
                             InputField("Main Count", mainCnt, { mainCnt = it }, modifier = Modifier.weight(1f))
@@ -560,7 +568,7 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                             InputField("Tie Ø (mm)", tieDia, { tieDia = it }, modifier = Modifier.weight(1f))
                             InputField("Tie Sp. (mm)", tieSp, { tieSp = it }, modifier = Modifier.weight(1f))
                         }
-                        InputField("Cover (mm)", cover, { cover = it })
+                        InputField(stringResource(R.string.cover_label), cover, { cover = it })
 
                         Button(
                             onClick = {
@@ -577,7 +585,7 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
-                        ) { Text("Generate Schedule") }
+                        ) { Text(stringResource(R.string.rebar_gen_schedule)) }
                     }
                 }
             }
@@ -605,7 +613,7 @@ private fun RebarScheduleTab(viewModel: RebarToolViewModel) {
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Mark", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.weight(0.5f))
+                        Text(stringResource(R.string.rebar_mark_label), fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.weight(0.5f))
                         Text("Ø", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.weight(0.5f))
                         Text("No.", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.weight(0.5f))
                         Text("L (m)", fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.weight(0.7f))
@@ -653,18 +661,18 @@ private fun CrackWidthTab(viewModel: RebarToolViewModel) {
     ) {
         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Crack Width Calculation", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.rebar_crack_title), fontWeight = FontWeight.Bold)
                 Text("wk = 3.4 × εm × acr", fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(4.dp))
 
-                InputField("Steel Stress fs (N/mm²)", steelStress, { steelStress = it })
-                InputField("Bar Diameter (mm)", barDiameter, { barDiameter = it })
-                InputField("Bar Spacing c/c (mm)", barSpacing, { barSpacing = it })
-                InputField("Cover to Bar Center (mm)", coverToCenter, { coverToCenter = it })
+                InputField(stringResource(R.string.rebar_steel_stress), steelStress, { steelStress = it })
+                InputField(stringResource(R.string.rebar_dia_label), barDiameter, { barDiameter = it })
+                InputField(stringResource(R.string.rebar_bar_spacing_label), barSpacing, { barSpacing = it })
+                InputField(stringResource(R.string.rebar_cover_center), coverToCenter, { coverToCenter = it })
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Limiting wk:", modifier = Modifier.align(Alignment.CenterVertically))
+                    Text(stringResource(R.string.rebar_limiting_wk), modifier = Modifier.align(Alignment.CenterVertically))
                     listOf("0.2", "0.3", "0.4").forEach { w ->
                         FilterChip(
                             selected = limitingWidth == w, onClick = { limitingWidth = w },
@@ -686,7 +694,7 @@ private fun CrackWidthTab(viewModel: RebarToolViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Calculate Crack Width")
+                    Text(stringResource(R.string.rebar_calc_crack))
                 }
             }
         }
@@ -719,14 +727,14 @@ private fun CrackWidthTab(viewModel: RebarToolViewModel) {
                             color = if (r.isAcceptable) Color(0xFF2E7D32) else Color(0xFFD32F2F)
                         )
                     }
-                    ResultRow("Status", if (r.isAcceptable) "ACCEPTABLE" else "EXCEEDS LIMIT")
-                    ResultRow("Limiting Width", "${r.limitingCrackWidth} mm")
-                    ResultRow("Mean Strain εm", "${"%.6f".format(r.meanStrain)}")
-                    ResultRow("Steel Stress", "${"%.1f".format(r.steelStress)} N/mm²")
-                    ResultRow("Bar Spacing", "${"%.0f".format(r.barSpacing)} mm")
-                    ResultRow("Cover to Bar Center", "${"%.0f".format(r.coverToBarCenter)} mm")
+                    ResultRow(stringResource(R.string.status), if (r.isAcceptable) stringResource(R.string.pile_ok) else "EXCEEDS LIMIT")
+                    ResultRow(stringResource(R.string.rebar_limiting_wk), "${r.limitingCrackWidth} mm")
+                    ResultRow(stringResource(R.string.rebar_mean_strain), "${"%.6f".format(r.meanStrain)}")
+                    ResultRow(stringResource(R.string.rebar_steel_stress), "${"%.1f".format(r.steelStress)} N/mm²")
+                    ResultRow(stringResource(R.string.rebar_bar_spacing_label), "${"%.0f".format(r.barSpacing)} mm")
+                    ResultRow(stringResource(R.string.rebar_cover_center), "${"%.0f".format(r.coverToBarCenter)} mm")
                     Spacer(Modifier.height(4.dp))
-                    Text("Calculation Notes:", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    Text(stringResource(R.string.notes), fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     r.notes.forEach { note ->
                         Text(text = "• $note", fontSize = 11.sp,
                             style = MaterialTheme.typography.bodySmall)
@@ -737,9 +745,9 @@ private fun CrackWidthTab(viewModel: RebarToolViewModel) {
     }
 }
 
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 //  SHARED COMPONENTS
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 @Composable
 private fun InputField(
     label: String,

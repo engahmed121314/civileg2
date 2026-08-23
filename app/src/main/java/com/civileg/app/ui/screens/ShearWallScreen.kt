@@ -14,12 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.DesignInputField
 import com.civileg.app.ui.compose.components.DesignResultRow
@@ -42,15 +44,15 @@ fun ShearWallScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Shear Wall Design", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.sw_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.reset() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
                     }
                 }
             )
@@ -72,7 +74,7 @@ fun ShearWallScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Design Code", style = MaterialTheme.typography.labelMedium,
+                        Text(stringResource(R.string.sw_design_code), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -89,7 +91,7 @@ fun ShearWallScreen(
                         }
 
                         Spacer(Modifier.height(12.dp))
-                        Text("Wall Type", style = MaterialTheme.typography.labelMedium,
+                        Text(stringResource(R.string.sw_wall_type), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -108,7 +110,7 @@ fun ShearWallScreen(
                         }
 
                         Spacer(Modifier.height(12.dp))
-                        Text("Wall Shape", style = MaterialTheme.typography.labelMedium,
+                        Text(stringResource(R.string.sw_wall_shape), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -128,22 +130,22 @@ fun ShearWallScreen(
             }
 
             // ── Geometry ────────────────────────────────────────────
-            item { DesignSectionHeader("Wall Geometry", Icons.Default.SquareFoot) }
+            item { DesignSectionHeader(stringResource(R.string.sw_geometry_section), Icons.Default.SquareFoot) }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DesignInputField(uiState.wallLength, "Length Lw (mm)",
+                    DesignInputField(uiState.wallLength, stringResource(R.string.sw_length),
                         { viewModel.updateGeometry(wallLength = it) }, Modifier.weight(1f))
-                    DesignInputField(uiState.wallThickness, "Thickness tw (mm)",
+                    DesignInputField(uiState.wallThickness, stringResource(R.string.sw_thickness),
                         { viewModel.updateGeometry(wallThickness = it) }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DesignInputField(uiState.storyHeight, "Story Height (m)",
+                    DesignInputField(uiState.storyHeight, stringResource(R.string.sw_story_height),
                         { viewModel.updateGeometry(storyHeight = it) }, Modifier.weight(1f))
-                    DesignInputField(uiState.numberOfStories, "Number of Stories",
+                    DesignInputField(uiState.numberOfStories, stringResource(R.string.sw_num_stories),
                         { viewModel.updateGeometry(numberOfStories = it) }, Modifier.weight(1f))
                 }
             }
@@ -156,13 +158,13 @@ fun ShearWallScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Flange Properties", style = MaterialTheme.typography.labelMedium,
+                            Text(stringResource(R.string.sw_flange_section), style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                DesignInputField(uiState.flangeWidth, "Flange Width (mm)",
+                                DesignInputField(uiState.flangeWidth, stringResource(R.string.sw_flange_width),
                                     { viewModel.updateFlange(flangeWidth = it) }, Modifier.weight(1f))
-                                DesignInputField(uiState.flangeThickness, "Flange Thickness (mm)",
+                                DesignInputField(uiState.flangeThickness, stringResource(R.string.sw_flange_thk),
                                     { viewModel.updateFlange(flangeThickness = it) }, Modifier.weight(1f))
                             }
                         }
@@ -171,57 +173,57 @@ fun ShearWallScreen(
             }
 
             // ── Loads ───────────────────────────────────────────────
-            item { DesignSectionHeader("Applied Loads (at Base)", Icons.Default.ArrowDownward) }
+            item { DesignSectionHeader(stringResource(R.string.sw_loads_section), Icons.Default.ArrowDownward) }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DesignInputField(uiState.axialLoad, "Axial Load Pu (kN)",
+                    DesignInputField(uiState.axialLoad, stringResource(R.string.sw_axial_load),
                         { viewModel.updateLoads(axialLoad = it) }, Modifier.weight(1f))
-                    DesignInputField(uiState.shearForce, "Shear Force Vu (kN)",
+                    DesignInputField(uiState.shearForce, stringResource(R.string.sw_shear_force),
                         { viewModel.updateLoads(shearForce = it) }, Modifier.weight(1f))
                 }
             }
 
             item {
-                DesignInputField(uiState.bendingMoment, "Bending Moment Mu (kN.m)",
+                DesignInputField(uiState.bendingMoment, stringResource(R.string.sw_bending_moment),
                     { viewModel.updateLoads(bendingMoment = it) }, Modifier.fillMaxWidth())
             }
 
             // ── Materials ───────────────────────────────────────────
-            item { DesignSectionHeader("Material Properties", Icons.Default.Science) }
+            item { DesignSectionHeader(stringResource(R.string.sw_materials_section), Icons.Default.Science) }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DesignInputField(uiState.fcu, "f'cu (MPa)",
+                    DesignInputField(uiState.fcu, stringResource(R.string.sw_fcu),
                         { viewModel.updateMaterials(fcu = it) }, Modifier.weight(1f))
-                    DesignInputField(uiState.fy, "fy (MPa)",
+                    DesignInputField(uiState.fy, stringResource(R.string.sw_fy),
                         { viewModel.updateMaterials(fy = it) }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DesignInputField(uiState.fyv, "fyv (MPa)",
+                    DesignInputField(uiState.fyv, stringResource(R.string.sw_fyv),
                         { viewModel.updateMaterials(fyv = it) }, Modifier.weight(1f))
-                    DesignInputField(uiState.clearCover, "Cover (mm)",
+                    DesignInputField(uiState.clearCover, stringResource(R.string.sw_cover),
                         { viewModel.updateMaterials(clearCover = it) }, Modifier.weight(1f))
                 }
             }
 
             // ── Coupling Beam (for Coupled walls) ───────────────────
             if (uiState.wallType == WallType.COUPLED) {
-                item { DesignSectionHeader("Coupling Beam", Icons.Default.CropSquare) }
+                item { DesignSectionHeader(stringResource(R.string.sw_coupling_section), Icons.Default.CropSquare) }
 
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        DesignInputField(uiState.couplingBeamLength, "Length (mm)",
+                        DesignInputField(uiState.couplingBeamLength, stringResource(R.string.length_label),
                             { viewModel.updateCoupling(couplingBeamLength = it) }, Modifier.weight(1f))
-                        DesignInputField(uiState.couplingBeamHeight, "Height (mm)",
+                        DesignInputField(uiState.couplingBeamHeight, stringResource(R.string.height_label),
                             { viewModel.updateCoupling(couplingBeamHeight = it) }, Modifier.weight(1f))
                     }
                 }
                 item {
-                    DesignInputField(uiState.couplingBeamClearSpan, "Clear Span (mm)",
+                    DesignInputField(uiState.couplingBeamClearSpan, stringResource(R.string.sw_clear_span),
                         { viewModel.updateCoupling(couplingBeamClearSpan = it) }, Modifier.fillMaxWidth())
                 }
             }
@@ -236,7 +238,7 @@ fun ShearWallScreen(
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Design Shear Wall", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sw_design_button), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -277,19 +279,19 @@ fun ShearWallScreen(
                 }
 
                 // Flexural Design Results
-                item { DesignSectionHeader("Flexural Design", Icons.Default.Square) }
+                item { DesignSectionHeader(stringResource(R.string.sw_flexural_design), Icons.Default.Square) }
 
                 item {
                     ResultCard(isSafe = result.flexuralOk) {
-                        DesignResultRow("Moment Capacity (Mn/φMn)",
+                        DesignResultRow(stringResource(R.string.moment_capacity),
                             "${"%.1f".format(result.momentCapacity)} kN.m")
-                        DesignResultRow("Axial Capacity (Pn/φPn)",
+                        DesignResultRow(stringResource(R.string.axial_capacity),
                             "${"%.1f".format(result.axialCapacity)} kN")
                         DesignResultRow("Compression Depth (a)",
                             "${"%.1f".format(result.compressionDepth)} mm")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-                        Text("Vertical Reinforcement", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.sw_num_stories), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         DesignResultRow("Provided",
                             "${result.verticalReinforcement.bars}Φ${result.verticalReinforcement.diameter} @ ${result.verticalReinforcement.spacing} mm")
@@ -303,11 +305,11 @@ fun ShearWallScreen(
                 }
 
                 // Shear Design Results
-                item { DesignSectionHeader("Shear Design", Icons.Default.CompareArrows) }
+                item { DesignSectionHeader(stringResource(R.string.sw_shear_design), Icons.Default.CompareArrows) }
 
                 item {
                     ResultCard(isSafe = result.shearOk) {
-                        DesignResultRow("Shear Capacity (φVn)",
+                        DesignResultRow(stringResource(R.string.shear_capacity),
                             "${"%.1f".format(result.shearCapacity)} kN")
                         DesignResultRow("Concrete (φVc)",
                             "${"%.1f".format(result.concreteShearCapacity)} kN")
@@ -315,7 +317,7 @@ fun ShearWallScreen(
                             "${"%.1f".format(result.steelShearCapacity)} kN")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-                        Text("Horizontal Reinforcement", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.sw_shear_design), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         DesignResultRow("Provided",
                             "${result.horizontalReinforcement.bars}Φ${result.horizontalReinforcement.diameter} @ ${result.horizontalReinforcement.spacing} mm")
@@ -327,12 +329,12 @@ fun ShearWallScreen(
                 }
 
                 // Boundary Element
-                item { DesignSectionHeader("Boundary Element", Icons.Default.SquareFoot) }
+                item { DesignSectionHeader(stringResource(R.string.sw_boundary_element), Icons.Default.SquareFoot) }
 
                 item {
                     ResultCard(isSafe = result.boundaryElementType == BoundaryElementType.NONE ||
                         result.boundaryElementReinforcement?.let { it.ratio >= 0.9 } == true) {
-                        DesignResultRow("Type", result.boundaryElementType.displayName)
+                        DesignResultRow(stringResource(R.string.type), result.boundaryElementType.displayName)
                         result.boundaryElementReinforcement?.let { be ->
                             DesignResultRow("Rebar", "${be.bars}Φ${be.diameter} @ ${be.spacing} mm")
                             DesignResultRow("As Provided", "${"%.0f".format(be.providedArea)} mm²")
@@ -343,31 +345,31 @@ fun ShearWallScreen(
 
                 // Coupling Beam
                 result.couplingBeamResult?.let { cb ->
-                    item { DesignSectionHeader("Coupling Beam", Icons.Default.CropSquare) }
+                    item { DesignSectionHeader(stringResource(R.string.sw_coupling_section), Icons.Default.CropSquare) }
 
                     item {
                         ResultCard(isSafe = cb.isSafe) {
                             DesignResultRow("Diagonal Bars", "${cb.diagonalBars}Φ${cb.diagonalBarDiameter}")
                             DesignResultRow("Transverse", "Φ${cb.transverseBarsDiameter} @ ${cb.transverseBarsSpacing} mm")
-                            DesignResultRow("Utilization", "${(cb.utilizationRatio * 100).toInt()}%")
+                            DesignResultRow(stringResource(R.string.steel_util_ratio), "${(cb.utilizationRatio * 100).toInt()}%")
                         }
                     }
                 }
 
                 // Slenderness
-                item { DesignSectionHeader("Stability", Icons.Default.Height) }
+                item { DesignSectionHeader(stringResource(R.string.sw_stability), Icons.Default.Height) }
 
                 item {
                     ResultCard(isSafe = result.slendernessOk) {
-                        DesignResultRow("H/t Ratio", "${"%.1f".format(result.slendernessRatio)}")
-                        DesignResultRow("Limit", "25.0")
-                        DesignResultRow("Status",
-                            if (result.slendernessOk) "OK" else "Exceeds limit — 2nd order analysis needed")
+                        DesignResultRow(stringResource(R.string.sw_h_t_ratio), "${"%.1f".format(result.slendernessRatio)}")
+                        DesignResultRow(stringResource(R.string.sw_limit), "25.0")
+                        DesignResultRow(stringResource(R.string.status),
+                            if (result.slendernessOk) stringResource(R.string.pile_ok) else "Exceeds limit — 2nd order analysis needed")
                     }
                 }
 
                 // Quantities
-                item { DesignSectionHeader("Quantities Per Story", Icons.Default.Inventory2) }
+                item { DesignSectionHeader(stringResource(R.string.sw_quantities_story), Icons.Default.Inventory2) }
 
                 item {
                     Card(
@@ -377,16 +379,16 @@ fun ShearWallScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            DesignResultRow("Concrete Volume",
+                            DesignResultRow(stringResource(R.string.concrete_vol),
                                 "${"%.3f".format(result.concreteVolumePerStory)} m³")
-                            DesignResultRow("Steel Weight",
+                            DesignResultRow(stringResource(R.string.steel_weight),
                                 "${"%.1f".format(result.steelWeightPerStory)} kg")
                         }
                     }
                 }
 
                 // Safety Checks
-                item { DesignSectionHeader("Safety Checks", Icons.Default.VerifiedUser) }
+                item { DesignSectionHeader(stringResource(R.string.safety_checks), Icons.Default.VerifiedUser) }
 
                 item {
                     Card(
@@ -429,7 +431,7 @@ fun ShearWallScreen(
                 }
 
                 // Drawing
-                item { DesignSectionHeader("Wall Drawing", Icons.Default.Draw) }
+                item { DesignSectionHeader(stringResource(R.string.sw_wall_drawing), Icons.Default.Draw) }
 
                 item {
                     Card(
@@ -470,7 +472,7 @@ fun ShearWallScreen(
                     ) {
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Export PDF Report", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.sw_export_pdf), fontWeight = FontWeight.Bold)
                     }
                 }
             }

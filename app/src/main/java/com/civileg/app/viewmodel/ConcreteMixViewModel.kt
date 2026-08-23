@@ -7,11 +7,19 @@ import com.civileg.app.utils.ConcreteMixDesigner.Exposure
 import com.civileg.app.utils.ConcreteMixDesigner.STANDARD_GRADES
 import com.civileg.app.utils.ConcreteMixDesigner.MixResult
 import com.civileg.app.utils.ConcreteMixDesigner.MixInput
+import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.DesignRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ConcreteMixViewModel : ViewModel() {
+@HiltViewModel
+class ConcreteMixViewModel @Inject constructor(
+    private val repository: DesignRepository
+) : ViewModel() {
 
     // ── Tab state ──
     private val _selectedTab = MutableStateFlow(0)
@@ -81,5 +89,12 @@ class ConcreteMixViewModel : ViewModel() {
     fun clearResults() {
         _mixResult.value = null
         _gradeResults.value = emptyList()
+    }
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _mixResult.value ?: return
+        viewModelScope.launch {
+            repository.saveConcreteMixDesign(projectId, name, res)
+        }
     }
 }

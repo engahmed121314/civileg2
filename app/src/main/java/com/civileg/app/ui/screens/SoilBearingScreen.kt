@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.SoilBearingResult
 import com.civileg.app.utils.SoilType
@@ -107,10 +109,10 @@ fun SoilBearingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Soil Bearing Capacity", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.soil_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -150,30 +152,30 @@ fun SoilBearingScreen(
             )
 
             // ---- Foundation dimensions ----
-            SectionCard(title = "Foundation Dimensions") {
-                InputRow("Width B (m)", foundationWidth) { foundationWidth = it }
-                InputRow("Length L (m)", foundationLength) { foundationLength = it }
-                InputRow("Depth Df (m)", foundationDepth) { foundationDepth = it }
+            SectionCard(title = stringResource(R.string.soil_dims_section)) {
+                InputRow(stringResource(R.string.soil_width_label), foundationWidth) { foundationWidth = it }
+                InputRow(stringResource(R.string.soil_length_label), foundationLength) { foundationLength = it }
+                InputRow(stringResource(R.string.soil_depth_label), foundationDepth) { foundationDepth = it }
             }
 
             // ---- Soil properties ----
-            SectionCard(title = "Soil Properties") {
-                InputRow("Cohesion c (kPa)", cohesion) { cohesion = it }
-                InputRow("Friction angle φ (°)", frictionAngle) { frictionAngle = it }
-                InputRow("Unit weight γ (kN/m³)", unitWeight) { unitWeight = it }
-                InputRow("Water table depth (m)", waterTableDepth) { waterTableDepth = it }
+            SectionCard(title = stringResource(R.string.soil_props_section)) {
+                InputRow(stringResource(R.string.soil_cohesion_label), cohesion) { cohesion = it }
+                InputRow(stringResource(R.string.soil_friction_label), frictionAngle) { frictionAngle = it }
+                InputRow(stringResource(R.string.soil_gamma_label), unitWeight) { unitWeight = it }
+                InputRow(stringResource(R.string.soil_water_table_label), waterTableDepth) { waterTableDepth = it }
             }
 
             // ---- Load eccentricity & inclination ----
-            SectionCard(title = "Load Eccentricity & Inclination") {
-                InputRow("Eccentricity ex (m)", eccentricityX) { eccentricityX = it }
-                InputRow("Eccentricity ey (m)", eccentricityY) { eccentricityY = it }
-                InputRow("Inclination αx (°)", loadInclinationX) { loadInclinationX = it }
-                InputRow("Inclination αy (°)", loadInclinationY) { loadInclinationY = it }
+            SectionCard(title = stringResource(R.string.soil_ecc_inc_section)) {
+                InputRow(stringResource(R.string.soil_ecc_x_label), eccentricityX) { eccentricityX = it }
+                InputRow(stringResource(R.string.soil_ecc_y_label), eccentricityY) { eccentricityY = it }
+                InputRow(stringResource(R.string.soil_inc_x_label), loadInclinationX) { loadInclinationX = it }
+                InputRow(stringResource(R.string.soil_inc_y_label), loadInclinationY) { loadInclinationY = it }
             }
 
             // ---- Safety factor ----
-            SectionCard(title = "Safety Factor") {
+            SectionCard(title = stringResource(R.string.soil_fos_section)) {
                 InputRow("FOS", safetyFactor) { safetyFactor = it }
             }
 
@@ -192,7 +194,7 @@ fun SoilBearingScreen(
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Calculate")
+                    Text(stringResource(R.string.soil_calc_button))
                 }
                 OutlinedButton(
                     onClick = {
@@ -204,7 +206,7 @@ fun SoilBearingScreen(
                 ) {
                     Icon(Icons.Default.CompareArrows, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Compare All")
+                    Text(stringResource(R.string.soil_compare_all))
                 }
                 IconButton(onClick = {
                     viewModel.resetToDefaults()
@@ -213,7 +215,7 @@ fun SoilBearingScreen(
                     waterTableDepth = "5.0"; eccentricityX = "0.0"; eccentricityY = "0.0"
                     loadInclinationX = "0.0"; loadInclinationY = "0.0"; safetyFactor = "3.0"
                 }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
                 }
             }
 
@@ -232,7 +234,7 @@ fun SoilBearingScreen(
 
                 // Cross-section drawing
                 Spacer(modifier = Modifier.height(8.dp))
-                SectionCard(title = "Foundation Cross-Section") {
+                SectionCard(title = stringResource(R.string.soil_cross_section)) {
                     FoundationCrossSectionCanvas(
                         B = res.effectiveWidth,
                         L = res.effectiveLength,
@@ -265,7 +267,7 @@ private fun MethodChips(
 ) {
     Column {
         Text(
-            "Calculation Method",
+            stringResource(R.string.soil_method_label),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -309,7 +311,7 @@ private fun SoilTypeDropdown(
             value = selectedSoilType.name,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Soil Type") },
+            label = { Text(stringResource(R.string.soil_type_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor().fillMaxWidth()
         )
@@ -384,7 +386,7 @@ private fun InputRow(label: String, value: String, onValueChange: (String) -> Un
 @Composable
 private fun ResultsSummaryCard(result: SoilBearingResult) {
     val statusColor = if (result.isSafe) SafeGreen else UnsafeRed
-    val statusText = if (result.isSafe) "✓ SAFE" else "✗ REVIEW REQUIRED"
+    val statusText = if (result.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check)
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -405,7 +407,7 @@ private fun ResultsSummaryCard(result: SoilBearingResult) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Results",
+                    stringResource(R.string.results),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -417,15 +419,15 @@ private fun ResultsSummaryCard(result: SoilBearingResult) {
                 )
             }
             HorizontalDivider()
-            ResultRow("Gross Bearing Capacity (qu)", "%.1f kPa".format(result.grossBearingCapacity))
-            ResultRow("Net Bearing Capacity (qnet)", "%.1f kPa".format(result.netBearingCapacity))
+            ResultRow(stringResource(R.string.soil_gross_cap), "%.1f kPa".format(result.grossBearingCapacity))
+            ResultRow(stringResource(R.string.soil_net_cap), "%.1f kPa".format(result.netBearingCapacity))
             ResultRow(
-                "Allowable Bearing Capacity (qall)",
+                stringResource(R.string.soil_allow_cap),
                 "%.1f kPa".format(result.allowableBearingCapacity),
                 highlight = true
             )
-            ResultRow("Est. Settlement", "%.1f mm".format(result.settlement))
-            ResultRow("Water Table Correction (rw)", "%.2f".format(result.waterTableCorrection))
+            ResultRow(stringResource(R.string.soil_est_settlement), "%.1f mm".format(result.settlement))
+            ResultRow(stringResource(R.string.soil_water_corr), "%.2f".format(result.waterTableCorrection))
         }
     }
 }
@@ -466,14 +468,14 @@ private fun FactorsDetailCard(result: SoilBearingResult, method: BearingMethod) 
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                "Bearing Capacity Factors (${method.name})",
+                "${stringResource(R.string.soil_factors_card)} (${method.name})",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(4.dp))
 
             // N factors
-            Text("N Factors", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.soil_n_factors), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             ResultRow("Nc", "%.2f".format(result.nc))
             ResultRow("Nq", "%.2f".format(result.nq))
             ResultRow("Nγ", "%.2f".format(result.ngamma))
@@ -481,7 +483,7 @@ private fun FactorsDetailCard(result: SoilBearingResult, method: BearingMethod) 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // Shape factors
-            Text("Shape Factors", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.soil_shape_factors), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             ResultRow("sc", "%.3f".format(result.shapeFactorC))
             ResultRow("sq", "%.3f".format(result.shapeFactorQ))
             ResultRow("sγ", "%.3f".format(result.shapeFactorGamma))
@@ -489,7 +491,7 @@ private fun FactorsDetailCard(result: SoilBearingResult, method: BearingMethod) 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // Depth factors
-            Text("Depth Factors", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.soil_depth_factors), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             ResultRow("dc", "%.3f".format(result.depthFactorC))
             ResultRow("dq", "%.3f".format(result.depthFactorQ))
             ResultRow("dγ", "%.3f".format(result.depthFactorGamma))
@@ -497,7 +499,7 @@ private fun FactorsDetailCard(result: SoilBearingResult, method: BearingMethod) 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // Inclination factors
-            Text("Inclination Factors", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.soil_inc_factors), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             ResultRow("ic", "%.3f".format(result.inclinationFactorC))
             ResultRow("iq", "%.3f".format(result.inclinationFactorQ))
             ResultRow("iγ", "%.3f".format(result.inclinationFactorGamma))
@@ -505,7 +507,7 @@ private fun FactorsDetailCard(result: SoilBearingResult, method: BearingMethod) 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // Effective dimensions
-            Text("Effective Dimensions", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.soil_eff_dims), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             ResultRow("B' (effective width)", "%.2f m".format(result.effectiveWidth))
             ResultRow("L' (effective length)", "%.2f m".format(result.effectiveLength))
         }
@@ -524,7 +526,7 @@ private fun ComparisonTable(results: Map<BearingMethod, SoilBearingResult>) {
                 .horizontalScroll(rememberScrollState())
         ) {
             Text(
-                "Method Comparison",
+                stringResource(R.string.soil_method_comp),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 8.dp)

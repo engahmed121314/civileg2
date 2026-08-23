@@ -15,7 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SoilBearingViewModel @Inject constructor() : ViewModel() {
+class SoilBearingViewModel @Inject constructor(
+    private val repository: com.civileg.app.db.DesignRepository
+) : ViewModel() {
 
     // ------------------------------------------------------------------
     // Output
@@ -29,6 +31,14 @@ class SoilBearingViewModel @Inject constructor() : ViewModel() {
 
     private val _comparisonResults = MutableLiveData<Map<BearingMethod, SoilBearingResult>>(emptyMap())
     val comparisonResults: LiveData<Map<BearingMethod, SoilBearingResult>> = _comparisonResults
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _result.value ?: return
+        val m = method.value?.name ?: "TERZAGHI"
+        viewModelScope.launch {
+            repository.saveSoilBearingDesign(projectId, name, res, m)
+        }
+    }
 
     // ------------------------------------------------------------------
     // Input fields (two-way via MutableLiveData)

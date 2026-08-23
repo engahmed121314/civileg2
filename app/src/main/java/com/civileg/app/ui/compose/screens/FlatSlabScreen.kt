@@ -16,12 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
@@ -62,10 +64,10 @@ fun FlatSlabScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Flat Slab Design", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.fs_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -82,7 +84,7 @@ fun FlatSlabScreen(
                 // ── Panel Type Selector ─────────────────────────────
                 item {
                     PremiumSectionHeader(
-                        title = "Panel Configuration",
+                        title = stringResource(R.string.fs_config_section),
                         icon = Icons.Default.ViewModule
                     )
                 }
@@ -131,7 +133,7 @@ fun FlatSlabScreen(
                 }
 
                 // ── Geometry ──────────────────────────────────────────
-                item { PremiumSectionHeader("Geometry", icon = Icons.Default.SquareFoot) }
+                item { PremiumSectionHeader(stringResource(R.string.fs_geometry_section), icon = Icons.Default.SquareFoot) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -139,14 +141,14 @@ fun FlatSlabScreen(
                     ) {
                         OutlinedTextField(
                             value = lx, onValueChange = { lx = it },
-                            label = { Text("Lx (m)", fontSize = 12.sp) },
+                            label = { Text(stringResource(R.string.fs_lx), fontSize = 12.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f),
                             shape = PremiumDesignSystem.InputShape, singleLine = true
                         )
                         OutlinedTextField(
                             value = ly, onValueChange = { ly = it },
-                            label = { Text("Ly (m)", fontSize = 12.sp) },
+                            label = { Text(stringResource(R.string.fs_ly), fontSize = 12.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f),
                             shape = PremiumDesignSystem.InputShape, singleLine = true
@@ -159,18 +161,18 @@ fun FlatSlabScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         PremiumInputField(
-                            slabThickness, "Slab Thickness (mm)", { slabThickness = it },
+                            slabThickness, stringResource(R.string.fs_slab_thk), { slabThickness = it },
                             modifier = Modifier.weight(1f)
                         )
                         PremiumInputField(
-                            columnWidth, "Column Width (mm)", { columnWidth = it },
+                            columnWidth, stringResource(R.string.fs_col_width), { columnWidth = it },
                             modifier = Modifier.weight(1f)
                         )
                     }
                 }
                 item {
                     PremiumInputField(
-                        columnDepth, "Column Depth (mm)", { columnDepth = it },
+                        columnDepth, stringResource(R.string.fs_col_depth), { columnDepth = it },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -182,7 +184,7 @@ fun FlatSlabScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Drop Panel", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(stringResource(R.string.fs_drop_panel), fontWeight = FontWeight.Medium, fontSize = 14.sp)
                         Switch(checked = showDropInputs, onCheckedChange = { showDropInputs = it })
                     }
                 }
@@ -193,49 +195,49 @@ fun FlatSlabScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             PremiumInputField(
-                                dropThickness, "Drop Thk (mm)", { dropThickness = it },
+                                dropThickness, stringResource(R.string.fs_drop_thk), { dropThickness = it },
                                 modifier = Modifier.weight(1f)
                             )
                             PremiumInputField(
-                                dropSizeX, "Drop Size X (mm)", { dropSizeX = it },
+                                dropSizeX, stringResource(R.string.fs_drop_size_x), { dropSizeX = it },
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     }
                     item {
                         PremiumInputField(
-                            dropSizeY, "Drop Size Y (mm)", { dropSizeY = it },
+                            dropSizeY, stringResource(R.string.fs_drop_size_y), { dropSizeY = it },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
 
                 // ── Material Properties ───────────────────────────────
-                item { PremiumSectionHeader("Material Properties", icon = Icons.Default.Science) }
+                item { PremiumSectionHeader(stringResource(R.string.fs_materials_section), icon = Icons.Default.Science) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PremiumInputField(fcu, "f'cu (MPa)", { fcu = it }, modifier = Modifier.weight(1f))
-                        PremiumInputField(fy, "fy (MPa)", { fy = it }, modifier = Modifier.weight(1f))
+                        PremiumInputField(fcu, stringResource(R.string.fs_fcu), { fcu = it }, modifier = Modifier.weight(1f))
+                        PremiumInputField(fy, stringResource(R.string.fs_fy), { fy = it }, modifier = Modifier.weight(1f))
                     }
                 }
 
                 // ── Loading ───────────────────────────────────────────
-                item { PremiumSectionHeader("Loading", icon = Icons.Default.Layers) }
+                item { PremiumSectionHeader(stringResource(R.string.fs_loading_section), icon = Icons.Default.Layers) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PremiumInputField(liveLoad, "Live Load (kN/m²)", { liveLoad = it }, modifier = Modifier.weight(1f))
-                        PremiumInputField(floorFinish, "Floor Finish (kN/m²)", { floorFinish = it }, modifier = Modifier.weight(1f))
+                        PremiumInputField(liveLoad, stringResource(R.string.fs_live_load), { liveLoad = it }, modifier = Modifier.weight(1f))
+                        PremiumInputField(floorFinish, stringResource(R.string.fs_floor_finish), { floorFinish = it }, modifier = Modifier.weight(1f))
                     }
                 }
                 item {
                     PremiumInputField(
-                        clearCover, "Clear Cover (mm)", { clearCover = it },
+                        clearCover, stringResource(R.string.fs_clear_cover), { clearCover = it },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -276,7 +278,7 @@ fun FlatSlabScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            if (isLoading) "Designing..." else "Design Flat Slab",
+                            if (isLoading) stringResource(R.string.pile_designing) else stringResource(R.string.fs_design_button),
                             fontWeight = FontWeight.Bold, fontSize = 15.sp
                         )
                     }
@@ -290,7 +292,7 @@ fun FlatSlabScreen(
                             shape = PremiumDesignSystem.CardShape
                         ) {
                             Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Error, "Error", tint = Color(0xFFE53935))
+                                Icon(Icons.Default.Error, stringResource(R.string.error), tint = Color(0xFFE53935))
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(err, fontSize = 13.sp, color = Color(0xFFE53935))
                             }
@@ -304,19 +306,19 @@ fun FlatSlabScreen(
                     item {
                         SafetyStatusCard(
                             utilizationRatio = res.utilizationRatio, isSafe = res.isSafe,
-                            title = "Flat Slab — ${panelType.displayName}"
+                            title = "${stringResource(R.string.home_flat_slab)} — ${panelType.displayName}"
                         )
                     }
 
                     // Load Summary
                     item {
                         ResultDataCard(
-                            "Load Summary",
+                            stringResource(R.string.fs_load_summary),
                             listOf(
-                                "Dead Load" to String.format("%.2f kN/m²", res.totalDeadLoad),
-                                "Factored Wu" to String.format("%.2f kN/m²", res.totalFactoredLoad),
-                                "MoX" to String.format("%.1f kN.m", res.panelMomentX),
-                                "MoY" to String.format("%.1f kN.m", res.panelMomentY)
+                                stringResource(R.string.fs_dead_load) to String.format("%.2f kN/m²", res.totalDeadLoad),
+                                stringResource(R.string.fs_factored_wu) to String.format("%.2f kN/m²", res.totalFactoredLoad),
+                                stringResource(R.string.fs_mox) to String.format("%.1f kN.m", res.panelMomentX),
+                                stringResource(R.string.fs_moy) to String.format("%.1f kN.m", res.panelMomentY)
                             ),
                             icon = Icons.Default.Layers, accentColor = MaterialTheme.colorScheme.tertiary
                         )
@@ -325,15 +327,15 @@ fun FlatSlabScreen(
                     // Column Strip
                     item {
                         ResultDataCard(
-                            "Column Strip (X)",
+                            stringResource(R.string.fs_col_strip),
                             listOf(
-                                "+M" to String.format("%.1f kN.m", res.columnStripMomentPos),
-                                "-M" to String.format("%.1f kN.m", res.columnStripMomentNeg),
-                                "Top Rebar" to res.columnStripTopRebar.barString,
-                                "Top As" to String.format("%.0f/%.0f mm²", res.columnStripTopRebar.requiredArea, res.columnStripTopRebar.providedArea),
-                                "Bot Rebar" to res.columnStripBotRebar.barString,
-                                "Bot As" to String.format("%.0f/%.0f mm²", res.columnStripBotRebar.requiredArea, res.columnStripBotRebar.providedArea),
-                                "Width" to String.format("%.0f mm", res.columnStripWidthX)
+                                stringResource(R.string.fs_pos_m) to String.format("%.1f kN.m", res.columnStripMomentPos),
+                                stringResource(R.string.fs_neg_m) to String.format("%.1f kN.m", res.columnStripMomentNeg),
+                                stringResource(R.string.fs_top_rebar) to res.columnStripTopRebar.barString,
+                                stringResource(R.string.fs_top_as) to String.format("%.0f/%.0f mm²", res.columnStripTopRebar.requiredArea, res.columnStripTopRebar.providedArea),
+                                stringResource(R.string.fs_bot_rebar) to res.columnStripBotRebar.barString,
+                                stringResource(R.string.fs_bot_as) to String.format("%.0f/%.0f mm²", res.columnStripBotRebar.requiredArea, res.columnStripBotRebar.providedArea),
+                                stringResource(R.string.fs_width) to String.format("%.0f mm", res.columnStripWidthX)
                             ),
                             icon = Icons.Default.ViewColumn, accentColor = Color(0xFF1565C0)
                         )
@@ -342,12 +344,12 @@ fun FlatSlabScreen(
                     // Middle Strip
                     item {
                         ResultDataCard(
-                            "Middle Strip (X)",
+                            stringResource(R.string.fs_mid_strip),
                             listOf(
-                                "+M" to String.format("%.1f kN.m", res.middleStripMomentPos),
-                                "-M" to String.format("%.1f kN.m", res.middleStripMomentNeg),
-                                "Top Rebar" to res.middleStripTopRebar.barString,
-                                "Bot Rebar" to res.middleStripBotRebar.barString
+                                stringResource(R.string.fs_pos_m) to String.format("%.1f kN.m", res.middleStripMomentPos),
+                                stringResource(R.string.fs_neg_m) to String.format("%.1f kN.m", res.middleStripMomentNeg),
+                                stringResource(R.string.fs_top_rebar) to res.middleStripTopRebar.barString,
+                                stringResource(R.string.fs_bot_rebar) to res.middleStripBotRebar.barString
                             ),
                             icon = Icons.Default.ViewStream, accentColor = Color(0xFF2E7D32)
                         )
@@ -356,12 +358,12 @@ fun FlatSlabScreen(
                     // Punching Shear
                     item {
                         ResultDataCard(
-                            "Punching Shear",
+                            stringResource(R.string.fs_punching_shear),
                             listOf(
                                 "Vu" to String.format("%.1f kN", res.punchingShearVu),
                                 "Vc" to String.format("%.1f kN", res.punchingShearVc),
-                                "Perimeter bo" to String.format("%.0f mm", res.punchingPerimeter),
-                                "Status" to if (res.punchingShearOk) "PASS ✓" else "FAIL ✗"
+                                stringResource(R.string.fs_perimeter) to String.format("%.0f mm", res.punchingPerimeter),
+                                stringResource(R.string.status) to if (res.punchingShearOk) "PASS ✓" else "FAIL ✗"
                             ),
                             icon = Icons.Default.Shield,
                             accentColor = if (res.punchingShearOk) Color(0xFF2E7D32) else Color(0xFFE53935)
@@ -372,12 +374,12 @@ fun FlatSlabScreen(
                     res.punchingReinforcement?.let { pr ->
                         item {
                             ResultDataCard(
-                                "Shear Reinforcement",
+                                stringResource(R.string.fs_shear_reinf),
                                 listOf(
-                                    "Type" to "Shear Studs",
-                                    "Diameter" to "φ${pr.diameter} mm",
-                                    "Spacing" to "@${pr.spacing} mm",
-                                    "Total" to "${pr.bars} studs"
+                                    stringResource(R.string.type) to "Shear Studs",
+                                    stringResource(R.string.rebar_dia_label) to "φ${pr.diameter} mm",
+                                    stringResource(R.string.rebar_bar_spacing_label) to "@${pr.spacing} mm",
+                                    stringResource(R.string.total) to "${pr.bars} studs"
                                 ),
                                 icon = Icons.Default.Build, accentColor = Color(0xFFF57C00)
                             )
@@ -387,11 +389,11 @@ fun FlatSlabScreen(
                     // Deflection
                     item {
                         ResultDataCard(
-                            "Deflection",
+                            stringResource(R.string.fs_deflection),
                             listOf(
-                                "Long-term δ" to String.format("%.2f mm", res.deflection),
-                                "Allowable" to String.format("%.2f mm", res.allowableDeflection),
-                                "Status" to if (res.deflectionOk) "PASS ✓" else "FAIL ✗"
+                                stringResource(R.string.fs_long_term_delta) to String.format("%.2f mm", res.deflection),
+                                stringResource(R.string.pile_allowable_set) to String.format("%.2f mm", res.allowableDeflection),
+                                stringResource(R.string.status) to if (res.deflectionOk) "PASS ✓" else "FAIL ✗"
                             ),
                             icon = Icons.Default.Straighten,
                             accentColor = if (res.deflectionOk) Color(0xFF2E7D32) else Color(0xFFE53935)
@@ -401,7 +403,7 @@ fun FlatSlabScreen(
                     // Drop Panel
                     item {
                         ResultDataCard(
-                            "Drop Panel",
+                            stringResource(R.string.fs_drop_panel),
                             listOf(
                                 "Required" to if (res.dropRequired) "Yes" else "No",
                                 "Recommended" to String.format("%.0f mm", res.dropThickness)
@@ -414,10 +416,10 @@ fun FlatSlabScreen(
                     // Quantities
                     item {
                         ResultDataCard(
-                            "Quantities",
+                            stringResource(R.string.fs_quantities),
                             listOf(
-                                "Concrete" to String.format("%.3f m³/panel", res.concreteVolumePerPanel),
-                                "Steel" to String.format("%.1f kg/panel", res.steelWeightPerPanel)
+                                stringResource(R.string.fs_concrete) to String.format("%.3f m³/panel", res.concreteVolumePerPanel),
+                                stringResource(R.string.fs_steel) to String.format("%.1f kg/panel", res.steelWeightPerPanel)
                             ),
                             icon = Icons.Default.Inventory2, accentColor = Color(0xFF6A1B9A)
                         )
@@ -453,7 +455,7 @@ fun FlatSlabScreen(
                     }
 
                     // Drawing
-                    item { PremiumSectionHeader("Panel Plan", icon = Icons.Default.Draw) }
+                    item { PremiumSectionHeader(stringResource(R.string.fs_panel_plan), icon = Icons.Default.Draw) }
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth().height(320.dp),

@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.utils.ConcreteMixDesigner
 import com.civileg.app.utils.ConcreteMixDesigner.CementType
 import com.civileg.app.utils.ConcreteMixDesigner.Exposure
@@ -90,13 +92,13 @@ fun ConcreteMixScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Concrete Mix Design",
+                        stringResource(R.string.mix_title),
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -114,20 +116,20 @@ fun ConcreteMixScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ── 1. Target Strength & Grade Selection ──
-            SectionCard(title = "Target Strength") {
+            SectionCard(title = stringResource(R.string.mix_target_strength)) {
                 InputRow(
-                    label = "f'c Target Strength (MPa)",
+                    label = stringResource(R.string.mix_fc_target),
                     value = targetStrength,
                     onValueChange = { targetStrength = it }
                 )
                 InputRow(
-                    label = "Standard Deviation S (MPa)",
+                    label = stringResource(R.string.mix_std_dev),
                     value = standardDeviation,
                     onValueChange = { standardDeviation = it }
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Quick Grade Selection",
+                    stringResource(R.string.mix_quick_grade),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -156,7 +158,7 @@ fun ConcreteMixScreen(
             }
 
             // ── 2. Exposure Condition ──
-            SectionCard(title = "Exposure Condition") {
+            SectionCard(title = stringResource(R.string.mix_exposure)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.horizontalScroll(rememberScrollState())
@@ -186,7 +188,7 @@ fun ConcreteMixScreen(
             }
 
             // ── 3. Aggregate Properties ──
-            SectionCard(title = "Aggregate Properties") {
+            SectionCard(title = stringResource(R.string.mix_agg_props)) {
                 // Max aggregate size dropdown
                 var aggExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
@@ -197,7 +199,7 @@ fun ConcreteMixScreen(
                         value = "${maxAggSize.toInt()} mm",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Max Aggregate Size") },
+                        label = { Text(stringResource(R.string.mix_max_agg)) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = aggExpanded)
                         },
@@ -222,24 +224,24 @@ fun ConcreteMixScreen(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 InputRow(
-                    label = "Fine Agg Fineness Modulus (FM)",
+                    label = stringResource(R.string.mix_fm),
                     value = finenessModulus,
                     onValueChange = { finenessModulus = it }
                 )
                 InputRow(
-                    label = "Fine Aggregate Specific Gravity",
+                    label = stringResource(R.string.mix_fine_sg),
                     value = fineAggSG,
                     onValueChange = { fineAggSG = it }
                 )
                 InputRow(
-                    label = "Coarse Aggregate Specific Gravity",
+                    label = stringResource(R.string.mix_coarse_sg),
                     value = coarseAggSG,
                     onValueChange = { coarseAggSG = it }
                 )
             }
 
             // ── 4. Slump Selector ──
-            SectionCard(title = "Required Slump") {
+            SectionCard(title = stringResource(R.string.mix_slump)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.horizontalScroll(rememberScrollState())
@@ -258,7 +260,7 @@ fun ConcreteMixScreen(
             }
 
             // ── 5. Cement Type Selector ──
-            SectionCard(title = "Cement Type") {
+            SectionCard(title = stringResource(R.string.mix_cement_type_label)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -282,13 +284,13 @@ fun ConcreteMixScreen(
             }
 
             // ── 6. Admixtures Toggle ──
-            SectionCard(title = "Admixtures") {
+            SectionCard(title = stringResource(R.string.mix_admixtures)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Use Admixture", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.mix_use_admix), style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = hasAdmixture,
                         onCheckedChange = { hasAdmixture = it }
@@ -313,7 +315,7 @@ fun ConcreteMixScreen(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     InputRow(
-                        label = "Dosage (% of cement weight)",
+                        label = stringResource(R.string.mix_dosage),
                         value = admixtureDosage,
                         onValueChange = { admixtureDosage = it }
                     )
@@ -349,7 +351,7 @@ fun ConcreteMixScreen(
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Calculate Mix")
+                    Text(stringResource(R.string.mix_calc_button))
                 }
                 IconButton(
                     onClick = {
@@ -369,7 +371,7 @@ fun ConcreteMixScreen(
                         viewModel.clearResults()
                     }
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
                 }
             }
 
@@ -380,14 +382,14 @@ fun ConcreteMixScreen(
 
                 // Mix Proportion Bar Chart
                 Spacer(modifier = Modifier.height(4.dp))
-                SectionCard(title = "Mix Proportion Chart") {
+                SectionCard(title = stringResource(R.string.mix_proportion_chart)) {
                     MixProportionBarChart(result = result)
                 }
 
                 // Notes
                 if (result.notes.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    SectionCard(title = "Design Notes") {
+                    SectionCard(title = stringResource(R.string.mix_design_notes)) {
                         result.notes.forEach { note ->
                             Text(
                                 text = "• $note",
@@ -508,7 +510,7 @@ private fun MixResultCard(result: MixResult) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Mix Design Results",
+                    stringResource(R.string.mix_results_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -529,17 +531,17 @@ private fun MixResultCard(result: MixResult) {
 
             // Key results
             ResultRow(
-                "Required Strength f'cr",
+                stringResource(R.string.mix_req_strength),
                 "%.1f MPa".format(result.requiredStrength)
             )
             ResultRow(
-                "Water-Cement Ratio",
+                stringResource(R.string.mix_wc_ratio),
                 "%.3f".format(result.waterCementRatio),
                 highlight = true
             )
             if (result.admixtureContent > 0) {
                 ResultRow(
-                    "Effective w/cm (with admix)",
+                    stringResource(R.string.mix_effective_wc),
                     "%.3f".format(result.wCmRatio)
                 )
             }
@@ -547,30 +549,30 @@ private fun MixResultCard(result: MixResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             Text(
-                "Material Quantities (per m³)",
+                stringResource(R.string.mix_material_quantities),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
             ResultRow(
-                "Cement Content",
+                stringResource(R.string.mix_cement_content),
                 "%.0f kg/m³".format(result.cementContent),
                 highlight = true
             )
             ResultRow(
-                "Water Content",
+                stringResource(R.string.mix_water_content),
                 "%.0f liters/m³".format(result.waterContent)
             )
             ResultRow(
-                "Fine Aggregate",
+                stringResource(R.string.mix_fine_agg),
                 "%.0f kg/m³".format(result.fineAggContent)
             )
             ResultRow(
-                "Coarse Aggregate",
+                stringResource(R.string.mix_coarse_agg),
                 "%.0f kg/m³".format(result.coarseAggContent)
             )
             if (result.admixtureContent > 0) {
                 ResultRow(
-                    "Admixture",
+                    stringResource(R.string.mix_admix_content),
                     "%.1f kg/m³".format(result.admixtureContent)
                 )
             }
@@ -578,15 +580,15 @@ private fun MixResultCard(result: MixResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             ResultRow(
-                "Air Content",
+                stringResource(R.string.mix_air_content),
                 "%.1f %%".format(result.airContent)
             )
             ResultRow(
-                "Unit Weight",
+                stringResource(R.string.mix_unit_weight),
                 "%.0f kg/m³".format(result.unitWeight)
             )
             ResultRow(
-                "Yield",
+                stringResource(R.string.mix_yield_label),
                 "%.2f m³".format(result.yield)
             )
 
@@ -594,7 +596,7 @@ private fun MixResultCard(result: MixResult) {
 
             // Mix Ratio prominently displayed
             Text(
-                "Mix Ratio (C : FA : CA : W)",
+                stringResource(R.string.mix_ratio_prominent),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -652,10 +654,10 @@ private fun MixProportionBarChart(result: MixResult) {
     if (total <= 0) return
 
     val segments = listOf(
-        "Cement" to ((cement / total) to CementGray),
-        "Water"  to ((water / total)  to WaterBlue),
-        "Fine Agg" to ((fine / total) to FineSandBeige),
-        "Coarse Agg" to ((coarse / total) to CoarseBrown)
+        stringResource(R.string.mix_cement_content) to ((cement / total) to CementGray),
+        stringResource(R.string.mix_water_content)  to ((water / total)  to WaterBlue),
+        stringResource(R.string.mix_fine_agg) to ((fine / total) to FineSandBeige),
+        stringResource(R.string.mix_coarse_agg) to ((coarse / total) to CoarseBrown)
     )
 
     Column(

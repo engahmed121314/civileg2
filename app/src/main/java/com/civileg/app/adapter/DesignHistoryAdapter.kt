@@ -48,6 +48,9 @@ class DesignHistoryAdapter(
                 DesignType.PILE_FOUNDATION -> R.drawable.ic_pile
                 DesignType.FLAT_SLAB -> R.drawable.ic_slab
                 DesignType.SHEAR_WALL -> R.drawable.ic_wall
+                DesignType.CONCRETE_MIX -> R.drawable.ic_beam // TODO: Add specific icons if available
+                DesignType.SOIL_BEARING -> R.drawable.ic_footing
+                DesignType.WIND_LOAD -> R.drawable.ic_search
             }
             binding.ivDesignType.setImageResource(iconRes)
 

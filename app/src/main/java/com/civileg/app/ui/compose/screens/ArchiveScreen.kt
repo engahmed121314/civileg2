@@ -404,6 +404,9 @@ private fun DesignTypeBadge(type: DesignType, count: Int) {
         DesignType.PILE_FOUNDATION -> "Pile Found." to Color(0xFF33691E)
         DesignType.FLAT_SLAB -> "Flat Slab" to Color(0xFF004D40)
         DesignType.SHEAR_WALL -> "Shear Wall" to Color(0xFF880E4F)
+        DesignType.CONCRETE_MIX -> "Concrete Mix" to Color(0xFF455A64)
+        DesignType.SOIL_BEARING -> "Soil Bearing" to Color(0xFF795548)
+        DesignType.WIND_LOAD -> "Wind Load" to Color(0xFF0288D1)
     }
     Surface(
         shape = RoundedCornerShape(6.dp),

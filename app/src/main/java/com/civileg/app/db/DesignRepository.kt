@@ -261,6 +261,82 @@ class DesignRepository @Inject constructor(
         saveGeneralDesign(projectId, DesignType.SEISMIC, name, result.isSafe, 0.0, 0.0, 0.0, 0.0, result, result.code.displayName, inputData)
     }
 
+    suspend fun savePileFoundationDesign(projectId: Long, name: String, result: com.civileg.app.domain.PileDesignResult) {
+        val inputData = JSONObject().apply {
+            put("pileType", result.pileType)
+            put("pileDiameter", result.pileDiameterMm)
+            put("pileLength", result.pileLengthM)
+            put("numberOfPiles", result.numberOfPiles)
+            put("fcu", result.fcu)
+            put("fy", result.fy)
+        }.toString()
+        saveGeneralDesign(
+            projectId = projectId,
+            type = DesignType.PILE_FOUNDATION,
+            name = name,
+            isSafe = result.isSafe,
+            utilizationRatio = result.utilizationRatio,
+            concreteVolume = result.capResult.concreteVolume,
+            steelWeight = result.capResult.steelWeight,
+            totalCost = 0.0,
+            result = result,
+            codeUsed = "ECP 203",
+            inputData = inputData
+        )
+    }
+
+    suspend fun saveFlatSlabDesign(projectId: Long, name: String, result: com.civileg.app.domain.FlatSlabResult) {
+        val inputData = JSONObject().apply {
+            put("panelMomentX", result.panelMomentX)
+            put("panelMomentY", result.panelMomentY)
+        }.toString()
+        saveGeneralDesign(
+            projectId = projectId,
+            type = DesignType.FLAT_SLAB,
+            name = name,
+            isSafe = result.isSafe,
+            utilizationRatio = result.utilizationRatio,
+            concreteVolume = result.concreteVolumePerPanel,
+            steelWeight = result.steelWeightPerPanel,
+            totalCost = 0.0,
+            result = result,
+            codeUsed = "ECP/ACI",
+            inputData = inputData
+        )
+    }
+
+    suspend fun saveShearWallDesign(projectId: Long, name: String, result: com.civileg.app.domain.ShearWallResult) {
+        val inputData = JSONObject().apply {
+            put("momentCapacity", result.momentCapacity)
+            put("axialCapacity", result.axialCapacity)
+        }.toString()
+        saveGeneralDesign(
+            projectId = projectId,
+            type = DesignType.SHEAR_WALL,
+            name = name,
+            isSafe = result.isSafe,
+            utilizationRatio = result.utilizationRatio,
+            concreteVolume = result.concreteVolumePerStory,
+            steelWeight = result.steelWeightPerStory,
+            totalCost = 0.0,
+            result = result,
+            codeUsed = "ECP/ACI",
+            inputData = inputData
+        )
+    }
+
+    suspend fun saveConcreteMixDesign(projectId: Long, name: String, result: com.civileg.app.utils.ConcreteMixDesigner.MixResult) {
+        saveGeneralDesign(projectId, DesignType.CONCRETE_MIX, name, true, 0.0, 0.0, 0.0, 0.0, result, "Standard")
+    }
+
+    suspend fun saveSoilBearingDesign(projectId: Long, name: String, result: com.civileg.app.utils.SoilBearingResult, method: String) {
+        saveGeneralDesign(projectId, DesignType.SOIL_BEARING, name, true, 0.0, 0.0, 0.0, 0.0, result, method)
+    }
+
+    suspend fun saveWindLoadDesign(projectId: Long, name: String, result: com.civileg.app.utils.WindLoadResult) {
+        saveGeneralDesign(projectId, DesignType.WIND_LOAD, name, true, 0.0, 0.0, 0.0, 0.0, result, "Code")
+    }
+
     private suspend fun saveGeneralDesign(
         projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double,
         concreteVolume: Double, steelWeight: Double, totalCost: Double, result: Any, codeUsed: String,

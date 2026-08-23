@@ -191,10 +191,13 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> stringResource(R.string.design_type_steel_member)
                 DesignType.PILE -> stringResource(R.string.design_type_pile)
                 DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
-                DesignType.FRAME_ANALYSIS -> "Frame Analysis"
-                DesignType.PILE_FOUNDATION -> "Pile Foundation"
-                DesignType.FLAT_SLAB -> "Flat Slab"
-                DesignType.SHEAR_WALL -> "Shear Wall"
+                DesignType.FRAME_ANALYSIS -> stringResource(R.string.design_type_frame_analysis)
+                DesignType.PILE_FOUNDATION -> stringResource(R.string.design_type_pile_foundation)
+                DesignType.FLAT_SLAB -> stringResource(R.string.design_type_flat_slab)
+                DesignType.SHEAR_WALL -> stringResource(R.string.design_type_shear_wall)
+                DesignType.CONCRETE_MIX -> "Concrete Mix"
+                DesignType.SOIL_BEARING -> "Soil Bearing"
+                DesignType.WIND_LOAD -> "Wind Load"
             }
             val icon = when (design.type) {
                 DesignType.BEAM -> Icons.Default.AccountBalance

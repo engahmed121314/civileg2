@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,7 @@ import android.graphics.Paint
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.utils.*
 import com.civileg.app.viewmodel.WindLoadViewModel
 import com.civileg.app.viewmodel.WindPreset
@@ -103,10 +105,10 @@ fun WindLoadScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Wind Load Analysis", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.wind_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -120,7 +122,7 @@ fun WindLoadScreen(
                         topographyFactor = "1.0"; numberOfFloors = "5"; naturalFrequency = "1.0"
                         dampingRatio = "0.02"; hasOpenings = false; isFlexible = false
                     }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
                     }
                 }
             )
@@ -138,10 +140,10 @@ fun WindLoadScreen(
             PresetRow(onPreset = { viewModel.applyPreset(it); syncToVm() })
 
             // ---- Wind & terrain ----
-            SectionCard(title = "Wind & Terrain") {
-                LabeledTextField("Basic Wind Speed (m/s)", basicWindSpeed, { basicWindSpeed = it; syncToVm() })
+            SectionCard(title = stringResource(R.string.wind_wind_terrain)) {
+                LabeledTextField(stringResource(R.string.wind_speed), basicWindSpeed, { basicWindSpeed = it; syncToVm() })
                 Spacer(Modifier.height(6.dp))
-                Text("Terrain Category", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.wind_terrain_cat), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -158,8 +160,8 @@ fun WindLoadScreen(
             }
 
             // ---- Building geometry ----
-            SectionCard(title = "Building Geometry") {
-                Text("Building Shape", style = MaterialTheme.typography.labelMedium)
+            SectionCard(title = stringResource(R.string.wind_geometry_section)) {
+                Text(stringResource(R.string.wind_shape), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -177,17 +179,17 @@ fun WindLoadScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = buildingHeight, onValueChange = { buildingHeight = it; syncToVm() },
-                        label = { Text("Height (m)") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.wind_height)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = buildingWidth, onValueChange = { buildingWidth = it; syncToVm() },
-                        label = { Text("Width (m)") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.wind_width)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = buildingDepth, onValueChange = { buildingDepth = it; syncToVm() },
-                        label = { Text("Depth (m)") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.wind_depth)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                 }
@@ -195,25 +197,25 @@ fun WindLoadScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = numberOfFloors, onValueChange = { numberOfFloors = it; syncToVm() },
-                        label = { Text("Floors") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.wind_floors)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = importanceFactor, onValueChange = { importanceFactor = it; syncToVm() },
-                        label = { Text("k₁ (Importance)") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.wind_importance)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = topographyFactor, onValueChange = { topographyFactor = it; syncToVm() },
-                        label = { Text("k₃ (Topo)") }, modifier = Modifier.weight(1f),
+                        label = { Text(stringResource(R.string.wind_topo)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                 }
             }
 
             // ---- Roof & openings ----
-            SectionCard(title = "Roof & Openings") {
-                Text("Roof Type", style = MaterialTheme.typography.labelMedium)
+            SectionCard(title = stringResource(R.string.wind_roof_openings)) {
+                Text(stringResource(R.string.wind_roof_type), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -230,7 +232,7 @@ fun WindLoadScreen(
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = roofSlope, onValueChange = { roofSlope = it; syncToVm() },
-                    label = { Text("Roof Slope (°)") }, modifier = Modifier.fillMaxWidth(0.5f),
+                    label = { Text(stringResource(R.string.wind_roof_slope)) }, modifier = Modifier.fillMaxWidth(0.5f),
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                 )
                 Spacer(Modifier.height(8.dp))
@@ -242,12 +244,12 @@ fun WindLoadScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Switch(checked = hasOpenings, onCheckedChange = { hasOpenings = it; syncToVm() })
                         Spacer(Modifier.width(6.dp))
-                        Text("Windward Openings", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.wind_windward_openings), style = MaterialTheme.typography.bodySmall)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Switch(checked = isFlexible, onCheckedChange = { isFlexible = it; syncToVm() })
                         Spacer(Modifier.width(6.dp))
-                        Text("Flexible Structure", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.wind_flexible), style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (isFlexible) {
@@ -255,12 +257,12 @@ fun WindLoadScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = naturalFrequency, onValueChange = { naturalFrequency = it; syncToVm() },
-                            label = { Text("Freq (Hz)") }, modifier = Modifier.weight(1f),
+                            label = { Text(stringResource(R.string.wind_freq)) }, modifier = Modifier.weight(1f),
                             textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                         )
                         OutlinedTextField(
                             value = dampingRatio, onValueChange = { dampingRatio = it; syncToVm() },
-                            label = { Text("Damping") }, modifier = Modifier.weight(1f),
+                            label = { Text(stringResource(R.string.wind_damping)) }, modifier = Modifier.weight(1f),
                             textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                         )
                     }
@@ -283,7 +285,7 @@ fun WindLoadScreen(
                 }
                 Icon(Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Calculate Wind Load", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.wind_calc_button), fontWeight = FontWeight.SemiBold)
             }
 
             // ---- Results ----
@@ -310,7 +312,7 @@ fun WindLoadScreen(
 @Composable
 private fun PresetRow(onPreset: (WindPreset) -> Unit) {
     Column {
-        Text("Quick Presets", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.wind_presets), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -375,22 +377,22 @@ private fun ResultValueCard(label: String, value: String, unit: String, color: C
 
 @Composable
 private fun SummaryCards(result: WindLoadResult) {
-    Text("Results Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.wind_results_summary), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(6.dp))
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ResultValueCard("Design Wind Speed", "%.1f".format(result.designWindSpeed), "m/s", AccentOrange, Modifier.weight(1f))
-        ResultValueCard("Design Pressure", "%.3f".format(result.designWindPressure), "kN/m²", PressureNegative, Modifier.weight(1f))
-        ResultValueCard("Gust Factor (Gf)", "%.2f".format(result.gustFactor), "", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-        ResultValueCard("Base Shear", "%.1f".format(result.totalBaseShear), "kN", PressurePositive, Modifier.weight(1f))
-        ResultValueCard("OTM", "%.0f".format(result.overturningMoment), "kN·m", Color(0xFF6A1B9A), Modifier.weight(1f))
+        ResultValueCard(stringResource(R.string.wind_design_speed), "%.1f".format(result.designWindSpeed), "m/s", AccentOrange, Modifier.weight(1f))
+        ResultValueCard(stringResource(R.string.wind_design_pressure), "%.3f".format(result.designWindPressure), "kN/m²", PressureNegative, Modifier.weight(1f))
+        ResultValueCard(stringResource(R.string.wind_gust_factor), "%.2f".format(result.gustFactor), "", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+        ResultValueCard(stringResource(R.string.wind_base_shear), "%.1f".format(result.totalBaseShear), "kN", PressurePositive, Modifier.weight(1f))
+        ResultValueCard(stringResource(R.string.wind_otm), "%.0f".format(result.overturningMoment), "kN·m", Color(0xFF6A1B9A), Modifier.weight(1f))
     }
     Spacer(Modifier.height(8.dp))
     // Pressure coefficient cards
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ResultValueCard("Windward Pₑ", "%.3f".format(result.externalPressureWindward), "kN/m²", PressurePositive, Modifier.weight(1f))
@@ -408,7 +410,7 @@ private fun SummaryCards(result: WindLoadResult) {
 @Composable
 private fun PressureTable(pressures: List<WindPressureAtHeight>) {
     Spacer(Modifier.height(6.dp))
-    Text("Pressure Distribution by Floor", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.wind_pressure_dist), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(8.dp)) {
@@ -449,7 +451,7 @@ private fun PressureTable(pressures: List<WindPressureAtHeight>) {
 @Composable
 private fun ElevationCanvas(result: WindLoadResult) {
     Spacer(Modifier.height(6.dp))
-    Text("Building Elevation — Wind Load Diagram", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.wind_elevation_diag), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     Card(modifier = Modifier.fillMaxWidth()) {
         Canvas(
