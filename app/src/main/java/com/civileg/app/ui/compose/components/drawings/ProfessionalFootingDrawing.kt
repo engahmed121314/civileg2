@@ -51,11 +51,16 @@ fun ProfessionalFootingDrawing(
         val h = size.height
 
         // ── Safety checks ─────────────────────────────────────────
-        val safeLX = footingLengthX.coerceAtLeast(100.0)
-        val safeLY = footingLengthY.coerceAtLeast(100.0)
-        val safeThick = footingThickness.coerceAtLeast(50.0)
+        val safeLX = footingLengthX.coerceAtLeast(0.5)
+        val safeLY = footingLengthY.coerceAtLeast(0.5)
+        val safeThick = footingThickness.coerceAtLeast(200.0)
         val safeColW = columnWidth.coerceAtLeast(50.0)
         val safeColD = columnDepth.coerceAtLeast(50.0)
+
+        // Normalize units: drawing logic expects mm
+        val lxMm = if (safeLX < 50.0) safeLX * 1000.0 else safeLX
+        val lyMm = if (safeLY < 50.0) safeLY * 1000.0 else safeLY
+        val thickMm = if (safeThick < 50.0) safeThick * 1000.0 else safeThick
 
         // ── Color Palette (delegates to shared DrawingColors) ─────
         val C = DrawingColorDefaults
@@ -81,13 +86,13 @@ fun ProfessionalFootingDrawing(
         val hasPressure = footingType == "Combined" || footingType == "Raft"
 
         val planH = when (viewMode) {
-            1 -> h * 0.88f
-            0 -> h * 0.32f
+            1 -> h * 0.82f
+            0 -> h * 0.35f
             else -> h * 0.10f
         }
         val sectionH = when (viewMode) {
-            2 -> h * 0.55f
-            0 -> h * 0.24f
+            2 -> h * 0.50f
+            0 -> h * 0.28f
             else -> h * 0.10f
         }
         val pressureH = if (hasPressure) when (viewMode) {
@@ -128,11 +133,11 @@ fun ProfessionalFootingDrawing(
         //  PLAN VIEW
         // ══════════════════════════════════════════════════════════
         // Scaling (used by both plan and section views)
-        val scaleX = planW / safeLX.toFloat()
-        val scaleY = planDrawH / safeLY.toFloat()
-        val scale = min(scaleX, scaleY) * 0.85f
-        val drawLX = safeLX.toFloat() * scale
-        val drawLY = safeLY.toFloat() * scale
+        val scaleX = planW / lxMm.toFloat()
+        val scaleY = planDrawH / lyMm.toFloat()
+        val scale = min(scaleX, scaleY) * 0.92f
+        val drawLX = lxMm.toFloat() * scale
+        val drawLY = lyMm.toFloat() * scale
 
         if (viewMode == 0 || viewMode == 1) {
         val fLeft = planLeft + (planW - drawLX) / 2f
@@ -293,8 +298,8 @@ fun ProfessionalFootingDrawing(
 
         // ── Dimension lines using DrawingUtils ────────────────────
         // Footing L × B
-        drawHorizontalDimension(fLeft, fRight, fTop, "L=${safeLX.toInt()}", dimColor, 9f * density, offset = -14f)
-        drawVerticalDimension(fTop, fBottom, fLeft, "B=${safeLY.toInt()}", dimColor, 9f * density, offset = -14f)
+        drawHorizontalDimension(fLeft, fRight, fTop, "L=${lxMm.toInt()}", dimColor, 9f * density, offset = -14f)
+        drawVerticalDimension(fTop, fBottom, fLeft, "B=${lyMm.toInt()}", dimColor, 9f * density, offset = -14f)
 
         // Column b × h (for isolated)
         if (footingType == "Isolated") {
@@ -337,8 +342,8 @@ fun ProfessionalFootingDrawing(
 
         val maxSecW = secRight - secLeft - 120f
         val secSpanPx = min(drawLX, maxSecW)
-        val secScale = secSpanPx / safeLX.toFloat()
-        val thickPx = (safeThick * secScale).toFloat().coerceIn(20f, 70f)
+        val secScale = secSpanPx / lxMm.toFloat()
+        val thickPx = (thickMm * secScale).toFloat().coerceIn(30f, 120f)
         val sLeft = secLeft + (maxSecW - secSpanPx) / 2f
         val sTop = secTop + (sectionH - thickPx) / 2f + 8f
         val sBottom = sTop + thickPx
@@ -521,10 +526,10 @@ fun ProfessionalFootingDrawing(
         val tblLeft = margin
         val tblWidth = w - 2 * margin
 
-        val xSpacing = if (rebarXCount > 1) (safeLY / (rebarXCount - 1)).toInt() else safeLY.toInt()
-        val ySpacing = if (rebarYCount > 1) (safeLX / (rebarYCount - 1)).toInt() else safeLX.toInt()
-        val barLengthX = safeLY.toInt()
-        val barLengthY = safeLX.toInt()
+        val xSpacing = if (rebarXCount > 1) (lyMm / (rebarXCount - 1)).toInt() else lyMm.toInt()
+        val ySpacing = if (rebarYCount > 1) (lxMm / (rebarYCount - 1)).toInt() else lxMm.toInt()
+        val barLengthX = lyMm.toInt()
+        val barLengthY = lxMm.toInt()
 
         val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Length (mm)")
         val colWidths = listOf(

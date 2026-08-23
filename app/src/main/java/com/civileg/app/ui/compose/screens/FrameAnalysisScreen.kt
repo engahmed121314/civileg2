@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -910,10 +911,16 @@ private fun ResultsTab(
                         Text(stringResource(R.string.frame_node_displacements), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (nr in result.nodeResults.filter { it.nodeId in (viewModel.nodes.value?.map { it.id } ?: emptyList()) }) {
-                            Text(
-                                "عقدة ${nr.nodeId}: dx=${String.format("%.4f", nr.dx * 1000)} mm, dy=${String.format("%.4f", nr.dy * 1000)} mm, θ=${String.format("%.6f", nr.rz)} rad",
-                                fontSize = 11.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("عقدة ${nr.nodeId}", modifier = Modifier.width(50.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("dx: ${String.format("%.3f", nr.dx * 1000)} mm", modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                Text("dy: ${String.format("%.3f", nr.dy * 1000)} mm", modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                Text("θ: ${String.format("%.4f", nr.rz)} rad", modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                            }
+                            HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
                         }
                     }
                 }

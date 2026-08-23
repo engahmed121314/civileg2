@@ -704,7 +704,12 @@ fun DrawScope.drawTextAnnotated(
                                  else android.graphics.Paint.Align.LEFT
                 this.typeface = tf ?: android.graphics.Typeface.SANS_SERIF
             }
-            val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
+            val layoutWidth = if (center) {
+                // For centered text, allow more space to avoid wrapping
+                (this.width * 0.9f).toInt()
+            } else {
+                (this.width - x).toInt().coerceAtLeast(1)
+            }
             val layoutAlign = when {
                 center -> android.text.Layout.Alignment.ALIGN_CENTER
                 else -> android.text.Layout.Alignment.ALIGN_NORMAL

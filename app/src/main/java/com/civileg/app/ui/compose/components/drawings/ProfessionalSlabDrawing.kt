@@ -116,7 +116,7 @@ fun ProfessionalSlabDrawing(
         val planTop = h * 0.05f
         val planLeft = margin + 50f
         val planRight = w - margin
-        val planBottom = h * 0.50f
+        val planBottom = planTop + planH
         val planW = planRight - planLeft
         val planDrawH = planBottom - planTop
 
@@ -131,15 +131,20 @@ fun ProfessionalSlabDrawing(
                            slabType.contains("ناتئ", ignoreCase = true)
         val isFlat = slabType.contains("Flat", ignoreCase = true) ||
                      slabType.contains("مسطحة", ignoreCase = true)
-        val spanRatio = if (spanY > 0) spanX / spanY else 1.0
+
+        // Normalize units: spans should be in meters for scaling logic
+        val sX = if (spanX > 50.0) spanX / 1000.0 else spanX
+        val sY = if (spanY > 50.0) spanY / 1000.0 else spanY
+
+        val spanRatio = if (sY > 0) sX / sY else 1.0
         val isOneWay = spanRatio < 0.5
 
         // ── Scaling for plan view ──────────────────────────────────────
-        val scaleX = planW / spanX.toFloat()
-        val scaleY = planDrawH / spanY.toFloat()
-        val scale = min(scaleX, scaleY) * 0.85f
-        val drawSpanX = spanX.toFloat() * scale
-        val drawSpanY = spanY.toFloat() * scale
+        val scaleX = planW / sX.toFloat()
+        val scaleY = planDrawH / sY.toFloat()
+        val scale = min(scaleX, scaleY) * 0.92f
+        val drawSpanX = sX.toFloat() * scale
+        val drawSpanY = sY.toFloat() * scale
         val slabLeft = planLeft + (planW - drawSpanX) / 2f
         val slabTop = planTop + (planDrawH - drawSpanY) / 2f
         val slabRight = slabLeft + drawSpanX

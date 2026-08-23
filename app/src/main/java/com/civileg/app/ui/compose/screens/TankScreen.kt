@@ -38,7 +38,7 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TankScreen(
     viewModel: TankViewModel = hiltViewModel(),
@@ -154,18 +154,26 @@ fun TankScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.tank_location), style = MaterialTheme.typography.labelMedium)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         val isGround = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_GROUND
                         val isElevated = selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED
                         val isUnderground = selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND
 
-                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { Text(stringResource(R.string.tank_location_ground)) })
-                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { Text(stringResource(R.string.tank_location_elevated)) })
-                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { Text(stringResource(R.string.tank_location_underground)) })
+                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { Text(stringResource(R.string.tank_location_ground), fontSize = 11.sp) })
+                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { Text(stringResource(R.string.tank_location_elevated), fontSize = 11.sp) })
+                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { Text(stringResource(R.string.tank_location_underground), fontSize = 11.sp) })
                     }
                     
                     Text(stringResource(R.string.tank_section_shape), style = MaterialTheme.typography.labelMedium)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         val isRect = selectedType == CalculatorEngine.TankType.RECTANGULAR_GROUND || selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.UNDERGROUND
                         
                         FilterChip(
@@ -178,7 +186,7 @@ fun TankScreen(
                                     else -> selectedType
                                 }
                             }, 
-                            label = { Text(stringResource(R.string.tank_shape_rectangular)) }
+                            label = { Text(stringResource(R.string.tank_shape_rectangular), fontSize = 11.sp) }
                         )
                         FilterChip(
                             selected = !isRect, 
@@ -190,7 +198,7 @@ fun TankScreen(
                                     else -> selectedType
                                 }
                             }, 
-                            label = { Text(stringResource(R.string.tank_shape_circular)) }
+                            label = { Text(stringResource(R.string.tank_shape_circular), fontSize = 11.sp) }
                         )
                     }
                 }

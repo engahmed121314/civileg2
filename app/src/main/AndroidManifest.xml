@@ -5,6 +5,7 @@
     <!-- Network permission — required for future API integrations -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="com.android.vending.BILLING" />
 
     <!-- Storage permissions for PDF/Excel export (scoped to SDK 32 and below) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"

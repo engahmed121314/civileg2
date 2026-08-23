@@ -3,6 +3,9 @@ package com.civileg.app.security
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
+import com.google.android.play.core.integrity.IntegrityManagerFactory
+import com.google.android.play.core.integrity.IntegrityTokenRequest
 import java.util.Locale
 
 /**
@@ -10,6 +13,28 @@ import java.util.Locale
  * Developer: Eng. Ahmed Magdy | eng.ahmedmagdy121314@gmail.com
  */
 object PlaySafetyChecker {
+
+    /**
+     * Request an integrity token from Google Play.
+     * Note: Full security requires server-side verification of this token.
+     */
+    fun checkIntegrity(context: Context, cloudProjectNumber: Long) {
+        val integrityManager = IntegrityManagerFactory.create(context)
+        
+        val integrityTokenRequest = IntegrityTokenRequest.builder()
+            .setCloudProjectNumber(cloudProjectNumber)
+            .build()
+            
+        integrityManager.requestIntegrityToken(integrityTokenRequest)
+            .addOnSuccessListener { response ->
+                val token = response.token()
+                Log.d("PlaySafety", "Integrity token received successfully")
+                // Here you would send the token to your backend for verification
+            }
+            .addOnFailureListener { e ->
+                Log.w("PlaySafety", "Integrity check failed: ${e.message}")
+            }
+    }
 
     /**
      * Validate that the app was installed from a legitimate source.

@@ -95,5 +95,19 @@
 -dontwarn org.slf4j.**
 -keep class org.slf4j.** { *; }
 
+# --- Google Play Billing ---
+-keep class com.android.billingclient.** { *; }
+-dontwarn com.android.billingclient.**
+
+# --- Google AdMob & UMP ---
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.android.ump.** { *; }
+-dontwarn com.google.android.gms.ads.**
+-dontwarn com.google.android.ump.**
+
+# --- Play Integrity API ---
+-keep class com.google.android.play.core.integrity.** { *; }
+-dontwarn com.google.android.play.core.integrity.**
+
 # --- Security: Keep application and model classes ---
 -keep class com.civileg.app.** { *; }

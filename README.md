@@ -156,6 +156,15 @@ The output APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ---
 
+### Security & Monetization (Pro Features)
+
+- **Google AdMob Integration** — Optimized ad placement (Banners, Interstitials, Native Ads) with GDPR/UMP consent flow.
+- **Google Play Billing** — Secure in-app purchases for premium features and ad-free experience.
+- **Play Integrity API** — Protection against unauthorized modifications and ensuring app security on genuine devices.
+- **Advanced Obfuscation** — R8/ProGuard rules to protect business logic and design formulas.
+
+---
+
 <div id="العربية">
 
 ## العربية
@@ -257,6 +266,15 @@ cd civileg2
 ### إخلاء المسؤولية
 
 > هذا التطبيق لأغراض **تعليمية والتصميم المبدئي فقط**. يجب التحقق من جميع الحسابات بواسطة مهندس إنشائي مرخص. المطور غير مسؤول عن أي أخطاء أو أضرار ناتجة عن استخدام هذا التطبيق.
+
+---
+
+### الحماية والربح (ميزات النسخة الاحترافية)
+
+- **تكامل Google AdMob** — توزيع احترافي للإعلانات (Banners, Interstitials, Native Ads) مع نظام طلب الموافقة UMP.
+- **نظام الدفع Google Play Billing** — مشتريات آمنة داخل التطبيق لفتح الميزات المميزة وإزالة الإعلانات.
+- **حماية Play Integrity** — تأمين التطبيق ضد التلاعب وضمان تشغيله على أجهزة أصلية فقط.
+- **تشفير متقدم للكود** — قواعد R8/ProGuard متطورة لحماية خوارزميات التصميم والمعادلات الهندسية.
 
 ---
 

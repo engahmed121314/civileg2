@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -49,7 +49,7 @@ fun ProfessionalPileDrawing(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(4f / 3f)
+            .fillMaxSize()
     ) {
         val w = size.width
         val h = size.height
@@ -103,19 +103,19 @@ fun ProfessionalPileDrawing(
         // ══════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 36f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 44f))
         drawTextAnnotated(
             "PILE FOUNDATION DETAIL — $pattern (${numberOfPiles} piles)",
-            w / 2f, 24f, textColor, 12f * density, center = true, bold = true
+            w / 2f, 26f, textColor, 11f * density, center = true, bold = true
         )
 
         // ══════════════════════════════════════════════════
         // PLAN VIEW (top-left)
         // ══════════════════════════════════════════════════
         val planLeft = margin + 40f
-        val planTop = 46f
+        val planTop = 75f
         val planMaxW = w * 0.48f
-        val planMaxH = h * 0.38f
+        val planMaxH = h * 0.36f
 
         drawTextAnnotated("PLAN", planLeft, planTop - 4f, C.ExtensionGray, 9f * density, bold = true)
 
@@ -203,8 +203,8 @@ fun ProfessionalPileDrawing(
         // CROSS-SECTION VIEW (top-right)
         // ══════════════════════════════════════════════════
         val secLeft = w * 0.52f
-        val secTop = 46f
-        val secMaxSize = min(w * 0.44f, h * 0.38f)
+        val secTop = 75f
+        val secMaxSize = min(w * 0.44f, h * 0.36f)
 
         drawTextAnnotated("PILE SECTION", secLeft, secTop - 4f, C.ExtensionGray, 9f * density, bold = true)
 

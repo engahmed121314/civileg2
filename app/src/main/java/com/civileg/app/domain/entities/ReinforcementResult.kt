@@ -22,7 +22,7 @@ data class ReinforcementResult(
     val spacing: Double = 0.0,
     val description: String = ""
 ) : Parcelable {
-    val barString: String get() = if (numberOfBars > 0) "${numberOfBars}Ø${barDiameter.toInt()}" else if (spacing > 0) "${(1000/spacing).toInt()}Ø${barDiameter.toInt()}/m'" else description
+    val barString: String get() = if (numberOfBars > 0) "${numberOfBars}Ø${barDiameter.toInt()}" else if (spacing > 0) "${(1000/spacing).toInt()}Ø${barDiameter.toInt()}/m" else description
 
     val safetyStatus: String
         get() = when {

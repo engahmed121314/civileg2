@@ -39,8 +39,7 @@ class CivilEGApplication : Application() {
         // can query the current language without needing a Context parameter.
         LocaleHelper.initApplicationContext(this)
 
-        // Initialize AdMob safely (checks GMS availability first)
-        initializeAds()
+        // AdMob is now initialized via AdsManager in SplashActivity for UMP consent compliance.
 
         // Initialize security checks
         initializeSecurity()
@@ -92,32 +91,6 @@ class CivilEGApplication : Application() {
             } catch (e: Exception) {
                 Log.w(TAG, "Security check skipped: ${e.message}")
             }
-        }
-    }
-
-    /**
-     * Initialize Google AdMob SDK safely.
-     * Checks Google Play Services availability first to prevent crashes
-     * on devices without GMS (e.g., Honor/Huawei devices).
-     * Uses DELAY_APP_MEASUREMENT_INIT in manifest for GDPR consent.
-     */
-    private fun initializeAds() {
-        try {
-            val gmsStatus = GoogleApiAvailability.getInstance()
-                .isGooglePlayServicesAvailable(this)
-            if (gmsStatus == ConnectionResult.SUCCESS) {
-                MobileAds.initialize(this) { initializationStatus: InitializationStatus ->
-                    val statusMap = initializationStatus.adapterStatusMap
-                    for (adapterClass in statusMap.keys) {
-                        val status = statusMap[adapterClass]
-                        Log.d(TAG, "AdMob: $adapterClass = ${status?.initializationState?.name}")
-                    }
-                }
-            } else {
-                Log.w(TAG, "Google Play Services not available (code: $gmsStatus). AdMob skipped.")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "AdMob initialization failed: ${e.message}")
         }
     }
 }
