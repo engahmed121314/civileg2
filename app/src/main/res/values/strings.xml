@@ -11,6 +11,21 @@
     </string>
     <string name="accept">I Understand</string>
 
+    <string name="home_pile">Piles</string>
+    <string name="home_pile_sub">Pile Foundation Design</string>
+    <string name="home_flat_slab">Flat Slab</string>
+    <string name="home_flat_slab_sub">Flat Slab with Drop Panels</string>
+    <string name="home_shear_wall">Shear Wall</string>
+    <string name="home_shear_wall_sub">Structural Shear Wall Design</string>
+    <string name="home_rebar_tool">Rebar Tool</string>
+    <string name="home_rebar_sub">Rebar Diameter &amp; Area Calculator</string>
+    <string name="home_concrete_mix">Concrete Mix</string>
+    <string name="home_concrete_mix_sub">Concrete Mix Design &amp; Proportions</string>
+    <string name="home_soil_bearing">Soil Bearing</string>
+    <string name="home_soil_bearing_sub">Soil Bearing Capacity Analysis</string>
+    <string name="home_wind_load">Wind Load</string>
+    <string name="home_wind_load_sub">Wind Force Calculations</string>
+
     <!-- Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_design">Design Tools</string>
@@ -182,6 +197,13 @@
     <string name="stair">Stair</string>
     <string name="retaining_wall_item">Retaining Wall</string>
     <string name="tank">Tank</string>
+
+    <!-- Phase 6 -->
+    <string name="home_site_layout_title">Site Layout</string>
+    <string name="home_site_layout_sub">Workshop and site planning tools</string>
+    <string name="tool_execution_logs_sub">Track site progress and logs</string>
+    <string name="home_column_biaxial">Biaxial Column Design</string>
+    <string name="home_column_biaxial_sub">Advanced interaction analysis</string>
 
     <!-- Tank Types -->
     <string name="tank_type">Tank Type</string>

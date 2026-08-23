@@ -174,23 +174,25 @@ object ConcreteFrameDesign {
         b: Double, d: Double, fcu: Double, fy: Double,
         code: DesignCode, warnings: MutableList<String>
     ): Tuple4<Double, Int, Int, Double, Double> {
-        if (asRequired <= 0) return Tuple4(0.0, 0, 0, 0.0, 0.0)
+        val asMin = if (code == DesignCode.ECP) {
+            max(0.15 / 100.0 * b * d, 0.22 * sqrt(fcu) / fy * b * d)
+        } else {
+            0.26 * (fcu / fy) * b * d
+        }
+        
+        val targetAs = max(asRequired, asMin)
 
         // Try bars from 12mm to 25mm
         val barDias = listOf(12.0, 16.0, 18.0, 20.0, 22.0, 25.0)
         val areaPerBar = REBAR_AREAS
 
         var selectedDia = 16.0
-        var numBars = ceil(asRequired / (areaPerBar[selectedDia] ?: 201.1)).toInt()
+        var numBars = ceil(targetAs / (areaPerBar[selectedDia] ?: 201.1)).toInt()
         if (numBars < 2) numBars = 2 // minimum 2 bars
-
-        // Check if bars fit in width
-        val minSpacing = max(selectedDia + 25.0, 25.0) // mm
-        val maxBars = ((b - 2 * 50.0) / (selectedDia + minSpacing)).toInt().coerceAtLeast(2)
 
         for (dia in barDias) {
             val areaOne = areaPerBar[dia] ?: continue
-            val n = ceil(asRequired / areaOne).toInt().coerceAtLeast(2)
+            val n = ceil(targetAs / areaOne).toInt().coerceAtLeast(2)
             val maxForDia = ((b - 2 * 50.0) / (dia + 25.0)).toInt()
             if (n <= maxForDia && n <= 8) {
                 selectedDia = dia
@@ -203,16 +205,16 @@ object ConcreteFrameDesign {
 
         // For beams: top and bottom reinforcement
         val numTop = if (memberType == FrameMemberType.Beam) {
-            val asTop = asRequired * 0.5
-            ceil(asTop / (areaPerBar[selectedDia] ?: 201.1)).toInt().coerceAtLeast(2)
+            val asTopMin = asMin * 0.2 // hanger bars
+            val asTopReq = asRequired * 0.4 // approx for top steel over supports if designed for midspan moment
+            val asTopTarget = maxOf(asTopMin, asTopReq)
+            ceil(asTopTarget / (areaPerBar[selectedDia] ?: 201.1)).toInt().coerceAtLeast(2)
         } else numBars
 
         val numBot = numBars
         val asTop = numTop * (areaPerBar[selectedDia] ?: 201.1)
         val asBot = asProvided
 
-        // Check min/max reinforcement
-        val asMin = 0.26 * (fcu / fy) * b * d // ACI min
         if (asBot < asMin) warnings.add("مساحة التسليح أقل من الحد الأدنى (${asMin.toInt()} mm²)")
         val asMax = 0.04 * b * d
         if (asBot > asMax) warnings.add("مساحة التسليح تتجاوز الحد الأقصى (${asMax.toInt()} mm²)")

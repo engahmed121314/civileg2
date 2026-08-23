@@ -136,7 +136,10 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI"),        CardAccentStair,   Icons.Default.Stairs),
     DesignModuleItem(AppScreen.SteelDesign,     R.string.home_steel,    R.string.home_steel_sub,    listOf("AISC", "ECP"),      CardAccentSteel,   Icons.Default.Build),
     DesignModuleItem(AppScreen.SeismicAnalysis, R.string.home_seismic,  R.string.home_seismic_sub,  listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning),
-    DesignModuleItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.home_frame_sub,    listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree)
+    DesignModuleItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.home_frame_sub,    listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree),
+    DesignModuleItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP"),              StatCardGreen,   Icons.Default.Foundation),
+    DesignModuleItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI"),      CardAccentSlab,    Icons.Default.Dashboard),
+    DesignModuleItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    CardAccentWall,    Icons.Default.SensorDoor)
 )
 
 private val quickTools = listOf(
@@ -144,8 +147,12 @@ private val quickTools = listOf(
     QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
     QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
     QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
-    QuickTool(R.string.home_section_tools_title, R.string.home_footing_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
-    QuickTool(R.string.home_inventory,     R.string.home_inventory_sub,     Icons.Default.Inventory2,      ToolPdfBg,   ToolPdfAccent,   AppScreen.Inventory.route)
+    QuickTool(R.string.home_site_layout_title, R.string.home_site_layout_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
+    QuickTool(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, ToolPdfBg, ToolPdfAccent, AppScreen.ExecutionLog.route),
+    QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),
+    QuickTool(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, ToolCalcBg, ToolCalcAccent, AppScreen.ConcreteMix.route),
+    QuickTool(R.string.home_soil_bearing, R.string.home_soil_bearing_sub,  Icons.Default.Landscape, ToolSteelBg, ToolSteelAccent, AppScreen.SoilBearing.route),
+    QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route)
 )
 
 // Recent projects now loaded from DB via ViewModel in HomeScreen composable
@@ -185,6 +192,9 @@ fun HomeScreen(
                 DesignType.PILE -> stringResource(R.string.design_type_pile)
                 DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
                 DesignType.FRAME_ANALYSIS -> "Frame Analysis"
+                DesignType.PILE_FOUNDATION -> "Pile Foundation"
+                DesignType.FLAT_SLAB -> "Flat Slab"
+                DesignType.SHEAR_WALL -> "Shear Wall"
             }
             val icon = when (design.type) {
                 DesignType.BEAM -> Icons.Default.AccountBalance

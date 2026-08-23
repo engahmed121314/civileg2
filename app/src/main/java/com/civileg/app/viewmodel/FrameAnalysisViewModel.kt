@@ -221,41 +221,47 @@ class FrameAnalysisViewModel @Inject constructor(
                 // Run analysis
                 val analysisResult = FrameAnalysisEngine.solveFrame(nodes, members, nodalLoads, memberLoads, settings)
 
-                if (!analysisResult.isSolved) {
-                    _errorMessage.value = analysisResult.errorMessage
-                    _result.value = analysisResult
-                    _isLoading.value = false
-                    return@launch
+                withContext(Dispatchers.Main) {
+                    if (!analysisResult.isSolved) {
+                        _errorMessage.value = analysisResult.errorMessage
+                        _result.value = analysisResult
+                        _isLoading.value = false
+                        return@withContext
+                    }
+
+                    // Run concrete design
+                    val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
+                    val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
+                        ConcreteFrameDesign.designAllConcreteMembers(
+                            members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
+                        )
+                    } else emptyList()
+
+                    // Run steel design
+                    val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
+                    val steelDesignResults = if (steelMembers.isNotEmpty()) {
+                        SteelFrameDesign.designAllSteelMembers(
+                            members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
+                            settings.designCode, _steelFy.value ?: 355.0
+                        )
+                    } else emptyList()
+
+                    _result.value = analysisResult.copy(
+                        concreteDesignResults = concreteDesignResults,
+                        steelDesignResults = steelDesignResults
+                    )
+                    _concreteResults.value = concreteDesignResults
+                    _steelResults.value = steelDesignResults
                 }
 
-                // Run concrete design
-                val concreteMembers = members.filter { it.materialType == FrameMaterialType.Concrete }
-                val concreteDesignResults = if (concreteMembers.isNotEmpty()) {
-                    ConcreteFrameDesign.designAllConcreteMembers(
-                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams, settings.designCode
-                    )
-                } else emptyList()
-
-                // Run steel design
-                val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
-                val steelDesignResults = if (steelMembers.isNotEmpty()) {
-                    SteelFrameDesign.designAllSteelMembers(
-                        members, analysisResult.memberEndForces, analysisResult.memberDiagrams,
-                        settings.designCode, _steelFy.value ?: 355.0
-                    )
-                } else emptyList()
-
-                _result.value = analysisResult.copy(
-                    concreteDesignResults = concreteDesignResults,
-                    steelDesignResults = steelDesignResults
-                )
-                _concreteResults.value = concreteDesignResults
-                _steelResults.value = steelDesignResults
-
             } catch (e: Exception) {
-                _errorMessage.value = "Frame analysis error: ${e.message ?: ""}"
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Frame analysis error: ${e.message ?: ""}"
+                }
             } finally {
-                _isLoading.value = false
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                }
             }
         }
     }
@@ -265,29 +271,21 @@ class FrameAnalysisViewModel @Inject constructor(
     // ========================================================================
 
     fun loadSimplePortalFrame(span: Double, height: Double, udl: Double) {
+        clearAll()
         val (nodes, members, loads) = FrameAnalysisEngine.createSimplePortalFrame(span, height, udl)
         _nodes.value = nodes
         _members.value = members
         _memberLoads.value = loads
-        _nodalLoads.value = emptyList()
-        _result.value = null
-        _concreteResults.value = emptyList()
-        _steelResults.value = emptyList()
-        _errorMessage.value = null
     }
 
     fun loadTwoStoryFrame(span: Double, height1: Double, height2: Double, udl: Double) {
+        clearAll()
         val (ns, ms, ls) = FrameAnalysisEngine.createMultiStoryFrame(
             listOf(span), listOf(height1, height2), udl
         )
         _nodes.value = ns
         _members.value = ms
         _memberLoads.value = ls
-        _nodalLoads.value = emptyList()
-        _result.value = null
-        _concreteResults.value = emptyList()
-        _steelResults.value = emptyList()
-        _errorMessage.value = null
     }
 
     fun clearAll() {

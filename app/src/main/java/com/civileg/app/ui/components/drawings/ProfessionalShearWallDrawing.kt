@@ -19,28 +19,29 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.drawings.DrawingColors
+import com.civileg.app.ui.compose.components.drawings.DrawingColorDefaults
 import kotlin.math.*
 
 // ─── Color Palette ───────────────────────────────────────────────
 
 private object C {
-    val Concrete = DrawingColors.ConcreteTopGray
-    val ConcreteDark = DrawingColors.ConcreteSideGray
+    val Concrete = DrawingColorDefaults.ConcreteTopGray
+    val ConcreteDark = DrawingColorDefaults.ConcreteSideGray
     val ConcreteFill = Color(0xFF2A2A3A)
-    val Bar = DrawingColors.RebarBlue
+    val Bar = DrawingColorDefaults.RebarBlue
     val BarLight = Color(0xFF7EC8E3)
-    val Tie = DrawingColors.StirrupPurple
+    val Tie = DrawingColorDefaults.StirrupPurple
     val TieLight = Color(0xFFB07CC8)
     val HorzBar = Color(0xFFE67E22)  // orange for horizontal
-    val White = DrawingColors.DimensionWhite
-    val DimLine = DrawingColors.ExtensionGray
-    val Safe = DrawingColors.SafeGreen
-    val Unsafe = DrawingColors.UnsafeRed
+    val White = DrawingColorDefaults.DimensionWhite
+    val DimLine = DrawingColorDefaults.ExtensionGray
+    val Safe = DrawingColorDefaults.SafeGreen
+    val Unsafe = DrawingColorDefaults.UnsafeRed
     val MomentArrow = Color(0xFFE91E63)
     val ShearArrow = Color(0xFF9C27B0)
     val AxialArrow = Color(0xFF2196F3)
     val BeZone = Color(0x44FF6600)
-    val Hatch = DrawingColors.HatchColor
+    val Hatch = DrawingColorDefaults.HatchColor
     val Ground = Color(0xFF8B6914)
     val Coupling = Color(0xFFFF9800)
 }

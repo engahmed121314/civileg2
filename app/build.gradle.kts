@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
+    // alias(libs.plugins.google.services)
+    // alias(libs.plugins.firebase.crashlytics)
     id("kotlin-parcelize")
 }
 
@@ -192,6 +194,15 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
+
+    // Play Billing
+    implementation(libs.play.billing)
+    implementation(libs.play.billing.ktx)
 
     // Tools
     implementation(libs.gson)

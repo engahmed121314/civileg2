@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.2"
+agp = "8.7.3"
 kotlin = "2.1.0"
 coreKtx = "1.12.0"
 junit = "4.13.2"
@@ -27,6 +27,8 @@ datastore = "1.1.1"
 play-services-ads = "23.5.0"
 play-integrity = "1.4.0"
 ump = "3.1.0"
+play-billing = "7.1.1"
+firebase-bom = "33.1.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -57,6 +59,11 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "play-services-ads" }
 play-integrity = { group = "com.google.android.play", name = "integrity", version.ref = "play-integrity" }
 user-messaging-platform = { group = "com.google.android.ump", name = "user-messaging-platform", version.ref = "ump" }
+play-billing = { group = "com.android.billingclient", name = "billing", version.ref = "play-billing" }
+play-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "play-billing" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -79,3 +86,5 @@ navigation-safeargs = { id = "androidx.navigation.safeargs.kotlin", version.ref 
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.1" }
+google-services = { id = "com.google.gms.google-services", version = "4.4.2" }

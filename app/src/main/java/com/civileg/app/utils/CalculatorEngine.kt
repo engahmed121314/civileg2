@@ -113,7 +113,10 @@ class CalculatorEngine @Inject constructor(
         val description: String = "5Ø8/m'", 
         val weightKg: Double = 0.0,
         val numLegs: Int = 2,
-        val zones: List<StirrupZone> = emptyList()
+        val zones: List<StirrupZone> = emptyList(),
+        val condensationZoneLength: Double = 0.0,
+        val spacingAtSupport: Double = 0.0,
+        val spacingAtMidspan: Double = 0.0
     ) : Parcelable {
         val area: Double get() = numLegs * (PI * diameter.toDouble().pow(2.0) / 4.0)
     }

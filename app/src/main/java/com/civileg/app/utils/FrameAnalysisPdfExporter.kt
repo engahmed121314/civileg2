@@ -290,7 +290,7 @@ object FrameAnalysisPdfExporter {
                 if (points.size < 2) continue
                 val maxVal = points.maxOfOrNull { abs(it.value) } ?: 1.0
                 if (maxVal < 0.001) continue
-                val dScale = 30f / maxVal.toFloat()
+                val dScale = 60f / maxVal.toFloat()
 
                 val diagColor = when (diagramType) {
                     DiagramType.BMD -> Color.parseColor("#2196F3")

@@ -112,6 +112,13 @@
     <string name="retaining_wall_item">حائط ساند</string>
     <string name="tank">خزان</string>
 
+    <!-- Phase 6 -->
+    <string name="home_site_layout_title">تخطيط الموقع</string>
+    <string name="home_site_layout_sub">أدوات ورشة العمل وتخطيط الموقع</string>
+    <string name="tool_execution_logs_sub">تتبع تقدم الموقع والسجلات</string>
+    <string name="home_column_biaxial">تصميم الأعمدة ثنائية المحور</string>
+    <string name="home_column_biaxial_sub">تحليل التفاعل المتقدم</string>
+
     <!-- Tank Types -->
     <string name="tank_type">نوع الخزان</string>
     <string name="rectangular_tank">خزان مستطيل</string>

@@ -44,7 +44,11 @@ private val designHubItems = listOf(
     DesignHubItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI"), Color(0xFF558B2F), Icons.Default.SensorDoor),
     DesignHubItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI"),        Color(0xFFAD1457), Icons.Default.Stairs),
     DesignHubItem(AppScreen.SeismicAnalysis, R.string.home_seismic,  R.string.home_seismic_sub,  listOf("ASCE", "SBC"),       Color(0xFFBF360C), Icons.Default.Warning),
-    DesignHubItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.hub_design_frame_sub, listOf("ECP", "ACI", "AISC"), Color(0xFF1A237E), Icons.Default.AccountTree)
+    DesignHubItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.hub_design_frame_sub, listOf("ECP", "ACI", "AISC"), Color(0xFF1A237E), Icons.Default.AccountTree),
+    DesignHubItem(AppScreen.ColumnDesign,   R.string.home_column_biaxial, R.string.home_column_biaxial_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewCompact),
+    DesignHubItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP"),              Color(0xFF33691E), Icons.Default.Foundation),
+    DesignHubItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI"),      Color(0xFF004D40), Icons.Default.Dashboard),
+    DesignHubItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    Color(0xFF880E4F), Icons.Default.SensorDoor)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

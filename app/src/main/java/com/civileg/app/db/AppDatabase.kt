@@ -20,9 +20,12 @@ import androidx.room.TypeConverters
         Tank::class,
         InventoryItem::class,
         PourLog::class,
-        SiteInspection::class
+        SiteInspection::class,
+        FlatSlabDesignEntity::class,
+        PileFoundationDesignEntity::class,
+        ShearWallDesignEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -40,6 +43,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tankDao(): TankDao
     abstract fun inventoryDao(): InventoryDao
     abstract fun constructionDao(): ConstructionDao
+    abstract fun flatSlabDao(): FlatSlabDao
+    abstract fun pileFoundationDao(): PileFoundationDao
+    abstract fun shearWallDao(): ShearWallDao
     
     companion object {
         @Volatile

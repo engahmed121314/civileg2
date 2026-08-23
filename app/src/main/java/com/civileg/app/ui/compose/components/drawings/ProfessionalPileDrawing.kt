@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.civileg.app.ui.compose.components.drawings.DrawingColorDefaults
 import kotlin.math.*
 
 /**
@@ -52,7 +53,7 @@ fun ProfessionalPileDrawing(
     ) {
         val w = size.width
         val h = size.height
-        val C = DrawingColors
+        val C = DrawingColorDefaults
 
         // Color palette
         val concreteFill = Color(0xFF3D3D3D)

@@ -112,7 +112,7 @@ object ColumnDesignEngine {
             formula = if (isBraced) "lambda = K*Ho/i, Braced: Short<=15, Long<=30" else "lambda = K*Ho/i, Unbraced: Short<=10, Long<=23",
             formulaWithValues = "lambda_in = $K_in * ${String.format("%.0f", Ho_in)} / $t = ${String.format("%.2f", lambdaIn)}\n" +
                     "lambda_out = $K_out * ${String.format("%.0f", Ho_out)} / $b = ${String.format("%.2f", lambdaOut)}\n" +
-                    "lambda_max = max($lambdaIn, $lambdaOut) = $lambdaMax ${if (isBraced) "(Braced: Short<=15, Long<=30)" else "(Unbraced: Short<=10, Long<=23)"}",
+                    "lambda_max = max($lambdaIn, $lambdaOut) = ${String.format("%.2f", lambdaMax)} ${if (isBraced) "(Braced: Short<=15, Long<=30)" else "(Unbraced: Short<=10, Long<=23)"}",
             result = "Classification: $classification (${String.format("%.2f", lambdaMax)} <= $limitLong)",
             unit = "-",
             isPass = classification != "Unsafe_Slender",
@@ -171,11 +171,11 @@ object ColumnDesignEngine {
                     formula = "delta = (lambda^2 * dimension) / 2000\nM_add = Pu * delta",
                     formulaWithValues = "defl_in = (${String.format("%.2f", lambdaIn)}^2 * ${(t/1000.0)}) / 2000 = ${String.format("%.4f", deflIn)} m\n" +
                         "defl_out = (${String.format("%.2f", lambdaOut)}^2 * ${(b/1000.0)}) / 2000 = ${String.format("%.4f", deflOut)} m\n" +
-                        "M_add_in = $Pu * $deflIn = ${String.format("%.2f", mAddIn)} kN.m\n" +
-                        "M_add_out = $Pu * $mAddOut = ${String.format(".2f", mAddOut)} kN.m\n" +
-                        "M_des_in = ${String.format(".2f", MextIn)} + ${String.format(".2f", mAddIn)} = ${String.format(".2f", mDesIn)} kN.m\n" +
-                        "M_des_out = ${String.format(".2f", MextOut)} + ${String.format(".2f", mAddOut)} = ${String.format(".2f", mDesOut)} kN.m",
-                    result = "M_add_in = ${String.format(".2f", mAddIn)} kN.m, M_add_out = ${String.format(".2f", mAddOut)} kN.m",
+                        "M_add_in = $Pu * ${String.format("%.4f", deflIn)} = ${String.format("%.2f", mAddIn)} kN.m\n" +
+                        "M_add_out = $Pu * ${String.format("%.4f", deflOut)} = ${String.format("%.2f", mAddOut)} kN.m\n" +
+                        "M_des_in = ${String.format("%.2f", MextIn)} + ${String.format("%.2f", mAddIn)} = ${String.format("%.2f", mDesIn)} kN.m\n" +
+                        "M_des_out = ${String.format("%.2f", MextOut)} + ${String.format("%.2f", mAddOut)} = ${String.format("%.2f", mDesOut)} kN.m",
+                    result = "M_add_in = ${String.format("%.2f", mAddIn)} kN.m, M_add_out = ${String.format("%.2f", mAddOut)} kN.m",
                     unit = "kN.m"
                 ))
                 SlenderDesign(deflIn, deflOut, mAddIn, mAddOut, mDesIn, mDesOut)
@@ -289,7 +289,7 @@ object ColumnDesignEngine {
             stepNum, "Tie/Stirrup Design",
             codeReference = when(code) { DesignCode.ECP -> "ECP 203 §7-9-2"; else -> "ACI 318 §25.7" },
             formula = when(code) { DesignCode.ECP -> "s_max = min(200, 16*db, 48*dt, min(b,t)/2)"; else -> "s_max = min(16*db, 48*dt, min(b,t))" },
-            formulaWithValues = "s_max = $sMax mm\nCondensation zone = ${String.format(".0f", condLen)} mm\nDense: ${nDense}x${sDense.toInt()}mm, Normal: ${nNormal}x${sMax.toInt()}mm\nTie weight = ${String.format(".1f", tieWeight)} kg",
+            formulaWithValues = "s_max = $sMax mm\nCondensation zone = ${String.format("%.0f", condLen)} mm\nDense: ${nDense}x${sDense.toInt()}mm, Normal: ${nNormal}x${sMax.toInt()}mm\nTie weight = ${String.format("%.1f", tieWeight)} kg",
             result = tieDesc, unit = "-"
         ))
 
@@ -312,9 +312,9 @@ object ColumnDesignEngine {
         steps_s.add(CalculationStep(
             stepNum, "Verification & Summary",
             formula = "Check all safety criteria",
-            formulaWithValues = "Pn0 = ${String.format(".1f", capacity)} kN >= Pu = ${String.format(".1f", Pu)} kN -> ${if(capacity >= Pu) "PASS" else "FAIL"}\n" +
-                "Utilization = ${String.format(".1f", util*100)}%\n" +
-                "Concrete = ${String.format(".3f", vol)} m3, Steel = ${String.format(".1f", totalWt)} kg",
+            formulaWithValues = "Pn0 = ${String.format("%.1f", capacity)} kN >= Pu = ${String.format("%.1f", Pu)} kN -> ${if(capacity >= Pu) "PASS" else "FAIL"}\n" +
+                "Utilization = ${String.format("%.1f", util*100)}%\n" +
+                "Concrete = ${String.format("%.3f", vol)} m3, Steel = ${String.format("%.1f", totalWt)} kg",
             result = "${if(capacity >= Pu) "SAFE" else "UNSAFE"}",
             isPass = capacity >= Pu,
             status = if (capacity >= Pu) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL

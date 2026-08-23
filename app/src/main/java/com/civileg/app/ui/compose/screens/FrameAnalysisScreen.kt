@@ -89,10 +89,14 @@ fun FrameAnalysisScreen(
                 actions = {
                     // Template buttons
                     IconButton(onClick = {
-                        var span = 6.0; var h = 4.0; var udl = 20.0
-                        viewModel.loadSimplePortalFrame(span, h, udl)
+                        viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
                     }) {
-                        Icon(Icons.Default.ViewInAr, stringResource(R.string.frame_template_simple), tint = Color.White)
+                        Icon(Icons.Default.Home, "Simple Portal Frame", tint = Color.White)
+                    }
+                    IconButton(onClick = {
+                        viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
+                    }) {
+                        Icon(Icons.Default.Layers, "Two-Story Frame", tint = Color.White)
                     }
                     IconButton(onClick = { viewModel.clearAll() }) {
                         Icon(Icons.Default.DeleteSweep, stringResource(R.string.frame_clear_all), tint = Color.White)

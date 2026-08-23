@@ -2785,4 +2785,87 @@ object PdfDrawingGenerator {
         return bitmap
     }
 
+    // ========== GENERATE ACCURATE STEEL SECTION DRAWING ==========
+    fun generateAccurateSteelSection(
+        sectionName: String,
+        sectionTypeName: String,
+        h: Double, bf: Double, tw: Double, tf: Double,
+        gradeName: String, fy: Double, fu: Double,
+        area: Double, ix: Double, sx: Double, zx: Double,
+        weight: Double,
+        rootR: Double = 0.0,
+        outerDia: Double = 0.0,
+        rhsW: Double = 0.0, rhsH: Double = 0.0, rhsT: Double = 0.0,
+        legA: Double = 0.0, legB: Double = 0.0, angleThk: Double = 0.0,
+        bfTop: Double = 0.0, bfBot: Double = 0.0, tfTop: Double = 0.0, tfBot: Double = 0.0
+    ): Bitmap {
+        val W = 800; val H = 800
+        val (bitmap, canvas) = createCanvas(W, H)
+        val paint = createPaint(Color.WHITE, 2f)
+        val fillP = fillPaint(Color.parseColor("#3D3D3D"))
+        val textP = textPaint(Color.WHITE, 16f, true)
+
+        val cx = W / 2f; val cy = H / 2f
+        val scale = minOf(W * 0.6f / maxOf(h, bf, outerDia, rhsW, rhsH, legA, legB, 10.0).toFloat(), 5f)
+
+        val sh = h.toFloat() * scale
+        val sw = bf.toFloat() * scale
+        val stw = tw.toFloat() * scale
+        val stf = tf.toFloat() * scale
+
+        when {
+            sectionTypeName.contains("CHS", true) || sectionTypeName.contains("Pipe", true) -> {
+                val r = (outerDia.toFloat() * scale) / 2f
+                canvas.drawCircle(cx, cy, r, fillP)
+                canvas.drawCircle(cx, cy, r, paint)
+                if (r - stw > 0) {
+                    canvas.drawCircle(cx, cy, r - stw, fillPaint(BG_COLOR))
+                    canvas.drawCircle(cx, cy, r - stw, paint)
+                }
+            }
+            sectionTypeName.contains("RHS", true) || sectionTypeName.contains("SHS", true) -> {
+                val rw = rhsW.toFloat() * scale
+                val rh = rhsH.toFloat() * scale
+                val rt = rhsT.toFloat() * scale
+                canvas.drawRect(cx - rw/2, cy - rh/2, cx + rw/2, cy + rh/2, fillP)
+                canvas.drawRect(cx - rw/2, cy - rh/2, cx + rw/2, cy + rh/2, paint)
+                if (rw - 2*rt > 0 && rh - 2*rt > 0) {
+                    canvas.drawRect(cx - rw/2 + rt, cy - rh/2 + rt, cx + rw/2 - rt, cy + rh/2 - rt, fillPaint(BG_COLOR))
+                    canvas.drawRect(cx - rw/2 + rt, cy - rh/2 + rt, cx + rw/2 - rt, cy + rh/2 - rt, paint)
+                }
+            }
+            sectionTypeName.contains("Angle", true) || sectionTypeName.contains("L-Section", true) -> {
+                val sa = legA.toFloat() * scale
+                val sb = legB.toFloat() * scale
+                val t = angleThk.toFloat() * scale
+                val path = Path().apply {
+                    moveTo(cx - sb/2, cy - sa/2)
+                    lineTo(cx - sb/2 + t, cy - sa/2)
+                    lineTo(cx - sb/2 + t, cy + sa/2 - t)
+                    lineTo(cx + sb/2, cy + sa/2 - t)
+                    lineTo(cx + sb/2, cy + sa/2)
+                    lineTo(cx - sb/2, cy + sa/2)
+                    close()
+                }
+                canvas.drawPath(path, fillP)
+                canvas.drawPath(path, paint)
+            }
+            else -> {
+                // I-Beam / C-Section / T-Section / Plate Girder (Default to I-profile)
+                canvas.drawRect(cx - sw/2, cy - sh/2, cx + sw/2, cy - sh/2 + stf, fillP)
+                canvas.drawRect(cx - sw/2, cy - sh/2, cx + sw/2, cy - sh/2 + stf, paint)
+                canvas.drawRect(cx - stw/2, cy - sh/2 + stf, cx + stw/2, cy + sh/2 - stf, fillP)
+                canvas.drawRect(cx - stw/2, cy - sh/2 + stf, cx + stw/2, cy + sh/2 - stf, paint)
+                canvas.drawRect(cx - sw/2, cy + sh/2 - stf, cx + sw/2, cy + sh/2, fillP)
+                canvas.drawRect(cx - sw/2, cy + sh/2 - stf, cx + sw/2, cy + sh/2, paint)
+            }
+        }
+
+        canvas.drawTextCentered(sectionName, cx, 50f, textPaint(Color.CYAN, 20f, true))
+        canvas.drawText("Area: ${"%.1f".format(area/100)} cm2", 50f, H - 100f, textP)
+        canvas.drawText("Weight: ${"%.1f".format(weight)} kg/m", 50f, H - 70f, textP)
+        canvas.drawText("Grade: $gradeName", 50f, H - 40f, textP)
+
+        return bitmap
+    }
 }

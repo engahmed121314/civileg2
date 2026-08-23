@@ -46,10 +46,10 @@ fun ColumnCalculationStepsCard(
         ) {
             ColDetailRow("K_in / K_out", "${String.format("%.2f", result.KfactorIn)} / ${String.format("%.2f", result.KfactorOut)}")
             ColDetailRow("Ho_in / Ho_out", "${String.format("%.0f", result.clearHeightIn)} / ${String.format("%.0f", result.clearHeightOut)} mm")
-            ColDetailRow("lambda_in / lambda_out", "${String.format("%.2f", result.lambdaIn)} / ${String.format(".2f", result.lambdaOut)}")
-            ColDetailRow("lambda_max", "${String.format(".2f", result.lambdaMax)}",
+            ColDetailRow("lambda_in / lambda_out", "${String.format("%.2f", result.lambdaIn)} / ${String.format("%.2f", result.lambdaOut)}")
+            ColDetailRow("lambda_max", "${String.format("%.2f", result.lambdaMax)}",
                 color = if (result.lambdaMax > result.lambdaLimitLong) Color(0xFFE74C3C) else if (result.lambdaMax > result.lambdaLimitShort) Color(0xFFE67E22) else Color(0xFF27AE60))
-            ColDetailRow("Short limit / Long limit", "${String.format("%.1f", result.lambdaLimitShort)} / ${String.format(".1f", result.lambdaLimitLong)}")
+            ColDetailRow("Short limit / Long limit", "${String.format("%.1f", result.lambdaLimitShort)} / ${String.format("%.1f", result.lambdaLimitLong)}")
             ColDetailRow("Classification", result.columnClassification,
                 color = when (result.columnClassification) {
                     "Short" -> Color(0xFF27AE60); "Long" -> Color(0xFFE67E22)
@@ -64,11 +64,11 @@ fun ColumnCalculationStepsCard(
             expandedSection == 1, { expandedSection = if (expandedSection == 1) -1 else 1 }
         ) {
             ColDetailRow("Deflection in", "${String.format("%.4f", result.deflectionIn * 1000)} mm")
-            ColDetailRow("Deflection out", "${String.format(".4f", result.deflectionOut * 1000)} mm")
-            ColDetailRow("M_add in", "${String.format(".2f", result.MaddIn)} kN.m")
-            ColDetailRow("M_add out", "${String.format(".2f", result.MaddOut)} kN.m")
-            ColDetailRow("M_des in", "${String.format(".2f", result.MdesIn)} kN.m", bold = true)
-            ColDetailRow("M_des out", "${String.format(".2f", result.MdesOut)} kN.m")
+            ColDetailRow("Deflection out", "${String.format("%.4f", result.deflectionOut * 1000)} mm")
+            ColDetailRow("M_add in", "${String.format("%.2f", result.MaddIn)} kN.m")
+            ColDetailRow("M_add out", "${String.format("%.2f", result.MaddOut)} kN.m")
+            ColDetailRow("M_des in", "${String.format("%.2f", result.MdesIn)} kN.m", bold = true)
+            ColDetailRow("M_des out", "${String.format("%.2f", result.MdesOut)} kN.m")
         }
 
         // REINFORCEMENT
@@ -77,12 +77,12 @@ fun ColumnCalculationStepsCard(
             Color(0xFF27AE60),
             expandedSection == 2, { expandedSection = if (expandedSection == 2) -1 else 2 }
         ) {
-            ColDetailRow("As required", "${String.format(".1f", result.AsRequired)} mm\u00B2")
-            ColDetailRow("As min (${String.format(".2f", result.rhoMin)}%)", "${String.format(".1f", result.AsMin)} mm\u00B2")
-            ColDetailRow("As max (${String.format(".2f", result.rhoMax)}%)", "${String.format(".1f", result.AsMax)} mm\u00B2")
-            ColDetailRow("As provided", "${String.format(".1f", result.AsProvided)} mm\u00B2 = ${result.finalBars}",
+            ColDetailRow("As required", "${String.format("%.1f", result.AsRequired)} mm\u00B2")
+            ColDetailRow("As min (${String.format("%.2f", result.rhoMin)}%)", "${String.format("%.1f", result.AsMin)} mm\u00B2")
+            ColDetailRow("As max (${String.format("%.2f", result.rhoMax)}%)", "${String.format("%.1f", result.AsMax)} mm\u00B2")
+            ColDetailRow("As provided", "${String.format("%.1f", result.AsProvided)} mm\u00B2 = ${result.finalBars}",
                 bold = true, color = Color(0xFF27AE60))
-            ColDetailRow("rho actual", "${String.format(".3f", result.rhoActual)}%")
+            ColDetailRow("rho actual", "${String.format("%.3f", result.rhoActual)}%")
         }
 
         // TIES
@@ -91,10 +91,10 @@ fun ColumnCalculationStepsCard(
             Color(0xFF9B59B6),
             expandedSection == 3, { expandedSection = if (expandedSection == 3) -1 else 3 }
         ) {
-            ColDetailRow("Max spacing", "${String.format(".0f", result.tieSpacingMax)} mm")
-            ColDetailRow("Dense spacing", "${String.format(".0f", result.tieSpacingDense)} mm")
-            ColDetailRow("Normal spacing", "${String.format(".0f", result.tieSpacingNormal)} mm")
-            ColDetailRow("Condensation zone", "${String.format(".0f", result.condensationZoneLength)} mm")
+            ColDetailRow("Max spacing", "${String.format("%.0f", result.tieSpacingMax)} mm")
+            ColDetailRow("Dense spacing", "${String.format("%.0f", result.tieSpacingDense)} mm")
+            ColDetailRow("Normal spacing", "${String.format("%.0f", result.tieSpacingNormal)} mm")
+            ColDetailRow("Condensation zone", "${String.format("%.0f", result.condensationZoneLength)} mm")
             ColDetailRow("Tie description", result.tieDescription, bold = true)
         }
 

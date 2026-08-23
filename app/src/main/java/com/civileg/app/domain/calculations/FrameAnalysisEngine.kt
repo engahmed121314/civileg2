@@ -56,19 +56,32 @@ object FrameAnalysisEngine {
                 }
             }
             // Add fixed-end forces from member loads
-            val fixedEndForces = mutableListOf<Pair<Int, DoubleArray>>() // (memberIdx, FEF[6])
             for (mLoad in memberLoads) {
                 val mIdx = members.indexOfFirst { it.id == mLoad.memberId }
                 if (mIdx < 0) continue
                 val member = members[mIdx]
-                val fef = getFixedEndForces(member, mLoad, nodes)
-                fixedEndForces.add(Pair(mIdx, fef))
-                // Subtract FEF from global load vector (negative because we move to RHS)
+                val fefLocal = getFixedEndForces(member, mLoad, nodes)
+                
+                // CRITICAL FIX: FEF must be transformed from LOCAL to GLOBAL before assembly into F
+                val cosA = member.getCosTheta(nodes)
+                val sinA = member.getSinTheta(nodes)
+                
+                // local: [fi_x, fi_y, mi_z, fj_x, fj_y, mj_z]
+                // global: [Fi_X, Fi_Y, Mi_Z, Fj_X, Fj_Y, Mj_Z]
+                val fefGlobal = DoubleArray(6)
+                fefGlobal[0] = fefLocal[0] * cosA - fefLocal[1] * sinA
+                fefGlobal[1] = fefLocal[0] * sinA + fefLocal[1] * cosA
+                fefGlobal[2] = fefLocal[2]
+                fefGlobal[3] = fefLocal[3] * cosA - fefLocal[4] * sinA
+                fefGlobal[4] = fefLocal[3] * sinA + fefLocal[4] * cosA
+                fefGlobal[5] = fefLocal[5]
+
                 val ni = nodes.indexOfFirst { it.id == member.nodeI }
                 val nj = nodes.indexOfFirst { it.id == member.nodeJ }
                 if (ni >= 0 && nj >= 0) {
-                    F[ni * 3] -= fef[0]; F[ni * 3 + 1] -= fef[1]; F[ni * 3 + 2] -= fef[2]
-                    F[nj * 3] -= fef[3]; F[nj * 3 + 1] -= fef[4]; F[nj * 3 + 2] -= fef[5]
+                    // Assemble equivalent nodal loads: P_eq = -FEF_global
+                    F[ni * 3] -= fefGlobal[0]; F[ni * 3 + 1] -= fefGlobal[1]; F[ni * 3 + 2] -= fefGlobal[2]
+                    F[nj * 3] -= fefGlobal[3]; F[nj * 3 + 1] -= fefGlobal[4]; F[nj * 3 + 2] -= fefGlobal[5]
                 }
             }
 
@@ -88,6 +101,10 @@ object FrameAnalysisEngine {
             val Ff = DoubleArray(freeDOFs.size) { F[freeDOFs[it]] }
 
             val Uf = solveLinearSystem(Kff, Ff) ?: return FrameAnalysisResult(errorMessage = "فشل حل نظام المعادلات - تحقق من الارتكازات")
+            
+            if (Uf.any { it.isNaN() || it.isInfinite() }) {
+                return FrameAnalysisResult(errorMessage = "نتائج غير منطقية (NaN/Inf) - تحقق من استقرار المنشأ")
+            }
 
             // 5. Full displacement vector
             val U = DoubleArray(totalDOF)
@@ -139,8 +156,10 @@ object FrameAnalysisEngine {
                     for (i in 0..5) fefThisMember[i] += fef[i]
                 }
 
-                // Total local forces = k*u + FEF
-                val fTotal = DoubleArray(6) { fLocal[it] + fefThisMember[it] }
+                // Total local forces = k*u + forces acting on member when fixed
+                // fefThisMember contains forces acting ON THE NODES (P_eq).
+                // Thus, forces acting on the member = -fefThisMember
+                val fTotal = DoubleArray(6) { fLocal[it] - fefThisMember[it] }
 
                 // Convert to global
                 val fiX = fTotal[0] * cosA - fTotal[1] * sinA
@@ -308,13 +327,15 @@ object FrameAnalysisEngine {
             }
             MemberLoadType.LinearVarying -> {
                 // FEF for triangular load (0 at I, w at J)
+                // Member reactions (on member): RI = 3wL/20, RJ = 7wL/20, MI = wL²/30 (CCW), MJ = -wL²/20 (CW)
+                // Nodal forces (on nodes): FI_Y = -3wL/20, MI_Z = -wL²/30, FJ_Y = -7wL/20, MJ_Z = wL²/20
                 doubleArrayOf(
                     0.0,
-                    -w * L * 7.0 / 20.0,
-                    -w * L * L / 20.0,
-                    0.0,
                     -w * L * 3.0 / 20.0,
-                    w * L * L / 30.0
+                    -w * L * L / 30.0,
+                    0.0,
+                    -w * L * 7.0 / 20.0,
+                    w * L * L / 20.0
                 )
             }
         }
