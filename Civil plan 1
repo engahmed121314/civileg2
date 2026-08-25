@@ -1,0 +1,3050 @@
+# CIVILEG2 — CIVILEG PROFESSIONAL
+
+## MASTER PROMPT
+
+### ENGINEERING CORE + CALCULATIONS + UX/UI + MODERN PLATFORM + ONBOARDING + DRAWINGS + PDF + DXF + BBS + BOQ + QA + SECURITY
+
+أنت تعمل على مشروع Android قائم فعليًا باسم:
+
+CivilEG2 / Civil Engineer Pro
+
+Repository:
+https://github.com/engahmed121314/civileg2
+
+لا تتعامل معه كمشروع جديد.
+
+المشروع الحالي يحتوي بالفعل على بنية كبيرة من:
+Kotlin
+Jetpack Compose
+Material 3
+Hilt
+Room
+MVVM
+Navigation
+Calculation Engines
+ECP
+ACI
+SBC
+Steel
+Seismic
+Frame Analysis
+Drawings
+PDF
+DXF
+BBS
+BOQ
+Inventory
+Interactive Views
+Legacy Views
+
+المطلوب هو تحويل المشروع الحالي تدريجيًا إلى:
+
+CIVILEG PROFESSIONAL
+
+منصة هندسية مدنية وإنشائية احترافية متكاملة.
+
+لا تبدأ بإعادة كتابة المشروع من الصفر.
+
+ابدأ:
+
+AUDIT
+→ UNDERSTAND
+→ MAP
+→ REPAIR
+→ COMPLETE
+→ REFACTOR
+→ INTEGRATE
+→ TEST
+→ POLISH
+→ RELEASE
+
+============================================================
+
+1. MASTER PRODUCT VISION
+   ============================================================
+
+المنتج النهائي يجب أن يغطي دورة العمل الهندسي:
+
+PROJECT
+↓
+SITE
+↓
+STRUCTURAL MODEL
+↓
+GEOMETRY
+↓
+MATERIALS
+↓
+LOADS
+↓
+LOAD COMBINATIONS
+↓
+ANALYSIS
+↓
+DESIGN
+↓
+CODE CHECK
+↓
+OPTIMIZATION
+↓
+DETAILING
+↓
+DRAWINGS
+↓
+BBS
+↓
+BOQ
+↓
+PDF
+↓
+DXF
+↓
+QA/QC
+↓
+FINAL PACKAGE
+
+ويجب أن يشعر المستخدم أنه يستخدم:
+
+PROFESSIONAL ENGINEERING PLATFORM
+
+وليس:
+
+Calculator Application.
+
+============================================================
+2. CORE RULE — ONE SOURCE OF TRUTH
+==================================
+
+اعتمد:
+
+ONE SOURCE OF TRUTH
+
+أي أن:
+
+Project Model
+→
+Analysis
+→
+Design
+→
+Detailing
+→
+Drawing Model
+→
+PDF
+→
+DXF
+→
+BBS
+→
+BOQ
+
+كلها مترابطة.
+
+لا تسمح بوجود:
+
+Calculation Result مختلف عن Drawing
+أو
+Drawing مختلف عن BBS
+أو
+BBS مختلف عن BOQ.
+
+============================================================
+3. FIRST STEP — COMPLETE PROJECT AUDIT
+======================================
+
+قبل أي تعديل:
+
+افحص المستودع بالكامل.
+
+افحص:
+
+Gradle
+Modules
+Packages
+Files
+Entities
+Repositories
+DAOs
+ViewModels
+UseCases
+CalculationFactory
+Calculation Engines
+Validators
+Drawing Engines
+PDF
+DXF
+BBS
+BOQ
+Navigation
+Compose
+Legacy Views
+Localization
+Security
+Tests
+
+أنشئ:
+
+PROJECT_AUDIT.md
+
+و:
+
+FEATURE_MATRIX.md
+
+و:
+
+ENGINEERING_GAP_MATRIX.md
+
+لكل ملف أو Feature:
+
+Current Status
+Owner
+Dependencies
+Code
+Inputs
+Outputs
+Tests
+Problems
+Risk
+Missing Features
+Required Action
+
+الحالات:
+
+COMPLETE
+PARTIAL
+BROKEN
+UNTESTED
+DUPLICATED
+LEGACY
+MISSING
+UNSUPPORTED
+
+============================================================
+4. لا تعيد بناء الموجود بدون سبب
+================================
+
+إذا كان Engine موجودًا:
+
+KEEP
+ثم:
+
+REVIEW
+REPAIR
+REFACTOR
+
+إذا كان المكون مكررًا:
+
+MERGE
+
+إذا كان Legacy:
+
+ADAPTER
+→
+NEW ENGINE
+→
+TEST
+→
+DEPRECATE
+→
+REMOVE
+
+لا تحذف الملفات القديمة قبل إثبات أن البديل كامل.
+
+============================================================
+5. MASTER ARCHITECTURE
+======================
+
+اعتمد:
+
+UI
+↓
+ViewModel
+↓
+UseCase
+↓
+Domain Engine
+↓
+Domain Result
+↓
+Detailing
+↓
+Drawing
+↓
+Export
+
+ولا تضع المعادلات داخل:
+
+Composable
+ViewModel
+UI Components
+
+============================================================
+6. CORE ENGINE
+==============
+
+أنشئ/طوّر:
+
+core/
+math/
+matrix/
+geometry/
+units/
+tolerance/
+validation/
+logging/
+security/
+
+ويشمل:
+
+Vector2D
+Vector3D
+Point2D
+Point3D
+Matrix
+SparseMatrix
+Numerical Solver
+Interpolation
+Iteration
+Root Finding
+Optimization
+Coordinate Transformation
+
+مع حماية من:
+
+NaN
+Infinity
+Overflow
+Underflow
+Singular Matrix
+Zero Division
+Convergence Failure
+
+============================================================
+7. UNITS ENGINE
+===============
+
+اعتمد Internal SI Units.
+
+Input:
+
+mm
+cm
+m
+N
+kN
+kg
+ton
+MPa
+kPa
+kg/cm²
+ton/m²
+
+يتم:
+
+Input Conversion
+→
+Internal Calculation
+→
+Output Conversion
+
+ولا يتم التقريب داخل الحساب.
+
+التقريب فقط عند:
+
+UI
+PDF
+DXF
+Reports
+BOQ
+
+============================================================
+8. GEOMETRY ENGINE
+==================
+
+أنشئ:
+
+GeometryEngine
+SectionGeometryEngine
+CoordinateTransformEngine
+IntersectionEngine
+OffsetEngine
+PolygonEngine
+SectionPropertyEngine
+
+يحسب:
+
+Area
+Centroid
+Ix
+Iy
+Ixy
+J
+Sx
+Sy
+Zx
+Zy
+Principal Axis
+
+ويكون مصدرًا موحدًا لكل:
+
+RC
+Steel
+Foundation
+Drawing
+DXF
+BOQ
+
+============================================================
+9. PROJECT MODEL
+================
+
+StructuralProject يحتوي:
+
+Project Info
+Site
+Units
+Codes
+Materials
+Grid
+Stories
+Nodes
+Members
+Slabs
+Walls
+Foundations
+Loads
+Load Cases
+Load Combinations
+Design Settings
+Drawing Settings
+
+يدعم:
+
+Revision
+Undo
+Redo
+Auto Save
+Recovery
+
+============================================================
+10. SITE ENGINEERING
+====================
+
+أضف:
+
+Location
+Survey
+Coordinates
+Levels
+Property Boundary
+Setbacks
+North
+Existing Structures
+Roads
+Utilities
+Soil
+Groundwater
+Site Notes
+
+والمخرجات:
+
+Site Plan
+Setting Out
+Coordinate Table
+Levels
+Grid
+
+============================================================
+11. MATERIAL ENGINE
+===================
+
+Concrete
+Rebar
+Structural Steel
+Bolts
+Welds
+Soil
+
+لكل مادة:
+
+Strength
+Density
+Elastic Modulus
+Poisson Ratio
+Yield
+Ultimate
+Design Parameters
+
+============================================================
+12. CODE ENGINE
+===============
+
+يجب دعم وفصل:
+
+ECP 203
+ECP 205
+ACI 318
+SBC
+AISC 360
+
+ولا تستخدم:
+
+ACI fallback to ECP
+SBC fallback to ECP
+
+إلا إذا كانت القاعدة المشتركة موثقة ومصممة في Common Engine.
+
+أنشئ:
+
+CodeProvider
+ConcreteCodeProvider
+SteelCodeProvider
+SeismicCodeProvider
+LoadCombinationProvider
+DetailingCodeProvider
+
+============================================================
+13. CALCULATION TRACE
+=====================
+
+كل نتيجة يجب أن تحتوي:
+
+Input
+Formula
+Variables
+Substitution
+Result
+Limit
+Utilization
+Status
+Code
+Clause
+Assumptions
+Warnings
+
+مثال:
+
+INPUT
+↓
+FORMULA
+↓
+SUBSTITUTION
+↓
+RESULT
+↓
+LIMIT
+↓
+CHECK
+↓
+CODE REFERENCE
+
+ممنوع:
+
+Black Box Calculation.
+
+============================================================
+14. LOAD ENGINE
+===============
+
+يدعم:
+
+Self Weight
+Dead
+Super Dead
+Live
+Roof Live
+Wind
+Seismic
+Temperature
+Shrinkage
+Creep
+Equipment
+Soil
+Hydrostatic
+Construction
+Special Loads
+
+ثم:
+
+LoadCase
+LoadPattern
+LoadCombination
+Envelope
+FactoredAction
+ServiceAction
+
+ولا يسمح لأي Calculator باختراع Load Factor داخلي.
+
+============================================================
+15. ANALYSIS ENGINE
+===================
+
+راجع الموجود فعليًا وطوره إلى:
+
+2D Frame
+3D Frame
+Truss
+Grillage
+Plate
+Shell
+Foundation Springs
+
+ثم:
+
+Linear Static
+P-Delta
+Second Order
+Modal
+Response Spectrum
+
+ومستقبلًا:
+
+Nonlinear
+Material Nonlinearity
+Geometric Nonlinearity
+
+اختبر Solver على:
+
+Simply Supported Beam
+Cantilever
+Fixed Beam
+Portal Frame
+Continuous Beam
+
+مع:
+
+Equilibrium
+Reaction Check
+Load Sum
+Displacement Check
+Symmetry Check
+
+============================================================
+16. DESIGN MODULES
+==================
+
+أكمل كل عنصر حتى يصبح:
+
+INPUT
+→
+VALIDATION
+→
+ANALYSIS
+→
+DESIGN
+→
+CHECKS
+→
+OPTIMIZATION
+→
+DETAILING
+→
+DRAWING
+→
+PDF
+→
+DXF
+→
+BBS
+→
+BOQ
+→
+QA
+
+العناصر:
+
+Beam
+Column
+Slab
+Foundation
+Raft
+Combined Footing
+Strap Footing
+Pile
+Pile Cap
+Retaining Wall
+Water Tank
+Stair
+Steel
+Warehouse
+Seismic
+
+============================================================
+17. BEAM ENGINE
+===============
+
+يشمل:
+
+Geometry
+Support
+Loads
+Analysis
+Mu
+Vu
+Tu
+Flexure
+Shear
+Torsion
+Deflection
+Crack
+Development
+Anchorage
+Lap
+Curtailment
+Top Bars
+Bottom Bars
+Side Bars
+Stirrups
+Seismic Detail
+
+لا تعتبر Beam مكتملة حتى تخرج:
+
+Calculation
+Rebar
+BBS
+Drawing
+PDF
+DXF
+QA
+
+============================================================
+18. COLUMN ENGINE
+=================
+
+يشمل:
+
+Short
+Slender
+P
+Mx
+My
+Effective Length
+K
+Second Order
+Moment Magnification
+Minimum Eccentricity
+P-M
+P-M-M
+Bresler
+Load Contour
+Strain Compatibility
+Rebar Optimization
+Tie
+Confinement
+Lap
+Development
+Seismic Detail
+
+ويجب إنشاء Interaction Diagrams حقيقية من الحساب.
+
+============================================================
+19. SLAB ENGINE
+===============
+
+راجع ما هو موجود فعليًا، ثم أكمل:
+
+One-Way
+Two-Way
+Flat Plate
+Flat Slab
+Solid
+Waffle
+Hordi
+Drop
+Post-Tension
+Precast
+
+يشمل:
+
+Flexure
+Shear
+Punching
+Deflection
+Crack
+Openings
+Column Strip
+Middle Strip
+Top Steel
+Bottom Steel
+Support Steel
+Distribution Steel
+
+============================================================
+20. FOUNDATION ENGINE
+=====================
+
+يشمل:
+
+Isolated
+Combined
+Strip
+Strap
+Raft
+Pile
+Pile Cap
+
+ويشمل:
+
+Bearing
+Pressure
+Eccentricity
+No-Tension
+Sliding
+Overturning
+Settlement
+Punching
+One-Way Shear
+Flexure
+Uplift
+Reinforcement
+Dowels
+
+============================================================
+21. RETAINING WALL
+==================
+
+Active
+Passive
+At Rest
+Rankine
+Coulomb
+Surcharge
+Water
+Seismic
+Sliding
+Overturning
+Bearing
+Global Stability
+Stem
+Heel
+Toe
+Key
+Drainage
+Crack
+Reinforcement
+
+============================================================
+22. TANK
+========
+
+Rectangular
+Circular
+Ground
+Elevated
+Underground
+
+Cases:
+
+Empty
+Full
+External Water
+Uplift
+Soil
+Groundwater
+Temperature
+Shrinkage
+
+يشمل:
+
+Hydrostatic
+Hoop
+Wall
+Base
+Roof
+Crack
+Minimum Steel
+Joint
+Waterstop
+Detailing
+
+============================================================
+23. STAIR
+=========
+
+Straight
+Dog-leg
+Quarter Turn
+Landing
+Waist Slab
+
+يشمل:
+
+Geometry
+2R+G
+Loads
+Moments
+Shear
+Deflection
+Main Steel
+Distribution
+Landing
+Anchorage
+Drawing
+BBS
+
+============================================================
+24. STEEL
+=========
+
+AISC / ECP 205 / SBC
+
+يشمل:
+
+Tension
+Compression
+Flexure
+Shear
+Buckling
+LTB
+Interaction
+Local Buckling
+Connections
+Bolts
+Welds
+Base Plates
+Anchors
+Bracing
+Gusset
+
+============================================================
+25. SEISMIC
+===========
+
+يشمل:
+
+Hazard
+Site
+Importance
+Spectrum
+Mass
+Modal
+Period
+Base Shear
+Distribution
+Drift
+P-Delta
+Irregularity
+Torsion
+
+============================================================
+26. OPTIMIZATION ENGINE
+=======================
+
+لا تختار أول حل.
+
+Generate Candidates
+→
+Strength
+→
+Service
+→
+Detailing
+→
+Spacing
+→
+Development
+→
+Congestion
+→
+Weight
+→
+Cost
+→
+Constructability
+→
+Best Solution
+
+============================================================
+27. CONSTRUCTABILITY ENGINE
+===========================
+
+يفحص:
+
+Clear Spacing
+Cover
+Bar Layers
+Congestion
+Lap Conflict
+Anchorage Conflict
+Beam-Column Joint
+Foundation Congestion
+Steel Connection Access
+
+ويظهر:
+
+DESIGN SAFE
+BUT CONSTRUCTION DIFFICULT
+
+عندما تكون النتيجة كذلك.
+
+============================================================
+28. DETAILING ENGINE
+====================
+
+أنشئ:
+
+RebarDefinition
+BarSegment
+BarHook
+Anchorage
+Lap
+BarShape
+BarMark
+
+كل Bar يجب أن يعرف:
+
+Host
+Mark
+Diameter
+Grade
+Quantity
+Shape
+Length
+Position
+Cover
+Hooks
+Lap
+Anchorage
+
+============================================================
+29. BBS
+=======
+
+يولد من نفس Rebar Model:
+
+Mark
+Shape
+Diameter
+Grade
+A
+B
+C
+D
+E
+Hook
+Cut Length
+Quantity
+Total Length
+Unit Weight
+Total Weight
+Host
+
+============================================================
+30. CUTTING OPTIMIZATION
+========================
+
+Stock Bar
+→
+Required Bars
+→
+Optimization
+→
+Waste Minimization
+→
+Cut Plan
+
+ويصدر:
+
+Cutting Plan
+Waste
+Waste %
+Residuals
+
+============================================================
+31. DRAWING MODEL
+=================
+
+لا تسمح لأي Screen أن ترسم مباشرة.
+
+أنشئ:
+
+DrawingDocument
+DrawingSheet
+DrawingView
+DrawingEntity
+DrawingDimension
+DrawingNote
+DrawingLeader
+DrawingSection
+DrawingDetail
+DrawingTable
+DrawingTitleBlock
+DrawingRevision
+
+ثم:
+
+DesignResult
++
+DetailingResult
++
+Geometry
+↓
+DrawingModel
+
+============================================================
+32. DRAWING ENGINE
+==================
+
+أنشئ:
+
+BeamDrawingGenerator
+ColumnDrawingGenerator
+SlabDrawingGenerator
+FoundationDrawingGenerator
+WallDrawingGenerator
+TankDrawingGenerator
+StairDrawingGenerator
+SteelDrawingGenerator
+
+كل Generator ينتج:
+
+Plan
+Elevation
+Section
+Detail
+Schedule
+Notes
+Dimensions
+Bar Marks
+
+حسب العنصر.
+
+============================================================
+33. PROFESSIONAL DRAWING VIEWER
+===============================
+
+يجب أن يكون داخل التطبيق:
+
+Engineering Drawing Workspace
+
+يدعم:
+
+Pan
+Zoom
+Rotate عند الحاجة
+Layer Visibility
+Measurement
+Sections
+Details
+Dimensions
+Grid
+Levels
+Bar Selection
+
+عند الضغط على Bar:
+
+Bar Mark
+Diameter
+Length
+Quantity
+Shape
+Host
+Lap
+Anchorage
+
+وعند الضغط على Member:
+
+Open Design Result
+
+============================================================
+34. DXF ENGINE
+==============
+
+الـDXF يجب أن يكون CAD Native.
+
+لا تستخدم Screenshot.
+
+ادعم:
+
+LINE
+LWPOLYLINE
+ARC
+CIRCLE
+TEXT
+MTEXT
+DIMENSION
+LEADER
+HATCH
+BLOCK
+INSERT
+ATTRIBUTE
+
+مع:
+
+Layer Manager
+Block Manager
+Text Manager
+Dimension Manager
+Hatch Manager
+
+============================================================
+35. DXF LAYERS
+==============
+
+استخدم نظام Layer منظم:
+
+S-GRID
+S-AXIS
+S-CONCRETE
+S-HATCH
+S-REBAR
+S-REBAR-TOP
+S-REBAR-BOTTOM
+S-STIRRUP
+S-TIE
+S-DIM
+S-TEXT
+S-NOTE
+S-SECTION
+S-DETAIL
+S-STEEL
+S-BOLT
+S-WELD
+S-TITLE
+S-SCHEDULE
+
+============================================================
+36. DXF QUALITY GATE
+====================
+
+بعد التوليد:
+
+DXF Generate
+→
+Validate
+→
+Check Layers
+→
+Check Entities
+→
+Check Handles
+→
+Check Extents
+→
+Check Units
+→
+Check Scale
+→
+Check References
+
+فقط بعد النجاح:
+
+DXF READY
+
+============================================================
+37. PDF ENGINE
+==============
+
+PDF يجب أن يكون Vector Engineering Document.
+
+وليس Screenshot.
+
+أنشئ:
+
+PdfDocumentEngine
+PdfCalculationRenderer
+PdfDrawingRenderer
+PdfTableRenderer
+PdfScheduleRenderer
+PdfEquationRenderer
+PdfValidator
+
+============================================================
+38. CALCULATION PDF
+===================
+
+يتضمن:
+
+Cover
+Revision
+Project
+Codes
+Materials
+Geometry
+Loads
+Combinations
+Analysis
+Design
+Detailed Calculations
+Checks
+Warnings
+Reinforcement
+BBS
+BOQ
+QA
+
+============================================================
+39. DRAWING PDF
+===============
+
+يتضمن:
+
+Cover
+General Notes
+Plans
+Elevations
+Sections
+Details
+Schedules
+BBS
+Revision
+
+مع:
+
+A4
+A3
+A2
+A1
+A0
+
+============================================================
+40. PDF/DXF TRACEABILITY
+========================
+
+كل:
+
+Calculation
+→ Design ID
+
+Bar
+→ Host Member
+
+Drawing
+→ Source Element
+
+PDF
+→ Calculation/Design ID
+
+BOQ
+→ Source Geometry
+
+الهدف:
+
+ZERO ORPHAN OUTPUTS
+
+============================================================
+41. BOQ
+=======
+
+المصدر:
+
+Structural Model
++
+Detailing Model
+
+يشمل:
+
+Concrete
+Rebar
+Formwork
+Steel
+Bolts
+Welds
+Excavation
+Backfill
+Waterproofing
+
+وكل كمية يجب أن تعرف:
+
+Source
+Element
+Level
+Geometry
+
+============================================================
+42. QA/QC ENGINE
+================
+
+أنشئ:
+
+EngineeringAuditEngine
+
+يفحص:
+
+Input
+Units
+Geometry
+Loads
+Analysis
+Design
+Detailing
+Drawing
+PDF
+DXF
+BBS
+BOQ
+
+الحالات:
+
+PASS
+WARNING
+FAIL
+NOT CHECKED
+
+ممنوع:
+
+False PASS
+
+============================================================
+43. PROFESSIONAL UX/UI — لا تعيد تصميم التطبيق كمجموعة Cards
+============================================================
+
+الهدف:
+
+ENGINEERING WORKSPACE
+
+وليس:
+
+Dashboard + Cards + Forms فقط.
+
+الواجهة يجب أن تكون:
+
+Modern
+Professional
+Smooth
+Technical
+Precise
+Minimal
+Information-Dense
+Easy to Learn
+Fast
+Responsive
+
+============================================================
+44. DESIGN PHILOSOPHY
+=====================
+
+اعتمد:
+
+PROGRESSIVE DISCLOSURE
+
+المستخدم يرى:
+
+Summary
+→
+Engineering Details
+→
+Calculation
+→
+Detailing
+→
+Drawing
+→
+Output
+
+ولا تعرض كل التفاصيل منذ أول شاشة.
+
+============================================================
+45. MAIN NAVIGATION
+===================
+
+PHONE:
+
+Home
+Projects
+Model
+Design
+More
+
+More:
+
+Analysis
+Detailing
+Drawings
+Reports
+BOQ
+Site
+QA
+Settings
+
+TABLET:
+
+Home
+Projects
+Model
+Analysis
+Design
+Detailing
+Drawings
+Reports
+BOQ
+Site
+QA
+
+============================================================
+46. HOME — ENGINEERING COMMAND CENTER
+=====================================
+
+لا تجعل الصفحة الرئيسية مجرد قائمة مشاريع.
+
+اعرض:
+
+Active Project
+Project Health
+Analysis Status
+Design Status
+Detailing Status
+Drawing Status
+Warnings
+Failures
+Recent Projects
+Recent Exports
+Quick Actions
+
+مثال:
+
+PROJECT
+Residential Building
+
+HEALTH
+94%
+
+Analysis ✓
+Design ⚠
+Detailing ✓
+Drawings ✓
+QA ⚠
+
+============================================================
+47. PROJECT CREATION WIZARD
+===========================
+
+لا تعرض Form ضخم.
+
+اعتمد:
+
+STEP 1
+Project
+
+STEP 2
+Type
+
+STEP 3
+Code
+
+STEP 4
+Units
+
+STEP 5
+Materials
+
+STEP 6
+Site/Soil
+
+STEP 7
+Geometry
+
+STEP 8
+Loads
+
+STEP 9
+Review
+
+STEP 10
+Create
+
+مع:
+
+Progress Indicator
+
+============================================================
+48. STRUCTURAL MODEL WORKSPACE
+==============================
+
+هذه الشاشة هي مركز التطبيق.
+
+على Tablet:
+
+LEFT:
+Model Tree
+
+CENTER:
+3D / 2D Engineering View
+
+RIGHT:
+Properties / Results
+
+BOTTOM:
+Actions / Checks
+
+على Phone:
+
+Model
+↓
+Viewer
+↓
+Bottom Sheet
+
+============================================================
+49. 3D ENGINEERING VIEWER
+=========================
+
+يدعم:
+
+Rotate
+Pan
+Zoom
+Orbit
+Section Cut
+Explode
+Hide
+Isolate
+Multi Select
+Measure
+Grid
+Levels
+Rebar
+Loads
+Supports
+Utilization
+
+Modes:
+
+MODEL
+LOAD
+ANALYSIS
+DESIGN
+REBAR
+DRAWING
+
+============================================================
+50. ELEMENT WORKSPACE
+=====================
+
+عند فتح:
+
+Beam B-101
+
+Tabs:
+
+SUMMARY
+CALCULATION
+CHECKS
+REBAR
+DETAILING
+DRAWING
+BBS
+
+ويُطبّق نفس النظام على:
+
+Column
+Slab
+Foundation
+Wall
+Tank
+Stair
+Steel
+
+============================================================
+51. RESULT-FIRST DESIGN
+=======================
+
+في أعلى كل Design:
+
+PASS
+WARNING
+FAIL
+
+ثم:
+
+Utilization
+
+ثم:
+
+Critical Checks
+
+ثم:
+
+Engineering Details
+
+============================================================
+52. ENGINEERING RESULT CARDS
+============================
+
+استخدم مكونات متخصصة:
+
+EngineeringMetric
+EngineeringStatus
+EngineeringCheck
+EngineeringWarning
+EngineeringCalculation
+EngineeringValue
+
+ولا تستخدم Cards عشوائية لكل شيء.
+
+============================================================
+53. CALCULATION VIEWER
+======================
+
+المستخدم يفتح:
+
+CALCULATION
+
+ويشاهد:
+
+INPUT
+FORMULA
+SUBSTITUTION
+RESULT
+LIMIT
+UTILIZATION
+CODE
+CLAUSE
+
+مع:
+
+Copy
+Share
+PDF
+
+============================================================
+54. INTERACTIVE DIAGRAMS
+========================
+
+ادعم:
+
+Moment Diagram
+Shear Diagram
+Deflection
+Interaction
+Stress
+Strain
+Soil Pressure
+Utilization
+
+والـCharts تكون:
+
+Zoomable
+Selectable
+Interactive
+
+============================================================
+55. INTERACTIVE DRAWING
+=======================
+
+الرسم داخل التطبيق ليس Image.
+
+إنما:
+
+Vector / Geometry Model
+
+يدعم:
+
+Layers
+Measurement
+Selection
+Zoom
+Pan
+Section
+Detail
+
+============================================================
+56. BBS UI
+==========
+
+جدول تفاعلي:
+
+Mark
+Diameter
+Shape
+Length
+Qty
+Weight
+
+مع:
+
+Search
+Filter
+Sort
+
+وعند اختيار Bar:
+
+Shape Diagram
+
+============================================================
+57. BOQ UI
+==========
+
+Dashboard:
+
+Concrete
+Rebar
+Steel
+Formwork
+Excavation
+
+وكل Quantity يمكن فتح مصدرها:
+
+BOQ
+→
+Element
+→
+Geometry
+→
+Calculation
+
+============================================================
+58. EXPORT CENTER
+=================
+
+أنشئ:
+
+EXPORT CENTER
+
+يحتوي:
+
+Calculation PDF
+Drawing PDF
+DXF
+BBS
+Excel
+BOQ
+QA Report
+Complete Package
+
+زر:
+
+GENERATE COMPLETE PACKAGE
+
+============================================================
+59. PACKAGE GENERATION
+======================
+
+ينتج:
+
+/Project/
+/PDF/
+/DXF/
+/BBS/
+/BOQ/
+/Drawings/
+/Calculations/
+/QA/
+/Revision/
+
+مع:
+
+Manifest
+Project Version
+Code
+Revision
+Date
+Checks
+Warnings
+File List
+
+============================================================
+60. ONBOARDING — يظهر مرة واحدة فقط
+===================================
+
+عند أول تشغيل:
+
+لا تعرض Tutorial طويلًا على الشاشة الرئيسية.
+
+اعمل:
+
+FIRST RUN EXPERIENCE
+
+SCREEN 1
+
+WELCOME TO CIVILEG
+
+Professional Civil & Structural Engineering Platform
+
+[START]
+
+SCREEN 2
+
+HOW CIVILEG WORKS
+
+MODEL
+→
+ANALYZE
+→
+DESIGN
+→
+DETAIL
+→
+DRAW
+→
+REPORT
+
+SCREEN 3
+
+PROJECT
+
+SCREEN 4
+
+STRUCTURAL MODEL
+
+SCREEN 5
+
+LOADS & ANALYSIS
+
+SCREEN 6
+
+DESIGN
+
+SCREEN 7
+
+DETAILING
+
+SCREEN 8
+
+DRAWINGS
+
+SCREEN 9
+
+PDF / DXF / BBS / BOQ
+
+SCREEN 10
+
+QA & FINAL PACKAGE
+
+آخر شاشة:
+
+READY TO ENGINEER
+
+[CREATE FIRST PROJECT]
+
+============================================================
+61. ONBOARDING STATE
+====================
+
+احفظ:
+
+onboarding_completed
+
+مرة واحدة فقط.
+
+بعد:
+
+true
+
+لا يظهر تلقائيًا.
+
+لكن:
+
+Settings
+→
+Help & Tutorials
+→
+Replay Introduction
+
+يمكنه إعادة الشرح يدويًا.
+
+============================================================
+62. CONTEXTUAL FIRST-USE TOUR
+=============================
+
+بعد Onboarding العام:
+
+عند أول دخول إلى Beam:
+
+BEAM TOUR
+
+1
+Geometry
+
+2
+Loads
+
+3
+Design
+
+4
+Checks
+
+5
+Rebar
+
+6
+Drawing
+
+7
+BBS
+
+ويحفظ:
+
+beam_tour_completed
+
+ونفس الشيء:
+
+column_tour_completed
+slab_tour_completed
+foundation_tour_completed
+...
+
+ولا يظهر مرة أخرى تلقائيًا.
+
+============================================================
+63. SMART HELP BUTTON
+=====================
+
+كل Module يحتوي:
+
+?
+
+وعند الضغط:
+
+What is this page?
+What should I enter?
+What does this result mean?
+Why did the design fail?
+How do I fix it?
+Where does the formula come from?
+How do I export it?
+
+============================================================
+64. ENGINEERING HELP PANEL
+==========================
+
+محتواه:
+
+Definition
+Purpose
+Inputs
+Units
+Workflow
+Formula
+Checks
+Result Interpretation
+Warnings
+Example
+Code Reference
+
+============================================================
+65. CONTEXTUAL GUIDANCE
+=======================
+
+لا تجعل المساعدة تظهر بلا داعٍ.
+
+إذا كتب المستخدم:
+
+b = 20 mm
+
+تظهر:
+
+Beam width appears unusually small.
+
+[REVIEW]
+
+إذا فشل Punching:
+
+PUNCHING SHEAR FAIL
+
+Vu > φVc
+
+[VIEW CHECK]
+
+Suggested options:
+
+Increase thickness
+Increase column size
+Add punching reinforcement
+
+لكن لا تطبق الحل تلقائيًا بدون موافقة المستخدم.
+
+============================================================
+66. QUICK MODE + EXPERT MODE
+============================
+
+QUICK MODE:
+
+Geometry
+Loads
+Material
+Calculate
+
+EXPERT MODE:
+
+Advanced Code Parameters
+Advanced Analysis
+Detailed Checks
+Optimization
+Detailing
+Solver Settings
+
+============================================================
+67. NO DEAD END UX
+==================
+
+كل شاشة يجب أن تقود للخطوة التالية.
+
+مثال:
+
+Design Complete
+
+[VIEW DETAILING]
+
+ثم:
+
+Detailing Complete
+
+[GENERATE DRAWING]
+
+ثم:
+
+Drawing Complete
+
+[EXPORT PDF]
+
+[EXPORT DXF]
+
+============================================================
+68. WORKFLOW STATE
+==================
+
+المشروع له حالة:
+
+PROJECT CREATED
+MODEL READY
+ANALYSIS READY
+DESIGN READY
+DETAILING READY
+DRAWINGS READY
+REPORT READY
+PACKAGE READY
+
+ولا تسمح بتشغيل خطوة تعتمد على خطوة لم تكتمل إلا برسالة واضحة.
+
+============================================================
+69. PROJECT HEALTH
+==================
+
+اعرض:
+
+Model
+Analysis
+Design
+Detailing
+Drawing
+QA
+
+مثال:
+
+████████████ 94%
+
+Critical Issues
+Warnings
+Pending Reviews
+
+============================================================
+70. DESIGN REVIEW MODE
+======================
+
+في Model Viewer:
+
+SAFE
+WARNING
+FAIL
+NOT CHECKED
+
+مع:
+
+Utilization
+
+والألوان ليست الوسيلة الوحيدة؛ استخدم:
+
+Icon
+Label
+Text
+
+============================================================
+71. MODERN DESIGN SYSTEM
+========================
+
+أنشئ:
+
+CivilEGDesignSystem
+
+يحتوي:
+
+Theme
+Colors
+Typography
+Spacing
+Shapes
+Elevation
+Icons
+Charts
+Tables
+Engineering Components
+
+============================================================
+72. VISUAL STYLE
+================
+
+الهوية:
+
+Modern Engineering
+Technical
+Elegant
+Precise
+Premium
+Minimal
+
+لا تستخدم:
+
+Heavy Gradients
+Excessive Shadows
+Gaming UI
+Huge Buttons
+Random Colors
+Card Overload
+
+استخدم:
+
+Clean Grid
+Strong Typography
+Measured Spacing
+Technical Icons
+Clear Hierarchy
+Engineering Diagrams
+
+============================================================
+73. LIGHT MODE
+==============
+
+Light Mode:
+
+Clean
+High Contrast
+Professional
+Technical
+
+============================================================
+74. DARK MODE
+=============
+
+Dark Mode:
+
+Engineering Workspace
+Low Eye Strain
+High Contrast
+Accurate Drawings
+Clear Charts
+
+ولا تستخدم Invert Colors.
+
+============================================================
+75. RESPONSIVE UI
+=================
+
+Phone:
+
+Single Pane
+
+Tablet:
+
+Master / Detail
+
+Large Tablet:
+
+Model
+Viewer
+Properties
+
+لا تقم فقط بتكبير عناصر الهاتف.
+
+============================================================
+76. BOTTOM SHEETS
+=================
+
+استخدم Bottom Sheet للبيانات الثانوية:
+
+Properties
+Checks
+Bar Details
+Calculation
+Warnings
+
+============================================================
+77. GLOBAL SEARCH
+=================
+
+Search:
+
+Beam B-101
+
+يجب أن يجد:
+
+Model
+Calculation
+Drawing
+BBS
+BOQ
+PDF Reference
+
+============================================================
+78. COMMAND PALETTE
+===================
+
+للمهندس المحترف:
+
+Add Beam
+Add Column
+Run Analysis
+Run Design
+Open Drawing
+Generate PDF
+Generate DXF
+Open BBS
+Generate Package
+
+============================================================
+79. BREADCRUMBS
+===============
+
+اعرض:
+
+PROJECT / LEVEL / ELEMENT / DESIGN
+
+مثال:
+
+Residential
+/
+Level 02
+/
+Beam B-102
+/
+Design
+
+============================================================
+80. INPUT UX
+============
+
+المدخلات:
+
+Grouped
+Unit-Aware
+Validated
+Contextual
+Readable
+
+مثال:
+
+Width
+[300] mm
+
+وليس:
+
+Width
+[300]
+
+ثم وحدة في مكان آخر.
+
+============================================================
+81. TABLE SYSTEM
+================
+
+Tables يجب أن تدعم:
+
+Search
+Sort
+Filter
+Sticky Header
+Horizontal Scroll
+Selection
+Export
+
+خصوصًا:
+
+BBS
+BOQ
+Schedules
+Checks
+
+============================================================
+82. ACCESSIBILITY
+=================
+
+دعم:
+
+Large Text
+Screen Readers
+High Contrast
+Touch Targets
+Color Blind
+Arabic RTL
+English LTR
+
+لا تعتمد على اللون وحده.
+
+============================================================
+83. LOCALIZATION
+================
+
+كل النصوص في:
+
+strings.xml / localization resources
+
+ممنوع:
+
+Hard-coded Arabic
+Hard-coded English
+
+داخل Business Logic.
+
+============================================================
+84. LEGACY VIEW MIGRATION
+=========================
+
+افحص Legacy Views.
+
+لكل شاشة:
+
+KEEP
+MIGRATE
+DEPRECATE
+
+الهدف النهائي:
+
+Compose First
+
+لكن لا تكسر الوظائف أثناء النقل.
+
+============================================================
+85. STATE MANAGEMENT
+====================
+
+استخدم:
+
+UiState<T>
+
+States:
+
+Loading
+Empty
+Success
+Warning
+Error
+
+ولا تضع Business Logic داخل Composable.
+
+============================================================
+86. PERFORMANCE
+===============
+
+الحسابات الثقيلة:
+
+Dispatchers.Default
+
+PDF/DXF:
+
+Background
+
+Rendering:
+
+Lazy
+Caching
+Memoization
+
+ولا تنفذ عمليات ضخمة على Main Thread.
+
+============================================================
+87. SECURITY
+============
+
+حافظ وطوّر:
+
+Play Integrity
+R8/ProGuard
+Android Keystore
+Encrypted Storage
+Secure Project Files
+Secure Export
+No Secrets in Repository
+No API Keys in Source
+
+============================================================
+88. DATABASE
+============
+
+راجع:
+
+Room
+Entities
+Relations
+Foreign Keys
+Indexes
+Migrations
+Transactions
+
+وأضف Project Revisioning.
+
+============================================================
+89. ERROR HANDLING
+==================
+
+ممنوع عرض:
+
+NullPointerException
+Stack Trace
+Generic Calculation Error
+
+للمستخدم.
+
+أظهر:
+
+DESIGN COULD NOT BE COMPLETED
+
+Reason:
+...
+
+Suggested Action:
+...
+
+[EDIT]
+
+============================================================
+90. NO HALF IMPLEMENTATION
+==========================
+
+ممنوع:
+
+TODO
+FIXME
+Placeholder
+Dummy Result
+Fake Calculation
+Hardcoded Engineering Result
+
+إلا إذا ظهر بوضوح داخليًا كـ:
+
+UNIMPLEMENTED
+
+ولا يتم تقديمه للمستخدم كميزة مكتملة.
+
+============================================================
+91. FILE COMPLETION RULE
+========================
+
+عند فتح أي ملف للتعديل:
+
+1. اقرأ الملف كاملًا.
+2. افهم Dependencies.
+3. افحص الاستخدامات.
+4. نفذ التعديل.
+5. راجع Imports.
+6. راجع Types.
+7. راجع Nullability.
+8. راجع Units.
+9. راجع Code References.
+10. أضف Tests.
+11. اعمل Build/Test.
+12. راجع التكرار.
+13. وثق التغيير.
+
+ثم:
+
+FILE = COMPLETE
+
+ولا تنتقل إلى الجزء التالي إذا كان هذا الملف ما زال غير مكتمل.
+
+============================================================
+92. MODULE COMPLETION RULE
+==========================
+
+لا تعتبر Beam أو Column أو Slab أو Foundation أو أي Module مكتملًا بمجرد ظهور Screen.
+
+يجب أن يمر:
+
+INPUT
+→
+VALIDATION
+→
+CALCULATION
+→
+CHECK
+→
+DESIGN
+→
+OPTIMIZATION
+→
+DETAILING
+→
+DRAWING
+→
+PDF
+→
+DXF
+→
+BBS
+→
+BOQ
+→
+QA
+→
+UI
+→
+TEST
+
+ثم:
+
+MODULE = COMPLETE
+
+============================================================
+93. FINAL ENGINEERING PACKAGE
+=============================
+
+عند:
+
+GENERATE COMPLETE PACKAGE
+
+ينتج:
+
+Calculation_Report.pdf
+Design_Summary.pdf
+Structural_Drawings.pdf
+Structural_Drawings.dxf
+BBS.pdf
+BBS.xlsx
+BOQ.pdf
+BOQ.xlsx
+Cutting_Plan.pdf
+QA_Report.pdf
+Project.civileg
+
+============================================================
+94. COMPLETE PACKAGE MANIFEST
+=============================
+
+يحتوي:
+
+Project
+Revision
+Code
+Engine Version
+Date
+Generated Files
+Passed Checks
+Warnings
+Failures
+Unverified Items
+
+============================================================
+95. TESTING
+===========
+
+أنشئ:
+
+Unit Tests
+Integration Tests
+Calculation Tests
+Regression Tests
+UI Tests
+Screenshot Tests
+RTL Tests
+Dark Mode Tests
+Tablet Tests
+DXF Tests
+PDF Tests
+Security Tests
+Migration Tests
+Performance Tests
+
+============================================================
+96. ENGINEERING BENCHMARK LIBRARY
+=================================
+
+أنشئ:
+
+Beam-001
+Beam-002
+Column-001
+Column-002
+Slab-001
+Footing-001
+Wall-001
+Tank-001
+Stair-001
+Steel-001
+Frame-001
+Seismic-001
+
+لكل:
+
+Input
+Expected
+Tolerance
+Actual
+Status
+
+============================================================
+97. REGRESSION POLICY
+=====================
+
+أي تغيير في:
+
+Calculation
+Code
+Detailing
+Drawing
+DXF
+PDF
+
+يجب أن يخضع لـRegression.
+
+ولا يتم قبول Result Change دون تفسير هندسي واضح.
+
+============================================================
+98. DEVELOPMENT ORDER
+=====================
+
+PHASE 00
+Repository Audit
+
+PHASE 01
+Build Stabilization
+
+PHASE 02
+Architecture Repair
+
+PHASE 03
+Calculation Core
+
+PHASE 04
+Unit + Validation
+
+PHASE 05
+Load Engine
+
+PHASE 06
+Analysis
+
+PHASE 07
+Code Framework
+
+PHASE 08
+Beam
+
+PHASE 09
+Column
+
+PHASE 10
+Slab
+
+PHASE 11
+Foundation
+
+PHASE 12
+Wall
+
+PHASE 13
+Tank
+
+PHASE 14
+Stair
+
+PHASE 15
+Steel
+
+PHASE 16
+Seismic
+
+PHASE 17
+Optimization
+
+PHASE 18
+Detailing
+
+PHASE 19
+BBS
+
+PHASE 20
+Cutting
+
+PHASE 21
+Drawing Model
+
+PHASE 22
+DXF
+
+PHASE 23
+PDF
+
+PHASE 24
+BOQ
+
+PHASE 25
+QA/QC
+
+PHASE 26
+Design System
+
+PHASE 27
+Navigation Shell
+
+PHASE 28
+Home / Dashboard
+
+PHASE 29
+Project Wizard
+
+PHASE 30
+Structural Workspace
+
+PHASE 31
+Element Workspaces
+
+PHASE 32
+Drawing Viewer
+
+PHASE 33
+Report Viewer
+
+PHASE 34
+Export Center
+
+PHASE 35
+ONBOARDING
+
+PHASE 36
+Contextual Tours
+
+PHASE 37
+Help System
+
+PHASE 38
+Responsive Tablet UI
+
+PHASE 39
+Accessibility
+
+PHASE 40
+Dark Mode
+
+PHASE 41
+Performance
+
+PHASE 42
+Security
+
+PHASE 43
+Testing
+
+PHASE 44
+Final UX Audit
+
+PHASE 45
+Final Engineering Audit
+
+PHASE 46
+Release
+
+============================================================
+99. ONBOARDING FINAL REQUIREMENT
+================================
+
+يجب أن يظهر شرح التطبيق للمستخدم:
+
+مرة واحدة فقط
+
+عند أول تشغيل.
+
+لكن الشرح يجب أن يكون:
+
+مختصرًا
+راقيًا
+تفاعليًا
+بصريًا
+واضحًا
+
+ثم يعتمد التطبيق بعد ذلك على:
+
+Contextual Help
+First Use Tours
+Tooltips
+Help Center
+
+بدون إزعاج المستخدم المتقدم.
+
+============================================================
+100. FINAL UX EXPERIENCE
+========================
+
+المستخدم الجديد:
+
+Open App
+→
+Welcome
+→
+Introduction
+→
+Create Project
+→
+Guided Setup
+→
+Model
+→
+Analysis
+→
+Design
+→
+Detailing
+→
+Drawing
+→
+Report
+→
+Export
+
+المستخدم المحترف:
+
+Open App
+→
+Recent Project
+→
+Model
+→
+Run Analysis
+→
+Run Design
+→
+Review
+→
+Generate Package
+
+نفس النظام يخدم:
+
+BEGINNER
+و
+EXPERT
+
+============================================================
+101. FINAL ENGINEERING EXPERIENCE
+=================================
+
+المستخدم يجب أن يعرف دائمًا:
+
+WHERE AM I?
+WHAT AM I EDITING?
+WHAT INPUTS ARE ACTIVE?
+WHAT CODE IS ACTIVE?
+WHAT IS THE RESULT?
+IS IT SAFE?
+WHAT FAILED?
+WHY?
+WHAT SHOULD I DO NEXT?
+WHERE IS THE CALCULATION?
+WHERE IS THE DRAWING?
+WHERE IS THE PDF?
+WHERE IS THE DXF?
+WHERE IS THE BBS?
+WHERE IS THE BOQ?
+
+============================================================
+102. FINAL COMMAND
+==================
+
+طور CivilEG2 وفق هذه المواصفة.
+
+لا تعيد بناء المشروع من الصفر.
+
+افحص الموجود أولًا.
+
+استفد من كل كود صالح.
+
+أصلح الحسابات.
+
+أكمل الفجوات.
+
+طوّر المعادلات.
+
+وحّد النتائج.
+
+اربط Design بـDetailing.
+
+اربط Detailing بـDrawing.
+
+اربط Drawing بـPDF وDXF.
+
+اربط Rebar بـBBS.
+
+اربط Model بـBOQ.
+
+أضف QA/QC.
+
+ثم أعد بناء تجربة المستخدم فوق هذه البنية.
+
+اجعل الواجهة Modern Engineering Platform.
+
+اجعل المستخدم يتعلم التطبيق مرة واحدة عند أول تشغيل.
+
+بعد ذلك استخدم Contextual Guidance وليس Tutorials مزعجة.
+
+لا تجعل الواجهة مجرد Cards.
+
+لا تجعل الرسم مجرد Image.
+
+لا تجعل PDF مجرد Screenshot.
+
+لا تجعل DXF مجرد خطوط تقريبية.
+
+لا تجعل BBS جدولًا منفصلًا.
+
+لا تخفي FAIL.
+
+لا تحول WARNING إلى PASS.
+
+لا تستخدم Fake Data حيث توجد بيانات حقيقية.
+
+لا تكرر المعادلات.
+
+لا تضع Engineering Logic داخل UI.
+
+لا تترك Feature نصف مكتملة.
+
+لا تنتقل من Module إلى التالي قبل إكمال واختبار الحالي وفق Definition of Done.
+
+الهدف النهائي:
+
+CIVILEG PROFESSIONAL
+
+A MODERN, SECURE, TRACEABLE, CODE-BASED, FULL-CYCLE CIVIL AND STRUCTURAL ENGINEERING PLATFORM
+
+من:
+
+INPUT
+
+إلى:
+
+CALCULATION
+
+إلى:
+
+DESIGN
+
+إلى:
+
+DETAILING
+
+إلى:
+
+DRAWING
+
+إلى:
+
+PDF
+
+إلى:
+
+DXF
+
+إلى:
+
+BBS
+
+إلى:
+
+BOQ
+
+إلى:
+
+QA
+
+إلى:
+
+FINAL ENGINEERING PACKAGE.
