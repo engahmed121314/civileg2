@@ -51,7 +51,7 @@ class TankResultActivity : AppCompatActivity() {
 
     private fun displayResults() {
         binding.apply {
-            tvStatus.text = result.safetyCheck
+            tvStatus.text = if (result.isSafe) "SAFE" else "UNSAFE"
             tvCapacity.text = String.format(Locale.getDefault(), "Capacity: %.1f m³", result.capacityM3)
             tvWallT.text = String.format(Locale.getDefault(), "Wall: %.0f mm", result.wallThickness)
             tvBaseT.text = String.format(Locale.getDefault(), "Base: %.0f mm", result.baseThickness)

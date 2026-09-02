@@ -58,7 +58,7 @@ class FootingViewModel @Inject constructor(
         soil: Double,
         colB: Double,
         colT: Double,
-        code: CalculatorEngine.DesignCode,
+        code: CalculatorEngine.AppDesignCode,
         preferredDiameter: Int,
         preferredSpacing: Double,
         p2: Double = 0.0,
@@ -72,21 +72,17 @@ class FootingViewModel @Inject constructor(
                 lastFcu = fcu
                 lastFy = fy
 
-                val res = calculatorEngine.calculateFooting(
-                    type = type,
-                    p = p,
+                val res = calculatorEngine.designIsolatedFooting(
+                    columnWidth = colB,
+                    columnDepth = colT,
                     fcu = fcu,
                     fy = fy,
-                    soil = soil,
-                    colB = colB,
-                    colT = colT,
-                    code = code,
-                    preferredDiameter = preferredDiameter,
-                    preferredSpacing = preferredSpacing,
-                    p2 = p2,
-                    distance = distance,
-                    maxLeft = maxLeft,
-                    maxRight = maxRight
+                    axialLoad = p,
+                    momentX = 0.0,
+                    momentY = 0.0,
+                    soilCapacity = soil,
+                    footingDepth = preferredSpacing,
+                    code = code
                 )
                 
                 // Validate Footing
@@ -150,8 +146,8 @@ class FootingViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(

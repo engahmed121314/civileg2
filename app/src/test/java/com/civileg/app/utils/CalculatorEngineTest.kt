@@ -56,7 +56,7 @@ class CalculatorEngineTest {
     @Test
     fun testRHSArea() {
         val section = SteelSectionType.RHS(
-            width = 200.0, height = 100.0, thickness = 5.0,
+            w = 200.0, height = 100.0, thickness = 5.0,
             grade = SteelGrade.S275
         )
         // A = 2*(w + h - 2*t)*t

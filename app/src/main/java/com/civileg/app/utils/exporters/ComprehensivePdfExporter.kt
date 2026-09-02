@@ -841,7 +841,7 @@ class ComprehensivePdfExporter(private val context: Context) {
     // ==================== Method 5: Footing Report ====================
     fun exportFootingReport(
         projectName: String,
-        designCode: CalculatorEngine.DesignCode,
+        designCode: CalculatorEngine.AppDesignCode,
         result: CalculatorEngine.FootingResult,
         outputPath: String,
         drawingBitmap: Bitmap? = null
@@ -849,9 +849,9 @@ class ComprehensivePdfExporter(private val context: Context) {
         return try {
             val (_, document, font) = createDocument(outputPath)
             val codeStr = when (designCode) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
-                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+                CalculatorEngine.AppDesignCode.EGYPTIAN -> "ECP 203-2020"
+                CalculatorEngine.AppDesignCode.ACI -> "ACI 318-19"
+                CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304-2018"
             }
 
             addReportHeader(document,
@@ -920,7 +920,7 @@ class ComprehensivePdfExporter(private val context: Context) {
     // ==================== Method 6: Tank Report ====================
     fun exportTankReport(
         projectName: String,
-        designCode: CalculatorEngine.DesignCode,
+        designCode: CalculatorEngine.AppDesignCode,
         result: CalculatorEngine.TankResult,
         outputPath: String,
         drawingBitmap: Bitmap? = null
@@ -928,9 +928,9 @@ class ComprehensivePdfExporter(private val context: Context) {
         return try {
             val (_, document, font) = createDocument(outputPath)
             val codeStr = when (designCode) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
-                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+                CalculatorEngine.AppDesignCode.EGYPTIAN -> "ECP 203-2020"
+                CalculatorEngine.AppDesignCode.ACI -> "ACI 318-19"
+                CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304-2018"
             }
 
             addReportHeader(document,
@@ -1000,7 +1000,7 @@ class ComprehensivePdfExporter(private val context: Context) {
     // ==================== Method 7: Stair Report ====================
     fun exportStairReport(
         projectName: String,
-        designCode: CalculatorEngine.DesignCode,
+        designCode: CalculatorEngine.AppDesignCode,
         result: CalculatorEngine.StairResult,
         outputPath: String,
         drawingBitmap: Bitmap? = null
@@ -1008,9 +1008,9 @@ class ComprehensivePdfExporter(private val context: Context) {
         return try {
             val (_, document, font) = createDocument(outputPath)
             val codeStr = when (designCode) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
-                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+                CalculatorEngine.AppDesignCode.EGYPTIAN -> "ECP 203-2020"
+                CalculatorEngine.AppDesignCode.ACI -> "ACI 318-19"
+                CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304-2018"
             }
 
             addReportHeader(document,
@@ -1079,7 +1079,7 @@ class ComprehensivePdfExporter(private val context: Context) {
     // ==================== Method 8: Retaining Wall Report ====================
     fun exportRetainingWallReport(
         projectName: String,
-        designCode: CalculatorEngine.DesignCode,
+        designCode: CalculatorEngine.AppDesignCode,
         result: CalculatorEngine.RetainingWallResult,
         outputPath: String,
         drawingBitmap: Bitmap? = null
@@ -1087,9 +1087,9 @@ class ComprehensivePdfExporter(private val context: Context) {
         return try {
             val (_, document, font) = createDocument(outputPath)
             val codeStr = when (designCode) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
-                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+                CalculatorEngine.AppDesignCode.EGYPTIAN -> "ECP 203-2020"
+                CalculatorEngine.AppDesignCode.ACI -> "ACI 318-19"
+                CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304-2018"
             }
 
             addReportHeader(document,
@@ -1102,17 +1102,15 @@ class ComprehensivePdfExporter(private val context: Context) {
             addStatusBanner(document, result.isSafe)
 
             addSectionTitle(document, t("معاملات التصميم", "Design Parameters"), "Design Parameters")
+            val ka = Math.pow(Math.tan(Math.toRadians(45.0 - result.backfillAngle / 2.0)), 2.0)
             addInfoTable(document, listOf(
                 t("اسم المشروع", "Project Name") to projectName,
                 t("ارتفاع الحائط", "Wall Height") to "${result.height.format(2)} m",
                 t("سمك الجذع", "Stem Thickness") to "${result.stemThickness.format(0)} mm",
                 t("عرض القاعدة", "Base Width") to "${result.baseWidth.format(0)} mm",
-                t("كثافة التربة", "Soil Density") to "${result.soilDensity.format(1)} kN/m\u00B3",
-                t("زاوية الاحتكاك الداخلي", "Internal Friction Angle") to "${Math.toDegrees(Math.asin((1.0 - result.ka.toDouble()) / (1.0 + result.ka.toDouble()))).format(1)}\u00B0",
-                t("معامل الضغط النشط", "Active Pressure Coeff.") to "Ka = ${result.ka.format(3)}",
-                t("قوة التربة النشطة", "Active Earth Force") to "${result.pa.format(1)} kN/m",
-                t("مقاومة الخرسانة", "Concrete Strength") to "f'c = ${result.fcu.format(0)} MPa",
-                t("مقاومة الحديد", "Steel Strength") to "fy = ${result.fy.format(0)} MPa"
+                t("زاوية الاحتكاك الداخلي", "Internal Friction Angle") to "${result.backfillAngle.format(1)}\u00B0",
+                t("معامل الضغط النشط", "Active Pressure Coeff.") to "Ka = ${ka.format(3)}",
+                t("قوة التربة النشطة", "Active Earth Force") to "${result.pa.format(1)} kN/m"
             ), font)
 
             // Stability Checks

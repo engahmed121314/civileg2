@@ -5,12 +5,14 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.graphics.toColorInt
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
+import com.civileg.app.domain.entities.SteelWarehouseInputs
 
 @Deprecated("Use ProfessionalSteelDrawing")
 class SteelWarehouseView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
-    private var result: CalculatorEngine.SteelWarehouseResult? = null
+    private var result: SteelWarehouseAnalysisResult? = null
+    private var inputs: SteelWarehouseInputs? = null
     private val framePath = Path()
 
     private val linePaint = Paint().apply {
@@ -33,14 +35,16 @@ class SteelWarehouseView(context: Context, attrs: AttributeSet?) : View(context,
         style = Paint.Style.STROKE
     }
 
-    fun setDesignResult(res: CalculatorEngine.SteelWarehouseResult) {
+    fun setDesignResult(res: SteelWarehouseAnalysisResult, inputs: SteelWarehouseInputs) {
         this.result = res
+        this.inputs = inputs
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val res = result ?: return
+        val inp = inputs ?: return
 
         val w = width.toFloat()
         val h = height.toFloat()
@@ -51,8 +55,8 @@ class SteelWarehouseView(context: Context, attrs: AttributeSet?) : View(context,
         val groundY = h - padding
         
         // Use eaveHeight and totalHeight from result
-        val eaveY = (groundY - (res.eaveHeight * 20.0)).toFloat()
-        val ridgeY = (groundY - (res.totalHeight * 20.0)).toFloat()
+        val eaveY = (groundY - (inp.eaveHeight * 20.0)).toFloat()
+        val ridgeY = (groundY - ((inp.eaveHeight + inp.ridgeHeight) * 20.0)).toFloat()
         val centerX = w / 2
 
         canvas.drawLine(startX - 20f, groundY, endX + 20f, groundY, linePaint)
@@ -72,8 +76,8 @@ class SteelWarehouseView(context: Context, attrs: AttributeSet?) : View(context,
             canvas.drawCircle(px, py, 5f, linePaint)
         }
 
-        canvas.drawText("Span: ${res.span} m", centerX, groundY + 40f, textPaint)
-        canvas.drawText("${res.columnSection}", startX + 60f, (groundY + eaveY) / 2, textPaint)
-        canvas.drawText("${res.rafterSection}", (startX + centerX) / 2, (eaveY + ridgeY) / 2 - 20f, textPaint)
+        canvas.drawText("Span: ${inp.span} m", centerX, groundY + 40f, textPaint)
+        canvas.drawText("${res.mainFrame.columnSection}", startX + 60f, (groundY + eaveY) / 2, textPaint)
+        canvas.drawText("${res.mainFrame.rafterSection}", (startX + centerX) / 2, (eaveY + ridgeY) / 2 - 20f, textPaint)
     }
 }

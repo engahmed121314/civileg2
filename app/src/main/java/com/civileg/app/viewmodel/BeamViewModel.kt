@@ -59,7 +59,7 @@ class BeamViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode,
+        code: CalculatorEngine.AppDesignCode,
         supportType: CalculatorEngine.SupportType
     ) {
         viewModelScope.launch {
@@ -84,9 +84,7 @@ class BeamViewModel @Inject constructor(
                     deadLoad = deadLoad,
                     liveLoad = liveLoad,
                     preferredDiameter = preferredDiameter,
-                    code = code,
-                    supportType = supportType,
-                    autoIncludeSelfWeight = true
+                    code = code
                 )
                 
                 // Validate results for consistency & dead load logic
@@ -110,7 +108,7 @@ class BeamViewModel @Inject constructor(
     }
 
     fun calculateBeam(span: Double, load: Double, fcu: Double, fy: Double) {
-        calculateBeamPro(250.0, 600.0, span, load * 0.6, load * 0.4, fcu, fy, 16, CalculatorEngine.DesignCode.EGYPTIAN, CalculatorEngine.SupportType.HINGED_HINGED)
+        calculateBeamPro(250.0, 600.0, span, load * 0.6, load * 0.4, fcu, fy, 16, CalculatorEngine.AppDesignCode.EGYPTIAN, CalculatorEngine.SupportType.HINGED_HINGED)
     }
 
     fun saveBeam(projectId: Long, name: String, result: CalculatorEngine.BeamResult) {
@@ -237,8 +235,8 @@ class BeamViewModel @Inject constructor(
                     } catch (e: Exception) { e.printStackTrace(); null }
 
                 val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                     else -> "ECP 203"
                 }
 

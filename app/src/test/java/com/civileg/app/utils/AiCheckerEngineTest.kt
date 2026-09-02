@@ -21,7 +21,7 @@ class AiCheckerEngineTest {
         stirrups = CalculatorEngine.StirrupReinforcement(8, 150.0),
         isSafe = safe,
         concreteVolume = 0.625, steelWeight = 45.0, cost = 1200.0,
-        code = CalculatorEngine.DesignCode.EGYPTIAN,
+        code = CalculatorEngine.AppDesignCode.EGYPTIAN,
         appliedMoment = 150.0, appliedShear = 80.0,
         supportType = if (cantilever) CalculatorEngine.SupportType.CANTILEVER
                       else CalculatorEngine.SupportType.HINGED_HINGED,
@@ -62,11 +62,12 @@ class AiCheckerEngineTest {
     fun `column below min ratio fails and above max fails`() {
         val base = CalculatorEngine.ColumnResult(
             width = 300.0, depth = 300.0, pu = 1000.0,
+            muX = 0.0, muY = 0.0,
             reinforcement = CalculatorEngine.ReinforcementBar(8, 16),
             stirrups = CalculatorEngine.StirrupReinforcement(8, 150.0),
             isSafe = true, concreteVolume = 0.09, steelWeight = 30.0, cost = 800.0,
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
-            axialCapacity = 2000.0, appliedAxial = 1000.0,
+            code = CalculatorEngine.AppDesignCode.EGYPTIAN,
+            axialCapacity = 2000.0,
             reinforcementRatio = 0.8   // < 1% minimum
         )
         val low = AiCheckerEngine.checkColumn(base)

@@ -200,7 +200,6 @@ class ExportViewModel @Inject constructor(
                     isSafe = result.isSafe,
                     utilizationRatio = result.utilizationRatio * 100,
                     sectionType = sectionType.displayName,
-                    radius = sectionType.rootRadius,
                     area = sectionType.area,
                     ix = sectionType.ix,
                     sx = sectionType.sx,

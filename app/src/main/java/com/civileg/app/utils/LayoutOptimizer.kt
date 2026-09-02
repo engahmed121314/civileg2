@@ -36,7 +36,7 @@ object LayoutOptimizer {
         plotLength: Double, // m
         columns: List<ColumnLoad>,
         soilCapacity: Double, // kPa
-        designCode: CalculatorEngine.DesignCode
+        designCode: CalculatorEngine.AppDesignCode
     ): LayoutRecommendation {
         val plotArea = plotWidth * plotLength
         var totalAreaNeeded = 0.0

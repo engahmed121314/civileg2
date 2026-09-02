@@ -22,8 +22,7 @@ class BeamDetailingEngineTest {
                 fcu = 25.0, fy = 400.0,
                 deadLoad = 12.0, liveLoad = 6.0,
                 preferredDiameter = 16,
-                code = CalculatorEngine.DesignCode.EGYPTIAN,
-                supportType = support
+                code = CalculatorEngine.AppDesignCode.EGYPTIAN
             )
             val input = BeamDetailingEngine.BeamInput(
                 spanMm = 5000.0, coverMm = 40.0,
@@ -75,8 +74,7 @@ class BeamDetailingEngineTest {
                 width = 250.0, height = 500.0, span = 5.0,
                 fcu = 25.0, fy = 400.0, deadLoad = 10.0, liveLoad = 5.0,
                 preferredDiameter = 16,
-                code = CalculatorEngine.DesignCode.EGYPTIAN,
-                supportType = CalculatorEngine.SupportType.HINGED_HINGED
+                code = CalculatorEngine.AppDesignCode.EGYPTIAN
             )
             BeamDetailingEngine.build(
                 res,

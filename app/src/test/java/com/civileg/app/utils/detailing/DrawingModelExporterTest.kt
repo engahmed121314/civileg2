@@ -105,7 +105,8 @@ class DrawingModelExporterTest {
         val dxf = DrawingModelExporter.writeDxf(sampleModel())
 
         assertTrue(dxf.contains("ENTITIES"))
-        assertTrue(dxf.contains("AcDbEntity"))
+        // Deliberate AC1009 (R12) output (ADR-004/ADR-009): no AcDbEntity subclass.
+        assertTrue(dxf.contains("AC1009"))
         assertTrue(dxf.trimEnd().endsWith("EOF"))
     }
 
@@ -187,7 +188,8 @@ class DrawingModelExporterTest {
         assertFalse(dxf.contains("NaN"))
         // beam sheet keeps the bar schedule (elevation is a drawing layer)
         assertTrue(dxf.contains("SPACING"))
-        assertTrue(dxf.contains("\\U+00D820"))
+        // AC1009 (ADR-004/ADR-009): Ø is emitted raw (Windows-1256), not \U+00D8-escaped.
+        assertTrue(dxf.contains("Ø20"))
     }
 
     @Test
@@ -419,11 +421,12 @@ class DrawingModelExporterTest {
         val dxf = DrawingModelExporter.writeDxfWithSchedule(sampleModel())
 
         assertTrue(dxf.contains("ENTITIES"))
-        assertTrue(dxf.contains("AcDbEntity"))
+        // Deliberate AC1009 (R12) output (ADR-004/ADR-009): no AcDbEntity subclass.
+        assertTrue(dxf.contains("AC1009"))
         assertTrue(dxf.trimEnd().endsWith("EOF"))
         assertFalse(dxf.contains("NaN"))
         assertTrue(dxf.contains("SPACING"))        // schedule header written
-        assertTrue(dxf.contains("\\U+00D820"))     // bar diameter Ø20 encoded as DXF unicode escape
+        assertTrue(dxf.contains("Ø20"))            // AC1009: raw Ø (Windows-1256), not \U+00D8-escaped
         assertTrue(dxf.contains("1:"))            // title-block SCALE filled with the chosen scale
     }
 

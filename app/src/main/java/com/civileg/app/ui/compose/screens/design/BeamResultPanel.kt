@@ -30,9 +30,9 @@ import com.civileg.app.utils.CalculatorEngine
 fun beamOverallStatus(result: CalculatorEngine.BeamResult): EngineeringStatus =
     elementOverallStatus(result.utilizationRatio, result.isSafe)
 
-private fun codeRefFor(code: CalculatorEngine.DesignCode): String = when (code) {
-    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+private fun codeRefFor(code: CalculatorEngine.AppDesignCode): String = when (code) {
+    CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
     else -> "ECP 203"
 }
 

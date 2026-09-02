@@ -42,7 +42,7 @@ class BeamInputActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+        val codes = CalculatorEngine.AppDesignCode.values().map { it.displayName }
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes)
 
         val diameters = listOf(10, 12, 14, 16, 18, 20, 22, 25)
@@ -70,7 +70,7 @@ class BeamInputActivity : AppCompatActivity() {
             val span = binding.etSpan.text.toString().toDoubleOrNull() ?: 5.0
             val load = binding.etLoad.text.toString().toDoubleOrNull() ?: 20.0
             
-            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+            val code = CalculatorEngine.AppDesignCode.values()[binding.spinnerCode.selectedItemPosition]
             val diameter = listOf(10, 12, 14, 16, 18, 20, 22, 25)[binding.spinnerDiameter.selectedItemPosition]
 
             viewModel.calculateBeamPro(

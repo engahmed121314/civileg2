@@ -138,7 +138,7 @@ class ColumnViewModel @Inject constructor(
         calculate()
     }
 
-    fun calculateColumnPro(width: Double, depth: Double, height: Double, fcu: Double, fy: Double, load: Double, diameter: Int, code: CalculatorEngine.DesignCode) {
+    fun calculateColumnPro(width: Double, depth: Double, height: Double, fcu: Double, fy: Double, load: Double, diameter: Int, code: CalculatorEngine.AppDesignCode) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
@@ -196,9 +196,6 @@ class ColumnViewModel @Inject constructor(
                     code = mapDesignCode(state.designCode),
                     clearHeight = h * 1000.0,
                     preferredDiameter = dia,
-                    autoOptimize = state.autoOptimize,
-                    manualNumBars = manualBars,
-                    autoIncludeSelfWeight = true,
                     isSeismic = state.isSeismic
                 )
                 
@@ -337,10 +334,10 @@ class ColumnViewModel @Inject constructor(
         }
     }
 
-    private fun mapDesignCode(code: DesignCode): CalculatorEngine.DesignCode = when(code) {
-        DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
-        DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
-        DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+    private fun mapDesignCode(code: DesignCode): CalculatorEngine.AppDesignCode = when(code) {
+        DesignCode.ECP -> CalculatorEngine.AppDesignCode.EGYPTIAN
+        DesignCode.ACI -> CalculatorEngine.AppDesignCode.ACI
+        DesignCode.SBC -> CalculatorEngine.AppDesignCode.SAUDI
     }
 
     fun reset() {

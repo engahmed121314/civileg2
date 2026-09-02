@@ -80,7 +80,7 @@ class SlabInputActivity : AppCompatActivity() {
         val fy = binding.etFy.text.toString().toDoubleOrNull() ?: 400.0
 
         val selectedType = CalculatorEngine.SlabType.values().getOrNull(binding.spinnerSlabType.selectedItemPosition) ?: CalculatorEngine.SlabType.SOLID
-        val selectedCode = CalculatorEngine.DesignCode.values().getOrNull(binding.spinnerCode.selectedItemPosition) ?: CalculatorEngine.DesignCode.EGYPTIAN
+        val selectedCode = CalculatorEngine.AppDesignCode.values().getOrNull(binding.spinnerCode.selectedItemPosition) ?: CalculatorEngine.AppDesignCode.EGYPTIAN
 
         val diamStr = binding.spinnerDiameter.selectedItem?.toString()?.replace(" mm", "")
         val preferredDiameter = diamStr?.toIntOrNull() ?: 12
@@ -106,7 +106,7 @@ class SlabInputActivity : AppCompatActivity() {
         binding.spinnerSlabType.adapter = slabAdapter
 
         // Design Codes
-        val codes = CalculatorEngine.DesignCode.values()
+        val codes = CalculatorEngine.AppDesignCode.values()
         val codeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes.map { it.displayName })
         binding.spinnerCode.adapter = codeAdapter
         

@@ -95,7 +95,11 @@ class DxfWriter {
                     val dimLineX = if (isHoriz) midX else e.x1 + e.offsetMm
                     out.add(CadLine(e.x1, e.y1, e.x1, dimLineY, layer = e.layer, color = e.color))
                     out.add(CadLine(e.x2, e.y2, e.x2, dimLineY, layer = e.layer, color = e.color))
-                    out.add(CadLine(e.x1, dimLineY, e.x2, dimLineY, layer = e.layer, color = e.color))
+                    // Dimension line must have non-zero length; for a vertical
+                    // dimension (x1 == x2) extend a small tick each side.
+                    val dimLineX1 = if (isHoriz) e.x1 else e.x1 - e.offsetMm.coerceAtLeast(1.0)
+                    val dimLineX2 = if (isHoriz) e.x2 else e.x1 + e.offsetMm.coerceAtLeast(1.0)
+                    out.add(CadLine(dimLineX1, dimLineY, dimLineX2, dimLineY, layer = e.layer, color = e.color))
                     out.add(CadText(text = e.displayText, x = dimLineX, y = dimLineY + 2.0, heightMm = 2.5, layer = e.layer, color = e.color, hJustify = 1))
                 }
                 else -> out.add(e)

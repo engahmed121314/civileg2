@@ -6,7 +6,6 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.*
 import com.civileg.app.domain.*
-import com.civileg.app.domain.calculations.base.RetainingWallResult
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.core.calculations.entities.ProjectSummary
@@ -98,7 +97,7 @@ class ProjectViewModel @Inject constructor(
                 ?.let { BbsGenerator.generateFlatSlabBbs(design.name, it) }
             DesignType.WATER_TANK -> gson.fromJson(design.results, CalculatorEngine.TankResult::class.java)
                 ?.let { BbsGenerator.generateTankBbs(design.name, it) }
-            DesignType.RETAINING_WALL -> gson.fromJson(design.results, RetainingWallResult::class.java)
+            DesignType.RETAINING_WALL -> gson.fromJson(design.results, CalculatorEngine.RetainingWallResult::class.java)
                 ?.let { BbsGenerator.generateRetainingWallBbs(design.name, it) }
             DesignType.PILE_FOUNDATION -> gson.fromJson(design.results, PileDesignResult::class.java)
                 ?.let { BbsGenerator.generatePileFoundationBbs(design.name, it) }
@@ -151,7 +150,7 @@ class ProjectViewModel @Inject constructor(
             val inputData = JSONObject().apply {
                 put("zone", result.zone)
                 put("importance", result.importance)
-                put("reductionFactor", result.reductionFactor)
+                put("reductionFactor", result.responseReduction)
                 put("totalWeight", result.totalWeight)
                 put("height", result.height)
                 put("baseShear", result.baseShear)

@@ -6,13 +6,35 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.LinearLayout
 import com.civileg.app.databinding.ViewDesignReportBinding
-import com.civileg.app.utils.CalculatorEngine
 import java.util.Locale
 
 /**
  * DesignReportView: واجهة عرض تفاعلية لعرض نتائج التصميم بشكل احترافي.
  * تعرض الحصر، التكلفة، الرسومات التوضيحية، والمعادلات.
  */
+data class DesignReport(
+    val elementTitle: String,
+    val dimensions: String,
+    val boq: Boq,
+    val reinforcement: List<ReinforcementEntry>,
+    val safetyChecks: List<SafetyCheck>
+) {
+    data class Boq(
+        val concreteM3: Double,
+        val steelKg: Double,
+        val totalCost: Double,
+        val currency: String
+    )
+    data class ReinforcementEntry(
+        val type: String,
+        val description: String,
+        val weightKg: Double
+    )
+    data class SafetyCheck(
+        val isSafe: Boolean
+    )
+}
+
 class DesignReportView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
@@ -21,7 +43,7 @@ class DesignReportView @JvmOverloads constructor(
         LayoutInflater.from(context), this, true
     )
 
-    fun setReport(report: CalculatorEngine.DesignReport) {
+    fun setReport(report: DesignReport) {
         binding.apply {
             tvTitle.text = report.elementTitle
             tvDimensions.text = "الأبعاد: ${report.dimensions}"

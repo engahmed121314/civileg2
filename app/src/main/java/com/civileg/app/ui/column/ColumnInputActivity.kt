@@ -28,7 +28,7 @@ class ColumnInputActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+        val codes = CalculatorEngine.AppDesignCode.values().map { it.displayName }
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes)
 
         val diameters = listOf(12, 14, 16, 18, 20, 22, 25, 28, 32)
@@ -47,7 +47,7 @@ class ColumnInputActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+            val code = CalculatorEngine.AppDesignCode.values()[binding.spinnerCode.selectedItemPosition]
             val diameter = listOf(12, 14, 16, 18, 20, 22, 25, 28, 32)[binding.spinnerDiameter.selectedItemPosition]
 
             // التحديث لدعم المعاملات الجديدة في الـ ViewModel
@@ -60,11 +60,11 @@ class ColumnInputActivity : AppCompatActivity() {
                 axialLoad = binding.etLoad.text.toString(),
                 preferredDiameter = diameter.toString()
             )
-            // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
+            // Map CalculatorEngine.AppDesignCode to domain.entities.DesignCode
             val domainCode = when(code) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.core.calculations.entities.DesignCode.ECP
-                CalculatorEngine.DesignCode.ACI -> com.civileg.core.calculations.entities.DesignCode.ACI
-                CalculatorEngine.DesignCode.SAUDI -> com.civileg.core.calculations.entities.DesignCode.SBC
+                CalculatorEngine.AppDesignCode.EGYPTIAN -> com.civileg.core.calculations.entities.DesignCode.ECP
+                CalculatorEngine.AppDesignCode.ACI -> com.civileg.core.calculations.entities.DesignCode.ACI
+                CalculatorEngine.AppDesignCode.SAUDI -> com.civileg.core.calculations.entities.DesignCode.SBC
             }
             viewModel.updateDesignCode(domainCode)
         }

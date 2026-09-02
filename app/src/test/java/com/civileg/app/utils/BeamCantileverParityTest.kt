@@ -25,9 +25,9 @@ class BeamCantileverParityTest {
     fun `cantilever puts tension steel on top for all three codes`() {
         val eng = engine()
         val codes = listOf(
-            CalculatorEngine.DesignCode.EGYPTIAN,
-            CalculatorEngine.DesignCode.ACI,
-            CalculatorEngine.DesignCode.SAUDI
+            CalculatorEngine.AppDesignCode.EGYPTIAN,
+            CalculatorEngine.AppDesignCode.ACI,
+            CalculatorEngine.AppDesignCode.SAUDI
         )
         val utils = mutableListOf<Double>()
         val capacities = mutableListOf<Double>()

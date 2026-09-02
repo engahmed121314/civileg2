@@ -28,7 +28,7 @@ class StairInputActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+        val codes = CalculatorEngine.AppDesignCode.values().map { it.displayName }
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes)
 
         val diameters = listOf(10, 12, 14, 16, 18)
@@ -53,7 +53,7 @@ class StairInputActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+            val code = CalculatorEngine.AppDesignCode.values()[binding.spinnerCode.selectedItemPosition]
             val diameter = listOf(10, 12, 14, 16, 18)[binding.spinnerDiameter.selectedItemPosition]
             val type = CalculatorEngine.StairType.values()[binding.spinnerStairType.selectedItemPosition]
 
@@ -61,9 +61,7 @@ class StairInputActivity : AppCompatActivity() {
                 type = type,
                 span = span,
                 riser = riser,
-                tread = tread,
-                deadLoad = liveLoad * 0.8, // Assumption
-                liveLoad = liveLoad,
+                ts = 150.0,
                 fcu = fcu,
                 fy = fy,
                 preferredDiameter = diameter,

@@ -45,13 +45,11 @@ class StairViewModel @Inject constructor(
         type: CalculatorEngine.StairType,
         span: Double,
         riser: Double,
-        tread: Double,
-        deadLoad: Double,
-        liveLoad: Double,
+        ts: Double,
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode
+        code: CalculatorEngine.AppDesignCode
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -59,12 +57,10 @@ class StairViewModel @Inject constructor(
                 val res = calculatorEngine.designStaircase(
                     type = type,
                     span = span,
-                    riser = riser,
-                    tread = tread,
-                    deadLoad = deadLoad,
-                    liveLoad = liveLoad,
+                    rise = riser,
                     fcu = fcu,
                     fy = fy,
+                    ts = ts,
                     preferredDiameter = preferredDiameter,
                     code = code
                 )
@@ -86,7 +82,7 @@ class StairViewModel @Inject constructor(
 
     // Fixed legacy support
     fun calculateStair(rise: Double, run: Double, width: Double, load: Double, fcu: Double, fy: Double) {
-        calculateStairPro(CalculatorEngine.StairType.STRAIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, CalculatorEngine.AppDesignCode.EGYPTIAN)
+        calculateStairPro(CalculatorEngine.StairType.STRAIGHT, run, rise, 150.0, fcu, fy, 12, CalculatorEngine.AppDesignCode.EGYPTIAN)
     }
 
     fun saveStair(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
@@ -112,8 +108,8 @@ class StairViewModel @Inject constructor(
                     val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
                     val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
                     val pdfCover = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> 38.0
-                        CalculatorEngine.DesignCode.SAUDI -> 40.0
+                        CalculatorEngine.AppDesignCode.ACI -> 38.0
+                        CalculatorEngine.AppDesignCode.SAUDI -> 40.0
                         else -> 25.0
                     }
                     // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
@@ -133,8 +129,8 @@ class StairViewModel @Inject constructor(
                             // R3 engineering annotations
                             wuKnm2 = currentResult.wu,
                             codeName = when (currentResult.code) {
-                                CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                                CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                                CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                                CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                                 else -> "ECP 203"
                             },
                             fcu = currentResult.fcu,
@@ -145,8 +141,8 @@ class StairViewModel @Inject constructor(
                     pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                        CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                         else -> "ECP 203"
                     }
                     val inputsMap = mapOf(

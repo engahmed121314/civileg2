@@ -27,7 +27,7 @@ class DxfExporterV2ColumnTest {
         width = 300.0, depth = 500.0,
         pu = 1500.0, mx = 120.0, my = 40.0,
         fcu = 25.0, fy = 400.0,
-        code = CalculatorEngine.DesignCode.EGYPTIAN,
+        code = CalculatorEngine.AppDesignCode.EGYPTIAN,
         clearHeight = 3200.0,
         preferredDiameter = 16
     )

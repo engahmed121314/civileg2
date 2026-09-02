@@ -16,7 +16,7 @@ import com.civileg.app.db.Project as DbProject
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.CalculatorEngine.DesignCode
+import com.civileg.app.utils.CalculatorEngine.AppDesignCode
 import com.civileg.app.utils.CalculatorEngine.SlabType
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
@@ -51,7 +51,7 @@ class SlabDesignFragment : Fragment() {
     lateinit var designRepository: DesignRepository
     
     private var selectedSlabTypeEnum = SlabType.SOLID
-    private var selectedCodeEnum = DesignCode.EGYPTIAN
+    private var selectedCodeEnum = AppDesignCode.EGYPTIAN
     private var lastResult: CalculatorEngine.SlabResult? = null
     private var projectsList: List<DbProject> = emptyList()
 
@@ -83,9 +83,9 @@ class SlabDesignFragment : Fragment() {
         binding.codeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 selectedCodeEnum = when (checkedId) {
-                    R.id.btnAmericanCode -> DesignCode.ACI
-                    R.id.btnSaudiCode -> DesignCode.SAUDI
-                    else -> DesignCode.EGYPTIAN
+                    R.id.btnAmericanCode -> AppDesignCode.ACI
+                    R.id.btnSaudiCode -> AppDesignCode.SAUDI
+                    else -> AppDesignCode.EGYPTIAN
                 }
             }
         }

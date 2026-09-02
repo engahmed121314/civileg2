@@ -49,9 +49,9 @@ fun ColumnResultHeader(
         Spacer(Modifier.height(12.dp))
         UtilizationBar(utilization = result.utilizationRatio, status = status)
         Spacer(Modifier.height(8.dp))
-        EngineeringPropertyRow(label = "Pu", value = "%.1f".format(result.appliedAxial), unit = "kN")
-        if (result.mx != 0.0) EngineeringPropertyRow(label = "Mx", value = "%.1f".format(result.mx), unit = "kN.m")
-        if (result.my != 0.0) EngineeringPropertyRow(label = "My", value = "%.1f".format(result.my), unit = "kN.m")
+        EngineeringPropertyRow(label = "Pu", value = "%.1f".format(result.pu), unit = "kN")
+        if (result.muX != 0.0) EngineeringPropertyRow(label = "Mx", value = "%.1f".format(result.muX), unit = "kN.m")
+        if (result.muY != 0.0) EngineeringPropertyRow(label = "My", value = "%.1f".format(result.muY), unit = "kN.m")
     }
 }
 
@@ -85,9 +85,9 @@ fun ColumnReinforcementSummary(
     }
 }
 
-fun columnCodeRef(code: CalculatorEngine.DesignCode): String = when (code) {
-    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+fun columnCodeRef(code: CalculatorEngine.AppDesignCode): String = when (code) {
+    CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
     else -> "ECP 203"
 }
 

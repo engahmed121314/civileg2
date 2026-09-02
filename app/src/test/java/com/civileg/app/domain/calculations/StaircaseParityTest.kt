@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.aci.ACIStaircase
 import com.civileg.app.domain.calculations.base.StaircaseDesign
 import com.civileg.app.domain.calculations.base.StaircaseInput
 import com.civileg.app.domain.calculations.base.StaircaseResult
-import com.civileg.app.domain.calculations.base.StairType
+import com.civileg.app.domain.calculations.base.DomainStairType
 import com.civileg.app.domain.calculations.ecp.ECPStaircase
 import com.civileg.app.domain.calculations.sbc.SBCStaircase
 import com.civileg.core.calculations.entities.DesignCode
@@ -37,7 +37,7 @@ class StaircaseParityTest {
     private data class Case(
         val label: String,
         val code: DesignCode,
-        val appType: StairType,
+        val appType: DomainStairType,
         val coreType: CoreStairType,
         val fcu: Double,
         val fy: Double,
@@ -161,7 +161,7 @@ class StaircaseParityTest {
 
     @Test
     fun ecpBothGiven() = assertParity(
-        Case("ecp-both", DesignCode.ECP, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("ecp-both", DesignCode.ECP, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 25.0, fy = 360.0,
             span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 140.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 10, going = 280.0)
@@ -169,7 +169,7 @@ class StaircaseParityTest {
 
     @Test
     fun ecpRiserOnly() = assertParity(
-        Case("ecp-riser", DesignCode.ECP, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("ecp-riser", DesignCode.ECP, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 25.0, fy = 360.0,
             span = 3.6, totalRise = 1.8, stairWidth = 1.3, waistThickness = 130.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 10, going = 0.0)
@@ -177,7 +177,7 @@ class StaircaseParityTest {
 
     @Test
     fun ecpGoingOnly() = assertParity(
-        Case("ecp-going", DesignCode.ECP, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("ecp-going", DesignCode.ECP, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 30.0, fy = 420.0,
             span = 3.0, totalRise = 1.65, stairWidth = 1.1, waistThickness = 120.0,
             deadLoad = 6.5, liveLoad = 4.0, riserCount = 0, going = 300.0)
@@ -185,7 +185,7 @@ class StaircaseParityTest {
 
     @Test
     fun ecpFullyAuto() = assertParity(
-        Case("ecp-auto", DesignCode.ECP, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("ecp-auto", DesignCode.ECP, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 25.0, fy = 360.0,
             span = 3.4, totalRise = 1.9, stairWidth = 1.2, waistThickness = 150.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 0, going = 0.0)
@@ -193,7 +193,7 @@ class StaircaseParityTest {
 
     @Test
     fun ecpDogLeg() = assertParity(
-        Case("ecp-dogleg", DesignCode.ECP, StairType.DOG_LEG, CoreStairType.DOG_LEG,
+        Case("ecp-dogleg", DesignCode.ECP, DomainStairType.DOG_LEG, CoreStairType.DOG_LEG,
             fcu = 25.0, fy = 360.0,
             span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 140.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 10, going = 280.0)
@@ -203,7 +203,7 @@ class StaircaseParityTest {
 
     @Test
     fun aciBothGiven() = assertParity(
-        Case("aci-both", DesignCode.ACI, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("aci-both", DesignCode.ACI, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 30.0, fy = 420.0,
             span = 3.0, totalRise = 1.5, stairWidth = 1.0, waistThickness = 200.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 9, going = 279.0)
@@ -211,7 +211,7 @@ class StaircaseParityTest {
 
     @Test
     fun aciRiserOnly() = assertParity(
-        Case("aci-riser", DesignCode.ACI, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("aci-riser", DesignCode.ACI, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 35.0, fy = 420.0,
             span = 3.4, totalRise = 1.6, stairWidth = 1.1, waistThickness = 200.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 9, going = 0.0)
@@ -219,7 +219,7 @@ class StaircaseParityTest {
 
     @Test
     fun aciGoingOnly() = assertParity(
-        Case("aci-going", DesignCode.ACI, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("aci-going", DesignCode.ACI, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 30.0, fy = 420.0,
             span = 3.1, totalRise = 1.52, stairWidth = 0.9, waistThickness = 180.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 0, going = 300.0)
@@ -227,7 +227,7 @@ class StaircaseParityTest {
 
     @Test
     fun aciFullyAuto() = assertParity(
-        Case("aci-auto", DesignCode.ACI, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("aci-auto", DesignCode.ACI, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 30.0, fy = 420.0,
             span = 3.2, totalRise = 1.6, stairWidth = 1.0, waistThickness = 180.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 0, going = 0.0)
@@ -235,7 +235,7 @@ class StaircaseParityTest {
 
     @Test
     fun aciDogLeg() = assertParity(
-        Case("aci-dogleg", DesignCode.ACI, StairType.DOG_LEG, CoreStairType.DOG_LEG,
+        Case("aci-dogleg", DesignCode.ACI, DomainStairType.DOG_LEG, CoreStairType.DOG_LEG,
             fcu = 30.0, fy = 420.0,
             span = 3.0, totalRise = 1.5, stairWidth = 1.0, waistThickness = 200.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 9, going = 279.0)
@@ -245,7 +245,7 @@ class StaircaseParityTest {
 
     @Test
     fun sbcBothGiven() = assertParity(
-        Case("sbc-both", DesignCode.SBC, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("sbc-both", DesignCode.SBC, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 30.0, fy = 420.0,
             span = 3.0, totalRise = 1.5, stairWidth = 1.0, waistThickness = 200.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 9, going = 279.0)
@@ -253,7 +253,7 @@ class StaircaseParityTest {
 
     @Test
     fun sbcRiserOnly() = assertParity(
-        Case("sbc-riser", DesignCode.SBC, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("sbc-riser", DesignCode.SBC, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 25.0, fy = 420.0,
             span = 3.4, totalRise = 1.6, stairWidth = 1.1, waistThickness = 210.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 9, going = 0.0)
@@ -261,7 +261,7 @@ class StaircaseParityTest {
 
     @Test
     fun sbcFullyAuto() = assertParity(
-        Case("sbc-auto", DesignCode.SBC, StairType.STRAIGHT, CoreStairType.STRAIGHT,
+        Case("sbc-auto", DesignCode.SBC, DomainStairType.STRAIGHT, CoreStairType.STRAIGHT,
             fcu = 30.0, fy = 420.0,
             span = 3.2, totalRise = 1.6, stairWidth = 1.0, waistThickness = 180.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 0, going = 0.0)
@@ -269,7 +269,7 @@ class StaircaseParityTest {
 
     @Test
     fun sbcDogLeg() = assertParity(
-        Case("sbc-dogleg", DesignCode.SBC, StairType.DOG_LEG, CoreStairType.DOG_LEG,
+        Case("sbc-dogleg", DesignCode.SBC, DomainStairType.DOG_LEG, CoreStairType.DOG_LEG,
             fcu = 30.0, fy = 420.0,
             span = 3.0, totalRise = 1.5, stairWidth = 1.0, waistThickness = 200.0,
             deadLoad = 6.0, liveLoad = 4.0, riserCount = 9, going = 279.0)

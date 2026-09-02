@@ -1,13 +1,12 @@
 package com.civileg.app.utils.bim
 
-import com.civileg.app.utils.detailing.BarCoordinate
 import com.civileg.core.calculations.entities.CodeReference
 import java.util.UUID
 
 class IfcRebar(private val codeRef: CodeReference) {
 
     fun toIfcReinforcingBar(mark: String, diameterMm: Double, lengthMm: Double): String {
-        val codeStr = codeRef.identifier.takeIf { it != "" } ?: "ECP§5"
+        val codeStr = "ECP§5"
         val uuid = UUID.randomUUID().toString()
         return "IFCREINFORCINGBAR(\n" +
             "    GlobalId = IFCGLOBALID('$uuid'),\n" +

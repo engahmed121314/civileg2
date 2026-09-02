@@ -243,7 +243,7 @@ private fun DrawScope.drawBoltedConnectionDetail(
     val patternLbl = if (isArabic) "نمط: " else "Pattern: "
     val boltLabel = "M${boltDia.toInt()} x $numBolts"
 
-    drawTextAnnotated("$boltLabel  |  $gradeLbl${res.boltGrade.displayName}  |  $patternLbl${res.boltPattern.displayName}",
+    drawTextAnnotated("$boltLabel  |  $gradeLbl${res.boltGrade.displayName}  |  $patternLbl${res.boltPattern.name}",
         left + viewW / 2f, infoY + 16f, DimWhite, 10f, center = true)
 
     // ── Status badge ──
@@ -401,7 +401,7 @@ private fun DrawScope.drawWeldedConnectionDetail(
     val throatAreaLbl = if (isArabic) "مساحة الحلق: " else "Throat Area: "
 
     drawTextAnnotated(
-        "$typeLbl${res.weldType.displayName}  |  $elecLbl${res.electrodeType.displayName}  |  $throatAreaLbl${"%.0f".format(res.throatArea)} mm²",
+        "$typeLbl${res.weldType.name}  |  $elecLbl${res.electrodeType.displayName}  |  $throatAreaLbl${"%.0f".format(res.throatArea)} mm²",
         left + viewW / 2f, infoY + 16f, DimWhite, 10f, center = true
     )
 

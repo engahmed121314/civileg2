@@ -32,20 +32,17 @@ class StaircaseDesignFragment : Fragment() {
 
     private fun setupListeners() {
         binding.btnCalculate.setOnClickListener {
-            val span = binding.etSpan.text.toString().toDoubleOrNull() ?: 3.0
-            val rise = binding.etRise.text.toString().toDoubleOrNull() ?: 1.5
-            val load = binding.etLoad.text.toString().toDoubleOrNull() ?: 5.0
-            val fc = binding.etFc.text.toString().toDoubleOrNull() ?: 25.0
-            val fy = binding.etFy.text.toString().toDoubleOrNull() ?: 400.0
-            val ts = binding.etThickness.text.toString().toDoubleOrNull() ?: 150.0
+            val rise = binding.etRiser.text.toString().toDoubleOrNull() ?: 150.0
+            val load = binding.etLiveLoad.text.toString().toDoubleOrNull() ?: 3.0
+            val fc = binding.etConcreteStrength.text.toString().toDoubleOrNull() ?: 25.0
+            val fy = binding.etSteelStrength.text.toString().toDoubleOrNull() ?: 360.0
+            val ts = rise
 
             viewModel.calculateStairPro(
                 type = CalculatorEngine.StairType.STRAIGHT,
-                span = span,
-                riser = 150.0,
-                tread = 300.0,
-                deadLoad = load * 0.8,
-                liveLoad = load * 0.2,
+                span = 3.0,
+                riser = rise,
+                ts = ts,
                 fcu = fc,
                 fy = fy,
                 preferredDiameter = 12,

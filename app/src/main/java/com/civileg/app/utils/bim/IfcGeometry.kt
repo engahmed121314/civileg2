@@ -1,6 +1,7 @@
 package com.civileg.app.utils.bim
 
 import com.civileg.app.utils.detailing.*
+import com.civileg.app.utils.detailing.ColumnDetailingEngine.BarCoordinate
 import com.civileg.core.calculations.entities.*
 import java.util.UUID
 import kotlin.math.*

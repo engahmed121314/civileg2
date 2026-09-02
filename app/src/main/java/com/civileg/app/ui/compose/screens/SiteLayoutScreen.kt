@@ -71,7 +71,7 @@ fun SiteLayoutScreen() {
                     plotLength.toDoubleOrNull() ?: 30.0,
                     columns,
                     soilCapacity.toDoubleOrNull() ?: 200.0,
-                    CalculatorEngine.DesignCode.EGYPTIAN
+                    CalculatorEngine.AppDesignCode.EGYPTIAN
                 )
             },
             modifier = Modifier.fillMaxWidth(),

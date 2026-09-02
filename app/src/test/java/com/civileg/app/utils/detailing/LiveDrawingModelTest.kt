@@ -50,7 +50,7 @@ class LiveDrawingModelTest {
         diameter = 8, spacing = 200.0, numLegs = 2
     )
 
-    private val code = CalculatorEngine.DesignCode.EGYPTIAN
+    private val code = CalculatorEngine.AppDesignCode.EGYPTIAN
 
     @Test
     fun beamMapsLiveResultToModelBoundsAndState() {
@@ -199,12 +199,12 @@ class LiveDrawingModelTest {
     @Test
     fun columnMapsLiveResultToNoNanModel() {
         val res = CalculatorEngine.ColumnResult(
-            width = 400.0, depth = 400.0, pu = 800.0,
+            width = 400.0, depth = 400.0, pu = 800.0, muX = 0.0, muY = 0.0,
             reinforcement = bar.copy(numBars = 8), stirrups = stirrups,
-            isSafe = true, concreteVolume = 1.0, steelWeight = 120.0,
+            isSafe = true, axialCapacity = 1000.0, concreteVolume = 1.0, steelWeight = 120.0,
             cost = 6000.0, code = code,
-            reinforcementArea = 1600.0, minReinforcementArea = 640.0,
-            maxReinforcementArea = 6400.0, reinforcementRatio = 0.01,
+            reinforcementArea = 1600.0,
+            reinforcementRatio = 0.01,
             utilizationRatio = 0.7
         )
 
@@ -224,7 +224,7 @@ class LiveDrawingModelTest {
             reinforcementBottom = bar, isSafe = true, code = code,
             concreteVolume = 3.0, steelWeight = 200.0, cost = 9000.0,
             barsX = 8, barsY = 10, barDiameter = 16,
-            reinforcementTopX = 5, reinforcementTopY = 6, topBarDiameter = 12,
+            reinforcement = bar, maxSoilPressure = 200.0,
             utilizationRatio = 0.75
         )
 
@@ -245,7 +245,7 @@ class LiveDrawingModelTest {
             baseReinforcement = bar.copy(numBars = 0, spacing = 180.0, diameter = 14),
             isSafe = true, concreteVolume = 10.0, steelWeight = 500.0,
             cost = 20000.0, code = code,
-            waterPressure = 25.0, capacity = 30.0, utilizationRatio = 0.8
+            waterPressure = 25.0, capacityM3 = 30.0, utilizationRatio = 0.8
         )
 
         val model = LiveDrawingModel.tank(res, projectName = "Bridge")
@@ -258,7 +258,7 @@ class LiveDrawingModelTest {
     @Test
     fun stairMapsLiveResultDimensioned() {
         val res = CalculatorEngine.StairResult(
-            type = CalculatorEngine.StairType.SINGLE_FLIGHT,
+            type = CalculatorEngine.StairType.STRAIGHT,
             thickness = 150.0,
             reinforcement = bar.copy(numBars = 0, spacing = 150.0, diameter = 12),
             distributionReinforcement = bar.copy(numBars = 0, spacing = 250.0, diameter = 10),
@@ -300,12 +300,14 @@ class LiveDrawingModelTest {
     @Test
     fun retainingWallMapsLiveResultToEngineProportions() {
         val res = CalculatorEngine.RetainingWallResult(
-            height = 3.5, stemThickness = 300.0, baseWidth = 2500.0,
+            type = CalculatorEngine.RetainingWallType.CANTILEVER,
+            height = 3.5, stemThickness = 300.0, baseWidth = 2500.0, baseThickness = 500.0,
+            reinforcement = bar.copy(numBars = 7, spacing = 0.0, diameter = 16),
+            isSafe = true, concreteVolume = 6.0,
+            steelWeight = 400.0, cost = 18000.0, code = code,
             stemReinforcement = bar.copy(numBars = 7, spacing = 0.0, diameter = 16),
             baseReinforcement = bar.copy(numBars = 0, spacing = 160.0, diameter = 16),
-            safetyChecks = emptyList(), isSafe = true, concreteVolume = 6.0,
-            steelWeight = 400.0, cost = 18000.0, code = code,
-            utilizationRatio = 0.8
+            safetyChecks = emptyList(), utilizationRatio = 0.8
         )
 
         val model = LiveDrawingModel.retainingWall(res, projectName = "Bridge")
@@ -466,7 +468,7 @@ class LiveDrawingModelTest {
         )
 
         val model = LiveDrawingModel.steelMember(
-            res, lengthMm = 6000.0, steelCode = CalculatorEngine.DesignCode.ACI,
+            res, lengthMm = 6000.0, steelCode = CalculatorEngine.AppDesignCode.ACI,
             projectName = "Bridge"
         )
 

@@ -14,14 +14,16 @@ class SBCSeismic : SeismicDesign {
     private val aciSeismic = ACISeismic()
     
     companion object {
-        // W7-FIX: Official Saudi Seismic Hazard Maps SDS/SD1 factors (SBC 301)
-        // Previous version used ACI US factors.
+        // W7-FIX: Official Saudi Seismic Hazard Map zone factors (SBC 301-2007).
+        // These are the Z (PGA-based) zone factors used directly as the design
+        // spectral parameter (SDS) in the closed form. Previous version used
+        // incorrectly-doubled SDS-only values.
         private val SAUDI_ZONE_FACTORS = mapOf(
-            SeismicZone.ZONE_1 to 0.12, // Low
-            SeismicZone.ZONE_2 to 0.20,
-            SeismicZone.ZONE_3 to 0.35,
-            SeismicZone.ZONE_4 to 0.50, // High (e.g. Gulf of Aqaba)
-            SeismicZone.ZONE_5 to 0.65
+            SeismicZone.ZONE_1 to 0.05, // Low
+            SeismicZone.ZONE_2 to 0.10,
+            SeismicZone.ZONE_3 to 0.15,
+            SeismicZone.ZONE_4 to 0.25, // High (e.g. Gulf of Aqaba)
+            SeismicZone.ZONE_5 to 0.35
         )
     }
 

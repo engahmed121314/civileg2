@@ -131,13 +131,13 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
-        val momentCoefficient = if (input.stairType == StairType.DOG_LEG) 1.0 / 10.0 else 1.0 / 8.0
+        val momentCoefficient = if (input.stairType == DomainStairType.DOG_LEG) 1.0 / 10.0 else 1.0 / 8.0
         val adjustedMoment = horizontalLoad * span * span * momentCoefficient
         val adjustedShear = horizontalLoad * span / 2.0
         val reactionA = adjustedShear
         val reactionB = adjustedShear
 
-        if (input.stairType == StairType.DOG_LEG) {
+        if (input.stairType == DomainStairType.DOG_LEG) {
             codeNotes.add("Dog-leg stair: landing provides partial fixity, M = wL²/10")
         }
         codeNotes.add("Design moment M = ${String.format("%.2f", adjustedMoment)} kN.m/m")

@@ -200,15 +200,15 @@ class DesignRepository @Inject constructor(
         }.toString()
         
         // Utilization ratio - using overturning FS as a proxy if not directly available
-        val utilRatio = 1.5 / result.overturningFS.coerceAtLeast(0.1)
+        val utilRatio = 1.5 / result.factorOfSafetyOverturning.coerceAtLeast(0.1)
         
-        saveGeneralDesign(projectId, DesignType.RETAINING_WALL, name, result.isSafe, utilRatio, 0.0, 0.0, 0.0, result, result.designCode.name, inputData)
+        saveGeneralDesign(projectId, DesignType.RETAINING_WALL, name, result.isSafe, utilRatio, 0.0, 0.0, 0.0, result, result.code.name, inputData)
         
         val wall = RetainingWall(
             projectId = projectId, height = result.trace.getValue("height") ?: 3000.0, 
             stemThickness = result.trace.getValue("stemThickness") ?: 300.0,
             baseWidth = result.trace.getValue("baseWidth") ?: 2000.0, baseThickness = 500.0,
-            reinforcement = result.stemMainRebar,
+            reinforcement = result.stemReinforcement.barString,
             concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0,
             utilizationRatio = utilRatio
         )

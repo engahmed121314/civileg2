@@ -39,7 +39,7 @@ class SteelViewModel @Inject constructor(
         val section: SteelSectionType,
         val memberType: SteelMemberType,
         val inputs: SteelInputs,
-        val code: CalculatorEngine.DesignCode
+        val code: CalculatorEngine.AppDesignCode
     )
 
     private val _isLoading = MutableLiveData(false)
@@ -82,7 +82,7 @@ class SteelViewModel @Inject constructor(
         section: SteelSectionType,
         memberType: SteelMemberType,
         inputs: SteelInputs,
-        code: CalculatorEngine.DesignCode
+        code: CalculatorEngine.AppDesignCode
     ) {
         // Store actual inputs for PDF export
         lastMemberInputs = SteelMemberStoredInputs(section, memberType, inputs, code)
@@ -194,7 +194,7 @@ class SteelViewModel @Inject constructor(
                         utilizationRatio = res.utilizationRatio * 100,
                         // New parameters matching on-screen ProfessionalSteelDrawing
                         sectionType = stored.section.displayName,
-                        radius = stored.section.rootRadius,
+                        radius = 0.0,
                         area = stored.section.area,
                         ix = stored.section.ix,
                         sx = stored.section.sx,
@@ -215,8 +215,8 @@ class SteelViewModel @Inject constructor(
                 // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
                 // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when (stored.code) {
-                    CalculatorEngine.DesignCode.ACI -> "AISC 360-16"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 306"
+                    CalculatorEngine.AppDesignCode.ACI -> "AISC 360-16"
+                    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 306"
                     else -> "ECP 205-2007"
                 }
 
@@ -379,15 +379,15 @@ class SteelViewModel @Inject constructor(
         }
     }
 
-    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode): Double {
+    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.AppDesignCode): Double {
         return calculatorEngine.calculateWeldCapacity(size, length, electrode, code)
     }
 
-    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode): Double {
+    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.AppDesignCode): Double {
         return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
 
-    fun exportWeldToPdf(context: android.content.Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode, capacity: Double) {
+    fun exportWeldToPdf(context: android.content.Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.AppDesignCode, capacity: Double) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
@@ -424,7 +424,7 @@ class SteelViewModel @Inject constructor(
         }
     }
 
-    fun exportBoltToPdf(context: android.content.Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
+    fun exportBoltToPdf(context: android.content.Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.AppDesignCode, capacity: Double) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"

@@ -47,7 +47,7 @@ class SlabViewModel @Inject constructor(
     private data class SlabStoredInputs(
         val lx: Double, val ly: Double, val deadLoad: Double, val liveLoad: Double,
         val fcu: Double, val fy: Double, val ts: Double, val preferredDiameter: Int,
-        val code: CalculatorEngine.DesignCode, val type: CalculatorEngine.SlabType,
+        val code: CalculatorEngine.AppDesignCode, val type: CalculatorEngine.SlabType,
         val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double,
         val openingWidth: Double = 0.0, val openingLength: Double = 0.0
     )
@@ -61,7 +61,7 @@ class SlabViewModel @Inject constructor(
         fy: Double,
         ts: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode,
+        code: CalculatorEngine.AppDesignCode,
         type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
         prestressForce: Double = 0.0,
         dropPanelThickness: Double = 0.0,
@@ -82,9 +82,7 @@ class SlabViewModel @Inject constructor(
                 val res = calculatorEngine.designSlab(
                     lx = lx, ly = ly, deadLoad = deadLoad, liveLoad = liveLoad,
                     fcu = fcu, fy = fy, ts = ts, preferredDiameter = preferredDiameter,
-                    code = code, type = type, prestressForce = prestressForce,
-                    dropPanelThickness = dropPanelThickness, columnSize = columnSize,
-                    openingWidth = openingWidth, openingLength = openingLength
+                    code = code
                 )
                 
                 // Validate consistency & Dead Load logic
@@ -110,7 +108,7 @@ class SlabViewModel @Inject constructor(
         spanX: Double, spanY: Double, deadLoad: Double, liveLoad: Double,
         fcu: Double, fy: Double, thickness: Double, preferredDiameter: Int,
         type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
-        code: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+        code: CalculatorEngine.AppDesignCode = CalculatorEngine.AppDesignCode.EGYPTIAN,
         prestressForce: Double = 0.0,
         dropPanelThickness: Double = 0.0,
         columnSize: Double = 400.0
@@ -170,8 +168,8 @@ class SlabViewModel @Inject constructor(
                 // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
                 // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when(inputs.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(

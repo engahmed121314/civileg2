@@ -75,7 +75,7 @@ fun SlabScreen(
     var ribSpacingY by remember { mutableStateOf("500") }
 
     var selectedType by remember { mutableStateOf(CalculatorEngine.SlabType.SOLID) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.AppDesignCode.EGYPTIAN) }
     var expandedType by remember { mutableStateOf(false) }
     var expandedCode by remember { mutableStateOf(false) }
     
@@ -190,7 +190,7 @@ fun SlabScreen(
                             shape = RoundedCornerShape(12.dp)
                         )
                         ExposedDropdownMenu(expanded = expandedCode, onDismissRequest = { expandedCode = false }) {
-                            CalculatorEngine.DesignCode.values().forEach { code ->
+                            CalculatorEngine.AppDesignCode.values().forEach { code ->
                                 DropdownMenuItem(
                                     text = { Text(code.displayName) },
                                     onClick = {

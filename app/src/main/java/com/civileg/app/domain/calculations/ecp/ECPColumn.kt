@@ -170,7 +170,7 @@ class ECPColumn : ColumnDesign {
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
-    override fun getMaxReinforcementRatio(): Double = 0.04  // W9-FIX: Use 4% (conservative lap limit)
+    override fun getMaxReinforcementRatio(): Double = 0.06  // ECP 203 §4-2-3 general-section max (6%)
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0

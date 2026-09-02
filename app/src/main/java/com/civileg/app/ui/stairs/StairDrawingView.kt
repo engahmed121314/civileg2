@@ -15,7 +15,7 @@ class StairDrawingView @JvmOverloads constructor(
     var riserHeight: Float = 150f
     var treadWidth: Float = 300f
     var numSteps: Int = 10
-    var stairType: CalculatorEngine.StairType = CalculatorEngine.StairType.SINGLE_FLIGHT
+    var stairType: CalculatorEngine.StairType = CalculatorEngine.StairType.STRAIGHT
     var mainReinforcementText: String = ""
     var concreteVolume: Float = 0f
     var isSafe: Boolean = true

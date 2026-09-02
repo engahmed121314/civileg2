@@ -46,9 +46,9 @@ class TorsionRouteIntegrationTest {
             cover = 40.0, torsionalMoment = 5.0
         )
         assertTrue(r.needsTorsionDesign)
-        // designBeam passes raw fcu=30 -> ACI cylinder f'c=0.8·30=24 -> Tth≈0.456 kN·m
-        // (the direct cross-gate used fcu=37.5 to simulate f'c=30 -> 0.680)
-        assertEquals(0.456, r.torsionalThreshold, 5e-3)
+        // designBeam passes raw fcu=30 -> ACI cylinder f'c=0.8·30=24 -> Tth≈0.608 kN·m
+        // (the direct cross-gate used fcu=37.5 to simulate f'c=30 -> 0.680; ∝√f'c)
+        assertEquals(0.608, r.torsionalThreshold, 5e-3)
         assertEquals("12Ø19", r.torsionalLongitudinalBars)
         assertTrue(r.torsionalReinforcement.contains("Ø8"))
         assertEquals(185.0, r.torsionalStirrupSpacing, 1e-9)

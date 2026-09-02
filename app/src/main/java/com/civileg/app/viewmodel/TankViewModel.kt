@@ -52,15 +52,15 @@ class TankViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode
+        code: CalculatorEngine.AppDesignCode
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 // ADR-002: Dispatch through UnifiedTankDesign via CalculationFactory
                 val resolvedCode = when(code) {
-                    CalculatorEngine.DesignCode.ACI -> DesignCode.ACI
-                    CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+                    CalculatorEngine.AppDesignCode.ACI -> DesignCode.ACI
+                    CalculatorEngine.AppDesignCode.SAUDI -> DesignCode.SBC
                     else -> DesignCode.ECP
                 }
                 val designer = CalculationFactory.getTankDesign(resolvedCode)
@@ -86,7 +86,7 @@ class TankViewModel @Inject constructor(
 
     // Legacy method
     fun calculateTank(type: CalculatorEngine.TankType, capacity: Double, height: Double, fcu: Double, fy: Double) {
-        calculateTankPro(type, capacity, height, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
+        calculateTankPro(type, capacity, height, fcu, fy, 12, CalculatorEngine.AppDesignCode.EGYPTIAN)
     }
 
     fun saveTank(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
@@ -124,8 +124,8 @@ class TankViewModel @Inject constructor(
                         foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                         // R3 engineering annotations
                         codeName = when (res.code) {
-                            CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                            CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                            CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                            CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                             else -> "ECP 203-2020"
                         },
                         fcu = res.fcu,
@@ -138,8 +138,8 @@ class TankViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(

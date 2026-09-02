@@ -2,7 +2,6 @@ package com.civileg.app.utils
 
 import android.os.Parcelable
 import com.civileg.app.utils.CalculatorEngine.*
-import com.civileg.app.domain.calculations.base.RetainingWallResult
 import kotlinx.parcelize.Parcelize
 import kotlin.math.*
 
@@ -248,7 +247,7 @@ object BbsGenerator {
         return entries
     }
 
-    fun generateRetainingWallBbs(mark: String, result: com.civileg.app.domain.RetainingWallResult): List<BbsEntry> {
+    fun generateRetainingWallBbs(mark: String, result: CalculatorEngine.RetainingWallResult): List<BbsEntry> {
         val entries = mutableListOf<BbsEntry>()
         // Stem main steel (Shape 21 - L bar)
         val h = 3000.0 // Placeholder

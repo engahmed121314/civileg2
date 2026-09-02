@@ -222,15 +222,7 @@ object LiveDrawingModel {
                    else res.barDiameter.toDouble()
         val nX = maxOf(2, res.barsX)
         val nY = maxOf(2, res.barsY)
-        val distribution = if (res.reinforcementTopX > 0 && res.topBarDiameter > 0)
-            FootingDistributionSteel(
-                barsPerMeter = res.reinforcementTopY,
-                diameterMm = res.topBarDiameter.toDouble(),
-                spacingMm = ((res.width - 2 * cover) / (maxOf(2, res.reinforcementTopY) - 1)).coerceAtLeast(50.0),
-                astRequired = 0.0,
-                astProvided = 0.0
-            )
-        else null
+        val distribution: FootingDistributionSteel? = null
 
         val model = DrawingModelBuilder.buildFooting(
             project = projectName,
@@ -429,8 +421,8 @@ object LiveDrawingModel {
         val heelLengthMm = (res.baseWidth - toeLengthMm - res.stemThickness).coerceAtLeast(0.0)
         val stemFreeHeightMm = (res.height * 1000.0 - res.stemThickness).coerceAtLeast(100.0)
         val cover = when (res.code) {
-            CalculatorEngine.DesignCode.ACI -> 75.0
-            CalculatorEngine.DesignCode.SAUDI -> 65.0
+            CalculatorEngine.AppDesignCode.ACI -> 75.0
+            CalculatorEngine.AppDesignCode.SAUDI -> 65.0
             else -> 50.0
         }
         val stemPerMetre = res.stemReinforcement.numBars.coerceAtLeast(5)
@@ -723,15 +715,15 @@ object LiveDrawingModel {
     fun steelMember(
         res: SteelMemberResult,
         lengthMm: Double,
-        steelCode: CalculatorEngine.DesignCode,
+        steelCode: CalculatorEngine.AppDesignCode,
         projectName: String,
         drawingNumber: String = "ST-01",
         date: String = LocalDate.now().toString()
     ): DrawingModel {
         val coreCode = steelCode.toCore()
         val codeLabel = when (steelCode) {
-            CalculatorEngine.DesignCode.ACI -> "AISC 360-16"
-            CalculatorEngine.DesignCode.SAUDI -> "SBC 306"
+            CalculatorEngine.AppDesignCode.ACI -> "AISC 360-16"
+            CalculatorEngine.AppDesignCode.SAUDI -> "SBC 306"
             else -> "ECP 205-2007"
         }
         val member = SteelMemberReinforcementResult(
@@ -927,10 +919,10 @@ object LiveDrawingModel {
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
-    private fun CalculatorEngine.DesignCode.toCore(): CoreDesignCode = when (this) {
-        CalculatorEngine.DesignCode.EGYPTIAN -> CoreDesignCode.ECP
-        CalculatorEngine.DesignCode.ACI -> CoreDesignCode.ACI
-        CalculatorEngine.DesignCode.SAUDI -> CoreDesignCode.SBC
+    private fun CalculatorEngine.AppDesignCode.toCore(): CoreDesignCode = when (this) {
+        CalculatorEngine.AppDesignCode.EGYPTIAN -> CoreDesignCode.ECP
+        CalculatorEngine.AppDesignCode.ACI -> CoreDesignCode.ACI
+        CalculatorEngine.AppDesignCode.SAUDI -> CoreDesignCode.SBC
     }
 
     private fun titleBlock(

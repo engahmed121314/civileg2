@@ -3,7 +3,7 @@ package com.civileg.app.domain.calculations
 import com.civileg.app.domain.calculations.aci.ACIRetainingWall
 import com.civileg.app.domain.calculations.base.RetainingWallDesign
 import com.civileg.app.domain.calculations.base.RetainingWallInput as AppRetainingWallInput
-import com.civileg.app.domain.calculations.base.RetainingWallResult
+import com.civileg.app.domain.calculations.base.DomainRetainingWallResult
 import com.civileg.app.domain.calculations.base.WallSafetyCheck
 import com.civileg.app.domain.calculations.ecp.ECPRetainingWall
 import com.civileg.app.domain.calculations.sbc.SBCRetainingWall
@@ -66,7 +66,7 @@ class RetainingWallParityTest {
 
     private lateinit var currentCase: Case
 
-    private fun appResult(c: Case): RetainingWallResult {
+    private fun appResult(c: Case): DomainRetainingWallResult {
         currentCase = c
         val wall: RetainingWallDesign = when (c.code) {
             DesignCode.ECP -> ECPRetainingWall()

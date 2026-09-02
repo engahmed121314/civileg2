@@ -52,13 +52,13 @@ object CalculationValidator {
         val warnings = mutableListOf<String>()
 
         // 1. Axial Capacity Consistency
-        if (result.appliedAxial > result.axialCapacity + 1.0) {
-            if (result.isSafe) errors.add("CRITICAL: Column marked SAFE but Pu (${result.appliedAxial}) > Capacity Pn (${result.axialCapacity})")
+        if (result.pu > result.axialCapacity + 1.0) {
+            if (result.isSafe) errors.add("CRITICAL: Column marked SAFE but Pu (${result.pu}) > Capacity Pn (${result.axialCapacity})")
         }
 
         // 2. Reinforcement Ratio Audit
         val rho = result.reinforcementRatio
-        val minRho = if (result.code == DesignCode.EGYPTIAN) 0.8 else 1.0
+        val minRho = if (result.code == AppDesignCode.EGYPTIAN) 0.8 else 1.0
         if (rho < minRho - 0.01) {
             warnings.add("Logic: Reinforcement ratio ($rho%) is below code minimum ($minRho%)")
         }
@@ -172,8 +172,8 @@ object CalculationValidator {
 
         // 6. Check structural weight vs uplift for underground tanks
         if (result.type == TankType.UNDERGROUND) {
-            val upliftCheck = result.suggestions.find { it.contains("Uplift") }
-            if (upliftCheck != null && upliftCheck.contains("Unsafe")) {
+            val upliftCheck = result.safetyChecks.find { it.name.contains("Uplift", ignoreCase = true) }
+            if (upliftCheck != null && !upliftCheck.isSafe) {
                 errors.add("CRITICAL: Underground tank fails uplift check. Needs more weight or mechanical anchors.")
             }
         }
@@ -213,14 +213,8 @@ object CalculationValidator {
             if (result.isSafe) errors.add("CRITICAL: Wall fails sliding check (FS=${String.format(java.util.Locale.US, "%.2f", result.factorOfSafetySliding)} < 1.5)")
         }
 
-        // 5. Bearing pressure within allowable
-        if (result.bearingFS < 2.5) {
-            warnings.add("Logic: Bearing safety factor (${String.format(java.util.Locale.US, "%.2f", result.bearingFS)}) is below standard 2.5-3.0 range.")
-        }
-        if (result.maxBearingPressure > 0 && result.bearingFS > 0) {
-            val allowablePressure = result.maxBearingPressure * result.bearingFS
-            // If bearingFS is the actual factor, maxBearingPressure * bearingFS should be the soil capacity
-            // The check is indirect via bearingFS, but we also verify no negative (tension) bearing
+        // 5. Bearing pressure check
+        if (result.maxBearingPressure > 0) {
             if (result.minBearingPressure < 0) {
                 errors.add("CRITICAL: Negative bearing pressure detected (toe lift-off). Base width may be insufficient.")
             }

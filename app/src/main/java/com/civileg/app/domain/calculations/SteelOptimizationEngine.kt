@@ -23,7 +23,7 @@ object SteelOptimizationEngine {
                 steelSec,
                 memberType,
                 inputs,
-                com.civileg.app.utils.CalculatorEngine.DesignCode.fromDomain(code)
+                com.civileg.app.utils.CalculatorEngine.AppDesignCode.fromDomain(code)
             )
             res.isSafe
         }

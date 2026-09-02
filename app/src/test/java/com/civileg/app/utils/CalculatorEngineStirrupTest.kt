@@ -22,10 +22,10 @@ class CalculatorEngineStirrupTest {
     private fun design(
         width: Double,
         customShear: Double? = null,
-        code: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN
+        code: CalculatorEngine.AppDesignCode = CalculatorEngine.AppDesignCode.EGYPTIAN
     ) = engine().designBeam(
         width = width, height = 500.0, span = 5.0,
-        fcu = 25.0, fy = 400.0, deadLoad = 10.0, liveLoad = 5.0,
+        fcu = 25.0, fy = 400.0,         deadLoad = 10.0, liveLoad = 5.0,
         preferredDiameter = 16, code = code,
         customShear = customShear
     )

@@ -49,7 +49,7 @@ class RetainingWallViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode
+        code: CalculatorEngine.AppDesignCode
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -82,7 +82,7 @@ class RetainingWallViewModel @Inject constructor(
 
     // Legacy method for backward compatibility
     fun calculateRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double) {
-        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, CalculatorEngine.DesignCode.EGYPTIAN)
+        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, CalculatorEngine.AppDesignCode.EGYPTIAN)
     }
 
     fun saveRetainingWall(projectId: Long, name: String, result: CalculatorEngine.RetainingWallResult) {
@@ -133,8 +133,8 @@ class RetainingWallViewModel @Inject constructor(
                     pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        CalculatorEngine.AppDesignCode.ACI -> "ACI 318"
+                        CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304"
                         else -> "ECP 203"
                     }
                     val inputsMap = mapOf(

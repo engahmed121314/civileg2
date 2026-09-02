@@ -54,7 +54,7 @@ class StaircaseView @JvmOverloads constructor(
             invalidate()
         }
     
-    var stairType: CalculatorEngine.StairType = CalculatorEngine.StairType.SINGLE_FLIGHT
+    var stairType: CalculatorEngine.StairType = CalculatorEngine.StairType.STRAIGHT
         set(value) {
             field = value
             invalidate()
@@ -94,8 +94,8 @@ class StaircaseView @JvmOverloads constructor(
         val availableHeight = height.toFloat() - 2 * padding
         
         val totalWidth = when(stairType) {
-            CalculatorEngine.StairType.SINGLE_FLIGHT -> (treadWidth * numSteps)
-            CalculatorEngine.StairType.DOUBLE_FLIGHT -> (treadWidth * (numSteps/2)) + landingWidth
+            CalculatorEngine.StairType.STRAIGHT -> (treadWidth * numSteps)
+            CalculatorEngine.StairType.DOG_LEG -> (treadWidth * (numSteps/2)) + landingWidth
             else -> (treadWidth * numSteps)
         }
         val totalHeight = riserHeight * numSteps
@@ -125,7 +125,7 @@ class StaircaseView @JvmOverloads constructor(
             path.lineTo(currentX, currentY)
         }
 
-        if (stairType == CalculatorEngine.StairType.DOUBLE_FLIGHT) {
+        if (stairType == CalculatorEngine.StairType.DOG_LEG) {
             currentX += landingWidth * scale
             path.lineTo(currentX, currentY)
         }

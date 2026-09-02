@@ -44,7 +44,7 @@ class TankInputActivity : AppCompatActivity() {
 
     private fun setupSpinners() {
         // Design Codes
-        val codes = CalculatorEngine.DesignCode.values()
+        val codes = CalculatorEngine.AppDesignCode.values()
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes.map { it.displayName })
 
         // Tank Types
@@ -95,7 +95,7 @@ class TankInputActivity : AppCompatActivity() {
         val fy = binding.etFy.text.toString().toDoubleOrNull() ?: return
         
         val type = CalculatorEngine.TankType.values()[binding.spinnerTankType.selectedItemPosition]
-        val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+        val code = CalculatorEngine.AppDesignCode.values()[binding.spinnerCode.selectedItemPosition]
         val diameter = binding.spinnerDiameter.selectedItem.toString().replace(" mm", "").toInt()
 
         viewModel.calculateTankPro(type, capacity, height, fcu, fy, diameter, code)
@@ -112,7 +112,7 @@ class TankInputActivity : AppCompatActivity() {
                 binding.tvThickness.text = "Wall: ${result.wallThickness.toInt()}mm, Base: ${result.baseThickness.toInt()}mm"
                 
                 // Efficiency Logic (Placeholder or from engine if available)
-                val efficiency = if (result.isOptimal) 90 else 65
+                val efficiency = if (result.isSafe) 90 else 65
                 binding.tvEfficiency.text = "Efficiency Score: $efficiency%"
                 
                 val warnings = result.safetyChecks.filter { !it.isSafe }.map { it.name }

@@ -34,8 +34,9 @@ object DevelopmentLengthCalculator {
 
         // ECP 203 §4-2-5-1: Ld = alpha * beta * eta * (fy/gammaS) / (4 * fbu) * db
         val gammaS = 1.15
-        val gammaC = 1.5
-        val fbu = 0.3 * sqrt(fcu / gammaC)
+        // fbu = 0.6*sqrt(fcu) — the material safety factor is already carried
+        // inside the 0.6 coefficient (not 0.3/sqrt(gammaC)).
+        val fbu = 0.6 * sqrt(fcu)
         
         var factor = 1.0
         if (loc == BarLocation.TOP) factor *= 1.3

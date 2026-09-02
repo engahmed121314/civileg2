@@ -140,7 +140,7 @@ object CadDxfExporter {
         context: Context,
         res: com.civileg.app.domain.entities.SteelMemberResult,
         lengthMm: Double,
-        steelCode: CalculatorEngine.DesignCode,
+        steelCode: CalculatorEngine.AppDesignCode,
         projectName: String = "CIVILEG STEEL MEMBER"
     ): DxfExportOutcome? = runModelExport(
         context, "STEEL_MEMBER",

@@ -22,8 +22,7 @@ sealed class SteelSectionType(
     abstract fun getWebThickness(): Double
     abstract fun getFlangeThickness(): Double
 
-    val area: Double get() = getArea()
-    val weight: Double get() = area * 7.85e-3
+    val weight: Double get() = getArea() * 7.85e-3
     
     abstract fun getIx(): Double
     abstract fun getIy(): Double
@@ -34,17 +33,8 @@ sealed class SteelSectionType(
     abstract fun getJ(): Double
     abstract fun getCw(): Double
 
-    val ix: Double get() = getIx()
-    val iy: Double get() = getIy()
-    val sx: Double get() = getSx()
-    val sy: Double get() = getSy()
-    val zx: Double get() = getZx()
-    val zy: Double get() = getZy()
-    val j: Double get() = getJ()
-    val cw: Double get() = getCw()
-
-    val rx: Double get() = if (area > 0) sqrt(ix / area) else 0.0
-    val ry: Double get() = if (area > 0) sqrt(iy / area) else 0.0
+    val rx: Double get() = if (getArea() > 0) sqrt(getIx() / getArea()) else 0.0
+    val ry: Double get() = if (getArea() > 0) sqrt(getIy() / getArea()) else 0.0
 
     @Parcelize
     data class ISection(
@@ -158,26 +148,26 @@ sealed class SteelSectionType(
     
     @Parcelize
     data class RHS(
-        val width: Double,
+        val w: Double,
         val height: Double,
         val thickness: Double,
         val grade: SteelGrade,
         val customName: String? = null
-    ) : SteelSectionType("Rectangular Hollow Section", customName ?: "RHS ${width.toInt()}x${height.toInt()}x${thickness.toInt()}", "AISC 360-B4 / ECP 205-3") {
-        override fun getArea() = 2 * (width + height - 2 * thickness) * thickness
+    ) : SteelSectionType("Rectangular Hollow Section", customName ?: "RHS ${w.toInt()}x${height.toInt()}x${thickness.toInt()}", "AISC 360-B4 / ECP 205-3") {
+        override fun getArea() = 2 * (w + height - 2 * thickness) * thickness
         override fun getDepth() = height
-        override fun getWidth() = width
+        override fun getWidth() = w
         override fun getWebThickness() = thickness
         override fun getFlangeThickness() = thickness
-        override fun getIx() = (width * height.pow(3) - (width - 2 * thickness) * (height - 2 * thickness).pow(3)) / 12.0
-        override fun getIy() = (height * width.pow(3) - (height - 2 * thickness) * (width - 2 * thickness).pow(3)) / 12.0
+        override fun getIx() = (w * height.pow(3) - (w - 2 * thickness) * (height - 2 * thickness).pow(3)) / 12.0
+        override fun getIy() = (height * w.pow(3) - (height - 2 * thickness) * (w - 2 * thickness).pow(3)) / 12.0
         override fun getSx() = getIx() / (height / 2.0)
-        override fun getSy() = getIy() / (width / 2.0)
+        override fun getSy() = getIy() / (w / 2.0)
         override fun getZx() = getSx() * 1.08
         override fun getZy() = getSy() * 1.08
         override fun getJ(): Double {
             val hw = height - 2 * thickness
-            val bw = width - 2 * thickness
+            val bw = w - 2 * thickness
             val A = hw * bw
             val peri = 2.0 * (hw + bw)
             return if (peri > 0) 4.0 * A * A * thickness / peri else 0.0
@@ -188,33 +178,33 @@ sealed class SteelSectionType(
     @Parcelize
     data class TSection(
         val flangeWidth: Double,
-        val flangeThickness: Double,
+        val ft: Double,
         val webDepth: Double,
-        val webThickness: Double,
+        val wt: Double,
         val grade: SteelGrade,
         val customName: String? = null
     ) : SteelSectionType("T Section", customName ?: "T ${flangeWidth.toInt()}x${webDepth.toInt()}", "AISC 360-B4") {
-        override fun getArea() = flangeWidth * flangeThickness + webDepth * webThickness
-        override fun getDepth() = webDepth + flangeThickness
+        override fun getArea() = flangeWidth * ft + webDepth * wt
+        override fun getDepth() = webDepth + ft
         override fun getWidth() = flangeWidth
-        override fun getWebThickness() = webThickness
-        override fun getFlangeThickness() = flangeThickness
+        override fun getWebThickness() = wt
+        override fun getFlangeThickness() = ft
         override fun getIx(): Double {
-            val totalH = webDepth + flangeThickness
-            val yBar = (flangeWidth * flangeThickness * (totalH - flangeThickness / 2.0) + webThickness * webDepth * (webDepth / 2.0)) / getArea()
-            return (flangeWidth * flangeThickness.pow(3) / 12.0 + flangeWidth * flangeThickness * (totalH - flangeThickness / 2.0 - yBar).pow(2)) +
-                   (webThickness * webDepth.pow(3) / 12.0 + webThickness * webDepth * (webDepth / 2.0 - yBar).pow(2))
+            val totalH = webDepth + ft
+            val yBar = (flangeWidth * ft * (totalH - ft / 2.0) + wt * webDepth * (webDepth / 2.0)) / getArea()
+            return (flangeWidth * ft.pow(3) / 12.0 + flangeWidth * ft * (totalH - ft / 2.0 - yBar).pow(2)) +
+                   (wt * webDepth.pow(3) / 12.0 + wt * webDepth * (webDepth / 2.0 - yBar).pow(2))
         }
-        override fun getIy() = flangeWidth.pow(3) * flangeThickness / 12.0 + webDepth * webThickness.pow(3) / 12.0
+        override fun getIy() = flangeWidth.pow(3) * ft / 12.0 + webDepth * wt.pow(3) / 12.0
         override fun getSx(): Double {
-            val totalH = webDepth + flangeThickness
-            val yBar = (flangeWidth * flangeThickness * (totalH - flangeThickness / 2.0) + webThickness * webDepth * (webDepth / 2.0)) / getArea()
+            val totalH = webDepth + ft
+            val yBar = (flangeWidth * ft * (totalH - ft / 2.0) + wt * webDepth * (webDepth / 2.0)) / getArea()
             return maxOf(getIx() / yBar, getIx() / (totalH - yBar))
         }
         override fun getSy() = getIy() / (flangeWidth / 2.0)
         override fun getZx() = getSx() * 1.05
         override fun getZy() = getSy() * 1.05
-        override fun getJ() = (flangeWidth * flangeThickness.pow(3) + webDepth * webThickness.pow(3)) / 3.0
+        override fun getJ() = (flangeWidth * ft.pow(3) + webDepth * wt.pow(3)) / 3.0
         override fun getCw() = 0.0
     }
     
@@ -302,6 +292,15 @@ val SteelSectionType.depth: Double get() = getDepth()
 val SteelSectionType.width: Double get() = getWidth()
 val SteelSectionType.webThickness: Double get() = getWebThickness()
 val SteelSectionType.flangeThickness: Double get() = getFlangeThickness()
+val SteelSectionType.area: Double get() = getArea()
+val SteelSectionType.ix: Double get() = getIx()
+val SteelSectionType.iy: Double get() = getIy()
+val SteelSectionType.sx: Double get() = getSx()
+val SteelSectionType.sy: Double get() = getSy()
+val SteelSectionType.zx: Double get() = getZx()
+val SteelSectionType.zy: Double get() = getZy()
+val SteelSectionType.j: Double get() = getJ()
+val SteelSectionType.cw: Double get() = getCw()
 
 enum class SteelGrade(val displayName: String, val fy: Double, val fu: Double, val codeReference: String) : Parcelable {
     ST37("St37", 240.0, 360.0, "ECP 205-2.1"),

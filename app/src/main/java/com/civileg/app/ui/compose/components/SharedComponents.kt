@@ -70,8 +70,8 @@ import com.civileg.app.utils.CalculatorEngine
  */
 @Composable
 fun DesignCodeSelectorRow(
-    selectedCode: CalculatorEngine.DesignCode,
-    onCodeSelected: (CalculatorEngine.DesignCode) -> Unit,
+    selectedCode: CalculatorEngine.AppDesignCode,
+    onCodeSelected: (CalculatorEngine.AppDesignCode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -86,7 +86,7 @@ fun DesignCodeSelectorRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            CalculatorEngine.DesignCode.entries.forEach { code ->
+            CalculatorEngine.AppDesignCode.entries.forEach { code ->
                 FilterChip(
                     selected = code == selectedCode,
                     onClick = { onCodeSelected(code) },

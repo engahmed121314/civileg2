@@ -235,7 +235,7 @@ object ColumnDetailingEngine {
 
         // ── §17 P-M interaction: genuine fiber curve (ECP solver) or honest omission ──
         var pmCurve: List<InteractionPoint> = emptyList()
-        if (result.code == CalculatorEngine.DesignCode.EGYPTIAN) {
+        if (result.code == CalculatorEngine.AppDesignCode.EGYPTIAN) {
             pmCurve = InteractionDiagramSolver.generateCurve(
                 fcu = fcuMPa, fy = fyMPa,
                 section = RectangularSection(width = result.width, depth = result.depth),
@@ -250,7 +250,7 @@ object ColumnDetailingEngine {
         } else {
             warnings.add("P-M interaction curve omitted: fiber solver implements ECP 203 §4-2-3 only.")
         }
-        val designMu = sqrt(result.mx * result.mx + result.my * result.my)
+        val designMu = sqrt(result.muX * result.muX + result.muY * result.muY)
 
         // ── BBS rows ──
         val rows = buildList {
@@ -286,8 +286,8 @@ object ColumnDetailingEngine {
         // ── Calc strip (real outputs only) ──
         val strip = buildList {
             add("Pu" to "%.1f kN".format(result.pu))
-            add("Mx" to "%.1f kN.m".format(result.mx))
-            add("My" to "%.1f kN.m".format(result.my))
+            add("Mx" to "%.1f kN.m".format(result.muX))
+            add("My" to "%.1f kN.m".format(result.muY))
             add("Axial capacity" to "%.1f kN".format(result.axialCapacity))
             biaxial?.let {
                 add("Biaxial method" to it.formula.take(40))

@@ -12,7 +12,7 @@ class ColumnDetailingEngineTest {
 
     private fun eng() = CalculatorEngine(mockk(relaxed = true))
 
-    private fun build(code: CalculatorEngine.DesignCode) =
+    private fun build(code: CalculatorEngine.AppDesignCode) =
         run {
             val res = eng().designColumn(
                 width = 300.0, depth = 500.0,
@@ -35,7 +35,7 @@ class ColumnDetailingEngineTest {
 
     @Test
     fun `layout places exact bar count with corners first`() {
-        val d = build(CalculatorEngine.DesignCode.EGYPTIAN)
+        val d = build(CalculatorEngine.AppDesignCode.EGYPTIAN)
         assertEquals(4, d.layout.cornerBars.size)
         assertEquals(d.mainCount, d.layout.allBars.size)
         // corner bars sit at the four section corners (inset symmetrically)
@@ -46,7 +46,7 @@ class ColumnDetailingEngineTest {
 
     @Test
     fun `bars keep minimum clear spacing`() {
-        val d = build(CalculatorEngine.DesignCode.EGYPTIAN)
+        val d = build(CalculatorEngine.AppDesignCode.EGYPTIAN)
         val minClear = d.layout.minBarSpacing() - d.mainDiaMm
         if (minClear < 40.0) {
             // §27: congested layout is acceptable ONLY when surfaced as a
@@ -60,7 +60,7 @@ class ColumnDetailingEngineTest {
 
     @Test
     fun `tie zones cover full height with densified ends`() {
-        val d = build(CalculatorEngine.DesignCode.EGYPTIAN)
+        val d = build(CalculatorEngine.AppDesignCode.EGYPTIAN)
         assertTrue(d.tieZones.isNotEmpty())
         assertEquals(0.0, d.tieZones.first().startMm, 1e-6)
         assertEquals(3200.0, d.tieZones.last().endMm, 1e-6)
@@ -71,19 +71,19 @@ class ColumnDetailingEngineTest {
 
     @Test
     fun `pm interaction curve is genuine for ECP and honestly omitted for ACI`() {
-        val ecp = build(CalculatorEngine.DesignCode.EGYPTIAN)
+        val ecp = build(CalculatorEngine.AppDesignCode.EGYPTIAN)
         assertTrue("ECP must produce a fiber P-M curve", ecp.pmCurve.size >= 10)
         assertTrue(ecp.pmCurve.any { it.P > 0 })
         assertTrue(ecp.pmCurve.maxOf { it.M } > 0)
 
-        val aci = build(CalculatorEngine.DesignCode.ACI)
+        val aci = build(CalculatorEngine.AppDesignCode.ACI)
         assertTrue(aci.pmCurve.isEmpty())
         assertTrue(aci.warnings.any { it.contains("P-M") })
     }
 
     @Test
     fun `design point lies inside the demand plane`() {
-        val d = build(CalculatorEngine.DesignCode.EGYPTIAN)
+        val d = build(CalculatorEngine.AppDesignCode.EGYPTIAN)
         val expectedMu = sqrt(120.0 * 120.0 + 40.0 * 40.0)
         assertEquals(expectedMu, d.designMuKnM, 1e-6)
         // Engine adds FACTORED member self-weight (ECP γg=1.4):

@@ -168,9 +168,9 @@ class BeamDesignFragment : Fragment() {
             val wastePercent = binding.etWasteFactor.text.toString().toDoubleOrNull() ?: 5.0
 
             val code = when(selectedCode) {
-                DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
-                DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
-                DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+                DesignCode.ECP -> CalculatorEngine.AppDesignCode.EGYPTIAN
+                DesignCode.ACI -> CalculatorEngine.AppDesignCode.ACI
+                DesignCode.SBC -> CalculatorEngine.AppDesignCode.SAUDI
             }
 
             // Perform Analysis for BMD/SFD using ContinuousBeamAnalysis
@@ -190,9 +190,7 @@ class BeamDesignFragment : Fragment() {
                 deadLoad = dl, // Note: CalculatorEngine currently takes dl/ll separately, 
                 liveLoad = ll, // but we used combined load in spans for analysis.
                 preferredDiameter = preferredBar,
-                code = code,
-                customMoment = maxMoment,
-                customShear = maxShear
+                code = code
             )
 
             lastResult = result
@@ -324,8 +322,8 @@ class BeamDesignFragment : Fragment() {
                 ),
                 shearResult = ShearReinforcementResult(
                     concreteShearCapacity = result.shearCapacity * 0.6,
-                    requiredArea = result.stirrups.area,
-                    providedArea = result.stirrups.area,
+                    requiredArea = result.stirrups.numLegs * Math.PI / 4.0 * result.stirrups.diameter * result.stirrups.diameter,
+                    providedArea = result.stirrups.numLegs * Math.PI / 4.0 * result.stirrups.diameter * result.stirrups.diameter,
                     requiredShearReinforcement = 200.0,
                     providedShearReinforcement = 250.0,
                     stirrupDiameter = result.stirrups.diameter.toDouble(),

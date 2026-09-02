@@ -915,7 +915,7 @@ object ProfessionalEnglishPdfReporter {
                     "Design per ECP 203 (γc=1.5, γs=1.15, R-method). Equivalent ACI 318-19/SBC 304 result would use φ=0.9, f''c=0.8·fcu (Rn-ρ) — typically yields 3-8% lower As for the same Mu."
             }
         }
-        val detail = " [\ element: comparison is qualitative; full recalculation per alternate code would be required for exact values.]"
+        val detail = " [\\element: comparison is qualitative; full recalculation per alternate code would be required for exact values.]"
         val fullText = comparisonText + detail
         val ctx = bilingualContext
         if (ctx != null && ArabicFontProvider.containsArabic(fullText)) {

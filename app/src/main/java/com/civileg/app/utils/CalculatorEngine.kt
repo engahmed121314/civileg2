@@ -49,6 +49,7 @@ class CalculatorEngine @Inject constructor(
             get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
     }
     enum class SupportType(val displayName: String) {
+        SIMPLY_SUPPORTED("Simply Supported"),
         HINGED_HINGED("Hinged-Hinged"),
         ROLLER_HINGED("Roler-Hinged"),
         FIXED_HINGED("Fixed-Hinged"),
@@ -272,15 +273,33 @@ class CalculatorEngine @Inject constructor(
     ): ColumnResult {
         val domainCode = if (code == AppDesignCode.EGYPTIAN) CoreDesignCode.ECP else if (code == AppDesignCode.ACI) CoreDesignCode.ACI else CoreDesignCode.SBC
         val engine = CalculationFactory.getColumnDesign(domainCode)
-        val res = engine.calculateReinforcement(fcu, fy, width, depth, pu, mx, my, CoreLoadCombination.DEAD_LIVE)
-        
+
+        // factored column self-weight  (γg × volume × 25 kN/m³)
+        val selfWeightKn = (width / 1000.0) * (depth / 1000.0) * (clearHeight / 1000.0) * 25.0
+        val puDesign = pu + domainCode.getDeadLoadFactor() * selfWeightKn
+
+        val res = engine.calculateReinforcement(fcu, fy, width, depth, puDesign, mx, my, CoreLoadCombination.DEAD_LIVE)
+
         val concVol = (width * depth * clearHeight) / 1e9
         val steelWt = res.astProvided * (clearHeight / 1000.0) * 7.85e-3
 
+        // 3-zone tie schedule: support / mid-span / support
+        val endZoneLen = clearHeight / 6.0
+        val tieDia = res.tiesDiameter.toInt().coerceAtLeast(8)
+        val spacingEnd = minOf(res.tiesSpacing, 150.0)
+        val spacingMid = res.tiesSpacing
+
+        val zones = listOf(
+            StirrupZone("Support (Bottom)", 0.0, endZoneLen, spacingEnd, diameter = tieDia, description = "Densified ties"),
+            StirrupZone("Mid-span", endZoneLen, clearHeight - endZoneLen, spacingMid, diameter = tieDia, description = "Normal ties"),
+            StirrupZone("Support (Top)", clearHeight - endZoneLen, clearHeight, spacingEnd, diameter = tieDia, description = "Densified ties")
+        )
+
         return ColumnResult(
-            width, depth, pu, mx, my,
+            width, depth, puDesign, mx, my,
             ReinforcementBar(res.numberOfBars, res.barDiameter.toInt(), description = "${res.numberOfBars}Ø${res.barDiameter.toInt()}"),
-            StirrupReinforcement(res.tiesDiameter.toInt(), res.tiesSpacing),
+            StirrupReinforcement(tieDia, spacingEnd, description = "${tieDia}Ø ties", zones = zones,
+                condensationZoneLength = endZoneLen, spacingAtSupport = spacingEnd, spacingAtMidspan = spacingMid),
             res.isSafe, 0.0, concVol, steelWt, concVol * 4000.0 + steelWt * 45.0, code,
             utilizationRatio = res.utilizationRatio,
             reinforcementArea = res.astProvided,
@@ -291,28 +310,125 @@ class CalculatorEngine @Inject constructor(
     // ── BEAM ──
     fun designBeam(
         width: Double, height: Double, span: Double, fcu: Double, fy: Double,
-        deadLoad: Double, liveLoad: Double, preferredDiameter: Int, code: AppDesignCode
+        deadLoad: Double, liveLoad: Double, preferredDiameter: Int, code: AppDesignCode,
+        supportType: SupportType = SupportType.SIMPLY_SUPPORTED,
+        customShear: Double? = null
     ): BeamResult {
         val domainCode = if (code == AppDesignCode.EGYPTIAN) CoreDesignCode.ECP else if (code == AppDesignCode.ACI) CoreDesignCode.ACI else CoreDesignCode.SBC
         val engine = CalculationFactory.getBeamDesign(domainCode)
         val wu = domainCode.getDeadLoadFactor() * deadLoad + domainCode.getLiveLoadFactor() * liveLoad
-        val mu = wu * (span/1000.0).pow(2) / 8.0
-        val vu = wu * (span/1000.0) / 2.0
+        val isCantilever = supportType == SupportType.CANTILEVER
+
+        // Statics: span is in metres so the w·L² formulas yield kN·m directly.
+        val mu = if (isCantilever) wu * span * span / 2.0 else wu * span * span / 8.0
+        val vu = customShear ?: if (isCantilever) wu * span else wu * span / 2.0
         val d = height - 50.0
+        val spanMm = span * 1000.0
 
         val flex = engine.calculateFlexureReinforcement(fcu, fy, width, d, height, mu, CoreLoadCombination.DEAD_LIVE)
         val shear = engine.calculateShearReinforcement(fcu, fy, width, d, vu, 0.0, CoreLoadCombination.DEAD_LIVE)
 
+        // ---------- Stirrup / transverse design (zone schedule) ----------
+        val numLegs = when {
+            width < 400 -> 2
+            width < 600 -> 4
+            else -> 6
+        }
+        val maxSpacing = 200.0
+        val vStress = vu * 1000.0 / (width * d)   // MPa
+        val vc = 0.16 * sqrt(fcu)                 // MPa concrete shear capacity (ECP basic)
+        val qmax = 0.7 * sqrt(fcu)                // MPa maximum shear stress
+        val vs = vStress - vc
+
+        val shearSafe = vStress <= qmax
+        val criticalBand = vs > 1.5 * vc
+        val spacingLimit = if (criticalBand) min(d / 4.0, 100.0) else maxSpacing
+
+        var stirrupDia = 8
+        var supportSpacing: Double
+        if (vStress <= vc) {
+            supportSpacing = maxSpacing
+        } else {
+            val vcKn = vc * width * d / 1000.0           // kN concrete contribution
+            val vsKn = (vu - vcKn).coerceAtLeast(0.0)    // kN steel shear
+            fun requiredSpacing(dia: Int, legs: Int): Double {
+                val area = legs * PI * dia * dia / 4.0   // mm²
+                return area * fy * d / (vsKn * 1000.0)   // mm
+            }
+            var sReq = requiredSpacing(stirrupDia, numLegs)
+            // Upgrade Ø8 -> Ø10 when the support spacing drops below the
+            // 100 mm practical minimum.
+            if (sReq < 100.0) {
+                stirrupDia = 10
+                sReq = requiredSpacing(stirrupDia, numLegs)
+            }
+            supportSpacing = (round(sReq / 10.0) * 10.0).coerceIn(50.0, spacingLimit)
+        }
+        val midSpacing = maxSpacing
+
+        val condensationZoneLength = min(2.0 * height, spanMm / 4.0)
+        fun zoneDescription(dia: Int, sp: Double, legs: Int) =
+            "\u00D8$dia @ ${sp.toInt()} mm c/c \u00B7 $legs-Leg"
+
+        val supportDesc = zoneDescription(stirrupDia, supportSpacing, numLegs)
+        val midDesc = zoneDescription(stirrupDia, midSpacing, numLegs)
+
+        val zones = listOf(
+            StirrupZone("Support Zone (Left)", 0.0, condensationZoneLength, supportSpacing, numLegs, stirrupDia, supportDesc),
+            StirrupZone("Mid-Span Zone", condensationZoneLength, spanMm - condensationZoneLength, midSpacing, numLegs, stirrupDia, midDesc),
+            StirrupZone("Support Zone (Right)", spanMm - condensationZoneLength, spanMm, supportSpacing, numLegs, stirrupDia, supportDesc)
+        )
+
+        // Steel weight: flexure bars + multi-ring stirrup perimeter + 10% laps.
+        val flexWeight = flex.astProvided * span * 0.00785
+        val innerRings = (numLegs - 2) / 2
+        val ringPerimeter = (2.0 * (width + height) - 8.0 * 25.0) * (1 + innerRings) / 1000.0
+        val ringWeight = ringPerimeter * (stirrupDia.toDouble() * stirrupDia / 162.0)
+        fun stirrupCount(zoneLength: Double, spacing: Double): Int = (zoneLength / spacing).toInt() + 1
+        val stirrupWeight = zones.sumOf { stirrupCount(it.endLocation - it.startLocation, it.spacing) * ringWeight }
+        val steelWt = (flexWeight + stirrupWeight) * 1.10
+
+        val warnings = mutableListOf<String>()
+        warnings.addAll(flex.warnings)
+        warnings.addAll(shear.warnings)
+        if (vStress > vc) warnings.add("High shear: stirrup spacing reduced to ${supportSpacing.toInt()} mm at supports")
+        if (vStress > qmax) warnings.add("Shear stress exceeds qmax - section inadequate")
+
+        val shearCheck = DesignSafetyCheck("Shear Stress", vStress, qmax, "MPa", shearSafe)
+        val spacingCheck = DesignSafetyCheck("Max Stirrup Spacing", supportSpacing, spacingLimit, "mm", supportSpacing <= spacingLimit)
+        val safetyChecks = listOf(shearCheck, spacingCheck)
+        val isSafe = shearSafe && supportSpacing <= spacingLimit && flex.isSafe
+
         val concVol = (width * height * span) / 1e9
-        val steelWt = flex.astProvided * (span / 1000.0) * 7.85e-3
+        val momentCapacity = if (flex.utilizationRatio > 0) mu / flex.utilizationRatio else mu
+        val tensionBar = ReinforcementBar(
+            flex.numberOfBars, flex.barDiameter.toInt(),
+            description = "${flex.numberOfBars}\u03A6${flex.barDiameter.toInt()}"
+        )
 
         return BeamResult(
             width, height, mu, vu,
-            ReinforcementBar(flex.numberOfBars, flex.barDiameter.toInt()),
-            ReinforcementBar(2, 12),
-            StirrupReinforcement(shear.stirrupDiameter.toInt(), shear.stirrupSpacing),
-            isSafe = flex.isSafe && shear.isSafe, concreteVolume = concVol, steelWeight = steelWt,
-            cost = concVol * 4000.0 + steelWt * 45.0, code = code, appliedMoment = mu, appliedShear = vu,
+            reinforcementBottom = if (isCantilever) ReinforcementBar(2, 12) else tensionBar,
+            reinforcementTop = if (isCantilever) tensionBar else ReinforcementBar(2, 12),
+            stirrups = StirrupReinforcement(
+                diameter = stirrupDia,
+                spacing = supportSpacing,
+                description = supportDesc,
+                numLegs = numLegs,
+                zones = zones,
+                condensationZoneLength = condensationZoneLength,
+                spacingAtSupport = supportSpacing,
+                spacingAtMidspan = midSpacing
+            ),
+            safetyChecks = safetyChecks,
+            isSafe = isSafe, concreteVolume = concVol, steelWeight = steelWt,
+            cost = concVol * 4000.0 + steelWt * 45.0, code = code,
+            appliedMoment = mu, appliedShear = vu,
+            supportType = supportType,
+            momentCapacity = momentCapacity,
+            shearCapacity = vc * width * d / 1000.0,
+            steelRatio = if (width * d > 0) flex.astProvided / (width * d) * 100 else 0.0,
+            warnings = warnings,
             utilizationRatio = flex.utilizationRatio,
             trace = flex.trace
         )
@@ -407,7 +523,7 @@ class CalculatorEngine @Inject constructor(
         
         val res = engine.designStaircase(
             StaircaseInput(
-                stairType = com.civileg.app.domain.calculations.base.StairType.STRAIGHT,
+                stairType = com.civileg.app.domain.calculations.base.DomainStairType.STRAIGHT,
                 span = span, totalRise = rise, stairWidth = 1.2,
                 waistThickness = ts, fcu = fcu, fy = fy
             )
@@ -551,7 +667,7 @@ class CalculatorEngine @Inject constructor(
         }
 
         return if (memberType == SteelMemberType.COLUMN) {
-            val res = engine.checkColumnCombined(inputs.axialLoad, inputs.moment, inputs.momentY, secProps, grade, inputs.kX, inputs.length)
+            val res = engine.checkColumnCombined(inputs.axialLoad, inputs.moment, 0.0, secProps, grade, 1.0, inputs.length)
             SteelMemberResult(
                 sectionType = section, memberType = memberType,
                 axialCapacity = 0.0, flexuralCapacity = 0.0, shearCapacity = 0.0,
@@ -561,7 +677,7 @@ class CalculatorEngine @Inject constructor(
                 trace = res.trace
             )
         } else {
-            val res = engine.designBeam(inputs.moment, inputs.shear, inputs.liveLoad, inputs.length, secProps, grade, inputs.unbracedLength)
+            val res = engine.designBeam(inputs.moment, inputs.shear, 0.0, inputs.length, secProps, grade, inputs.unbracedLength)
             SteelMemberResult(
                 sectionType = section, memberType = memberType,
                 axialCapacity = 0.0, flexuralCapacity = 0.0, shearCapacity = 0.0,

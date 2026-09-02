@@ -150,10 +150,9 @@ class UnifiedTankDesign(
         val steelWeight = concreteVolume * STEEL_KG_PER_M3
         val cost = concreteVolume * CONCRETE_RATE + (steelWeight / 1000.0) * STEEL_RATE_PER_TON
 
-        // 8a. Legacy isSafe ordering: the app ECPTank computes isSafe BEFORE the
-        //     uplift row (so ECP isSafe ignores buoyancy); ACITank/SBCTank compute
-        //     it AFTER (buoyancy included). Byte-exact parity keeps both orders.
-        val preUpliftIsSafe = safetyChecks.all { it.isSafe }
+        // 8a. Legacy isSafe ordering: the app ECPTank computes isSafe AFTER the
+        //     uplift row (buoyancy included). ACITank/SBCTank also include it.
+        //     Byte-exact parity -> isSafe includes the uplift check for ALL codes.
 
         // 8b. Uplift — underground only; demand driven by EXTERNAL groundwater
         var factorOfSafetyUplift = 0.0
@@ -175,7 +174,7 @@ class UnifiedTankDesign(
             }
         }
 
-        val isSafe = if (isEcp) preUpliftIsSafe else safetyChecks.all { it.isSafe }
+        val isSafe = safetyChecks.all { it.isSafe }
 
         // 9. Recommendations
         applyRecommendations(recommendations, isUnderground, wallThickness)

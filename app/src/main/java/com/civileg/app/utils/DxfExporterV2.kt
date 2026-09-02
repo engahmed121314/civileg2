@@ -53,8 +53,8 @@ object DxfExporterV2 {
             spanMm = spanMm, coverMm = coverMm,
             supportTypeName = result.supportType.name,
             codeName = when (result.code) {
-                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+                CalculatorEngine.AppDesignCode.ACI -> "ACI 318-19"
+                CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304-2018"
                 else -> "ECP 203-2020"
             },
             fcuMPa = fcuMPa, fyMPa = fyMPa
@@ -158,8 +158,8 @@ object DxfExporterV2 {
         require(fcuMPa > 0 && fyMPa > 0) { "Column DXF export requires real material strengths." }
 
         val codeName = when (result.code) {
-            CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-            CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+            CalculatorEngine.AppDesignCode.ACI -> "ACI 318-19"
+            CalculatorEngine.AppDesignCode.SAUDI -> "SBC 304-2018"
             else -> "ECP 203-2020"
         }
         val det = ColumnDetailingEngine.build(

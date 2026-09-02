@@ -115,22 +115,24 @@ object CalculatorDetailingV4 {
     }
 
     private fun computeCutLength(b: BarDefinition): Double {
-        var len = b.straightLengthMm ?: b.segments.sumOf { it.length }
-        
-        // ADR-026: Apply Bend Deduction (خصم الثني)
-        // 45° -> 1d, 90° -> 2d, 135° -> 3d, 180° -> 4d
-        // Note: For simplicity, we derive bends from the shape or explicit segments.
+        // Explicit segments already encode the final cut length (including
+        // hooks), so no bend deduction is applied on top — doing so would
+        // double-count (ADR-026 is only for straight-length + allowances).
         val d = b.diameterMm.toDouble()
-        val deduction = when (b.shape) {
-            BarShape.L -> 2.0 * d // One 90-deg bend
-            BarShape.U -> 4.0 * d // Two 90-deg bends
-            BarShape.C -> 4.0 * d
-            BarShape.STIRRUP_90 -> 8.0 * d // Four 90-deg bends
-            BarShape.STIRRUP_135 -> 10.0 * d // Two 135-deg hooks + three 90-deg bends
-            else -> 0.0
+        val deduction = if (b.segments.isNotEmpty()) {
+            0.0
+        } else {
+            when (b.shape) {
+                BarShape.L -> 2.0 * d // One 90-deg bend
+                BarShape.U -> 4.0 * d // Two 90-deg bends
+                BarShape.C -> 4.0 * d
+                BarShape.STIRRUP_90 -> 8.0 * d // Four 90-deg bends
+                BarShape.STIRRUP_135 -> 10.0 * d // Two 135-deg hooks + three 90-deg bends
+                else -> 0.0
+            }
         }
-        
-        len -= deduction
+
+        var len = (b.straightLengthMm ?: b.segments.sumOf { it.length }) - deduction
         len += b.hookStartLengthMm ?: 0.0
         len += b.hookEndLengthMm ?: 0.0
         len += b.bendAllowanceMm

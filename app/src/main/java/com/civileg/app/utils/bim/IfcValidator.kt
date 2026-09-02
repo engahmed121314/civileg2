@@ -59,7 +59,7 @@ class IfcValidator {
         }
 
         // Check that at least one element was written
-        if (stepContent.contains("END-ISO-10303-21;") && stepContent.trim().length() < 50) {
+        if (stepContent.contains("END-ISO-10303-21;") && stepContent.trim().length < 50) {
             errors.add("STEP file contains no structural elements")
         }
 

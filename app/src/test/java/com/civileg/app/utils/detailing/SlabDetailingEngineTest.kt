@@ -16,7 +16,7 @@ class SlabDetailingEngineTest {
         deadLoad = 4.5, liveLoad = 2.0,
         fcu = 25.0, fy = 400.0,
         ts = 180.0, preferredDiameter = 12,
-        code = CalculatorEngine.DesignCode.EGYPTIAN
+        code = CalculatorEngine.AppDesignCode.EGYPTIAN
     )
 
     private fun input(isFlat: Boolean, openings: Int = 0) =
@@ -61,8 +61,7 @@ class SlabDetailingEngineTest {
             deadLoad = 5.0, liveLoad = 3.0,
             fcu = 25.0, fy = 400.0,
             ts = 250.0, preferredDiameter = 16,
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
-            type = CalculatorEngine.SlabType.FLAT
+            code = CalculatorEngine.AppDesignCode.EGYPTIAN
         )
         val d = SlabDetailingEngine.build(
             flatRes,
