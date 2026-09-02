@@ -3,6 +3,9 @@ package com.civileg.app.domain.usecases
 import com.civileg.app.domain.entities.*
 import javax.inject.Inject
 import kotlin.math.PI
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
+import com.civileg.core.calculations.entities.StirrupZone
 
 /**
  * حساب كميات العناصر الإنشائية من نتائج التصميم

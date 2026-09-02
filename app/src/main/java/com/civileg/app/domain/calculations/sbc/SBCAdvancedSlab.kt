@@ -3,6 +3,11 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.CrackWidthCheckResult
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.PunchingShearCheckResult
+import com.civileg.core.calculations.entities.ShearCheckResult
+import com.civileg.core.calculations.entities.SupportCondition
 
 /**
  * تصميم البلاطات المتقدم حسب الكود السعودي SBC 304-2018

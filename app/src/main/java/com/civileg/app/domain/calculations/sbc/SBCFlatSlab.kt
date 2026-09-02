@@ -182,6 +182,7 @@ class SBCFlatSlab : FlatSlabDesign {
             dropThickness = input.dropThickness,
             columnWidth = input.columnWidth,
             columnDepth = input.columnDepth,
+            panelType = input.panelType, // I5-FIX: Pass panelType
             cover = input.clearCover
         )
 
@@ -367,6 +368,7 @@ class SBCFlatSlab : FlatSlabDesign {
         vu: Double, fcu: Double, fy: Double,
         slabThickness: Double, dropThickness: Double,
         columnWidth: Double, columnDepth: Double,
+        panelType: PanelType,
         cover: Double
     ): FlatSlabDesign.PunchingShearResult {
         val d = if (dropThickness > 0) {
@@ -380,9 +382,13 @@ class SBCFlatSlab : FlatSlabDesign {
         val bo = 2.0 * (b1 + b2)
 
         val beta = max(b1, b2) / min(b1, b2).coerceAtLeast(1.0)
-        val alphaS = when {
-            columnWidth >= 2000 && columnDepth >= 2000 -> 40.0  // interior
-            else -> 30.0  // edge (conservative)
+        
+        // I5-FIX: alphaS must depend on column position (ACI/SBC standard)
+        // Interior = 40, Edge = 30, Corner = 20
+        val alphaS = when (panelType) {
+            PanelType.INTERIOR -> 40.0
+            PanelType.EDGE -> 30.0
+            PanelType.CORNER -> 20.0
         }
 
         val sqrtFcu = sqrt(fcu)
@@ -466,9 +472,10 @@ class SBCFlatSlab : FlatSlabDesign {
         val aOverD = 0.9 * EPSILON_CU / (EPSILON_CU + epsilonY)
         val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
 
-        // Lever arm
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        // Lever arm: z = d × (0.5 + √(0.25 - K/0.893)) 
+        // A12-FIX: was 1.25 here, under-reinforcing flat slabs relative to beams
+        val leverArm = if (0.25 - K / 0.893 > 0) {
+            d * (0.5 + sqrt(0.25 - K / 0.893))
         } else d * 0.7
 
         // As = Mu / (fs × z)

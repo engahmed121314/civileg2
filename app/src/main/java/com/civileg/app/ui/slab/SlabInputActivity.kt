@@ -15,7 +15,11 @@ import com.civileg.app.databinding.ActivitySlabInputBinding
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.SlabViewModel
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.data.local.PreferencesManager
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,6 +31,9 @@ class SlabInputActivity : AppCompatActivity() {
 
     @Inject
     lateinit var settingsManager: SettingsManager
+
+    @Inject
+    lateinit var preferencesManager: PreferencesManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,13 +58,16 @@ class SlabInputActivity : AppCompatActivity() {
     }
 
     private fun setDefaultSelections() {
-        val defaultCode = settingsManager.defaultDesignCode
-        val codeIndex = when(defaultCode) {
-            com.civileg.app.domain.entities.DesignCode.ECP -> 0
-            com.civileg.app.domain.entities.DesignCode.ACI -> 1
-            com.civileg.app.domain.entities.DesignCode.SBC -> 2
+        // ADR-003: default code resolved from DataStore (single source)
+        lifecycleScope.launch {
+            val defaultCode = preferencesManager.defaultDesignCodeEnum.first()
+            val codeIndex = when(defaultCode) {
+                com.civileg.core.calculations.entities.DesignCode.ECP -> 0
+                com.civileg.core.calculations.entities.DesignCode.ACI -> 1
+                com.civileg.core.calculations.entities.DesignCode.SBC -> 2
+            }
+            binding.spinnerCode.setSelection(codeIndex)
         }
-        binding.spinnerCode.setSelection(codeIndex)
     }
 
     private fun triggerCalculation() {

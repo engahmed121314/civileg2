@@ -2,6 +2,7 @@ package com.civileg.app.domain.entities
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import com.civileg.core.calculations.entities.DesignCode
 
 /**
  * Comprehensive Beam Design Result - covers ALL design aspects from the 9 reference PDFs:
@@ -180,7 +181,7 @@ data class BeamDesignResult(
     val codeNotes: List<String> = emptyList(),
 
     // ===== 14. STEP-BY-STEP CALCULATION LOG =====
-    val calculationSteps: List<CalculationStep> = emptyList()
+    val calculationSteps: List<AppCalculationStep> = emptyList()
 ) : Parcelable
 
 /**
@@ -188,7 +189,7 @@ data class BeamDesignResult(
  * Used to display step-by-step calculations in the UI.
  */
 @Parcelize
-data class CalculationStep(
+data class AppCalculationStep(
     val stepNumber: Int,
     val title: String,           // e.g. "Step 1: Ultimate Load"
     val subtitle: String = "", // subcategory

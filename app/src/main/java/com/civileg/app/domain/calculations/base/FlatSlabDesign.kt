@@ -76,6 +76,7 @@ interface FlatSlabDesign {
         dropThickness: Double,// mm (0 if no drop)
         columnWidth: Double,   // mm
         columnDepth: Double,   // mm
+        panelType: PanelType,  // I5-FIX: Added for correct alphaS determination
         cover: Double = 25.0
     ): PunchingShearResult
 

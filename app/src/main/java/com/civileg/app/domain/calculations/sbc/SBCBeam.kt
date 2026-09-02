@@ -4,6 +4,14 @@ import com.civileg.app.domain.calculations.aci.ACIBeam
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.BarLocation
+import com.civileg.core.calculations.entities.CoatingType
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
+import com.civileg.core.calculations.entities.SupportCondition
 
 /**
  * تنفيذ الكود السعودي SBC 304-2018 للكمرات
@@ -40,10 +48,21 @@ class SBCBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        // rule 1.4 — loud invalid-input failure instead of Infinity/NaN downstream (InputGuard)
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width,
+            "effectiveDepth" to effectiveDepth, "totalDepth" to totalDepth
+        )
         // استخدام حسابات ACI كأساس
         val result = aciBeam.calculateFlexureReinforcement(
             fcu, fy, width, effectiveDepth, totalDepth, designMoment, loadCombination
         )
+        
+        // [Phase 3] Inherit trace from ACI basis and update code notes
+        val traceSteps = result.trace.steps.toMutableList()
+        traceSteps.add(0, com.civileg.core.calculations.entities.CalculationStep(
+            "SBC Basis", "SBC 304 follows ACI 318", "Mapping to ACI 318-19", 1.0, ""
+        ))
         
         val updatedNotes = result.codeNotes.toMutableList()
         val updatedWarnings = result.warnings.toMutableList()
@@ -71,7 +90,8 @@ class SBCBeam : BeamDesign {
         
         return result.copy(
             codeNotes = updatedNotes,
-            warnings = updatedWarnings
+            warnings = updatedWarnings,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -84,6 +104,9 @@ class SBCBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width, "effectiveDepth" to effectiveDepth
+        )
         val result = aciBeam.calculateShearReinforcement(
             fcu, fy, width, effectiveDepth, designShear, axialLoad, loadCombination
         )
@@ -362,7 +385,8 @@ class SBCBeam : BeamDesign {
             val dia = parts[1].trim().toInt().toDouble()
             return count * PI * dia * dia / 4
         } catch (e: Exception) {
-            return 0.0
+            // rule 1.4 — no silent failure: engine-generated notation must always parse
+            throw IllegalArgumentException("Invalid bar notation '$barString' — expected like '4O16' | صيغة تسليح غير مفهومة", e)
         }
     }
 }

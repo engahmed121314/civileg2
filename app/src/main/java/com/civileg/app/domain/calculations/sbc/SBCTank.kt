@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ReinforcementResult
 import kotlin.math.*
 
 /**
@@ -30,8 +30,16 @@ class SBCTank : TankDesign {
 
     override fun calculateTank(
         length: Double, width: Double, height: Double,
-        waterDepth: Double, fcu: Double, fy: Double, type: TankType
+        waterDepth: Double, fcu: Double, fy: Double, type: TankType,
+        groundWaterDepth: Double
     ): TankResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "length" to length, "width" to width, "height" to height,
+            "fcu" to fcu, "fy" to fy
+        )
+        require(waterDepth >= 0.0 && waterDepth <= height) {
+            "Invalid input: waterDepth must be within [0, height] | منسوب الماء داخل حدود الخزان"
+        }
         val warnings = mutableListOf<String>()
         val safetyChecks = mutableListOf<TankSafetyCheck>()
         val codeNotes = mutableListOf<String>()
@@ -91,12 +99,20 @@ class SBCTank : TankDesign {
         var upliftFS = 0.0
         if (isUnderground) {
             val tankWeight = concreteVolume * CONCRETE_DENSITY
-            val upliftForce = L * B * H * GAMMA_W
-            upliftFS = tankWeight / upliftForce
-            safetyChecks.add(TankSafetyCheck(
-                "Uplift Safety Factor", upliftFS, 1.25, "-",
-                upliftFS >= 1.25, "SBC 304: Stability against buoyancy"
-            ))
+            // A5-FIX: buoyancy is driven by EXTERNAL groundwater (empty-tank
+            // governing case). Legacy default models a full-height head.
+            val submergenceM = if (groundWaterDepth.isInfinite()) H
+                               else (H - groundWaterDepth / 1000.0).coerceIn(0.0, H)
+            val upliftForce = L * B * submergenceM * GAMMA_W
+            if (upliftForce > 0.0) {
+                upliftFS = tankWeight / upliftForce
+                safetyChecks.add(TankSafetyCheck(
+                    "Uplift Safety Factor", upliftFS, 1.25, "-",
+                    upliftFS >= 1.25, "SBC 304: Stability against buoyancy"
+                ))
+            } else {
+                upliftFS = 99.0 // dry formation — buoyancy not governing
+            }
         }
 
         val isSafe = safetyChecks.all { it.isSafe }
@@ -262,12 +278,13 @@ class SBCTank : TankDesign {
         val vertSpacing = floor(1000.0 / vertBarsPerMeter).coerceIn(100.0, 300.0)
 
         // فحص الشق
-        val hoopStress = maxHoopTension / (wallThickness / 1000.0)
+        // A3-FIX: σ[MPa=N/mm²] = T[kN/m]/t[mm]; old form yielded kPa vs MPa limit.
+        val hoopStress = maxHoopTension / wallThickness
         val fct = 0.62 * sqrt(fcPrime)
         val isCrackSafe = hoopStress <= fct
 
         safetyChecks.add(TankSafetyCheck(
-            "Hoop Tension Stress", hoopStress, fct, "kN/m²",
+            "Hoop Tension Stress", hoopStress, fct, "MPa",
             isCrackSafe, "SBC 304: Hoop stress vs tensile strength"
         ))
 
@@ -331,9 +348,10 @@ class SBCTank : TankDesign {
         val spacing = floor(1000.0 / barsPerMeter).coerceIn(100.0, 300.0)
         val asProvided = (1000.0 / spacing) * barArea
 
-        // فحص قص الاختراق
-        val b0 = if (isCircular) 2 * PI * (wallThickness / 1000.0 + d / 1000.0)
-            else 2.0 * (2.0 * wallThickness / 1000.0 + 2.0 * d / 1000.0)
+        // فحص قص الاختراق (critical perimeter in mm, per the unified tank engine —
+        // A3-precedent fix: the legacy metre-based perimeter made the capacity ~1000× too small)
+        val b0 = if (isCircular) 2 * PI * (wallThickness + d)
+            else 2.0 * (2.0 * wallThickness + 2.0 * d)
         val vc_punch = 0.33 * sqrt(fcPrime)
         val punchingCap = PHI_SHEAR * vc_punch * b0 * d / 1000.0
         val punchingLoad = totalPressure * L * B * 0.5

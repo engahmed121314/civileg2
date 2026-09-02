@@ -28,9 +28,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -152,7 +154,8 @@ private val quickTools = listOf(
     QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),
     QuickTool(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, ToolCalcBg, ToolCalcAccent, AppScreen.ConcreteMix.route),
     QuickTool(R.string.home_soil_bearing, R.string.home_soil_bearing_sub,  Icons.Default.Landscape, ToolSteelBg, ToolSteelAccent, AppScreen.SoilBearing.route),
-    QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route)
+    QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route),
+    QuickTool(R.string.home_section_tools_title, R.string.home_calculator_sub, Icons.Default.Analytics, ToolCalcBg, ToolCalcAccent, AppScreen.GeneralEstimation.route)
 )
 
 // Recent projects now loaded from DB via ViewModel in HomeScreen composable
@@ -286,6 +289,13 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             item(span = { GridItemSpan(2) }) {
                 QuickStatsRow(isDark = isDark, designCount = designCount, codeCount = uniqueCodes, typeCount = uniqueTypes)
+            }
+
+            // ══════════════════════════════════════════
+            // B2. PROJECT HEALTH (§69) — from the QA audit engine
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(2) }) {
+                ProjectHealthCard(isDark = isDark, designs = allDesigns)
             }
 
             // ══════════════════════════════════════════
@@ -1048,6 +1058,97 @@ private fun SectionHeader(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// §69/§70 — PROJECT HEALTH card, powered by EngineeringAuditEngine.
+// Verdict uses icon + label + percentage (never color alone).
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun ProjectHealthCard(isDark: Boolean, designs: List<com.civileg.app.db.Design>) {
+    val audit = remember(designs) {
+        val checks = if (designs.isEmpty()) {
+            listOf(
+                com.civileg.app.domain.audit.AuditCheck(
+                    stage = com.civileg.app.domain.audit.AuditStage.DESIGN,
+                    name = "workspace",
+                    status = com.civileg.app.domain.audit.AuditStatus.NOT_CHECKED,
+                    message = "no designs yet"
+                )
+            )
+        } else {
+            designs.map { d ->
+                com.civileg.app.domain.audit.AuditCheck(
+                    stage = com.civileg.app.domain.audit.AuditStage.DESIGN,
+                    name = d.name,
+                    status = if (d.isSafe) com.civileg.app.domain.audit.AuditStatus.PASS
+                             else com.civileg.app.domain.audit.AuditStatus.FAIL,
+                    message = if (d.isSafe) "" else "code check failed (${d.codeUsed})"
+                )
+            }
+        }
+        com.civileg.app.domain.audit.EngineeringAuditEngine.report("workspace", checks)
+    }
+
+    val (icon, verdictText) = when (audit.status) {
+        com.civileg.app.domain.audit.AuditStatus.PASS ->
+            Icons.Default.CheckCircle to "PASS"
+        com.civileg.app.domain.audit.AuditStatus.WARNING ->
+            Icons.Default.Warning to "WARNING"
+        com.civileg.app.domain.audit.AuditStatus.FAIL ->
+            Icons.Default.Error to "FAIL"
+        else -> Icons.AutoMirrored.Filled.HelpOutline to "NOT CHECKED"
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = verdictText,
+                     tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.home_health_title),
+                         style = MaterialTheme.typography.labelMedium,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("$verdictText — ${audit.healthPercent}%",
+                         style = MaterialTheme.typography.titleMedium,
+                         fontWeight = FontWeight.Bold)
+                }
+            }
+
+            LinearProgressIndicator(
+                progress = { audit.healthPercent / 100f },
+                modifier = Modifier.fillMaxWidth().height(6.dp),
+                trackColor = MaterialTheme.colorScheme.surface
+            )
+
+            if (designs.isEmpty()) {
+                Text(stringResource(R.string.home_health_no_designs),
+                     style = MaterialTheme.typography.labelSmall,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                val failCount = audit.failures.size
+                Text(
+                    "${audit.passedChecksForManifest}/${audit.checks.size} " +
+                        stringResource(R.string.home_health_passed) +
+                        if (failCount > 0) " · $failCount " +
+                            stringResource(R.string.home_health_failed) else "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                audit.failures.take(2).forEach { f ->
+                    Text("✗ $f",
+                         style = MaterialTheme.typography.labelSmall,
+                         color = MaterialTheme.colorScheme.error,
+                         maxLines = 1)
+                }
+            }
         }
     }
 }

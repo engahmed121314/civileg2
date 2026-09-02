@@ -2,6 +2,7 @@ package com.civileg.app.domain.entities
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import com.civileg.core.calculations.entities.DesignCode
 
 @Parcelize
 data class SteelWarehouseInputs(

@@ -6,11 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.domain.entities.*
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.data.local.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -37,22 +39,27 @@ data class ColumnUiState(
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
     val errors: List<String> = emptyList(),
-    val validationReport: CalculationValidator.ValidationReport? = null
+    val validationReport: CalculationValidator.ValidationReport? = null,
+    val sanityResult: com.civileg.app.domain.safety.SanityResult? = null
 )
 
 @HiltViewModel
 class ColumnViewModel @Inject constructor(
     private val repository: DesignRepository,
     private val calculatorEngine: CalculatorEngine,
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ColumnUiState())
     val uiState: StateFlow<ColumnUiState> = _uiState.asStateFlow()
-    
+
     init {
-        // Initialize with default code from settings
-        _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }
+        // Initialize with default code from settings (ADR-003: DataStore single source)
+        viewModelScope.launch {
+            val defaultCode = preferencesManager.defaultDesignCodeEnum.first()
+            _uiState.update { it.copy(designCode = defaultCode) }
+        }
     }
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
@@ -159,8 +166,17 @@ class ColumnViewModel @Inject constructor(
         val w = state.width.toDoubleOrNull() ?: return
         val d = state.depth.toDoubleOrNull() ?: return
         val h = state.height.toDoubleOrNull() ?: 3.0
-        val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
-        val fyVal = state.fy.toDoubleOrNull() ?: 400.0
+        // rule 1.4 — fcu/fy are engineering-critical: refuse to guess them silently.
+        val fcuVal = state.fcu.toDoubleOrNull()
+        if (fcuVal == null || fcuVal <= 0) {
+            _uiState.update { it.copy(errors = listOf("أدخل مقاومة الخرسانة fcu — لا يمكن افتراضها / Enter concrete strength fcu")) }
+            return
+        }
+        val fyVal = state.fy.toDoubleOrNull()
+        if (fyVal == null || fyVal <= 0) {
+            _uiState.update { it.copy(errors = listOf("أدخل مقاومة الحديد fy — لا يمكن افتراضها / Enter steel yield strength fy")) }
+            return
+        }
         val load = state.axialLoad.toDoubleOrNull() ?: 0.0
         val mxVal = state.mx.toDoubleOrNull() ?: 0.0
         val myVal = state.my.toDoubleOrNull() ?: 0.0
@@ -191,7 +207,15 @@ class ColumnViewModel @Inject constructor(
                 val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to w, "depth" to d, "height" to h), load)
                 
                 val combinedWarnings = report.warnings + dlReport.warnings
-                _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList()) }
+                _uiState.update {
+                    it.copy(
+                        result = res,
+                        validationReport = report.copy(warnings = combinedWarnings),
+                        sanityResult = com.civileg.app.domain.safety.EngineeringSanityEngine
+                            .fromValidation(report.copy(warnings = combinedWarnings)),
+                        errors = emptyList()
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
             }
@@ -235,8 +259,8 @@ class ColumnViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(state.designCode) {
-                    com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"
-                    com.civileg.app.domain.entities.DesignCode.SBC -> "SBC 304"
+                    com.civileg.core.calculations.entities.DesignCode.ACI -> "ACI 318"
+                    com.civileg.core.calculations.entities.DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
                 }
 
@@ -285,7 +309,10 @@ class ColumnViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    warnings = _uiState.value.validationReport?.warnings.orEmpty(),
+                    outputPath = file.absolutePath,
+                    context = context,
+                    trace = res.trace
                 )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

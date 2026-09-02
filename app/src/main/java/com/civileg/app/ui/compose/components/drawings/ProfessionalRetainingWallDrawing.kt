@@ -64,10 +64,11 @@ fun ProfessionalRetainingWallDrawing(
     maxBearingPressure: Double = 0.0,
     allowableBearingPressure: Double = 200.0,
     viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     Canvas(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize().failStampWhen(!isSafe)
     ) {
         val cw = size.width
         val ch = size.height

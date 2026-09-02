@@ -1,6 +1,7 @@
 package com.civileg.app.domain.entities
 
 import android.os.Parcelable
+import com.civileg.core.calculations.entities.*
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 
@@ -123,21 +124,22 @@ data class SlabDesignResult(
     val isSafe: Boolean,
     val utilizationRatio: Double,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    val trace: @RawValue com.civileg.core.calculations.entities.DesignTrace = com.civileg.core.calculations.entities.DesignTrace()
 ) : Parcelable
 
 @Parcelize
 data class AdvancedSlabResult(
     val slabType: SlabType,
     val flexureResult: SlabDesignResult,
-    val shearCheck: ShearCheckResult,
-    val deflectionCheck: DeflectionCheckResult,
-    val punchingShearCheck: PunchingShearCheckResult?,
+    val shearCheck: @RawValue ShearCheckResult,
+    val deflectionCheck: @RawValue DeflectionCheckResult,
+    val punchingShearCheck: @RawValue PunchingShearCheckResult?,
     val reinforcementLayout: ReinforcementLayout,
     val concreteVolume: Double,
     val formworkArea: Double,
     val inventoryAnalysis: InventoryAnalysisResult?,
-    val postTensionCalculations: PostTensionCalculations?,
+    val postTensionCalculations: @RawValue PostTensionCalculations?,
     val warnings: List<String>,
     val codeNotes: List<String>
 ) : Parcelable

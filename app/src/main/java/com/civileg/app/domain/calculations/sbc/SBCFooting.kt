@@ -1,10 +1,10 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.domain.entities.ShearCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearCheckResult
 import kotlin.math.*
 
 class SBCFooting : FootingDesign {
@@ -90,9 +90,11 @@ class SBCFooting : FootingDesign {
         val Mu_x = q_avg * (roundedLength / 1000.0) * cantX * cantX / 2.0  // kN.m
         val Mu_y = q_avg * (roundedWidth / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 7. فحص القص الأحادي عند بعد d/2 من وجه العمود (SBC 304 / ACI 318-22.5)
-        val Vu_x = q_avg * (roundedLength / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
-        val Vu_y = q_avg * (roundedWidth / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
+        // 7. فحص القص الأحادي عند بعد d من وجه العمود
+        // W6-FIX: one-way shear section at d from column face (was d/2 — the
+        // punching distance — understating Vu), mirroring ACIFooting.
+        val Vu_x = q_avg * (roundedLength / 1000.0) * max(cantX - d / 1000.0, 0.0)  // kN
+        val Vu_y = q_avg * (roundedWidth / 1000.0) * max(cantY - d / 1000.0, 0.0)  // kN
         // One-way shear capacity: Vc = 0.17 × √f'c × b × d (ACI 318-22.5.5.1)
         val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val vc_oneWay = 0.17 * sqrt(fc_prime)  // MPa
@@ -145,6 +147,15 @@ class SBCFooting : FootingDesign {
         }
         codeNotes.add(String.format("One-way shear capacity: %.2f MPa", vc_oneWay))
 
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Cylinder Strength (f'c)", "f'c = 0.8 * fcu", "0.8 * $fcu", fc_prime, "MPa"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Required Area (A_req)", "A_req = P_service / netSBC", "$P_service / $netSBC", areaRequired, "m2"
+        ))
+
         return FootingDesignResult(
             requiredWidth = roundedWidth,
             requiredLength = roundedLength,
@@ -155,9 +166,11 @@ class SBCFooting : FootingDesign {
             punchingShearCheck = punchingCheck,
             isSafe = q_max <= soilBearingCapacity && q_min >= 0
                 && Vu_x <= Vc_x && Vu_y <= Vc_y
-                && punchingCheck.isSafe,
+                && punchingCheck.isSafe
+                && reinfX.isSafe && reinfY.isSafe,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -315,6 +328,7 @@ class SBCFooting : FootingDesign {
             reinforcement = reinforcement,
             punchingShearCheck = punching1,
             isSafe = soilPressure <= soilBearingCapacity && punching1.isSafe
+                && reinforcement.isSafe
         )
     }
 
@@ -350,6 +364,7 @@ class SBCFooting : FootingDesign {
             reinforcement = reinforcement,
             punchingShearCheck = punchingCheck,
             isSafe = soilPressure <= soilBearingCapacity && punchingCheck.isSafe
+                && reinforcement.isSafe
         )
     }
 
@@ -425,7 +440,8 @@ class SBCFooting : FootingDesign {
             punchingShearCheck = punchingResult,
             isSafe = punchingResult.isSafe
                 && pileShearStress <= pileShearCap
-                && strutAngle >= 40.0,
+                && strutAngle >= 40.0
+                && reinf.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )

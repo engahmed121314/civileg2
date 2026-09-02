@@ -6,17 +6,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
-import com.civileg.app.domain.calculations.aci.ACIFlatSlab
+import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
-import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
+import com.civileg.app.utils.SettingsManager
+import com.civileg.app.data.local.PreferencesManager
+import com.civileg.core.calculations.entities.DesignCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class FlatSlabViewModel @Inject constructor(
-    private val repository: DesignRepository
+    private val repository: DesignRepository,
+    private val settingsManager: SettingsManager,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val _result = MutableLiveData<FlatSlabResult?>()
@@ -36,7 +41,7 @@ class FlatSlabViewModel @Inject constructor(
 
     /**
      * Main calculation entry point.
-     * @param designCode "ECP" or "ACI"
+     * @param designCode "ECP" / "ACI" / "SBC" — blank resolves to the user's default from Settings (ADR-003)
      */
     fun calculateFlatSlab(
         panelType: PanelType,
@@ -56,7 +61,7 @@ class FlatSlabViewModel @Inject constructor(
         numberOfFloors: Int,
         clearCover: Double,    // mm
         storyHeight: Double,   // m
-        designCode: String = "ECP"
+        designCode: String = ""
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -77,10 +82,11 @@ class FlatSlabViewModel @Inject constructor(
                 )
                 lastInput = input
 
-                val designer: FlatSlabDesign = when (designCode) {
-                    "ACI" -> ACIFlatSlab()
-                    else -> ECPFlatSlab()
-                }
+                // ADR-002: dispatch through CalculationFactory only (SBC wired — no silent fallback)
+                // ADR-003: default code resolved from DataStore (single source)
+                val resolvedCode = CalculationFactory.parseDesignCode(designCode)
+                    ?: preferencesManager.defaultDesignCodeEnum.first()
+                val designer = CalculationFactory.getFlatSlabDesign(resolvedCode)
 
                 val result = designer.design(input)
                 _result.value = result
@@ -146,18 +152,16 @@ class FlatSlabViewModel @Inject constructor(
                     )
                 }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم بلاطة مسطحة",
-                    titleEn = "Flat Slab Design Report",
-                    subtitle = "${input.panelType.displayName} — ${input.designMethod.displayName}",
-                    designType = input.panelType.displayName,
-                    inputs = inputsMap, results = resultsMap,
-                    safetyChecks = safetyChecks, isSafe = res.isSafe,
-                    drawingBitmap = null, outputPath = file.absolutePath
+                val exporter = com.civileg.app.utils.exporters.FlatSlabPdfExporter(context)
+                val generated = exporter.exportToDownload(
+                    input = input,
+                    result = res,
+                    projectName = "CIVILEG FLAT SLAB",
+                    clientName = "Site Engineer"
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    generated.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }

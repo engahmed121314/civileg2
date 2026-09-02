@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.aci
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.SupportCondition
 
 /**
  * تصميم البلاطات حسب الكود الأمريكي ACI 318-19
@@ -31,6 +33,11 @@ class ACISlab : SlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy,
+            "slabThickness" to slabThickness,
+            "clearSpan" to clearSpan
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -92,6 +99,15 @@ class ACISlab : SlabDesign {
         codeNotes.add(String.format("rho=%.4f, rho_min=%.4f", rhoFinal, rhoMin))
         codeNotes.add(String.format("Vc=%.1f kN/m", Vc))
 
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Cylinder Strength (f'c)", "f'c = 0.8 * fcu", "0.8 * $fcu", fc_prime, "MPa"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Moment Coefficient (Rn)", "Rn = Mu / (\u03C6 * b * d^2)", "$Mu / (0.9 * 1000 * $effectiveDepth^2)", Rn, "MPa"
+        ))
+
         return SlabDesignResult(
             requiredReinforcement = asRequired,
             providedReinforcement = asProvided,
@@ -102,7 +118,8 @@ class ACISlab : SlabDesign {
             isSafe = discriminant > 0 && isShearSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -116,6 +133,11 @@ class ACISlab : SlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): TwoWaySlabResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy,
+            "slabThickness" to slabThickness,
+            "shortSpan" to shortSpan, "longSpan" to longSpan
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 

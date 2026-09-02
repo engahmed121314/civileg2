@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.entities.*
+import com.civileg.core.calculations.entities.DesignCode
 import com.civileg.app.utils.SteelTables
 import kotlin.math.*
 

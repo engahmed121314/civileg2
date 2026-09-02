@@ -66,7 +66,8 @@ object PdfExportHelper {
                 safetyChecks = emptyList(),
                 isSafe = true,
                 drawingBitmap = null,
-                outputPath = file.absolutePath
+                outputPath = file.absolutePath,
+                context = context
             )
 
             if (generated != null) {
@@ -131,7 +132,8 @@ object PdfExportHelper {
                 safetyChecks = safetyChecks,
                 isSafe = isSafe,
                 drawingBitmap = drawingBitmap,
-                outputPath = file.absolutePath
+                outputPath = file.absolutePath,
+                context = context
             )
 
             if (generated != null) {

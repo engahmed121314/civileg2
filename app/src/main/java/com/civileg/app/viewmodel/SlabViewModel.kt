@@ -34,6 +34,9 @@ class SlabViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
+    private val _sanityResult = MutableLiveData<com.civileg.app.domain.safety.SanityResult?>()
+    val sanityResult: LiveData<com.civileg.app.domain.safety.SanityResult?> = _sanityResult
+
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
@@ -90,6 +93,8 @@ class SlabViewModel @Inject constructor(
                 
                 val combinedWarnings = report.warnings + dlReport.warnings
                 _validationReport.value = report.copy(warnings = combinedWarnings)
+                _sanityResult.value = com.civileg.app.domain.safety.EngineeringSanityEngine
+                    .fromValidation(report.copy(warnings = combinedWarnings))
                 
                 _result.value = res
                 _error.value = null
@@ -211,7 +216,10 @@ class SlabViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    warnings = _validationReport.value?.warnings.orEmpty(),
+                    outputPath = file.absolutePath,
+                    context = context,
+                    trace = res.trace
                 )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

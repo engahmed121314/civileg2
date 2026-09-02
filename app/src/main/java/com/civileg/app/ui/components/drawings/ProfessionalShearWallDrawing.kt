@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.drawings.DrawingColors
 import com.civileg.app.ui.compose.components.drawings.DrawingColorDefaults
+import com.civileg.app.ui.compose.components.drawings.failStampWhen
 import kotlin.math.*
 
 // ─── Color Palette ───────────────────────────────────────────────
@@ -64,12 +65,14 @@ fun ProfessionalShearWallDrawing(
     axialLoad: Double,
     shearForce: Double,
     bendingMoment: Double,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1.4f)
+            .failStampWhen(!isSafe)
     ) {
         val w = size.width
         val h = size.height

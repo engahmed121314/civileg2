@@ -59,12 +59,14 @@ fun ProfessionalSteelDrawing(
     hasStiffener: Boolean = false,
     weldSize: Double = 6.0,
     isColumn: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxSize()
+            .failStampWhen(!isSafe)
     ) {
         val cw = size.width
         val ch = size.height

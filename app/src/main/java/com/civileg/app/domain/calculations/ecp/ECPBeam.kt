@@ -3,6 +3,14 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.BarLocation
+import com.civileg.core.calculations.entities.CoatingType
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
+import com.civileg.core.calculations.entities.SupportCondition
 
 class ECPBeam : BeamDesign {
     
@@ -24,6 +32,11 @@ class ECPBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        // rule 1.4 — loud invalid-input failure instead of Infinity/NaN downstream (InputGuard)
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width,
+            "effectiveDepth" to effectiveDepth, "totalDepth" to totalDepth
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -112,17 +125,27 @@ class ECPBeam : BeamDesign {
         codeNotes.add(CodeReference.ECP.BEAM_FLEXURE)
         codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MIN)
         
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Effective Depth (d)", "d = h - cover - rebar/2", "$totalDepth - 50.0", effectiveDepth, "mm"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Reinforcement Area (As)", "As = num * areaOne", "$numberOfBars * ${PI*barDiameter.pow(2)/4}", astProvided, "mm2"
+        ))
+
         return ReinforcementResult(
             astRequired = astRequired,
             astProvided = astProvided,
             barDiameter = barDiameter,
             numberOfBars = numberOfBars,
-            tiesDiameter = 0.0,  // ليس للكمرات
+            tiesDiameter = 0.0,
             tiesSpacing = 0.0,
             isSafe = utilizationRatio <= 1.0 && astRequired <= maxSteel,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -135,6 +158,9 @@ class ECPBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width, "effectiveDepth" to effectiveDepth
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -246,30 +272,16 @@ class ECPBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
-        // حسب الكود المصري: Ld = (fy/γs) * φ / (4 * fb)
-        // حيث fb = إجهاد التماسك
-        
-        // ECP 203 §5-2-2: fbd = 0.6 × √(fcu) for deformed bars (good bond)
-        // Note: 0.3 is for plain bars; 0.6 is for deformed (high bond) bars
-        val fbd = 0.6 * sqrt(fcu)  // MPa (deformed bars)
-        
-        val fs = fy / GAMMA_S
-        var Ld = fs * barDiameter / (4 * fbd.coerceAtLeast(0.1))
-        
-        // عوامل التعديل
-        if (barLocation == BarLocation.TOP) Ld *= 1.3  // حديد علوي
-        if (coating == CoatingType.EPOXY_COATED) Ld *= 1.2
-        
-        // حد أدنى حسب ECP 203: max(10φ, 100 مم)
-        Ld = maxOf(Ld, 10.0 * barDiameter, 100.0)
-        
-        // تقريب لأعلى لأقرب 50 مم
-        return ceil(Ld / 50) * 50
+        // [A14-UNIFICATION]: Delegate to the unified core calculator
+        return com.civileg.core.engineering.DevelopmentLengthCalculator.calculateLd(
+            com.civileg.core.calculations.entities.DesignCode.ECP,
+            barDiameter, fy, fcu, barLocation, coating
+        )
     }
 
-    // ECP 203 §4-2-2-3: ρ_min = max(0.26 × √(fcu) / fy, 0.0013)
+    // ECP 203 §4-2-2-3 (post-A10): ρ_min = max(0.25 × √(fcu) / fy, 0.0013)
     private fun getMinReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
-        return max(0.26 * sqrt(fcu) / fy, 0.0013)
+        return max(0.25 * sqrt(fcu) / fy, 0.0013)
     }
     // ECP 203 §4-2-2-1: عندما K يقترب من K_bal، نحد ρ إلى ~75% من النسبة المتوازنة
     private fun getMaxReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
@@ -379,7 +391,7 @@ class ECPBeam : BeamDesign {
             val asReq = Mu / (fs * leverArm)
             
             // تطبيق الحد الأدنى
-            val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
+            val minSteel = max(0.25 * sqrt(fcu) / fy, 0.0013) * b * d
             val asFinal = max(asReq, minSteel)
             
             notes.add("K ≤ K_bal → Singly reinforced section is sufficient")
@@ -430,7 +442,7 @@ class ECPBeam : BeamDesign {
         val AsTotal = As1 + As2
         
         // تطبيق الحد الأدنى
-        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
+        val minSteel = max(0.25 * sqrt(fcu) / fy, 0.0013) * b * d
         val asFinal = max(AsTotal, minSteel)
         
         // اختيار الأسياخ
@@ -500,7 +512,8 @@ class ECPBeam : BeamDesign {
             val dia = parts[1].trim().toInt().toDouble()
             return count * PI * dia * dia / 4
         } catch (e: Exception) {
-            return 0.0
+            // rule 1.4 — no silent failure: engine-generated notation must always parse
+            throw IllegalArgumentException("Invalid bar notation '$barString' — expected like '4O16' | صيغة تسليح غير مفهومة", e)
         }
     }
 }

@@ -77,7 +77,9 @@ fun CivilEngineerTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = {
+            com.civileg.app.ui.designsystem.CivilEGDesignSystem(content = content)
+        }
     )
 }
 

@@ -2,7 +2,7 @@ package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.calculations.base.BeamDesign
 import com.civileg.app.domain.calculations.ecp.ECPBeam
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test

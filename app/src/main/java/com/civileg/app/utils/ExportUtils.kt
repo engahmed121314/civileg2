@@ -60,9 +60,43 @@ object ExportUtils {
             }
             context.startActivity(intent)
         } catch (e: android.content.ActivityNotFoundException) {
-            Toast.makeText(context, "No app found to open this file type.", Toast.LENGTH_LONG).show()
+            // No viewer for this type (e.g. DXF on a phone without CAD) — fall back
+            // to share so the user can send it to AutoCAD/web/mail.
+            Toast.makeText(
+                context,
+                "No ${mimeType.substringAfter('/').uppercase()} viewer installed — sharing instead",
+                Toast.LENGTH_LONG
+            ).show()
+            shareFile(context, file, mimeType)
         } catch (e: Exception) {
             Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /**
+     * Centralized DXF export-result handling (governance rule 1.4 — no silent
+     * failures). A sheet is opened ONLY when the exporter's self-QA passed;
+     * export errors and QA issues are surfaced to the user instead of ignored.
+     * Spec §47: a drawing file is not considered successful before validation.
+     */
+    fun handleDxfOutcome(context: Context, outcome: CadDxfExporter.DxfExportOutcome?) {
+        when {
+            outcome == null ->
+                Toast.makeText(
+                    context,
+                    "DXF export failed — details in logcat",
+                    Toast.LENGTH_LONG
+                ).show()
+            !outcome.qaPassed -> {
+                val issues = outcome.issues.joinToString("; ").take(140)
+                Toast.makeText(
+                    context,
+                    "DXF saved but QA FAILED${if (issues.isNotBlank()) ": $issues" else ""}",
+                    Toast.LENGTH_LONG
+                ).show()
+                // File remains on disk under CivilEG_DXF/ for inspection — do not auto-open.
+            }
+            else -> CadDxfExporter.firstSheetFile(outcome)?.let { openFile(context, it, "application/dxf") }
         }
     }
 }

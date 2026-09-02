@@ -35,6 +35,27 @@ class CivilEGApplication : Application() {
         super.onCreate()
         instance = this
 
+        // Global crash capture — writes full stack traces to
+        // Android/data/com.civileg.app/files/CrashReports/ so field issues
+        // (e.g. SoilBearing crash) can be diagnosed without logcat access.
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            runCatching {
+                val dir = java.io.File(getExternalFilesDir(null), "CrashReports").apply { mkdirs() }
+                val f = java.io.File(dir, "crash_${System.currentTimeMillis()}.txt")
+                f.writeText(
+                    buildString {
+                        appendLine("Thread: ${thread.name}")
+                        appendLine("Version: $VERSION_NAME ($VERSION_CODE)")
+                        appendLine(java.io.StringWriter().apply {
+                            throwable.printStackTrace(java.io.PrintWriter(this))
+                        }.toString())
+                    }
+                )
+            }
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+
         // Initialize LocaleHelper with app context so enum displayName properties
         // can query the current language without needing a Context parameter.
         LocaleHelper.initApplicationContext(this)

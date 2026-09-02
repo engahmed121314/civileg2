@@ -4,6 +4,17 @@ import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.CrackWidthCheckResult
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.DevelopmentLengthCheckResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
+import com.civileg.core.engineering.CodeRuleEngine
+import com.civileg.core.engineering.ConcreteMaterial
+import com.civileg.core.engineering.SteelMaterial
 
 class ECPAdvancedBeam {
     
@@ -259,7 +270,7 @@ class ECPAdvancedBeam {
 
         // ── تطبيق الحدود الدنيا والعليا ──
         val Ag = webWidth * d
-        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * Ag
+        val minSteel = max(0.25 * sqrt(fcu) / fy, 0.0013) * Ag
         val maxSteel = 0.04 * Ag   // 4%
         val finalAst = astRequired.coerceIn(minSteel, maxSteel)
 
@@ -440,7 +451,7 @@ class ECPAdvancedBeam {
 
         // حدود التسليح
         val Ag = webWidth * d
-        val minSteel = max(0.26 * sqrt(fcu) / fy, 0.0013) * Ag
+        val minSteel = max(0.25 * sqrt(fcu) / fy, 0.0013) * Ag
         val maxSteel = 0.04 * Ag
         val finalAst = astRequired.coerceIn(minSteel, maxSteel)
 
@@ -1155,7 +1166,11 @@ class ECPAdvancedBeam {
 
     /**
      * تصميم تسليح الالتواء حسب الكود المصري ECP 203 البند 4-3-4
-     * 
+     *
+     * Delegates to the unified space-truss engine ([CodeRuleEngine.designBeamTorsion]),
+     * eliminating the legacy simplified b²·h threshold divergence (spec §4-3-4 uses the
+     * Acp²/Pcp space-truss form).
+     *
      * @param designTorque kN.m - عزم اللي التصميمي
      * @param fcu MPa
      * @param fy MPa
@@ -1170,136 +1185,35 @@ class ECPAdvancedBeam {
         width: Double, depth: Double,
         loadCombination: LoadCombination
     ): TorsionReinforcementResult {
-        val warnings = mutableListOf<String>()
-        val codeNotes = mutableListOf<String>()
-
-        codeNotes.add("ECP 203-2020: Section 4-3-4 (Torsion Design)")
-
         val b = min(width, depth)
         val h = max(width, depth)
-        val fsDesign = fy / GAMMA_S
+        val eng = CodeRuleEngine.forEcp(
+            ConcreteMaterial(fcuMpa = fcu),
+            SteelMaterial(yieldMpa = fy, ultimateMpa = fy * 1.5)
+        )
+        val out = eng.designBeamTorsion(
+            b = b, h = h, coverMm = COVER, tuKnm = designTorque, vuKn = 0.0, dMm = depth - COVER
+        )
 
-        // ── عزم اللي الحرج (Threshold Torque) ──
-        // Tu_th = 0.083 × √fcu × b² × d (N.mm → kN.m)
-        // هنا نستخدم وحدات N و mm ثم نحول
-        val Tu = designTorque * 1e6  // kN.m → N.mm
-        val Tu_th = 0.083 * sqrt(fcu / GAMMA_C) * b * b * h  // N.mm
-        val Tu_th_kNm = Tu_th / 1e6  // kN.m
-
-        codeNotes.add("Tu = ${"%.2f".format(designTorque)} kN.m")
-        codeNotes.add("Tu_threshold = 0.083×√(fcu/γc)×b²×h = ${"%.3f".format(Tu_th_kNm)} kN.m")
-
-        // ── التحقق: هل يلزم تصميم الالتواء؟ ──
-        if (Tu <= Tu_th) {
-            codeNotes.add("Tu ≤ Tu_th → لا يلزم تصميم الالتواء - التسليح الأدنى يكفي")
-            return TorsionReinforcementResult(
-                designTorque = designTorque,
-                thresholdTorque = Tu_th_kNm,
-                torsionRequired = false,
-                stirrupAreaPerLeg = 0.0,
-                stirrupSpacing = 200.0,
-                additionalLongitudinalArea = 0.0,
-                longitudinalBars = 0,
-                longitudinalDiameter = 0.0,
-                aoh = 0.0,
-                ao = 0.0,
-                ph = 0.0,
-                isSafe = true,
-                codeReference = "ECP 203-2020: Section 4-3-4 (Tu < Tu_threshold - No torsion design required)",
-                warnings = warnings
-            )
-        }
-
-        // ── المساحات المحاطة بمحور الكانات ──
-        // Aoh = (b - 2×cover) × (h - 2×cover)
-        val aoh = (b - 2 * COVER) * (h - 2 * COVER)  // mm²
-        val ao = 0.85 * aoh  // المساحة الفعالة
-        val ph = 2.0 * ((b - 2 * COVER) + (h - 2 * COVER))  // محيط محور الكانات
-
-        codeNotes.add("Aoh = (b-2×${COVER.toInt()})×(h-2×${COVER.toInt()}) = ${"%.0f".format(aoh)} mm²")
-        codeNotes.add("Ao = 0.85 × Aoh = ${"%.0f".format(ao)} mm²")
-        codeNotes.add("Ph = 2×((b-2c)+(h-2c)) = ${"%.0f".format(ph)} mm")
-
-        // ── التحقق من الحد الأقصى ──
-        // الحد الأقصى لعزم اللي: Tu_max = 0.333 × √(fcu/γc) × b² × d
-        val Tu_max = 0.333 * sqrt(fcu / GAMMA_C) * b * b * h
-        if (Tu > Tu_max) {
-            warnings.add("تحذير: عزم اللي يتجاوز الحد الأقصى! زد أبعاد المقطع أو مقاومة الخرسانة")
-            codeNotes.add("Tu_max = ${"%.3f".format(Tu_max / 1e6)} kN.m - EXCEEDED!")
-        }
-
-        // ── زاوية الميل (θ) ──
-        // θ = 45° للخرسانة المسلحة العادية
-        val theta = PI / 4.0  // 45° بالراديان
-        val cotTheta = 1.0 / tan(theta)  // = 1.0 لـ 45°
-
-        codeNotes.add("θ = 45° (standard for RC), cotθ = ${"%.2f".format(cotTheta)}")
-
-        // ── مساحة الكانة لكل فرع ──
-        // At = Tu × s / (1.5 × Ao × fy/γs × cotθ)
-        // نحسب At/s أولاً
-        val At_per_s = Tu / (1.5 * ao * fsDesign * cotTheta)  // mm²/mm
-
-        // اختيار قطر الكانة وحساب التباعد
-        // نستخدم كانة مغلقة (فرعين على الأقل)
-        val availableStirrups = listOf(8.0, 10.0, 12.0, 14.0, 16.0)
-        var selectedStirrupDia = availableStirrups.firstOrNull { dia ->
-            val area = PI * dia * dia / 4.0
-            // التباعد = area / (At_per_s), يجب أن يكون ≥ 75mm و ≤ ph/8
-            val spacing = area / At_per_s
-            spacing >= 75.0 && spacing <= ph / 8.0
-        } ?: availableStirrups.last()
-
-        val stirrupAreaPerLeg = PI * selectedStirrupDia * selectedStirrupDia / 4.0
-        var stirrupSpacing = stirrupAreaPerLeg / At_per_s
-
-        // حدود التباعد
-        val minSpacing = 75.0
-        val maxSpacingTorsion = min(ph / 8.0, 300.0)
-        stirrupSpacing = stirrupSpacing.coerceIn(minSpacing, maxSpacingTorsion)
-
-        // تقريب لأقرب 25 مم
-        stirrupSpacing = ceil(stirrupSpacing / 25.0) * 25.0
-
-        codeNotes.add("At/s = ${"%.4f".format(At_per_s)} mm²/mm")
-        codeNotes.add("Selected: Ø${selectedStirrupDia.toInt()} @ ${"%.0f".format(stirrupSpacing)} mm (At = ${"%.1f".format(stirrupAreaPerLeg)} mm²)")
-
-        // ── الحديد الطولي الإضافي للالتواء ──
-        // Al = At × (fy_stirrup/fy_longitudinal) × (Ao/Ph) × cot²θ
-        // إذا كان fy_stirrup = fy_longitudinal:
-        val Al = At_per_s * (ao / ph) * cotTheta * cotTheta * stirrupSpacing  // mm² (لكل فرع)
-
-        val Al_total = Al * 2  // فرعين على الأقل (أعلى وأسفل)
-        val longBarDia = if (Al_total < 100) 12.0 else if (Al_total < 200) 14.0 else 16.0
-        val longBarArea = PI * longBarDia * longBarDia / 4.0
-        val numLongBars = max(2, ceil(Al_total / longBarArea).toInt())
-
-        codeNotes.add("Al (total) = ${"%.0f".format(Al_total)} mm²")
-        codeNotes.add("Additional longitudinal: ${numLongBars}Ø${longBarDia.toInt()} (${"%.0f".format(numLongBars * longBarArea)} mm²)")
-
-        // حد أدنى للحديد الطولي
-        val Al_min = 0.0025 * b * h  // ECP 203
-        val finalAl = max(Al_total, Al_min)
-        if (Al_total < Al_min) {
-            codeNotes.add("Minimum longitudinal torsion steel applied: ${"%.0f".format(Al_min)} mm²")
-        }
-
-        val isSafe = Tu <= Tu_max
+        val stirrupAreaPerLeg = PI * out.stirrupDiaMm * out.stirrupDiaMm / 4.0
+        val warnings = if (!out.isSafe) {
+            listOf("تحذير: عزم اللي يتجاوز سعة المقطع! زد أبعاد المقطع أو مقاومة الخرسانة")
+        } else emptyList<String>()
 
         return TorsionReinforcementResult(
             designTorque = designTorque,
-            thresholdTorque = Tu_th_kNm,
-            torsionRequired = true,
+            thresholdTorque = out.tuThKnm,
+            torsionRequired = designTorque > out.tuThKnm,
             stirrupAreaPerLeg = stirrupAreaPerLeg,
-            stirrupSpacing = stirrupSpacing,
-            additionalLongitudinalArea = finalAl,
-            longitudinalBars = numLongBars,
-            longitudinalDiameter = longBarDia,
-            aoh = aoh,
-            ao = ao,
-            ph = ph,
-            isSafe = isSafe,
-            codeReference = "ECP 203-2020: Section 4-3-4 (Torsion Design)",
+            stirrupSpacing = out.stirrupSpacingMm,
+            additionalLongitudinalArea = out.longitudinalAreaMm2,
+            longitudinalBars = out.longitudinalBars,
+            longitudinalDiameter = out.longitudinalDiaMm,
+            aoh = out.aohMm2,
+            ao = out.aoMm2,
+            ph = out.phMm,
+            isSafe = out.isSafe,
+            codeReference = "ECP 203 Section 4-3-4 (unified space-truss model)",
             warnings = warnings
         )
     }
@@ -1341,7 +1255,7 @@ class ECPAdvancedBeam {
     }
     
     private fun checkDevelopmentLength(result: ReinforcementResult, fcu: Double, fy: Double, availableLength: Double = 0.0): DevelopmentLengthCheckResult {
-        val fbd = 0.3 * sqrt(fcu)
+        val fbd = 0.6 * sqrt(fcu) // A14 unification: deformed bars
         val fs = fy / 1.15
         val db = result.barDiameter
         val ld = if (fbd > 0) fs * db / (4.0 * fbd) else 0.0

@@ -1,9 +1,9 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.base.ColumnDesign
-import com.civileg.app.domain.entities.ColumnShearDesignResult
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ColumnShearDesignResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
 import kotlin.math.*
 
 class ACIColumn : ColumnDesign {
@@ -12,6 +12,22 @@ class ACIColumn : ColumnDesign {
         private const val BETA_1 = 0.85  // Concrete stress block factor
         private const val PHI_TIED = 0.65     // معامل الاختزال للأعمدة المربوطة (ACI 318-21.2.1)
         private const val PHI_SPIRAL = 0.75   // معامل الاختزال للأعمدة الحلزونية (ACI 318-21.2.1)
+
+        // ACI 318-19 Table 22.4.2.1: maximum nominal axial strength
+        // Pn,max = 0.80·P0 (tied) / 0.85·P0 (spiral) — replaces the pre-2002
+        // blanket 0.80 factor with an explicit cap on design capacity.
+        private const val CAP_TIED = 0.80
+        private const val CAP_SPIRAL = 0.85
+
+        /** φ·Pn,max per ACI 318-19 §22.4.2, with fc' = 0.8×fcu cube conversion. */
+        private fun cappedDesignCapacity(
+            fcu: Double, fy: Double, Ag: Double, Ast: Double,
+            phi: Double, capFactor: Double
+        ): Double {
+            val fcPrime = 0.8 * fcu
+            val p0 = 0.85 * fcPrime * (Ag - Ast) + fy * Ast
+            return phi * capFactor * p0 / 1000.0 // kN
+        }
     }
 
     override fun calculateAxialCapacity(
@@ -24,18 +40,8 @@ class ACIColumn : ColumnDesign {
     ): Double {
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
-        
-        // ACI 318-22.4.2: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
-        // fc' = 0.8 × fcu (cube to cylinder conversion)
-        val fc_prime = 0.8 * fcu
-        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
-        val steelCapacity = fy * Ast
-        val nominalCapacity = concreteCapacity + steelCapacity
-        
-        // ACI 318-19: No separate alpha factor (removed since ACI 2002)
-        // φ = 0.65 for tied columns per ACI 21.2.1
-        val phi = PHI_TIED
-        return phi * nominalCapacity / 1000.0 // kN
+        // W5: ACI 318-19 Table 22.4.2.1(a) — tied columns capped at 0.80·P0
+        return cappedDesignCapacity(fcu, fy, Ag, Ast, PHI_TIED, CAP_TIED)
     }
     
     /**
@@ -48,13 +54,9 @@ class ACIColumn : ColumnDesign {
     ): Double {
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
-        val fc_prime = 0.8 * fcu
-        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
-        val steelCapacity = fy * Ast
-        val nominalCapacity = concreteCapacity + steelCapacity
-        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
-        // ACI 318-19: No separate alpha factor
-        return phi * nominalCapacity / 1000.0
+        // W5: ACI 318-19 Table 22.4.2.1(a)/(b) — 0.80·P0 tied / 0.85·P0 spiral
+        return if (isSpiral) cappedDesignCapacity(fcu, fy, Ag, Ast, PHI_SPIRAL, CAP_SPIRAL)
+        else cappedDesignCapacity(fcu, fy, Ag, Ast, PHI_TIED, CAP_TIED)
     }
     
     /**
@@ -74,7 +76,9 @@ class ACIColumn : ColumnDesign {
         val L_mm = unsupportedLength * 1000.0
         val slendernessRatio = effectiveLengthFactor * L_mm / r
         
-        // ACI 318-22.4.2.1: العمود قصير إذا λ ≤ 22 (مربوط) أو λ ≤ 28 (حلزوني)
+        // W5 note: ACI 318-19 Table 6.2.3 — short-column limits depend on
+        // bracing (kLu/r ≤ 34+12·M1/M2 braced, ≤ 22 non-braced). This engine
+        // conservatively applies the non-braced bound of 22.
         val isShort = slendernessRatio <= 22.0
         
         // حساب إجهاد الانبعاج الحرج Fcr
@@ -87,8 +91,11 @@ class ACIColumn : ColumnDesign {
         val As = reinforcementRatio * Ag
         val d_prime = 40.0  // cover + tie dia (approximate, mm)
         val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)  // N.mm^2
-        val PI2_EI = PI * PI * EI / 1e6  // kN.m^2 (unit conversion)
-        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)  // kN
+        // W5 fix: Pc[kN] = pi^2*EI[N.mm^2] / (1000*(K*L_mm)^2)
+        // The old code divided by 1e6 and then by L in metres, mixing unit bases
+        // (~1000x overstatement) and ignored K entirely.
+        val KL_mm = effectiveLengthFactor * L_mm
+        val Pc = PI * PI * EI / (1000.0 * KL_mm.pow(2))  // kN
         
         return Triple(slendernessRatio, !isShort, Pc)
     }
@@ -103,6 +110,9 @@ class ACIColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width, "depth" to depth
+        )
         val Ag = width * depth
         val Pu = axialLoad * 1000.0  // N - الحمل المحوري التصميمي (مضروب في معامل التحميل بالفعل)
         
@@ -175,8 +185,25 @@ class ACIColumn : ColumnDesign {
         
         // Safety check
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
-        val utilizationRatio = axialLoad / capacity
+        // rule 1.4 — non-positive capacity means the design FAILS, never Infinity/0
+        val utilizationRatio = if (capacity > 0) axialLoad / capacity else 2.0
+        if (capacity <= 0) warnings.add("Axial capacity non-positive — section/materials invalid")
         
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Cylinder Strength (f'c)", "f'c = 0.8 * fcu", "0.8 * $fcu", fc_prime, "MPa"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Gross Area (Ag)", "Ag = b * h", "$width * $depth", Ag, "mm2"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Design Strength (\u03C6Pn,max)", "\u03C6Pn,max = 0.80 * \u03C6 * [0.85*f'c*(Ag-As) + fy*As]", "0.80*0.65*[0.85*$fc_prime*($Ag-$astProvided) + $fy*$astProvided]", capacity, "kN"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Utilization Ratio", "U = Pu / \u03C6Pn", "$axialLoad / $capacity", utilizationRatio, "", limit = 1.0, limitType = com.civileg.core.calculations.entities.LimitType.MAX, isSafe = utilizationRatio <= 1.0
+        ))
+
         codeNotes.add("ACI 318-19: Chapter 10 - Columns")
         codeNotes.add("phi = 0.65 for tied columns")
         codeNotes.add("Min cover: ${getMinCover()}mm for cast-in-place")
@@ -191,7 +218,8 @@ class ACIColumn : ColumnDesign {
             isSafe = utilizationRatio <= 1.0,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 

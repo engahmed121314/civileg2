@@ -1517,8 +1517,11 @@ class SBCSteelDesignEngine {
                 Cb * Mn_full - (Cb * Mn_full - Mn_Lr) * ((Lb - Lp) / (Lr - Lp).coerceAtLeast(1.0))
             }
             else -> {
-                // المنطقة المرنة (Elastic LTB) - AISC F2-3
-                val Fcr_ltb = Cb * PI * PI * E_STEEL / ((Lb / ry.coerceAtLeast(1.0)).pow(2))
+                // المنطقة المرنة (Elastic LTB) - AISC F2-3/F2-13
+                // [P038/W2 FIX] F2-13 uses (Lb/rt)² — was (Lb/ry)², which
+                // over-predicted Fcr because ry < rt for rolled I-shapes
+                // (audit defect W2, unconservative).
+                val Fcr_ltb = Cb * PI * PI * E_STEEL / ((Lb / rt.coerceAtLeast(1e-6)).pow(2))
                 Fcr_ltb * Sx / 1e6  // kN.m
             }
         }

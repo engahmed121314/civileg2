@@ -34,6 +34,9 @@ class StairViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
+    private val _sanityResult = MutableLiveData<com.civileg.app.domain.safety.SanityResult?>()
+    val sanityResult: LiveData<com.civileg.app.domain.safety.SanityResult?> = _sanityResult
+
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
@@ -69,6 +72,7 @@ class StairViewModel @Inject constructor(
                 // Validate result for engineering consistency
                 val report = CalculationValidator.validateStair(res)
                 _validationReport.value = report
+                _sanityResult.value = com.civileg.app.domain.safety.EngineeringSanityEngine.fromValidation(report)
                 
                 _result.value = res
                 _error.value = null
@@ -82,7 +86,7 @@ class StairViewModel @Inject constructor(
 
     // Fixed legacy support
     fun calculateStair(rise: Double, run: Double, width: Double, load: Double, fcu: Double, fy: Double) {
-        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
+        calculateStairPro(CalculatorEngine.StairType.STRAIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, CalculatorEngine.AppDesignCode.EGYPTIAN)
     }
 
     fun saveStair(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
@@ -125,7 +129,17 @@ class StairViewModel @Inject constructor(
                             mainSpacing = currentResult.reinforcement.spacing,
                             distDia = currentResult.distributionReinforcement.diameter.toDouble(),
                             distSpacing = currentResult.distributionReinforcement.spacing,
-                            cover = pdfCover
+                            cover = pdfCover,
+                            // R3 engineering annotations
+                            wuKnm2 = currentResult.wu,
+                            codeName = when (currentResult.code) {
+                                CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                                CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                                else -> "ECP 203"
+                            },
+                            fcu = currentResult.fcu,
+                            fy = currentResult.fy,
+                            isSafe = currentResult.isSafe
                         )
                     } catch (e: Exception) { e.printStackTrace(); null }
                     pendingDrawingBitmap = null  // consume after use
@@ -172,7 +186,9 @@ class StairViewModel @Inject constructor(
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
                         drawingBitmap = drawingBitmap,
-                        outputPath = file.absolutePath
+                        warnings = _validationReport.value?.warnings.orEmpty(),
+                        outputPath = file.absolutePath,
+                    context = context
                     )
                 }
                 exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

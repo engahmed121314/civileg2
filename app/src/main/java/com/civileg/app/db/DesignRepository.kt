@@ -1,8 +1,17 @@
 package com.civileg.app.db
 
+import com.civileg.app.domain.FlatSlabResult
+import com.civileg.app.domain.PileDesignResult
+import com.civileg.app.domain.ShearWallResult
 import com.civileg.app.domain.entities.SteelMemberResult
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.CalculatorEngine.RetainingWallResult
+import com.civileg.app.utils.CalculatorEngine.SeismicResult
+import com.civileg.app.utils.ConcreteMixDesigner
+import com.civileg.app.utils.SoilBearingResult
+import com.civileg.app.utils.WindLoadResult
+import com.civileg.core.calculations.entities.DesignTrace
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONObject
@@ -54,7 +63,7 @@ class DesignRepository @Inject constructor(
             projectId = projectId, type = "Isolated", load = result.soilPressure, soilPressure = result.allowablePressure,
             fcu = fcu, fy = fy, colWidth = result.column1Size.first, colDepth = result.column1Size.second,
             width = result.width, length = result.length, thickness = result.thickness,
-            reinforcementBottom = result.reinforcementBottom.barString, reinforcementTop = null,
+            reinforcementBottom = result.reinforcement.barString, reinforcementTop = null,
             concreteVolume = result.concreteVolume, steelWeight = result.steelWeight, cost = result.cost,
             utilizationRatio = result.utilizationRatio
         )
@@ -135,7 +144,6 @@ class DesignRepository @Inject constructor(
     }
 
     suspend fun saveStairDesign(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
-        // StairResult already contains fcu, fy, span, riser, tread directly
         val inputData = JSONObject().apply {
             put("fcu", result.fcu)
             put("fy", result.fy)
@@ -158,7 +166,6 @@ class DesignRepository @Inject constructor(
     }
 
     suspend fun saveTankDesign(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
-        // TankResult already contains fcu, fy directly
         val inputData = JSONObject().apply {
             put("fcu", result.fcu)
             put("fy", result.fy)
@@ -180,26 +187,30 @@ class DesignRepository @Inject constructor(
         tankDao.insertTank(tank)
     }
 
-    suspend fun saveRetainingWallDesign(projectId: Long, name: String, result: CalculatorEngine.RetainingWallResult) {
-        // RetainingWallResult already contains fcu, fy, soilDensity, backfillAngle directly
+    suspend fun saveRetainingWallDesign(projectId: Long, name: String, result: RetainingWallResult) {
         val inputData = JSONObject().apply {
-            put("fcu", result.fcu)
-            put("fy", result.fy)
-            put("height", result.height)
-            put("stemThickness", result.stemThickness)
-            put("baseWidth", result.baseWidth)
+            put("fcu", result.trace.getValue("fcu") ?: 25.0)
+            put("fy", result.trace.getValue("fy") ?: 400.0)
+            put("height", result.trace.getValue("height") ?: 3000.0)
+            put("stemThickness", result.trace.getValue("stemThickness") ?: 300.0)
+            put("baseWidth", result.trace.getValue("baseWidth") ?: 2000.0)
             put("baseThickness", 500.0)
-            put("soilDensity", result.soilDensity)
-            put("backfillAngle", result.backfillAngle)
+            put("soilDensity", result.trace.getValue("soilDensity") ?: 18.0)
+            put("backfillAngle", result.trace.getValue("backfillAngle") ?: 30.0)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.RETAINING_WALL, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        
+        // Utilization ratio - using overturning FS as a proxy if not directly available
+        val utilRatio = 1.5 / result.overturningFS.coerceAtLeast(0.1)
+        
+        saveGeneralDesign(projectId, DesignType.RETAINING_WALL, name, result.isSafe, utilRatio, 0.0, 0.0, 0.0, result, result.designCode.name, inputData)
         
         val wall = RetainingWall(
-            projectId = projectId, height = result.height, stemThickness = result.stemThickness,
-            baseWidth = result.baseWidth, baseThickness = 500.0,
-            reinforcement = result.stemReinforcement.barString,
-            concreteVolume = result.concreteVolume, steelWeight = result.steelWeight, cost = result.cost,
-            utilizationRatio = result.utilizationRatio
+            projectId = projectId, height = result.trace.getValue("height") ?: 3000.0, 
+            stemThickness = result.trace.getValue("stemThickness") ?: 300.0,
+            baseWidth = result.trace.getValue("baseWidth") ?: 2000.0, baseThickness = 500.0,
+            reinforcement = result.stemMainRebar,
+            concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0,
+            utilizationRatio = utilRatio
         )
         retainingWallDao.insertRetainingWall(wall)
     }
@@ -236,32 +247,27 @@ class DesignRepository @Inject constructor(
             type = DesignType.STEEL_WAREHOUSE,
             name = name,
             isSafe = result.safetyStatus,
-            utilizationRatio = 0.0, // Warehouse usually has multiple ratios, using 0.0 for general
+            utilizationRatio = 0.0, 
             concreteVolume = 0.0,
-            steelWeight = result.totalWeight * 1000.0, // Convert Tons to Kg
-            totalCost = result.totalWeight * 50000.0, // Estimated cost per ton
+            steelWeight = result.totalWeight * 1000.0, 
+            totalCost = result.totalWeight * 50000.0, 
             result = result,
             codeUsed = "Steel Code",
             inputData = inputData
         )
     }
 
-    suspend fun saveSeismicDesign(projectId: Long, name: String, result: CalculatorEngine.SeismicResult) {
+    suspend fun saveSeismicDesign(projectId: Long, name: String, result: SeismicResult) {
         val inputData = JSONObject().apply {
             put("zone", result.zone)
             put("importance", result.importance)
-            put("reductionFactor", result.reductionFactor)
-            put("totalWeight", result.totalWeight)
-            put("height", result.height)
+            put("reductionFactor", result.responseReduction)
             put("baseShear", result.baseShear)
-            put("storyDrift", result.storyDrift)
-            put("timePeriod", result.timePeriod)
-            put("spectralAcceleration", result.spectralAcceleration)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.SEISMIC, name, result.isSafe, 0.0, 0.0, 0.0, 0.0, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.SEISMIC, name, result.isSafe, 0.0, 0.0, 0.0, 0.0, result, "Code", inputData)
     }
 
-    suspend fun savePileFoundationDesign(projectId: Long, name: String, result: com.civileg.app.domain.PileDesignResult) {
+    suspend fun savePileFoundationDesign(projectId: Long, name: String, result: PileDesignResult) {
         val inputData = JSONObject().apply {
             put("pileType", result.pileType)
             put("pileDiameter", result.pileDiameterMm)
@@ -285,7 +291,7 @@ class DesignRepository @Inject constructor(
         )
     }
 
-    suspend fun saveFlatSlabDesign(projectId: Long, name: String, result: com.civileg.app.domain.FlatSlabResult) {
+    suspend fun saveFlatSlabDesign(projectId: Long, name: String, result: FlatSlabResult) {
         val inputData = JSONObject().apply {
             put("panelMomentX", result.panelMomentX)
             put("panelMomentY", result.panelMomentY)
@@ -305,7 +311,7 @@ class DesignRepository @Inject constructor(
         )
     }
 
-    suspend fun saveShearWallDesign(projectId: Long, name: String, result: com.civileg.app.domain.ShearWallResult) {
+    suspend fun saveShearWallDesign(projectId: Long, name: String, result: ShearWallResult) {
         val inputData = JSONObject().apply {
             put("momentCapacity", result.momentCapacity)
             put("axialCapacity", result.axialCapacity)
@@ -325,15 +331,15 @@ class DesignRepository @Inject constructor(
         )
     }
 
-    suspend fun saveConcreteMixDesign(projectId: Long, name: String, result: com.civileg.app.utils.ConcreteMixDesigner.MixResult) {
+    suspend fun saveConcreteMixDesign(projectId: Long, name: String, result: ConcreteMixDesigner.MixResult) {
         saveGeneralDesign(projectId, DesignType.CONCRETE_MIX, name, true, 0.0, 0.0, 0.0, 0.0, result, "Standard")
     }
 
-    suspend fun saveSoilBearingDesign(projectId: Long, name: String, result: com.civileg.app.utils.SoilBearingResult, method: String) {
+    suspend fun saveSoilBearingDesign(projectId: Long, name: String, result: SoilBearingResult, method: String) {
         saveGeneralDesign(projectId, DesignType.SOIL_BEARING, name, true, 0.0, 0.0, 0.0, 0.0, result, method)
     }
 
-    suspend fun saveWindLoadDesign(projectId: Long, name: String, result: com.civileg.app.utils.WindLoadResult) {
+    suspend fun saveWindLoadDesign(projectId: Long, name: String, result: WindLoadResult) {
         saveGeneralDesign(projectId, DesignType.WIND_LOAD, name, true, 0.0, 0.0, 0.0, 0.0, result, "Code")
     }
 
@@ -372,7 +378,7 @@ class DesignRepository @Inject constructor(
             projectId = projectId,
             type = DesignType.FRAME_ANALYSIS,
             name = name,
-            isSafe = true, // Frame analysis itself doesn't have a single safe/unsafe flag
+            isSafe = true, 
             utilizationRatio = 0.0,
             concreteVolume = 0.0,
             steelWeight = 0.0,

@@ -1,11 +1,12 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignTrace
 
 /**
  * أنواع السلالم المدعومة
  */
-enum class StairType(val displayName: String) {
+enum class DomainStairType(val displayName: String) {
     STRAIGHT("Straight Stair"),
     DOG_LEG("Dog-Leg / Quarter-Turn"),
     SPIRAL("Spiral Stair"),
@@ -16,7 +17,7 @@ enum class StairType(val displayName: String) {
  * بيانات الإدخال لتصميم السلم
  */
 data class StaircaseInput(
-    val stairType: StairType = StairType.STRAIGHT,
+    val stairType: DomainStairType = DomainStairType.STRAIGHT,
     val span: Double,            // m - horizontal projection of stair flight
     val totalRise: Double,       // m - total vertical height
     val stairWidth: Double,      // m - width of stair
@@ -88,7 +89,8 @@ data class StaircaseResult(
 
     // فحوصات الأمان
     val safetyChecks: List<StairSafetyCheck>,
-    val codeNotes: List<String>
+    val codeNotes: List<String>,
+    val trace: DesignTrace = DesignTrace()
 )
 
 /**

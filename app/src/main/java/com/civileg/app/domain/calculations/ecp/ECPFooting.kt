@@ -1,10 +1,10 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.domain.entities.ShearCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearCheckResult
 import kotlin.math.*
 
 /**
@@ -169,6 +169,18 @@ class ECPFooting : FootingDesign {
         }
         codeNotes.add(String.format("One-way shear capacity: %.2f MPa", qcu))
 
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Required Area (A_req)", "A_req = P / (SBC - gamma_c * t)", "$P_service / ($soilBearingCapacity - 25 * $t_m)", A_req, "m2"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Max Soil Pressure (q_max)", "q_max = q_avg * (1 + 6e/B)", "$q_avg * (1 + 6*$ex/($B/1000.0))", q_max, "kPa", limit = soilBearingCapacity, limitType = com.civileg.core.calculations.entities.LimitType.MAX, isSafe = q_max <= soilBearingCapacity
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "One-way Shear (q_cu)", "q_cu = 0.24 * sqrt(fcu/gammaC)", "0.24 * sqrt($fcu / 1.5)", qcu, "MPa"
+        ))
+
         return FootingDesignResult(
             requiredWidth = B,
             requiredLength = L,
@@ -181,9 +193,11 @@ class ECPFooting : FootingDesign {
                 && q_min >= 0
                 && Vu_x <= Vc_x
                 && Vu_y <= Vc_y
-                && punchingCheck.isSafe,
+                && punchingCheck.isSafe
+                && reinfX.isSafe && reinfY.isSafe,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -404,7 +418,8 @@ class ECPFooting : FootingDesign {
             maxSoilPressure = qu_u,
             reinforcement = reinfBottom,
             punchingShearCheck = if (punching1.utilizationRatio > punching2.utilizationRatio) punching1 else punching2,
-            isSafe = punching1.isSafe && punching2.isSafe && qu_s <= soilBearingCapacity,
+            isSafe = punching1.isSafe && punching2.isSafe && qu_s <= soilBearingCapacity
+                && reinfBottom.isSafe && reinfTop.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )
@@ -491,7 +506,8 @@ class ECPFooting : FootingDesign {
             maxSoilPressure = q_max,
             reinforcement = reinf,
             punchingShearCheck = punchingCheck,
-            isSafe = q_max <= soilBearingCapacity && q_min >= 0 && punchingCheck.isSafe,
+            isSafe = q_max <= soilBearingCapacity && q_min >= 0 && punchingCheck.isSafe
+                && reinfBotX.isSafe && reinfBotY.isSafe && reinfTopX.isSafe && reinfTopY.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )
@@ -587,7 +603,8 @@ class ECPFooting : FootingDesign {
             punchingShearCheck = punchingResult,
             isSafe = punchingResult.isSafe
                 && pileShearStress <= pileShearCap
-                && strutAngle >= 40.0,
+                && strutAngle >= 40.0
+                && reinf.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )

@@ -2,7 +2,6 @@ package com.civileg.app.utils
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.civileg.app.domain.entities.DesignCode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,9 +31,9 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         get() = prefs.getString(KEY_USER_NAME, "Civil Engineer") ?: "Civil Engineer"
         set(value) = prefs.edit().putString(KEY_USER_NAME, value).apply()
 
-    var defaultDesignCode: DesignCode
-        get() = DesignCode.valueOf(prefs.getString(KEY_DESIGN_CODE, DesignCode.ECP.name) ?: DesignCode.ECP.name)
-        set(value) = prefs.edit().putString(KEY_DESIGN_CODE, value.name).apply()
+    // NOTE (ADR-003): the legacy "design_code" SharedPreferences key was removed.
+    // DataStore (PreferencesManager.defaultDesignCodeEnum) is the single source
+    // of truth; all readers were migrated to it.
 
     var steelPrice: Double
         // Default: EGP 28,000/ton — matches Egyptian market rate for rebar (2024-2025)
@@ -62,7 +61,6 @@ class SettingsManager @Inject constructor(@ApplicationContext context: Context) 
         private const val KEY_UNIT_SYSTEM = "unit_system"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_USER_NAME = "user_name"
-        private const val KEY_DESIGN_CODE = "design_code"
         private const val KEY_STEEL_PRICE = "steel_price"
         private const val KEY_CONCRETE_PRICE = "concrete_price"
         private const val KEY_FORMWORK_PRICE = "formwork_price"

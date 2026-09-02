@@ -1,0 +1,1924 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 8,
+    "identityHash": "5a648bd6faddb8573eaa79a883601286",
+    "entities": [
+      {
+        "tableName": "projects",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `location` TEXT NOT NULL, `clientName` TEXT NOT NULL, `description` TEXT NOT NULL, `status` TEXT NOT NULL, `code` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clientName",
+            "columnName": "clientName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "code",
+            "columnName": "code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "designs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `type` TEXT NOT NULL, `name` TEXT NOT NULL, `inputData` TEXT NOT NULL, `results` TEXT NOT NULL, `isSafe` INTEGER NOT NULL, `utilizationRatio` REAL NOT NULL, `codeUsed` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `totalCost` REAL NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputData",
+            "columnName": "inputData",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "results",
+            "columnName": "results",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSafe",
+            "columnName": "isSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codeUsed",
+            "columnName": "codeUsed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCost",
+            "columnName": "totalCost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "materials",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `name` TEXT NOT NULL, `unit` TEXT NOT NULL, `quantity` REAL NOT NULL, `unitPrice` REAL NOT NULL, `totalPrice` REAL NOT NULL, `category` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unit",
+            "columnName": "unit",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity",
+            "columnName": "quantity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unitPrice",
+            "columnName": "unitPrice",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalPrice",
+            "columnName": "totalPrice",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "footings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `type` TEXT NOT NULL, `load` REAL NOT NULL, `soilPressure` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `colWidth` REAL NOT NULL, `colDepth` REAL NOT NULL, `width` REAL NOT NULL, `length` REAL NOT NULL, `thickness` REAL NOT NULL, `reinforcementBottom` TEXT NOT NULL, `reinforcementTop` TEXT, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "load",
+            "columnName": "load",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "soilPressure",
+            "columnName": "soilPressure",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "colWidth",
+            "columnName": "colWidth",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "colDepth",
+            "columnName": "colDepth",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "length",
+            "columnName": "length",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thickness",
+            "columnName": "thickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcementBottom",
+            "columnName": "reinforcementBottom",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcementTop",
+            "columnName": "reinforcementTop",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "columns_table",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `load` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `width` REAL NOT NULL, `depth` REAL NOT NULL, `reinforcement` TEXT NOT NULL, `ties` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "load",
+            "columnName": "load",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depth",
+            "columnName": "depth",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcement",
+            "columnName": "reinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ties",
+            "columnName": "ties",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "slabs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `type` TEXT NOT NULL, `spanX` REAL NOT NULL, `spanY` REAL NOT NULL, `thickness` REAL NOT NULL, `load` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `reinforcement` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "spanX",
+            "columnName": "spanX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "spanY",
+            "columnName": "spanY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thickness",
+            "columnName": "thickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "load",
+            "columnName": "load",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcement",
+            "columnName": "reinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "beams",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `span` REAL NOT NULL, `load` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `width` REAL NOT NULL, `depth` REAL NOT NULL, `reinforcement` TEXT NOT NULL, `stirrups` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "span",
+            "columnName": "span",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "load",
+            "columnName": "load",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depth",
+            "columnName": "depth",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcement",
+            "columnName": "reinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stirrups",
+            "columnName": "stirrups",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "stairs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `thickness` REAL NOT NULL, `load` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `reinforcement` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thickness",
+            "columnName": "thickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "load",
+            "columnName": "load",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcement",
+            "columnName": "reinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "retaining_walls",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `height` REAL NOT NULL, `stemThickness` REAL NOT NULL, `baseWidth` REAL NOT NULL, `baseThickness` REAL NOT NULL, `reinforcement` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stemThickness",
+            "columnName": "stemThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseWidth",
+            "columnName": "baseWidth",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseThickness",
+            "columnName": "baseThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcement",
+            "columnName": "reinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "tanks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `length` REAL NOT NULL, `width` REAL NOT NULL, `height` REAL NOT NULL, `wallThickness` REAL NOT NULL, `baseThickness` REAL NOT NULL, `reinforcement` TEXT NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `cost` REAL NOT NULL, `utilizationRatio` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "length",
+            "columnName": "length",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallThickness",
+            "columnName": "wallThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseThickness",
+            "columnName": "baseThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reinforcement",
+            "columnName": "reinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cost",
+            "columnName": "cost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "inventory",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `quantity` REAL NOT NULL, `unit` TEXT NOT NULL, `registrationDate` INTEGER NOT NULL, `alertQuantity` REAL NOT NULL, `lastUpdated` INTEGER NOT NULL, `notes` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity",
+            "columnName": "quantity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unit",
+            "columnName": "unit",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "registrationDate",
+            "columnName": "registrationDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alertQuantity",
+            "columnName": "alertQuantity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUpdated",
+            "columnName": "lastUpdated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "pour_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `elementId` TEXT NOT NULL, `date` INTEGER NOT NULL, `volumeM3` REAL NOT NULL, `slumpMm` REAL NOT NULL, `truckId` TEXT NOT NULL, `sampleId` TEXT NOT NULL, `strength7Days` REAL NOT NULL, `strength28Days` REAL NOT NULL, `status` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elementId",
+            "columnName": "elementId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "volumeM3",
+            "columnName": "volumeM3",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slumpMm",
+            "columnName": "slumpMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "truckId",
+            "columnName": "truckId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sampleId",
+            "columnName": "sampleId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "strength7Days",
+            "columnName": "strength7Days",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "strength28Days",
+            "columnName": "strength28Days",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "site_inspections",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `designId` INTEGER NOT NULL, `inspectorName` TEXT NOT NULL, `date` INTEGER NOT NULL, `formworkSafe` INTEGER NOT NULL, `rebarMatchesDesign` INTEGER NOT NULL, `coverAdequate` INTEGER NOT NULL, `cleanlinessPassed` INTEGER NOT NULL, `comments` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "designId",
+            "columnName": "designId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inspectorName",
+            "columnName": "inspectorName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "formworkSafe",
+            "columnName": "formworkSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rebarMatchesDesign",
+            "columnName": "rebarMatchesDesign",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coverAdequate",
+            "columnName": "coverAdequate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cleanlinessPassed",
+            "columnName": "cleanlinessPassed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comments",
+            "columnName": "comments",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "flat_slabs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `panelSpanX` REAL NOT NULL, `panelSpanY` REAL NOT NULL, `slabThickness` REAL NOT NULL, `dropPanelThickness` REAL NOT NULL, `dropPanelSizeX` REAL NOT NULL, `dropPanelSizeY` REAL NOT NULL, `columnSizeX` REAL NOT NULL, `columnSizeY` REAL NOT NULL, `hasDropPanel` INTEGER NOT NULL, `hasShearReinforcement` INTEGER NOT NULL, `deadLoad` REAL NOT NULL, `liveLoad` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `columnStripWidthX` REAL NOT NULL, `columnStripWidthY` REAL NOT NULL, `middleStripWidthX` REAL NOT NULL, `middleStripWidthY` REAL NOT NULL, `negMomentColStripX` REAL NOT NULL, `posMomentColStripX` REAL NOT NULL, `negMomentMidStripX` REAL NOT NULL, `posMomentMidStripX` REAL NOT NULL, `negMomentColStripY` REAL NOT NULL, `posMomentColStripY` REAL NOT NULL, `negMomentMidStripY` REAL NOT NULL, `posMomentMidStripY` REAL NOT NULL, `topReinColStripX` TEXT NOT NULL, `botReinColStripX` TEXT NOT NULL, `topReinMidStripX` TEXT NOT NULL, `botReinMidStripX` TEXT NOT NULL, `topReinColStripY` TEXT NOT NULL, `botReinColStripY` TEXT NOT NULL, `topReinMidStripY` TEXT NOT NULL, `botReinMidStripY` TEXT NOT NULL, `punchingShearStress` REAL NOT NULL, `punchingShearCapacity` REAL NOT NULL, `isPunchingSafe` INTEGER NOT NULL, `deflection` REAL NOT NULL, `allowableDeflection` REAL NOT NULL, `isDeflectionSafe` INTEGER NOT NULL, `isSafe` INTEGER NOT NULL, `utilizationRatio` REAL NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `totalCost` REAL NOT NULL, `codeUsed` TEXT NOT NULL, `inputDataJson` TEXT NOT NULL, `resultsJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "panelSpanX",
+            "columnName": "panelSpanX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "panelSpanY",
+            "columnName": "panelSpanY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slabThickness",
+            "columnName": "slabThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dropPanelThickness",
+            "columnName": "dropPanelThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dropPanelSizeX",
+            "columnName": "dropPanelSizeX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dropPanelSizeY",
+            "columnName": "dropPanelSizeY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "columnSizeX",
+            "columnName": "columnSizeX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "columnSizeY",
+            "columnName": "columnSizeY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasDropPanel",
+            "columnName": "hasDropPanel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasShearReinforcement",
+            "columnName": "hasShearReinforcement",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deadLoad",
+            "columnName": "deadLoad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "liveLoad",
+            "columnName": "liveLoad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "columnStripWidthX",
+            "columnName": "columnStripWidthX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "columnStripWidthY",
+            "columnName": "columnStripWidthY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "middleStripWidthX",
+            "columnName": "middleStripWidthX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "middleStripWidthY",
+            "columnName": "middleStripWidthY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "negMomentColStripX",
+            "columnName": "negMomentColStripX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "posMomentColStripX",
+            "columnName": "posMomentColStripX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "negMomentMidStripX",
+            "columnName": "negMomentMidStripX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "posMomentMidStripX",
+            "columnName": "posMomentMidStripX",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "negMomentColStripY",
+            "columnName": "negMomentColStripY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "posMomentColStripY",
+            "columnName": "posMomentColStripY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "negMomentMidStripY",
+            "columnName": "negMomentMidStripY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "posMomentMidStripY",
+            "columnName": "posMomentMidStripY",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "topReinColStripX",
+            "columnName": "topReinColStripX",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "botReinColStripX",
+            "columnName": "botReinColStripX",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "topReinMidStripX",
+            "columnName": "topReinMidStripX",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "botReinMidStripX",
+            "columnName": "botReinMidStripX",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "topReinColStripY",
+            "columnName": "topReinColStripY",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "botReinColStripY",
+            "columnName": "botReinColStripY",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "topReinMidStripY",
+            "columnName": "topReinMidStripY",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "botReinMidStripY",
+            "columnName": "botReinMidStripY",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "punchingShearStress",
+            "columnName": "punchingShearStress",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "punchingShearCapacity",
+            "columnName": "punchingShearCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPunchingSafe",
+            "columnName": "isPunchingSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deflection",
+            "columnName": "deflection",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "allowableDeflection",
+            "columnName": "allowableDeflection",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeflectionSafe",
+            "columnName": "isDeflectionSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSafe",
+            "columnName": "isSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCost",
+            "columnName": "totalCost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codeUsed",
+            "columnName": "codeUsed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputDataJson",
+            "columnName": "inputDataJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resultsJson",
+            "columnName": "resultsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_flat_slabs_projectId",
+            "unique": false,
+            "columnNames": [
+              "projectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_flat_slabs_projectId` ON `${TABLE_NAME}` (`projectId`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "pile_foundations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `pileType` TEXT NOT NULL, `pileDiameter` REAL NOT NULL, `pileLength` REAL NOT NULL, `numberOfPiles` INTEGER NOT NULL, `axialLoad` REAL NOT NULL, `lateralLoad` REAL NOT NULL, `momentLoad` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `soilType` TEXT NOT NULL, `cu` REAL NOT NULL, `phi` REAL NOT NULL, `ultimateCapacity` REAL NOT NULL, `allowableCapacity` REAL NOT NULL, `shaftResistance` REAL NOT NULL, `endBearingResistance` REAL NOT NULL, `settlement` REAL NOT NULL, `isSafe` INTEGER NOT NULL, `utilizationRatio` REAL NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `totalCost` REAL NOT NULL, `codeUsed` TEXT NOT NULL, `inputDataJson` TEXT NOT NULL, `resultsJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pileType",
+            "columnName": "pileType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pileDiameter",
+            "columnName": "pileDiameter",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pileLength",
+            "columnName": "pileLength",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numberOfPiles",
+            "columnName": "numberOfPiles",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "axialLoad",
+            "columnName": "axialLoad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lateralLoad",
+            "columnName": "lateralLoad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "momentLoad",
+            "columnName": "momentLoad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "soilType",
+            "columnName": "soilType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cu",
+            "columnName": "cu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phi",
+            "columnName": "phi",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimateCapacity",
+            "columnName": "ultimateCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "allowableCapacity",
+            "columnName": "allowableCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shaftResistance",
+            "columnName": "shaftResistance",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endBearingResistance",
+            "columnName": "endBearingResistance",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "settlement",
+            "columnName": "settlement",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSafe",
+            "columnName": "isSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCost",
+            "columnName": "totalCost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codeUsed",
+            "columnName": "codeUsed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputDataJson",
+            "columnName": "inputDataJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resultsJson",
+            "columnName": "resultsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_pile_foundations_projectId",
+            "unique": false,
+            "columnNames": [
+              "projectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_pile_foundations_projectId` ON `${TABLE_NAME}` (`projectId`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "shear_walls",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `projectId` INTEGER NOT NULL, `wallLength` REAL NOT NULL, `wallHeight` REAL NOT NULL, `wallThickness` REAL NOT NULL, `wallType` TEXT NOT NULL, `hasBoundaryElement` INTEGER NOT NULL, `beLength` REAL NOT NULL, `beThickness` REAL NOT NULL, `axialLoad` REAL NOT NULL, `shearForce` REAL NOT NULL, `bendingMoment` REAL NOT NULL, `fcu` REAL NOT NULL, `fy` REAL NOT NULL, `verticalReinforcement` TEXT NOT NULL, `horizontalReinforcement` TEXT NOT NULL, `boundaryVerticalReinforcement` TEXT NOT NULL, `boundaryTransverseReinforcement` TEXT NOT NULL, `webVerticalReinRatio` REAL NOT NULL, `webHorizontalReinRatio` REAL NOT NULL, `concreteShearCapacity` REAL NOT NULL, `steelShearCapacity` REAL NOT NULL, `totalShearCapacity` REAL NOT NULL, `appliedShearStress` REAL NOT NULL, `isShearSafe` INTEGER NOT NULL, `axialCapacity` REAL NOT NULL, `momentCapacity` REAL NOT NULL, `isFlexureSafe` INTEGER NOT NULL, `driftRatio` REAL NOT NULL, `allowableDriftRatio` REAL NOT NULL, `isDriftSafe` INTEGER NOT NULL, `isSafe` INTEGER NOT NULL, `utilizationRatio` REAL NOT NULL, `concreteVolume` REAL NOT NULL, `steelWeight` REAL NOT NULL, `totalCost` REAL NOT NULL, `codeUsed` TEXT NOT NULL, `inputDataJson` TEXT NOT NULL, `resultsJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallLength",
+            "columnName": "wallLength",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallHeight",
+            "columnName": "wallHeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallThickness",
+            "columnName": "wallThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallType",
+            "columnName": "wallType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasBoundaryElement",
+            "columnName": "hasBoundaryElement",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "beLength",
+            "columnName": "beLength",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "beThickness",
+            "columnName": "beThickness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "axialLoad",
+            "columnName": "axialLoad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shearForce",
+            "columnName": "shearForce",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bendingMoment",
+            "columnName": "bendingMoment",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fcu",
+            "columnName": "fcu",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fy",
+            "columnName": "fy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verticalReinforcement",
+            "columnName": "verticalReinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "horizontalReinforcement",
+            "columnName": "horizontalReinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "boundaryVerticalReinforcement",
+            "columnName": "boundaryVerticalReinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "boundaryTransverseReinforcement",
+            "columnName": "boundaryTransverseReinforcement",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "webVerticalReinRatio",
+            "columnName": "webVerticalReinRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "webHorizontalReinRatio",
+            "columnName": "webHorizontalReinRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteShearCapacity",
+            "columnName": "concreteShearCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelShearCapacity",
+            "columnName": "steelShearCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalShearCapacity",
+            "columnName": "totalShearCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appliedShearStress",
+            "columnName": "appliedShearStress",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isShearSafe",
+            "columnName": "isShearSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "axialCapacity",
+            "columnName": "axialCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "momentCapacity",
+            "columnName": "momentCapacity",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFlexureSafe",
+            "columnName": "isFlexureSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driftRatio",
+            "columnName": "driftRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "allowableDriftRatio",
+            "columnName": "allowableDriftRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDriftSafe",
+            "columnName": "isDriftSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSafe",
+            "columnName": "isSafe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilizationRatio",
+            "columnName": "utilizationRatio",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concreteVolume",
+            "columnName": "concreteVolume",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steelWeight",
+            "columnName": "steelWeight",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCost",
+            "columnName": "totalCost",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codeUsed",
+            "columnName": "codeUsed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputDataJson",
+            "columnName": "inputDataJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resultsJson",
+            "columnName": "resultsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_shear_walls_projectId",
+            "unique": false,
+            "columnNames": [
+              "projectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_shear_walls_projectId` ON `${TABLE_NAME}` (`projectId`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5a648bd6faddb8573eaa79a883601286')"
+    ]
+  }
+}

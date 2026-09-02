@@ -3,12 +3,13 @@
 /local.properties
 /.idea
 .DS_Store
-/build
+# Gradle build outputs at ANY module depth (root /build, app/build,
+# core/calculations/build, ...) — trailing slash keeps build.gradle.kts tracked.
+build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-app/build
 *.apk
 *.aab
 *.ap_

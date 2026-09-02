@@ -32,6 +32,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.ProjectSummary
 
 /**
  * مصدّر PDF الشامل - Comprehensive PDF Exporter

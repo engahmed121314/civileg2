@@ -4,6 +4,7 @@ import com.civileg.app.domain.entities.*
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.PI
+import kotlin.math.pow
 
 class CalculatorEngineTest {
 
@@ -141,7 +142,7 @@ class CalculatorEngineTest {
             assertTrue("${s.name}: Sy should be > 0", s.sy > 0)
             assertTrue("${s.name}: Ry should be > 0", s.ry > 0)
             // Weight ≈ area × 7.85 kg/m (area is in cm² here, weight in kg/m)
-            val approxWeight = s.area * 7.85
+            val approxWeight = s.area * 0.785
             assertEquals("${s.name}: weight mismatch", approxWeight, s.weight, approxWeight * 0.05) // 5% tolerance
         }
     }
@@ -150,8 +151,11 @@ class CalculatorEngineTest {
     fun testSteelTablesHEBDataIntegrity() {
         for (s in SteelTables.hebSections) {
             assertTrue("${s.name}: Iy > Iz", s.iy > s.iz)
-            assertTrue("${s.name}: depth ≈ width (HEB is square-flanged)",
-                kotlin.math.abs(s.depth - s.width) < 5.0)
+            assertTrue(
+                "${s.name}: depth-width relation (h<=300: b=h; h>300: b=300mm)",
+                if (s.depth <= 305.0) kotlin.math.abs(s.depth - s.width) < 5.0
+                else kotlin.math.abs(s.width - 300.0) < 5.0
+            )
         }
     }
 

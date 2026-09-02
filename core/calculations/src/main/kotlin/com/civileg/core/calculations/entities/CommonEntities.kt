@@ -153,3 +153,23 @@ data class ProjectSummary(
     val costEfficiencyIndex: Double = 1.0,
     val costBreakdown: Map<String, Double> = emptyMap()
 )
+
+/**
+ * Column shear design result
+ */
+data class ColumnShearDesignResult(
+    val Vu: Double,
+    val Vc: Double,
+    val phiVc: Double,
+    val asvPerS: Double,
+    val minAsvPerS: Double,
+    val designAsvPerS: Double,
+    val stirrupDiameter: Double,
+    val stirrupSpacing: Double,
+    val providedAsvPerS: Double,
+    val maxSpacing: Double,
+    val needsStirrups: Boolean,
+    val isSafe: Boolean,
+    val utilizationRatio: Double = 0.0,
+    val codeNotes: List<String> = emptyList()
+)

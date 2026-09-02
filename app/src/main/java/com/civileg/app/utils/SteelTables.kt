@@ -32,7 +32,8 @@ object SteelTables {
         val Zx: Double = 0.0,   // cm³ — Plastic Section Modulus, strong axis
         val Zy: Double = 0.0,   // cm³ — Plastic Section Modulus, weak axis
         val J: Double = 0.0,    // cm⁴ — Torsional constant (St. Venant)
-        val Cw: Double = 0.0    // cm⁶ — Warping constant
+        val Cw: Double = 0.0,   // cm⁶ — Warping constant
+        val rootRadius: Double = 0.0 // mm
     ) {
         // European convention: iy = strong axis, iz = weak axis
         // American convention: Ix = strong axis, Iy = weak axis

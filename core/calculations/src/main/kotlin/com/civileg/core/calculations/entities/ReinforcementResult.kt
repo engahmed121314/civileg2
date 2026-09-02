@@ -16,7 +16,8 @@ data class ReinforcementResult(
     val warnings: List<String> = emptyList(), // تحذيرات إن وجدت
     val codeNotes: List<String> = emptyList(), // ملاحظات خاصة بالكود
     val spacing: Double = 0.0,
-    val description: String = ""
+    val description: String = "",
+    val trace: DesignTrace = DesignTrace() // [Phase 3] Transparency Trace
 ) {
     val barString: String get() = if (numberOfBars > 0) "${numberOfBars}Ø${barDiameter.toInt()}" else if (spacing > 0) "${(1000/spacing).toInt()}Ø${barDiameter.toInt()}/m" else description
 
@@ -27,3 +28,21 @@ data class ReinforcementResult(
             else -> "Unsafe - Redesign Required"
         }
 }
+
+/**
+ * نتيجة تصميم الكمرة المضاعفة التسليح (Doubly-Reinforced Beam)
+ */
+data class DoublyReinforcedResult(
+    val needsCompressionSteel: Boolean,
+    val balancedMoment: Double,       // kN.m
+    val excessMoment: Double,         // kN.m
+    val tensionSteelArea: Double,     // mm²
+    val compressionSteelArea: Double, // mm²
+    val tensionBars: String,
+    val compressionBars: String,
+    val leverArm: Double,             // mm
+    val neutralAxisDepth: Double,     // mm
+    val isSafe: Boolean,
+    val utilizationRatio: Double,
+    val codeNotes: String
+)

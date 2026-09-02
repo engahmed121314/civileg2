@@ -107,12 +107,14 @@ fun ProfessionalStairDrawing(
     cover: Double = 25.0,         // mm
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
     viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxSize()
+            .failStampWhen(!isSafe)
     ) {
         val cw = size.width
         val ch = size.height

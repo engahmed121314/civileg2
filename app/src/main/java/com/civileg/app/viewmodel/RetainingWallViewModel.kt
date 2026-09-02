@@ -34,6 +34,9 @@ class RetainingWallViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
+    private val _sanityResult = MutableLiveData<com.civileg.app.domain.safety.SanityResult?>()
+    val sanityResult: LiveData<com.civileg.app.domain.safety.SanityResult?> = _sanityResult
+
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
@@ -65,6 +68,7 @@ class RetainingWallViewModel @Inject constructor(
                 // Validate Retaining Wall
                 val report = CalculationValidator.validateRetainingWall(res)
                 _validationReport.value = report
+                _sanityResult.value = com.civileg.app.domain.safety.EngineeringSanityEngine.fromValidation(report)
                 
                 _result.value = res
                 _error.value = null
@@ -168,7 +172,9 @@ class RetainingWallViewModel @Inject constructor(
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
                         drawingBitmap = drawingBitmap,
-                        outputPath = file.absolutePath
+                        warnings = _validationReport.value?.warnings.orEmpty(),
+                        outputPath = file.absolutePath,
+                    context = context
                     )
                 }
                 exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

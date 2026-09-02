@@ -108,7 +108,8 @@ fun FrameAnalysisScreen(
                         val framePdfErrorMsg = stringResource(R.string.frame_pdf_error)
                         val scope = rememberCoroutineScope()
                         var isFrameExporting by remember { mutableStateOf(false) }
-                        IconButton(enabled = !isFrameExporting, onClick = {
+                        var isDxfExporting by remember { mutableStateOf(false) }
+                        IconButton(enabled = !isFrameExporting && !isDxfExporting, onClick = {
                             val inputs = viewModel.getStoredInputs()
                             isFrameExporting = true
                             scope.launch(Dispatchers.IO) {
@@ -150,6 +151,40 @@ fun FrameAnalysisScreen(
                                 )
                             } else {
                                 Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
+                            }
+                        }
+                        // DXF export — ADR-004: canonical P043 model-derived single
+                        // sheet (frame elevation + member schedule), ungated like the
+                        // other live exports.
+                        IconButton(
+                            enabled = !isFrameExporting && !isDxfExporting,
+                            onClick = {
+                                val inputs = viewModel.getStoredInputs()
+                                isDxfExporting = true
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        val frameResult = inputs.result ?: return@launch
+                                        val outcome = com.civileg.app.utils.CadDxfExporter.exportFrame(
+                                            context, inputs.nodes, inputs.members, frameResult,
+                                            inputs.settings, context.getString(R.string.frame_title)
+                                        )
+                                        withContext(Dispatchers.Main) {
+                                            com.civileg.app.utils.ExportUtils.handleDxfOutcome(context, outcome)
+                                        }
+                                    } finally {
+                                        withContext(Dispatchers.Main) { isDxfExporting = false }
+                                    }
+                                }
+                            }
+                        ) {
+                            if (isDxfExporting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(Icons.Default.FileDownload, stringResource(R.string.frame_export_dxf), tint = Color.White)
                             }
                         }
                     }
@@ -292,7 +327,8 @@ private fun DrawingTab(
                 diagramType = diagramType,
                 selectedMemberId = selectedMemberId,
                 onMemberTap = { viewModel.setSelectedMember(it) },
-                viewMode = viewMode
+                viewMode = viewMode,
+                isSafe = result?.let { it.concreteDesignResults.all { m -> m.isSafe } && it.steelDesignResults.all { m -> m.isSafe } } ?: true
             )
 
             // Solve button (FAB)
@@ -889,11 +925,17 @@ private fun ResultsTab(
     }
 
     var resultSubTab by remember { mutableIntStateOf(0) }
+    // R4-B: stable tab indices — conditional tabs previously shifted indexes and
+    // left the steel/concrete panes unreachable ("hidden tabs").
+    val showConcrete = concreteResults.isNotEmpty()
+    val showSteel = steelResults.isNotEmpty()
+    val idxConcrete = 2
+    val idxSteel = if (showConcrete) 3 else 2
     val subTabs = buildList {
         add(stringResource(R.string.frame_result_displacements))
         add(stringResource(R.string.frame_result_reactions))
-        if (concreteResults.isNotEmpty()) add(stringResource(R.string.frame_result_concrete_design))
-        if (steelResults.isNotEmpty()) add(stringResource(R.string.frame_result_steel_design))
+        if (showConcrete) add(stringResource(R.string.frame_result_concrete_design))
+        if (showSteel) add(stringResource(R.string.frame_result_steel_design))
     }
 
     TabRow(selectedTabIndex = resultSubTab) {
@@ -963,7 +1005,7 @@ private fun ResultsTab(
         }
 
         // === Concrete Design Results ===
-        if (resultSubTab == 2 && concreteResults.isNotEmpty()) {
+        if (resultSubTab == idxConcrete && showConcrete) {
             items(concreteResults) { cr ->
                 Card(
                     modifier = Modifier
@@ -1024,7 +1066,7 @@ private fun ResultsTab(
         }
 
         // === Steel Design Results ===
-        if (resultSubTab == 3 && steelResults.isNotEmpty()) {
+        if (resultSubTab == idxSteel && showSteel) {
             items(steelResults) { sr ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(4.dp),

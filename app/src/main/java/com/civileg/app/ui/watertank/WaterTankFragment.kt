@@ -19,9 +19,13 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.utils.SettingsManager
+import com.civileg.app.data.local.PreferencesManager
+import androidx.lifecycle.lifecycleScope
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.*
 import javax.inject.Inject
@@ -38,6 +42,9 @@ class WaterTankFragment : Fragment() {
     
     @Inject
     lateinit var settingsManager: SettingsManager
+
+    @Inject
+    lateinit var preferencesManager: PreferencesManager
 
     private var lastResult: DomainTankResult? = null
     private var lastInputData: JSONObject? = null
@@ -154,26 +161,30 @@ class WaterTankFragment : Fragment() {
     }
 
     private fun saveToProject(projectId: Long, result: DomainTankResult) {
-        val design = Design(
-            projectId = projectId, type = DesignType.WATER_TANK,
-            name = "Tank (${selectedType.name}) - ${System.currentTimeMillis() % 1000}",
-            inputData = lastInputData.toString(),
-            results = JSONObject().apply {
-                put("capacity", result.capacityM3)
-                put("cost", result.cost)
-                put("concreteVol", result.concreteVolume)
-                put("currency", settingsManager.currency)
-            }.toString(),
-            isSafe = result.isSafe, codeUsed = settingsManager.defaultDesignCode.name,
-            concreteVolume = result.concreteVolume, steelWeight = result.steelWeight,
-            totalCost = result.cost
-        )
-        viewModel.saveDesign(design)
-        
-        viewModel.saveMaterial(MaterialItem(projectId = projectId, name = "Concrete (Tank)", unit = "m3", quantity = result.concreteVolume, unitPrice = settingsManager.concretePrice, totalPrice = result.concreteVolume * settingsManager.concretePrice, category = MaterialCategory.CONCRETE))
-        viewModel.saveMaterial(MaterialItem(projectId = projectId, name = "Steel (Tank)", unit = "kg", quantity = result.steelWeight, unitPrice = settingsManager.steelPrice/1000, totalPrice = result.steelWeight * (settingsManager.steelPrice/1000), category = MaterialCategory.STEEL))
+        lifecycleScope.launch {
+            // ADR-003: default code resolved from DataStore (single source)
+            val codeUsed = preferencesManager.defaultDesignCodeEnum.first().name
+            val design = Design(
+                projectId = projectId, type = DesignType.WATER_TANK,
+                name = "Tank (${selectedType.name}) - ${System.currentTimeMillis() % 1000}",
+                inputData = lastInputData.toString(),
+                results = JSONObject().apply {
+                    put("capacity", result.capacityM3)
+                    put("cost", result.cost)
+                    put("concreteVol", result.concreteVolume)
+                    put("currency", settingsManager.currency)
+                }.toString(),
+                isSafe = result.isSafe, codeUsed = codeUsed,
+                concreteVolume = result.concreteVolume, steelWeight = result.steelWeight,
+                totalCost = result.cost
+            )
+            viewModel.saveDesign(design)
 
-        Toast.makeText(context, getString(R.string.save_success), Toast.LENGTH_SHORT).show()
+            viewModel.saveMaterial(MaterialItem(projectId = projectId, name = "Concrete (Tank)", unit = "m3", quantity = result.concreteVolume, unitPrice = settingsManager.concretePrice, totalPrice = result.concreteVolume * settingsManager.concretePrice, category = MaterialCategory.CONCRETE))
+            viewModel.saveMaterial(MaterialItem(projectId = projectId, name = "Steel (Tank)", unit = "kg", quantity = result.steelWeight, unitPrice = settingsManager.steelPrice/1000, totalPrice = result.steelWeight * (settingsManager.steelPrice/1000), category = MaterialCategory.STEEL))
+
+            Toast.makeText(context, getString(R.string.save_success), Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupExportButton() {

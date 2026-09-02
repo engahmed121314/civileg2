@@ -6,6 +6,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
 import com.civileg.app.utils.ArabicShaper
 import com.civileg.app.utils.PdfTextSegmenter
+import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb
 import com.itextpdf.kernel.font.PdfFont
@@ -15,8 +16,10 @@ import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.BaseDirection
+import com.itextpdf.layout.properties.HorizontalAlignment
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -121,6 +124,40 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     private fun Double.fmt(decimals: Int = 2): String = String.format(Locale.US, "%.${decimals}f", this)
 
+    // ==================== DESIGN DRAWINGS ====================
+    private fun addDesignDrawings(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+        document.add(arParagraph("Structural Design Drawings", 14f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(LineSeparator(SolidLine(1f)).setMarginBottom(10f))
+
+        // 1. Main Frame Drawing (Column & Rafter)
+        addSectionDrawing(document, "Main Column Section", result.mainFrame.columnSection, inputs.eaveHeight * 1000.0)
+        document.add(Paragraph(" "))
+        addSectionDrawing(document, "Main Rafter Section", result.mainFrame.rafterSection, (inputs.span / 2.0) * 1000.0)
+    }
+
+    private fun addSectionDrawing(document: Document, title: String, section: SteelSectionType, lengthMm: Double) {
+        document.add(arParagraph(title, 10f, true, SECONDARY))
+        
+        val bitmap = com.civileg.app.utils.PdfDrawingGenerator.generateSteelDrawing(
+            sectionName = section.sectionName,
+            sectionHeight = section.depth,
+            flangeWidth = section.width,
+            webThickness = section.webThickness,
+            flangeThickness = section.flangeThickness,
+            memberLength = lengthMm,
+            isSafe = true,
+            utilizationRatio = 0.8,
+            sectionType = section::class.simpleName ?: "I-BEAM"
+        )
+
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+        val imageData = ImageDataFactory.create(stream.toByteArray())
+        val image = Image(imageData).setHorizontalAlignment(HorizontalAlignment.CENTER).scaleToFit(500f, 300f)
+        
+        document.add(image)
+    }
+
     /**
      * Generate and save a comprehensive steel warehouse PDF report.
      *
@@ -157,7 +194,11 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         addMemberSchedule(document, inputs, result)
         document.add(AreaBreak())
 
-        // ========== PAGE 4: CONNECTIONS & RECOMMENDATIONS ==========
+        // ========== PAGE 4: DESIGN DRAWINGS (NEW) ==========
+        addDesignDrawings(document, inputs, result)
+        document.add(AreaBreak())
+
+        // ========== PAGE 5: CONNECTIONS & RECOMMENDATIONS ==========
         addConnectionSchedule(document, result)
         addRecommendations(document, result)
         document.add(AreaBreak())
@@ -178,7 +219,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val bannerCell = Cell().setPadding(15f).setBackgroundColor(PRIMARY).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
         bannerCell.add(Paragraph("STRUCTURAL DESIGN & ANALYSIS REPORT")
             .setFontSize(18f).setBold().setFontColor(WHITE).setTextAlignment(TextAlignment.CENTER))
-        bannerCell.add(arParagraph("تقرير التصميم والتحليل الإنشائي", 16f, true, WHITE, TextAlignment.CENTER))
+        bannerCell.add(arParagraph("Structural Design & Analysis Report", 16f, true, WHITE, TextAlignment.CENTER))
         banner.addCell(bannerCell)
         document.add(banner)
 
@@ -209,25 +250,29 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
 
         var row = 0
-        addInfoRow("المشروع | Project", "$projAr - $projEn", row++); row++
-        addInfoRow("العميل | Client", "$clientAr - $clientEn", row++); row++
-        addInfoRow("الكود التصميمي | Design Code", inputs.code.version, row++); row++
-        addInfoRow("البحر | Span", "${inputs.span.fmt()} m", row++); row++
-        addInfoRow("الطول | Length", "${inputs.length.fmt()} m", row++); row++
-        addInfoRow("ارتفاع القاعدة | Eave Height", "${inputs.eaveHeight.fmt()} m", row++); row++
-        addInfoRow("ارتفاع القمة | Ridge Height", "${inputs.ridgeHeight.fmt()} m", row++); row++
-        addInfoRow("مسافة البي | Bay Spacing", "${inputs.baySpacing.fmt()} m", row++); row++
-        addInfoRow("ميل السقف | Roof Slope", "${(inputs.slope * 100).fmt(1)}%", row++); row++
-        addInfoRow("تاريخ التصميم | Date", SimpleDateFormat("yyyy/MM/dd", Locale("ar")).format(Date()), row)
+        // ADR-009: prefer the English identifier when provided; user-entered
+        // Arabic identifiers pass through as DATA (labels are always English).
+        val projValue = projEn.ifBlank { projAr }
+        val clientValue = clientEn.ifBlank { clientAr }
+        addInfoRow("Project", projValue, row++); row++
+        addInfoRow("Client", clientValue, row++); row++
+        addInfoRow("Design Code", inputs.code.version, row++); row++
+        addInfoRow("Span", "${inputs.span.fmt()} m", row++); row++
+        addInfoRow("Length", "${inputs.length.fmt()} m", row++); row++
+        addInfoRow("Eave Height", "${inputs.eaveHeight.fmt()} m", row++); row++
+        addInfoRow("Ridge Height", "${inputs.ridgeHeight.fmt()} m", row++); row++
+        addInfoRow("Bay Spacing", "${inputs.baySpacing.fmt()} m", row++); row++
+        addInfoRow("Roof Slope", "${(inputs.slope * 100).fmt(1)}%", row++); row++
+        addInfoRow("Design Date", SimpleDateFormat("yyyy/MM/dd", Locale.US).format(Date()), row)
 
         document.add(infoTable)
         document.add(Paragraph(" "))
 
         // Status Banner
         val statusText = if (result.safetyStatus) {
-            "STRUCTURAL ANALYSIS PASSED | التصميم الإنشائي آمن ومطابق للكود"
+            "STRUCTURAL ANALYSIS PASSED — CODE COMPLIANT"
         } else {
-            "REVIEW REQUIRED | يحتاج مراجعة إنشائية"
+            "REVIEW REQUIRED"
         }
         // Use PdfTextSegmenter for proper mixed Arabic/Latin in status banner
         val statusColor = if (result.safetyStatus) SUCCESS else ERROR
@@ -240,16 +285,16 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== GENERAL NOTES ====================
     private fun addGeneralNotes(document: Document, inputs: SteelWarehouseInputs) {
-        document.add(arParagraph("ملاحظات عامة - General Notes", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("General Notes", 12f, true, PRIMARY, TextAlignment.CENTER))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val notes = listOf(
-            "1. جميع الأبعاد بالمتر ما لم يُذكر غير ذلك.",
-            "2. تصميم الأعضاء الفولاذية طبقاً للكود ${inputs.code.version}.",
-            "3. اللحام طبقاً لمواصفات AWS D1.1 (حد أدنى 6mm).",
-            "4. البراغي عالية الشد ASTM A325 أو ما يعادلها.",
-            "5. ميل السقف 1% - 10% لتصريف المياه حسب التصميم.",
-            "6. درجة المادة: الإطار الرئيسي S355/St-52، الثانوي S235/St-37.",
+            "1. All dimensions in metres unless otherwise noted.",
+            "2. Steel members designed per ${inputs.code.version}.",
+            "3. Welding per AWS D1.1 (minimum 6 mm).",
+            "4. High-strength bolts ASTM A325 or equivalent.",
+            "5. Roof slope 1%–10% for drainage as designed.",
+            "6. Material grades: main frame S355/St-52, secondary S235/St-37.",
             "7. All dimensions are in METERS unless otherwise noted.",
             "8. Steel members designed per ${inputs.code.version} code.",
             "9. Welding per AWS D1.1 (6mm minimum fillet weld).",
@@ -274,7 +319,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== PROJECT SUMMARY ====================
     private fun addProjectSummary(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
-        document.add(arParagraph("ملخص المشروع والمواد - Project & Material Summary", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("Project & Material Summary", 12f, true, PRIMARY, TextAlignment.CENTER))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val summary = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
@@ -299,13 +344,13 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
 
         var row = 0
-        addSummaryCell("الوزن الكلي للفولاذ | Total Steel Weight", "${result.totalWeight.fmt(1)} Tons", row++); row++
-        addSummaryCell("الوزن لكل م\u00B2 | Weight per m\u00B2", "${result.weightPerM2.fmt(1)} kg/m\u00B2", row++); row++
-        addSummaryCell("التكلفة لكل م\u00B2 | Cost per m\u00B2", "${result.costPerM2.fmt(0)} EGP/m\u00B2", row++); row++
-        addSummaryCell("التكلفة الإجمالية | Total Estimated Cost", "${result.estimatedTotalCost.fmt(0)} EGP", row++); row++
-        addSummaryCell("صافي الربح | Net Profit", "${result.netProfit.fmt(0)} EGP", row++); row++
-        addSummaryCell("العائد على الاستثمار | ROI", "${result.roi.fmt(1)}%", row++); row++
-        addSummaryCell("مساحة الكسوة | Cladding Area", "${result.totalCladdingArea.fmt(1)} m\u00B2", row)
+        addSummaryCell("Total Steel Weight", "${result.totalWeight.fmt(1)} Tons", row++); row++
+        addSummaryCell("Weight per m²", "${result.weightPerM2.fmt(1)} kg/m\u00B2", row++); row++
+        addSummaryCell("Cost per m²", "${result.costPerM2.fmt(0)} EGP/m\u00B2", row++); row++
+        addSummaryCell("Total Estimated Cost", "${result.estimatedTotalCost.fmt(0)} EGP", row++); row++
+        addSummaryCell("Net Profit", "${result.netProfit.fmt(0)} EGP", row++); row++
+        addSummaryCell("ROI", "${result.roi.fmt(1)}%", row++); row++
+        addSummaryCell("Cladding Area", "${result.totalCladdingArea.fmt(1)} m\u00B2", row)
 
         document.add(summary)
         document.add(Paragraph(" "))
@@ -313,7 +358,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== MEMBER SCHEDULE ====================
     private fun addMemberSchedule(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
-        document.add(arParagraph("جدول القطاعات الإنشائية - Steel Member Schedule", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("Steel Member Schedule", 12f, true, PRIMARY, TextAlignment.CENTER))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 15f, 25f, 18f, 12f, 12f, 10f))).useAllAvailableWidth()
@@ -327,11 +372,11 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         val numBays = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
         val members = listOf(
-            Triple("C1", "أعمدة | Columns", result.mainFrame.columnSection),
-            Triple("R1", "روافع | Rafters", result.mainFrame.rafterSection),
-            Triple("P1", "بورمات | Purlins", result.secondaryMembers.purlinSection),
-            Triple("G1", "جيرتس | Girts", result.secondaryMembers.girtSection),
-            Triple("B1", "تقوية | Bracing", result.secondaryMembers.bracingSection)
+            Triple("C1", "Columns", result.mainFrame.columnSection),
+            Triple("R1", "Rafters", result.mainFrame.rafterSection),
+            Triple("P1", "Purlins", result.secondaryMembers.purlinSection),
+            Triple("G1", "Girts", result.secondaryMembers.girtSection),
+            Triple("B1", "Bracing", result.secondaryMembers.bracingSection)
         )
 
         members.forEachIndexed { i, (mark, member, section) ->
@@ -365,13 +410,13 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // Design Forces Summary
         document.add(Paragraph(" "))
-        document.add(arParagraph("القوى التصميمية - Design Forces Summary", 10f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("Design Forces Summary", 10f, true, PRIMARY, TextAlignment.CENTER))
 
         val forces = Table(UnitValue.createPercentArray(floatArrayOf(25f, 25f, 25f, 25f))).useAllAvailableWidth()
         forces.addHeaderCell(headerCell("AXIAL (kN)"))
         forces.addHeaderCell(headerCell("MOMENT (kN.m)"))
         forces.addHeaderCell(headerCell("SHEAR (kN)"))
-        forces.addHeaderCell(headerCell(ar("الحالة") + " | STATUS"))
+        forces.addHeaderCell(headerCell("STATUS"))
         forces.addCell(dataCell("${result.mainFrame.maxAxial.fmt(1)}", bold = true))
         forces.addCell(dataCell("${result.mainFrame.maxMoment.fmt(1)}", bold = true))
         forces.addCell(dataCell("${result.mainFrame.maxShear.fmt(1)}", bold = true))
@@ -384,11 +429,11 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private fun addConnectionSchedule(document: Document, result: SteelWarehouseAnalysisResult) {
         if (result.connections.isEmpty()) return
 
-        document.add(arParagraph("جدول الوصلات - Connection Schedule", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("Connection Schedule", 12f, true, PRIMARY, TextAlignment.CENTER))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(20f, 20f, 20f, 20f, 20f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell(ar("الوصلة") + " | Connection"))
+        table.addHeaderCell(headerCell("Connection"))
         table.addHeaderCell(headerCell("TYPE"))
         table.addHeaderCell(headerCell("CAPACITY (kN)"))
         table.addHeaderCell(headerCell("DEMAND (kN)"))
@@ -413,7 +458,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private fun addRecommendations(document: Document, result: SteelWarehouseAnalysisResult) {
         if (result.recommendations.isEmpty()) return
 
-        document.add(arParagraph("توصيات التصميم - Design Recommendations", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("Design Recommendations", 12f, true, PRIMARY, TextAlignment.CENTER))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         result.recommendations.forEachIndexed { i, rec ->
@@ -427,14 +472,14 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
     // ==================== MATERIAL TAKEOFF ====================
     private fun addMaterialTakeoff(document: Document, result: SteelWarehouseAnalysisResult) {
-        document.add(arParagraph("جدول الكميات والتكلفة - Bill of Quantities", 12f, true, PRIMARY, TextAlignment.CENTER))
+        document.add(arParagraph("Bill of Quantities", 12f, true, PRIMARY, TextAlignment.CENTER))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 25f, 30f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("#"))
-        table.addHeaderCell(ar("البند") + " | ITEM")
-        table.addHeaderCell(ar("الكمية") + " | QUANTITY")
-        table.addHeaderCell(ar("ملاحظات") + " | NOTES")
+        table.addHeaderCell("ITEM")
+        table.addHeaderCell("QUANTITY")
+        table.addHeaderCell("NOTES")
 
         var idx = 1
         result.materialTakeoff.forEach { (key, value) ->
@@ -449,9 +494,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         // Add cost rows
         val bg = if (idx % 2 == 0) ROW_ALT else null
         table.addCell(dataCell("", bg = bg))
-        table.addCell(dataCell(ar("التكلفة الإجمالية") + " | TOTAL COST", bold = true, bg = LIGHT_BLUE))
+        table.addCell(dataCell("TOTAL COST", bold = true, bg = LIGHT_BLUE))
         table.addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", bold = true, bg = LIGHT_BLUE))
-        table.addCell(dataCell(ar("شامل الضريبة") + " | Incl. Tax", bg = LIGHT_BLUE))
+        table.addCell(dataCell("Incl. Tax", bg = LIGHT_BLUE))
 
         document.add(table)
         document.add(Paragraph(" "))
@@ -467,7 +512,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         // Project cell — use PdfTextSegmenter for mixed Arabic/Latin
         val projCell = Cell(1, 1).setPadding(5f)
         val projLabelP = PdfTextSegmenter.buildMixedParagraph(
-            "PROJECT / المشروع", arabicBoldFont(), helveticaFont(bold = true), 6f, DeviceRgb(128, 128, 128), null
+            "PROJECT", arabicBoldFont(), helveticaFont(bold = true), 6f, DeviceRgb(128, 128, 128), null
         )
         projCell.add(projLabelP)
         val projText = PdfTextSegmenter.buildMixedParagraph(
@@ -483,7 +528,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         // Client cell
         val clientCell = Cell(1, 1).setPadding(5f)
         val clientLabelP = PdfTextSegmenter.buildMixedParagraph(
-            "CLIENT / العميل", arabicBoldFont(), helveticaFont(bold = true), 6f, DeviceRgb(128, 128, 128), null
+            "CLIENT", arabicBoldFont(), helveticaFont(bold = true), 6f, DeviceRgb(128, 128, 128), null
         )
         clientCell.add(clientLabelP)
         val clientText = PdfTextSegmenter.buildMixedParagraph(
@@ -518,7 +563,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // Footer disclaimer — use PdfTextSegmenter for proper mixed rendering
         document.add(Paragraph(" "))
-        val footerRaw = "Generated by Civil EG Pro | ${ar("هذا التقرير لأغراض مرجعية فقط - يجب مراجعته بواسطة مهندس مؤهل")}"
+        val footerRaw = "Generated by Civil EG Pro | For reference only — must be reviewed by a qualified engineer."
         val footer = PdfTextSegmenter.buildMixedParagraph(
             footerRaw, arabicFont(), helveticaFont(bold = false), 7f, DeviceRgb(211, 211, 211), TextAlignment.CENTER
         )

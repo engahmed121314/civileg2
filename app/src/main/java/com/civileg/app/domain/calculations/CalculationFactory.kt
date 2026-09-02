@@ -44,9 +44,35 @@ import com.civileg.app.domain.calculations.ecp.ECPStaircase
 import com.civileg.app.domain.calculations.aci.ACIStaircase
 import com.civileg.app.domain.calculations.sbc.SBCStaircase
 import com.civileg.app.domain.calculations.base.StaircaseDesign
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.calculations.base.FlatSlabDesign
+import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
+import com.civileg.app.domain.calculations.aci.ACIFlatSlab
+import com.civileg.app.domain.calculations.sbc.SBCFlatSlab
+import com.civileg.app.domain.calculations.base.ShearWallDesign
+import com.civileg.app.domain.calculations.ecp.ECPShearWall
+import com.civileg.app.domain.calculations.aci.ACIShearWall
+import com.civileg.app.domain.calculations.sbc.SBCShearWall
+import com.civileg.app.domain.calculations.base.PileFoundationDesign
+import com.civileg.app.domain.calculations.base.SeismicDesign
+import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
+import com.civileg.app.domain.calculations.aci.ACIPileFoundation
+import com.civileg.app.domain.calculations.aci.ACISeismic
+import com.civileg.app.domain.calculations.ecp.ECPSeismic
+import com.civileg.app.domain.calculations.sbc.SBCPileFoundation
+import com.civileg.app.domain.calculations.sbc.SBCSeismic
+import com.civileg.core.calculations.entities.DesignCode
 
 object CalculationFactory {
+
+    /**
+     * Parse a user-facing code string ("ECP"/"ACI"/"SBC", case-insensitive).
+     * Returns null for blank/unrecognized input so the caller can fall back
+     * to the settings default (ADR-003) instead of silently assuming ECP.
+     */
+    fun parseDesignCode(raw: String?): DesignCode? =
+        raw?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { s -> DesignCode.entries.firstOrNull { it.name.equals(s, ignoreCase = true) } }
+
     
     fun getColumnDesign(code: DesignCode): ColumnDesign = when (code) {
         DesignCode.ECP -> ECPColumn()
@@ -152,5 +178,37 @@ object CalculationFactory {
         DesignCode.ECP -> ECPStaircase()
         DesignCode.ACI -> ACIStaircase()
         DesignCode.SBC -> SBCStaircase()
+    }
+
+    // ========== البلاطات المسطحة (Flat Slabs / DDM + Punching) ==========
+
+    fun getFlatSlabDesign(code: DesignCode): FlatSlabDesign = when (code) {
+        DesignCode.ECP -> ECPFlatSlab()
+        DesignCode.ACI -> ACIFlatSlab()
+        DesignCode.SBC -> SBCFlatSlab()
+    }
+
+    // ========== حوائط القص (Shear Walls) ==========
+
+    fun getShearWallDesign(code: DesignCode): ShearWallDesign = when (code) {
+        DesignCode.ECP -> ECPShearWall()
+        DesignCode.ACI -> ACIShearWall()
+        DesignCode.SBC -> SBCShearWall()
+    }
+
+    // ========== التحليل الزلزالي (Seismic Analysis) ==========
+
+    fun getSeismicAnalysis(code: DesignCode): SeismicDesign = when (code) {
+        DesignCode.ECP -> ECPSeismic()
+        DesignCode.ACI -> ACISeismic()
+        DesignCode.SBC -> SBCSeismic()
+    }
+
+    // ========== الأساسات العميقة (Pile Foundations) ==========
+
+    fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
+        DesignCode.ECP -> ECPPileFoundation()
+        DesignCode.ACI -> ACIPileFoundation()
+        DesignCode.SBC -> SBCPileFoundation()
     }
 }

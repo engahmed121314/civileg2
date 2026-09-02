@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.domain.entities.*
+import com.civileg.app.ui.compose.components.drawings.failStampWhen
 import com.civileg.app.viewmodel.DiagramType
 import kotlin.math.*
 
@@ -49,7 +50,8 @@ fun FrameDrawingCanvas(
     selectedMemberId: Int?,
     onMemberTap: ((Int) -> Unit)? = null,
     viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     val showDiagrams = result?.hasResults == true && viewMode == 0
     val colorScheme = MaterialTheme.colorScheme
@@ -86,6 +88,7 @@ fun FrameDrawingCanvas(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
+                .failStampWhen(!isSafe)
                 .pointerInput(selectedMemberId) {
                     detectTapGestures { tapOffset ->
                         if (onMemberTap != null) {

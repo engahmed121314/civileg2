@@ -1,8 +1,6 @@
 package com.civileg.app.domain.calculations.base
 
-import android.os.Parcelable
-import com.civileg.app.domain.entities.ReinforcementResult
-import kotlinx.parcelize.Parcelize
+import com.civileg.core.calculations.entities.ReinforcementResult
 
 interface TankDesign {
     fun calculateTank(
@@ -12,7 +10,14 @@ interface TankDesign {
         waterDepth: Double, // mm
         fcu: Double,
         fy: Double,
-        type: TankType = TankType.RECTANGULAR
+        type: TankType = TankType.RECTANGULAR,
+        /**
+         * A5-FIX: external groundwater depth below the tank top (mm).
+         * Buoyancy of underground tanks is driven by this — not by the stored
+         * water. Default [Double.POSITIVE_INFINITY] keeps the legacy envelope
+         * behaviour (full-height head on the empty tank).
+         */
+        groundWaterDepth: Double = Double.POSITIVE_INFINITY
     ): TankResult
 }
 
@@ -23,7 +28,6 @@ enum class TankType {
     RECTANGULAR, CIRCULAR
 }
 
-@Parcelize
 data class TankResult(
     val wallThickness: Double,
     val baseThickness: Double,
@@ -42,10 +46,10 @@ data class TankResult(
     val structuralSystem: String = "",
     val recommendations: List<String> = emptyList(),
     val safetyChecks: List<TankSafetyCheck> = emptyList(),
-    val warnings: List<String> = emptyList()
-) : Parcelable
+    val warnings: List<String> = emptyList(),
+    val trace: com.civileg.core.calculations.entities.DesignTrace = com.civileg.core.calculations.entities.DesignTrace()
+)
 
-@Parcelize
 data class TankSafetyCheck(
     val name: String,
     val value: Double,
@@ -53,4 +57,4 @@ data class TankSafetyCheck(
     val unit: String,
     val isSafe: Boolean,
     val description: String = ""
-) : Parcelable
+)

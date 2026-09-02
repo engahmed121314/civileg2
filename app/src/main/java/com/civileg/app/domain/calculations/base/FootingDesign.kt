@@ -1,8 +1,12 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.domain.entities.ShearCheckResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearCheckResult
+import com.civileg.core.calculations.entities.DesignTrace
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 /**
  * واجهة موحدة لتصميم القواعد حسب أي كود إنشائي
@@ -118,7 +122,8 @@ data class FootingDesignResult(
     val punchingShearCheck: ShearCheckResult,
     val isSafe: Boolean,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    val trace: @RawValue DesignTrace = DesignTrace()
 )
 
 enum class FootingDirection { SHORT, LONG }

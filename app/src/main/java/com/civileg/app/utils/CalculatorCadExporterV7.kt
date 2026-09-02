@@ -183,7 +183,7 @@ object CalculatorCadExporterV7 {
     }
 
     private fun validate(packages:List<CalculatorDetailingV4.DetailingPackage>,bbs:CalculatorDetailingV4.BarSchedule,issues:MutableList<String>){val ids=packages.map{it.memberId};ids.groupingBy{it}.eachCount().filterValues{it>1}.forEach{(k,v)->issues+="Duplicate Member ID $k x$v"};if(bbs.rows.isEmpty()&&packages.any{it.bars.isNotEmpty()||it.stirrups.isNotEmpty()})issues+="Reinforcement exists but BBS is empty";bbs.rows.forEach{if(it.quantity<=0)issues+="${it.mark}: invalid quantity";if(it.individualLengthMm<=0)issues+="${it.mark}: invalid cutting length"}}
-    private fun qaScan(file:File):List<String>{if(!file.exists())return listOf("Missing CAD file ${file.name}");val t=file.readText();val out=mutableListOf<String>();if(!t.contains("0\nEOF\n"))out+="${file.name}: missing DXF terminator";if(!t.contains("AcDbEntity"))out+="${file.name}: missing DXF entity subclass markers";if(t.count{it=='\n'}<200)out+="${file.name}: suspiciously small drawing";return out}
+    private fun qaScan(file:File):List<String>{if(!file.exists())return listOf("Missing CAD file ${file.name}");val t=file.readText().replace("\r\n","\n");val out=mutableListOf<String>();if(!t.contains("0\nEOF\n"))out+="${file.name}: missing DXF terminator";if(!t.contains("AcDbEntity"))out+="${file.name}: missing DXF entity subclass markers";if(t.count{it=='\n'}<200)out+="${file.name}: suspiciously small drawing";return out}
 
     private fun title(t:CalculatorDetailingV4.MemberType)=when(t){CalculatorDetailingV4.MemberType.BEAM->"RC_BEAM";CalculatorDetailingV4.MemberType.COLUMN->"RC_COLUMN";CalculatorDetailingV4.MemberType.SLAB->"RC_SLAB";CalculatorDetailingV4.MemberType.FOOTING->"FOUNDATION";CalculatorDetailingV4.MemberType.WALL->"WALL";CalculatorDetailingV4.MemberType.TANK->"TANK";CalculatorDetailingV4.MemberType.STAIR->"STAIR";CalculatorDetailingV4.MemberType.STEEL_MEMBER->"STEEL";CalculatorDetailingV4.MemberType.CONNECTION->"CONNECTION"}
     private fun safe(s:String)=s.replace(Regex("[^A-Za-z0-9_-]+"),"_")
@@ -212,8 +212,9 @@ object CalculatorCadExporterV7 {
         val acadGroupH = w.h()
         val rootH = w.h()
         w.raw("0\nSECTION\n2\nOBJECTS\n")
-        w.raw("0\nDICTIONARY\n5\n$rootH\n100\nAcDbDictionary\n281\n1\n3\nACAD_GROUP\n350\n$acadGroupH\n")
-        w.raw("0\nDICTIONARY\n5\n$acadGroupH\n100\nAcDbDictionary\n281\n0\n")
+        // Root dictionary owner must be 0 (ezdxf audit fix-202 otherwise)
+        w.raw("0\nDICTIONARY\n5\n$rootH\n330\n0\n100\nAcDbDictionary\n281\n1\n3\nACAD_GROUP\n350\n$acadGroupH\n")
+        w.raw("0\nDICTIONARY\n5\n$acadGroupH\n330\n$rootH\n100\nAcDbDictionary\n281\n0\n")
         w.raw("0\nENDSEC\n")
     }
     /** Write DXF content to file with CRLF and HANDSEED replacement. */

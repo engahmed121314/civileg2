@@ -8,7 +8,13 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
 dependencies {
     implementation(kotlin("stdlib"))
-    // Add math or other pure Kotlin libraries if needed
+    testImplementation("junit:junit:4.13.2")
 }

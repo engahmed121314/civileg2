@@ -2,6 +2,7 @@ package com.civileg.app.domain.entities
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import com.civileg.core.calculations.entities.DesignCode
 
 /**
  * Comprehensive Column Design Result
@@ -98,7 +99,7 @@ data class ColumnDesignResult(
     val cost: Double = 0.0,
 
     // ===== STEP-BY-STEP =====
-    val calculationSteps: List<CalculationStep> = emptyList()
+    val calculationSteps: List<AppCalculationStep> = emptyList()
 ) : Parcelable
 
 @Parcelize

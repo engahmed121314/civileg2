@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.civileg.app.domain.entities.ProjectSummary
+import com.civileg.core.calculations.entities.ProjectSummary
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet

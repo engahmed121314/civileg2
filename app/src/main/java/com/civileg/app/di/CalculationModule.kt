@@ -1,6 +1,6 @@
 package com.civileg.app.di
 
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.calculations.base.SlabDesign
 import com.civileg.app.domain.calculations.base.TankDesign

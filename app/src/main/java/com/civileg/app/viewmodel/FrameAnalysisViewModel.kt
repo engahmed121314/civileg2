@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import com.civileg.core.calculations.entities.DesignCode
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
@@ -459,7 +460,8 @@ class FrameAnalysisViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = isAllSafe,
                     drawingBitmap = null,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    context = getApplication<android.app.Application>()
                 )
 
                 withContext(Dispatchers.Main) {

@@ -57,6 +57,13 @@ class ECPShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "wallLength" to input.wallLength,
+            "wallThickness" to input.wallThickness,
+            "wallHeight" to input.wallHeight
+        )
+        com.civileg.app.domain.calculations.InputGuard.atLeastOne("numberOfStories", input.numberOfStories)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
@@ -142,6 +149,19 @@ class ECPShearWall : ShearWallDesign {
         codeNotes.add(String.format("Vc = %.1f kN, Vs = %.1f kN, Vn = %.1f kN (Vu = %.1f kN)",
             Vc, Vs, Vn, input.shearForce))
 
+        // ── 4b. Capacity design — flexural overstrength (A9-FIX) ───
+        // checkOverstrength() existed but was never called. Enforced for
+        // SPECIAL/COUPLED walls: Vn ≥ 1.2·Mn/Lw (ECP 201 capacity design)
+        // so a ductile flexure mechanism forms before shear failure.
+        val overstrengthOk = if (input.wallType != WallType.ORDINARY) {
+            val overstrengthDemand = 1.2 * Mn * 1000.0 / Lw / 1000.0  // kN
+            val ok = checkOverstrength(input, Mn, Vn)
+            safetyChecks.add(ShearWallSafetyCheck(
+                "Overstrength Vn>=1.2Mn/Lw", Vn, overstrengthDemand, "kN", ok
+            ))
+            ok
+        } else true
+
         // Horizontal reinforcement
         val horzRebar = designHorizontalReinforcement(input, Vc, d)
         codeNotes.add(String.format("Horizontal: %dΦ%d @ %d mm c/c (As = %.0f mm², req = %.0f mm²)",
@@ -198,10 +218,19 @@ class ECPShearWall : ShearWallDesign {
         val totalWeight = vertWeight + horzWeight
 
         // ── 9. Overall safety ──────────────────────────────────────
-        val overallSafe = flexOk && shearOk && slenderOk &&
+        val overallSafe = flexOk && shearOk && slenderOk && overstrengthOk &&
             (couplingResult?.isSafe ?: true)
         val maxUtil = maxOf(flexUtilRatio, shearUtilRatio,
             couplingResult?.utilizationRatio ?: 0.0)
+
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Design Moment (Mu)", "Mu_design", "${"%.1f".format(input.bendingMoment)} kN.m", input.bendingMoment, "kN.m"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Shear Capacity (Vn)", "Vn = Vc + Vs", "${"%.1f".format(Vc)} + ${"%.1f".format(Vs)}", Vn, "kN"
+        ))
 
         return ShearWallResult(
             isSafe = overallSafe,
@@ -225,7 +254,8 @@ class ECPShearWall : ShearWallDesign {
             steelWeightPerStory = totalWeight,
             warnings = warnings,
             codeNotes = codeNotes,
-            safetyChecks = safetyChecks
+            safetyChecks = safetyChecks,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -661,6 +691,7 @@ class ECPShearWall : ShearWallDesign {
         val beta1 = calculateBeta1(fcu)
 
         var c = 50.0
+        var cNext = c
         for (i in 1..60) {
             val a = beta1 * c
             val leverArm = d - a / 2.0
@@ -670,11 +701,15 @@ class ECPShearWall : ShearWallDesign {
             val newA = if (bw > 0 && fcDesign > 0) {
                 (AsEst * fsDesign + PuN) / (fcDesign * bw)
             } else a
-            c = newA / beta1
-            // Convergence check
-            if (abs(c - (newA / beta1)) < 0.1) break
+            // A9-FIX: compare against the PREVIOUS iterate. The old check
+            // compared c with the value just assigned to it -> always broke
+            // after the first pass.
+            cNext = newA / beta1
+            if (abs(cNext - c) < 0.1) break
+            c = cNext
         }
-        return c.coerceIn(0.0, 0.5 * d)  // limit c/d to 0.5 for ductility
+        // Ductility limit applied AFTER convergence, never inside the loop.
+        return cNext.coerceIn(0.0, 0.5 * d)
     }
 
     // ══════════════════════════════════════════════════════════════════

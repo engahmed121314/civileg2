@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
@@ -808,3 +810,32 @@ fun DrawScope.drawNorthArrow(
     drawLine(color, Offset(x, y - 4f), Offset(x, y + size - 8f), 1.5f)
     drawTextAnnotated("N", x, y - size - 4f, color, 16f, center = true, bold = true)
 }
+
+/**
+ * P2-11 — stamp an unsafe design onto the canvas. Rendered centred over the
+ * drawing in the same red "NOT SAFE - DESIGN FAILS" wording as the DXF stamp
+ * (EN-only per ADR-009). Intended to be drawn at the very end of a drawing's
+ * DrawScope so it always sits on top of the geometry.
+ */
+fun DrawScope.drawFailStamp() {
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val w = size.width * 0.72f
+    val h = 46f
+    val left = cx - w / 2f
+    val top = cy - h / 2f
+    drawRect(DrawingColorDefaults.UnsafeRed.copy(alpha = 0.08f), Offset(left, top), Size(w, h))
+    drawRect(DrawingColorDefaults.UnsafeRed, Offset(left, top), Size(w, h), style = Stroke(4f))
+    drawTextAnnotated("NOT SAFE", cx, cy - 6f, DrawingColorDefaults.UnsafeRed, 36f, center = true, bold = true)
+    drawTextAnnotated("DESIGN FAILS", cx, cy + 20f, DrawingColorDefaults.UnsafeRed, 18f, center = true)
+    drawTextAnnotated("DO NOT ISSUE FOR CONSTRUCTION", cx, cy + 36f, DrawingColorDefaults.UnsafeRed, 11f, center = true)
+}
+
+/**
+ * Applies a red "NOT SAFE - DESIGN FAILS" stamp on top of the drawing when the
+ * design is not safe. The stamp is drawn after the canvas content so it always
+ * sits on top of the geometry.
+ */
+fun Modifier.failStampWhen(showFail: Boolean): Modifier =
+    if (showFail) this.then(Modifier.drawWithContent { drawContent(); drawFailStamp() })
+    else this

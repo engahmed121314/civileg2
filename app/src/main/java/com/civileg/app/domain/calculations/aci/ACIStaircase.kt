@@ -3,6 +3,7 @@ package com.civileg.app.domain.calculations.aci
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.DesignCode
 
 /**
  * تصميم السلالم حسب الكود الأمريكي ACI 318-19
@@ -40,6 +41,15 @@ class ACIStaircase : StaircaseDesign {
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "span" to input.span, "totalRise" to input.totalRise,
+            "waistThickness" to input.waistThickness,
+            "stairWidth" to input.stairWidth
+        )
+        if (input.going > 0) {
+            com.civileg.app.domain.calculations.InputGuard.positive("going" to input.going)
+        }
         val safetyChecks = mutableListOf<StairSafetyCheck>()
         val codeNotes = mutableListOf<String>()
 
@@ -406,7 +416,10 @@ class ACIStaircase : StaircaseDesign {
                 val barArea = PI * dia * dia / 4.0
                 return barArea * 1000.0 / spacing
             }
-        } catch (e: Exception) { /* fall through */ }
+        } catch (e: Exception) {
+                // rule 1.4 — no silent failure
+                throw IllegalArgumentException("Invalid stair bar notation '$barString' | صيغة تسليح السلم غير مفهومة", e)
+            }
         return 0.0
     }
 
@@ -421,7 +434,10 @@ class ACIStaircase : StaircaseDesign {
                 val numBars = (stairWidthM * 1000.0 / spacing).toInt().coerceAtLeast(1)
                 return numBars * barArea
             }
-        } catch (e: Exception) { /* fall through */ }
+        } catch (e: Exception) {
+                // rule 1.4 — no silent failure
+                throw IllegalArgumentException("Invalid stair bar notation '$barString' | صيغة تسليح السلم غير مفهومة", e)
+            }
         return 0.0
     }
 }

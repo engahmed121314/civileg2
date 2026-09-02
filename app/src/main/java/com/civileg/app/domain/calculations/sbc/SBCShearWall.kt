@@ -148,6 +148,18 @@ class SBCShearWall : ShearWallDesign {
             VcNominal, Vs, phiVn, input.shearForce
         ))
 
+        // ── Capacity design — flexural overstrength (A9-FIX) ───────
+        // checkOverstrength() existed but was never called. Enforced for
+        // SPECIAL/COUPLED walls: Vn ≥ 1.2·Mn/Lw (SBC 304 capacity design).
+        val overstrengthOk = if (input.wallType != WallType.ORDINARY) {
+            val overstrengthDemand = 1.2 * Mn * 1000.0 / Lw / 1000.0  // kN
+            val ok = checkOverstrength(input, Mn, VcNominal + Vs)
+            safetyChecks.add(ShearWallSafetyCheck(
+                "Overstrength Vn>=1.2Mn/Lw", VcNominal + Vs, overstrengthDemand, "kN", ok
+            ))
+            ok
+        } else true
+
         // Horizontal reinforcement
         val horzRebar = designHorizontalReinforcement(input, VcNominal, d)
         codeNotes.add(String.format(
@@ -206,7 +218,7 @@ class SBCShearWall : ShearWallDesign {
         val totalWeight = vertWeight + horzWeight
 
         // ── 9. Overall safety ──────────────────────────────────────
-        val overallSafe = flexOk && shearOk && slenderOk && (couplingResult?.isSafe ?: true)
+        val overallSafe = flexOk && shearOk && slenderOk && overstrengthOk && (couplingResult?.isSafe ?: true)
         val maxUtil = maxOf(flexUtilRatio, shearUtilRatio, couplingResult?.utilizationRatio ?: 0.0)
 
         return ShearWallResult(
@@ -572,6 +584,7 @@ class SBCShearWall : ShearWallDesign {
         val beta1 = calculateBeta1(fcu)
 
         var c = 50.0
+        var cNext = c
         for (i in 1..60) {
             val a = beta1 * c
             val leverArm = d - a / 2.0
@@ -580,10 +593,13 @@ class SBCShearWall : ShearWallDesign {
             val newA = if (bw > 0 && fcDesign > 0) {
                 (AsEst * fsDesign + PuN) / (fcDesign * bw)
             } else a
-            c = newA / beta1
-            if (abs(c - newA / beta1) < 0.1) break
+            // A9-FIX: compare against the PREVIOUS iterate (old check always
+            // broke after the first pass).
+            cNext = newA / beta1
+            if (abs(cNext - c) < 0.1) break
+            c = cNext
         }
-        return c.coerceIn(0.0, 0.5 * d)
+        return cNext.coerceIn(0.0, 0.5 * d)
     }
 
     // ══════════════════════════════════════════════════════════════════

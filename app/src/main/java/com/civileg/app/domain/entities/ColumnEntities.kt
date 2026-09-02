@@ -1,7 +1,9 @@
 package com.civileg.app.domain.entities
 
 import android.os.Parcelable
+import com.civileg.core.calculations.entities.*
 import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 import kotlin.math.PI
 
 /**
@@ -98,7 +100,7 @@ data class AdvancedColumnResult(
     val slendernessRatio: Double,
     val isSlender: Boolean,
     val effectiveLength: Double,
-    val reinforcementResult: ReinforcementResult,
+    val reinforcementResult: @RawValue ReinforcementResult,
     val inventoryAnalysis: InventoryAnalysisResult?,
     val biaxialCheck: BiaxialCheckResult?,
     val punchingCheck: PunchingCheckResult?,

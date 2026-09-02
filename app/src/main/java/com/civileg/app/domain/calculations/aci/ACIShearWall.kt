@@ -61,6 +61,13 @@ class ACIShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "wallLength" to input.wallLength,
+            "wallThickness" to input.wallThickness,
+            "wallHeight" to input.wallHeight
+        )
+        com.civileg.app.domain.calculations.InputGuard.atLeastOne("numberOfStories", input.numberOfStories)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
@@ -160,6 +167,19 @@ class ACIShearWall : ShearWallDesign {
             "Max Shear (Vu/φVmax)", input.shearForce, PHI_SHEAR * VnMax, "kN", maxShearOk
         ))
 
+        // ── Capacity design — flexural overstrength (A9-FIX) ───────
+        // ACI 318-19 §18.10.2.4 capacity-design principle: the wall shear
+        // strength must exceed the moment overstrength demand so a ductile
+        // flexure mechanism forms first (SPECIAL/COUPLED walls).
+        val overstrengthOk = if (input.wallType != WallType.ORDINARY) {
+            val overstrengthDemand = 1.2 * Mn * 1000.0 / Lw / 1000.0  // kN
+            val ok = checkOverstrength(input, Mn, Vc + Vs)
+            safetyChecks.add(ShearWallSafetyCheck(
+                "Overstrength Vn>=1.2Mn/Lw", Vc + Vs, overstrengthDemand, "kN", ok
+            ))
+            ok
+        } else true
+
         // ── 5. Boundary elements ────────────────────────────────────
         val (beType, beRebar) = designBoundaryElements(input)
         if (beType != BoundaryElementType.NONE) {
@@ -196,7 +216,7 @@ class ACIShearWall : ShearWallDesign {
         val horzWeight = horzBars * Lw / 1000.0 * PI * (horzRebar.diameter / 2.0).pow(2) / 1e6 * 7850.0
 
         // ── 9. Overall ──────────────────────────────────────────────
-        val overallSafe = flexOk && shearOk && slenderOk && maxShearOk &&
+        val overallSafe = flexOk && shearOk && slenderOk && maxShearOk && overstrengthOk &&
             (couplingResult?.isSafe ?: true)
         val maxUtil = maxOf(flexUtilRatio, shearUtilRatio,
             couplingResult?.utilizationRatio ?: 0.0)
@@ -627,16 +647,20 @@ class ACIShearWall : ShearWallDesign {
         val beta1 = calculateBeta1(fc)
 
         var c = 50.0
+        var cNext = c
         for (i in 1..60) {
             val a = beta1 * c
             val leverArm = d - a / 2.0
             if (leverArm <= 0) break
             val As = max(0.0, (MuNmm / PHI_FLEXURE - PuN * (d - Lw / 2.0)) / (fy * leverArm))
             val newA = if (bw > 0 && fc > 0) (As * fy + PuN) / (0.85 * fc * bw) else a
-            c = newA / beta1
-            if (abs(c - newA / beta1) < 0.1) break
+            // A9-FIX: compare against the PREVIOUS iterate (old check always
+            // broke after the first pass).
+            cNext = newA / beta1
+            if (abs(cNext - c) < 0.1) break
+            c = cNext
         }
-        return c.coerceIn(0.0, 0.5 * d)
+        return cNext.coerceIn(0.0, 0.5 * d)
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -732,5 +756,20 @@ class ACIShearWall : ShearWallDesign {
             requiredArea = reqAreaPerMeter,
             ratio = if (reqAreaPerMeter > 0) provAreaPerMeter / reqAreaPerMeter else 1.0
         )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // CAPACITY DESIGN: OVERSTRENGTH (A9-FIX — was absent entirely in ACI)
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * ACI 318-19 §18.10.2.4 capacity design (simplified 1.2 factor consistent
+     * with the ECP/SBC siblings): wall shear strength must develop the flexural
+     * overstrength before shear failure.
+     */
+    private fun checkOverstrength(input: ShearWallInput, Mn: Double, Vn: Double): Boolean {
+        val Lw = input.wallLength
+        val Voverstrength = 1.2 * Mn * 1000.0 / Lw / 1000.0  // kN
+        return Vn >= Voverstrength
     }
 }

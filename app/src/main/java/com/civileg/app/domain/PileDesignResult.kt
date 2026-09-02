@@ -50,7 +50,8 @@ data class PileDesignResult(
     val isSafe: Boolean,
     val utilizationRatio: Double,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    val trace: com.civileg.core.calculations.entities.DesignTrace = com.civileg.core.calculations.entities.DesignTrace()
 )
 
 /**

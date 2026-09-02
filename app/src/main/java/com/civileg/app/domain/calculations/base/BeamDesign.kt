@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.base
 
 import com.civileg.app.domain.entities.*
+import com.civileg.core.calculations.entities.*
 
 /**
  * واجهة موحدة لتصميم الكمرات حسب أي كود إنشائي

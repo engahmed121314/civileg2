@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.entities.BeamDesignResult
-import com.civileg.app.domain.entities.CalculationStep
+import com.civileg.app.domain.entities.AppCalculationStep
 import com.civileg.app.domain.entities.SafetyCheckItem
 import kotlin.math.max
 import com.civileg.app.domain.entities.StepStatus
@@ -159,7 +159,7 @@ private fun BeamDetailRow(label: String, value: String, bold: Boolean = false, c
 }
 
 @Composable
-private fun BeamCalcStepItem(step: CalculationStep) {
+private fun BeamCalcStepItem(step: AppCalculationStep) {
     val bgColor = when (step.status) { StepStatus.CHECK_PASS -> Color(0xFF27AE60).copy(alpha = 0.1f); StepStatus.CHECK_FAIL -> Color(0xFFE74C3C).copy(alpha = 0.1f); StepStatus.WARNING -> Color(0xFFE67E22).copy(alpha = 0.1f); StepStatus.SECTION_HEADER -> Color(0xFF3498DB).copy(alpha = 0.1f); else -> Color.Transparent }
     val accent = when (step.status) { StepStatus.CHECK_PASS -> Color(0xFF27AE60); StepStatus.CHECK_FAIL -> Color(0xFFE74C3C); StepStatus.WARNING -> Color(0xFFE67E22); StepStatus.SECTION_HEADER -> Color(0xFF3498DB); else -> Color(0xFF1ABC9C) }
     Column(modifier = Modifier.fillMaxWidth().background(bgColor, RoundedCornerShape(8.dp)).padding(10.dp)) {

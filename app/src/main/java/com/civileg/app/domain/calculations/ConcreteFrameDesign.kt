@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.entities.*
+import com.civileg.core.calculations.entities.DesignCode
 import kotlin.math.*
 
 /**
@@ -173,7 +174,7 @@ object ConcreteFrameDesign {
         asRequired: Double,
         b: Double, d: Double, fcu: Double, fy: Double,
         code: DesignCode, warnings: MutableList<String>
-    ): Tuple4<Double, Int, Int, Double, Double> {
+    ): BarSelection {
         val asMin = if (code == DesignCode.ECP) {
             max(0.15 / 100.0 * b * d, 0.22 * sqrt(fcu) / fy * b * d)
         } else {
@@ -219,7 +220,7 @@ object ConcreteFrameDesign {
         val asMax = 0.04 * b * d
         if (asBot > asMax) warnings.add("مساحة التسليح تتجاوز الحد الأقصى (${asMax.toInt()} mm²)")
 
-        return Tuple4(selectedDia, numTop, numBot, asTop, asBot)
+        return BarSelection(selectedDia, numTop, numBot, asTop, asBot)
     }
 
     /**
@@ -277,7 +278,12 @@ object ConcreteFrameDesign {
         val phi = if (code == DesignCode.ECP) 1.0 else 0.9
         return phi * As * fy / gammaS * (d - a / 2.0) / 1e6 // kN.m
     }
-}
 
-/** Helper data class for returning multiple values */
-private data class Tuple4<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
+    private data class BarSelection(
+        val diameter: Double,
+        val numTop: Int,
+        val numBot: Int,
+        val asTop: Double,
+        val asBot: Double
+    )
+}

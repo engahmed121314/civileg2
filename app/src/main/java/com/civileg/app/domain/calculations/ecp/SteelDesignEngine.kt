@@ -46,7 +46,8 @@ class SteelDesignEngine {
         val localBucklingCheck: SteelCheckResult?,
         val isSafe: Boolean,
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
+        val codeNotes: List<String> = emptyList(),
+        val trace: com.civileg.core.calculations.entities.DesignTrace = com.civileg.core.calculations.entities.DesignTrace()
     )
 
     data class ColumnDesignResult(
@@ -56,7 +57,8 @@ class SteelDesignEngine {
         val isSlender: Boolean,
         val isSafe: Boolean,
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
+        val codeNotes: List<String> = emptyList(),
+        val trace: com.civileg.core.calculations.entities.DesignTrace = com.civileg.core.calculations.entities.DesignTrace()
     )
 
     data class SectionProperties(
@@ -206,9 +208,16 @@ class SteelDesignEngine {
             codeNotes.add("Lb=%.0fmm, Lp=%.0fmm, Lb%s Lp".format(Lb, Lp, if (Lb <= Lp) "≤" else ">"))
         }
 
-        if (!momentCheck.isSafe) warnings.add("العزم يتجاوز القدرة - اختر مقطع أكبر")
-        if (!shearCheck.isSafe) warnings.add("القص يتجاوز القدرة - زِد سماكة الجذع")
         if (!deflectionCheck.isSafe) warnings.add("الانحراف يتجاوز الحد المسموح")
+
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Nominal Moment (Mn)", "Mn = Fy * Zx", "${grade.fy} * ${section.Zx}", grade.fy * section.Zx / 1e6, "kN.m"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Shear Capacity (\u03C6Vn)", "Vn = 0.6 * Fy * Aw", "0.9 * 0.6 * ${grade.fy} * ${section.h * section.tw}", 0.9 * 0.6 * grade.fy * section.h * section.tw / 1000.0, "kN"
+        ))
 
         return BeamDesignResult(
             momentCheck = momentCheck,
@@ -218,7 +227,8 @@ class SteelDesignEngine {
             localBucklingCheck = localBucklingCheck,
             isSafe = momentCheck.isSafe && shearCheck.isSafe && deflectionCheck.isSafe,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -362,6 +372,8 @@ class SteelDesignEngine {
 
         // Lr حساب حسب AISC F2-6
         // rt = √(√(Iyc × Cw) / Sx) - تقريبي للمقاطع المدرفلة
+        // [P038/W2 FIX] Removed undocumented ×0.9 fudge — it shrank rt and
+        // inflated both Lr and elastic Fcr (unconservative).
         val Iyc = section.Iy
         val Cw = if (section.tw > 0 && section.tf > 0) {
             val h_web = (section.h - 2 * section.tf).coerceAtLeast(1.0)
@@ -369,7 +381,7 @@ class SteelDesignEngine {
         } else {
             section.Iy * 1000.0
         }
-        val rt = sqrt(sqrt(Iyc * Cw) / section.Sx) * 0.9
+        val rt = sqrt(sqrt(Iyc * Cw) / section.Sx)
         // Lr = 1.95 × rt × √(E / (0.7 × Fy)) (AISC F2-6)
         val Lr = 1.95 * rt * sqrt(E_STEEL / (0.7 * grade.fy))
 
@@ -381,8 +393,11 @@ class SteelDesignEngine {
                 Cb * Mn_full - (Cb * Mn_full - Mn_Lr) * ((Lb - Lp) / (Lr - Lp).coerceAtLeast(1.0))
             }
             else -> {
-                // المنطقة المرنة (Elastic LTB) - AISC F2-3
-                val Fcr_ltb = Cb * PI * PI * E_STEEL / ((Lb / ry).pow(2))
+                // المنطقة المرنة (Elastic LTB) - AISC F2-3/F2-4
+                // [P038/W2 FIX] F2-13 uses (Lb/rt)² — was (Lb/ry)², which
+                // over-predicted Fcr because ry < rt for rolled I-shapes
+                // (audit defect W2, unconservative).
+                val Fcr_ltb = Cb * PI * PI * E_STEEL / ((Lb / rt.coerceAtLeast(1e-6)).pow(2))
                 Fcr_ltb * section.Sx / 1e6
             }
         }

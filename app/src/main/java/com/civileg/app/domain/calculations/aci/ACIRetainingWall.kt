@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import kotlin.math.*
 
 class ACIRetainingWall : RetainingWallDesign {
@@ -18,7 +18,13 @@ class ACIRetainingWall : RetainingWallDesign {
         private const val SLIDE_FS_LIMIT = 1.5
     }
 
-    override fun designRetainingWall(input: RetainingWallInput): RetainingWallResult {
+    override fun designRetainingWall(input: RetainingWallInput): DomainRetainingWallResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "wallHeight" to input.wallHeight,
+            "frictionAngle" to input.frictionAngle,
+            "soilDensity" to input.soilDensity
+        )
         val H = input.wallHeight
         val tBase = input.stemBaseThickness
         val tTop = input.stemTopThickness
@@ -38,17 +44,25 @@ class ACIRetainingWall : RetainingWallDesign {
         val phiRad = Math.toRadians(phi)
         val Ka = tan(Math.PI / 4 - phiRad / 2).pow(2)
 
-        val hSoil = if (zwt >= H) H else zwt
-        val hWater = max(0.0, H - zwt)
+        // A4-FIX: layered Rankine active pressure with water table at depth zwt
+        // (same model as ECPRetainingWall — see derivation notes there).
+        val zw = if (zwt >= H) H else zwt.coerceAtLeast(0.0)
+        val hw = (H - zw).coerceAtLeast(0.0)
         val gammaSub = gamma - 9.81
 
-        val paSoil = 0.5 * Ka * gamma * hSoil.pow(2)
-        val paWater = 0.5 * 9.81 * hWater.pow(2)
+        val pDry = 0.5 * Ka * gamma * zw * zw
+        val pSubRect = Ka * gamma * zw * hw
+        val pSubTri = 0.5 * Ka * gammaSub * hw * hw
+        val paWater = 0.5 * 9.81 * hw * hw
         val paSurcharge = Ka * q * H
-        val totalPa = paSoil + paWater + paSurcharge
-        val paArm = H / 3.0
+        val totalPa = pDry + pSubRect + pSubTri + paWater + paSurcharge
 
-        val momentOT = paSoil * paArm + paWater * (hWater / 3.0 + hSoil) + paSurcharge * (H / 2.0)
+        val momentOT =
+            pDry * (hw + zw / 3.0) +
+            pSubRect * (hw / 2.0) +
+            pSubTri * (hw / 3.0) +
+            paWater * (hw / 3.0) +
+            paSurcharge * (H / 2.0)
 
         val stemW = 0.5 * (tBase + tTop) * H * 25.0
         val baseW = B * tFooting * 25.0
@@ -133,9 +147,9 @@ class ACIRetainingWall : RetainingWallDesign {
             "Cover = ${COVER_EARTH}mm (earth contact)",
             "Min \u03C1 = ${MIN_STEEL_RATIO}"
         )
-        if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
+        if (hw > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
 
-        return RetainingWallResult(
+        return DomainRetainingWallResult(
             isSafe = isSafe, designCode = DesignCode.ACI,
             overturningFS = otFS, slidingFS = slideFS, bearingFS = bearingFS,
             maxBearingPressure = maxBP, minBearingPressure = minBP,

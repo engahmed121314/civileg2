@@ -1,19 +1,26 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.base.ColumnDesign
-import com.civileg.app.domain.entities.ColumnShearDesignResult
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ColumnShearDesignResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
 import kotlin.math.*
 
 class ECPColumn : ColumnDesign {
     
     companion object {
-        private const val ALPHA = 0.8          // عامل اختزال الخرسانة
+        private const val ALPHA = 0.8          // معامل اللامركزية الصغرى للأعمدة المربوطة (ECP 203 §4-2-2-2)
+        private const val PHI_AXIAL = 0.65     // معامل اختزال المقاومة للضغط - أعمدة مربوطة (ECP 203 §4-2-2-2)
         private const val GAMMA_C = 1.5        // معامل أمان الخرسانة (ECP 203 §2-3-1)
         private const val GAMMA_S = 1.15       // معامل أمان الحديد (ECP 203 §2-3-1)
-        // ECP 203 لا يستخدم معامل φ منفصل للقص - γc و γs كافيان
-        // (تم حذف PHI_SHEAR = 0.75 الذي كان ACI-style ويسبب double-counting للأمان)
+        // ملاحظة: ALPHA ≠ PHI_AXIAL — الأول يعوض اللامركزية العرضية الصغرى، والثاني اختزال مقاومة.
+        // كلاهما إلزامي في ECP 203: Pu = φ × [α × (0.67fcu/γc×(Ag−Ast) + fy/γs×Ast)]
+
+        /** 
+         * W9-FIX: ECP 203 §4-2-3: maximum longitudinal reinforcement ratio
+         * is 6% for general section, but 4% is common in lap locations. 
+         */
+        const val MAX_REINFORCEMENT_RATIO = 0.06
     }
 
     override fun calculateAxialCapacity(
@@ -25,18 +32,18 @@ class ECPColumn : ColumnDesign {
         loadCombination: LoadCombination
     ): Double {
         val Ag = width * depth                          // مساحة المقطع الكلية (mm²)
-        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08) // حد أقصى 8%
+        val Ast = reinforcementArea.coerceAtMost(Ag * MAX_REINFORCEMENT_RATIO) // حد أقصى 6%
         
         // مقاومة الخرسانة: 0.67 * fcu / γc
         val concreteStress = 0.67 * fcu / GAMMA_C
         // مقاومة الحديد: fy / γs
         val steelStress = fy / GAMMA_S
         
-        // القدرة المحورية: Pu = α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
-        // ECP 203 يستخدم γc و γs فقط - لا يوجد معامل φ منفصل
+        // القدرة التصميمية: Pu = φ × α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
+        // (ECP 203-2020 §4-2-2-2: φ=0.65 مربوطة + α=0.8 للامركزية الصغرى)
         val concreteCapacity = concreteStress * (Ag - Ast)
         val steelCapacity = steelStress * Ast
-        val designCapacity = ALPHA * (concreteCapacity + steelCapacity)
+        val designCapacity = PHI_AXIAL * ALPHA * (concreteCapacity + steelCapacity)
         
         // التحويل من نيوتن إلى كيلو نيوتن
         return designCapacity / 1000.0
@@ -52,6 +59,9 @@ class ECPColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width, "depth" to depth
+        )
         val Ag = width * depth
         // Pu: الحمل المحوري التصميمي (N) - نستخدمه مباشرة بدون قسمة
         val Pu = axialLoad * 1000.0  // N
@@ -127,6 +137,18 @@ class ECPColumn : ColumnDesign {
             codeNotes.add("Eccentricity check: e=${"%.1f".format(eccentricity)}mm > emin=${minEccentricity}mm")
         }
         
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Concrete Area (Ag)", "Ag = b * h", "$width * $depth", width * depth, "mm2"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Reinforcement Ratio (\u03C1)", "\u03C1 = As / Ag", "$astProvided / ${width*depth}", astProvided / (width * depth), ""
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Axial Capacity (Pu)", "Pu = (0.35*fcu*Ac + 0.67*fy*As)/1000", "(0.35*$fcu*Ac + 0.67*$fy*$astProvided)/1000", capacity, "kN"
+        ))
+
         return ReinforcementResult(
             astRequired = requiredSteelArea,
             astProvided = astProvided,
@@ -137,7 +159,8 @@ class ECPColumn : ColumnDesign {
             isSafe = utilizationRatio <= 1.0 && requiredSteelArea <= maxSteel,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -147,7 +170,7 @@ class ECPColumn : ColumnDesign {
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
-    override fun getMaxReinforcementRatio(): Double = 0.08   // 8% per ECP 203-2020 Section 4-2-3 (4% typical, 6% at splices, 8% max)
+    override fun getMaxReinforcementRatio(): Double = 0.04  // W9-FIX: Use 4% (conservative lap limit)
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0

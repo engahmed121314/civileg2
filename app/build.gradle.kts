@@ -35,6 +35,7 @@ android {
             arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
             arg("dagger.fastInit", "enabled")
             arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
 
         // Developer info for Play Store
@@ -47,7 +48,7 @@ android {
 
     buildFeatures {
         viewBinding = true
-        dataBinding = true
+        dataBinding = false
         compose = true
         buildConfig = true
     }
@@ -93,7 +94,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use release signing config if available
+            // Tier-1 signing safety: release artifacts must be signed with the
+            // real key. The hard gate lives in gradle.taskGraph.whenReady below
+            // so local debug/test workflows stay unaffected.
             signingConfigs.findByName("release")?.let {
                 signingConfig = it
             }
@@ -159,7 +162,34 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:-processing")
 }
 
+// Tier-1 signing gate (fail-fast, lazy): hard-fail when a RELEASE artifact is
+// requested without a real signing config. Local debug/test workflows are
+// unaffected. Escape hatch for throwaway local builds:
+//   ./gradlew assembleRelease -PallowDebugSignedRelease
+gradle.taskGraph.whenReady {
+    // Mirrors the signingConfigs creation conditions above (keystore.properties
+    // file OR CI env vars) without needing the android extension receiver.
+    val hasSigningSource =
+        rootProject.file("keystore.properties").exists() ||
+        (!System.getenv("KEY_ALIAS").isNullOrBlank() &&
+         !System.getenv("KEYSTORE_FILE").isNullOrBlank())
+    val wantsReleaseArtifact = allTasks.any {
+        it.name == "assembleRelease" || it.name == "bundleRelease"
+    }
+    if (wantsReleaseArtifact && !hasSigningSource &&
+        !project.hasProperty("allowDebugSignedRelease")
+    ) {
+        throw GradleException(
+            "RELEASE ARTIFACT REQUIRES SIGNING: no keystore.properties and no " +
+                "CI env vars (KEY_ALIAS/KEYSTORE_FILE/KEYSTORE_PASSWORD). Provide " +
+                "credentials, or pass -PallowDebugSignedRelease for a local " +
+                "debug-signed build."
+        )
+    }
+}
+
 dependencies {
+    implementation(project(":core:calculations"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -223,6 +253,10 @@ dependencies {
     implementation(libs.user.messaging.platform)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
+    androidTestImplementation("androidx.test:core:1.5.0")
 }

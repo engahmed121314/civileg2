@@ -26,7 +26,7 @@ import androidx.room.TypeConverters
         ShearWallDesignEntity::class
     ],
     version = 8,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -58,7 +58,12 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civil_eg_database"
                 )
-                .fallbackToDestructiveMigration()
+                // ADR-001: Strict data persistence — no destructive migration in production.
+                // Every schema change MUST be handled by Migrations.kt chain.
+                .addMigrations(
+                    Migrations.MIGRATION_6_7,
+                    Migrations.MIGRATION_7_8
+                )
                 .build()
                 INSTANCE = instance
                 instance

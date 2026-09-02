@@ -3,7 +3,7 @@ package com.civileg.app.db
 import androidx.lifecycle.LiveData
 import androidx.room.*
 
-@Dao
+@Dao // touch
 interface MaterialDao {
     @Query("SELECT * FROM materials WHERE projectId = :projectId")
     fun getMaterialsForProject(projectId: Long): LiveData<List<MaterialItem>>

@@ -8,21 +8,6 @@ import kotlin.math.*
  * When a singly reinforced section is insufficient (Mu > Mu_max for tension-controlled),
  * compression steel is added to increase the moment capacity.
  *
- * Key equations:
- * - K_bal uses strain compatibility per ECP 203 §4-2-2-1
- * - R = Mu / (fcu/γc × b × d²)
- * - If R > R_bal -> need compression steel
- * - As' = (Mu - Mu_bal) / (fy/γs × (d - d'))
- * - As = As1 (concrete balanced) + As' (compression steel couple)
- *
- * Where:
- * - fcu = concrete compressive strength (MPa)
- * - fy = steel yield strength (MPa)
- * - gamma_c = 1.5 (concrete safety factor per ECP)
- * - gamma_s = 1.15 (steel safety factor per ECP)
- * - d = effective depth
- * - d' = depth to compression steel
- *
  * Reference: ECP 203-2020 Clause 4-2-2-2
  */
 data class DoublyReinforcedBeamResult(
@@ -33,14 +18,14 @@ data class DoublyReinforcedBeamResult(
     val kBal: Double,                      // Balanced K
     val r: Double,                         // R = Mu / (fcu/gamma_c * b * d^2)
     val rBal: Double,                      // Balanced R
-    val asRequired: Double,                // Total tension steel area (cm^2)
-    val asCompression: Double,             // Compression steel area (cm^2)
-    val asTensionFromConcrete: Double,     // Tension steel balanced with concrete (cm^2)
-    val asTensionFromCompression: Double,  // Additional tension steel for compression steel (cm^2)
-    val asMin: Double,                     // Minimum steel area (cm^2)
-    val asMax: Double,                     // Maximum steel area (cm^2)
-    val tensionBars: String,               // e.g. "5\u03A620"
-    val compressionBars: String,           // e.g. "3\u03A616"
+    val asRequired: Double,                // Total tension steel area (mm^2)
+    val asCompression: Double,             // Compression steel area (mm^2)
+    val asTensionFromConcrete: Double,     // Tension steel balanced with concrete (mm^2)
+    val asTensionFromCompression: Double,  // Additional tension steel for compression steel (mm^2)
+    val asMin: Double,                     // Minimum steel area (mm^2)
+    val asMax: Double,                     // Maximum steel area (mm^2)
+    val tensionBars: String,               // e.g. "5Φ20"
+    val compressionBars: String,           // e.g. "3Φ16"
     val tensionBarCount: Int,
     val tensionBarDia: Int,
     val compressionBarCount: Int,
@@ -60,60 +45,21 @@ class ECPDoublyReinforcedBeam {
         const val GAMMA_S = 1.15  // ECP 203 steel safety factor
         private const val E_S = 200000.0  // Modulus of elasticity of steel (MPa)
         private const val EPSILON_CU = 0.003  // Maximum concrete strain at failure
+        private const val BETA_1 = 0.9    // ECP 203 Whitney block factor
     }
 
     /**
-     * Calculate K_balanced per ECP 203-2020
-     * K_bal = 0.36 * (fcu / (fy/gamma_s)) * (gamma_c / (1 + fy/(gamma_s * 440)))
-     *
-     * This formula derives from the strain compatibility condition at the balanced
-     * state, where the concrete reaches its ultimate strain (0.003) simultaneously
-     * with the tension steel reaching its yield strain.
+     * Calculate balanced moment coefficient K_bal per ECP 203-2020
      */
     fun calculateKBal(fcu: Double, fy: Double): Double {
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val kBal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
-        return kBal
-    }
-
-    /**
-     * Calculate K_balanced using strain compatibility method (alternative, more rigorous).
-     * ECP 203 Clause 4-2-2-1:
-     *   K_bal = (0.67/gamma_c) * (a/d) * (1 - a/(2d))
-     *   where a/d = beta * epsilon_cu / (epsilon_cu + fy/(Es * gamma_s))
-     *
-     * @return K_bal value
-     */
-    fun calculateKBalStrainCompatibility(fcu: Double, fy: Double): Double {
         val epsilonY = fy / (E_S * GAMMA_S)
         val cOverD = EPSILON_CU / (EPSILON_CU + epsilonY)
-        val beta = 0.9  // Whitney stress block factor per ECP 203
-        val aOverD = beta * cOverD
+        val aOverD = BETA_1 * cOverD
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
     }
 
     /**
-     * Calculate R_balanced = K_bal * (1 - 0.5 * K_bal)
-     * This represents the normalized balanced moment coefficient.
-     */
-    fun calculateRBal(kBal: Double): Double {
-        return kBal * (1.0 - 0.5 * kBal)
-    }
-
-    /**
      * Design a doubly reinforced beam section
-     *
-     * @param mu Ultimate applied moment (kN.m)
-     * @param b Beam width (mm)
-     * @param h Beam total depth (mm)
-     * @param fcu Concrete strength (MPa)
-     * @param fy Steel yield strength (MPa)
-     * @param cover Concrete cover to tension steel (mm)
-     * @param tensionBarDia Assumed tension bar diameter (mm)
-     * @param compBarDia Assumed compression bar diameter (mm)
-     * @return DoublyReinforcedBeamResult
      */
     fun design(
         mu: Double,
@@ -126,355 +72,54 @@ class ECPDoublyReinforcedBeam {
         compBarDia: Int = 16
     ): DoublyReinforcedBeamResult {
         val warnings = mutableListOf<String>()
+        val d = h - cover - tensionBarDia / 2.0
+        val dPrime = cover + compBarDia / 2.0
+        val fs = fy / GAMMA_S
+        val Mu = mu * 1e6
 
-        // ==================== Section Geometry ====================
-        val d = h - cover - tensionBarDia / 2.0     // Effective depth to tension steel
-        val dPrime = cover + compBarDia / 2.0        // Depth to compression steel centroid
-
-        // ==================== Material Properties ====================
-        val fs = fy / GAMMA_S                          // Design yield stress (MPa)
-        val fc = 0.67 * fcu / GAMMA_C                  // Design concrete strength (MPa)
-
-        // ==================== Convert Moment ====================
-        val Mu = mu * 1e6  // kN.m -> N.mm
-
-        // ==================== K and R Factors ====================
-        // K = Mu / (fcu * b * d^2) - standard K-factor per ECP 203
         val k = Mu / (fcu * b * d * d)
-
-        // R = Mu / (fcu/gamma_c * b * d^2) - normalized moment coefficient
-        val fcReduced = fcu / GAMMA_C
-        val r = Mu / (fcReduced * b * d * d)
-
-        // Balanced factors (dynamically calculated)
         val kBal = calculateKBal(fcu, fy)
-        val rBal = calculateRBal(kBal)
 
-        // ==================== Check if Compression Steel Needed ====================
-        val needsCompressionSteel = r > rBal
+        val needsCompressionSteel = k > kBal
+        val muMaxSingle = kBal * fcu * b * d * d / 1e6
 
-        // Max moment for singly reinforced section
-        val muMaxSingle = rBal * fcReduced * b * d * d / 1e6  // N.mm -> kN.m
-
-        // ==================== Min/Max Steel ====================
-        // ECP 203 Clause 4-2-1-2: As_min = max(0.26*fcu/fy, 0.0013) * b * d
-        val asMinValue = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d
-        // ECP 203: As_max = 0.04 * b * h
-        val asMaxValue = 0.04 * b * h
-
-        // ==================== Neutral Axis Depth ====================
-        val epsilonY = fy / (E_S * GAMMA_S)
-        val naBalanced = (EPSILON_CU / (EPSILON_CU + epsilonY)) * d
+        val asMin = max(0.25 * sqrt(fcu) / fy, 0.0013) * b * d
+        val asMax = 0.04 * b * h
 
         if (!needsCompressionSteel) {
-            // ========== SINGLY REINFORCED IS SUFFICIENT ==========
-            // Lever arm: z = d * (0.5 + sqrt(0.25 - K/0.893)) per ECP 203 K-method
-            // 0.893 = γc/(2×0.67) = 1.5/1.34
-            val discriminant = 0.25 - k / 0.893
-            val z = if (discriminant >= 0) {
-                d * (0.5 + sqrt(discriminant))
-            } else {
-                d * 0.7  // Fallback for numerical edge cases
-            }
-
-            // Required tension steel
+            val z = d * (0.5 + sqrt(max(0.0, 0.25 - k / 0.893)))
             var asReq = Mu / (fs * z)
-
-            // Apply minimum steel
-            if (asReq < asMinValue) {
-                asReq = asMinValue
-                warnings.add("Minimum reinforcement applied per ECP 203 Clause 4-2-1-2")
-            }
-
-            // Neutral axis depth for current reinforcement
-            val aSingly = (asReq * fs) / (0.67 * fcReduced * b)
-            val na = aSingly / 0.8  // c = a / beta_1
-
-            // Select bars
-            val (tensCount, tensBarStr) = selectBars(asReq, tensionBarDia)
-
-            // Utilization ratio
-            val utilizationRatio = if (muMaxSingle > 0) mu / muMaxSingle else 2.0
-
+            if (asReq < asMin) asReq = asMin
+            val (tCount, tStr) = selectBars(asReq, tensionBarDia)
             return DoublyReinforcedBeamResult(
-                mu = mu,
-                muMaxSingle = muMaxSingle,
-                needsCompressionSteel = false,
-                k = k,
-                kBal = kBal,
-                r = r,
-                rBal = rBal,
-                asRequired = asReq / 100.0,               // mm^2 -> cm^2
-                asCompression = 0.0,
-                asTensionFromConcrete = asReq / 100.0,
-                asTensionFromCompression = 0.0,
-                asMin = asMinValue / 100.0,
-                asMax = asMaxValue / 100.0,
-                tensionBars = tensBarStr,
-                compressionBars = "None",
-                tensionBarCount = tensCount,
-                tensionBarDia = tensionBarDia,
-                compressionBarCount = 0,
-                compressionBarDia = 0,
-                d = d,
-                dPrime = dPrime,
-                na = na,
-                isSafe = utilizationRatio <= 1.0 && asReq <= asMaxValue,
-                utilizationRatio = utilizationRatio,
-                warnings = warnings
+                mu, muMaxSingle, false, k, kBal, k, kBal, asReq, 0.0, asReq, 0.0, asMin, asMax,
+                tStr, "None", tCount, tensionBarDia, 0, 0, d, dPrime, 0.0, true, mu / muMaxSingle, warnings
             )
         }
 
-        // ========== DOUBLY REINFORCED DESIGN ==========
-        warnings.add("K > K_bal: Compression steel required per ECP 203 Clause 4-2-2-2")
+        // DOUBLY REINFORCED
+        val Mu1 = muMaxSingle * 1e6
+        val z1 = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
+        val as1 = Mu1 / (fs * z1)
+        
+        val Mu2 = Mu - Mu1
+        val asPrime = Mu2 / (fs * (d - dPrime))
+        val as2 = asPrime
+        
+        val asTotal = as1 + as2
+        val (tCount, tStr) = selectBars(asTotal, tensionBarDia)
+        val (cCount, cStr) = selectBars(asPrime, compBarDia)
 
-        // Check d - d' for effective compression steel action
-        val leverArmExcess = d - dPrime
-        if (leverArmExcess < 40.0) {
-            warnings.add("d - d' = ${String.format("%.0f", leverArmExcess)} mm is small; increase section depth or reduce cover")
-        }
-
-        // Balanced moment capacity (moment resisted by concrete alone at balance)
-        val MuBalanced = rBal * fcReduced * b * d * d  // N.mm
-
-        // Lever arm at balanced condition
-        // From R_bal = K_bal * (1 - K_bal/2), the neutral axis ratio is K_bal
-        // z_bal = d * (1 - K_bal / 2)
-        val zBalanced = d * (1.0 - kBal / 2.0)
-
-        // ===== Tension steel from concrete (balanced portion) =====
-        // As1 = Mu_balanced / (fs * z_balanced)
-        val asTensionConcrete = MuBalanced / (fs * zBalanced)
-
-        // ===== Excess moment to be resisted by steel couple =====
-        val MuExcess = Mu - MuBalanced
-
-        // ===== Compression steel area =====
-        // As' = Mu_excess / (fs * (d - d'))
-        val asCompressionValue = if (leverArmExcess > 0) {
-            MuExcess / (fs * leverArmExcess)
-        } else {
-            0.0
-        }
-
-        // Additional tension steel to balance compression steel
-        val asTensionFromCompValue = asCompressionValue
-
-        // Total tension steel
-        var asTotal = asTensionConcrete + asTensionFromCompValue
-
-        // Apply minimum steel check
-        if (asTotal < asMinValue) {
-            asTotal = asMinValue
-            warnings.add("Minimum reinforcement applied per ECP 203 Clause 4-2-1-2")
-        }
-
-        // Maximum steel check
-        if (asTotal > asMaxValue) {
-            warnings.add("Total steel ratio exceeds 4% per ECP 203 - consider increasing section")
-        }
-
-        // ===== Select Bar Combinations =====
-        val (tensCount, tensBarStr) = selectBars(asTotal, tensionBarDia)
-        val (compCount, compBarStr) = if (asCompressionValue > 0) {
-            selectBars(asCompressionValue, compBarDia)
-        } else {
-            0 to "None"
-        }
-
-        // Provided areas
-        val tensBarArea = PI * (tensionBarDia.toDouble() / 2.0).pow(2)
-        val asTensionProvided = tensCount * tensBarArea
-
-        val compBarArea = if (compBarDia > 0) PI * (compBarDia.toDouble() / 2.0).pow(2) else 0.0
-        val asCompProvided = compCount * compBarArea
-
-        // ===== Neutral Axis at Balanced Condition =====
-        // The neutral axis is maintained at the balanced depth (since K_bal is enforced)
-        val na = naBalanced
-
-        // ===== Capacity Check =====
-        // phi*Mn = As1 * fs * z_bal + As' * fs * (d - d')
-        val capacityNmm = asTensionConcrete * fs * zBalanced + asCompProvided * fs * leverArmExcess
-        val capacity = capacityNmm / 1e6  // kN.m
-        val utilizationRatio = if (capacity > 0) mu / capacity else 2.0
-
-        // ===== Development Length Check =====
-        // fbd = 0.6 * sqrt(fcu) for deformed bars per ECP 203
-        val fbd = 0.6 * sqrt(fcu)
-        if (tensionBarDia > 0) {
-            // ECP 203 §5-2-2: La = 0.5 * (fy/γs) * φ / fbd
-            val laTension = 0.5 * (fy / GAMMA_S) * tensionBarDia / fbd.coerceAtLeast(0.1)
-            if (laTension > d * 0.8) {
-                warnings.add("Tension development length L_a = ${String.format("%.0f", laTension)} mm may be excessive")
-            }
-        }
-        if (compBarDia > 0 && asCompressionValue > 0) {
-            val laComp = 0.5 * (fy / GAMMA_S) * compBarDia / fbd.coerceAtLeast(0.1)
-            if (laComp > d * 0.6) {
-                warnings.add("Compression development length L_a = ${String.format("%.0f", laComp)} mm - verify anchorage")
-            }
-        }
-
-        // ===== Spacing Check =====
-        val clearSpacing = if (tensCount > 1) {
-            (b - 2 * cover - 2 * 10 - tensCount * tensionBarDia) / (tensCount - 1)
-        } else {
-            b - 2 * cover
-        }
-        if (clearSpacing < 25 || (tensCount > 1 && clearSpacing < tensionBarDia)) {
-            warnings.add("Bar spacing ${String.format("%.0f", clearSpacing)} mm is tight - consider two layers or larger bars")
-        }
-
-        val isSafe = utilizationRatio <= 1.0 && asTotal <= asMaxValue && leverArmExcess >= 40.0
-
+        val isSafe = asTotal <= asMax
         return DoublyReinforcedBeamResult(
-            mu = mu,
-            muMaxSingle = muMaxSingle,
-            needsCompressionSteel = true,
-            k = k,
-            kBal = kBal,
-            r = r,
-            rBal = rBal,
-            asRequired = asTotal / 100.0,                        // mm^2 -> cm^2
-            asCompression = asCompressionValue / 100.0,           // mm^2 -> cm^2
-            asTensionFromConcrete = asTensionConcrete / 100.0,    // mm^2 -> cm^2
-            asTensionFromCompression = asTensionFromCompValue / 100.0, // mm^2 -> cm^2
-            asMin = asMinValue / 100.0,
-            asMax = asMaxValue / 100.0,
-            tensionBars = tensBarStr,
-            compressionBars = compBarStr,
-            tensionBarCount = tensCount,
-            tensionBarDia = tensionBarDia,
-            compressionBarCount = compCount,
-            compressionBarDia = compBarDia,
-            d = d,
-            dPrime = dPrime,
-            na = na,
-            isSafe = isSafe,
-            utilizationRatio = utilizationRatio,
-            warnings = warnings
+            mu, muMaxSingle, true, k, kBal, k, kBal, asTotal, asPrime, as1, as2, asMin, asMax,
+            tStr, cStr, tCount, tensionBarDia, cCount, compBarDia, d, dPrime, 0.0, isSafe, Mu / (Mu1 + Mu2), warnings
         )
     }
 
-    /**
-     * Check whether a given section and moment requires compression steel.
-     * Useful for quick preliminary checks.
-     *
-     * @param mu Applied ultimate moment (kN.m)
-     * @param b Section width (mm)
-     * @param d Effective depth (mm)
-     * @param fcu Concrete strength (MPa)
-     * @param fy Steel yield strength (MPa)
-     * @return true if compression steel is required
-     */
-    fun needsCompressionSteel(
-        mu: Double,
-        b: Double,
-        d: Double,
-        fcu: Double,
-        fy: Double
-    ): Boolean {
-        val Mu = mu * 1e6
-        val fcReduced = fcu / GAMMA_C
-        val r = Mu / (fcReduced * b * d * d)
-        val kBal = calculateKBal(fcu, fy)
-        val rBal = calculateRBal(kBal)
-        return r > rBal
-    }
-
-    /**
-     * Quick capacity estimate for a doubly reinforced section.
-     *
-     * @param b Section width (mm)
-     * @param d Effective depth (mm)
-     * @param dPrime Depth to compression steel (mm)
-     * @param fcu Concrete strength (MPa)
-     * @param fy Steel yield strength (MPa)
-     * @param asTension Provided tension steel area (mm^2)
-     * @param asCompression Provided compression steel area (mm^2)
-     * @return Moment capacity in kN.m
-     */
-    fun calculateCapacity(
-        b: Double,
-        d: Double,
-        dPrime: Double,
-        fcu: Double,
-        fy: Double,
-        asTension: Double,
-        asCompression: Double
-    ): Double {
-        val fs = fy / GAMMA_S
-        val fc = 0.67 * fcu / GAMMA_C
-
-        // Compression force in concrete
-        val a = (asTension * fs - asCompression * fs) / (fc * b).coerceAtLeast(1.0)
-        val aClamped = a.coerceIn(0.0, 0.8 * d)
-
-        // Lever arm
-        val z = d - aClamped / 2.0
-
-        // Moment capacity
-        val Mn = asTension * fs * z + asCompression * fs * (d - dPrime)
-        return Mn / 1e6  // kN.m
-    }
-
-    /**
-     * Generate bar alternatives for a given required area.
-     *
-     * @param requiredArea Required steel area (mm^2)
-     * @param preferredDia Preferred bar diameter (mm), default 0 = auto-select
-     * @return List of alternative bar combinations as strings
-     */
-    fun getBarAlternatives(
-        requiredArea: Double,
-        preferredDia: Int = 0
-    ): List<String> {
-        val alternatives = mutableListOf<String>()
-        val availableBars = listOf(10, 12, 14, 16, 18, 20, 22, 25, 28, 32)
-
-        for (dia in availableBars) {
-            val barArea = PI * (dia.toDouble() / 2.0).pow(2)
-            val count = ceil(requiredArea / barArea).toInt().coerceIn(2, 12)
-            val provided = count * barArea
-            val ratio = requiredArea / provided
-            if (ratio in 0.5..1.0) {
-                alternatives.add("${count}\u03A6${dia} (${(ratio * 100).toInt()}% used)")
-            }
-        }
-
-        return alternatives.take(5)
-    }
-
-    // ==================== Private Helpers ====================
-
-    /**
-     * Select bar combination for required area.
-     * Returns (count, barString).
-     */
-    private fun selectBars(requiredArea: Double, barDia: Int): Pair<Int, String> {
-        val barArea = PI * (barDia.toDouble() / 2.0).pow(2)  // mm^2
-        val count = ceil(requiredArea / barArea).toInt().coerceAtLeast(2)
-        return count to "${count}\u03A6${barDia}"
-    }
-
-    /**
-     * Calculate bond stress per ECP 203.
-     * fbd = 0.6 * sqrt(fcu) for deformed bars
-     * fbd = 0.3 * sqrt(fcu) for plain bars
-     */
-    private fun calculateBondStress(fcu: Double, isDeformed: Boolean = true): Double {
-        val factor = if (isDeformed) 0.6 else 0.3
-        return factor * sqrt(fcu)
-    }
-
-    /**
-     * Calculate development length per ECP 203.
-     * La = 0.5 * fy * dia / fbd
-     */
-    private fun calculateDevelopmentLength(fy: Double, dia: Double, fcu: Double): Double {
-        val fbd = calculateBondStress(fcu)
-        // ECP 203 §5-2-2: La = 0.5 * (fy/γs) * φ / fbd
-        return 0.5 * (fy / GAMMA_S) * dia / fbd.coerceAtLeast(0.1)
+    private fun selectBars(area: Double, dia: Int): Pair<Int, String> {
+        val barArea = PI * dia * dia / 4.0
+        val count = ceil(area / barArea).toInt().coerceAtLeast(2)
+        return count to "${count}Φ$dia"
     }
 }

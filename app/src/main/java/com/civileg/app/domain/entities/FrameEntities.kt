@@ -1,6 +1,7 @@
 package com.civileg.app.domain.entities
 
 import android.os.Parcelable
+import com.civileg.core.calculations.entities.DesignCode
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 import kotlin.math.*

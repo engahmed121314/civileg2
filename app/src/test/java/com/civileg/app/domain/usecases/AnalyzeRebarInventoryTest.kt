@@ -1,7 +1,6 @@
 package com.civileg.app.domain.usecases
 
 import com.civileg.app.domain.entities.CuttingPlan
-import com.civileg.app.domain.entities.CuttingOptimizationResult
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -47,9 +46,10 @@ class AnalyzeRebarInventoryTest {
             }
         }
 
-        // Verify utilization is high (should be ≥ 75%)
+        // Optimal packing is [3,3,3], [3,3,3], [3,3] → utilization 75%, 75%, 50%
+        // Average = 66.7% by construction (4×3m cannot fit a 12m bar with kerf)
         val avgUtil = result.sumOf { it.utilizationPercentage } / result.size
-        assertTrue("Average utilization should be high (>= 75%), got ${"%.1f".format(avgUtil)}%", avgUtil >= 75.0)
+        assertTrue("Average utilization should be >= 66% for this scenario, got ${"%.1f".format(avgUtil)}%", avgUtil >= 66.0)
     }
 
     // ------------------------------------------------------------------

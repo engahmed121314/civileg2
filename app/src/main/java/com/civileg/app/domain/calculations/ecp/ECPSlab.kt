@@ -3,6 +3,9 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.SupportCondition
 
 class ECPSlab : SlabDesign {
     
@@ -20,6 +23,11 @@ class ECPSlab : SlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy,
+            "slabThickness" to slabThickness,
+            "clearSpan" to clearSpan
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -58,7 +66,7 @@ class ECPSlab : SlabDesign {
         var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0 // mm²/m
         
         // الحد الأدنى للتسليح للبلاطات (0.6/fy * b * d or 0.15% Ag)
-        val minSteel = max(0.26 * sqrt(fcu) / fy * width * effectiveDepth, 0.0013 * width * effectiveDepth)  // ECP 203: based on d
+        val minSteel = max(0.25 * sqrt(fcu) / fy * width * effectiveDepth, 0.0013 * width * effectiveDepth)  // ECP 203: based on d
         if (astRequired < minSteel) {
             astRequired = minSteel
             warnings.add("Minimum reinforcement applied")
@@ -99,6 +107,18 @@ class ECPSlab : SlabDesign {
         codeNotes.add(String.format("K = %.3f, z = %.0f mm", K, leverArm))
         codeNotes.add(String.format("As_req = %.0f mm²/m, As_prov = %.0f mm²/m", astRequired, astProvided))
         
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Effective Depth (d)", "d = ts - cover - phi/2", "$slabThickness - 25.0", effectiveDepth, "mm"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Moment Coefficient (K)", "K = Mu / (fcu * b * d^2)", "$Mu / ($fcu * 1000 * $effectiveDepth^2)", K, ""
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Lever Arm (z)", "z = d * (0.5 + sqrt(0.25 - K/0.893))", "$effectiveDepth * (0.5 + sqrt(0.25 - $K/0.893))", leverArm, "mm"
+        ))
+
         return SlabDesignResult(
             requiredReinforcement = astRequired,
             providedReinforcement = astProvided,
@@ -109,7 +129,8 @@ class ECPSlab : SlabDesign {
             isSafe = isShearSafe && slabThickness >= minThickness,
             utilizationRatio = if (astProvided > 0) designMoment / (astProvided * fs * leverArm / 1e6) else 2.0,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -123,22 +144,32 @@ class ECPSlab : SlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): TwoWaySlabResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy,
+            "slabThickness" to slabThickness,
+            "shortSpan" to shortSpan, "longSpan" to longSpan
+        )
         // معاملات العزم حسب حالة التثبيت
         val aspectRatio = longSpan / shortSpan.coerceAtLeast(1.0)
         val coefficients = calculateMomentCoefficients(aspectRatio, supportConditions)
-        
+
+        // A11-FIX: interface contract is spans in mm; moments (kN.m/m) and shears (kN/m)
+        // must be formed with span in METRES — same convention as ACISlab/SBCSlab.
+        val lx = shortSpan / 1000.0  // m
+        val ly = longSpan / 1000.0   // m
+
         // العزم في الاتجاه القصير
-        val MuShort = coefficients.positiveShort * totalLoad * shortSpan * shortSpan / 1000.0 // kN.m/m
+        val MuShort = coefficients.positiveShort * totalLoad * lx * lx // kN.m/m
         val resultShort = designOneWaySlab(
-            fcu, fy, slabThickness, shortSpan, 
-            MuShort, totalLoad * shortSpan / 2, loadCombination
+            fcu, fy, slabThickness, shortSpan,
+            MuShort, totalLoad * lx / 2, loadCombination
         )
-        
+
         // العزم في الاتجاه الطويل
-        val MuLong = coefficients.positiveLong * totalLoad * longSpan * longSpan / 1000.0 // kN.m/m
+        val MuLong = coefficients.positiveLong * totalLoad * ly * ly // kN.m/m
         val resultLong = designOneWaySlab(
             fcu, fy, slabThickness, longSpan,
-            MuLong, totalLoad * longSpan / 2, loadCombination
+            MuLong, totalLoad * ly / 2, loadCombination
         )
         
         return TwoWaySlabResult(

@@ -44,12 +44,14 @@ fun ProfessionalPileDrawing(
     capRebarDia: Int,              // mm
     capRebarCount: Int,
     soilType: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxSize()
+            .failStampWhen(!isSafe)
     ) {
         val w = size.width
         val h = size.height

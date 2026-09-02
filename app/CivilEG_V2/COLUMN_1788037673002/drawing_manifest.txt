@@ -1,0 +1,6 @@
+CIVILEG DRAWING MANIFEST
+PROJECT: T
+────────────────────────────────────────────────────────────────────────────────
+SHEET        ELEMENT                        REV    CODE             STATUS             FILE
+────────────────────────────────────────────────────────────────────────────────
+S-01         S-COL-001-C1                   00     ECP 203-2020     FOR CONSTRUCTION   S-01_S-COL-001-C1_RC_COLUMN.dxf

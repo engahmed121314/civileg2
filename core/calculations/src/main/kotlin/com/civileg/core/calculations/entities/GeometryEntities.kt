@@ -21,5 +21,9 @@ data class RebarLine(
 data class DimensionLine(
     val start: Point2D,
     val end: Point2D,
-    val value: String
+    val value: String,
+    val id: String? = null,
+    val unit: String = "mm",
+    val codeReference: String? = null,
+    val associatedBar: String? = null
 )

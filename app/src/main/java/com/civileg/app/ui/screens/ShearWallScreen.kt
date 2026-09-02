@@ -31,6 +31,9 @@ import com.civileg.app.ui.compose.components.UtilizationGauge
 import com.civileg.app.ui.components.drawings.ProfessionalShearWallDrawing
 import com.civileg.app.viewmodel.ShearWallViewModel
 import kotlin.math.max
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +43,7 @@ fun ShearWallScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -78,7 +82,7 @@ fun ShearWallScreen(
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            listOf("ECP", "ACI").forEach { code ->
+                            listOf("ECP", "ACI", "SBC").forEach { code ->
                         FilterChip(
                             selected = uiState.designCode == code,
                             onClick = { viewModel.updateDesignCode(code) },
@@ -461,6 +465,7 @@ fun ShearWallScreen(
                             axialLoad = uiState.axialLoad.toDoubleOrNull() ?: 0.0,
                             shearForce = uiState.shearForce.toDoubleOrNull() ?: 0.0,
                             bendingMoment = uiState.bendingMoment.toDoubleOrNull() ?: 0.0,
+                            isSafe = result.isSafe,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -477,6 +482,52 @@ fun ShearWallScreen(
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.sw_export_pdf), fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // DXF export — ADR-004: canonical P043 model-derived single sheet
+                // (ungated: this legacy screen has no premium infra, same as
+                // PileFoundation/FlatSlab — documented deviation)
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                val outcome = withContext(Dispatchers.IO) {
+                                    com.civileg.app.utils.CadDxfExporter.exportShearWall(
+                                        context, result,
+                                        ShearWallInput(
+                                            wallType = uiState.wallType,
+                                            wallLength = uiState.wallLength.toDoubleOrNull() ?: 4000.0,
+                                            wallThickness = uiState.wallThickness.toDoubleOrNull() ?: 300.0,
+                                            wallHeight = (uiState.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
+                                            numberOfStories = uiState.numberOfStories.toIntOrNull() ?: 10,
+                                            axialLoad = uiState.axialLoad.toDoubleOrNull() ?: 0.0,
+                                            shearForce = uiState.shearForce.toDoubleOrNull() ?: 0.0,
+                                            bendingMoment = uiState.bendingMoment.toDoubleOrNull() ?: 0.0,
+                                            fcu = uiState.fcu.toDoubleOrNull() ?: 30.0,
+                                            fy = uiState.fy.toDoubleOrNull() ?: 400.0,
+                                            fyv = uiState.fyv.toDoubleOrNull() ?: 250.0,
+                                            clearCover = uiState.clearCover.toDoubleOrNull() ?: 25.0,
+                                            flangeWidth = uiState.flangeWidth.toDoubleOrNull() ?: 0.0,
+                                            flangeThickness = uiState.flangeThickness.toDoubleOrNull() ?: 0.0,
+                                            couplingBeamLength = uiState.couplingBeamLength.toDoubleOrNull() ?: 0.0,
+                                            couplingBeamHeight = uiState.couplingBeamHeight.toDoubleOrNull() ?: 0.0,
+                                            couplingBeamClearSpan = uiState.couplingBeamClearSpan.toDoubleOrNull() ?: 0.0
+                                        ),
+                                        wallShape = uiState.wallShape,
+                                        designCode = uiState.designCode
+                                    )
+                                }
+                                com.civileg.app.utils.ExportUtils.handleDxfOutcome(context, outcome)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("DXF", fontWeight = FontWeight.Bold)
                     }
                 }
             }

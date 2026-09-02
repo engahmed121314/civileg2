@@ -3,6 +3,14 @@ package com.civileg.app.domain.calculations.aci
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.BarLocation
+import com.civileg.core.calculations.entities.CoatingType
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
+import com.civileg.core.calculations.entities.SupportCondition
 
 class ACIBeam : BeamDesign {
     
@@ -23,6 +31,11 @@ class ACIBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        // rule 1.4 — loud invalid-input failure instead of Infinity/NaN downstream (InputGuard)
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width,
+            "effectiveDepth" to effectiveDepth, "totalDepth" to totalDepth
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -116,6 +129,18 @@ class ACIBeam : BeamDesign {
         codeNotes.add(CodeReference.ACI.BEAM_FLEXURE)
         codeNotes.add("φ = $PHI_FLEXURE for tension-controlled sections")
         
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Cylinder Strength (f'c)", "f'c = 0.8 * fcu", "0.8 * $fcu", fc, "MPa"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Moment Coefficient (Rn)", "Rn = Mu / (\u03C6 * b * d^2)", "$Mu / (0.9 * $width * $effectiveDepth^2)", Rn, "MPa"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Whitney Block Depth (a)", "a = As*fy / (0.85*f'c*b)", "$astProvided * $fy / (0.85 * $fc * $width)", a, "mm"
+        ))
+
         return ReinforcementResult(
             astRequired = astRequired,
             astProvided = astProvided,
@@ -126,7 +151,8 @@ class ACIBeam : BeamDesign {
             isSafe = utilizationRatio <= 1.0 && rho <= rhoMaxTc,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -139,6 +165,9 @@ class ACIBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width, "effectiveDepth" to effectiveDepth
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -261,26 +290,11 @@ class ACIBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
-        // ACI 25.4.2: Ld = (fy * ψt * ψe * ψs) / (1.7 * λ * √(fc')) * db
-        // λ يظهر في المقام فقط (ليس في البسط)
-        
-        var psi_t = 1.0
-        if (barLocation == BarLocation.TOP) psi_t = 1.3
-        
-        var psi_e = 1.0
-        if (coating == CoatingType.EPOXY_COATED) psi_e = 1.2
-        
-        val psi_s = if (barDiameter <= 22.0) 1.0 else 0.8
-        val lambda = LAMBDA
-        val fc_prime = 0.8 * fcu  // تحويل مكعب لأسطوانة
-        
-        val numerator = fy * psi_t * psi_e * psi_s
-        val denominator = 1.7 * lambda * sqrt(fc_prime.coerceAtLeast(1.0))
-        
-        var Ld = (numerator / denominator) * barDiameter
-        
-        Ld = max(Ld, ACI_MIN_DEVELOPMENT_LENGTH)
-        return ceil(Ld / 25) * 25
+        // [A14-UNIFICATION]: Delegate to the unified core calculator
+        return com.civileg.core.engineering.DevelopmentLengthCalculator.calculateLd(
+            com.civileg.core.calculations.entities.DesignCode.ACI,
+            barDiameter, fy, fcu, barLocation, coating
+        )
     }
 
     private fun calculateBeta1(fc: Double): Double {
@@ -467,7 +481,8 @@ class ACIBeam : BeamDesign {
             val dia = parts[1].trim().toInt().toDouble()
             return count * PI * dia * dia / 4
         } catch (e: Exception) {
-            return 0.0
+            // rule 1.4 — no silent failure: engine-generated notation must always parse
+            throw IllegalArgumentException("Invalid bar notation '$barString' — expected like '4O16' | صيغة تسليح غير مفهومة", e)
         }
     }
 

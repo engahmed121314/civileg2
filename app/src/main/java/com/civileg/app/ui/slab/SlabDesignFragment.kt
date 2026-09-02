@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.*
 import javax.inject.Inject
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.ShearCheckResult
 
 @AndroidEntryPoint
 class SlabDesignFragment : Fragment() {
@@ -187,7 +189,7 @@ class SlabDesignFragment : Fragment() {
 
             val exportedFile = exporter.exportSlabReport(
                 projectName = projectName,
-                designCode = com.civileg.app.domain.entities.DesignCode.ECP,
+                designCode = com.civileg.core.calculations.entities.DesignCode.ECP,
                 slabType = slabTypeDomain,
                 inputs = inputs,
                 result = advResult,

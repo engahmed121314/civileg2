@@ -28,6 +28,9 @@ import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
 import com.civileg.app.viewmodel.FlatSlabViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +39,7 @@ fun FlatSlabScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // ── Input state ────────────────────────────────────────────────
     var panelType by remember { mutableStateOf(PanelType.INTERIOR) }
@@ -127,7 +131,7 @@ fun FlatSlabScreen(
                 item {
                     CodeSelectorChips(
                         selectedCode = designCode,
-                        codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318"),
+                        codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
                         onCodeSelected = { designCode = it }
                     )
                 }
@@ -491,7 +495,47 @@ fun FlatSlabScreen(
                     item {
                         PremiumActionButtons(
                             onExportPdf = { viewModel.exportToPdf(context) {} },
-                            onSave = {}, isExporting = isExporting
+                            onSave = {}, isExporting = isExporting,
+                            extraActions = {
+                                // ADR-004: canonical P043 model-derived single-sheet DXF
+                                OutlinedButton(
+                                    onClick = {
+                                        scope.launch {
+                                            val outcome = withContext(Dispatchers.IO) {
+                                                com.civileg.app.utils.CadDxfExporter.exportFlatSlab(
+                                                    context, res,
+                                                    FlatSlabInput(
+                                                        panelType = panelType,
+                                                        designMethod = designMethod,
+                                                        lx = (lx.toDoubleOrNull() ?: 0.0) * 1000.0,
+                                                        ly = (ly.toDoubleOrNull() ?: 0.0) * 1000.0,
+                                                        slabThickness = slabThickness.toDoubleOrNull() ?: 250.0,
+                                                        dropThickness = if (showDropInputs) (dropThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                                                        dropSizeX = if (showDropInputs) (dropSizeX.toDoubleOrNull() ?: 0.0) else 0.0,
+                                                        dropSizeY = if (showDropInputs) (dropSizeY.toDoubleOrNull() ?: 0.0) else 0.0,
+                                                        columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
+                                                        columnDepth = columnDepth.toDoubleOrNull() ?: 400.0,
+                                                        clearCover = clearCover.toDoubleOrNull() ?: 25.0,
+                                                        fcu = fcu.toDoubleOrNull() ?: 30.0,
+                                                        fy = fy.toDoubleOrNull() ?: 400.0,
+                                                        liveLoad = liveLoad.toDoubleOrNull() ?: 3.0,
+                                                        floorFinish = floorFinish.toDoubleOrNull() ?: 2.0
+                                                    ),
+                                                    designCode
+                                                )
+                                            }
+                                            com.civileg.app.utils.ExportUtils.handleDxfOutcome(context, outcome)
+                                        }
+                                    },
+                                    modifier = Modifier.width(96.dp),
+                                    shape = PremiumDesignSystem.ButtonShape,
+                                    enabled = !isLoading
+                                ) {
+                                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("DXF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
                         )
                     }
 

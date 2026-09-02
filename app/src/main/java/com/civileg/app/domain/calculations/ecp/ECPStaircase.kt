@@ -3,6 +3,7 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.DesignCode
 
 /**
  * تصميم السلالم حسب الكود المصري ECP 203-2020
@@ -33,6 +34,15 @@ class ECPStaircase : StaircaseDesign {
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "span" to input.span, "totalRise" to input.totalRise,
+            "waistThickness" to input.waistThickness,
+            "stairWidth" to input.stairWidth
+        )
+        if (input.going > 0) {
+            com.civileg.app.domain.calculations.InputGuard.positive("going" to input.going)
+        }
         val safetyChecks = mutableListOf<StairSafetyCheck>()
         val codeNotes = mutableListOf<String>()
 
@@ -155,7 +165,7 @@ class ECPStaircase : StaircaseDesign {
 
         // الحد الأدنى للتسليح: 0.15% من b×d للبلاطات (ECP 203)
         val minSteelRatio = 0.0013
-        val minSteelArea = max(0.26 * sqrt(input.fcu) / input.fy * b * d, 0.0013 * b * d)
+        val minSteelArea = max(0.25 * sqrt(input.fcu) / input.fy * b * d, 0.0013 * b * d)
 
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
@@ -271,6 +281,15 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add("ECP 203-2020: Section 6-3 (Deflection limits L/250)")
         codeNotes.add("ECP 201-2012: Staircase live load = 4.0 kN/m²")
 
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Geometry Comfort", "2R + G", "2*${String.format("%.1f", riserMm)} + ${String.format("%.1f", goingMm)}", 2 * riserMm + goingMm, "mm", limit = 640.0, limitType = com.civileg.core.calculations.entities.LimitType.EXACT
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Factored Load (Projected)", "Wu = 1.4*(DL/cos\u03B8) + 1.6*LL", "1.4*(${input.deadLoad}/${String.format("%.2f", cosTheta)}) + 1.6*${input.liveLoad}", horizontalLoad, "kN/m2"
+        ))
+
         return StaircaseResult(
             isSafe = safetyChecks.all { it.isSafe },
             designCode = DesignCode.ECP,
@@ -301,7 +320,8 @@ class ECPStaircase : StaircaseDesign {
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
             safetyChecks = safetyChecks,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -363,7 +383,10 @@ class ECPStaircase : StaircaseDesign {
                 val barArea = PI * dia * dia / 4.0
                 return barArea * 1000.0 / spacing
             }
-        } catch (e: Exception) { /* fall through */ }
+        } catch (e: Exception) {
+                // rule 1.4 — no silent failure
+                throw IllegalArgumentException("Invalid stair bar notation '$barString' | صيغة تسليح السلم غير مفهومة", e)
+            }
         return 0.0
     }
 
@@ -381,7 +404,10 @@ class ECPStaircase : StaircaseDesign {
                 val numBars = (stairWidthM * 1000.0 / spacing).toInt().coerceAtLeast(1)
                 return numBars * barArea
             }
-        } catch (e: Exception) { /* fall through */ }
+        } catch (e: Exception) {
+                // rule 1.4 — no silent failure
+                throw IllegalArgumentException("Invalid stair bar notation '$barString' | صيغة تسليح السلم غير مفهومة", e)
+            }
         return 0.0
     }
 }

@@ -1,6 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
-import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.core.calculations.entities.LoadCombination
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -52,10 +52,32 @@ class ECPColumnTest {
     fun `min and max reinforcement ratios are within code limits`() {
         val minRatio = column.getMinReinforcementRatio()
         val maxRatio = column.getMaxReinforcementRatio()
-        
+
         assertEquals(0.008, minRatio, 0.0001) // 0.8%
-        assertEquals(0.08, maxRatio, 0.0001)   // 8%
+        assertEquals(0.06, maxRatio, 0.0001)   // ECP 203 §4-2-3: 6% max (4% at laps)
         assertTrue("Min should be less than max", minRatio < maxRatio)
+    }
+
+    @Test
+    fun `W9 axial capacity caps reinforcement at ECP max ratio of 6 percent`() {
+        // Ag = 300×300 = 90,000 mm²; supplied Ast = 8,000 mm² (8.9%) > 6% limit
+        // Capped Ast = 0.06 × 90,000 = 5,400 mm²
+        // concreteStress = 0.67×25/1.5 = 11.1667 MPa, steelStress = 420/1.15 = 365.217 MPa
+        // Pu = 0.65 × 0.8 × [11.1667×(90000−5400) + 365.217×5400] = 1,516.77 kN
+        // (uncapped would give 1,995.53 kN — the cap must govern)
+        val capacity = column.calculateAxialCapacity(
+            fcu = 25.0,
+            fy = 420.0,
+            width = 300.0,
+            depth = 300.0,
+            reinforcementArea = 8000.0,
+            loadCombination = LoadCombination.DEAD_LIVE
+        )
+        val astCapped = 0.06 * 300.0 * 300.0
+        val expected =
+            0.65 * 0.8 * ((0.67 * 25.0 / 1.5) * (90000.0 - astCapped) + (420.0 / 1.15) * astCapped) / 1000.0
+        assertEquals(expected, capacity, 0.1)
+        assertEquals(1516.77, capacity, 1.0)
     }
     
     @Test

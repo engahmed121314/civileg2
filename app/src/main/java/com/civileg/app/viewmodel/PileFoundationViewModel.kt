@@ -7,11 +7,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.calculations.base.PileFoundationDesign
-import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
 import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.utils.SettingsManager
+import com.civileg.app.data.local.PreferencesManager
+import com.civileg.core.calculations.entities.DesignCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,10 +23,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PileFoundationViewModel @Inject constructor(
-    private val repository: DesignRepository
+    private val repository: DesignRepository,
+    private val settingsManager: SettingsManager,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
-
-    private val designEngine: PileFoundationDesign = ECPPileFoundation()
 
     private val _result = MutableLiveData<PileDesignResult?>()
     val result: LiveData<PileDesignResult?> = _result
@@ -58,6 +62,7 @@ class PileFoundationViewModel @Inject constructor(
         waterTableDepth: Double,
         embedmentDepth: Double,
         safetyFactor: Double,
+        designCode: String = "",
         pileGroupPattern: String,
         eccentricityX: Double,
         eccentricityY: Double,
@@ -97,6 +102,11 @@ class PileFoundationViewModel @Inject constructor(
                     columnLength = columnLength
                 )
 
+                // ADR-002: dispatch through CalculationFactory only — code is now selectable (ECP/ACI/SBC)
+                // ADR-003: default code resolved from DataStore (single source)
+                val resolvedCode = CalculationFactory.parseDesignCode(designCode)
+                    ?: preferencesManager.defaultDesignCodeEnum.first()
+                val designEngine = CalculationFactory.getPileFoundationDesign(resolvedCode)
                 val res = designEngine.designPile(input)
                 _result.value = res
                 _error.value = null
@@ -171,28 +181,41 @@ class PileFoundationViewModel @Inject constructor(
                     unit = "MPa"
                 ))
                 safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                    name = "Settlement",
-                    passed = settlement.isOk,
+                    name = "Settlement",                    passed = settlement.isOk,
                     calculated = settlement.totalSettlement,
                     limit = settlement.allowableSettlement,
                     unit = "mm"
                 ))
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم خوازيق",
-                    titleEn = "Pile Foundation Design Report",
-                    subtitle = "${res.pileType} | Ø${res.pileDiameterMm.toInt()}×${res.pileLengthM}m | ${res.numberOfPiles} piles",
-                    designType = "Pile Foundation",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
-                    isSafe = res.isSafe,
-                    drawingBitmap = null,
-                    outputPath = file.absolutePath
+                // ADR-011: attach engineering drawing (plan + section) to the report.
+                // A bitmap failure is cosmetic — log & continue without blocking the report.
+                val drawingBitmap = try {
+                    com.civileg.app.utils.PdfDrawingGenerator.generatePileFoundationDrawing(
+                        numberOfPiles = res.numberOfPiles,
+                        pattern = group.pattern,
+                        pileDiameterMm = res.pileDiameterMm,
+                        pileSpacingMm = group.spacing,
+                        capWidthMm = cap.capWidth,
+                        capLengthMm = cap.capLength,
+                        capThicknessMm = cap.capThickness,
+                        columnWidthMm = res.columnWidth,
+                        columnLengthMm = res.columnLength,
+                        pileLengthM = res.pileLengthM
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("PilePdf", "drawing generation skipped: ${e.message}")
+                    null
+                }
+
+                val exporter = com.civileg.app.utils.exporters.PileFoundationPdfExporter(context)
+                val generated = exporter.exportToDownload(
+                    result = res,
+                    projectName = "CIVILEG PILE FOUNDATION",
+                    clientName = "Site Engineer"
                 )
 
                 withContext(Dispatchers.Main) {
-                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    generated.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                     _isExporting.value = false
                 }

@@ -44,7 +44,7 @@ fun MomentShearForceDiagram(
     liveLoad: Double = 0.0,         // kN/m
     appliedMoment: Double = 0.0,    // kN.m (max moment from design)
     appliedShear: Double = 0.0,     // kN (max shear from design)
-    designCode: com.civileg.app.domain.entities.DesignCode = com.civileg.app.domain.entities.DesignCode.ECP,
+    designCode: com.civileg.core.calculations.entities.DesignCode = com.civileg.core.calculations.entities.DesignCode.ECP,
     // Diagram data (optional - if provided, overrides calculated diagrams)
     momentValues: List<Pair<Float, Float>>? = null, // (x_ratio, moment_value)
     shearValues: List<Pair<Float, Float>>? = null,  // (x_ratio, shear_value)

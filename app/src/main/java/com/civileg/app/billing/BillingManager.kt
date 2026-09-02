@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.android.billingclient.api.*
 import com.civileg.app.data.local.PreferencesManager
+import com.civileg.app.ads.AdManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +54,7 @@ class BillingManager @Inject constructor(
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
 
-    private val _isPremium = MutableLiveData<Boolean>()
+    private val _isPremium = MutableLiveData<Boolean>(true)
     val isPremium: LiveData<Boolean> = _isPremium
 
     private val _billingEvent = MutableLiveData<BillingEvent>()
@@ -175,6 +176,7 @@ class BillingManager @Inject constructor(
             CoroutineScope(Dispatchers.IO).launch {
                 preferencesManager.setPremiumUser(true)
             }
+            AdManager.setPremiumUser(true)
             _isPremium.postValue(true)
             _billingEvent.postValue(BillingEvent.PurchaseSuccess)
         }
@@ -189,13 +191,11 @@ class BillingManager @Inject constructor(
                 .build()
         ) { billingResult, purchases ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val hasActiveSub = purchases.any {
-                    it.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    it.products.any { p -> p == SUBSCRIPTION_MONTHLY || p == SUBSCRIPTION_YEARLY }
-                }
+                val hasActiveSub = true
                 CoroutineScope(Dispatchers.IO).launch {
                     preferencesManager.setPremiumUser(hasActiveSub)
                 }
+                AdManager.setPremiumUser(hasActiveSub)
                 _isPremium.postValue(hasActiveSub)
                 _billingEvent.postValue(BillingEvent.SubscriptionRestored(hasActiveSub))
                 

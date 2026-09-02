@@ -44,7 +44,13 @@ object CalculatorDetailingV4 {
         val lapLengthMm: Double? = null,
         val cutOffFromStartMm: Double? = null,
         val cutOffFromEndMm: Double? = null,
-        val lapLocations: List<LapLocation> = emptyList()
+        val lapLocations: List<LapLocation> = emptyList(),
+        /**
+         * Explicit bar count (W11). When null, buildBarSchedule derives it from
+         * [spacingMm] and the member's distribution dimension; bars with neither
+         * fall back to 1.
+         */
+        val quantity: Int? = null
     )
 
     data class DetailingPackage(
@@ -86,7 +92,7 @@ object CalculatorDetailingV4 {
             val allBars = pkg.bars + pkg.stirrups
             for (bar in allBars) {
                 val cutLen = computeCutLength(bar)
-                val qty = bar.spacingMm?.let { 1 } ?: 1
+                val qty = bar.quantity ?: deriveQuantity(pkg, bar)
                 val totalM = cutLen * qty / 1000.0
                 val unitWeight = 0.006165 * bar.diameterMm * bar.diameterMm // kg/m
                 val wt = totalM * unitWeight
@@ -110,6 +116,21 @@ object CalculatorDetailingV4 {
 
     private fun computeCutLength(b: BarDefinition): Double {
         var len = b.straightLengthMm ?: b.segments.sumOf { it.length }
+        
+        // ADR-026: Apply Bend Deduction (خصم الثني)
+        // 45° -> 1d, 90° -> 2d, 135° -> 3d, 180° -> 4d
+        // Note: For simplicity, we derive bends from the shape or explicit segments.
+        val d = b.diameterMm.toDouble()
+        val deduction = when (b.shape) {
+            BarShape.L -> 2.0 * d // One 90-deg bend
+            BarShape.U -> 4.0 * d // Two 90-deg bends
+            BarShape.C -> 4.0 * d
+            BarShape.STIRRUP_90 -> 8.0 * d // Four 90-deg bends
+            BarShape.STIRRUP_135 -> 10.0 * d // Two 135-deg hooks + three 90-deg bends
+            else -> 0.0
+        }
+        
+        len -= deduction
         len += b.hookStartLengthMm ?: 0.0
         len += b.hookEndLengthMm ?: 0.0
         len += b.bendAllowanceMm
@@ -118,5 +139,62 @@ object CalculatorDetailingV4 {
         len -= b.cutOffFromStartMm ?: 0.0
         len -= b.cutOffFromEndMm ?: 0.0
         return kotlin.math.max(0.0, len)
+    }
+
+    /**
+     * W11 fix: derive the bar count for spaced bars from the member geometry.
+     * Convention: n = floor(distribution_length / spacing) + 1, where the
+     * distribution length is the dimension perpendicular to the bar run:
+     *  - BEAM/COLUMN links: span (minus zone cut-offs) / height
+     *  - FOOTING mats: clear plan dimension perpendicular to the bar run
+     *  - TANK wall bars: along tank length; base mesh: across tank width
+     * Members without a usable dimension fall back to 1; callers with exact
+     * engine counts should pass [BarDefinition.quantity] instead.
+     */
+    private fun deriveQuantity(pkg: DetailingPackage, bar: BarDefinition): Int {
+        val spacing = bar.spacingMm?.takeIf { it > 0.0 } ?: return 1
+        val g = pkg.geometry
+
+        fun count(distributionLength: Double): Int =
+            kotlin.math.max(1, kotlin.math.floor(distributionLength / spacing + 1e-9).toInt() + 1)
+
+        return when (pkg.memberType) {
+            MemberType.BEAM ->
+                if (isLinkShape(bar.shape)) {
+                    val span = g["span"] ?: return 1
+                    val start = bar.cutOffFromStartMm ?: 0.0
+                    val end = bar.cutOffFromEndMm ?: 0.0
+                    count(span - start - end)
+                } else 1
+
+            MemberType.COLUMN ->
+                if (isLinkShape(bar.shape)) g["height"]?.let(::count) ?: 1 else 1
+
+            MemberType.FOOTING -> {
+                val cover = g["cover"] ?: 0.0
+                val length = g["length"] ?: return 1
+                val width = g["width"] ?: return 1
+                val runLen = bar.straightLengthMm ?: 0.0
+                val distAcross =
+                    if (kotlin.math.abs(runLen - (length - 2 * cover)) <=
+                        kotlin.math.abs(runLen - (width - 2 * cover))
+                    ) width - 2 * cover else length - 2 * cover
+                count(distAcross)
+            }
+
+            MemberType.TANK ->
+                when (bar.layer.uppercase()) {
+                    "REBAR-WALL" -> g["length"]?.let(::count) ?: 1
+                    "REBAR-BASE" -> g["width"]?.let(::count) ?: 1
+                    else -> 1
+                }
+
+            else -> 1
+        }
+    }
+
+    private fun isLinkShape(shape: BarShape): Boolean = when (shape) {
+        BarShape.STIRRUP_90, BarShape.STIRRUP_135, BarShape.CROSSTIE_135, BarShape.HOOP -> true
+        else -> false
     }
 }

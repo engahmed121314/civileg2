@@ -5,16 +5,19 @@ import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
+import com.civileg.app.utils.CompletePackageGenerator
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
+import com.civileg.core.calculations.entities.DesignCode
 
 @HiltViewModel
 class ExportViewModel @Inject constructor(
@@ -290,6 +293,64 @@ class ExportViewModel @Inject constructor(
     
     fun reset() {
         _exportState.value = ExportState.Idle
+    }
+
+    /**
+     * §58/§93/§42 — GENERATE COMPLETE PACKAGE: assembles every generated
+     * artifact (calculation/drawing PDFs, DXF, BBS, BOQ) into the structured
+     * delivery folder with a MANIFEST.json.
+     *
+     * §42 contract: the manifest's QA fields come from an [EngineeringAudit]
+     * run HERE — per-artifact existence probes plus any caller-supplied
+     * engineering checks — so delivery can never claim more QA than the audit
+     * proved. Heavy I/O on Dispatchers.IO; state/callback on Main.
+     */
+    fun generateCompletePackage(
+        context: Context,
+        projectName: String,
+        artifacts: List<File>,
+        codeVersion: DesignCode,
+        revision: String = "R0",
+        extraChecks: List<com.civileg.app.domain.audit.AuditCheck> = emptyList(),
+        onComplete: (CompletePackageGenerator.PackageResult?) -> Unit = {}
+    ) {
+        _exportState.value = ExportState.Exporting
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val root = File(
+                    context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                        ?: context.filesDir,
+                    "CivilEG_Packages"
+                )
+                // §42 authoritative audit at packaging time — artifact presence
+                // is probed here, NOT trusted from the UI layer.
+                val checks = com.civileg.app.domain.audit.EngineeringAuditEngine.run {
+                    artifacts.map { artifactExistsCheck(
+                        com.civileg.app.domain.audit.AuditStage.DRAWING, it.name, it) } + extraChecks
+                }
+                val audit = com.civileg.app.domain.audit.EngineeringAuditEngine
+                    .report(projectName, checks)
+
+                val result = CompletePackageGenerator.generatePackage(
+                    targetRoot = root,
+                    projectName = projectName,
+                    sources = artifacts,
+                    codeVersion = codeVersion.version,
+                    audit = audit,
+                    revision = revision
+                )
+                launch(Dispatchers.Main) {
+                    _exportState.value = ExportState.Success(result.manifestFile)
+                    onComplete(result)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ExportViewModel", "Complete package generation failed", e)
+                launch(Dispatchers.Main) {
+                    _exportState.value = ExportState.Error(e.message ?: "Package generation failed")
+                    onComplete(null)
+                }
+            }
+        }
     }
 }
 

@@ -4,6 +4,12 @@ import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.PunchingShearCheckResult
+import com.civileg.core.calculations.entities.ShearCheckResult
 
 /**
  * تصميم البلاطات المتقدم حسب الكود الأمريكي ACI 318-19

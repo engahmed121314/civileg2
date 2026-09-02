@@ -57,9 +57,12 @@ object PdfDrawingGenerator {
         } catch (_: Exception) { null }
     }
 
-    /** Pick Arabic or English label based on current locale */
-    fun t(ar: String, en: String): String =
-        if (LocaleHelper.isArabic()) ar else en
+    /**
+     * Pick drawing label language. ADR-009 (non-negotiable): exported PDF/DXF
+     * content is ENGLISH-ONLY regardless of UI language — locked EN.
+     * Arabic branches at call sites remain as reference but are unreachable.
+     */
+    fun t(ar: String, en: String): String = en
 
     private fun createCanvas(width: Int, height: Int): Pair<Bitmap, Canvas> {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -1402,7 +1405,13 @@ object PdfDrawingGenerator {
         totalHeight: Double, totalLength: Double, stairWidth: Double,
         riserHeight: Double, treadWidth: Double, slabThickness: Double,
         mainDia: Double, mainSpacing: Double, distDia: Double = 8.0, distSpacing: Double = 200.0,
-        cover: Double = 25.0
+        cover: Double = 25.0,
+        // R3 engineering annotations
+        wuKnm2: Double = 0.0,
+        codeName: String = "ECP 203",
+        fcu: Double = 25.0,
+        fy: Double = 400.0,
+        isSafe: Boolean = true
     ): Bitmap {
         val W = 1200; val H = 700
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1451,6 +1460,23 @@ object PdfDrawingGenerator {
         canvas.drawHDim(elevL, elevL + drawL, elevT + drawH + 20f, "${totalLength.toInt()} mm")
         canvas.drawVDim(elevT, elevT + drawH, elevL - 25f, "${totalHeight.toInt()} mm")
 
+        // R3: step geometry + waist thickness annotations
+        val geoP = textPaint(DIM_TEXT, 14f)
+        canvas.drawText("R = ${riserHeight.toInt()}", elevL + treadW * 0.4f, elevT + drawH - treadH * 0.5f, geoP)
+        canvas.drawText("T = ${treadWidth.toInt()}", elevL + treadW * 1.1f, elevT + drawH - treadH - 8f, geoP)
+        canvas.drawText("waist = ${slabThickness.toInt()} mm", elevL + drawL * 0.42f, elevT + drawH - drawH * 0.18f, geoP)
+
+        // R3: rebar callouts
+        val callP = textPaint(Color.parseColor("#4FC3F7"), 15f, true)
+        canvas.drawText(
+            "MAIN T${mainDia.toInt()}@${mainSpacing.toInt()} (EF, bottom of waist)",
+            elevL + drawL * 0.30f, elevT + drawH + 46f, callP
+        )
+        canvas.drawText(
+            "DIST T${distDia.toInt()}@${distSpacing.toInt()}",
+            elevL + drawL * 0.30f, elevT + drawH + 68f, callP
+        )
+
         val titleP = textPaint(Color.WHITE, 22f, true)
         canvas.drawTextCentered("STAIRCASE ELEVATION", elevL + drawL / 2f, elevT - 25f, titleP)
         
@@ -1480,6 +1506,23 @@ object PdfDrawingGenerator {
                 listOf("D1", "${distDia.toInt()}mm", "${distSpacing.toInt()}mm c/c", "-")
             )
         )
+
+        // === R3: Loads & Design box ===
+        run {
+            val bx = W - 560f; val by = 60f
+            canvas.drawRect(bx, by, bx + 270f, by + 96f, Paint().apply {
+                color = Color.parseColor("#12253A"); style = Paint.Style.FILL
+            })
+            canvas.drawRect(bx, by, bx + 270f, by + 96f, outlineP)
+            val hdr = textPaint(if (isSafe) Color.parseColor("#66BB6A") else Color.parseColor("#EF5350"), 16f, true)
+            val ln = textPaint(DIM_TEXT, 14f)
+            canvas.drawText(if (isSafe) "DESIGN OK" else "UNSAFE", bx + 10f, by + 22f, hdr)
+            var ly = by + 44f
+            fun line(s: String) { canvas.drawText(s, bx + 10f, ly, ln); ly += 20f }
+            line("wu = ${"%.1f".format(wuKnm2)} kN/m2 (factored)")
+            line("Code: $codeName | fcu=${fcu.toInt()} fy=${fy.toInt()}")
+            line("nR=${(totalHeight / riserHeight).toInt()}  R=${riserHeight.toInt()}  T=${treadWidth.toInt()}")
+        }
 
         drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Stair Detail")
         return bitmap
@@ -1554,7 +1597,15 @@ object PdfDrawingGenerator {
         verticalRebarDia: Double, verticalRebarSpacing: Double,
         horizontalRebarDia: Double, horizontalRebarSpacing: Double,
         waterLevel: Double = 0.0,
-        foundationDepth: Double = 0.0
+        foundationDepth: Double = 0.0,
+        // R3: engineering annotations (ADR-010 verified model: hoop/cantilever zones)
+        codeName: String = "ECP 203-2020",
+        fcu: Double = 25.0,
+        fy: Double = 400.0,
+        capacityM3: Double = 0.0,
+        maxPressureKpa: Double = 0.0,
+        upliftFS: Double? = null,
+        isSafe: Boolean = true
     ): Bitmap {
         val W = 1200; val H = 900
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1607,7 +1658,39 @@ object PdfDrawingGenerator {
             val wlPx = (waterLevel / height).coerceIn(0.0, 1.0).toFloat() * hPx
             val waterTop = baseTop - wlPx
             canvas.drawRect(leftWallRight, waterTop, rightWallLeft, baseTop, fillPaint(WATER_BLUE))
+
+            // R3: hydrostatic pressure triangle (inner face of left wall)
+            val triP = createPaint(Color.parseColor("#FFB74D"), 1.8f)
+            val triFill = Paint().apply { color = Color.parseColor("#33FFB74D"); style = Paint.Style.FILL }
+            val triPath = Path().apply {
+                moveTo(leftWallRight + 8f, waterTop)
+                lineTo(leftWallRight + 8f, baseTop)
+                lineTo(leftWallRight + 8f + wtPx * 1.6f, baseTop)
+                close()
+            }
+            canvas.drawPath(triPath, triFill)
+            canvas.drawPath(triPath, triP)
+            val pLbl = textPaint(Color.parseColor("#FFB74D"), 15f)
+            canvas.drawText("0", leftWallRight + 14f, waterTop + 4f, pLbl)
+            canvas.drawText(
+                "γw·hw = ${"%.1f".format(maxPressureKpa)} kPa",
+                leftWallRight + 20f + wtPx * 1.2f, baseTop - 6f, pLbl
+            )
         }
+
+        // R3: reinforcement face callouts (each face, EN-only per ADR-009)
+        val faceP = textPaint(Color.parseColor("#4FC3F7"), 15f, true)
+        canvas.save()
+        canvas.rotate(-90f, rightWallLeft + wtPx * 3f, wallTop + hPx / 2f)
+        canvas.drawText(
+            "V T${verticalRebarDia.toInt()}@${verticalRebarSpacing.toInt()} EF",
+            rightWallLeft + wtPx * 3f - 60f, wallTop + hPx / 2f + 5f, faceP
+        )
+        canvas.restore()
+        canvas.drawText(
+            "H(hoop) T${horizontalRebarDia.toInt()}@${horizontalRebarSpacing.toInt()} EF",
+            csLeft + drawW * 0.55f, wallTop + 18f, faceP
+        )
 
         // Vertical rebar circles on walls (inner and outer faces)
         val vRebarR = maxOf(verticalRebarDia.toFloat() * 0.4f, 3f)
@@ -1688,10 +1771,32 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.58f,
             data = listOf(
                 listOf("Mark", "Dia", "Direction", "Spacing"),
-                listOf("V1", "${verticalRebarDia.toInt()}mm", "Vertical", "${verticalRebarSpacing.toInt()}mm c/c"),
-                listOf("H1", "${horizontalRebarDia.toInt()}mm", "Horizontal", "${horizontalRebarSpacing.toInt()}mm c/c")
+                listOf("V1", "${verticalRebarDia.toInt()}mm", "Vertical (EF)", "${verticalRebarSpacing.toInt()}mm c/c"),
+                listOf("H1", "${horizontalRebarDia.toInt()}mm", "Hoop (EF)", "${horizontalRebarSpacing.toInt()}mm c/c")
             )
         )
+
+        // === R3: Engineering Results Box ===
+        run {
+            val bx = W * 0.52f; val by = H - 150f
+            val bw = W - bx - 40f; val bh = 110f
+            canvas.drawRect(bx, by, bx + bw, by + bh, Paint().apply {
+                color = Color.parseColor("#12253A"); style = Paint.Style.FILL
+            })
+            canvas.drawRect(bx, by, bx + bw, by + bh, outlineP)
+            val hdr = textPaint(if (isSafe) Color.parseColor("#66BB6A") else Color.parseColor("#EF5350"), 17f, true)
+            val ln = textPaint(DIM_TEXT, 15f)
+            canvas.drawText(
+                if (isSafe) "DESIGN OK — WATER TIGHT DETAILING REQUIRED"
+                else "UNSAFE — REDESIGN REQUIRED",
+                bx + 12f, by + 24f, hdr
+            )
+            var ly = by + 48f
+            fun line(s: String) { canvas.drawText(s, bx + 12f, ly, ln); ly += 21f }
+            line("Code: $codeName   |   fcu = ${fcu.toInt()} MPa   |   fy = ${fy.toInt()} MPa")
+            line("Capacity = ${"%.1f".format(capacityM3)} m3   |   Max pressure = ${"%.1f".format(maxPressureKpa)} kPa")
+            upliftFS?.let { line("Uplift F.S. = ${"%.2f".format(it)}  (req >= 1.25)") }
+        }
 
         // Title block
         drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Tank Detail")
@@ -2149,7 +2254,8 @@ object PdfDrawingGenerator {
         shearPoints: List<Pair<Double, Double>> = emptyList(),
         maxMoment: Double = 0.0,
         maxShear: Double = 0.0,
-        isSafe: Boolean = true
+        isSafe: Boolean = true,
+        stirrupZones: List<com.civileg.core.calculations.entities.StirrupZone> = emptyList()
     ): Bitmap {
         val W = 1200; val H = 1400
         val (bitmap, canvas) = createCanvas(W, H)
@@ -2231,25 +2337,45 @@ object PdfDrawingGenerator {
             canvas.drawRebar(rx, rebarY, rebarR, REBAR_BLUE)
         }
 
-        // Stirrups with spacing annotation
+        // Stirrups with spacing annotation — R2 (P044): zone-aware, so the ends
+        // densify with the engine's real confinement spacings.
         val stirrupP = createPaint(STIRRUP, 1.5f)
         val stirrupY1 = bTop + cover.toFloat() * scale
         val stirrupY2 = bBottom - cover.toFloat() * scale
-        val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
-        var sx = bLeft + stirrupSpacingPx
         var stirrupCount = 0
-        while (sx < bRight - stirrupSpacingPx) {
-            canvas.drawRect(sx - 2f, stirrupY1, sx + 2f, stirrupY2, stirrupP)
-            sx += stirrupSpacingPx
-            stirrupCount++
+        var dimSpacing: Double = stirrupSpacing
+        if (stirrupZones.isNotEmpty()) {
+            stirrupZones.forEach { zone ->
+                val spacing = zone.spacing.coerceAtLeast(50.0)
+                val zStartX = bLeft + (zone.startLocation / span) * bDrawW
+                val zEndX = bLeft + (zone.endLocation / span) * bDrawW
+                var sx = zStartX
+                var guard = 0
+                while (sx < zEndX - 1.0 && guard < 200) {
+                    canvas.drawRect((sx - 2.0).toFloat(), stirrupY1, (sx + 2.0).toFloat(), stirrupY2, stirrupP)
+                    sx += (spacing / span) * bDrawW
+                    stirrupCount++
+                    guard++
+                }
+            }
+            dimSpacing = stirrupZones.first().spacing
+        } else {
+            val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
+            var sx = bLeft + stirrupSpacingPx
+            while (sx < bRight - stirrupSpacingPx) {
+                canvas.drawRect(sx - 2f, stirrupY1, sx + 2f, stirrupY2, stirrupP)
+                sx += stirrupSpacingPx
+                stirrupCount++
+            }
         }
 
-        // Stirrup spacing dimension
+        // Stirrup spacing dimension (support-zone value when zones present)
         if (stirrupCount > 1) {
             val dimY = bTop - 5f
+            val dimSpacingPx = ((dimSpacing / span) * bDrawW).toFloat()
             canvas.drawHDim(
-                bLeft + stirrupSpacingPx, bLeft + stirrupSpacingPx * 2,
-                dimY, "@${stirrupSpacing.toInt()}", -18f, createPaint(STIRRUP, 1f)
+                bLeft + dimSpacingPx, bLeft + dimSpacingPx * 2,
+                dimY, "@${dimSpacing.toInt()}", -18f, createPaint(STIRRUP, 1f)
             )
         }
 
@@ -2314,13 +2440,14 @@ object PdfDrawingGenerator {
         canvas.drawVDim(csY, csY + csH, csX + csW + 15f, "b=${beamWidth.toInt()}")
         canvas.drawVDim(csY, csY + csH, csX - 20f, "h=${beamDepth.toInt()}")
 
-        // Reinforcement schedule table
+        // Reinforcement schedule table (S1 carries the support-zone spacing)
         drawRebarTable(canvas,
             x = W * 0.35f, y = 470f,
             data = listOf(
                 listOf("Mark", "Dia", "No.", "Spacing", "Length", "Type"),
                 listOf("B1", "${mainRebarDia.toInt()}", "$mainRebarCount", "-", "${span.toInt()} mm", "Main"),
-                listOf("S1", "${stirrupDia.toInt()}", "$stirrupCount", "@${stirrupSpacing.toInt()}", "-", "Stirrup")
+                listOf("S1", "${stirrupDia.toInt()}", "$stirrupCount", "@${dimSpacing.toInt()}", "-",
+                    if ((stirrupZones.firstOrNull()?.numLegs ?: 2) > 2) "Stirrup ${stirrupZones.first().numLegs}L" else "Stirrup")
             ) + if (hasTopSteel && topRebarCount > 0)
                 listOf(listOf("T1", "${topRebarDia.toInt()}", "$topRebarCount", "-", "${(span/3).toInt()} mm", "Top"))
             else emptyList()
@@ -2868,4 +2995,299 @@ object PdfDrawingGenerator {
 
         return bitmap
     }
+    // ══════════════════════════════════════════════════════════════
+    // PILE FOUNDATION — PLAN + SECTION (ADR-011: dims + labels EN-only)
+    // ══════════════════════════════════════════════════════════════
+
+    fun generatePileFoundationDrawing(
+        numberOfPiles: Int,
+        pattern: String,
+        pileDiameterMm: Double,
+        pileSpacingMm: Double,
+        capWidthMm: Double,
+        capLengthMm: Double,
+        capThicknessMm: Double,
+        columnWidthMm: Double,
+        columnLengthMm: Double,
+        pileLengthM: Double
+    ): Bitmap {
+        val W = 1200; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outline = createPaint(Color.WHITE, 1.8f)
+        val dash = createPaint(Color.GRAY, 1.2f).apply {
+            pathEffect = DashPathEffect(floatArrayOf(8f, 5f), 0f)
+        }
+        val capFill = Paint().apply { color = Color.parseColor("#1E3A4A"); style = Paint.Style.FILL }
+        val pileFill = Paint().apply { color = Color.parseColor("#2E7D32"); style = Paint.Style.FILL }
+        val soilP = createPaint(Color.parseColor("#6B5B3E"), 1f)
+        val dimP = textPaint(DIM_TEXT, 16f)
+        val titleP = textPaint(Color.CYAN, 20f, true)
+
+        // Parse "RxC" from patterns like "2x2" or "3x2 (6 piles)"
+        val head = pattern.substringBefore('(').trim()
+        val rows = head.split("x", "×", "X").getOrNull(0)?.trim()?.toIntOrNull()
+            ?.coerceIn(1, 10) ?: 2
+        val cols = head.split("x", "×", "X").getOrNull(1)?.trim()?.toIntOrNull()
+            ?.coerceIn(1, 10) ?: 2
+
+        // ── PLAN VIEW (left panel) ──
+        val planCx = 320f; val planCy = 430f
+        val scalePlan = min(500f / capWidthMm.toFloat(), 600f / capLengthMm.toFloat())
+        val cw = capWidthMm.toFloat() * scalePlan
+        val cl = capLengthMm.toFloat() * scalePlan
+        val left = planCx - cw / 2f; val top = planCy - cl / 2f
+        canvas.drawRect(left, top, left + cw, top + cl, capFill)
+        canvas.drawRect(left, top, left + cw, top + cl, outline)
+
+        val sx = pileSpacingMm.toFloat() * scalePlan
+        val sy = pileSpacingMm.toFloat() * scalePlan
+        val pr = max(8f, (pileDiameterMm / 2f).toFloat() * scalePlan)
+        val startX = planCx - sx * (cols - 1) / 2f
+        val startY = planCy - sy * (rows - 1) / 2f
+        for (r in 0 until rows) for (c in 0 until cols) {
+            val cx = startX + c * sx; val cy = startY + r * sy
+            canvas.drawCircle(cx, cy, pr, pileFill)
+            canvas.drawCircle(cx, cy, pr, outline)
+        }
+        val colW = columnWidthMm.toFloat() * scalePlan
+        val colL = columnLengthMm.toFloat() * scalePlan
+        canvas.drawRect(planCx - colW / 2f, planCy - colL / 2f,
+                        planCx + colW / 2f, planCy + colL / 2f, dash)
+
+        canvas.drawText("PLAN VIEW", planCx, top - 34f, titleP)
+        drawDimH(canvas, left, left + cw, top + cl + 40f, "B = ${capWidthMm.toInt()} mm", dimP)
+        drawDimV(canvas, top, top + cl, left - 44f, "L = ${capLengthMm.toInt()} mm", dimP)
+
+        // ── SECTION (right panel) ──
+        val secCx = 860f; val groundY = 360f
+        val scaleSec = min(520f / capWidthMm.toFloat(), 150f / capThicknessMm.toFloat())
+        val sw = capWidthMm.toFloat() * scaleSec
+        val st = capThicknessMm.toFloat() * scaleSec
+        val secLeft = secCx - sw / 2f
+        val capTop = groundY + 20f
+        val capBot = capTop + st
+
+        // soil line + hatch ticks
+        canvas.drawLine(secLeft - 60f, groundY, secCx + sw / 2f + 60f, groundY, soilP)
+        var hx = secLeft - 50f
+        while (hx < secCx + sw / 2f + 50f) {
+            canvas.drawLine(hx, groundY, hx - 12f, groundY + 14f, soilP); hx += 42f
+        }
+
+        canvas.drawRect(secLeft, capTop, secLeft + sw, capBot, capFill)
+        canvas.drawRect(secLeft, capTop, secLeft + sw, capBot, outline)
+
+        // piles as deep shafts below cap
+        val pileVisLen = (pileLengthM * 1000.0).toFloat() * scaleSec * 0.35f
+        val shaftW = max(10f, pileDiameterMm.toFloat() * scaleSec)
+        for (c in 0 until cols.coerceAtMost(6)) {
+            val cx = if (cols == 1) secCx else startX2(cols, secLeft + shaftW, secLeft + sw - shaftW, c)
+            canvas.drawRect(cx - shaftW / 2f, capBot, cx + shaftW / 2f, capBot + pileVisLen, pileFill)
+            canvas.drawRect(cx - shaftW / 2f, capBot, cx + shaftW / 2f, capBot + pileVisLen, outline)
+        }
+        // column stub above cap
+        val stubW = columnWidthMm.toFloat() * scaleSec
+        canvas.drawRect(secCx - stubW / 2f, capTop - 46f, secCx + stubW / 2f, capTop, dash)
+
+        canvas.drawText("SECTION A-A", secCx, capTop - 84f, titleP)
+        drawDimH(canvas, secLeft, secLeft + sw, capBot + 46f, "${capWidthMm.toInt()} mm", dimP)
+        drawDimV(canvas, capTop, capBot, secLeft - 30f, "t = ${capThicknessMm.toInt()}", dimP)
+
+        // summary box
+        val infoP = textPaint(DIM_TEXT, 17f)
+        val bx = 60f; var by = H - 130f
+        canvas.drawText("Piles: ${numberOfPiles} × Ø${pileDiameterMm.toInt()} mm — ${rows}×${cols} @ ${pileSpacingMm.toInt()} mm c/c", bx, by, infoP); by += 28f
+        canvas.drawText("Cap: ${capWidthMm.toInt()} × ${capLengthMm.toInt()} × ${capThicknessMm.toInt()} mm", bx, by, infoP); by += 28f
+        canvas.drawText("Pile length: ${pileLengthM} m", bx, by, infoP)
+
+        return bitmap
+    }
+
+    private fun startX2(n: Int, from: Float, to: Float, i: Int): Float =
+        if (n <= 1) (from + to) / 2f else from + (to - from) * i / (n - 1)
+
+    private fun drawDimH(cv: Canvas, x1: Float, x2: Float, y: Float, label: String, p: Paint) {
+        val line = createPaint(DIM_LINE, 1.2f)
+        cv.drawLine(x1, y, x2, y, line)
+        cv.drawLine(x1, y - 8f, x1, y + 8f, line)
+        cv.drawLine(x2, y - 8f, x2, y + 8f, line)
+        cv.drawText(label, (x1 + x2) / 2f - p.measureText(label) / 2f, y - 10f, p)
+    }
+
+    private fun drawDimV(cv: Canvas, y1: Float, y2: Float, x: Float, label: String, p: Paint) {
+        val line = createPaint(DIM_LINE, 1.2f)
+        cv.drawLine(x, y1, x, y2, line)
+        cv.drawLine(x - 8f, y1, x + 8f, y1, line)
+        cv.drawLine(x - 8f, y2, x + 8f, y2, line)
+        cv.save(); cv.rotate(-90f, x, (y1 + y2) / 2f)
+        cv.drawText(label, x - p.measureText(label) / 2f, (y1 + y2) / 2f - 10f, p)
+        cv.restore()
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SHEAR WALL — ELEVATION + HORIZONTAL SECTION (EN-only labels)
+    // ══════════════════════════════════════════════════════════════
+
+    fun generateShearWallDrawing(
+        wallLengthMm: Double,
+        wallThicknessMm: Double,
+        wallHeightMm: Double,
+        verticalDiaMm: Int,
+        verticalSpacingMm: Int,
+        horizontalDiaMm: Int,
+        horizontalSpacingMm: Int,
+        boundaryElementLabel: String,
+        designCode: String
+    ): Bitmap {
+        val W = 1200; val H = 900
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outline = createPaint(Color.WHITE, 1.8f)
+        val fill = Paint().apply { color = Color.parseColor("#20303C"); style = Paint.Style.FILL }
+        val beFill = Paint().apply { color = Color.parseColor("#7B1FA2"); style = Paint.Style.FILL }
+        val rebarP = createPaint(Color.parseColor("#4FC3F7"), 2.2f)
+        val hRebarP = createPaint(Color.parseColor("#FFB74D"), 2f)
+        val dimP = textPaint(DIM_TEXT, 16f)
+        val titleP = textPaint(Color.CYAN, 20f, true)
+
+        // ── ELEVATION (left) ──
+        val eCx = 330f; val eBottom = 700f
+        val scaleE = min(480f / wallHeightMm.toFloat(), 300f / wallLengthMm.toFloat())
+        val eh = wallHeightMm.toFloat() * scaleE
+        val el = wallLengthMm.toFloat() * scaleE
+        val eLeft = eCx - el / 2f; val eTop = eBottom - eh
+        canvas.drawRect(eLeft, eTop, eLeft + el, eBottom, fill)
+        canvas.drawRect(eLeft, eTop, eLeft + el, eBottom, outline)
+
+        // boundary element zones at both ends
+        val beW = min(el / 5f, wallThicknessMm.toFloat() * scaleE * 2f)
+        canvas.drawRect(eLeft, eTop, eLeft + beW, eBottom, beFill)
+        canvas.drawRect(eLeft + el - beW, eTop, eLeft + el, eBottom, beFill)
+
+        // vertical field bars
+        val vStep = verticalSpacingMm.toFloat() * scaleE
+        if (vStep > 9f) {
+            var vx = eLeft + beW + vStep
+            while (vx < eLeft + el - beW - 4f) {
+                canvas.drawLine(vx, eTop + 6f, vx, eBottom - 6f, rebarP); vx += vStep
+            }
+        }
+        // horizontal bars
+        val hStep = horizontalSpacingMm.toFloat() * scaleE
+        if (hStep > 9f) {
+            var hy = eTop + hStep
+            while (hy < eBottom - 4f) {
+                canvas.drawLine(eLeft + 4f, hy, eLeft + el - 4f, hy, hRebarP); hy += hStep
+            }
+        }
+
+        canvas.drawText("ELEVATION", eCx, eTop - 34f, titleP)
+        drawDimH(canvas, eLeft, eLeft + el, eBottom + 40f, "Lw = ${wallLengthMm.toInt()} mm", dimP)
+        drawDimV(canvas, eTop, eBottom, eLeft - 44f, "Hw = ${(wallHeightMm / 1000.0).let { "%.2f".format(it) }} m", dimP)
+
+        // ── HORIZONTAL SECTION (right) ──
+        val sCx = 850f; val sCy = 330f
+        val scaleS = min(420f / wallLengthMm.toFloat(), 110f / wallThicknessMm.toFloat())
+        val sl = wallLengthMm.toFloat() * scaleS
+        val st = wallThicknessMm.toFloat() * scaleS
+        val sLeft = sCx - sl / 2f; val sTop = sCy - st / 2f
+        canvas.drawRect(sLeft, sTop, sLeft + sl, sTop + st, fill)
+        canvas.drawRect(sLeft, sTop, sLeft + sl, sTop + st, outline)
+        canvas.drawRect(sLeft, sTop, sLeft + beW, sTop + st, beFill)
+        canvas.drawRect(sLeft + sl - beW, sTop, sLeft + sl, sTop + st, beFill)
+
+        // bar dots across section
+        val dotR = 3.5f
+        var dx = sLeft + beW + max(14f, verticalSpacingMm.toFloat() * scaleS)
+        while (dx < sLeft + sl - beW - 6f) {
+            canvas.drawCircle(dx, sTop + st / 2f, dotR, rebarP.apply { style = Paint.Style.FILL }); dx += max(14f, verticalSpacingMm.toFloat() * scaleS)
+        }
+        rebarP.style = Paint.Style.STROKE
+
+        canvas.drawText("HORIZONTAL SECTION", sCx, sTop - 40f, titleP)
+        drawDimH(canvas, sLeft, sLeft + sl, sTop + st + 44f, "Lw = ${wallLengthMm.toInt()} mm", dimP)
+        drawDimV(canvas, sTop, sTop + st, sLeft - 26f, "tw = ${wallThicknessMm.toInt()}", dimP)
+
+        // summary box
+        val infoP = textPaint(DIM_TEXT, 17f)
+        val bx = 60f; var by = H - 140f
+        canvas.drawText("Vertical bars: T$verticalDiaMm @ ${verticalSpacingMm} mm (each face)", bx, by, infoP); by += 28f
+        canvas.drawText("Horizontal bars: T$horizontalDiaMm @ ${horizontalSpacingMm} mm (each face)", bx, by, infoP); by += 28f
+        canvas.drawText("Boundary elements: $boundaryElementLabel   |   Code: $designCode", bx, by, infoP)
+
+        return bitmap
+    }
+    // ══════════════════════════════════════════════════════════════
+    // BEAM LOAD DIAGRAMS ONLY — SFD + BMD from case-aware point arrays
+    // (R1-P016; shapes follow verified statics per ADR-010)
+    // ══════════════════════════════════════════════════════════════
+
+    fun generateLoadDiagramsOnly(
+        supportTypeName: String,
+        spanM: Double,
+        momentPoints: List<Pair<Double, Double>>,
+        shearPoints: List<Pair<Double, Double>>,
+        maxMoment: Double,
+        maxShear: Double
+    ): Bitmap {
+        val W = 1000; val H = 760
+        val (bitmap, canvas) = createCanvas(W, H)
+        val axisP = createPaint(Color.WHITE, 1.6f)
+        val gridP = createPaint(Color.parseColor("#333333"), 0.8f)
+        val shearFill = Paint().apply { color = Color.parseColor("#4FC3F7"); style = Paint.Style.FILL }
+        val momFill = Paint().apply { color = Color.parseColor("#EF5350"); style = Paint.Style.FILL }
+        val lbl = textPaint(DIM_TEXT, 17f)
+        val titleP = textPaint(Color.CYAN, 19f, true)
+
+        fun drawChart(
+            top: Float, height: Float,
+            points: List<Pair<Double, Double>>,
+            fill: Paint,
+            title: String, unit: String, peak: Double, positiveDown: Boolean
+        ) {
+            if (points.size < 2) return
+            canvas.drawLine(60f, top + height / 2f, W - 50f, top + height / 2f, axisP) // baseline
+            val xs = points.map { it.first.toFloat() }
+            val ys = points.map { it.second.toFloat() }
+            val maxAbs = maxOf(ys.maxOf { kotlin.math.abs(it) }, 1e-6f)
+            val half = height / 2f * 0.82f
+            val x0 = 70f; val x1 = W - 60f
+            val path = android.graphics.Path()
+            points.forEachIndexed { i, (_, v) ->
+                val px = x0 + (x1 - x0) * (xs[i] / xs.last().coerceAtLeast(1e-9f))
+                val py = top + height / 2f +
+                    (if (positiveDown) 1f else -1f) * (v.toFloat() / maxAbs) * half
+                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            }
+            // closed fill to baseline
+            val fillPath = android.graphics.Path(path)
+            fillPath.lineTo(x1, top + height / 2f)
+            fillPath.lineTo(x0, top + height / 2f)
+            fillPath.close()
+            canvas.drawPath(fillPath, fill)
+            canvas.drawPath(path, createPaint(Color.WHITE, 2.2f))
+
+            canvas.drawText(title, 60f, top - 10f, titleP)
+            val sign = if (ys.maxOf { it } < 0 && ys.minOf { it } < 0) "-" else ""
+            canvas.drawText(
+                "peak = $sign${"%.1f".format(kotlin.math.abs(peak))} $unit",
+                W - 320f, top - 10f, lbl
+            )
+            // span ticks 0..L
+            for (i in 0..5) {
+                val px = x0 + (x1 - x0) * i / 5f
+                canvas.drawLine(px, top + height / 2f - 5f, px, top + height / 2f + 5f, gridP)
+                canvas.drawText("%.1f".format(spanM * i / 5.0), px - 12f, top + height + 22f, lbl)
+            }
+        }
+
+        canvas.drawText(
+            "BEAM DIAGRAMS — CASE: ${supportTypeName.replace('_', '-')}   |   L = $spanM m",
+            60f, 34f, titleP
+        )
+        drawChart(120f, 240f, shearPoints, shearFill, "SHEAR FORCE DIAGRAM (SFD)", "kN", maxShear, positiveDown = false)
+        drawChart(440f, 250f, momentPoints, momFill, "BENDING MOMENT DIAGRAM (BMD)", "kN.m", maxMoment, positiveDown = true)
+
+        return bitmap
+    }
+
 }

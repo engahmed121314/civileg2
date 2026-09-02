@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.calculations.ecp.ECPColumn
 import com.civileg.app.domain.calculations.aci.ACIColumn
 import com.civileg.app.domain.calculations.sbc.SBCColumn
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

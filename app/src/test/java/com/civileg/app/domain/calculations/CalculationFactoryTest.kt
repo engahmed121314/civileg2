@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -54,5 +54,48 @@ class CalculationFactoryTest {
         assertNotNull(CalculationFactory.getWaffleSlabDesign(DesignCode.ECP))
         assertNotNull(CalculationFactory.getDoublyReinforcedBeamDesign(DesignCode.ECP))
         assertNotNull(CalculationFactory.getCombinedFootingDesign(DesignCode.ECP))
+    }
+
+    @Test
+    fun `flat slab, shear wall and pile foundation factories return distinct impls per code`() {
+        // Phase 2 wiring: SBCFlatSlab / SBCShearWall / SBCPileFoundation / ACIPileFoundation
+        // must be reachable — no silent ECP fallback (ADR-002).
+        for (code in DesignCode.entries) {
+            val flatSlab = CalculationFactory.getFlatSlabDesign(code)
+            val shearWall = CalculationFactory.getShearWallDesign(code)
+            val pile = CalculationFactory.getPileFoundationDesign(code)
+
+            assertNotNull("FlatSlabDesign null for $code", flatSlab)
+            assertNotNull("ShearWallDesign null for $code", shearWall)
+            assertNotNull("PileFoundationDesign null for $code", pile)
+
+            assertTrue(flatSlab is FlatSlabDesign)
+            assertTrue(shearWall is ShearWallDesign)
+            assertTrue(pile is PileFoundationDesign)
+        }
+
+        // Distinct concrete types per code — proves no shared fallback instance class.
+        assertEquals(
+            3,
+            DesignCode.entries.map { CalculationFactory.getFlatSlabDesign(it)::class }.toSet().size
+        )
+        assertEquals(
+            3,
+            DesignCode.entries.map { CalculationFactory.getShearWallDesign(it)::class }.toSet().size
+        )
+        assertEquals(
+            3,
+            DesignCode.entries.map { CalculationFactory.getPileFoundationDesign(it)::class }.toSet().size
+        )
+    }
+
+    @Test
+    fun `parseDesignCode is case-insensitive and rejects garbage`() {
+        assertEquals(DesignCode.ECP, CalculationFactory.parseDesignCode("ecp"))
+        assertEquals(DesignCode.ACI, CalculationFactory.parseDesignCode(" ACI "))
+        assertEquals(DesignCode.SBC, CalculationFactory.parseDesignCode("SBC"))
+        assertNull(CalculationFactory.parseDesignCode(""))
+        assertNull(CalculationFactory.parseDesignCode(null))
+        assertNull(CalculationFactory.parseDesignCode("BS8110"))
     }
 }

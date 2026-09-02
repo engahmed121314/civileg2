@@ -33,7 +33,8 @@ private val moreItems = listOf(
     MoreItem(R.string.nav_settings,    R.string.more_settings_sub,    Icons.Default.Settings,   Color(0xFF37474F), AppScreen.Settings.route),
     MoreItem(R.string.nav_inventory,   R.string.more_inventory_sub,   Icons.Default.Inventory2, Color(0xFF2E7D32), AppScreen.Inventory.route),
     MoreItem(R.string.home_frame,      R.string.more_frame_sub,       Icons.Default.AccountTree,Color(0xFF1A237E), AppScreen.FrameAnalysis.route),
-    MoreItem(R.string.home_seismic,    R.string.more_seismic_sub,     Icons.Default.Warning,    Color(0xFFBF360C), AppScreen.SeismicAnalysis.route)
+    MoreItem(R.string.home_seismic,    R.string.more_seismic_sub,     Icons.Default.Warning,    Color(0xFFBF360C), AppScreen.SeismicAnalysis.route),
+    MoreItem(R.string.export_center,   R.string.export_center_sub,    Icons.Default.Archive,    Color(0xFF6A1B9A), AppScreen.ExportCenter.route)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

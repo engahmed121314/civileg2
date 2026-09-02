@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.calculations.base.ShearWallDesign
-import com.civileg.app.domain.calculations.ecp.ECPShearWall
-import com.civileg.app.domain.calculations.aci.ACIShearWall
+import com.civileg.app.utils.SettingsManager
+import com.civileg.app.data.local.PreferencesManager
+import com.civileg.core.calculations.entities.DesignCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -50,7 +52,9 @@ data class ShearWallUiState(
 
 @HiltViewModel
 class ShearWallViewModel @Inject constructor(
-    private val repository: DesignRepository
+    private val repository: DesignRepository,
+    private val settingsManager: SettingsManager,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShearWallUiState())
@@ -148,12 +152,25 @@ class ShearWallViewModel @Inject constructor(
         val wallLen = state.wallLength.toDoubleOrNull() ?: return
         val wallThk = state.wallThickness.toDoubleOrNull() ?: return
         val storyH = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0  // m → mm
-        val numStories = state.numberOfStories.toIntOrNull() ?: 10
+        // rule 1.4 — engineering-critical values are never guessed silently
+        val numStories = state.numberOfStories.toIntOrNull()
+        if (numStories == null || numStories < 1) {
+            _uiState.update { it.copy(errors = listOf("أدخل عدد الأدوار — لا يمكن افتراضه / Enter number of stories")) }
+            return
+        }
+        val fcu = state.fcu.toDoubleOrNull()
+        if (fcu == null || fcu <= 0) {
+            _uiState.update { it.copy(errors = listOf("أدخل fcu — لا يمكن افتراضها / Enter concrete strength")) }
+            return
+        }
+        val fy = state.fy.toDoubleOrNull()
+        if (fy == null || fy <= 0) {
+            _uiState.update { it.copy(errors = listOf("أدخل fy — لا يمكن افتراضها / Enter steel yield strength")) }
+            return
+        }
         val axial = state.axialLoad.toDoubleOrNull() ?: 0.0
         val shear = state.shearForce.toDoubleOrNull() ?: 0.0
         val moment = state.bendingMoment.toDoubleOrNull() ?: 0.0
-        val fcu = state.fcu.toDoubleOrNull() ?: 30.0
-        val fy = state.fy.toDoubleOrNull() ?: 400.0
         val fyv = state.fyv.toDoubleOrNull() ?: 250.0
         val cover = state.clearCover.toDoubleOrNull() ?: 25.0
         val flangeW = state.flangeWidth.toDoubleOrNull() ?: 0.0
@@ -185,10 +202,11 @@ class ShearWallViewModel @Inject constructor(
                     couplingBeamClearSpan = cbSpan
                 )
 
-                val designer: ShearWallDesign = when (state.designCode) {
-                    "ACI" -> ACIShearWall()
-                    else -> ECPShearWall()
-                }
+                // ADR-002: dispatch through CalculationFactory only (SBC wired — no silent fallback)
+                // ADR-003: default code resolved from DataStore (single source)
+                val resolvedCode = CalculationFactory.parseDesignCode(state.designCode)
+                    ?: preferencesManager.defaultDesignCodeEnum.first()
+                val designer = CalculationFactory.getShearWallDesign(resolvedCode)
 
                 val result = designer.designWall(input)
                 _uiState.update { it.copy(result = result, isLoading = false, errors = emptyList()) }
@@ -244,22 +262,55 @@ class ShearWallViewModel @Inject constructor(
                     )
                 }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم حائط قص",
-                    titleEn = "Shear Wall Design Report",
-                    subtitle = "${state.wallType.displayName} — ${state.designCode}",
-                    designType = state.wallType.displayName,
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
-                    isSafe = res.isSafe,
-                    drawingBitmap = null,
-                    outputPath = file.absolutePath
+                // ADR-011: attach elevation + horizontal-section drawing.
+                // Cosmetic layer: on failure log & continue with text-only report.
+                val drawingBitmap = try {
+                    val totalHeightMm = (state.numberOfStories.toIntOrNull() ?: 1) *
+                        ((state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0)
+                    com.civileg.app.utils.PdfDrawingGenerator.generateShearWallDrawing(
+                        wallLengthMm = state.wallLength.toDoubleOrNull() ?: 4000.0,
+                        wallThicknessMm = state.wallThickness.toDoubleOrNull() ?: 300.0,
+                        wallHeightMm = totalHeightMm,
+                        verticalDiaMm = res.verticalReinforcement.diameter,
+                        verticalSpacingMm = res.verticalReinforcement.spacing,
+                        horizontalDiaMm = res.horizontalReinforcement.diameter,
+                        horizontalSpacingMm = res.horizontalReinforcement.spacing,
+                        boundaryElementLabel = res.boundaryElementType.displayName,
+                        designCode = state.designCode
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("ShearWallPdf", "drawing generation skipped: ${e.message}")
+                    null
+                }
+
+                val storyH = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0
+                val numS = state.numberOfStories.toIntOrNull() ?: 1
+                val input = ShearWallInput(
+                    wallType = state.wallType,
+                    wallLength = state.wallLength.toDoubleOrNull() ?: 4000.0,
+                    wallThickness = state.wallThickness.toDoubleOrNull() ?: 300.0,
+                    wallHeight = storyH,
+                    numberOfStories = numS,
+                    axialLoad = state.axialLoad.toDoubleOrNull() ?: 0.0,
+                    shearForce = state.shearForce.toDoubleOrNull() ?: 0.0,
+                    bendingMoment = state.bendingMoment.toDoubleOrNull() ?: 0.0,
+                    fcu = state.fcu.toDoubleOrNull() ?: 30.0,
+                    fy = state.fy.toDoubleOrNull() ?: 400.0,
+                    fyv = state.fyv.toDoubleOrNull() ?: 250.0,
+                    clearCover = state.clearCover.toDoubleOrNull() ?: 25.0
+                )
+
+                val exporter = com.civileg.app.utils.exporters.ShearWallPdfExporter(context)
+                val generated = exporter.exportToDownload(
+                    input = input,
+                    result = res,
+                    projectName = "CIVILEG SHEAR WALL",
+                    clientName = "Site Engineer"
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }
-                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    generated.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)
                 }
             } catch (e: Throwable) {

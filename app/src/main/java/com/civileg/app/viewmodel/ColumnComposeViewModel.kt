@@ -6,9 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.civileg.app.domain.calculations.CalculationFactory
-import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.domain.entities.ReinforcementResult
-import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.LoadCombination
 import com.civileg.app.domain.base.CalculationResult
 import com.civileg.app.domain.base.ErrorCode
 import com.civileg.app.domain.validators.ColumnInputValidator

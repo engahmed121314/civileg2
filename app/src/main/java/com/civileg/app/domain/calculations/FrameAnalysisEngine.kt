@@ -79,9 +79,10 @@ object FrameAnalysisEngine {
                 val ni = nodes.indexOfFirst { it.id == member.nodeI }
                 val nj = nodes.indexOfFirst { it.id == member.nodeJ }
                 if (ni >= 0 && nj >= 0) {
-                    // Assemble equivalent nodal loads: P_eq = -FEF_global
-                    F[ni * 3] -= fefGlobal[0]; F[ni * 3 + 1] -= fefGlobal[1]; F[ni * 3 + 2] -= fefGlobal[2]
-                    F[nj * 3] -= fefGlobal[3]; F[nj * 3 + 1] -= fefGlobal[4]; F[nj * 3 + 2] -= fefGlobal[5]
+                    // A1-FIX: table returns P_eq (loads ON NODES) → ASSEMBLE WITH +
+                    // (old `-= ` applied the load upward, inverting all member-load results)
+                    F[ni * 3] += fefGlobal[0]; F[ni * 3 + 1] += fefGlobal[1]; F[ni * 3 + 2] += fefGlobal[2]
+                    F[nj * 3] += fefGlobal[3]; F[nj * 3 + 1] += fefGlobal[4]; F[nj * 3 + 2] += fefGlobal[5]
                 }
             }
 
@@ -292,12 +293,13 @@ object FrameAnalysisEngine {
 
         return when (load.loadType) {
             MemberLoadType.UDL -> {
-                // FEF for UDL w (kN/m) over full span L
-                // Local: [0, -wL/2, -wL²/12, 0, -wL/2, wL²/12]
-                doubleArrayOf(0.0, -w * L / 2.0, -w * L * L / 12.0, 0.0, -w * L / 2.0, w * L * L / 12.0)
+                // A1-FIX: PURE equivalent-nodal-load vector (P_eq, acting ON NODES).
+                // Shears: −wL/2 (down). Moments: opposite of classical fixed-end
+                // reactions (classical was ∓wL²/12).
+                doubleArrayOf(0.0, -w * L / 2.0, w * L * L / 12.0, 0.0, -w * L / 2.0, -w * L * L / 12.0)
             }
             MemberLoadType.PointLoad -> {
-                // FEF for point load P at distance 'a' from node I
+                // A1-FIX: P_eq moments = −(classical fixed-end moments).
                 val b = L - a
                 if (a < 1e-12 || b < 1e-12) {
                     doubleArrayOf(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
@@ -306,10 +308,10 @@ object FrameAnalysisEngine {
                     doubleArrayOf(
                         0.0,
                         -P * b * b * (L + 2 * a) / (L * L * L),
-                        -P * a * b * b / (L * L),
+                        P * a * b * b / (L * L),
                         0.0,
                         -P * a * a * (L + 2 * b) / (L * L * L),
-                        P * a * a * b / (L * L)
+                        -P * a * a * b / (L * L)
                     )
                 }
             }
@@ -357,6 +359,18 @@ object FrameAnalysisEngine {
     ): MemberDiagram {
         val L = member.getLength(nodes)
         val numPoints = 21
+        // R4+: include load breakpoints so peaks (e.g. midspan point load) are captured
+        val breakpoints = memberLoadList.mapNotNull { ml ->
+            when (ml.loadType) {
+                MemberLoadType.PointLoad, MemberLoadType.Moment ->
+                    if (ml.position > 1e-9 && ml.position < L - 1e-9) ml.position else null
+                else -> null
+            }
+        }.distinct().sorted()
+        val sampleXs = (buildList {
+            for (i in 0..numPoints) add(L * i / numPoints)
+            addAll(breakpoints)
+        }).sorted()
         val momentPoints = mutableListOf<DiagramPoint>()
         val shearPoints = mutableListOf<DiagramPoint>()
         val axialPoints = mutableListOf<DiagramPoint>()
@@ -368,41 +382,50 @@ object FrameAnalysisEngine {
         val vJ = fLocalTotal[4]  // shear at J
         val mJ = fLocalTotal[5]  // moment at J
 
-        for (i in 0..numPoints) {
-            val x = L * i / numPoints
-            var V = 0.0
-            var M = 0.0
+        for (x in sampleXs) {
+            val t = if (L > 0) x / L else 0.0
+
+            // ── R4-fix (equilibrium-exact reconstruction) ──────────────
+            // fLocalTotal carries TOTAL end forces (k·u + FEF). Interior
+            // diagrams must satisfy end equilibrium EXACTLY, independent of
+            // each code path's sign conventions:
+            //   M(x) = mI(1−t) + mJ·t + M_free(x)
+            //   V(x) = (mJ − mI)/L + V_free(x)
+            // where *_free are the "ends free" contributions of SPAN loads.
+            // (Old form mI + vI·x violated mJ consistency and double-counted
+            // span loads already folded into FEF.)
+            var V = (mJ - mI) / max(L, 1e-9)
+            var M = mI * (1.0 - t) + mJ * t
             var N = nI // axial is constant along member (no distributed axial load)
 
-            // Start with end force contributions
-            V = vI
-            M = mI + vI * x
-
-            // Add member load contributions
+            // Span-load "free" contributions
             for (mLoad in memberLoadList) {
                 when (mLoad.loadType) {
                     MemberLoadType.UDL -> {
-                        V -= mLoad.value * x
-                        M -= mLoad.value * x * x / 2.0
+                        val w = mLoad.value
+                        V -= w * (L / 2.0 - x)
+                        M -= w * x * (L - x) / 2.0
                     }
                     MemberLoadType.PointLoad -> {
-                        val a = mLoad.position
-                        if (x >= a) {
-                            V -= mLoad.value
-                            M -= mLoad.value * (x - a)
+                        val a = mLoad.position.coerceIn(0.0, L)
+                        val b = L - a
+                        if (x < a) {
+                            V -= mLoad.value * b / L
+                            M += mLoad.value * b / L * x
+                        } else {
+                            V += mLoad.value * a / L
+                            M += mLoad.value * a / L * (L - x)
                         }
                     }
                     MemberLoadType.Moment -> {
                         val a = mLoad.position
-                        if (x >= a) {
-                            M -= mLoad.value
-                        }
+                        if (x >= a) M -= mLoad.value
                     }
                     MemberLoadType.LinearVarying -> {
-                        // Triangular load: 0 at I, w at J
-                        val wAtX = mLoad.value * x / L
+                        val wEnd = mLoad.value
+                        val wAtX = wEnd * t
                         V -= wAtX * x / 2.0
-                        M -= mLoad.value * x * x * x / (6.0 * L)
+                        M -= wEnd * x * x * x / (6.0 * L)
                     }
                 }
             }
@@ -434,7 +457,7 @@ object FrameAnalysisEngine {
                 // E_c = 4700 * sqrt(fcu) MPa = 4700 * sqrt(fcu) * 1e3 kN/m²
                 4700.0 * sqrt(fcu) * 1e3
             }
-            FrameMaterialType.Steel -> settings.eSteel * 1e3  // MPa -> kN/m²
+            FrameMaterialType.Steel -> settings.eSteel // A2-FIX: Remove 1e3 multiplier, value is already in consistent units
         }
     }
 

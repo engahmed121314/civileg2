@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.base.TankDesign
 import com.civileg.app.domain.calculations.base.TankResult
 import com.civileg.app.domain.calculations.base.TankSafetyCheck
 import com.civileg.app.domain.calculations.base.TankType
-import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ReinforcementResult
 import kotlin.math.*
 import kotlin.collections.mutableListOf
 
@@ -33,8 +33,16 @@ class ECPTank : TankDesign {
         waterDepth: Double, // mm
         fcu: Double,
         fy: Double,
-        type: TankType
+        type: TankType,
+        groundWaterDepth: Double
     ): TankResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "length" to length, "width" to width, "height" to height,
+            "fcu" to fcu, "fy" to fy
+        )
+        require(waterDepth >= 0.0 && waterDepth <= height) {
+            "Invalid input: waterDepth must be within [0, height] | منسوب الماء داخل حدود الخزان"
+        }
         val warnings = mutableListOf<String>()
         val recommendations = mutableListOf<String>()
         val safetyChecks = mutableListOf<TankSafetyCheck>()
@@ -94,20 +102,28 @@ class ECPTank : TankDesign {
         val steelCostPerTon = 55000.0
         val cost = concreteVolume * concreteCostPerM3 + (steelWeight / 1000.0) * steelCostPerTon
 
-        // 7. فحص السلامة
-        val isSafe = safetyChecks.all { it.isSafe }
-
-        // 8. التحقق من الرفع للخزانات تحت الأرض
+        // 7. التحقق من الرفع للخزانات تحت الأرض
         var upliftFS = 0.0
         if (isUnderground) {
             val tankWeight = concreteVolume * CONCRETE_DENSITY
-            val upliftForce = L * B * H * GAMMA_W
-            upliftFS = tankWeight / upliftForce
-            safetyChecks.add(TankSafetyCheck(
-                "Uplift Safety Factor", upliftFS, 1.25, "-",
-                upliftFS >= 1.25, "Stability against buoyancy (ECP 203 Sec. 8-1)"
-            ))
+            // A5-FIX: buoyancy is driven by EXTERNAL groundwater (empty-tank
+            // governing case). Legacy default models a full-height head.
+            val submergenceM = if (groundWaterDepth.isInfinite()) H
+                               else (H - groundWaterDepth / 1000.0).coerceIn(0.0, H)
+            val upliftForce = L * B * submergenceM * GAMMA_W
+            if (upliftForce > 0.0) {
+                upliftFS = tankWeight / upliftForce
+                safetyChecks.add(TankSafetyCheck(
+                    "Uplift Safety Factor", upliftFS, 1.25, "-",
+                    upliftFS >= 1.25, "Stability against buoyancy (ECP 203 Sec. 8-1)"
+                ))
+            } else {
+                upliftFS = 99.0 // dry formation — buoyancy not governing
+            }
         }
+
+        // 8. فحص السلامة
+        val isSafe = safetyChecks.all { it.isSafe }
 
         // 9. التوصيات
         recommendations.add("استخدام SBR أو Water-stop في المفاصل الإنشائية")
@@ -320,7 +336,9 @@ class ECPTank : TankDesign {
         val vertSpacing = (1000.0 / vertBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
 
         // فحص الشق
-        val hoopStress = maxHoopTension / (wallThickness / 1000.0)
+        // A3-FIX: σ[MPa=N/mm²] = T[kN/m]/t[mm]. The old t/1000 form produced kPa
+        // compared against fct in MPa (~1000x understated -> check inert).
+        val hoopStress = maxHoopTension / wallThickness
         val fct = 0.6 * sqrt(fcu)  // ECP 203: fct = 0.6 * sqrt(fcu)
         val isCrackSafe = hoopStress <= fct
 
@@ -406,11 +424,12 @@ class ECPTank : TankDesign {
         val spacing = (1000.0 / barsPerMeter).let { ceil(it / 10.0) * 10.0 }
         val asProvided = (1000.0 / spacing) * barArea
 
-        // فحص قص الاختراق
+        // فحص قص الاختراق (critical perimeter in mm — A3-precedent fix: the legacy
+        // metre-based perimeter made the capacity ~1000× too small)
         val punchingPerimeter = if (isCircular) {
-            2 * PI * (wallThickness / 1000.0 + d / 1000.0)
+            2 * PI * (wallThickness + d)
         } else {
-            2 * (wallThickness / 1000.0 + d / 1000.0 + wallThickness / 1000.0 + d / 1000.0)
+            2 * (wallThickness + d + wallThickness + d)
         }
         val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * punchingPerimeter * d / 1000.0 // kN (ECP 203 §4-3-2)
         val punchingLoad = totalPressure * L * B // kN

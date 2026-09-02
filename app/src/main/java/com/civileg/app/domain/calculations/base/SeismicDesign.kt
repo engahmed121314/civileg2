@@ -1,6 +1,6 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 
 /**
  * واجهة موحدة للتصميم الزلزالي حسب أي كود إنشائي

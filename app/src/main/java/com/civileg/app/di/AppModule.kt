@@ -27,7 +27,15 @@ object AppModule {
             AppDatabase::class.java,
             "civil_eg_database"
         )
-        .fallbackToDestructiveMigration()
+        // Tier-1 data safety: explicit migration chain instead of the blanket
+        // destructive fallback that wiped user data on every schema bump.
+        .addMigrations(
+            Migrations.MIGRATION_6_7,
+            Migrations.MIGRATION_7_8
+        )
+        // Ancient pre-migration-era installs (v<=5) have no upgrade path;
+        // destruction is bounded to those versions only.
+        .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5)
         .build()
     }
 

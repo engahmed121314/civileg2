@@ -3,6 +3,11 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearCheckResult
 
 // ============================================================================
 // Result Data Classes
@@ -558,14 +563,16 @@ class ECPHordiSlabDesign {
     // ── K_bal calculation ──
 
     private fun calculateKBal(fcu: Double, fy: Double): Double {
-        // K_bal per ECP 203 Section 4-2-2-1
-        // For typical values: fcu=25, fy=360 → K_bal ≈ 0.186
-        val fs = fy / GAMMA_S
-        val n = 9.0 // modular ratio approximation for ECP
-        val dPrime = 30.0 // approximate
-        val xBal = (600.0 * dPrime) / (600.0 + fy)
-        val Kb = 0.4 * (xBal / (2.0 * (1.0 + xBal / 2.0 * n)))
-        return if (Kb > 0) Kb else 0.186
+        // W3-FIX: K_bal per ECP 203 Section 4-2-2-1 (Limit state version)
+        // K_bal = (0.67/gammaC) * (a/d)_bal * (1 - (a/d)_bal / 2)
+        // where (a/d)_bal = 0.9 * epsilon_cu / (epsilon_cu + fy/(Es * gammaS))
+        val es = 200000.0
+        val epsilonCu = 0.003
+        val gammaS = 1.15
+        val gammaC = 1.5
+        
+        val aOverD = 0.9 * epsilonCu / (epsilonCu + fy / (es * gammaS))
+        return (0.67 / gammaC) * aOverD * (1.0 - aOverD / 2.0)
     }
 
     // ── Unsafe result helper ──

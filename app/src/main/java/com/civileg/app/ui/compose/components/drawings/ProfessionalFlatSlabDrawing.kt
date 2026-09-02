@@ -47,7 +47,7 @@ fun ProfessionalFlatSlabDrawing(
     panelType: PanelType = PanelType.INTERIOR,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize().failStampWhen(!isSafe)) {
         val w = size.width
         val h = size.height
         val density = this.density

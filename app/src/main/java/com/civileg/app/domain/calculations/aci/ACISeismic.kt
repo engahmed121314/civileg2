@@ -1,8 +1,8 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.CodeReference
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.DesignCode
 import kotlin.math.*
 
 /**

@@ -39,6 +39,9 @@ import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.utils.PdfGenerator
 import com.civileg.app.viewmodel.BOQViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.billing.PremiumFeature
+import com.civileg.app.billing.PremiumPaywallSheet
+import com.civileg.app.viewmodel.PremiumViewModel
 import java.io.File
 import java.util.Locale
 
@@ -47,6 +50,7 @@ import java.util.Locale
 fun BOQScreen(
     projectViewModel: ProjectViewModel = hiltViewModel(),
     boqViewModel: BOQViewModel = hiltViewModel(),
+    premiumVm: PremiumViewModel = hiltViewModel(),
     onNavigateToSummary: (Long) -> Unit = {},
     onNavigateToExecution: (Long) -> Unit = {},
     onNavigateToMasterBbs: (Long) -> Unit = {},
@@ -54,6 +58,13 @@ fun BOQScreen(
 ) {
     var selectedMainTab by remember { mutableIntStateOf(1) }
     val mainTabs = listOf(stringResource(R.string.boq_title), stringResource(R.string.boq_subtitle))
+    val featureFlags = premiumVm.featureFlags
+    val billingManager = premiumVm.billingManager
+    var showPaywallFor by remember { mutableStateOf<PremiumFeature?>(null) }
+    val isPremium = featureFlags.isPremium()
+    showPaywallFor?.let { feature ->
+        PremiumPaywallSheet(feature = feature, billingManager = billingManager, onDismiss = { showPaywallFor = null })
+    }
 
     Scaffold(
         topBar = {
@@ -81,11 +92,12 @@ fun BOQScreen(
             when (selectedMainTab) {
                 0 -> DesignsBOQContent(
                     projectViewModel, 
+                    premiumVm = premiumVm,
                     onNavigateToSummary = onNavigateToSummary,
                     onNavigateToExecution = onNavigateToExecution,
                     onNavigateToMasterBbs = onNavigateToMasterBbs
                 )
-                1 -> SmartEstimatorProContent(boqViewModel)
+                1 -> SmartEstimatorProContent(boqViewModel, premiumVm = premiumVm)
             }
         }
     }
@@ -93,10 +105,17 @@ fun BOQScreen(
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun SmartEstimatorProContent(viewModel: BOQViewModel) {
+fun SmartEstimatorProContent(viewModel: BOQViewModel, premiumVm: PremiumViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val estimationResult by viewModel.estimationResult.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+
+    val featureFlags = premiumVm.featureFlags
+    var showPaywallFor by remember { mutableStateOf<PremiumFeature?>(null) }
+    val isPremium = featureFlags.isPremium()
+    showPaywallFor?.let { feature ->
+        PremiumPaywallSheet(feature = feature, billingManager = premiumVm.billingManager, onDismiss = { showPaywallFor = null })
+    }
 
     var category by remember { mutableStateOf(EstimationEngine.ProjectCategory.FULL_PROJECT) }
     var projectType by remember { mutableStateOf(EstimationEngine.FullProjectType.RESIDENTIAL) }
@@ -204,7 +223,10 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
         item { EstimationLogicInfo() }
 
         estimationResult?.let { res ->
-            item { ProfessionalEstimationCard(res) { exportEstimationPdf(context, res) } }
+            item { ProfessionalEstimationCard(res) {
+    if (!isPremium) { showPaywallFor = PremiumFeature.PDF_EXPORT; return@ProfessionalEstimationCard }
+    exportEstimationPdf(context, res)
+} }
         }
     }
 }
@@ -212,6 +234,7 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
 @Composable
 fun DesignsBOQContent(
     projectViewModel: ProjectViewModel,
+    premiumVm: PremiumViewModel = hiltViewModel(),
     boqViewModel: BOQViewModel = hiltViewModel(),
     onNavigateToSummary: (Long) -> Unit = {},
     onNavigateToExecution: (Long) -> Unit = {},
@@ -225,6 +248,12 @@ fun DesignsBOQContent(
     val elementBoqItems by boqViewModel.elementBoqItems.observeAsState(emptyList())
     val elementBoqTotal by boqViewModel.elementBoqTotal.observeAsState(0.0)
     val isLoading by boqViewModel.isLoading.observeAsState(false)
+    val featureFlags = premiumVm.featureFlags
+    var showPaywallFor by remember { mutableStateOf<PremiumFeature?>(null) }
+    val isPremium = featureFlags.isPremium()
+    showPaywallFor?.let { feature ->
+        PremiumPaywallSheet(feature = feature, billingManager = premiumVm.billingManager, onDismiss = { showPaywallFor = null })
+    }
 
     LaunchedEffect(projects) { if (selectedProjectId == -1L && projects.isNotEmpty()) selectedProjectId = projects.first().id }
 
@@ -248,6 +277,7 @@ fun DesignsBOQContent(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
+                        if (!isPremium) { showPaywallFor = PremiumFeature.PDF_EXPORT; return@Button }
                         val p = projects.find { it.id == selectedProjectId }
                         if (p != null) exportProjectBOQPdf(context, p.name, projectDesigns)
                     }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
@@ -255,6 +285,7 @@ fun DesignsBOQContent(
                     }
                     if (elementBoqItems.isNotEmpty()) {
                         Button(onClick = {
+                            if (!isPremium) { showPaywallFor = PremiumFeature.PDF_EXPORT; return@Button }
                             val items = elementBoqItems
                             val file = PdfGenerator.generateBOQReport(context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal, items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity }, items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity }, items.map { it.description to it.total })
                             sharePdf(context, file)
@@ -283,6 +314,85 @@ fun DesignsBOQContent(
                     }
                 }
             }
+            // ── R5: M/L/E breakdown card + CSV export (sibling item) ──
+            if (elementBoqItems.isNotEmpty()) {
+                item {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text(
+                                "COST BREAKDOWN — MATERIAL / LABOUR / EQUIPMENT",
+                                fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            Row(Modifier.fillMaxWidth()) {
+                                Text("Category", Modifier.weight(1.5f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Material", Modifier.weight(1f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Labour", Modifier.weight(1f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Equip.", Modifier.weight(1f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Total", Modifier.weight(1.1f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f))
+
+                            var gM = 0.0; var gL = 0.0; var gE = 0.0
+                            BoqCategory.entries.forEach { cat ->
+                                val catItems = elementBoqItems.filter { it.category == cat }
+                                if (catItems.isNotEmpty()) {
+                                    val m = catItems.sumOf { it.materialCost }
+                                    val l = catItems.sumOf { it.laborCost }
+                                    val e = catItems.sumOf { it.equipmentCost }
+                                    val t = catItems.sumOf { it.total }
+                                    gM += m; gL += l; gE += e
+                                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                        Text(cat.displayName, Modifier.weight(1.5f), fontSize = 12.sp)
+                                        Text("%.0f".format(m), Modifier.weight(1f), fontSize = 12.sp)
+                                        Text("%.0f".format(l), Modifier.weight(1f), fontSize = 12.sp)
+                                        Text("%.0f".format(e), Modifier.weight(1f), fontSize = 12.sp)
+                                        Text("%.0f".format(t), Modifier.weight(1.1f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            val grandTotal = elementBoqTotal
+                            HorizontalDivider(color = MaterialTheme.colorScheme.primary)
+                            Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                Text("GRAND TOTAL (EGP)", Modifier.weight(1.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Text("%.0f".format(gM), Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("%.0f".format(gL), Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("%.0f".format(gE), Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("%.0f".format(grandTotal), Modifier.weight(1.1f), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    if (!isPremium) { showPaywallFor = PremiumFeature.CSV_EXPORT; return@OutlinedButton }
+                                    val sb = StringBuilder()
+                                    sb.append("Category,Description,Unit,Qty,Unit Price EGP,Total EGP,Material EGP,Labour EGP,Equipment EGP\n")
+                                    elementBoqItems.forEach { bItem ->
+                                        sb.append("${bItem.category.name},")
+                                        sb.append("\"${bItem.description.replace("\"", "\"\"")}\",")
+                                        sb.append("${bItem.unit},${bItem.quantity},${"%.2f".format(bItem.unitPrice)},")
+                                        sb.append("%.2f,%.2f,%.2f,%.2f\n".format(bItem.total, bItem.materialCost, bItem.laborCost, bItem.equipmentCost))
+                                    }
+                                    sb.append("TOTAL,,,,%.2f,%.2f,%.2f,%.2f\n".format(elementBoqTotal, gM, gL, gE))
+                                    val file = com.civileg.app.utils.ExcelExporter.exportTextCsv(context, "BOQ_Breakdown", sb.toString())
+                                    file?.let { com.civileg.app.utils.ExportUtils.openFile(context, it, "text/csv") }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.FileDownload, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Export Breakdown CSV", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
             items(projectDesigns) { design ->
                 val isSelected = design.id == selectedDesignId
                 DesignBOQCard(design, isSelected = isSelected, onClick = {

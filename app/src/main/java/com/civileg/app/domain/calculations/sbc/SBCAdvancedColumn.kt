@@ -4,6 +4,10 @@ import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
 
 /**
  * تصميم متقدم للأعمدة حسب الكود السعودي SBC 304-2018

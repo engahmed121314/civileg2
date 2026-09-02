@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.SupportCondition
 
 /**
  * تصميم البلاطات حسب الكود السعودي SBC 304-2018
@@ -78,8 +80,17 @@ class SBCSlab : SlabDesign {
 
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
-        codeNotes.add("SBC 304-2018: One-Way Slab")
+        codeNotes.add(String.format("SBC 304-2018: One-Way Slab"))
         codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm", fc_prime, effectiveDepth))
+
+        // [Phase 3] Capture Calculation Trace
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Required Area (As_req)", "As_req = rho * b * d", "${String.format("%.4f", rhoFinal)} * 1000 * $effectiveDepth", asRequired, "mm2"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Concrete Capacity (\u03C6V_c)", "\u03C6V_c = 0.75 * 0.17 * sqrt(f'c) * b * d", "0.75 * 0.17 * sqrt($fc_prime) * 1000 * $effectiveDepth", PHI_SHEAR * Vc, "kN"
+        ))
 
         return SlabDesignResult(
             requiredReinforcement = asRequired,
@@ -91,7 +102,8 @@ class SBCSlab : SlabDesign {
             isSafe = discriminant > 0 && isShearSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 

@@ -4,6 +4,9 @@ import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
 
 // ──────────────────────────────────────────────────────────────────────────────
 // بيانات إضافية للدوال الجديدة (New Data Classes)
@@ -164,7 +167,10 @@ class ECPAdvancedColumn : ColumnDesign {
         }
         
         val biaxialCheck = if (abs(momentX) > 0.1 && abs(momentY) > 0.1) {
-            checkBiaxialLoading(columnType, axialLoad, momentX, momentY, axialCapacity)
+            // A13-FIX: pass fcu so overload resolution binds to the genuine
+            // Bresler-reciprocal + load-contour implementation (interaction
+            // diagrams), not the removed 5-arg stub that assumed As = 1%·Ag.
+            checkBiaxialLoading(columnType, axialLoad, momentX, momentY, axialCapacity, fcu, fy)
         } else null
         
         codeNotes.add("ECP 203-2020: Section 4.2 Design of Compression Members")
@@ -247,7 +253,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val GAMMA_S = 1.15
         val ALPHA = 0.8
         // ECP 203 does NOT use a separate phi factor - gamma_c and gamma_s are sufficient
-        val ast = if (Ast > 0) Ast.coerceAtMost(Ag * 0.08) else 0.008 * Ag
+        val ast = if (Ast > 0) Ast.coerceAtMost(Ag * 0.06) else 0.008 * Ag
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
         val designCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
@@ -259,62 +265,11 @@ class ECPAdvancedColumn : ColumnDesign {
         return analyzer.analyze(result.astRequired, result.numberOfBars * height, inventory, DesignCode.ECP, height)
     }
     
-    // فحص الانحناء الثنائي بطريقة Bresler التقريبية (ECP 203-4.2.6)
-    // 1/Pn ≈ 1/Pnx + 1/Pny - 1/Po
-    // أو طريقة الحد الأقصى المبسطة: (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1
-    private fun checkBiaxialLoading(type: ColumnType, Pu: Double, Mx: Double, My: Double, Pn: Double, fy: Double = 360.0): BiaxialCheckResult {
-        // حساب أبعاد المقطع
-        val dimensions = when (type) {
-            is ColumnType.Rectangular -> type.width to type.depth
-            is ColumnType.Circular -> type.diameter to type.diameter
-            else -> sqrt(type.getGrossArea()) to sqrt(type.getGrossArea())
-        }
-        val b = dimensions.first
-        val h = dimensions.second
-        
-        // نسبة التسليح التقريبية (1%)
-        val Ag = b * h
-        val ast = 0.01 * Ag
-        val d_eff = h - 40.0 - 10.0  // خصم الغطاء والكانة
-        
-        // قدرة العزم التصميمية لكل اتجاه (تقريبي)
-        // Mnx = φ × (fy/γs) × As × (d - d') × 0.8
-        val fs = fy / 1.15
-        val d_prime = 40.0 + 10.0  // cover + stirrup
-        val leverArm = (d_eff - d_prime).coerceAtLeast(d_eff * 0.5)
-        val Mnx = 0.65 * fs * ast * leverArm / 1e6  // kN.m (مع φ=0.65 للضغط)
-        
-        // للمقطع الدائري: Mnx = Mny (تماثل)
-        // للمستطيل: Mny يُحسب بنفس الطريقة لكن b و h يتبدلان
-        val Mny = if (type is ColumnType.Rectangular && abs(b - h) > 10.0) {
-            val d_eff_y = b - d_prime
-            val leverArmY = (d_eff_y - d_prime).coerceAtLeast(d_eff_y * 0.5)
-            0.65 * fs * ast * leverArmY / 1e6
-        } else {
-            Mnx  // للمربع والدائري
-        }
-        
-        // معامل α حسب Bresler المبسط (ECP 203 البند 4-2-6)
-        // α = 1.0 للعزوم المتساوية، يزيد مع عدم التماثل
-        val alpha = if (Mnx > 0 && Mny > 0) {
-            val beta = min(abs(Mx) / Mnx, abs(My) / Mny).coerceAtMost(1.0)
-            // α يتراوح بين 1.0 و 2.0 حسب نسبة الحمل المحوري
-            val r = (Pu / Pn).coerceIn(0.1, 0.9)
-            1.0 + (1.0 - r)  // α أكبر عندما يكون الحمل المحوري أقل
-        } else 1.0
-        
-        val interactionFactor = if (Mnx > 0 && Mny > 0) {
-            (abs(Mx) / Mnx).pow(alpha) + (abs(My) / Mny).pow(alpha)
-        } else 0.0
-        
-        return BiaxialCheckResult(
-            abs(Mx), abs(My), interactionFactor,
-            interactionFactor <= 1.0,
-            String.format("Bresler's reciprocal approximation (ECP 203 Sec 4.2.6), α=%.2f", alpha)
-        )
-    }
-    
-    override fun calculateAxialCapacity(fcu: Double, fy: Double, width: Double, depth: Double, 
+    // A13-FIX: the crude 5-arg checkBiaxialLoading stub (As = 1%·Ag, fake
+    // lever-arm capacities) was deleted — it silently shadowed the genuine
+    // Bresler + Load-Contour implementation below via overload resolution.
+
+    override fun calculateAxialCapacity(fcu: Double, fy: Double, width: Double, depth: Double,
                                        reinforcementArea: Double, loadCombination: LoadCombination): Double {
         return baseDesign.calculateAxialCapacity(fcu, fy, width, depth, reinforcementArea, loadCombination)
     }
@@ -326,7 +281,7 @@ class ECPAdvancedColumn : ColumnDesign {
     }
     
     override fun getMinReinforcementRatio(): Double = 0.008
-    override fun getMaxReinforcementRatio(): Double = 0.08 // ECP 203: 8% max
+    override fun getMaxReinforcementRatio(): Double = 0.06 // ECP 203 §4-2-3: 6% max (4% at laps)
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0 // ECP 203 البند 4-2-6: min(16×db, min(b,h), 300mm)
     override fun getMinCover(): Double = 40.0
@@ -452,7 +407,9 @@ class ECPAdvancedColumn : ColumnDesign {
                 fsi = fsi.coerceIn(-fsYield, fsYield)
 
                 sumFsiAsi += fsi * Asi
-                sumMoment += fsi * Asi * (di - h / 2.0)
+                // A13-stabilize: sagging-positive moment about the centroid —
+                // the old (di - h/2) form flipped the steel contribution sign.
+                sumMoment += fsi * Asi * (h / 2.0 - di)
 
                 // Track extreme tension strain (largest di)
                 if (di >= d - 1.0) {
@@ -466,7 +423,10 @@ class ECPAdvancedColumn : ColumnDesign {
             // Nominal axial force (positive = compression)
             val Pn = concreteForce + sumFsiAsi
             // Nominal moment about section centroid
-            val Mn = sumMoment
+            // A13-stabilize: include the concrete block's moment about the
+            // centroid — omitting it made the compression branch negative and
+            // collapsed interpolation to zero inside the envelope.
+            val Mn = sumMoment + concreteForce * (h / 2.0 - a / 2.0)
 
             // α is already applied inside Pn (via 0.67*fcu/γc and fy/γs material factors)
             // No additional α multiplier needed here
@@ -790,7 +750,7 @@ class ECPAdvancedColumn : ColumnDesign {
     private fun calculateAxialCapacityWithPhi(
         fcu: Double, fy: Double, Ag: Double, Ast: Double, phi: Double
     ): Double {
-        val ast = Ast.coerceAtMost(Ag * 0.08)
+        val ast = Ast.coerceAtMost(Ag * 0.06)
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
         val nominalCapacity = concreteStress * (Ag - ast) + steelStress * ast
@@ -969,7 +929,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val breslerSafe = if (Pnx > 0 && Pny > 0 && Po > 0) {
             val PnBiaxial = 1.0 / (1.0 / Pnx + 1.0 / Pny - 1.0 / Po)
             PnBiaxial >= Pu
-        } else true
+        } else false  // A13: demand outside the diagram envelope cannot default to safe
 
         // ── Method 2: Load Contour (Hsu) ──
         // (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1
@@ -979,9 +939,12 @@ class ECPAdvancedColumn : ColumnDesign {
         val alphaContour = ln(0.5) / ln(max(0.001, 1.0 - r))  // Hsu equation
         val alphaEffective = alphaContour.coerceIn(1.0, 2.0)
 
-        val contourFactor = if (Mnx > 0 && Mny > 0) {
-            (abs(Mx) / Mnx).pow(alphaEffective) + (abs(My) / Mny).pow(alphaEffective)
-        } else 0.0
+        val contourFactor = when {
+            // A13: zero interpolated capacity under a biaxial demand means the
+            // point lies outside the envelope -> fail loudly, never silently safe.
+            Mnx <= 0.0 || Mny <= 0.0 -> 99.0
+            else -> (abs(Mx) / Mnx).pow(alphaEffective) + (abs(My) / Mny).pow(alphaEffective)
+        }
 
         val contourSafe = contourFactor <= 1.0
 

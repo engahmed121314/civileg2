@@ -62,9 +62,9 @@ class ColumnInputActivity : AppCompatActivity() {
             )
             // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
             val domainCode = when(code) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
-                CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-                CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+                CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.core.calculations.entities.DesignCode.ECP
+                CalculatorEngine.DesignCode.ACI -> com.civileg.core.calculations.entities.DesignCode.ACI
+                CalculatorEngine.DesignCode.SAUDI -> com.civileg.core.calculations.entities.DesignCode.SBC
             }
             viewModel.updateDesignCode(domainCode)
         }

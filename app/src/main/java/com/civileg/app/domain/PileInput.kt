@@ -109,5 +109,8 @@ data class PileGroupInput(
     val pattern: String = "2x2",
     val soilType: SoilType = SoilType.CLAY,
     val pileLength: Double = 15.0,     // m
-    val pileType: PileType = PileType.BORED
+    val pileType: PileType = PileType.BORED,
+    /** Computed single-pile allowable capacity (kN) — null falls back to a
+     *  conservative 500 kN default when the caller has no geotechnical result. */
+    val singleCapacityKn: Double? = null
 )

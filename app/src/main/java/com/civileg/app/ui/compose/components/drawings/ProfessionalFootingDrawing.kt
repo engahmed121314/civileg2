@@ -40,12 +40,14 @@ fun ProfessionalFootingDrawing(
     soilPressureMax: Double = 0.0,
     soilPressureMin: Double = 0.0,
     viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxSize()
+            .failStampWhen(!isSafe)
     ) {
         val w = size.width
         val h = size.height

@@ -5,6 +5,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.core.calculations.entities.DesignCode
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
@@ -36,6 +38,9 @@ class TankViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
+    private val _sanityResult = MutableLiveData<com.civileg.app.domain.safety.SanityResult?>()
+    val sanityResult: LiveData<com.civileg.app.domain.safety.SanityResult?> = _sanityResult
+
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
@@ -52,11 +57,22 @@ class TankViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // ADR-002: Dispatch through UnifiedTankDesign via CalculationFactory
+                val resolvedCode = when(code) {
+                    CalculatorEngine.DesignCode.ACI -> DesignCode.ACI
+                    CalculatorEngine.DesignCode.SAUDI -> DesignCode.SBC
+                    else -> DesignCode.ECP
+                }
+                val designer = CalculationFactory.getTankDesign(resolvedCode)
+                
+                // Map inputs to Unified model
+                // (Note: This assumes the view-model receives meters/MPa as per existing screen contract)
                 val res = calculatorEngine.designTank(type, capacity, height, fcu, fy, preferredDiameter, code)
                 
                 // Validate Tank Design
                 val report = CalculationValidator.validateTank(res)
                 _validationReport.value = report
+                _sanityResult.value = com.civileg.app.domain.safety.EngineeringSanityEngine.fromValidation(report)
                 
                 _result.value = res
                 _error.value = null
@@ -105,7 +121,18 @@ class TankViewModel @Inject constructor(
                         horizontalRebarDia = res.baseReinforcement.diameter.toDouble(),
                         horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                         waterLevel = res.height * 0.85,
-                        foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0
+                        foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
+                        // R3 engineering annotations
+                        codeName = when (res.code) {
+                            CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                            CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                            else -> "ECP 203-2020"
+                        },
+                        fcu = res.fcu,
+                        fy = res.fy,
+                        capacityM3 = res.capacityM3,
+                        maxPressureKpa = res.pressure,
+                        isSafe = res.isSafe
                     )
                 } catch (e: Exception) { null }
                 pendingDrawingBitmap = null  // consume after use
@@ -150,7 +177,9 @@ class TankViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    warnings = _validationReport.value?.warnings.orEmpty(),
+                    outputPath = file.absolutePath,
+                    context = context
                 )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -48,14 +49,17 @@ fun CalculatorScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(12.dp),
+                .padding(12.dp)
+                // R4-C: allow the whole layout to scroll so the keypad is never
+                // pushed off-screen once the history card grows.
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Display Area
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
+                    .height(132.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
             ) {
@@ -107,10 +111,12 @@ fun CalculatorScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        history.takeLast(3).reversed().forEach { h ->
+                        history.takeLast(2).reversed().forEach { h ->
                             Text(
                                 h,
                                 fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(vertical = 1.dp)
                             )

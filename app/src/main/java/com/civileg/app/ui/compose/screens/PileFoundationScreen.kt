@@ -28,6 +28,9 @@ import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
 import com.civileg.app.viewmodel.PileFoundationViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +39,7 @@ fun PileFoundationScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
@@ -48,6 +52,7 @@ fun PileFoundationScreen(
     var selectedPileType by remember { mutableStateOf(PileType.BORED) }
     var selectedSoilType by remember { mutableStateOf(SoilType.CLAY) }
     var selectedPattern by remember { mutableStateOf("2x2") }
+    var designCode by remember { mutableStateOf("ECP") }
 
     // ── Pile geometry ──
     var pileDiameter by remember { mutableStateOf("600") }
@@ -440,25 +445,32 @@ fun PileFoundationScreen(
                 }
             }
 
-            // ─── ERROR DISPLAY ────────────────────────────────────
+            // ─── ERROR DISPLAY (§34 Engineering Error UX) ─────────
             error?.let { err ->
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0x22FF0000)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Error, null, tint = Color.Red)
-                            Spacer(Modifier.width(8.dp))
-                            Text(err, color = Color.Red, fontSize = 13.sp)
-                        }
-                    }
+                    com.civileg.app.ui.designsystem.components.EngineeringErrorState(
+                        reason = err,
+                        fix = stringResource(R.string.eg_error_fix_hint),
+                        actionLabel = stringResource(R.string.eg_error_action_review_inputs)
+                    )
                 }
             }
 
+            // ─── DESIGN CODE SELECTOR (ECP / ACI / SBC) ───────────
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    listOf("ECP", "ACI", "SBC").forEach { code ->
+                        FilterChip(
+                            selected = designCode == code,
+                            onClick = { designCode = code },
+                            label = { Text(code, fontSize = 13.sp,
+                                fontWeight = if (designCode == code) FontWeight.Bold else FontWeight.Normal) },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
             // ─── DESIGN BUTTON ────────────────────────────────────
             item {
                 val inputValid = axialLoad.toDoubleOrNull()?.let { it > 0 } == true
@@ -495,6 +507,7 @@ fun PileFoundationScreen(
                             eccentricityY = eccentricityY.toDoubleOrNull() ?: 0.0,
                             scourDepth = scourDepth.toDoubleOrNull() ?: 0.0,
                             capConcreteCover = capCover.toDoubleOrNull() ?: 75.0,
+                            designCode = designCode,
                             columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
                             columnLength = columnLength.toDoubleOrNull() ?: 400.0
                         )
@@ -750,6 +763,27 @@ fun PileFoundationScreen(
                             Spacer(Modifier.width(8.dp))
                             Text(if (isExporting) stringResource(R.string.pile_exporting) else stringResource(R.string.pile_pdf_report))
                         }
+
+                        // ADR-004: canonical P043 model-derived single-sheet DXF (cap section)
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    val outcome = withContext(Dispatchers.IO) {
+                                        com.civileg.app.utils.CadDxfExporter.exportPileFoundation(
+                                            context, res, designCode
+                                        )
+                                    }
+                                    com.civileg.app.utils.ExportUtils.handleDxfOutcome(context, outcome)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.FileDownload, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("DXF")
+                        }
                     }
                 }
 
@@ -778,6 +812,7 @@ fun PileFoundationScreen(
                                 capRebarDia = cap.flexuralReinforcement.diameter,
                                 capRebarCount = cap.flexuralReinforcement.bars,
                                 soilType = res.soilType,
+                                isSafe = res.isSafe,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

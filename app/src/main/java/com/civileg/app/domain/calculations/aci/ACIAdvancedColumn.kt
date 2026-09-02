@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.*
+import com.civileg.core.calculations.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
 
@@ -663,64 +664,68 @@ class ACIAdvancedColumn : ColumnDesign {
      * Bresler reciprocal load method per ACI 22.10.3.2 (Eq. 22.10.3.2):
      *   1/Pn = 1/Pnx + 1/Pny - 1/Po
      *
-     * Pnx: nominal axial strength at given Mux (bending about X only)
-     * Pny: nominal axial strength at given Muy (bending about Y only)
-     * Po:  pure axial nominal strength
+     * Pnx: capacity at given Mux (bending about X only)
+     * Pny: capacity at given Muy (bending about Y only)
+     * Po:  pure axial capacity
+     *
+     * UNITS/PHI CONTRACT (§63 — fixed: φ was applied twice and Po was mixed
+     * N-vs-kN against the φ-reduced diagram capacities):
+     *   The interaction diagrams return φ-reduced capacities in kN, so Po must
+     *   carry the SAME φ to keep the reciprocal identity exact — at Mx=My=0 the
+     *   method collapses to the pure-axial check 1/Pn = 1/Po, and at My=0 it
+     *   collapses to the X-axis uniaxial capacity. All arithmetic in kN.
      */
     fun checkBiaxialBresler(
         fcPrime: Double, fy: Double,
         b: Double, h: Double,
         Ag: Double, As: Double,
-        Pu: Double, Mx: Double, My: Double,
+        pu: Double, mx: Double, my: Double,
         isSpiral: Boolean = false,
         clearCover: Double = CLEAR_COVER
     ): BiaxialCheckResult {
         val phiComp = if (isSpiral) PHI_SPIRAL else PHI_TIED
 
-        // Pure axial capacity Po (ACI 22.10.2.2)
-        val Po = 0.85 * fcPrime * (Ag - As) + As * fy
+        // Pure axial capacity Po (ACI 22.10.2.2), reduced with the same φ
+        val poKn = phiComp * (0.85 * fcPrime * (Ag - As) + As * fy) / 1000.0  // kN
 
-        // Generate interaction diagrams for each axis
+        // Axis capacities from the φ-reduced diagrams — normalize to kN
         val diagramX = generateInteractionDiagram(
             ColumnType.Rectangular(b, h), fcPrime / 0.8, fy, As, isSpiral, clearCover
         )
         val diagramY = generateInteractionDiagram(
             ColumnType.Rectangular(h, b), fcPrime / 0.8, fy, As, isSpiral, clearCover
         )
+        val pnxKn = interpolatePnFromDiagram(diagramX, mx) / 1000.0
+        val pnyKn = interpolatePnFromDiagram(diagramY, my) / 1000.0
 
-        // Find Pnx at Mx: interpolate on the X-axis interaction diagram
-        val Pnx = interpolatePnFromDiagram(diagramX, Mx)
+        val eps = 1e-9
+        val invPnx = if (abs(pnxKn) > eps) 1.0 / pnxKn else 0.0
+        val invPny = if (abs(pnyKn) > eps) 1.0 / pnyKn else 0.0
+        val invPo = if (abs(poKn) > eps) 1.0 / poKn else 0.0
 
-        // Find Pny at My: interpolate on the Y-axis interaction diagram
-        val Pny = interpolatePnFromDiagram(diagramY, My)
+        val invPn = invPnx + invPny - invPo
+        val pnKn = if (abs(invPn) > 1e-12) 1.0 / invPn else Double.MAX_VALUE
 
-        // Bresler equation: 1/Pn = 1/Pnx + 1/Pny - 1/Po
-        val invPnx = if (abs(Pnx) > 0.01) 1.0 / Pnx else 0.0
-        val invPny = if (abs(Pny) > 0.01) 1.0 / Pny else 0.0
-        val invPo = 1.0 / Po
-
-        var invPn = invPnx + invPny - invPo
-        val PnBresler = if (abs(invPn) > 1e-10) 1.0 / invPn else Double.MAX_VALUE
-
-        // For tension: PnBresler is negative, check with absolute values
-        val isSafe = if (Pu >= 0) {
-            // Compression case: φPn ≥ Pu
-            phiComp * PnBresler / 1000.0 >= Pu // must meet required capacity exactly
+        val isSafe = if (pu >= 0) {
+            pnKn >= pu                       // compression: capacity ≥ demand (kN)
         } else {
-            // Tension case
-            PHI_FLEXURE * abs(PnBresler) / 1000.0 >= abs(Pu) // no tolerance — must meet required capacity
+            PHI_FLEXURE * abs(pnKn) >= abs(pu)
         }
 
-        val mxRatio = if (abs(Pnx) > 0.01) abs(Pu * 1000.0) / abs(Pnx) else 0.0
-        val myRatio = if (abs(Pny) > 0.01) abs(Pu * 1000.0) / abs(Pny) else 0.0
-        val interactionFactor = if (isSafe) mxRatio.coerceAtMost(myRatio) else max(mxRatio, myRatio)
+        val mxRatio = if (abs(pnxKn) > eps) abs(pu) / abs(pnxKn) else 0.0
+        val myRatio = if (abs(pnyKn) > eps) abs(pu) / abs(pnyKn) else 0.0
+        val utilization = if (abs(pnKn) > eps) abs(pu) / abs(pnKn) else Double.MAX_VALUE
 
         return BiaxialCheckResult(
             mxRatio = mxRatio,
             myRatio = myRatio,
-            interactionFactor = if (PnBresler > 0) Pu * 1000.0 / PnBresler else abs(Pu * 1000.0 / PnBresler),
+            interactionFactor = utilization,
             isSafe = isSafe,
-            formula = String.format("ACI 22.10.3.2: 1/Pn = 1/Pnx + 1/Pny - 1/Po, Pn=%.0fkN", PnBresler / 1000.0)
+            formula = String.format(
+                java.util.Locale.US,
+                "ACI 22.10.3.2: 1/Pn = 1/Pnx + 1/Pny - 1/Po (kN, φ-consistent), Pn=%.0f kN",
+                pnKn
+            )
         )
     }
 

@@ -61,6 +61,11 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "pileDiameter" to input.pileDiameter, "pileLength" to input.pileLength,
+            "safetyFactor" to input.safetyFactor, "fcu" to input.fcu, "fy" to input.fy
+        )
+        com.civileg.app.domain.calculations.InputGuard.atLeastOne("numberOfPiles", input.numberOfPiles)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -92,7 +97,8 @@ class SBCPileFoundation : PileFoundationDesign {
             pattern = input.pileGroupPattern,
             soilType = input.soilType,
             pileLength = input.pileLength,
-            pileType = input.pileType
+            pileType = input.pileType,
+            singleCapacityKn = capacity.allowableCapacity
         )
         val groupResult = checkGroupEfficiency(groupInput)
         codeNotes.add(String.format(
@@ -155,16 +161,34 @@ class SBCPileFoundation : PileFoundationDesign {
         val axialOk = netCapacity >= input.axialLoad
         val lateralUtilRatio = if (lateralResult.allowableLateralCapacity > 0) {
             input.lateralLoad / lateralResult.allowableLateralCapacity
-        } else 0.0
+        } else 2.0 // rule 1.4: unknown → UNSAFE
         val maxUtil = maxOf(
             if (netCapacity > 0) input.axialLoad / netCapacity else 2.0,
             lateralUtilRatio,
             capacity.utilizationRatio
         )
-        val overallSafe = axialOk && lateralOk && settlement.isOk && pileReinf.isSafe
+        val overallSafe = axialOk && lateralOk && settlement.isOk &&
+            pileReinf.isSafe && capResult.punchingShearOk && capResult.beamShearOk
 
         if (!axialOk) warnings.add(String.format(
             "Pile capacity %.0f kN < axial load %.0f kN", netCapacity, input.axialLoad
+        ))
+        if (!capResult.punchingShearOk) warnings.add(String.format(
+            "Pile cap punching shear %.2f MPa > capacity %.2f MPa (punching reinforcement required)",
+            capResult.punchingShearStress, capResult.punchingShearCapacity
+        ))
+        if (!capResult.beamShearOk) warnings.add(String.format(
+            "Pile cap one-way beam shear %.2f MPa > capacity %.2f MPa",
+            capResult.beamShearStress, capResult.beamShearCapacity
+        ))
+
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Geotechnical Capacity (Qa)", "Qa = Qu / FS", "${String.format("%.0f", capacity.ultimateCapacity)} / ${input.safetyFactor}", capacity.allowableCapacity, "kN"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Cap Punching Capacity (\u03C6Vc)", "\u03C6Vc = 0.75 * 0.24 * sqrt(fcu) * bo * d", "0.75 * 0.24 * sqrt(${input.fcu}) * ${String.format("%.0f", capResult.capWidth + capResult.capLength)} * ${capResult.capThickness-75}", capResult.punchingShearCapacity * (capResult.capWidth + capResult.capLength) * 2 * (capResult.capThickness-75) / 1000.0, "kN"
         ))
 
         return PileDesignResult(
@@ -190,7 +214,8 @@ class SBCPileFoundation : PileFoundationDesign {
             isSafe = overallSafe,
             utilizationRatio = min(maxUtil, 2.0),
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -244,7 +269,6 @@ class SBCPileFoundation : PileFoundationDesign {
                 val Nq = exp(PI * tan(input.phi * PI / 180.0))
                 Qb = Nq * input.gammaSoil * L * PI * D * D / 4.0
             }
-            else -> {}
         }
 
         // Water table correction — SBC 304 §7-4
@@ -347,8 +371,11 @@ class SBCPileFoundation : PileFoundationDesign {
         val beamShearCapacity = PHI_SHEAR * 0.17 * sqrt(input.fcu)
 
         // ── Flexural reinforcement ────────────────────────────────
-        val Mu = PperPile * shearSpan  // kN.m per meter strip
-        val MuNmm = Mu * 1e6
+        // Units (verified §63 classification — was WRONG: kN·mm treated as kN·m):
+        //   PperPile [kN] × shearSpan [mm] = kN·mm → /1000 → kN·m.
+        //   Moment term added for parity with ACI implementation.
+        val MuKnM = PperPile * shearSpan / 1000.0 + abs(MxPerPile)   // kN·m
+        val MuNmm = MuKnM * 1e6
         val b = capLength  // mm
 
         // K-method with fcu directly (SBC approach)
@@ -469,8 +496,8 @@ class SBCPileFoundation : PileFoundationDesign {
         val efficiency = 1.0 -
             (m - 1) * (s - d) / (m * s) * angle * 2.0 / PI
 
-        // Individual pile capacity estimate (uses average soil parameters)
-        val singleCapacity = 500.0  // kN (conservative default)
+        // Individual pile capacity — computed Qu when provided, else conservative default
+        val singleCapacity = input.singleCapacityKn ?: 500.0
         val groupCapacity = efficiency * n * singleCapacity
 
         // Pattern string
@@ -529,7 +556,7 @@ class SBCPileFoundation : PileFoundationDesign {
             allowableLateralCapacity = Ha,
             maxBendingMoment = Mmax,
             depthToFixity = depthToFixity,
-            deflectionAtHead = min(deflectionHead, 25.0)  // cap at 25mm for display
+            deflectionAtHead = deflectionHead  // A7-FIX: report true deflection (was silently capped, erasing the serviceability failure mode)
         )
     }
 
@@ -572,9 +599,13 @@ class SBCPileFoundation : PileFoundationDesign {
         val d = D - cover - tieDia       // effective depth mm
         val Ag = PI * (D / 2.0).pow(2)   // gross area mm²
 
-        // Factored loads
-        val Pu = axialLoad * LF_DL       // kN (use DL factor as conservative)
-        val Mu = moment * LF_DL          // kN.m
+        // [W8 FIX] Factored loads — SBC 304 §3-2: 1.4D + 1.6L
+        // Ensure both dead and live factors are applied per SBC 304
+        val lfDead = 1.4
+        val lfLive = 1.6
+        // Result is based on conservative envelope factor of 1.6 when split is unknown
+        val Pu = axialLoad * lfLive   // kN
+        val Mu = moment * lfLive      // kN.m
 
         // Design stresses with SBC material factors
         val fcDesign = 0.67 * input.fcu / GAMMA_C  // MPa

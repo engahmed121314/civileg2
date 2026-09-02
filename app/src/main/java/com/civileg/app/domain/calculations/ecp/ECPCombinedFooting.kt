@@ -413,7 +413,7 @@ class ECPCombinedFooting {
         val asMin = if (isFooting) {
             MIN_REIN_RATIO * b * d
         } else {
-            max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d  // ECP 203 §4-2-1-2 (fixed: added missing sqrt)
+            max(0.25 * sqrt(fcu) / fy, 0.0013) * b * d  // ECP 203 §4-2-1-2 (fixed: added missing sqrt)
         }
 
         asRequired = max(asRequired, asMin)
@@ -531,7 +531,7 @@ class ECPCombinedFooting {
     /**
      * Calculate minimum reinforcement area per ECP 203.
      * For footings: As_min = 0.0015 * b * d (Table 4-8)
-     * For beams: As_min = max(0.26 * fcu/fy, 0.0013) * b * d
+     * For beams: As_min = max(0.25 * sqrt(fcu)/fy, 0.0013) * b * d
      *
      * @param b Width (mm)
      * @param d Effective depth (mm)
@@ -550,7 +550,7 @@ class ECPCombinedFooting {
         return if (isFooting) {
             MIN_REIN_RATIO * b * d
         } else {
-            max(0.26 * (fcu / fy), 0.0013) * b * d
+            max(0.25 * sqrt(fcu) / fy, 0.0013) * b * d
         }
     }
 

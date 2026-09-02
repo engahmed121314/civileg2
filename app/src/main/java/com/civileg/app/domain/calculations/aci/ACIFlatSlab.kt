@@ -41,6 +41,15 @@ class ACIFlatSlab : FlatSlabDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun design(input: FlatSlabInput): FlatSlabResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "lx" to input.lx, "ly" to input.ly,
+            "slabThickness" to input.slabThickness,
+            "clearCover" to input.clearCover,
+            "liveLoad" to input.liveLoad,
+            "columnWidth" to input.columnWidth,
+            "columnDepth" to input.columnDepth
+        )
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
@@ -184,8 +193,9 @@ class ACIFlatSlab : FlatSlabDesign {
             dropThickness = input.dropThickness,
             columnWidth = input.columnWidth,
             columnDepth = input.columnDepth,
+            panelType = input.panelType, // I5-FIX
             cover = input.clearCover
-        ) as FlatSlabDesign.PunchingShearResult
+        )
 
         safetyChecks.add(SafetyCheckItem(
             "Punching Shear", punchingResult.vu, punchingResult.vc,
@@ -253,7 +263,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val totalAsX = colTopRebarX.providedArea + colBotRebarX.providedArea +
                 midTopRebarX.providedArea + midBotRebarX.providedArea
         val totalAsY = totalAsX * (lnYm / lnXm).coerceAtLeast(0.5)
-        val steelWeight = (totalAsX + totalAsY) * (input.lx + input.ly) / 1e6 * STEEL_UNIT_WEIGHT
+        val steelWeight = (totalAsX + totalAsY) * (input.lx + input.ly) / 1e9 * STEEL_UNIT_WEIGHT
 
         // ── Overall utilization ─────────────────────────────────────
         val maxUtil = maxOf(punchingResult.utilizationRatio, deflectionResult.ratio)
@@ -377,6 +387,7 @@ class ACIFlatSlab : FlatSlabDesign {
         vu: Double, fcu: Double, fy: Double,
         slabThickness: Double, dropThickness: Double,
         columnWidth: Double, columnDepth: Double,
+        panelType: PanelType,
         cover: Double
     ): FlatSlabDesign.PunchingShearResult {
         val fc = fcu  // already f'c
@@ -393,7 +404,13 @@ class ACIFlatSlab : FlatSlabDesign {
 
         // Vc = min of three expressions (ACI 22.6.5.2)
         val beta = max(b1, b2) / min(b1, b2).coerceAtLeast(1.0)
-        val alphaS = 40.0  // interior column
+        
+        // I5-FIX: alphaS must depend on column position (ACI 318)
+        val alphaS = when (panelType) {
+            PanelType.INTERIOR -> 40.0
+            PanelType.EDGE -> 30.0
+            PanelType.CORNER -> 20.0
+        }
         val lambda = 1.0   // normal weight concrete
 
         val sqrtFc = sqrt(fc)

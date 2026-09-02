@@ -4,6 +4,16 @@ import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
+import com.civileg.core.calculations.entities.BarLocation
+import com.civileg.core.calculations.entities.CoatingType
+import com.civileg.core.calculations.entities.CodeReference
+import com.civileg.core.calculations.entities.CrackWidthCheckResult
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.DevelopmentLengthCheckResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
 
 /**
  * تصميم متقدم للكمرات بجميع أنواعها حسب الكود السعودي SBC 304-2018

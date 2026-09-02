@@ -75,8 +75,9 @@ class ContinuousBeamAnalysis @Inject constructor() {
             val mRight = moments[i+1]
             
             // Simple Span Shear + Moment Difference Shear
-            val vLeft = (w * l / 2.0) + (mLeft - mRight) / l
-            val vRight = (w * l / 2.0) - (mLeft - mRight) / l
+            // CBA-1 FIX: (M_R − M_L)/L — old sign distributed reactions as 37.5/45/37.5
+            val vLeft = (w * l / 2.0) + (mRight - mLeft) / l
+            val vRight = (w * l / 2.0) - (mRight - mLeft) / l
             
             reactions[i] += vLeft
             reactions[i+1] += vRight

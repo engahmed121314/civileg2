@@ -1,12 +1,9 @@
 package com.civileg.app.domain.entities
 
-/**
- * Domain-level project model.
- * NOTE: The Room @Entity version of Project lives in com.civileg.app.db.entities (entities.kt).
- * This class serves as the domain-layer representation, mapped to/from the Room entity
- * by ProjectRepositoryImpl. Renamed from "Project" to "DomainProject" to avoid collision
- * with com.civileg.app.db.Project.
- */
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.ElementType
+
+/** Domain-level project model. */
 data class DomainProject(
     val id: Int = 0,
     val name: String,
@@ -19,5 +16,4 @@ data class DomainProject(
 )
 
 /** Type alias for backward compatibility with existing code referencing Project. */
-@Deprecated("Use DomainProject directly. This alias exists for migration convenience.")
 typealias Project = DomainProject

@@ -2,7 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.aci.ACIRetainingWall
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 
 class SBCRetainingWall : RetainingWallDesign {
 
@@ -17,7 +17,7 @@ class SBCRetainingWall : RetainingWallDesign {
 
     private val aciEngine = ACIRetainingWall()
 
-    override fun designRetainingWall(input: RetainingWallInput): RetainingWallResult {
+    override fun designRetainingWall(input: RetainingWallInput): DomainRetainingWallResult {
         // Use ACI calculations as base with SBC modifications
         val aciResult = aciEngine.designRetainingWall(input)
 

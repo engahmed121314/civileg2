@@ -1,6 +1,6 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import kotlin.math.PI
 import kotlin.math.pow
 
@@ -22,7 +22,7 @@ data class RetainingWallInput(
     val soilBearingCapacity: Double = 200.0
 )
 
-data class RetainingWallResult(
+data class DomainRetainingWallResult(
     val isSafe: Boolean,
     val designCode: DesignCode,
     val overturningFS: Double,
@@ -42,7 +42,8 @@ data class RetainingWallResult(
     val heelShear: Double,
     val heelRebar: String,
     val safetyChecks: List<WallSafetyCheck>,
-    val codeNotes: List<String>
+    val codeNotes: List<String>,
+    val trace: com.civileg.core.calculations.entities.DesignTrace = com.civileg.core.calculations.entities.DesignTrace()
 )
 
 data class WallSafetyCheck(
@@ -54,7 +55,7 @@ data class WallSafetyCheck(
 )
 
 interface RetainingWallDesign {
-    fun designRetainingWall(input: RetainingWallInput): RetainingWallResult
+    fun designRetainingWall(input: RetainingWallInput): DomainRetainingWallResult
 
     companion object {
         fun selectBars(requiredArea: Double, maxBars: Int = 12): Pair<Int, Int> {

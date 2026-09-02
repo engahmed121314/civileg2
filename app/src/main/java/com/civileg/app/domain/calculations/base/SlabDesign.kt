@@ -1,6 +1,8 @@
 package com.civileg.app.domain.calculations.base
 
 import com.civileg.app.domain.entities.*
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.SupportCondition
 
 /**
  * واجهة موحدة لتصميم البلاطات حسب أي كود إنشائي

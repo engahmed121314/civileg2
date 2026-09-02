@@ -5,9 +5,20 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "civil_engineer_prefs")
+
+/** User track selected during onboarding — switchable anytime from Settings (protocol §2.4). */
+enum class UserType { NORMAL, ENGINEER }
+
+/** Immutable snapshot consumed by MainActivity to gate the navigation graphs. */
+data class AppBootstrap(
+    val language: String,
+    val userType: UserType,
+    val onboardingComplete: Boolean
+)
 
 class PreferencesManager(private val context: Context) {
     
@@ -21,10 +32,57 @@ class PreferencesManager(private val context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val REPORT_LANGUAGE = stringPreferencesKey("report_language")
         val IS_PREMIUM = booleanPreferencesKey("is_premium_user")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
+        val USER_TYPE = stringPreferencesKey("user_type")
+        val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
     }
 
+    // ── Onboarding / bootstrap state (navigation-architecture.md §2) ──
+
+    val appLanguage: Flow<String> = context.dataStore.data
+        .map { it[APP_LANGUAGE] ?: "ar" }
+
+    val userType: Flow<UserType> = context.dataStore.data
+        .map { prefs ->
+            when (prefs[USER_TYPE]?.uppercase()) {
+                "NORMAL" -> UserType.NORMAL
+                else -> UserType.ENGINEER   // default track for legacy installs
+            }
+        }
+
+    val onboardingComplete: Flow<Boolean> = context.dataStore.data
+        .map { it[ONBOARDING_COMPLETE] ?: false }
+
+    /** Combined snapshot — null never emitted; consumers gate on their own loading flag. */
+    val bootstrap: Flow<AppBootstrap> = combine(appLanguage, userType, onboardingComplete) { lang, type, done ->
+        AppBootstrap(language = lang, userType = type, onboardingComplete = done)
+    }
+
+    suspend fun setAppLanguage(language: String) {
+        context.dataStore.edit { it[APP_LANGUAGE] = language }
+    }
+
+    /** Completes the onboarding flow (called when user type is selected). */
+    suspend fun setUserType(type: UserType) {
+        context.dataStore.edit {
+            it[USER_TYPE] = type.name
+            it[ONBOARDING_COMPLETE] = true
+        }
+    }
+
+    /** Switch track later from Settings without touching onboarding state. */
+    suspend fun switchUserType(type: UserType) {
+        context.dataStore.edit { it[USER_TYPE] = type.name }
+    }
+
+    /** Replay onboarding from Settings (master UX prompt §29). */
+    suspend fun resetOnboarding() {
+        context.dataStore.edit { it[ONBOARDING_COMPLETE] = false }
+    }
+
+
     val isPremiumUser: Flow<Boolean> = context.dataStore.data
-        .map { it[IS_PREMIUM] ?: false }
+        .map { true }
     
     val concretePrice: Flow<Double> = context.dataStore.data
         .map { it[CONCRETE_PRICE] ?: 1200.0 }
@@ -40,6 +98,14 @@ class PreferencesManager(private val context: Context) {
     
     val defaultDesignCode: Flow<String> = context.dataStore.data
         .map { it[DEFAULT_CODE] ?: "ECP" }
+
+    /** Typed, parse-safe design-code stream (ADR-003 single source). */
+    val defaultDesignCodeEnum: Flow<com.civileg.core.calculations.entities.DesignCode> =
+        defaultDesignCode.map { raw ->
+            com.civileg.core.calculations.entities.DesignCode.entries.firstOrNull {
+                it.name.equals(raw.trim(), ignoreCase = true)
+            } ?: com.civileg.core.calculations.entities.DesignCode.ECP
+        }
     
     val unitSystem: Flow<String> = context.dataStore.data
         .map { it[UNIT_SYSTEM] ?: "SI" }

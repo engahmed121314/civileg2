@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import com.civileg.app.domain.entities.StirrupZone
+import com.civileg.core.calculations.entities.StirrupZone
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.pow
@@ -83,9 +83,10 @@ fun ProfessionalColumnDrawing(
     interactionPoints: List<Pair<Double, Double>> = emptyList(),
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
     viewMode: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSafe: Boolean = true
 ) {
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(modifier = modifier.fillMaxSize().failStampWhen(!isSafe)) {
         val W = size.width
         val H = size.height
 

@@ -3,6 +3,7 @@ package com.civileg.app.domain.usecases
 import com.civileg.app.domain.entities.*
 import javax.inject.Inject
 import kotlin.math.*
+import com.civileg.core.calculations.entities.DesignCode
 
 /**
  * Rebar inventory analysis with optimized cutting algorithm.
@@ -548,6 +549,43 @@ class AnalyzeRebarInventory @Inject constructor() {
         }
     }
 
+    /**
+     * §34 CUT LIST — aggregate the plan's pieces into a workshop-ordered list:
+     * one row per distinct cut length with its piece count and total length.
+     * Sorted longest-first (matches how bars are staged at the saw).
+     */
+    fun buildCutList(requiredLengths: List<Double>): List<CutListItem> =
+        requiredLengths.filter { it > 0 }
+            .groupBy { it }
+            .map { (len, pieces) ->
+                CutListItem(cutLengthM = len, count = pieces.size, totalLengthM = len * pieces.size)
+            }
+            .sortedByDescending { it.cutLengthM }
+
+    /**
+     * §34 CUTTING DIAGRAM — one ASCII line per stock bar: proportional segment
+     * blocks separated by kerf markers, plus waste tail. Deterministic output
+     * suitable for PDF/DXF text layers and logcat debugging alike.
+     */
+    fun buildCuttingDiagram(plans: List<CuttingPlan>, charsPerMeter: Int = 10): List<String> {
+        if (charsPerMeter < 1) return emptyList()
+        return plans.mapIndexed { idx, plan ->
+            val sb = StringBuilder()
+            sb.append("Bar ").append(idx + 1).append(" [")
+            plan.requiredLengths.forEachIndexed { i, len ->
+                if (i > 0) sb.append('|')   // kerf marker
+                val width = (len * charsPerMeter).toInt().coerceAtLeast(1)
+                repeat(width) { sb.append('#') }
+            }
+            sb.append(']')
+            sb.append(" waste=")
+            sb.append(String.format(java.util.Locale.US, "%.2f", plan.wasteLength)).append("m")
+            sb.append(" (util ")
+            sb.append(String.format(java.util.Locale.US, "%.1f", plan.utilizationPercentage)).append("%)")
+            sb.toString()
+        }
+    }
+
     private fun getRebarWeightPerMeter(area: Double): Double {
         return area / 1e6 * 7850
     }
@@ -579,4 +617,11 @@ data class CuttingOptimizationResult(
     val overallUtilization: Double,
     val newLeftoverPieces: List<Double>,
     val leftoverPiecesUsed: Int
+)
+
+/** One aggregated row of the §34 cut list. */
+data class CutListItem(
+    val cutLengthM: Double,   // piece length (m)
+    val count: Int,           // pieces to cut at this length
+    val totalLengthM: Double  // cutLengthM × count
 )

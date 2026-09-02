@@ -59,8 +59,14 @@ object PdfGenerator {
         return ArabicFontProvider.containsArabic(text)
     }
 
+    /**
+     * ADR-009 (non-negotiable): exported PDF/DXF files are ENGLISH-ONLY regardless
+     * of UI language. Arabic must never reach the generated document — translation
+     * happens at export time only. This gate therefore always resolves to English;
+     * the Arabic branches of [t] below remain as reference but are unreachable.
+     */
     private fun isEnglish(context: Context): Boolean {
-        return LocaleHelper.getLocale(context) != "ar"
+        return true // was: LocaleHelper.getLocale(context) != "ar"
     }
 
     /**

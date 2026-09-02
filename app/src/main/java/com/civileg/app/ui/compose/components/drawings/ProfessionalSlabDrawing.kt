@@ -59,7 +59,7 @@ fun ProfessionalSlabDrawing(
 
     // Canvas fills the parent-constrained size from InteractiveDrawingScreen (responsive)
     Canvas(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize().failStampWhen(!isSafe)
     ) {
         val w = size.width
         val h = size.height

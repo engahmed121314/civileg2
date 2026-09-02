@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.SteelTables
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -305,7 +306,8 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    context = context
                 )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -330,6 +332,51 @@ class SteelViewModel @Inject constructor(
         _result.value = null
         _warehouseResult.value = null
         _errorMessage.value = null
+    }
+
+    private val _suggestedSection = MutableLiveData<SteelTables.SectionProperties?>()
+    val suggestedSection: LiveData<SteelTables.SectionProperties?> = _suggestedSection
+
+    fun suggestOptimalSection(
+        memberType: SteelMemberType,
+        inputs: SteelInputs,
+        code: com.civileg.core.calculations.entities.DesignCode,
+        library: List<SteelTables.SectionProperties>
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val suggested = com.civileg.app.domain.calculations.SteelOptimizationEngine.suggestLightestSection(
+                    calculatorEngine, memberType, inputs, code, library
+                )
+                _suggestedSection.value = suggested
+            } catch (e: Exception) {
+                _errorMessage.value = "Optimization failed: ${e.localizedMessage}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private val _cfsResult = MutableLiveData<com.civileg.core.calculations.ecp.CFSSectionResult?>()
+    val cfsResult: LiveData<com.civileg.core.calculations.ecp.CFSSectionResult?> = _cfsResult
+
+    fun calculateCFSPurlin(
+        h: Double, b: Double, c: Double, t: Double,
+        fy: Double, appliedMoment: Double
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val engine = com.civileg.core.calculations.ecp.CFSDesignEngine()
+                val res = engine.designCPurlin(h, b, c, t, fy, appliedMoment)
+                _cfsResult.value = res
+            } catch (e: Exception) {
+                _errorMessage.value = "CFS Calculation failed: ${e.localizedMessage}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode): Double {
@@ -367,7 +414,8 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = emptyList(),
                     isSafe = capacity > 0,
                     drawingBitmap = null,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    context = context
                 )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
@@ -404,7 +452,8 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = emptyList(),
                     isSafe = capacity > 0,
                     drawingBitmap = null,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    context = context
                 )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

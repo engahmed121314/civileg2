@@ -1,9 +1,9 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.base.ColumnDesign
-import com.civileg.app.domain.entities.ColumnShearDesignResult
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ColumnShearDesignResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
 import kotlin.math.*
 
 class SBCColumn : ColumnDesign {
@@ -24,14 +24,12 @@ class SBCColumn : ColumnDesign {
         // SBC 304 / ACI 318: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
         // fc' = 0.8 × fcu (تحويل مقاومة المكعب لمقاومة الأسطوانة)
         val fc_prime = 0.8 * fcu
-        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
-        val steelCapacity = fy * Ast
-        val nominalCapacity = concreteCapacity + steelCapacity
         
-        // معامل الاختزال للأعمدة المربوطة (SBC 304-10.6 / ACI 318-21.2.2)
+        // W5: SBC 304 / ACI 318 Table 22.4.2.1(a) — tied columns capped at
+        // Pn,max = 0.80·P0 (the post-2002 explicit cap; design = φ·Pn,max)
+        val p0 = 0.85 * fc_prime * (Ag - Ast) + fy * Ast
         val phi = 0.65
-        // ملاحظة: معامل 0.80 تم إلغاؤه من ACI/SBC منذ نسخة 2002
-        return phi * nominalCapacity / 1000.0 // kN
+        return phi * 0.80 * p0 / 1000.0 // kN
     }
 
     override fun calculateReinforcement(
@@ -44,6 +42,9 @@ class SBCColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to fcu, "fy" to fy, "width" to width, "depth" to depth
+        )
         val Ag = width * depth
         val Pu = axialLoad * 1000.0  // N - الحمل المحوري التصميمي
         
@@ -96,6 +97,21 @@ class SBCColumn : ColumnDesign {
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
         val utilizationRatio = axialLoad / capacity
         
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Design Cylinder Strength (f'c)", "f'c = 0.8 * fcu", "0.8 * $fcu", fc_prime, "MPa"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Gross Area (Ag)", "Ag = b * h", "$width * $depth", Ag, "mm2"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Capped Axial Capacity (\u03C6Pn,max)", "\u03C6Pn,max = 0.80 * \u03C6 * [0.85*f'c*(Ag-As) + fy*As]", "0.80*0.65*[0.85*$fc_prime*($Ag-$astProvided) + $fy*$astProvided]", capacity, "kN"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Utilization Ratio", "U = Axial Load / Capacity", "$axialLoad / $capacity", utilizationRatio, "", limit = 1.0, limitType = com.civileg.core.calculations.entities.LimitType.MAX, isSafe = utilizationRatio <= 1.0
+        ))
+
         codeNotes.add("SBC 304-2018: Section 10")
         codeNotes.add("phi = 0.65 (Tied)")
         
@@ -109,7 +125,8 @@ class SBCColumn : ColumnDesign {
             isSafe = utilizationRatio <= 1.0,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -118,6 +135,38 @@ class SBCColumn : ColumnDesign {
     override fun getMinSpacing(): Double = 40.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0
+
+    fun calculateSlenderness(
+        width: Double,
+        depth: Double,
+        unsupportedLength: Double,
+        effectiveLengthFactor: Double,
+        fcu: Double,
+        reinforcementRatio: Double = 0.01
+    ): Triple<Double, Boolean, Double> {
+        val Ag = width * depth
+        val minDimension = min(width, depth)
+        val r = minDimension / sqrt(12.0)
+        val L_mm = unsupportedLength * 1000.0
+        val slendernessRatio = effectiveLengthFactor * L_mm / r
+        
+        // SBC 304 / ACI 318 Table 6.2.3: short-column limit ≤ 22 (non-braced)
+        val isShort = slendernessRatio <= 22.0
+        
+        // W5-FIX: Pc[kN] = pi^2 * EI / (k*L)^2. Ensure correct unit conversion (N.mm2 -> kN)
+        val fc_prime = 0.8 * fcu
+        val Ig = width * depth.pow(3) / 12.0
+        val Ec = 4700.0 * sqrt(fc_prime)
+        val Es = 200000.0
+        val As = reinforcementRatio * Ag
+        val d_prime = 40.0
+        val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)
+        
+        val KL_mm = effectiveLengthFactor * L_mm
+        val Pc = (PI * PI * EI) / (1000.0 * KL_mm.pow(2)) // kN
+        
+        return Triple(slendernessRatio, !isShort, Pc)
+    }
 
     // ── Shear Design per SBC 304 (ACI-based with SBC f'c) ───────────────────
 

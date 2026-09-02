@@ -273,6 +273,27 @@ object CalculationValidator {
     }
 
     /**
+     * Validate footing result: check soil pressure ratio, dimensional consistency, reinforcement presence.
+     */
+    fun validateFooting(result: FootingResult): ValidationReport {
+        val errors = mutableListOf<String>()
+        val warnings = mutableListOf<String>()
+
+        if (result.width <= 0 || result.length <= 0) errors.add("Footing dimensions must be positive.")
+        if (result.thickness <= 0) errors.add("Footing thickness must be positive.")
+        if (result.soilPressure <= 0) errors.add("Soil pressure must be positive.")
+        if (result.allowablePressure <= 0) errors.add("Allowable bearing pressure must be positive.")
+
+        if (result.soilPressure > result.allowablePressure) {
+            warnings.add("Applied soil pressure (${String.format("%.1f", result.soilPressure)} kPa) exceeds allowable (${String.format("%.1f", result.allowablePressure)} kPa).")
+        }
+        if (result.barsX <= 0 || result.barsY <= 0) {
+            warnings.add("No reinforcement bars provided in one or both directions.")
+        }
+        return ValidationReport(errors.isEmpty(), errors, warnings)
+    }
+
+    /**
      * General result validation (dispatches to specific types)
      */
     fun validate(result: Any): ValidationReport {
@@ -283,6 +304,7 @@ object CalculationValidator {
             is StairResult -> validateStair(result)
             is TankResult -> validateTank(result)
             is RetainingWallResult -> validateRetainingWall(result)
+            is FootingResult -> validateFooting(result)
             else -> ValidationReport(true, emptyList(), emptyList())
         }
     }

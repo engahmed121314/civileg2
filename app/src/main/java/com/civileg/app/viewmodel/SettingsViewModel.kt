@@ -2,7 +2,7 @@ package com.civileg.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import com.civileg.app.domain.repository.ProjectRepository
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,12 +23,14 @@ data class AppSettings(
     val currency: String = "EGP",
     val unitSystem: String = "SI",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val reportLanguage: String = "ar"
+    val reportLanguage: String = "ar",
+    val userType: com.civileg.app.data.local.UserType = com.civileg.app.data.local.UserType.ENGINEER
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val repository: ProjectRepository
+    private val repository: ProjectRepository,
+    private val preferencesManager: com.civileg.app.data.local.PreferencesManager
 ) : ViewModel() {
     
     private val _settings = MutableStateFlow(AppSettings())
@@ -66,6 +69,17 @@ class SettingsViewModel @Inject constructor(
                 )
             }.collect { _settings.value = it }
         }
+        // User track streams independently (switchable live from Settings — protocol §2.4)
+        viewModelScope.launch {
+            preferencesManager.userType.collect { type ->
+                _settings.update { it.copy(userType = type) }
+            }
+        }
+    }
+
+    /** Switch between NORMAL / ENGINEER tracks without losing saved data. */
+    fun setUserType(type: com.civileg.app.data.local.UserType) {
+        viewModelScope.launch { preferencesManager.switchUserType(type) }
     }
     
     fun setThemeMode(mode: ThemeMode) {
@@ -92,6 +106,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setDefaultCode(code: DesignCode) {
         viewModelScope.launch {
+            // ADR-003: DataStore is the single source of truth. All readers
+            // (design ViewModels/Activities) consume defaultDesignCodeEnum —
+            // the legacy SettingsManager "design_code" key is no longer written.
             repository.setDefaultDesignCode(code.name)
         }
     }

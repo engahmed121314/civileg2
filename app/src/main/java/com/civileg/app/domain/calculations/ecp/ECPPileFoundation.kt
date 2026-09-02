@@ -31,6 +31,11 @@ class ECPPileFoundation : PileFoundationDesign {
         private const val GAMMA_S = 1.15
         private const val GAMMA_CONCRETE = 25.0       // kN/m³
 
+        // ECP 203 load factors (§3-2-1): γg = 1.4 (dead), γq = 1.6 (live) —
+        // canonical source: DesignCode.getDead/LiveLoadFactor(). The ENVELOPE
+        // upper bound is used for pile structural design. GAMMA_C is a
+        // MATERIAL factor and must never be applied to loads.
+
         // ECP 203 minimum reinforcement ratios
         private const val MIN_LONGITUDINAL_RATIO = 0.005  // 0.5% for piles (ECP 203 Table 4-8)
         private const val MAX_LONGITUDINAL_RATIO = 0.04   // 4%
@@ -61,6 +66,11 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "pileDiameter" to input.pileDiameter, "pileLength" to input.pileLength,
+            "safetyFactor" to input.safetyFactor, "fcu" to input.fcu, "fy" to input.fy
+        )
+        com.civileg.app.domain.calculations.InputGuard.atLeastOne("numberOfPiles", input.numberOfPiles)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -79,6 +89,9 @@ class ECPPileFoundation : PileFoundationDesign {
         val capacityResult = calculatePileCapacity(input)
 
         // 2. Pile group efficiency
+        // A6-FIX: feed the REAL single-pile capacity from the user's soil —
+        // the old path omitted it, forcing checkGroupEfficiency to invent a
+        // reference pile (cu=50, phi=30) regardless of actual ground.
         val groupInput = PileGroupInput(
             numberOfPiles = input.numberOfPiles,
             pileDiameter = input.pileDiameter,
@@ -86,7 +99,8 @@ class ECPPileFoundation : PileFoundationDesign {
             pattern = input.pileGroupPattern,
             soilType = input.soilType,
             pileLength = input.pileLength,
-            pileType = input.pileType
+            pileType = input.pileType,
+            singleCapacityKn = capacityResult.allowableCapacity
         )
         val groupResult = checkGroupEfficiency(groupInput)
 
@@ -124,10 +138,13 @@ class ECPPileFoundation : PileFoundationDesign {
         val maxAxialOnPile = (input.axialLoad + negFriction) / input.numberOfPiles
         val pileReinforcement = designPileReinforcement(input, maxAxialOnPile, maxMomentOnPile)
 
-        // 8. Overall utilization
+        // 8. Overall utilization — clamped to the documented [0,2] band
+        // (parity with ACI/SBC: unknown/failed checks report as ≥1, never ∞)
         val totalGroupCapacity = groupResult.groupCapacity - negFriction
         val loadPerPile = input.axialLoad / input.numberOfPiles
-        val utilizationRatio = loadPerPile / (totalGroupCapacity / input.numberOfPiles)
+        val utilizationRatio = if (totalGroupCapacity > 0.0) {
+            kotlin.math.min(loadPerPile / (totalGroupCapacity / input.numberOfPiles), 2.0)
+        } else 2.0
 
         val isSafe = capacityResult.allowableCapacity * groupResult.efficiencyFactor >= loadPerPile
                 && settlementResult.isOk
@@ -148,6 +165,15 @@ class ECPPileFoundation : PileFoundationDesign {
             warnings.add("Negative skin friction reduces net capacity by ${"%.1f".format(negFriction)} kN")
         }
 
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Geotechnical Capacity (Qa)", "Qa = Qu / FS", "${String.format(java.util.Locale.US, "%.1f", capacityResult.ultimateCapacity)} / ${input.safetyFactor}", capacityResult.allowableCapacity, "kN"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Group Capacity (Qg)", "Qg = \u03B7 * n * Qa", "${String.format(java.util.Locale.US, "%.2f", groupResult.efficiencyFactor)} * ${input.numberOfPiles} * ${capacityResult.allowableCapacity}", groupResult.groupCapacity, "kN"
+        ))
+
         return PileDesignResult(
             pileType = input.pileType.displayName,
             soilType = input.soilType.displayName,
@@ -165,13 +191,16 @@ class ECPPileFoundation : PileFoundationDesign {
             settlementResult = settlementResult,
             capResult = capResult,
             lateralCapacity = lateralResult.allowableLateralCapacity,
-            lateralUtilizationRatio = input.lateralLoad / lateralResult.allowableLateralCapacity,
+            // rule 1.4 — unknown lateral capacity is treated as UNSAFE (2.0), never 0/Infinity
+            lateralUtilizationRatio = if (lateralResult.allowableLateralCapacity > 0)
+                input.lateralLoad / lateralResult.allowableLateralCapacity else 2.0,
             negativeSkinFriction = negFriction,
             pileReinforcement = pileReinforcement,
             isSafe = isSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 
@@ -573,7 +602,12 @@ class ECPPileFoundation : PileFoundationDesign {
                 }
             }
         } catch (e: Exception) {
-            Pair(2, 2)
+            // rule 1.4 — no silent failure: a corrupt pattern string must not
+            // quietly become a 2×2 group
+            throw IllegalArgumentException(
+                "Invalid pile group pattern '$pattern' | نمط مجموعة الخوازيق غير مفهوم",
+                e
+            )
         }
     }
 
@@ -621,7 +655,9 @@ class ECPPileFoundation : PileFoundationDesign {
         // Consolidation settlement (for clay layers)
         val consolidationSettlement = if (input.soilType == SoilType.CLAY || input.soilType == SoilType.MIXED) {
             // Sc = Cc / (1+e0) * H * log10((sigma0 + delta_sigma)/sigma0)
-            val Cc = 0.009 * (input.cu - 25.0)  // compression index (simplified)
+            // A8-FIX: clamp Cc — the old unclamped form went NEGATIVE for cu<25,
+            // fabricating heave instead of settlement.
+            val Cc = max(0.009 * (input.cu - 25.0), 0.05)
             val e0 = 0.8  // initial void ratio
             val H = 2.0   // compressible layer thickness below tip (m)
             val sigma0 = input.gammaSoil * (L + H / 2.0)  // average effective stress
@@ -674,7 +710,10 @@ class ECPPileFoundation : PileFoundationDesign {
             1.0
         }
 
-        // Single pile capacity for reference
+        // Single pile capacity — A6-FIX: use the caller-supplied geotechnical
+        // result when available. The invented reference pile (cu=50, phi=30,
+        // gamma=18) remains only as a last-resort fallback for bare external
+        // calls carrying no soil data at all.
         val singlePileInput = PileInput(
             pileType = input.pileType,
             pileDiameter = input.pileDiameter,
@@ -688,8 +727,8 @@ class ECPPileFoundation : PileFoundationDesign {
             gammaSoil = 18.0,
             safetyFactor = 3.0
         )
-        val singleCapacity = calculatePileCapacity(singlePileInput)
-        val individualCapacity = singleCapacity.allowableCapacity
+        val individualCapacity = input.singleCapacityKn
+            ?: calculatePileCapacity(singlePileInput).allowableCapacity
         val groupCapacity = individualCapacity * totalPilesCount * efficiency
 
         return PileGroupResult(
@@ -762,9 +801,9 @@ class ECPPileFoundation : PileFoundationDesign {
         val kh = 5.0 * cu_kPa / D  // subgrade modulus kN/m³
         val nh = kh / D  // rate of increase
         val deflection = if (nh > 0.01) {
-            (H * L * L * L / (3.0 * EI) * 1000.0).coerceAtMost(25.0)
+            (H * L * L * L / (3.0 * EI) * 1000.0)  // A7-FIX: uncapped
         } else {
-            (H * L * L * L / (3.0 * EI) * 1000.0).coerceAtMost(25.0)
+            (H * L * L * L / (3.0 * EI) * 1000.0)  // A7-FIX: uncapped
         }
 
         return LateralLoadResult(
@@ -807,7 +846,7 @@ class ECPPileFoundation : PileFoundationDesign {
 
         // Deflection
         val EI = 30e6 * PI * D.pow(4) / 64.0
-        val deflection = (H * L * L * L / (3.0 * EI) * 1000.0).coerceAtMost(25.0)
+        val deflection = (H * L * L * L / (3.0 * EI) * 1000.0)  // A7-FIX: uncapped
 
         return LateralLoadResult(
             ultimateLateralCapacity = Hu,
@@ -889,9 +928,14 @@ class ECPPileFoundation : PileFoundationDesign {
         val fcu = input.fcu
         val fy = input.fyp
 
-        // Convert to N and N.mm
-        val Nu = axialLoad * 1000.0 * GAMMA_C  // factored axial load, N
-        val Mu = moment * 1e6 * GAMMA_C         // factored moment, N.mm
+        // Convert to N and N.mm — envelope load factor from the Code Engine
+        // (was: GAMMA_C material-factor misuse as a load factor)
+        val lfEnv = maxOf(
+            com.civileg.core.calculations.entities.DesignCode.ECP.getDeadLoadFactor(),
+            com.civileg.core.calculations.entities.DesignCode.ECP.getLiveLoadFactor()
+        )
+        val Nu = axialLoad * 1000.0 * lfEnv   // factored axial load, N
+        val Mu = moment * 1e6 * lfEnv         // factored moment, N.mm
 
         // Eccentricity
         val e = if (Nu > 0) abs(Mu) / Nu else 0.0  // mm

@@ -21,7 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.SettingsViewModel
 import com.civileg.app.R
@@ -35,6 +35,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
+    val mainViewModel: com.civileg.app.viewmodel.MainViewModel = hiltViewModel()
 
     Scaffold(
         topBar = {
@@ -79,13 +80,37 @@ fun SettingsScreen(
                 }
             }
 
+            // ─── نوع المستخدم / User Track ───
+            SettingsSectionCard(
+                title = stringResource(R.string.onboarding_choose_user_type),
+                icon = Icons.Default.Person,
+                iconColor = Color(0xFFE65100)
+            ) {
+                SettingsRadioRow(
+                    label = stringResource(R.string.onboarding_user_normal),
+                    subtitle = stringResource(R.string.onboarding_user_normal_desc),
+                    selected = settings.userType == com.civileg.app.data.local.UserType.NORMAL,
+                    onClick = { viewModel.setUserType(com.civileg.app.data.local.UserType.NORMAL) }
+                )
+                SettingsRadioRow(
+                    label = stringResource(R.string.onboarding_user_engineer),
+                    subtitle = stringResource(R.string.onboarding_user_engineer_desc),
+                    selected = settings.userType == com.civileg.app.data.local.UserType.ENGINEER,
+                    onClick = { viewModel.setUserType(com.civileg.app.data.local.UserType.ENGINEER) }
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_user_type_changeable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // ─── لغة التطبيق ───
             SettingsSectionCard(
                 title = stringResource(R.string.settings_language),
                 icon = Icons.Default.Language,
                 iconColor = Color(0xFF2E7D32)
-            ) {
-                SettingsRadioRow(
+            ) {                SettingsRadioRow(
                     label = stringResource(R.string.language_arabic),
                     subtitle = "Arabic",
                     selected = LocaleHelper.getLocale(context) == "ar",
@@ -104,6 +129,20 @@ fun SettingsScreen(
                         LocaleHelper.setLocale(context, "en")
                         restartActivity(context)
                     }
+                )
+            }
+
+            // ─── Help & Tutorials (§29: Replay Introduction) ───
+            SettingsSectionCard(
+                title = stringResource(R.string.settings_help_tutorials),
+                icon = Icons.Default.School,
+                iconColor = Color(0xFF00695C)
+            ) {
+                SettingsRadioRow(
+                    label = stringResource(R.string.settings_replay_introduction),
+                    subtitle = stringResource(R.string.settings_replay_introduction_desc),
+                    selected = false,
+                    onClick = { mainViewModel.replayOnboarding() }
                 )
             }
 

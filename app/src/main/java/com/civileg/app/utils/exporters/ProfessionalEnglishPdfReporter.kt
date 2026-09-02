@@ -3,6 +3,8 @@ package com.civileg.app.utils.exporters
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.civileg.app.utils.ArabicFontProvider
+import com.civileg.app.utils.PdfTextSegmenter
 import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.DeviceRgb
@@ -13,9 +15,12 @@ import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
+import com.itextpdf.layout.properties.BaseDirection
 import com.itextpdf.layout.properties.HorizontalAlignment
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
+import com.civileg.core.calculations.entities.DesignTrace
+import com.civileg.core.calculations.entities.CalculationStep as CoreStep
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -23,11 +28,15 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Professional English PDF Report Generator
+ * Professional Bilingual PDF Report Generator
  *
- * Generates comprehensive, professional structural design reports in English only.
- * Uses Helvetica font exclusively — no Arabic fonts, no RTL, no shaping needed.
- * This completely eliminates Arabic encoding issues that caused garbled text.
+ * Generates comprehensive, professional structural design reports.
+ * When a Context + titleAr are supplied via generateReportLegacy → bilingual mode:
+ *  titleAr and fixed section headers render in Arabic with proper shaping/RTL
+ *  (NotoNaskhArabic + ArabicShaper + PdfTextSegmenter). Body otherwise stays
+ *  English/numeric; mixed Arabic/Latin cells are segmented per PdfTextSegmenter
+ *  so Arabic and Latin glyphs each use their correct font.
+ * English-only path (no Context / blank titleAr) remains Helvetica as before.
  *
  * Reports include:
  * - Professional cover page with project info
@@ -86,7 +95,14 @@ object ProfessionalEnglishPdfReporter {
         val revision: String = "Rev. A"
     )
 
-    // ==================== Font Helpers (English Only) ====================
+    // ==================== Bilingual Mode ====================
+
+    @Volatile private var bilingualContext: Context? = null
+    private fun isBilingual(): Boolean = bilingualContext != null
+
+    private fun localizedSectionTitle(en: String): String = en // ADR-009: PDF is EN-only
+
+    // ==================== Font Helpers ====================
 
     /** Get a FRESH Helvetica regular font. Never cache across PdfDocuments. */
     private fun getFont(bold: Boolean = false): PdfFont {
@@ -97,6 +113,37 @@ object ProfessionalEnglishPdfReporter {
             Log.e(TAG, "Font creation failed: ${e.message}")
             try { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
             catch (_: Exception) { throw RuntimeException("No font available") }
+        }
+    }
+
+    private fun getLatinFont(bold: Boolean = false): PdfFont = getFont(bold)
+
+    private fun getArabicFont(bold: Boolean = false): PdfFont {
+        val ctx = bilingualContext ?: return getFont(bold)
+        return try { ArabicFontProvider.getArabicPdfFont(ctx, bold) }
+        catch (e: Exception) {
+            Log.w(TAG, "Arabic font fallback to Helvetica: ${e.message}")
+            getFont(bold)
+        }
+    }
+
+    private fun bilingualParagraph(
+        text: String,
+        fontSize: Float = 10f,
+        bold: Boolean = false,
+        color: DeviceRgb? = null,
+        alignment: TextAlignment? = null
+    ): Paragraph {
+        val ctx = bilingualContext
+        return if (ctx != null && ArabicFontProvider.containsArabic(text)) {
+            val af = getArabicFont(bold)
+            val lf = getLatinFont(bold)
+            PdfTextSegmenter.buildMixedParagraph(text, af, lf, fontSize, color, alignment)
+        } else {
+            val font = if (bold) createBoldFont() else createPdfFont()
+            val p = Paragraph().add(text(text, font, fontSize, color))
+            if (alignment != null) p.setTextAlignment(alignment) else p.setTextAlignment(TextAlignment.LEFT)
+            p
         }
     }
 
@@ -133,19 +180,37 @@ object ProfessionalEnglishPdfReporter {
     private fun emptyLine(): Paragraph = Paragraph(" ")
 
     private fun headerCell(text: String, colSpan: Int = 1): Cell {
-        val font = createBoldFont()
-        return Cell(colSpan, 1)
-            .setPadding(6f)
-            .setBackgroundColor(HEADER_BG)
-            .setTextAlignment(TextAlignment.CENTER)
-            .add(Paragraph().add(text(text, font, 9f, DeviceRgb(255, 255, 255))).setTextAlignment(TextAlignment.CENTER))
+        val ctx = bilingualContext
+        return if (ctx != null && ArabicFontProvider.containsArabic(text)) {
+            val af = getArabicFont(true)
+            val lf = getLatinFont(true)
+            val p = PdfTextSegmenter.buildMixedParagraph(text, af, lf, 9f, DeviceRgb(255, 255, 255), TextAlignment.CENTER)
+            Cell(colSpan, 1).setPadding(6f).setBackgroundColor(HEADER_BG).setTextAlignment(TextAlignment.CENTER).add(p)
+        } else {
+            val font = createBoldFont()
+            Cell(colSpan, 1)
+                .setPadding(6f)
+                .setBackgroundColor(HEADER_BG)
+                .setTextAlignment(TextAlignment.CENTER)
+                .add(Paragraph().add(text(text, font, 9f, DeviceRgb(255, 255, 255))).setTextAlignment(TextAlignment.CENTER))
+        }
     }
 
     private fun dataCell(text: String, fontSize: Float = 9f, bold: Boolean = false,
                          bg: DeviceRgb? = null, align: TextAlignment = TextAlignment.CENTER): Cell {
-        val font = if (bold) createBoldFont() else createPdfFont()
-        val cell = Cell().setPadding(4f).setTextAlignment(align)
-        cell.add(Paragraph().add(text(text, font, fontSize)).setTextAlignment(align))
+        val ctx = bilingualContext
+        val isAr = ctx != null && ArabicFontProvider.containsArabic(text)
+        val cellAlign = if (isAr && align == TextAlignment.LEFT) TextAlignment.RIGHT else align
+        val cell = Cell().setPadding(4f).setTextAlignment(cellAlign)
+        val para: Paragraph = if (isAr) {
+            val af = getArabicFont(bold)
+            val lf = getLatinFont(bold)
+            PdfTextSegmenter.buildMixedParagraph(text, af, lf, fontSize, null, cellAlign)
+        } else {
+            val font = if (bold) createBoldFont() else createPdfFont()
+            Paragraph().add(text(text, font, fontSize)).setTextAlignment(cellAlign)
+        }
+        cell.add(para)
         bg?.let { cell.setBackgroundColor(it) }
         return cell
     }
@@ -159,17 +224,31 @@ object ProfessionalEnglishPdfReporter {
     }
 
     private fun sectionTitle(title: String): Paragraph {
-        return Paragraph().add(text(title, createBoldFont(), 13f, PRIMARY))
-            .setTextAlignment(TextAlignment.LEFT)
-            .setMarginTop(12f)
-            .setMarginBottom(4f)
+        val localized = localizedSectionTitle(title)
+        val ctx = bilingualContext
+        return if (ctx != null && ArabicFontProvider.containsArabic(localized)) {
+            bilingualParagraph(localized, 13f, true, PRIMARY, null)
+                .setMarginTop(12f).setMarginBottom(4f)
+        } else {
+            Paragraph().add(text(localized, createBoldFont(), 13f, PRIMARY))
+                .setTextAlignment(TextAlignment.LEFT)
+                .setMarginTop(12f)
+                .setMarginBottom(4f)
+        }
     }
 
     private fun subTitle(title: String): Paragraph {
-        return Paragraph().add(text(title, createBoldFont(), 11f, SECONDARY))
-            .setTextAlignment(TextAlignment.LEFT)
-            .setMarginTop(8f)
-            .setMarginBottom(2f)
+        val localized = localizedSectionTitle(title)
+        val ctx = bilingualContext
+        return if (ctx != null && ArabicFontProvider.containsArabic(localized)) {
+            bilingualParagraph(localized, 11f, true, SECONDARY, null)
+                .setMarginTop(8f).setMarginBottom(2f)
+        } else {
+            Paragraph().add(text(localized, createBoldFont(), 11f, SECONDARY))
+                .setTextAlignment(TextAlignment.LEFT)
+                .setMarginTop(8f)
+                .setMarginBottom(2f)
+        }
     }
 
     private fun separator(): LineSeparator {
@@ -188,19 +267,43 @@ object ProfessionalEnglishPdfReporter {
             .setTextAlignment(TextAlignment.CENTER).setMarginTop(60f))
         document.add(emptyLine())
 
-        // Report Type Title
-        document.add(Paragraph().add(text(reportTitle, boldFont, 20f, SECONDARY))
-            .setTextAlignment(TextAlignment.CENTER))
+        // Report Type Title — bilingual when Arabic present
+        run {
+            val ctx = bilingualContext
+            if (ctx != null && ArabicFontProvider.containsArabic(reportTitle)) {
+                val p = bilingualParagraph(reportTitle, 20f, true, SECONDARY, TextAlignment.CENTER)
+                    .setMarginTop(0f)
+                document.add(p)
+            } else {
+                document.add(Paragraph().add(text(reportTitle, boldFont, 20f, SECONDARY))
+                    .setTextAlignment(TextAlignment.CENTER))
+            }
+        }
         document.add(emptyLine())
 
         // Subtitle
-        document.add(Paragraph().add(text(subtitle, font, 12f, SECONDARY))
-            .setTextAlignment(TextAlignment.CENTER))
+        run {
+            val ctx = bilingualContext
+            if (ctx != null && subtitle.isNotEmpty() && ArabicFontProvider.containsArabic(subtitle)) {
+                document.add(bilingualParagraph(subtitle, 12f, false, SECONDARY, TextAlignment.CENTER))
+            } else {
+                document.add(Paragraph().add(text(subtitle, font, 12f, SECONDARY))
+                    .setTextAlignment(TextAlignment.CENTER))
+            }
+        }
         document.add(emptyLine())
 
-        // Design Code Badge
-        document.add(Paragraph().add(text("Design Code: $designCode", boldFont, 11f, PRIMARY))
-            .setTextAlignment(TextAlignment.CENTER))
+        // Design Code Badge — localized when bilingual
+        run {
+            val badge = if (isBilingual()) "\u0627\u0644\u0643\u0648\u062f \u0627\u0644\u062a\u0635\u0645\u064a\u0645\u064a: $designCode" else "Design Code: $designCode"
+            val ctx = bilingualContext
+            if (ctx != null && ArabicFontProvider.containsArabic(badge)) {
+                document.add(bilingualParagraph(badge, 11f, true, PRIMARY, TextAlignment.CENTER))
+            } else {
+                document.add(Paragraph().add(text(badge, boldFont, 11f, PRIMARY))
+                    .setTextAlignment(TextAlignment.CENTER))
+            }
+        }
 
         // Line separator
         document.add(LineSeparator(SolidLine(2f)).setMarginTop(20f).setMarginBottom(20f))
@@ -243,7 +346,17 @@ object ProfessionalEnglishPdfReporter {
                                           steps: List<CalculationStep>) {
         document.add(sectionTitle("2. Design Calculations"))
         document.add(separator())
-        document.add(Paragraph().add(text("Method: $designCode — Strength Design Method (USD)", createPdfFont(), 10f, SECONDARY)))
+        run {
+            val methodEn = "Method: $designCode — Strength Design Method (USD)"
+            val methodAr = "\u0627\u0644\u0637\u0631\u064a\u0642\u0629: $designCode \u2014 \u0637\u0631\u064a\u0642\u0629 \u062d\u0633\u0627\u0628 \u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629 (USD)"
+            val m = if (isBilingual()) methodAr else methodEn
+            val ctx = bilingualContext
+            if (ctx != null && ArabicFontProvider.containsArabic(m)) {
+                document.add(bilingualParagraph(m, 10f, false, SECONDARY, null))
+            } else {
+                document.add(Paragraph().add(text(methodEn, createPdfFont(), 10f, SECONDARY)))
+            }
+        }
         document.add(emptyLine())
 
         if (steps.isNotEmpty()) {
@@ -302,12 +415,62 @@ object ProfessionalEnglishPdfReporter {
         document.add(Paragraph(" "))  // spacing
     }
 
+    private fun getPerCodeCalculationNote(designCode: String, element: String): String {
+        return when {
+            designCode.contains("SBC", ignoreCase = true) ->
+                "SBC 304: Per ACI 318-19 (Rn-\u03C1), \u03C6=0.9, f'c=0.8\u00B7fcu"
+            designCode.contains("ACI", ignoreCase = true) ->
+                "ACI 318-19: Uses Rn-\u03C1 method (Rn=Mu/(\u03C6\u00B7b\u00B7d\u00B2)), \u03C6=0.9, f'c=0.8\u00B7fcu"
+            designCode.contains("ECP", ignoreCase = true) ->
+                "ECP 203: Uses R-method (R=Mu/(fcu/\u03B3c\u00B7b\u00B7d\u00B2)), \u03B3c=1.5, \u03B3s=1.15"
+            else -> {
+                if (designCode.contains("304") || designCode.contains("318"))
+                    "ACI 318-19: Uses Rn-\u03C1 method (Rn=Mu/(\u03C6\u00B7b\u00B7d\u00B2)), \u03C6=0.9, f'c=0.8\u00B7fcu"
+                else
+                    "ECP 203: Uses R-method (R=Mu/(fcu/\u03B3c\u00B7b\u00B7d\u00B2)), \u03B3c=1.5, \u03B3s=1.15"
+            }
+        }
+    }
+
+    private fun getFlexureReference(designCode: String): String = when {
+        designCode.contains("SBC", ignoreCase = true) -> "SBC 304 §4 (per ACI 318-19, φ=0.90)"
+        designCode.contains("ACI", ignoreCase = true) -> "ACI 318-19 §21.2.1 (Rn-ρ, φ=0.90, 0.85f''c)"
+        designCode.contains("ECP", ignoreCase = true) -> "ECP 203 §4-2-1 (R-method, γc=1.5, γs=1.15)"
+        else -> if (designCode.contains("304") || designCode.contains("318")) "ACI 318-19 §21.2.1 (Rn-ρ, φ=0.90, 0.85f''c)" else "ECP 203 §4-2-1 (R-method, γc=1.5, γs=1.15)"
+    }
+
+    private fun getLoadFactorReference(designCode: String): String = when {
+        designCode.contains("SBC", ignoreCase = true) -> "SBC 304 §3-2 (per ACI 318-19, 1.2DL+1.6LL; also 1.4DL)"
+        designCode.contains("ACI", ignoreCase = true) -> "ACI 318-19 §5.3.1 (1.2DL+1.6LL; also 1.4DL)"
+        designCode.contains("ECP", ignoreCase = true) -> "ECP 203 §3-2-1 (1.4DL+1.6LL)"
+        else -> if (designCode.contains("304") || designCode.contains("318")) "ACI 318-19 §5.3.1 (1.2DL+1.6LL)" else "ECP 203 §3-2-1 (1.4DL+1.6LL)"
+    }
+
+    private fun getLoadCombinationEquation(designCode: String, suffix: String = ""): String {
+        val base = when {
+            designCode.contains("SBC", ignoreCase = true) ->
+                "Wu = 1.2*DL + 1.6*LL (SBC 304 \u00A73-2) \u2014 governing; also check Wu = 1.4*DL"
+            designCode.contains("ACI", ignoreCase = true) ->
+                "Wu = 1.2*DL + 1.6*LL (ACI 318-19 \u00A75.3.1) \u2014 governing; also check Wu = 1.4*DL"
+            designCode.contains("ECP", ignoreCase = true) ->
+                "Wu = 1.4*DL + 1.6*LL (ECP 203 \u00A73-2-1)"
+            else -> {
+                // Fallback: codes containing 304/318 are ACI-based
+                if (designCode.contains("304") || designCode.contains("318"))
+                    "Wu = 1.2*DL + 1.6*LL (ACI 318-19 \u00A75.3.1) \u2014 governing; also check Wu = 1.4*DL"
+                else
+                    "Wu = 1.4*DL + 1.6*LL (ECP 203 \u00A73-2-1)"
+            }
+        }
+        return if (suffix.isNotEmpty()) "$base $suffix" else base
+    }
+
     private fun getDefaultCalculationSteps(reportType: ReportType, designCode: String): List<CalculationStep> {
         return when (reportType) {
             ReportType.BEAM -> listOf(
                 CalculationStep(1, "Load Combination",
-                    "Wu = 1.4*DL + 1.6*LL", "$designCode Load Factors",
-                    "Factored load per unit length"),
+                    getLoadCombinationEquation(designCode), "$designCode Load Factors",
+                    "Factored load per unit length (" + getLoadFactorReference(designCode) + ")"),
                 CalculationStep(2, "Design Moment",
                     "Mu = wu * L^2 / 8 (simply supported)", "$designCode Flexure Design",
                     "Maximum design moment at midspan"),
@@ -330,7 +493,11 @@ object ProfessionalEnglishPdfReporter {
                     "Required stirrup area per spacing"),
                 CalculationStep(8, "Deflection Check",
                     "delta_L = 5 * w * L^4 / (384 * E * I)", "$designCode Serviceability",
-                    "Immediate deflection under service loads")
+                    "Immediate deflection under service loads"),
+                CalculationStep(9, "Per-Code Methodology",
+                    getPerCodeCalculationNote(designCode, "beam"),
+                    "$designCode Methodology",
+                    "Flexure: ECP R/\u03C9 (fcu/\u03B3c) vs ACI/SBC Rn/\u03C1 (0.85f'c, \u03C6=0.9); Shear: ECP vc=0.24\u221A(fcu/\u03B3c) vs ACI vc=0.17\u221Af'c\u00B7\u03A6; Material: ECP fcu/\u03B3c vs ACI 0.85f'c")
             )
             ReportType.COLUMN -> listOf(
                 CalculationStep(1, "Effective Length Factor (K)",
@@ -360,12 +527,16 @@ object ProfessionalEnglishPdfReporter {
                 CalculationStep(7, "Tie/Stirrup Design",
                     "s = min(16db, 48dtie, b) ; spacing requirements",
                     "$designCode Lateral Ties",
-                    "Tie spacing and diameter requirements")
+                    "Tie spacing and diameter requirements"),
+                CalculationStep(8, "Per-Code Methodology",
+                    getPerCodeCalculationNote(designCode, "column"),
+                    "$designCode Methodology",
+                    "Flexure: ECP R/\u03C9 (fcu/\u03B3c) vs ACI/SBC Rn/\u03C1 (0.85f'c, \u03C6=0.9); Shear: ECP vc=0.24\u221A(fcu/\u03B3c) vs ACI vc=0.17\u221Af'c\u00B7\u03A6; Material: ECP fcu/\u03B3c vs ACI 0.85f'c")
             )
             ReportType.SLAB -> listOf(
                 CalculationStep(1, "Load Combination",
-                    "Wu = 1.4*DL + 1.6*LL (kN/m^2)", "$designCode Load Factors",
-                    "Factored load per unit area"),
+                    getLoadCombinationEquation(designCode, "(kN/m^2)"), "$designCode Load Factors",
+                    "Factored load per unit area (" + getLoadFactorReference(designCode) + ")"),
                 CalculationStep(2, "Span Ratio & Direction",
                     "Lx/Ly = ratio ; One-Way if < 0.5, Two-Way otherwise",
                     "$designCode Slab Classification",
@@ -392,7 +563,11 @@ object ProfessionalEnglishPdfReporter {
                 CalculationStep(8, "Deflection Check",
                     "delta = L / (20 to 30) typical limits",
                     "$designCode Deflection Limits",
-                    "Span-to-depth ratio check")
+                    "Span-to-depth ratio check"),
+                CalculationStep(9, "Per-Code Methodology",
+                    getPerCodeCalculationNote(designCode, "slab"),
+                    "$designCode Methodology",
+                    "Flexure: ECP R/\u03C9 (fcu/\u03B3c) vs ACI/SBC Rn/\u03C1 (0.85f'c, \u03C6=0.9); Shear: ECP vc=0.24\u221A(fcu/\u03B3c) vs ACI vc=0.17\u221Af'c\u00B7\u03A6; Material: ECP fcu/\u03B3c vs ACI 0.85f'c")
             )
             ReportType.FOOTING -> listOf(
                 CalculationStep(1, "Bearing Pressure Check",
@@ -493,9 +668,9 @@ object ProfessionalEnglishPdfReporter {
                     "$designCode Stair Geometry",
                     "Rise, tread, and comfort check"),
                 CalculationStep(2, "Factored Load",
-                    "wu = 1.4*DL + 1.6*LL (typical LL = 2-4 kN/m^2)",
+                    getLoadCombinationEquation(designCode, "(typical LL = 2-4 kN/m^2)").replaceFirst("Wu", "wu"),
                     "$designCode Load Factors",
-                    "Factored load on stair slab"),
+                    "Factored load on stair slab (" + getLoadFactorReference(designCode) + ")"),
                 CalculationStep(3, "Design Moment",
                     "Mu = wu * L^2 / 10 (fixed ends) or L^2/8 (simply supported)",
                     "$designCode Bending",
@@ -628,14 +803,22 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
 
         if (safetyChecks.isNotEmpty()) {
-            val table = Table(UnitValue.createPercentArray(floatArrayOf(35f, 18f, 18f, 10f, 19f))).useAllAvailableWidth()
+            val table = Table(UnitValue.createPercentArray(floatArrayOf(28f, 14f, 14f, 8f, 14f, 22f))).useAllAvailableWidth()
 
             // Header Row
             table.addHeaderCell(headerCell("Check"))
             table.addHeaderCell(headerCell("Calculated"))
             table.addHeaderCell(headerCell("Limit"))
             table.addHeaderCell(headerCell("Unit"))
+            table.addHeaderCell(headerCell("Utilization"))
             table.addHeaderCell(headerCell("Status"))
+
+            // Pre-compute utilizations inline as calculated/limit*100
+            val utilizations = safetyChecks.map { check ->
+                if (check.calculated.isNaN() || check.calculated.isInfinite() ||
+                    check.limit.isNaN() || check.limit.isInfinite() || check.limit == 0.0
+                ) Double.NaN else (check.calculated / check.limit * 100.0)
+            }
 
             // Data Rows
             safetyChecks.forEachIndexed { i, check ->
@@ -652,14 +835,113 @@ object ProfessionalEnglishPdfReporter {
 
                 table.addCell(dataCell(check.unit, 8f, false, bg))
 
+                val util = utilizations[i]
+                val utilStr = if (util.isNaN() || util.isInfinite()) "---"
+                else String.format(Locale.US, "%.1f%%", util)
+                val finalUtilCell = if (!util.isNaN() && !util.isInfinite() && util > 85.0) {
+                    val clr = if (util > 100.0) ERROR else WARNING
+                    Cell().setPadding(4f).setTextAlignment(TextAlignment.CENTER).apply {
+                        bg?.let { setBackgroundColor(it) }
+                        add(Paragraph().add(text(utilStr, createBoldFont(), 8f, clr)).setTextAlignment(TextAlignment.CENTER))
+                    }
+                } else {
+                    dataCell(utilStr, 8f, false, bg)
+                }
+                table.addCell(finalUtilCell)
+
                 val statusStr = if (check.passed) "PASS" else "FAIL"
                 val statusClr = if (check.passed) SUCCESS else ERROR
-                table.addCell(dataCell(statusStr, 9f, true, bg).also {
-                    // Color the cell text
-                    it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
+                table.addCell(Cell().setPadding(4f).setTextAlignment(TextAlignment.CENTER).apply {
+                    bg?.let { setBackgroundColor(it) }
+                    add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
                 })
             }
             document.add(table)
+
+            // --- Expanded conclusions: utilization summary, governing check, recommendations ---
+            val validUtils = utilizations.withIndex().filter { !it.value.isNaN() && !it.value.isInfinite() }
+            if (validUtils.isNotEmpty()) {
+                val governing = validUtils.maxByOrNull { it.value }!!
+                val govCheck = safetyChecks[governing.index]
+                val govUtil = governing.value
+                val govText = String.format(
+                    Locale.US,
+                    "Governing check: %s at %.1f%% utilization (%.2f / %.2f %s)",
+                    govCheck.name, govUtil, govCheck.calculated, govCheck.limit, govCheck.unit
+                )
+                document.add(Paragraph().add(text(govText, createBoldFont(), 9f, SECONDARY)).setMarginTop(8f))
+
+                // Detailed utilization line
+                val utilSummary = validUtils.joinToString(", ") { (idx, u) ->
+                    String.format(Locale.US, "%s %.1f%%", safetyChecks[idx].name, u)
+                }
+                document.add(Paragraph().add(text("Utilizations: $utilSummary", createPdfFont(), 8f, SECONDARY)).setMarginTop(2f))
+
+                // Warning threshold >85%
+                val highChecks = validUtils.filter { it.value > 85.0 && it.value <= 100.0 }
+                if (highChecks.isNotEmpty()) {
+                    val names = highChecks.joinToString(", ") { safetyChecks[it.index].name }
+                    val warnText = "Warning: Utilization exceeds 85% for: $names \u2014 design is near limit, consider increasing section, reinforcement, or capacity."
+                    document.add(Paragraph().add(text(warnText, createBoldFont(), 8f, WARNING)).setMarginTop(4f))
+                }
+                val overChecks = validUtils.filter { it.value > 100.0 }
+                if (overChecks.isNotEmpty()) {
+                    val names = overChecks.joinToString(", ") { safetyChecks[it.index].name }
+                    val failText = "Action required: Over-utilized (>100%): $names \u2014 redesign required to satisfy code limits."
+                    document.add(Paragraph().add(text(failText, createBoldFont(), 8f, ERROR)).setMarginTop(4f))
+                }
+                if (govUtil <= 85.0 && validUtils.none { it.value > 100.0 }) {
+                    document.add(Paragraph().add(text("Recommendation: All checks below 85% utilization \u2014 design has adequate margin.", createPdfFont(), 8f, SUCCESS)).setMarginTop(4f))
+                }
+            }
+        }
+        document.add(emptyLine())
+    }
+
+    private fun addCodeComparisonSection(document: Document, designCode: String, reportType: String) {
+        document.add(sectionTitle("5b. Code Comparison Note"))
+        document.add(separator())
+        val comparisonText = when {
+            designCode.contains("ECP", ignoreCase = true) ->
+                "Design per ECP 203 (γc=1.5, γs=1.15, R-method, fcu/γc). Equivalent ACI 318-19 result would use φ=0.9, f''c=0.8·fcu (Rn-ρ, 0.85f''c) — typically yields 3-8% lower As for the same Mu; SBC 304 mirrors ACI 318-19 (φ=0.90)."
+            designCode.contains("ACI", ignoreCase = true) ->
+                "Design per ACI 318-19 (φ=0.9, 0.85f''c, Rn-ρ method, f''c=0.8·fcu). ECP 203 equivalent would use R-method with γc=1.5/γs=1.15 (fcu/γc) — typically yields 3-8% higher As for the same Mu; SBC 304 follows ACI 318-19."
+            designCode.contains("SBC", ignoreCase = true) ->
+                "Design per SBC 304 §4 (per ACI 318-19, φ=0.90, 0.85f''c, Rn-ρ). ECP 203 equivalent would use R-method with γc=1.5/γs=1.15 (fcu/γc) — typically yields 3-8% difference in As for the same Mu; ACI 318-19 results are equivalent to SBC 304."
+            else -> {
+                if (designCode.contains("304") || designCode.contains("318"))
+                    "Design per ACI 318-19 (φ=0.9, 0.85f''c, Rn-ρ method, f''c=0.8·fcu). ECP 203 equivalent would use R-method with γc=1.5/γs=1.15 — typically yields 3-8% variation in As for the same Mu."
+                else
+                    "Design per ECP 203 (γc=1.5, γs=1.15, R-method). Equivalent ACI 318-19/SBC 304 result would use φ=0.9, f''c=0.8·fcu (Rn-ρ) — typically yields 3-8% lower As for the same Mu."
+            }
+        }
+        val detail = " [\ element: comparison is qualitative; full recalculation per alternate code would be required for exact values.]"
+        val fullText = comparisonText + detail
+        val ctx = bilingualContext
+        if (ctx != null && ArabicFontProvider.containsArabic(fullText)) {
+            document.add(bilingualParagraph(fullText, 9f, false, SECONDARY, null).setMarginBottom(4f))
+        } else {
+            document.add(Paragraph().add(text(fullText, createPdfFont(), 9f, SECONDARY)).setMarginBottom(4f))
+        }
+        document.add(emptyLine())
+    }
+
+    private fun addWarningsSection(document: Document, warnings: List<String>) {
+        document.add(sectionTitle("4b. Design Warnings (QA)"))
+        document.add(separator())
+
+        warnings.forEach { w ->
+            val ctx = bilingualContext
+            val p: Paragraph = if (ctx != null && ArabicFontProvider.containsArabic(w)) {
+                val af = getArabicFont(false); val lf = getLatinFont(false)
+                PdfTextSegmenter.buildMixedParagraph("\u26A0 $w", af, lf, 10f, SECONDARY, null)
+                    .setMarginBottom(4f)
+            } else {
+                Paragraph().add(text("\u26A0 ", createBoldFont(), 10f, WARNING))
+                    .add(text(w, createPdfFont(), 10f, SECONDARY))
+                    .setMarginBottom(4f)
+            }
+            document.add(p)
         }
         document.add(emptyLine())
     }
@@ -669,8 +951,13 @@ object ProfessionalEnglishPdfReporter {
         document.add(separator())
 
         if (bitmap == null) {
-            document.add(Paragraph().add(text("[Drawing not available - ensure design data is complete]",
-                createPdfFont(), 9f, SECONDARY)).setTextAlignment(TextAlignment.CENTER))
+            val msg = if (isBilingual()) "[\u0627\u0644\u0631\u0633\u0645 \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631 - \u062a\u0623\u0643\u062f \u0645\u0646 \u0627\u0643\u062a\u0645\u0627\u0644 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u062a\u0635\u0645\u064a\u0645]" else "[Drawing not available - ensure design data is complete]"
+            val ctx = bilingualContext
+            if (ctx != null && ArabicFontProvider.containsArabic(msg)) {
+                document.add(bilingualParagraph(msg, 9f, false, SECONDARY, TextAlignment.CENTER))
+            } else {
+                document.add(Paragraph().add(text(msg, createPdfFont(), 9f, SECONDARY)).setTextAlignment(TextAlignment.CENTER))
+            }
             document.add(emptyLine())
             return
         }
@@ -683,8 +970,15 @@ object ProfessionalEnglishPdfReporter {
             img.setMaxWidth(480f)
             img.setHorizontalAlignment(HorizontalAlignment.CENTER)
             document.add(img)
-            document.add(Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
-                .setTextAlignment(TextAlignment.CENTER))
+            run {
+                val ctx = bilingualContext
+                if (ctx != null && ArabicFontProvider.containsArabic(title)) {
+                    document.add(bilingualParagraph(title, 9f, false, SECONDARY, TextAlignment.CENTER))
+                } else {
+                    document.add(Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
+                        .setTextAlignment(TextAlignment.CENTER))
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Drawing render error: ${e.message}")
             document.add(Paragraph().add(text("[Drawing render error: ${e.message}]",
@@ -702,6 +996,41 @@ object ProfessionalEnglishPdfReporter {
         document.add(Paragraph().add(
             text("This report is for reference only and must be reviewed by a qualified engineer before construction.",
             font, 7f, LIGHT_GRAY)).setTextAlignment(TextAlignment.CENTER))
+    }
+
+    private fun addCalculationTraceSection(document: Document, trace: DesignTrace) {
+        if (trace.steps.isEmpty()) return
+        
+        document.add(sectionTitle("2b. Detailed Calculation Trace"))
+        document.add(separator())
+        document.add(Paragraph().add(text("Detailed step-by-step verification of the structural design.", createPdfFont(), 9f, SECONDARY)))
+        document.add(emptyLine())
+
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(30f, 40f, 20f, 10f))).useAllAvailableWidth()
+        table.addHeaderCell(headerCell("Component / Step"))
+        table.addHeaderCell(headerCell("Formula & Substitution"))
+        table.addHeaderCell(headerCell("Result"))
+        table.addHeaderCell(headerCell("Status"))
+
+        trace.steps.forEachIndexed { i, step ->
+            val bg = if (i % 2 == 0) null else ROW_ALT
+            table.addCell(dataCell(step.title, 9f, true, bg, TextAlignment.LEFT))
+            
+            val formulaText = "${step.formula}\nSub: ${step.substitution}"
+            table.addCell(dataCell(formulaText, 8f, false, bg, TextAlignment.LEFT))
+            
+            val resText = "${String.format(Locale.US, "%.3f", step.result)} ${step.unit}"
+            table.addCell(dataCell(resText, 9f, true, bg))
+            
+            val statusStr = if (step.isSafe) "OK" else "FAIL"
+            val statusClr = if (step.isSafe) SUCCESS else ERROR
+            table.addCell(Cell().setPadding(4f).setTextAlignment(TextAlignment.CENTER).apply {
+                bg?.let { setBackgroundColor(it) }
+                add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
+            })
+        }
+        document.add(table)
+        document.add(emptyLine())
     }
 
     // ==================== Main Report Generation Method ====================
@@ -735,7 +1064,9 @@ object ProfessionalEnglishPdfReporter {
         drawingBitmap: Bitmap? = null,
         calculationSteps: List<CalculationStep> = emptyList(),
         config: ReportConfig = ReportConfig(),
-        outputPath: String
+        warnings: List<String> = emptyList(),
+        outputPath: String,
+        trace: DesignTrace = DesignTrace() // [Phase 3] New Trace Parameter
     ): File? {
         return try {
             val (pdfDoc, document, _) = createDocument(outputPath)
@@ -752,6 +1083,9 @@ object ProfessionalEnglishPdfReporter {
 
             // 3. Calculation Methodology
             addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            
+            // 3b. NEW: Detailed Trace
+            addCalculationTraceSection(document, trace)
 
             // 4. Results
             addResultsSection(document, results)
@@ -759,11 +1093,22 @@ object ProfessionalEnglishPdfReporter {
             // 5. Safety Checks
             addSafetyChecks(document, safetyChecks, isSafe)
 
+            // 5b. Code Comparison Note
+            addCodeComparisonSection(document, designCode, reportType.name)
+
+            // 5c. Design Warnings (QA) — only when non-empty
+            if (warnings.isNotEmpty()) {
+                addWarningsSection(document, warnings)
+            }
+
             // 6. Engineering Drawing
             if (drawingBitmap != null) {
                 document.add(AreaBreak())
             }
-            addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
+            run {
+                val detailSuffix = if (isBilingual()) " - \u0627\u0644\u062a\u0641\u0635\u064a\u0644 \u0627\u0644\u0647\u0646\u062f\u0633\u064a" else " - Engineering Detail"
+                addDrawingSection(document, drawingBitmap, "$title$detailSuffix")
+            }
 
             // 7. Footer
             addFooter(document, config)
@@ -785,9 +1130,12 @@ object ProfessionalEnglishPdfReporter {
     /**
      * Convenience method — generates report using the same signature as the old
      * ComprehensivePdfExporter.exportGenericReport for easy migration.
+     *
+     * Bilingual: when [context] != null and [titleAr] is non-blank, reportTitle and
+     * fixed section headers render in Arabic with proper shaping/RTL (NotoNaskhArabic).
      */
     fun generateReportLegacy(
-        titleAr: String,  // Ignored (English only)
+        titleAr: String,
         titleEn: String,
         subtitle: String,
         designType: String,
@@ -796,7 +1144,10 @@ object ProfessionalEnglishPdfReporter {
         safetyChecks: List<ComprehensivePdfExporter.GenericSafetyCheck>,
         isSafe: Boolean,
         drawingBitmap: Bitmap?,
-        outputPath: String
+        warnings: List<String> = emptyList(),
+        outputPath: String,
+        context: Context? = null,
+        trace: DesignTrace = DesignTrace()
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed)
@@ -820,21 +1171,29 @@ object ProfessionalEnglishPdfReporter {
         // Extract design code from inputs if available
         val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2020"
         val codeStr = inputs["Design Code"]
-            ?: inputs["الكود التصميمي"]
+            ?: inputs["\u0627\u0644\u0643\u0648\u062f \u0627\u0644\u062a\u0635\u0645\u064a\u0645\u064a"]
             ?: defaultCode
 
-        return generateReport(
-            reportType = reportType,
-            title = titleEn,
-            subtitle = subtitle,
-            designCode = codeStr,
-            inputs = inputs,
-            results = results,
-            safetyChecks = convertedChecks,
-            isSafe = isSafe,
-            drawingBitmap = drawingBitmap,
-            outputPath = outputPath
-        )
+        val useArabic = context != null && titleAr.isNotBlank()
+        bilingualContext = null // ADR-009: PDF is EN-only
+        return try {
+            generateReport(
+                reportType = reportType,
+                title = if (useArabic) titleAr else titleEn,
+                subtitle = subtitle,
+                designCode = codeStr,
+                inputs = inputs,
+                results = results,
+                safetyChecks = convertedChecks,
+                isSafe = isSafe,
+                drawingBitmap = drawingBitmap,
+                warnings = warnings,
+                outputPath = outputPath,
+                trace = trace
+            )
+        } finally {
+            bilingualContext = null
+        }
     }
 
     // ==================== Page Number Handler ====================

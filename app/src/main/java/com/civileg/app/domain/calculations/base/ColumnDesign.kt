@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.base
 
-import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.LoadCombination
+import com.civileg.core.calculations.entities.ReinforcementResult
 
 interface ColumnDesign {
     

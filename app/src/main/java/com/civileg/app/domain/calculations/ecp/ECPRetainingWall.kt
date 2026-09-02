@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.calculations.entities.DesignCode
 import kotlin.math.*
 
 class ECPRetainingWall : RetainingWallDesign {
@@ -19,7 +19,13 @@ class ECPRetainingWall : RetainingWallDesign {
         private const val CRACK_WIDTH_LIMIT = 0.3
     }
 
-    override fun designRetainingWall(input: RetainingWallInput): RetainingWallResult {
+    override fun designRetainingWall(input: RetainingWallInput): DomainRetainingWallResult {
+        com.civileg.app.domain.calculations.InputGuard.positive(
+            "fcu" to input.fcu, "fy" to input.fy,
+            "wallHeight" to input.wallHeight,
+            "frictionAngle" to input.frictionAngle,
+            "soilDensity" to input.soilDensity
+        )
         val H = input.wallHeight
         val tBase = input.stemBaseThickness
         val tTop = input.stemTopThickness
@@ -39,19 +45,28 @@ class ECPRetainingWall : RetainingWallDesign {
         val Ka = tan(Math.PI / 4 - phiRad / 2).pow(2)
         val KaSurcharge = Ka
 
-        // Earth pressures at base of wall
-        val hSoil = if (zwt >= H) H else zwt
-        val hWater = max(0.0, H - zwt)
+        // A4-FIX: layered Rankine active pressure with water table at depth zwt.
+        // Dry layer (zw): triangle 0.5*Ka*gamma*zw^2 acting at H - 2zw/3 above base.
+        // Submerged layer (hw = H-zw): buoyant unit weight gamma' rectangle+triangle
+        // plus a separate hydrostatic triangle — the old form ignored gammaSub
+        // entirely and double-counted hSoil in the hydrostatic arm.
+        val zw = if (zwt >= H) H else zwt.coerceAtLeast(0.0)
+        val hw = (H - zw).coerceAtLeast(0.0)
         val gammaSub = gamma - 9.81
 
-        val paSoil = 0.5 * Ka * gamma * hSoil.pow(2)
-        val paWater = 0.5 * 9.81 * hWater.pow(2)
+        val pDry = 0.5 * Ka * gamma * zw * zw
+        val pSubRect = Ka * gamma * zw * hw
+        val pSubTri = 0.5 * Ka * gammaSub * hw * hw
+        val paWater = 0.5 * 9.81 * hw * hw
         val paSurcharge = KaSurcharge * q * H
-        val totalPa = paSoil + paWater + paSurcharge
-        val paHeight = H / 3.0
-        val surchargeHeight = H / 2.0
+        val totalPa = pDry + pSubRect + pSubTri + paWater + paSurcharge
 
-        val momentOverturning = paSoil * paHeight + paWater * (hWater / 3.0 + hSoil) + paSurcharge * surchargeHeight
+        val momentOverturning =
+            pDry * (hw + zw / 3.0) +
+            pSubRect * (hw / 2.0) +
+            pSubTri * (hw / 3.0) +
+            paWater * (hw / 3.0) +
+            paSurcharge * (H / 2.0)
 
         // Self-weight components (per meter run)
         val stemWeight = 0.5 * (tBase + tTop) * H * 25.0
@@ -152,9 +167,18 @@ class ECPRetainingWall : RetainingWallDesign {
             "Cover = ${COVER_EARTH}mm (earth contact)",
             "Min steel = ${"%.4f".format(MIN_STEEL_RATIO)} (${MIN_STEEL_RATIO * 100}%)"
         )
-        if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
+        if (hw > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
 
-        return RetainingWallResult(
+        // [Phase 3] Capture Calculation Trace for Transparency
+        val traceSteps = mutableListOf<com.civileg.core.calculations.entities.CalculationStep>()
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Stem Moment (Mu)", "Mu = 1.6 * M_unfactored", "1.6 * $stemMomentUnfactored", Mu, "kN.m"
+        ))
+        traceSteps.add(com.civileg.core.calculations.entities.CalculationStep(
+            "Stem Shear (Vu)", "Vu = 1.6 * V_unfactored", "1.6 * $stemShearUnfactored", Vu, "kN"
+        ))
+
+        return DomainRetainingWallResult(
             isSafe = isSafe, designCode = DesignCode.ECP,
             overturningFS = overturningFS, slidingFS = slidingFS, bearingFS = bearingFS,
             maxBearingPressure = maxBearing, minBearingPressure = minBearing,
@@ -163,7 +187,8 @@ class ECPRetainingWall : RetainingWallDesign {
             stemDistributionRebar = distBars,
             toeMoment = toeMoment * LOAD_FACTOR_DEAD, toeShear = toeShear, toeRebar = toeRebarStr,
             heelMoment = heelMoment, heelShear = heelShear, heelRebar = heelRebarStr,
-            safetyChecks = checks, codeNotes = notes
+            safetyChecks = checks, codeNotes = notes,
+            trace = com.civileg.core.calculations.entities.DesignTrace(traceSteps)
         )
     }
 }

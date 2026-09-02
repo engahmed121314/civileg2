@@ -34,6 +34,9 @@ class BeamViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
+    private val _sanityResult = MutableLiveData<com.civileg.app.domain.safety.SanityResult?>()
+    val sanityResult: LiveData<com.civileg.app.domain.safety.SanityResult?> = _sanityResult
+
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
@@ -92,6 +95,8 @@ class BeamViewModel @Inject constructor(
                 
                 val combinedWarnings = report.warnings + dlReport.warnings
                 _validationReport.value = report.copy(warnings = combinedWarnings)
+                _sanityResult.value = com.civileg.app.domain.safety.EngineeringSanityEngine
+                    .fromValidation(report.copy(warnings = combinedWarnings))
                 
                 _result.value = res
                 lastSpan = span
@@ -128,47 +133,108 @@ class BeamViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate moment/shear point arrays for PDF diagrams
-                // Simply supported beam with UDL: M(x) = w*x*(L-x)/2, V(x) = w*(L/2-x)
+                // Generate moment/shear point arrays for PDF diagrams.
+                // R1-P016: case-aware statics (sources verified per ADR-010:
+                //  SS+UDL      M=wL²/8 mid, V linear ±wL/2
+                //  Cantilever  M=wL²/2 hogging @fixed end, V=wL
+                //  Fixed-Fixed M_ends=wL²/12, M_mid=wL²/24, V ±wL/2
+                //  Propped     M_fix=wL²/8, M_mid=9wL²/128, R_A=5wL/8
+                // Equivalent UDL back-calculated from the ENGINE's design envelope).
                 val L = lastSpan // span in meters
                 val maxM = res.appliedMoment  // kN.m
                 val maxV = res.appliedShear    // kN
-                // Derive UDL from max moment: M_max = w*L²/8 → w = 8*M_max/L²
-                val wUDL = if (L > 0) 8.0 * maxM / (L * L) else 0.0
+                val st = res.supportType
+                val wUDL = if (L > 0) when (st) {
+                    CalculatorEngine.SupportType.CANTILEVER -> 2.0 * maxM / (L * L)
+                    CalculatorEngine.SupportType.FIXED_FIXED -> 12.0 * maxM / (L * L)
+                    CalculatorEngine.SupportType.FIXED_HINGED -> 8.0 * maxM / (L * L)
+                    else -> 8.0 * maxM / (L * L)
+                } else 0.0
                 val numPoints = 21
-                val momentPoints = (0..numPoints).map { i ->
-                    val x = L * i / numPoints
-                    val m = wUDL * x * (L - x) / 2.0
-                    Pair(x, m)
+                val momentPoints = when (st) {
+                    CalculatorEngine.SupportType.CANTILEVER ->
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, -wUDL * (L - x) * (L - x) / 2.0)
+                        }
+                    CalculatorEngine.SupportType.FIXED_HINGED -> {
+                        val rA = 5.0 * wUDL * L / 8.0
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, -wUDL * L * L / 8.0 + rA * x - wUDL * x * x / 2.0)
+                        }
+                    }
+                    CalculatorEngine.SupportType.FIXED_FIXED ->
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, -wUDL * L * L / 12.0 + wUDL * L * x / 2.0 - wUDL * x * x / 2.0)
+                        }
+                    else ->
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, wUDL * x * (L - x) / 2.0)
+                        }
                 }
-                val shearPoints = (0..numPoints).map { i ->
-                    val x = L * i / numPoints
-                    val v = wUDL * (L / 2.0 - x)
-                    Pair(x, v)
+                val shearPoints = when (st) {
+                    CalculatorEngine.SupportType.CANTILEVER ->
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, wUDL * (L - x))
+                        }
+                    CalculatorEngine.SupportType.FIXED_HINGED -> {
+                        val rA = 5.0 * wUDL * L / 8.0
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, rA - wUDL * x)
+                        }
+                    }
+                    else ->
+                        (0..numPoints).map { i ->
+                            val x = L * i / numPoints
+                            Pair(x, wUDL * (L / 2.0 - x))
+                        }
                 }
 
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
-                    PdfDrawingGenerator.generateBeamDrawingWithDiagrams(
-                        beamWidth = res.width.toDouble(),
-                        beamDepth = res.depth.toDouble(),
-                        span = lastSpan * 1000.0,
-                        mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
-                        mainRebarCount = res.reinforcementBottom.numBars,
-                        stirrupDia = res.stirrups.diameter.toDouble(),
-                        stirrupSpacing = res.stirrups.spacing.toDouble(),
-                        cover = 50.0,
-                        hasTopSteel = res.reinforcementTop.numBars > 0,
-                        topRebarDia = res.reinforcementTop.diameter.toDouble(),
-                        topRebarCount = res.reinforcementTop.numBars,
-                        momentPoints = momentPoints,
-                        shearPoints = shearPoints,
-                        maxMoment = maxM,
-                        maxShear = maxV,
-                        isSafe = res.isSafe
-                    )
-                } catch (e: Exception) { e.printStackTrace(); null }
+                // R1: the screen capture (viewMode=0) now carries the per-case
+                // BMD/SFD itself, so the captured drawing stands alone. The
+                // generator (which also renders case-aware diagrams) remains the
+                // fallback so P016 — "report always carries diagrams" — holds
+                // even when no screen capture is available.
+                val capturedDrawing = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
+                val drawingBitmap: android.graphics.Bitmap? = capturedDrawing ?: try {
+                        PdfDrawingGenerator.generateBeamDrawingWithDiagrams(
+                            beamWidth = res.width.toDouble(),
+                            beamDepth = res.depth.toDouble(),
+                            span = lastSpan * 1000.0,
+                            mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
+                            mainRebarCount = res.reinforcementBottom.numBars,
+                            stirrupDia = res.stirrups.diameter.toDouble(),
+                            stirrupSpacing = res.stirrups.spacing.toDouble(),
+                            cover = 50.0,
+                            hasTopSteel = res.reinforcementTop.numBars > 0,
+                            topRebarDia = res.reinforcementTop.diameter.toDouble(),
+                            topRebarCount = res.reinforcementTop.numBars,
+                            momentPoints = momentPoints,
+                            shearPoints = shearPoints,
+                            maxMoment = maxM,
+                            maxShear = maxV,
+                            isSafe = res.isSafe,
+                            // R2 (P044): the fallback draws engineering stirrup
+                            // zones verbatim (dense @support / relaxed @mid).
+                            stirrupZones = res.stirrups.zones.map { z ->
+                                com.civileg.core.calculations.entities.StirrupZone(
+                                    name = z.name,
+                                    startLocation = z.startLocation,
+                                    endLocation = z.endLocation,
+                                    spacing = z.spacing,
+                                    numLegs = z.numLegs,
+                                    diameter = z.diameter,
+                                    description = z.description
+                                )
+                            }
+                        )
+                    } catch (e: Exception) { e.printStackTrace(); null }
 
                 val codeName = when(res.code) {
                     CalculatorEngine.DesignCode.ACI -> "ACI 318"
@@ -212,7 +278,6 @@ class BeamViewModel @Inject constructor(
                     )
                 }
 
-                // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                     titleAr = "تقرير تصميم كمرات - ${lastSupportType.displayName}",
                     titleEn = "Beam Design Report — ${lastSupportType.displayName}",
@@ -223,7 +288,10 @@ class BeamViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    warnings = _validationReport.value?.warnings.orEmpty(),
+                    outputPath = file.absolutePath,
+                    context = context,
+                    trace = res.trace
                 )
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

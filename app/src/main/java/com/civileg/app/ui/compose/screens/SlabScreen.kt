@@ -28,20 +28,28 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.utils.AiCheckerEngine
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.ui.compose.components.AiReviewCard
+import com.civileg.app.billing.PremiumFeature
+import com.civileg.app.billing.PremiumPaywallSheet
+import com.civileg.app.viewmodel.PremiumViewModel
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SlabScreen(
     viewModel: SlabViewModel = hiltViewModel(),
     projectViewModel: ProjectViewModel = hiltViewModel(),
+    premiumVm: PremiumViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -74,12 +82,15 @@ fun SlabScreen(
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
+    val sanity by viewModel.sanityResult.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    val featureFlags = premiumVm.featureFlags
+    val billingManager = premiumVm.billingManager
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var pdfError by remember { mutableStateOf<String?>(null) }
@@ -89,6 +100,11 @@ fun SlabScreen(
     var inputError by remember { mutableStateOf<String?>(null) }
     val configuration = LocalConfiguration.current
     val screenW = configuration.screenWidthDp.dp
+    var showPaywallFor by remember { mutableStateOf<PremiumFeature?>(null) }
+    val isPremium = featureFlags.isPremium()
+    showPaywallFor?.let { feature ->
+        PremiumPaywallSheet(feature = feature, billingManager = billingManager, onDismiss = { showPaywallFor = null })
+    }
 
     // Validation messages (captured in composable scope for use in onClick)
     val slabInvalidMsg = stringResource(R.string.slab_err_invalid_values)
@@ -121,6 +137,15 @@ fun SlabScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                com.civileg.app.ui.designsystem.shell.EngineeringContextBar(
+                    context = com.civileg.app.ui.designsystem.shell.EngineeringContext(
+                        element = "SLAB",
+                        units = "kN · mm"
+                    )
+                )
+            }
+
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ExposedDropdownMenuBox(
@@ -387,52 +412,15 @@ fun SlabScreen(
             }
 
             result?.let { res ->
-                item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
-                
-                item { SlabResultCard(res) }
-
-                if (res.safetyChecks.isNotEmpty()) {
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    stringResource(R.string.safety_checks),
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                res.safetyChecks.forEach { check ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            if (check.isSafe) Icons.Default.CheckCircle else Icons.Default.Error,
-                                            contentDescription = null,
-                                            tint = if (check.isSafe) Color(0xFF2E7D32) else Color.Red,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
-                                        Text(
-                                            "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                item {
+                    com.civileg.app.ui.compose.screens.design.SlabDesignResultsSection(result = res)
                 }
+                item {
+                    com.civileg.app.ui.compose.screens.design.SanityWarningsCard(sanity = sanity)
+                }
+                item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
+
+                item { SlabResultCard(res) }
 
                 item {
                     Text(stringResource(R.string.slab_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -444,6 +432,7 @@ fun SlabScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
+                                if (!isPremium) { showPaywallFor = PremiumFeature.PDF_EXPORT; return@Button }
                                 scope.launch {
                                     val captureBitmap = try {
                                         pdfCaptureLayer.captureToAndroidBitmap()
@@ -472,6 +461,30 @@ fun SlabScreen(
                             }
                         }
 
+                        // ADR-004: canonical P043 live DXF detailing sheet (model-derived, single sheet)
+                        OutlinedButton(
+                            onClick = {
+                                if (!isPremium) { showPaywallFor = PremiumFeature.DXF_EXPORT; return@OutlinedButton }
+                                val spanXmm = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0
+                                val spanYmm = (longSpan.toDoubleOrNull() ?: 5.0) * 1000.0
+                                scope.launch {
+                                    val outcome = withContext(Dispatchers.IO) {
+                                        com.civileg.app.utils.CadDxfExporter.exportSlab(
+                                            context, res, spanXmm, spanYmm
+                                        )
+                                    }
+                                    com.civileg.app.utils.ExportUtils.handleDxfOutcome(context, outcome)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isExporting
+                        ) {
+                            Icon(Icons.Default.FileDownload, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("DXF")
+                        }
+
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
@@ -495,38 +508,42 @@ fun SlabScreen(
                         3 -> (520 * wRatio).toInt().coerceIn(350, 700)
                         else -> (1000 * wRatio).toInt().coerceIn(600, 1400)
                     }
+                    val tabs = listOf(
+                        stringResource(R.string.view_all), 
+                        stringResource(R.string.slab_view_plan), 
+                        stringResource(R.string.view_section), 
+                        "Calculation Trace"
+                    )
+
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.slab_drawing_title),
                         subtitle = stringResource(R.string.slab_reinforcement_subtitle),
-                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = tabs,
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
-                        drawingHeightDp = drawingHeight,
+                        drawingHeightDp = if (selectedViewMode == 3) 500 else drawingHeight,
                         drawingContent = {
-                            ProfessionalSlabDrawing(
-                                slabType = selectedType.displayName,
-                                slabThickness = res.thickness.toDouble(),
-                                spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                                spanY = longSpan.toDoubleOrNull() ?: 5.0,
-                                mainRebarDia = res.reinforcementMain.diameter.toDouble(),
-                                mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
-                                distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
-                                distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
-                                cover = 25.0,
-                                dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
-                                ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
-                                viewMode = selectedViewMode,
-                                modifier = Modifier.fillMaxWidth(),
-                                // NEW: Pass real design values from the SlabResult
-                                momentX = res.momentX,
-                                momentY = res.momentY,
-                                factoredLoad = res.totalLoad,
-                                fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0,
-                                isSafe = res.isSafe,
-                                utilizationRatio = res.utilizationRatio
-                            )
+                            if (selectedViewMode == 3) {
+                                com.civileg.app.ui.compose.components.CalculationTraceComponent(res.trace)
+                            } else {
+                                ProfessionalSlabDrawing(
+                                    slabType = selectedType.displayName,
+                                    slabThickness = res.thickness.toDouble(),
+                                    spanX = shortSpan.toDoubleOrNull() ?: 4.0,
+                                    spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                                    mainRebarDia = res.reinforcementMain.diameter.toDouble(),
+                                    mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
+                                    distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
+                                    distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
+                                    cover = 25.0,
+                                    dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                                    ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
+                                    ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                                    isSafe = res.isSafe,
+                                    viewMode = selectedViewMode,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     )
                 }
@@ -555,13 +572,7 @@ fun SlabScreen(
                         ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth(),
-                        momentX = res.momentX,
-                        momentY = res.momentY,
-                        factoredLoad = res.totalLoad,
-                        fcu = fcu.toDoubleOrNull() ?: 25.0,
-                        fy = fy.toDoubleOrNull() ?: 360.0,
-                        isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio
+                        isSafe = res.isSafe
                     )
                 }
             }
@@ -700,6 +711,10 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
             
             Text(stringResource(R.string.slab_secondary_steel_ly), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
             Text(res.reinforcementSecondary.barString, fontWeight = FontWeight.Bold)
+
+            Spacer(Modifier.height(10.dp))
+            val aiReport = remember(res) { AiCheckerEngine.checkSlab(res) }
+            AiReviewCard(report = aiReport)
         }
     }
 }

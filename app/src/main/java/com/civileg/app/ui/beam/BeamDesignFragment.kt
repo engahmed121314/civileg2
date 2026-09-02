@@ -28,6 +28,10 @@ import org.json.JSONObject
 import java.io.File
 import java.util.*
 import javax.inject.Inject
+import com.civileg.core.calculations.entities.DeflectionCheckResult
+import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.core.calculations.entities.ReinforcementResult
+import com.civileg.core.calculations.entities.ShearReinforcementResult
 
 @AndroidEntryPoint
 class BeamDesignFragment : Fragment() {

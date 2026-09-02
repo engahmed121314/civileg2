@@ -22,10 +22,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Dangerous
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.R
+import com.civileg.app.utils.AiChecker
 import com.civileg.app.utils.CalculatorEngine
 
 // ============================================================================
@@ -646,6 +649,79 @@ fun QuickActionsRow(
                 ) {
                     Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
+// AI REVIEW CARD — shared across all element screens
+// ============================================================================
+
+/**
+ * Rule-based AI design review card.
+ * Shows score badge + findings grouped by severity.
+ * Used in Beam, Column, Slab, Footing, Tank, Stair, RetainingWall screens.
+ */
+@Composable
+fun AiReviewCard(report: AiChecker.AiReport, modifier: Modifier = Modifier) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (report.passed) Color(0xFF1B3A28) else Color(0xFF4A1B1B)
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = if (report.passed) Color(0xFF66BB6A) else Color(0xFFEF5350),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "AI REVIEW",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = if (report.passed) Color(0xFF66BB6A) else Color(0xFFEF5350)
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "Score ${report.score}/100",
+                    fontWeight = FontWeight.Bold,
+                    color = when {
+                        report.score >= 85 -> Color(0xFF66BB6A)
+                        report.score >= 60 -> Color(0xFFFFB74D)
+                        else -> Color(0xFFEF5350)
+                    },
+                    fontSize = 13.sp
+                )
+            }
+            if (report.findings.isEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text("No issues detected \u2014 clean design.", fontSize = 12.sp, color = Color(0xAAFFFFFF))
+            }
+            report.findings.forEach { fd ->
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    val (icon, tint) = when (fd.severity) {
+                        AiChecker.Severity.CRITICAL -> Icons.Default.Dangerous to Color(0xFFEF5350)
+                        AiChecker.Severity.WARNING -> Icons.Default.Warning to Color(0xFFFFB74D)
+                        AiChecker.Severity.OPTIMIZATION -> Icons.Default.Lightbulb to Color(0xFF4FC3F7)
+                        else -> Icons.Default.Info to Color.White
+                    }
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Column {
+                        Text(fd.titleEn + " \u00b7 " + fd.titleAr, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(fd.detailEn, fontSize = 11.sp, color = Color(0xCCFFFFFF))
+                        fd.suggestionEn?.let {
+                            Text("\u2192 $it", fontSize = 11.sp, color = Color(0xFF80CBC4))
+                        }
+                    }
                 }
             }
         }

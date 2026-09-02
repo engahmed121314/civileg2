@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import com.civileg.app.domain.entities.StirrupZone
+import com.civileg.core.calculations.entities.StirrupZone
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -91,6 +91,8 @@ private val HatchColor = Color(0x99AAAAAA)
  * - Development length (La) and lap splice annotations
  * - Inset cross-section view
  * - Reinforcement schedule table
+ * - R1: per-case UDL load arrows + SFD/BMD strips in the elevation view
+ *   (peak = engine design envelope; shapes via core BeamDiagramStatics)
  *
  * Background is transparent — the parent composable supplies the dark theme.
  */
@@ -107,15 +109,19 @@ fun ProfessionalBeamDrawing(
     developmentLength: Double, // mm  (La)
     lapLength: Double,         // mm  (Lap)
     isContinuous: Boolean = false,
+    supportTypeName: String = "HINGED_HINGED",   // R1: CalculatorEngine.SupportType.name
+    appliedMomentKnM: Double = 0.0,              // R1: engine M max (kN.m) — curve peak
+    appliedShearKn: Double = 0.0,                // R1: engine V max (kN) — curve peak
     hasTopSteel: Boolean = false,
     topRebarDia: Double = 0.0,
     topRebarCount: Int = 0,
     zones: List<StirrupZone> = emptyList(),
     modifier: Modifier = Modifier,
-    viewMode: Int = 0
+    viewMode: Int = 0,
+    isSafe: Boolean = true
 ) {
     Canvas(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize().failStampWhen(!isSafe)
     ) {
         // ---------------------------------------------------------------
         // Layout constants (in px)
@@ -128,17 +134,17 @@ fun ProfessionalBeamDrawing(
         val angleY = 0.20f          // vertical skew factor
 
         // ── Layout zones (vertical) ────────────────────────────────────
-        // Elevation: 0–40%  |  Section inset: 46–62%  |  Table: 66–100%
+        // Elevation: 0–64%  |  Section inset: 68–82%  |  Table: 86–100%
         // Adjust zones based on viewMode
         val elevationFrac = when (viewMode) {
-            1 -> 0.88f  // Elevation-only: use most of the height
-            0 -> 0.40f  // All: normal split
-            else -> 0.08f // Other modes: minimal
+            1 -> 0.90f  // Elevation-only
+            0 -> 0.64f  // All: large enough for diagrams
+            else -> 0.05f 
         }
         val sectionFrac = when (viewMode) {
-            2 -> 0.88f  // Section-only: use most of the height
-            0 -> 0.16f  // All: normal split
-            else -> 0.08f // Other modes: minimal
+            2 -> 0.90f  // Section-only
+            0 -> 0.14f  // All: centered in mid-lower zone
+            else -> 0.05f
         }
         val mainBottom = ch * elevationFrac
         val sectionZoneTop = ch * (elevationFrac + 0.04f)
@@ -182,7 +188,24 @@ fun ProfessionalBeamDrawing(
             drawSupports(
                 beamLeft = beamLeft, beamTop = beamTop,
                 beamBottom = beamBottom, beamRight = beamRight,
-                isContinuous = isContinuous
+                leftKind = when (supportTypeName) {
+                    "CANTILEVER", "FIXED_HINGED", "FIXED_FIXED" -> "FIXED"
+                    "ROLLER_HINGED" -> "ROLLER"
+                    else -> "PIN"
+                },
+                rightKind = when (supportTypeName) {
+                    "CANTILEVER" -> "NONE"
+                    "FIXED_FIXED" -> "FIXED"
+                    "HINGED_HINGED" -> "ROLLER"
+                    "ROLLER_HINGED" -> "PIN"
+                    else -> "ROLLER"
+                }
+            )
+            // R1: explicit support-case caption (ADR-009: EN-only)
+            drawTextAnnotated(
+                "SUPPORTS: ${supportTypeName.replace('_', '-')}",
+                beamLeft, mainBottom + 14f,
+                SupportColor, 13f
             )
 
             drawCutawayReinforcement(
@@ -218,6 +241,18 @@ fun ProfessionalBeamDrawing(
                 beamWidth = beamWidth, beamDepth = beamDepth,
                 span = span, cover = cover,
                 stirrupSpacing = stirrupSpacing
+            )
+
+            // R1: per-case UDL load arrows + SFD/BMD strips (peak = engine
+            // envelope; shapes shared with DXF/PDF via core BeamDiagramStatics).
+            drawBeamLoadAndDiagrams(
+                beamLeft = beamLeft, beamTop = beamTop,
+                beamRight = beamRight, beamBottom = beamBottom,
+                mainBottom = mainBottom,
+                supportTypeName = supportTypeName,
+                spanM = span / 1000.0,
+                appliedMomentKnM = appliedMomentKnM,
+                appliedShearKn = appliedShearKn
             )
         }
 
@@ -395,115 +430,92 @@ private fun DrawScope.drawAutoDimensions(
  * Left support: pin support — triangle with a circle at the apex.
  * Right support: roller support — triangle with circles underneath.
  */
+/**
+ * R1: support symbols per design case.
+ * PIN = triangle+circle | ROLLER = triangle+rollers | FIXED = wall block+hatch
+ * NONE = free end (cantilever tip)
+ */
 private fun DrawScope.drawSupports(
     beamLeft: Float, beamTop: Float,
-    beamBottom: Float, beamRight: Float,
-    isContinuous: Boolean
-) {
-    val supportH = 22f
-    val supportW = 22f
-    val circleR = 3f
-    val lineW = 2.dp.toPx()
+        beamBottom: Float, beamRight: Float,
+        leftKind: String, rightKind: String
+    ) {
+        val supportH = 22f
+        val supportW = 22f
+        val circleR = 3f
+        val lineW = 2.dp.toPx()
+        val c = SupportColor
 
-    val supportPaint = SupportColor
-    val groundY = beamBottom + supportH + circleR * 2 + 6f
-
-    // --- Left Pin Support ---
-    if (!isContinuous) {
-        // Triangle
-        val triPath = Path().apply {
-            moveTo(beamLeft, beamBottom)
-            lineTo(beamLeft - supportW / 2, beamBottom + supportH)
-            lineTo(beamLeft + supportW / 2, beamBottom + supportH)
-            close()
+        fun groundUnder(x: Float) {
+            val gy = beamBottom + supportH + circleR * 2 + 6f
+            drawLine(c, Offset(x - supportW, gy), Offset(x + supportW, gy), strokeWidth = lineW)
+            for (i in 0..4) {
+                val hx = x - supportW + i * (supportW * 2 / 4)
+                drawLine(c, Offset(hx, gy), Offset(hx - 5f, gy + 6f), strokeWidth = 1.5f)
+            }
         }
-        drawPath(path = triPath, color = supportPaint)
-        drawPath(
-            path = triPath, color = supportPaint,
-            style = Stroke(width = lineW, join = StrokeJoin.Miter)
-        )
-        // Pin circle at bottom
-        drawCircle(
-            color = supportPaint, radius = circleR,
-            center = Offset(beamLeft, beamBottom + supportH + circleR + 2f)
-        )
-        // Ground line
-        drawLine(
-            color = supportPaint,
-            start = Offset(beamLeft - supportW, groundY + circleR * 2 + 4f),
-            end = Offset(beamLeft + supportW, groundY + circleR * 2 + 4f),
-            strokeWidth = lineW
-        )
-        // Ground hatching
-        for (i in 0..4) {
-            val hx = beamLeft - supportW + i * (supportW * 2 / 4)
-            drawLine(
-                color = supportPaint,
-                start = Offset(hx, groundY + circleR * 2 + 4f),
-                end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
-                strokeWidth = 1.5f
+
+        fun drawPin(x: Float) {
+            val tri = Path().apply {
+                moveTo(x, beamBottom)
+                lineTo(x - supportW / 2, beamBottom + supportH)
+                lineTo(x + supportW / 2, beamBottom + supportH)
+                close()
+            }
+            drawPath(tri, c)
+            drawPath(tri, c, style = Stroke(width = lineW, join = StrokeJoin.Miter))
+            drawCircle(c, circleR, Offset(x, beamBottom + supportH + circleR + 2f))
+            groundUnder(x)
+        }
+
+        fun drawRoller(x: Float) {
+            val tri = Path().apply {
+                moveTo(x, beamBottom)
+                lineTo(x - supportW / 2, beamBottom + supportH)
+                lineTo(x + supportW / 2, beamBottom + supportH)
+                close()
+            }
+            drawPath(tri, c)
+            drawPath(tri, c, style = Stroke(width = lineW, join = StrokeJoin.Miter))
+            drawCircle(c, circleR, Offset(x - circleR * 1.6f, beamBottom + supportH + circleR))
+            drawCircle(c, circleR, Offset(x + circleR * 1.6f, beamBottom + supportH + circleR))
+            groundUnder(x)
+        }
+
+        fun drawFixed(x: Float, wallOnLeft: Boolean) {
+            val wallX = if (wallOnLeft) x - 10f else x
+            drawRect(
+                color = c.copy(alpha = 0.25f),
+                topLeft = Offset(wallX, beamBottom - 4f),
+                size = Size(10f, supportH * 1.7f)
             )
-        }
-    } else {
-        // Continuous beam — fixed support indication
-        drawLine(
-            color = supportPaint,
-            start = Offset(beamLeft, beamBottom),
-            end = Offset(beamLeft, beamBottom + 20f),
-            strokeWidth = lineW
-        )
-        // Small hatching for fixed
-        for (i in 0..3) {
-            val yy = beamBottom + i * 6f
-            drawLine(
-                color = supportPaint,
-                start = Offset(beamLeft, yy),
-                end = Offset(beamLeft - 8f, yy + 6f),
-                strokeWidth = 1.5f
+            drawRect(
+                color = c,
+                topLeft = Offset(wallX, beamBottom - 4f),
+                size = Size(10f, supportH * 1.7f),
+                style = Stroke(width = lineW)
             )
+            val hx = if (wallOnLeft) wallX else wallX + 10f
+            val dir = if (wallOnLeft) -1f else 1f
+            var yy = beamBottom
+            while (yy < beamBottom - 4f + supportH * 1.7f) {
+                drawLine(c, Offset(hx, yy), Offset(hx + dir * 8f, yy + 6f), strokeWidth = 1.5f)
+                yy += 9f
+            }
+        }
+
+        when (leftKind) {
+            "PIN" -> drawPin(beamLeft)
+            "ROLLER" -> drawRoller(beamLeft)
+            "FIXED" -> drawFixed(beamLeft, wallOnLeft = true)
+        }
+        when (rightKind) {
+            "PIN" -> drawPin(beamRight)
+            "ROLLER" -> drawRoller(beamRight)
+            "FIXED" -> drawFixed(beamRight, wallOnLeft = false)
+            "NONE" -> { /* cantilever free tip */ }
         }
     }
-
-    // --- Right Roller Support ---
-    // Triangle
-    val triPathR = Path().apply {
-        moveTo(beamRight, beamBottom)
-        lineTo(beamRight - supportW / 2, beamBottom + supportH)
-        lineTo(beamRight + supportW / 2, beamBottom + supportH)
-        close()
-    }
-    drawPath(path = triPathR, color = supportPaint)
-    drawPath(
-        path = triPathR, color = supportPaint,
-        style = Stroke(width = lineW, join = StrokeJoin.Miter)
-    )
-    // Roller circles
-    drawCircle(
-        color = supportPaint, radius = circleR,
-        center = Offset(beamRight - 6f, beamBottom + supportH + circleR + 2f)
-    )
-    drawCircle(
-        color = supportPaint, radius = circleR,
-        center = Offset(beamRight + 6f, beamBottom + supportH + circleR + 2f)
-    )
-    // Ground line
-    drawLine(
-        color = supportPaint,
-        start = Offset(beamRight - supportW, groundY + circleR * 2 + 4f),
-        end = Offset(beamRight + supportW, groundY + circleR * 2 + 4f),
-        strokeWidth = lineW
-    )
-    // Ground hatching
-    for (i in 0..4) {
-        val hx = beamRight - supportW + i * (supportW * 2 / 4)
-        drawLine(
-            color = supportPaint,
-            start = Offset(hx, groundY + circleR * 2 + 4f),
-            end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
-            strokeWidth = 1.5f
-        )
-    }
-}
 
 // ============================================================================
 // 3. CUTAWAY REINFORCEMENT — internal bars and stirrups
@@ -545,12 +557,12 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // "CUT" labels
     drawTextAnnotated(
-        text = "CUT", x = cutLeft + 2f, y = beamTop - 4f,
-        color = ExtensionGray, size = 22f
+        text = "CUT", x = cutLeft + 2f, y = beamTop + 16f,
+        color = ExtensionGray.copy(alpha = 0.8f), size = 14f
     )
     drawTextAnnotated(
-        text = "CUT", x = cutRight - 30f, y = beamTop - 4f,
-        color = ExtensionGray, size = 22f
+        text = "CUT", x = cutRight - 30f, y = beamTop + 16f,
+        color = ExtensionGray.copy(alpha = 0.8f), size = 14f
     )
 
     // Cut section dashed lines
@@ -703,6 +715,28 @@ private fun DrawScope.drawCutawayReinforcement(
                         pathEffect = if (isInCut) null else PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
                     )
 
+                    // R2 (P044): 135° hook at the top + bottom turn — drawn in
+                    // the cut window so the stirrup detail matches HOOK_135.
+                    if (isInCut && zone.numLegs >= 2) {
+                        val bottomTurn = min(zSpacing * 0.8f, cutRight - sx)
+                        if (bottomTurn > 2f) {
+                            drawLine(
+                                color = StirrupPurple,
+                                start = Offset(sx, stirrupInnerBottom),
+                                end = Offset(sx + bottomTurn, stirrupInnerBottom),
+                                strokeWidth = stirrupLineW
+                            )
+                        }
+                        val hookLen = 10f
+                        drawLine(
+                            color = StirrupPurple,
+                            start = Offset(sx, stirrupInnerTop),
+                            end = Offset(sx - hookLen, stirrupInnerTop - hookLen * 0.6f),
+                            strokeWidth = stirrupLineW,
+                            cap = StrokeCap.Round
+                        )
+                    }
+
                     // Draw internal legs for multi-leg stirrups in cutaway
                     if (zone.numLegs > 2 && isInCut) {
                         val internalLegs = zone.numLegs - 2
@@ -722,18 +756,55 @@ private fun DrawScope.drawCutawayReinforcement(
                 sx += zSpacing
             }
             
-            // Zone label
-            drawTextAnnotated(
-                text = zone.name,
-                x = zoneStart + 5f, y = beamTop - 35f,
-                color = ExtensionGray, size = 18f
-            )
-            drawTextAnnotated(
-                text = zone.description,
-                x = zoneStart + 5f, y = beamTop - 15f,
-                color = StirrupPurple, size = 20f
-            )
+            // Zone label — decimate if span too short to avoid overlap
+            if (zoneEnd - zoneStart > 80f) {
+                drawTextAnnotated(
+                    text = zone.name,
+                    x = zoneStart + 5f, y = beamTop - 48f,
+                    color = ExtensionGray, size = 14f
+                )
+                drawTextAnnotated(
+                    text = zone.description,
+                    x = zoneStart + 5f, y = beamTop - 30f,
+                    color = StirrupPurple, size = 16f
+                )
+            }
         }
+
+        // R2 (P044): confinement boundary markers between the dense support
+        // zones and the wider mid-span zone (lay-out from the engine zones —
+        // no recompute).
+        if (zones.size >= 3) {
+            val leftBoundary = beamLeft + zones[0].endLocation.toFloat() * scale
+            val rightBoundary = beamLeft + zones[2].startLocation.toFloat() * scale
+            val confDash = PathEffect.dashPathEffect(floatArrayOf(5f, 3f), 0f)
+            for (bx in listOf(leftBoundary, rightBoundary)) {
+                if (bx !in beamLeft..beamRight) continue
+                drawLine(
+                    color = StirrupPurple.copy(alpha = 0.8f),
+                    start = Offset(bx, stirrupInnerTop),
+                    end = Offset(bx, stirrupInnerBottom),
+                    strokeWidth = stirrupLineW * 0.8f,
+                    pathEffect = confDash
+                )
+                drawTextAnnotated(
+                    text = "CONF 2·h",
+                    x = bx - 24f, y = beamTop - 8f,
+                    color = StirrupPurple, size = 14f
+                )
+            }
+        }
+
+        // R2 (P044): compact stirrup distribution summary (EN) —
+        // moved to top-right of the beam to avoid top-bar collision.
+        val supportZone = zones.firstOrNull { it.name.contains("Support", ignoreCase = true) } ?: zones.first()
+        val midZone = zones.lastOrNull { it.name.contains("Mid", ignoreCase = true) } ?: zones.first()
+        drawTextAnnotated(
+            text = "STIRRUPS: Ø${supportZone.diameter}@${supportZone.spacing.toInt()} SUP / " +
+                "${midZone.spacing.toInt()} MID · ${supportZone.numLegs}L",
+            x = beamRight - 10f, y = beamTop - 12f,
+            color = StirrupPurple, size = 13f, center = false, bold = true
+        )
     } else {
         val stirrupSpacingPx = stirrupSpacing.toFloat() * scale
         if (stirrupSpacingPx > 5f) {
@@ -861,9 +932,9 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
     // Label
     drawTextAnnotated(
-        text = "La = ${developmentLength.roundToInt()} mm",
-        x = laEndX - 10f, y = bracketY + 22f,
-        color = DevLengthColor, size = 22f
+        text = "La=${developmentLength.roundToInt()}",
+        x = laEndX, y = bracketY + 14f,
+        color = DevLengthColor, size = 13f, bold = true
     )
 
     // --- Lap Splice Zone on RIGHT side ---
@@ -920,9 +991,9 @@ private fun DrawScope.drawDevelopmentAndLap(
 
     // Label
     drawTextAnnotated(
-        text = "Lap = ${lapLength.roundToInt()} mm",
-        x = lapZoneStart + 5f, y = lapBracketY + 20f,
-        color = LapSpliceColor, size = 22f
+        text = "Lap=${lapLength.roundToInt()}",
+        x = lapZoneStart + 5f, y = lapBracketY + 14f,
+        color = LapSpliceColor, size = 13f, bold = true
     )
 }
 
@@ -979,8 +1050,8 @@ private fun DrawScope.drawDimensionLines(
     val spanLabel = "L = ${span.toInt()} mm"
     val spanLabelX = beamLeft + (beamRight - beamLeft) / 2f
     drawTextAnnotated(
-        text = spanLabel, x = spanLabelX - 50f, y = spanY + 22f,
-        color = DimensionWhite, size = 26f
+        text = spanLabel, x = spanLabelX, y = spanY + 18f,
+        color = DimensionWhite, size = 16f, center = true, bold = true
     )
 
     // --- Beam DEPTH dimension (right side) ---
@@ -1138,8 +1209,8 @@ private fun DrawScope.drawSectionInset(
 
     // Title
     drawTextAnnotated(
-        text = "SECTION", x = insetLeft, y = insetTop - 2f,
-        color = DimensionWhite, size = 20f
+        text = "SECTION", x = insetLeft + 8f, y = insetTop + 14f,
+        color = DimensionWhite, size = 14f, bold = true
     )
 
     // Section drawing area inside inset
@@ -1216,8 +1287,8 @@ private fun DrawScope.drawSectionInset(
     // Section label: b × h
     drawTextAnnotated(
         text = "${beamWidth.toInt()}×${beamDepth.toInt()}",
-        x = secLeft + secW / 2f - 28f, y = secTop + secH + 18f,
-        color = DimensionWhite, size = 18f
+        x = secLeft + secW / 2f, y = secTop + secH + 16f,
+        color = DimensionWhite, size = 13f, center = true
     )
 }
 
@@ -1242,7 +1313,7 @@ private fun DrawScope.drawReinforcementSchedule(
     tableZoneTop: Float = 0f
 ) {
     val tableLeft = 16f
-    val tableTop = if (tableZoneTop > 0f) tableZoneTop + 8f else ch * 0.66f
+    val tableTop = if (tableZoneTop > 0f) tableZoneTop + 8f else ch * 0.86f
     val tableW = cw - 32f
     val rowH = 26f
     val headerH = 30f
@@ -1527,5 +1598,137 @@ private fun DrawScope.drawStressDiagram(
         end = Offset(naX, diagramTop + diagramH + 4f),
         strokeWidth = 1.dp.toPx(),
         pathEffect = naDash
+    )
+}
+
+// ============================================================================
+// R1 — CASE LOADS + BENDING/SHEAR FORCE DIAGRAMS (elevation view)
+// ============================================================================
+
+/**
+ * R1: draws the equivalent-UDL load arrows above the beam plus per-case
+ * SFD + BMD strips beneath the span dimension, so the on-screen drawing
+ * matches the DXF beam elevation and the PDF generator. Curve shapes come
+ * from the shared core [com.civileg.core.calculations.entities.BeamDiagramStatics];
+ * peaks are scaled to the ENGINE's design envelope (appliedMoment/appliedShear)
+ * — no strength value is recomputed (Pillar-2 / P016). EN-only captions (ADR-009).
+ */
+private fun DrawScope.drawBeamLoadAndDiagrams(
+    beamLeft: Float, beamTop: Float,
+    beamRight: Float, beamBottom: Float,
+    mainBottom: Float,
+    supportTypeName: String,
+    spanM: Double,
+    appliedMomentKnM: Double,
+    appliedShearKn: Double
+) {
+    // Case shapes (single source — core).
+    val statics = com.civileg.core.calculations.entities.BeamDiagramStatics
+    val maxAbsM = statics.maxAbsMoment(supportTypeName).coerceAtLeast(1e-6)
+    val maxAbsV = statics.maxAbsShear(supportTypeName).coerceAtLeast(1e-6)
+    val wEq = statics.equivalentUdl(supportTypeName, appliedMomentKnM, spanM)
+
+    val axis = DimensionWhite.copy(alpha = 0.9f)
+    val momentColor = RebarBlue     // matches screen "M (kN.m)" legend
+    val shearColor = SecondaryRed   // matches screen "V (kN)" legend
+    val lineW = 1.dp.toPx()
+    val curveW = 2.dp.toPx()
+
+    // --- UDL load indicator above the beam (mirrors DXF / PDF generator) ---
+    val loadLineY = beamTop - 64f
+    drawLine(axis, Offset(beamLeft, loadLineY), Offset(beamRight, loadLineY), strokeWidth = lineW)
+    for (i in 0..4) {
+        val ax = beamLeft + (beamRight - beamLeft) * (i + 0.5f) / 5f
+        drawLine(shearColor, Offset(ax, loadLineY + 2f), Offset(ax, beamTop - 54f), strokeWidth = lineW)
+        drawPath(
+            Path().apply {
+                moveTo(ax, beamTop - 54f); lineTo(ax - 4f, beamTop - 62f); lineTo(ax + 4f, beamTop - 62f); close()
+            },
+            shearColor
+        )
+    }
+    if (appliedMomentKnM > 0.0 && wEq.isFinite() && wEq > 0.0) {
+        drawTextAnnotated(
+            text = "w (UDL) ≈ %.1f kN/m".format(wEq),
+            x = (beamLeft + beamRight) / 2f, y = loadLineY - 14f,
+            color = shearColor, size = 14f, center = true
+        )
+    }
+
+    // --- Diagram strips below the span label ("L = ... mm") ---
+    val stripH = 76f
+    val stripGap = 14f
+    val spanLabelY = beamBottom + 60f + 22f
+    // Clamp into the elevation zone so short canvases never overflow.
+    val bmdBaselineY = min(spanLabelY + 64f, mainBottom - 160f)
+    val sfdBaselineY = bmdBaselineY + stripH + stripGap
+    val bandLeft = beamLeft
+    val bandRight = beamRight
+    val half = stripH / 2f * 0.86f
+
+    fun curvePath(
+        ord: (Double) -> Double,
+        maxAbs: Double,
+        baseline: Float,
+        positiveDown: Boolean
+    ): Pair<Path, Path> {
+        val n = 24
+        val poly = Path()
+        val fill = Path()
+        for (i in 0..n) {
+            val t = i.toDouble() / n
+            val px = bandLeft + (bandRight - bandLeft) * t.toFloat()
+            val py = baseline + (if (positiveDown) 1f else -1f) * (ord(t) / maxAbs).toFloat() * half
+            if (i == 0) {
+                poly.moveTo(px, py); fill.moveTo(px, py)
+            } else {
+                poly.lineTo(px, py); fill.lineTo(px, py)
+            }
+        }
+        fill.lineTo(bandRight, baseline); fill.lineTo(bandLeft, baseline); fill.close()
+        return poly to fill
+    }
+
+    // BMD strip (top) — sagging positive drawn on the tension/below side.
+    val (mPoly, mFill) = curvePath(
+        { t -> statics.normalizedMoment(supportTypeName, t) },
+        maxAbsM, bmdBaselineY, positiveDown = true
+    )
+    drawLine(axis, Offset(bandLeft, bmdBaselineY), Offset(bandRight, bmdBaselineY), strokeWidth = lineW)
+    drawPath(mFill, momentColor.copy(alpha = 0.16f))
+    drawPath(mPoly, momentColor, style = Stroke(width = curveW))
+    drawTextAnnotated(
+        text = "BMD (kN.m)", x = bandLeft + 2f, y = bmdBaselineY - stripH / 2f + 12f,
+        color = momentColor, size = 15f, bold = true
+    )
+    drawTextAnnotated(
+        text = "M max ≈ %s".format(if (appliedMomentKnM > 0.0) "%.1f".format(appliedMomentKnM) else "—"),
+        x = bandLeft + 2f, y = bmdBaselineY + stripH / 2f + 14f,
+        color = DimensionWhite, size = 15f
+    )
+
+    // SFD strip (bottom) — positive shear drawn above the axis.
+    val (sPoly, sFill) = curvePath(
+        { t -> statics.normalizedShear(supportTypeName, t) },
+        maxAbsV, sfdBaselineY, positiveDown = false
+    )
+    drawLine(axis, Offset(bandLeft, sfdBaselineY), Offset(bandRight, sfdBaselineY), strokeWidth = lineW)
+    drawPath(sFill, shearColor.copy(alpha = 0.16f))
+    drawPath(sPoly, shearColor, style = Stroke(width = curveW))
+    drawTextAnnotated(
+        text = "SFD (kN)", x = bandLeft + 2f, y = sfdBaselineY - stripH / 2f + 12f,
+        color = shearColor, size = 15f, bold = true
+    )
+    drawTextAnnotated(
+        text = "V max ≈ %s".format(if (appliedShearKn > 0.0) "%.1f".format(appliedShearKn) else "—"),
+        x = bandLeft + 2f, y = sfdBaselineY + stripH / 2f + 14f,
+        color = DimensionWhite, size = 15f
+    )
+
+    // Case caption (ADR-009: EN-only).
+    drawTextAnnotated(
+        text = "CASE: ${supportTypeName.replace('_', '-')}   |   L = ${"%.2f".format(spanM)} m",
+        x = (bandLeft + bandRight) / 2f, y = sfdBaselineY + stripH + 36f,
+        color = ExtensionGray, size = 14f, center = true
     )
 }
