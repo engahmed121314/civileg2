@@ -1,0 +1,26 @@
+warning: The following options were not recognized by any processor: '[dagger.hilt.internal.useAggregatingRootProcessor, dagger.fastInit, dagger.hilt.android.internal.disableAndroidSuperclassValidation, dagger.hilt.android.internal.projectType]'
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+1 warning
+Note: C:\Users\ahmed\AndroidStudioProjects\civileg2\app\build\generated\hilt\component_sources\release\com\civileg\app\CivilEGApplication_HiltComponents.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+C:\Users\ahmed\AndroidStudioProjects\civileg2\app\src\main\res\values-ar\strings.xml:58: Error: "code_Saud" is translated here but not found in default locale [ExtraTranslation]
+    <string name="code_Saud">الكود السعودي (SBC)</string>
+            ~~~~~~~~~~~~~~~~
+C:\Users\ahmed\AndroidStudioProjects\civileg2\app\src\main\res\values-ar\strings.xml:59: Error: "code_Saud_long" is translated here but not found in default locale [ExtraTranslation]
+    <string name="code_Saud_long">الكود السعودي (SBC)</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ExtraTranslation":
+   If a string appears in a specific language translation file, but there is
+   no corresponding string in the default locale, then this string is probably
+   unused. (It's technically possible that your application is only intended
+   to run in a specific locale, but it's still a good idea to provide a
+   fallback.)
+
+   Note that these strings can lead to crashes if the string is looked up on
+   any locale not providing a translation, so it's important to clean them
+   up.
+
+2 errors, 0 warnings
+

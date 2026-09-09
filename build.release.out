@@ -1,0 +1,140 @@
+> Task :app:buildKotlinToolingMetadata UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsRelease UP-TO-DATE
+> Task :app:generateReleaseResValues UP-TO-DATE
+> Task :app:generateReleaseResources UP-TO-DATE
+> Task :app:mergeReleaseResources UP-TO-DATE
+> Task :app:packageReleaseResources UP-TO-DATE
+> Task :app:parseReleaseLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesRelease UP-TO-DATE
+> Task :app:dataBindingTriggerRelease UP-TO-DATE
+> Task :app:generateReleaseBuildConfig UP-TO-DATE
+> Task :app:checkReleaseAarMetadata UP-TO-DATE
+> Task :app:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :app:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksRelease UP-TO-DATE
+> Task :app:processReleaseMainManifest UP-TO-DATE
+> Task :app:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseManifestForPackage UP-TO-DATE
+> Task :app:processReleaseResources UP-TO-DATE
+> Task :app:kspReleaseKotlin UP-TO-DATE
+> Task :app:javaPreCompileRelease UP-TO-DATE
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :app:mergeReleaseNativeLibs UP-TO-DATE
+> Task :app:stripReleaseDebugSymbols UP-TO-DATE
+> Task :app:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :app:mergeReleaseArtProfile UP-TO-DATE
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets UP-TO-DATE
+> Task :app:compressReleaseAssets UP-TO-DATE
+> Task :app:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :app:convertLinkedResourcesToProtoRelease UP-TO-DATE
+> Task :app:collectReleaseDependencies UP-TO-DATE
+> Task :app:sdkReleaseDependencyData UP-TO-DATE
+> Task :app:writeReleaseAppMetadata UP-TO-DATE
+> Task :app:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :app:compileReleaseKotlin
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:7:8 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:20:37 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:20:53 'constructor(id: Int = ..., name: String, date: Long = ..., designCode: DesignCode, elementType: ElementType, inputs: Map<String, Double>, results: Map<String, Any?>, notes: String = ...): DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:31:46 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:34:68 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:37:47 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:40:47 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/data/repository/ProjectRepositoryImpl.kt:49:49 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:43:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:47:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:51:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:55:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:59:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:63:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:67:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:71:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:75:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:79:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:83:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:87:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:91:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:95:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/calculations/DesignCodeModule.kt:99:6 'annotation class DesignCodeQualifier : Annotation' is deprecated. Unused by Hilt. See com.civileg.app.di.DesignCodeModule for the active module.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/repository/ProjectRepository.kt:3:8 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/repository/ProjectRepository.kt:7:37 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/repository/ProjectRepository.kt:8:59 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/repository/ProjectRepository.kt:9:38 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/repository/ProjectRepository.kt:10:38 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/domain/repository/ProjectRepository.kt:11:40 'typealias Project = DomainProject' is deprecated. Use DomainProject directly. This alias exists for migration convenience.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/security/PlaySafetyChecker.kt:44:52 'fun getInstallerPackageName(p0: String): String?' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:22:8 'class BeamSectionView : View' is deprecated. Use ProfessionalBeamDrawing Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:116:43 'class AnalysisDiagramView : View' is deprecated. Use FrameDrawingCanvas Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:118:43 'class AnalysisDiagramView : View' is deprecated. Use FrameDrawingCanvas Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:147:30 'class BeamSectionView : View' is deprecated. Use ProfessionalBeamDrawing Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:148:33 'class BeamSectionView : View' is deprecated. Use ProfessionalBeamDrawing Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:267:39 'class BeamSectionView : View' is deprecated. Use ProfessionalBeamDrawing Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/beam/BeamDesignFragment.kt:268:42 'class BeamSectionView : View' is deprecated. Use ProfessionalBeamDrawing Compose component.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:23:8 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:53:27 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:115:17 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:120:17 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:154:47 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:180:40 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:181:40 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:186:41 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:195:106 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/column/ColumnDesignFragment.kt:363:50 'class ColumnSectionView : View' is deprecated. Use ProfessionalColumnDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/components/beam/BeamCalculationStepsCard.kt:50:87 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/FrameDrawingCanvas.kt:1327:20 This extension is shadowed by a member: 'fun getDistance(): Float' defined in 'androidx/compose/ui/geometry/Offset'.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/HomeScreen.kt:149:91 'val Icons.Filled.Assignment: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Assignment.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/InventoryScreen.kt:308:48 'val Icons.Filled.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Send.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/InventoryScreen.kt:354:45 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SlabScreen.kt:222:29 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:1945:64 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:2034:64 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:2067:64 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:2702:64 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:2868:68 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:2895:68 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/SteelDesignScreen.kt:2952:68 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/compose/screens/ToolsHubScreen.kt:39:89 'val Icons.Filled.Assignment: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Assignment.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/screens/ConcreteMixScreen.kt:214:30 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/screens/ShearWallScreen.kt:312:100 'val Icons.Filled.CompareArrows: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.CompareArrows.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/screens/SoilBearingScreen.kt:207:40 'val Icons.Filled.CompareArrows: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.CompareArrows.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/screens/SoilBearingScreen.kt:316:33 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:25:8 'class SlabDetailView : View' is deprecated. Use ProfessionalSlabDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/slab/SlabDesignFragment.kt:136:20 'class SlabDetailView : View' is deprecated. Use ProfessionalSlabDrawing.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/ui/theme/Theme.kt:72:20 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/PdfGenerator.kt:533:48 Condition is always 'true'.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/ResponsiveDesignManager.kt:35:23 'val defaultDisplay: Display!' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/ResponsiveDesignManager.kt:35:38 'fun getMetrics(p0: DisplayMetrics!): Unit' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/ResponsiveDesignManager.kt:62:23 'val defaultDisplay: Display!' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/ResponsiveDesignManager.kt:62:38 'fun getMetrics(p0: DisplayMetrics!): Unit' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/ResponsiveDesignManager.kt:184:54 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/utils/exporters/ComprehensivePdfExporter.kt:719:17 Condition is always 'true'.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/viewmodel/BOQViewModel.kt:365:17 Duplicate branch condition in 'when'.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/viewmodel/SettingsViewModel.kt:38:13 Type argument for reified type parameter 'T' was inferred to the intersection of ['kotlin.Comparable<*>' & 'java.io.Serializable']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/views/RetainingWallSectionView.kt:161:14 'fun computeBounds(p0: RectF, p1: Boolean): Unit' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/views/RetainingWallSectionView.kt:183:14 'fun computeBounds(p0: RectF, p1: Boolean): Unit' is deprecated. Deprecated in Java.
+w: file:///C:/Users/ahmed/AndroidStudioProjects/civileg2/app/src/main/java/com/civileg/app/views/StaircaseElevationView.kt:147:14 'fun computeBounds(p0: RectF, p1: Boolean): Unit' is deprecated. Deprecated in Java.
+
+> Task :app:compileReleaseJavaWithJavac
+
+> Task :app:hiltAggregateDepsRelease FROM-CACHE
+
+> Task :app:hiltJavaCompileRelease
+
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:transformReleaseClassesWithAsm
+> Task :app:mergeReleaseGeneratedProguardFiles
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:minifyReleaseWithR8
+> Task :app:lintVitalReportRelease
+
+> Task :app:lintVitalRelease FAILED
