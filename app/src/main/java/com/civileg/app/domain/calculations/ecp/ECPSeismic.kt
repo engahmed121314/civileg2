@@ -149,22 +149,28 @@ class ECPSeismic : SeismicDesign {
         val results = mutableListOf<SeismicForceDistribution>()
         var currentStoryShear = baseShear
         
+        // حساب Fi أولاً
+        val forces = DoubleArray(n) { i -> if (whSum > 0) (floorWeights[i] * floorHeights[i] / whSum) * baseShear else 0.0 }
+        // storyShear[i] = مجموع Fi من i إلى الأعلى, overturningMoment[i] = Σ_{j=i..n-1} Fj*Hj
         for (i in n - 1 downTo 0) {
-            val lateralForce = if (whSum > 0) {
-                (floorWeights[i] * floorHeights[i] / whSum) * baseShear
-            } else 0.0
-            
+            val lateralForce = forces[i]
+            // story shear عند الطابق i
+            var storyShear = 0.0
+            var mot = 0.0
+            for (j in i until n) {
+                storyShear += forces[j]
+                mot += forces[j] * floorHeights[j]
+            }
             val distribution = SeismicForceDistribution(
                 floorIndex = i,
                 floorWeight = floorWeights[i],
                 floorHeight = floorHeights[i],
                 lateralForce = lateralForce,
-                storyShear = currentStoryShear,
-                overturningMoment = currentStoryShear * (if (i > 0) floorHeights[i] - floorHeights[i-1] else floorHeights[i])
+                storyShear = storyShear,
+                overturningMoment = mot
             )
-            
             results.add(distribution)
-            currentStoryShear -= lateralForce
+            currentStoryShear = storyShear
         }
         
         return results.reversed()

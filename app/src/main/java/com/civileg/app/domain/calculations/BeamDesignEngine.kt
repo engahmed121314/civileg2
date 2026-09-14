@@ -455,8 +455,8 @@ object BeamDesignEngine {
 
         when (code) {
             DesignCode.ECP -> {
-                // ECP 203 - K-method (First Principles - PDF 07)
-                K = (mu * 1e6) / ((fcu / GAMMA_C_ECP) * b * d * d)
+                // ECP 203 - K-method: K = Mu/(fcu*b*d²) - fcu مباشرة وليس fcu/γc
+                K = (mu * 1e6) / (fcu * b * d * d)
 
                 steps.add(CalculationStep(
                     steps.size + 1, "Flexure Design - K-Method (First Principles)",
@@ -471,7 +471,7 @@ object BeamDesignEngine {
                     // Singly reinforced
                     needsCompSteel = false
                     omega = 1.0 * (1.0 - sqrt(max(0.0, 1.0 - 2.0 * K)))
-                    leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.9)))
+                    leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
                     
                     // From K: a/d ratio
                     val adRatio = 1.0 - sqrt(max(0.0, 1.0 - 2.0 * K))
@@ -492,11 +492,11 @@ object BeamDesignEngine {
                 } else {
                     // Doubly reinforced (PDF 07 - compression steel needed)
                     needsCompSteel = true
-                    val Mu_bal = Kbal * (fcu / GAMMA_C_ECP) * b * d * d / 1e6
+                    val Mu_bal = Kbal * fcu * b * d * d / 1e6
                     val excessMu = mu - Mu_bal
                     val fs = fy / GAMMA_S_ECP
                     val dPrime = 50.0 // assume 50mm to compression steel
-                    leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - Kbal / 0.9)))
+                    leverArm = d * (0.5 + sqrt(max(0.0, 0.25 - Kbal / 0.893)))
                     omega = 1.0 * (1.0 - sqrt(max(0.0, 1.0 - 2.0 * Kbal)))
                     stressBlockDepth = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * Kbal))) * d
                     neutralAxisDepth = stressBlockDepth / BETA_WHITNEY

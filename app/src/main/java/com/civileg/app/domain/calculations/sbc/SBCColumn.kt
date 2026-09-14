@@ -28,10 +28,10 @@ class SBCColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         
-        // معامل الاختزال للأعمدة المربوطة (SBC 304-10.6 / ACI 318-21.2.2)
+        // SBC 304 / ACI 318-19 §22.4.2.2: Pn,max = 0.80*Po (tied) + φ
+        val alpha = 0.80
         val phi = 0.65
-        // ملاحظة: معامل 0.80 تم إلغاؤه من ACI/SBC منذ نسخة 2002
-        return phi * nominalCapacity / 1000.0 // kN
+        return phi * alpha * nominalCapacity / 1000.0 // kN
     }
 
     override fun calculateReinforcement(

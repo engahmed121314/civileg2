@@ -44,6 +44,9 @@ import com.civileg.app.domain.calculations.ecp.ECPStaircase
 import com.civileg.app.domain.calculations.aci.ACIStaircase
 import com.civileg.app.domain.calculations.sbc.SBCStaircase
 import com.civileg.app.domain.calculations.base.StaircaseDesign
+import com.civileg.app.domain.calculations.base.PileFoundationDesign
+import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
+import com.civileg.app.domain.calculations.sbc.SBCPileFoundation
 import com.civileg.app.domain.entities.DesignCode
 
 object CalculationFactory {
@@ -104,30 +107,32 @@ object CalculationFactory {
 
     fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = when (code) {
         DesignCode.ECP -> ECPHordiSlabDesign()
-        // Fallback: No ACI/SBC-specific hordi slab implementation exists yet; using ECP as default
-        DesignCode.ACI, DesignCode.SBC -> ECPHordiSlabDesign()
+        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Hordi slab ACI/SBC not yet implemented - use ECP with warning")
     }
 
     fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = when (code) {
         DesignCode.ECP -> ECPWaffleSlabDesign()
-        // Fallback: No ACI/SBC-specific waffle slab implementation exists yet; using ECP as default
-        DesignCode.ACI, DesignCode.SBC -> ECPWaffleSlabDesign()
+        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Waffle slab ACI/SBC not yet implemented - use ECP with warning")
     }
 
     // ========== كمرات مزدوجة التسليح (Doubly Reinforced Beams) ==========
 
     fun getDoublyReinforcedBeamDesign(code: DesignCode): ECPDoublyReinforcedBeam = when (code) {
         DesignCode.ECP -> ECPDoublyReinforcedBeam()
-        // Fallback: No ACI/SBC-specific doubly reinforced beam implementation exists yet; using ECP as default
-        DesignCode.ACI, DesignCode.SBC -> ECPDoublyReinforcedBeam()
+        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Doubly reinforced ACI/SBC via ECP fallback removed - implement ACI/SBC specific")
     }
 
     // ========== القواعد المركبة (Combined Footings) ==========
 
     fun getCombinedFootingDesign(code: DesignCode): ECPCombinedFooting = when (code) {
         DesignCode.ECP -> ECPCombinedFooting()
-        // Fallback: No ACI/SBC-specific combined footing implementation exists yet; using ECP as default
-        DesignCode.ACI, DesignCode.SBC -> ECPCombinedFooting()
+        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Combined footing ACI/SBC not yet implemented")
+    }
+
+    fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
+        DesignCode.ECP -> ECPPileFoundation()
+        DesignCode.ACI -> ECPPileFoundation() // TODO: ACIPileFoundation not yet implemented - ECP fallback with 0.8 fcu conversion
+        DesignCode.SBC -> SBCPileFoundation()
     }
 
     // ========== البلاطات المتقدمة (Advanced Slab Design) ==========

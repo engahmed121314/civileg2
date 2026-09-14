@@ -120,7 +120,7 @@ object BeamDesignEnginePart2 {
         val condensationZone = minOf(d, span / 4.0 * 1000.0) // d or L/4
         val avProvided = legs * PI * stirrupDia.toDouble().pow(2) / 4.0
         val avMin = when(code) {
-            DesignCode.ECP -> 0.4 * b / (fy / GAMMA_C_ECP)
+            DesignCode.ECP -> 0.4 * b / (fy / GAMMA_S_ECP)
             else -> 0.062 * sqrt(fcu * 0.8) * b / fy
         }
         val maxSpacing = if (code == DesignCode.ECP) minOf(d / 2.0, 200.0) else minOf(d / 2.0, 300.0)
@@ -202,8 +202,8 @@ object BeamDesignEnginePart2 {
         val Aoh = (b - 2*cover) * (d - 2*cover) // area inside stirrups
         val Ao = 0.85 * Aoh
         val theta = 45.0 // degrees
-        val AtOverS = (Tu * 1e6) / (2.0 * Ao * (fy / GAMMA_C_ECP) * sin(theta * PI / 180.0))
-        val Al = (AtOverS * 2.0 * (b + d) * (fy / GAMMA_C_ECP)) / (fy / GAMMA_C_ECP)
+        val AtOverS = (Tu * 1e6) / (2.0 * Ao * (fy / GAMMA_S_ECP) * sin(theta * PI / 180.0))
+        val Al = (AtOverS * 2.0 * (b + d) * (fy / GAMMA_S_ECP)) / (fy / GAMMA_S_ECP)
         val stirrupSpacingTorsion = (PI * 8.0.pow(2) / 4.0) / AtOverS
         val clampedSpacing = maxOf(75.0, minOf(stirrupSpacingTorsion, b / 4.0, 200.0))
 
@@ -370,7 +370,7 @@ object BeamDesignEnginePart2 {
         code: DesignCode, span: Double, d: Double
     ): DevLengthResult {
         val fbd = when(code) {
-            DesignCode.ECP -> 0.3 * sqrt(fcu) // ECP 203: fbd = 0.3√f'cu
+            DesignCode.ECP -> 0.6 * sqrt(fcu) // ECP 203 §5-2-2: fbd =0.6√fcu for deformed bars (high bond)
             else -> 1.0 * sqrt(fcu * 0.8) / (2.5) // ACI simplified
         }
         val fs = when(code) { DesignCode.ECP -> fy / 1.15 else -> fy }

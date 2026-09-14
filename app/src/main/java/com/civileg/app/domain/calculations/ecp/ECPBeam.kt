@@ -212,8 +212,10 @@ class ECPBeam : BeamDesign {
         // النسخة المبسطة المعتمدة: MF = 0.55 + 0.0075 × fs / (ρ × fy) 
         // حيث fs = 0.58 × fy → MF = 0.55 + 0.0075 / ρ
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        val fy = 360.0  // ECP 203 default steel yield
-        val modificationFactor = 0.55 + 477.0 / (fy * rhoPercent)
+        // fy يجب تمريره من المدخل - هنا نستخدم 360 كافتراضي لكن ينصح تمرير fy الحقيقي
+        // سيتم استبدال هذا في النسخة المحسنة التي تستقبل fy كباراميتر
+        val fyEff = 360.0  // ECP 203 default - TODO: مرر fy الفعلي من الواجهة
+        val modificationFactor = 0.55 + 477.0 / (fyEff * rhoPercent)
         val allowableRatio = basicRatio * modificationFactor
         
         val actualRatio = (span * 1000) / totalDepth  // تحويل span إلى مم

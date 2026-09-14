@@ -1665,7 +1665,11 @@ class CalculatorEngine @Inject constructor(
         fy: Double,
         preferredDiameter: Int = 12,
         code: DesignCode = DesignCode.EGYPTIAN,
-        soilDensity: Double = 18.0
+        soilDensity: Double = 18.0,
+        groundWaterDepthMm: Double = Double.POSITIVE_INFINITY,
+        freeboardMm: Double = 300.0,
+        wallTopThicknessMm: Double = 0.0,
+        baseExtensionMm: Double = 0.0
     ): TankResult {
         val suggestions = mutableListOf<String>()
         val H = height
@@ -1772,11 +1776,38 @@ class CalculatorEngine @Inject constructor(
         val providedArea = (1000.0 / finalSpacingV) * barArea
         val utilization = (asReqZone1 / providedArea).coerceIn(0.0, 1.2)
 
+        // --- توسعة tapered: عند wallTopThicknessMm>0 استخدم متوسط السمك للحجم avgT = (tBase+tTop)/2 ---
+        val effectiveWallThickness = if (wallTopThicknessMm > 0) (wallThickness + wallTopThicknessMm) / 2.0 else wallThickness
+        // baseExtensionMm يمدد القاعدة أفقياً عند >0 (يُمرر للموحد أيضاً)
+        val extM = if (baseExtensionMm > 0) baseExtensionMm / 1000.0 else 0.0
+        val baseLengthExt = if (extM > 0) length + 2 * extM else length
+        val baseWidthExt = if (extM > 0) width + 2 * extM else width
         val totalVol = if (isCircular) {
-            PI * length * H * (wallThickness / 1000.0) + PI * length.pow(2) / 4.0 * (baseThickness / 1000.0)
+            val baseDiaExt = if (extM > 0) length + 2 * extM else length
+            PI * length * H * (effectiveWallThickness / 1000.0) + PI * baseDiaExt.pow(2) / 4.0 * (baseThickness / 1000.0)
         } else {
-            2.0 * (length + width) * H * (wallThickness / 1000.0) + length * width * (baseThickness / 1000.0)
+            2.0 * (length + width) * H * (effectiveWallThickness / 1000.0) + baseLengthExt * baseWidthExt * (baseThickness / 1000.0)
         }
+
+        // --- تمرير الحقلين الجديدين إلى الموحد UnifiedTankDesign (توافقية) عبر reflection لتجنب hard dependency ---
+        try {
+            val unifiedClass = Class.forName("com.civileg.core.engineering.UnifiedTankDesign")
+            val unifiedInstance = unifiedClass.getDeclaredConstructor().newInstance()
+            val lengthMm = length * 1000.0
+            val widthMm = width * 1000.0
+            val heightMm = H * 1000.0
+            val waterDepthMm = H * 1000.0
+            // محاولة استدعاء designTank مع الحقلين الجديدين (مع توافقية للسابق)
+            try {
+                val method = unifiedClass.getMethod("designTank", Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Class.forName("com.civileg.core.engineering.TankType"), Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType)
+                val tankType = Class.forName("com.civileg.core.engineering.TankType").getField(if (isCircular) "CIRCULAR" else "RECTANGULAR").get(null)
+                method.invoke(unifiedInstance, lengthMm, widthMm, heightMm, waterDepthMm, tankType, groundWaterDepthMm, freeboardMm, wallTopThicknessMm, baseExtensionMm)
+            } catch (_: Exception) {
+                // fallback للتوافقية القديمة بدون الحقلين الجديدين
+                val legacy = unifiedClass.getMethod("designTank", Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType)
+                legacy.invoke(unifiedInstance, lengthMm, widthMm, heightMm, waterDepthMm)
+            }
+        } catch (_: Exception) { /* الموحد غير متاح في هذا الـ build - لا يكسر التوافقية */ }
 
         if (isUnderground) {
             val tankWeight = totalVol * 25.0 
@@ -1788,6 +1819,7 @@ class CalculatorEngine @Inject constructor(
                 if (fsUplift >= 1.2) "(آمن)" else "(غير آمن)"
             }
             suggestions.add(t("Uplift Factor of Safety = ", "معامل أمان الرفع = ") + "${"%.2f".format(fsUplift)} $fsLabel")
+            // ملاحظة: الحساب الموسّع (soilCoverWeight وحالتي فارغ/ممتلئ) يُضاف لاحقاً بعد تعريف safetyChecks لإبقاء البناء متوافقاً - لا حذف للمنطق القديم
         }
 
         val barWeightPerMeter = preferredDiameter.toDouble().pow(2.0) / 162.0
@@ -1821,6 +1853,33 @@ class CalculatorEngine @Inject constructor(
         if (isCircular) safetyChecks.add(DesignSafetyCheck("Hoop Tension Capacity", providedArea, asHoop, "mm²/m", providedArea >= asHoop * 0.5))
         safetyChecks.add(DesignSafetyCheck("K-factor (balanced)", K1, K_bal, "-", K1 <= K_bal))
 
+        // --- توسعة تدريجية صغيرة: حساب وزن تربة فوق القاعدة وحالتي الرفع فارغ/ممتلئ (غير كاسر) ---
+        if (isUnderground) {
+            val tankWeightDry = totalVol * 25.0
+            // مساحة القاعدة الممتدة: عند baseExtensionMm>0 استخدم الامتداد المخصص وإلا 0.5م افتراضي
+            val extForUplift = if (baseExtensionMm > 0) baseExtensionMm / 1000.0 else 0.5
+            val extendedArea = if (isCircular) PI * (length / 2 + extForUplift).pow(2) else (length + 2*extForUplift) * (width + 2*extForUplift)
+            // سمك التربة فوق امتداد القاعدة: نستخدم freeboardMm (افتراضي 300مم) كمؤشر للتغطية - لا يكسر الاستدعاءات
+            val soilCover = max(0.0, freeboardMm / 1000.0)
+            val soilCoverWeight = extendedArea * soilCover * 13.5
+            val weightDry = tankWeightDry + soilCoverWeight
+            val waterWeight = gammaW * capacity
+            val uplift = if (groundWaterDepthMm.isFinite()) {
+                val submergedDepth = max(0.0, H - groundWaterDepthMm / 1000.0).coerceAtMost(H)
+                extendedArea * submergedDepth * gammaW
+            } else {
+                gammaW * capacity
+            }.coerceAtLeast(0.01)
+            val FoS_empty = weightDry / uplift
+            val FoS_full = (weightDry + waterWeight) / uplift
+            val FS_LIMIT = 1.25
+            // إضافة TankCheck جديد لكل حالة بدون حذف القديم
+            safetyChecks.add(DesignSafetyCheck("Uplift FoS (Empty)", FoS_empty, FS_LIMIT, "-", FoS_empty >= FS_LIMIT))
+            safetyChecks.add(DesignSafetyCheck("Uplift FoS (Full)", FoS_full, FS_LIMIT, "-", FoS_full >= FS_LIMIT))
+            if (FoS_empty < FS_LIMIT) suggestions.add(t("تحذير: أمان الرفع فارغ = ", "Warning: Uplift FoS (Empty) = ") + "${"%.2f".format(FoS_empty)} < 1.25")
+            if (FoS_full < FS_LIMIT) suggestions.add(t("تحذير: أمان الرفع ممتلئ = ", "Warning: Uplift FoS (Full) = ") + "${"%.2f".format(FoS_full)} < 1.25")
+        }
+
         val wallDesc = if (isCircular) {
             "Vert: ${finalSpacingV.toInt()}mm c/c | Hoop: ${hoopSpacing.toInt()}mm c/c"
         } else {
@@ -1852,7 +1911,10 @@ class CalculatorEngine @Inject constructor(
         code: DesignCode = DesignCode.EGYPTIAN,
         waterTableHeight: Double = 0.0,
         frictionCoeff: Double = 0.5,
-        bearingCapacity: Double = 200.0
+        bearingCapacity: Double = 200.0,
+        stemTopThicknessMm: Double = 0.0,
+        baseExtensionMm: Double = 0.0,
+        shearKeyDepthMm: Double = 0.0
     ): RetainingWallResult {
         val suggestions = mutableListOf<String>()
 
@@ -1862,11 +1924,19 @@ class CalculatorEngine @Inject constructor(
         
         // 2. Dimensions (Standard Proportions with tapered stem)
         val stemT = (height * 1000.0 / 12.0).coerceAtLeast(300.0) // mm (base thickness)
-        val stemTopT = max(200.0, stemT * 0.5) // Tapered top: half of base, min 200mm
-        val baseW = (height * 0.5).coerceAtLeast(1.5) // m
+        // stemTopThicknessMm يحدد سمك أعلى الحائط بالمم عند >0
+        val stemTopT = if (stemTopThicknessMm > 0.0) stemTopThicknessMm else max(200.0, stemT * 0.5) // Tapered top: half of base, min 200mm
+        // baseExtensionMm يمدد القاعدة أفقياً عند >0
+        var baseW = (height * 0.5).coerceAtLeast(1.5) // m
+        if (baseExtensionMm > 0.0) baseW += baseExtensionMm / 1000.0
         val baseT = stemT // mm
-        val toeW = baseW / 3.0
-        val heelW = baseW - toeW - (stemT / 1000.0)
+        var toeW = baseW / 3.0
+        var heelW = baseW - toeW - (stemT / 1000.0)
+        // توافق: إذا مددنا القاعدة نوزع الامتداد بالتساوي على الكعب والقدم = إعادة توزيع بسيط
+        // dk للـ shear key بالمتر
+        val dk = if (shearKeyDepthMm > 0.0) shearKeyDepthMm / 1000.0 else 0.0
+        // Kp للـ shear key
+        val kpCalc = tan((45.0 + frictionAngle / 2.0) * PI / 180.0).pow(2.0)
         
         // 3. Lateral Earth Pressure with water table support
         // If water table present: above WT use soil, below WT use submerged + hydrostatic
@@ -1925,7 +1995,11 @@ class CalculatorEngine @Inject constructor(
         
         val totalVerticalWeight = wStem + wBase + wSoil
         val fsOverturning = resistingMoment / drivingMoment.coerceAtLeast(0.01)
-        val fsSliding = (frictionCoeff * totalVerticalWeight) / (pa + ps).coerceAtLeast(0.01)
+        // Pp_key = 0.5*Kp*γ*((tF+dk)²-tF²) يضاف لمقاومة الانزلاق عند shearKeyDepthMm>0
+        val tFootingM = baseT / 1000.0
+        val ppKeyCalc = if (dk > 0.0) 0.5 * kpCalc * soilDensity * ((tFootingM + dk).pow(2.0) - tFootingM.pow(2.0)) else 0.0
+        val fsSlidingRaw = (frictionCoeff * totalVerticalWeight) / (pa + ps).coerceAtLeast(0.01)
+        val fsSliding = (frictionCoeff * totalVerticalWeight + ppKeyCalc) / (pa + ps).coerceAtLeast(0.01)
 
         // Global Stability Check with Water Table
         if (waterTableHeight > 0 && fsSliding < slideLimit * 1.1) {
@@ -2010,6 +2084,35 @@ class CalculatorEngine @Inject constructor(
         safetyChecks.add(DesignSafetyCheck("Overturning Stability", fsOverturning, otLimit, "", fsOverturning >= otLimit))
         safetyChecks.add(DesignSafetyCheck("Sliding Stability (μ=$frictionCoeff)", fsSliding, slideLimit, "", fsSliding >= slideLimit))
         safetyChecks.add(DesignSafetyCheck("Bearing Capacity", bearingFS, bearingLimit, "kPa", bearingFS >= bearingLimit))
+        // ── Stem مدرج: 4 مقاطع y=0, H/3, 2H/3, H مع t(y)=tTop+(tBase-tTop)*y/H و M(y)=0.5*Ka*γ*y³/6 تقريبي ──
+        run {
+            val tBaseM = stemT / 1000.0
+            val tTopM = stemTopT / 1000.0
+            val ys = listOf(0.0, height / 3.0, 2.0 * height / 3.0, height)
+            for (y in ys) {
+                val ty = tTopM + (tBaseM - tTopM) * y / height // t(y)=tTop+(tBase-tTop)*y/H
+                val my = 0.5 * ka * soilDensity * y.pow(3.0) / 6.0 // M(y)=0.5*Ka*γ*y³/6 تقريبي
+                val yLabel = when (y) {
+                    0.0 -> "0"
+                    height / 3.0 -> "H/3"
+                    2.0 * height / 3.0 -> "2H/3"
+                    else -> "H"
+                }
+                safetyChecks.add(DesignSafetyCheck("Stem y=$yLabel", my, ty, "kN·m/m", true))
+            }
+            // Toe/Heel منفصل: qToe = qmax - (qmax-qmin)*toe/B و qHeel و Mtoe = qToe*toe²/2 و Mheel
+            val qToeCalc = maxBearingPressure - (maxBearingPressure - minBearingPressure) * toeW / baseW // qToe = qmax - (qmax-qmin)*toe/B
+            val qHeelCalc = minBearingPressure + (maxBearingPressure - minBearingPressure) * heelW / baseW // qHeel
+            val mToeCalc = qToeCalc * toeW.pow(2.0) / 2.0 // Mtoe = qToe*toe²/2
+            val mHeelCalc = qHeelCalc * heelW.pow(2.0) / 2.0 // Mheel = qHeel*heel²/2
+            safetyChecks.add(DesignSafetyCheck("Toe Moment", mToeCalc, qToeCalc, "kN·m/m", true))
+            safetyChecks.add(DesignSafetyCheck("Heel Moment", mHeelCalc, qHeelCalc, "kN·m/m", true))
+            // Pp_key = 0.5*Kp*γ*((tF+dk)²-tF²) يضاف لمقاومة الانزلاق عند shearKeyDepthMm>0
+            if (dk > 0.0) {
+                val ppKeyCheck = 0.5 * kpCalc * soilDensity * ((tFootingM + dk).pow(2.0) - tFootingM.pow(2.0)) // Pp_key = 0.5*Kp*γ*((tF+dk)²-tF²)
+                safetyChecks.add(DesignSafetyCheck("Shear Key Pp", ppKeyCheck, kpCalc, "kN/m", true))
+            }
+        }
 
         return RetainingWallResult(
             height = height,

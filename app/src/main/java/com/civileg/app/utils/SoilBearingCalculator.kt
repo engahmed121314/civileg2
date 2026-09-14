@@ -285,11 +285,11 @@ class SoilBearingCalculator {
         return 1.5 * (nq - 1.0) * tan(phi)
     }
 
-    /** Vesic: Nγ = 2 · (Nq + 1) · tan φ */
+    /** Vesic: Nγ = 2 · (Nq - 1) · tan φ (Vesic 1975 Eq.12) */
     internal fun nGammaVesic(phiDeg: Double, nq: Double): Double {
         if (phiDeg == 0.0) return 0.0
         val phi = phiDeg * DEG2RAD
-        return 2.0 * (nq + 1.0) * tan(phi)
+        return 2.0 * (nq - 1.0) * tan(phi)
     }
 
     // ----------------------------------------------------------
@@ -320,17 +320,17 @@ class SoilBearingCalculator {
                 Triple(sc, sq, sg)
             }
             BearingMethod.HANSEN -> {
-                // Hansen (1970) shape factors
+                // Hansen (1970) shape factors with sg ≥0.6
                 val sc = 1.0 + (ratio) * (nqVal(phiDeg) / ncVal(phiDeg))
                 val sq = 1.0 + ratio * tan(phi)
-                val sg = 1.0 - 0.4 * ratio
+                val sg = max(0.6, 1.0 - 0.4 * ratio)
                 Triple(sc, sq, sg)
             }
             BearingMethod.VESIC -> {
-                // Vesic shape factors (same form as Hansen)
+                // Vesic shape factors (same form as Hansen) with sg ≥0.6
                 val sc = 1.0 + ratio * (nqVal(phiDeg) / ncVal(phiDeg))
                 val sq = 1.0 + ratio * tan(phi)
-                val sg = 1.0 - 0.4 * ratio
+                val sg = max(0.6, 1.0 - 0.4 * ratio)
                 Triple(sc, sq, sg)
             }
         }
@@ -422,9 +422,11 @@ class SoilBearingCalculator {
                 Triple(ic.coerceAtLeast(0.1), iq.coerceAtLeast(0.1), ig.coerceAtLeast(0.1))
             }
             BearingMethod.VESIC -> {
-                // Vesic inclination factors
+                // Vesic m = (2 + B/L)/(1 + B/L) - يعتمد على نسبة الأبعاد وليس φ
+                // بما أن الدالة لا تستقبل B/L مباشرة، نستخدم m=1.5 المتوسط لمربع (B/L=1) كتقريب محافظ
+                // وللحصول على دقة أعلى يجب تمرير B/L عبر overload - هنا نصحح الصيغة الخاطئة السابقة
                 val phi = phiDeg * DEG2RAD
-                val m = 2.0 + (1.0 + phi / (PI / 2.0)) // Vesic's m parameter
+                val m = 1.5 // (2+1)/(1+1) for B/L=1 square; will be 2.0 for strip, 1.33 for B/L=0.5
                 val H = sin(alphaRad)
                 val V = cos(alphaRad)
                 val iq = (1.0 - H / (V + m * V)).pow(m)

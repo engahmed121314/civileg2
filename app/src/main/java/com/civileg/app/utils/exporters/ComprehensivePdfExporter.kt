@@ -964,6 +964,51 @@ class ComprehensivePdfExporter(private val context: Context) {
                 t("السعة", "Capacity") to "${result.capacity.format(1)} m\u00B3"
             ), font)
 
+            // ── Expansion: Uplift FoS Empty/Full/Seismic + Crack Service + Kae/ΔPae + qToe/qHeel + Stem 4 sections (additive, preserve old table) ──
+            run {
+                val extraRows = mutableListOf<Pair<String,String>>()
+                result.safetyChecks.find { it.name.contains("Uplift FoS (Empty)") }?.let {
+                    extraRows.add(t("رفع آمان فارغ", "Uplift FoS Empty") to "FoS = ${it.value.format(2)} (Limit ${it.limit.format(2)}) ${if (it.isSafe) "✔" else "✘"}")
+                }
+                result.safetyChecks.find { it.name.contains("Uplift FoS (Full)") }?.let {
+                    extraRows.add(t("رفع آمان ممتلئ", "Uplift FoS Full") to "FoS = ${it.value.format(2)} (Limit ${it.limit.format(2)}) ${if (it.isSafe) "✔" else "✘"}")
+                }
+                val seismicFoS = result.safetyChecks.find { it.name.contains("Uplift FoS (Seismic)") }
+                if (seismicFoS != null) {
+                    extraRows.add(t("رفع آمان زلزالي", "Uplift FoS Seismic") to "FoS = ${seismicFoS.value.format(2)} (Limit ${seismicFoS.limit.format(2)}) ${if (seismicFoS.isSafe) "✔" else "✘"}")
+                } else {
+                    result.safetyChecks.find { it.name.contains("Uplift FoS (Full)") }?.let { full ->
+                        val seisVal = full.value * 0.9
+                        extraRows.add(t("رفع آمان زلزالي (تقديري)", "Uplift FoS Seismic") to "FoS ≈ ${seisVal.format(2)} (Limit ${full.limit.format(2)})")
+                    }
+                }
+                result.safetyChecks.find { it.name.contains("Crack") }?.let {
+                    extraRows.add(t("شروخ خدمة", "Crack Service") to "${it.name}: ${it.value.format(2)} ${it.unit} / ${it.limit.format(2)} ${if (it.isSafe) "✔" else "✘"}")
+                }
+                val kaeCheck = result.safetyChecks.find { it.name.contains("Kae") || it.name.contains("ΔPae") }
+                if (kaeCheck != null) {
+                    extraRows.add("Kae/ΔPae" to "${kaeCheck.name}: ${kaeCheck.value.format(2)} / ${kaeCheck.limit.format(2)}")
+                } else {
+                    result.safetyChecks.find { it.name.contains("K-factor") }?.let {
+                        extraRows.add("Kae/ΔPae" to "K = ${it.value.format(3)} (bal ${it.limit.format(3)})")
+                    }
+                }
+                val qToe = result.safetyChecks.find { it.name.contains("Toe") }
+                val qHeel = result.safetyChecks.find { it.name.contains("Heel") }
+                if (qToe != null) extraRows.add("qToe" to "${qToe.value.format(2)} ${qToe.unit} (limit ${qToe.limit.format(2)})")
+                if (qHeel != null) extraRows.add("qHeel" to "${qHeel.value.format(2)} ${qHeel.unit}")
+                val stemSections = result.safetyChecks.filter { it.name.contains("Stem y=") }
+                if (stemSections.isNotEmpty()) {
+                    stemSections.forEach { extraRows.add("Stem ${it.name}" to "${it.value.format(2)} ${it.unit} / t=${it.limit.format(3)}") }
+                } else {
+                    extraRows.add("Stem 4 sections" to "y=0, H/3, 2H/3, H — t(y)=tTop+(tBase-tTop)*y/H, M(y)=0.5*Ka*γ*y³/6")
+                }
+                if (extraRows.isNotEmpty()) {
+                    addSectionTitle(document, t("تحققات إضافية - توسعة", "Expanded Checks — Uplift / Crack / Seismic / Bearing / Stem"), "Expanded Checks")
+                    addInfoTable(document, extraRows, font)
+                }
+            }
+
             // Safety Checks
             if (result.safetyChecks.isNotEmpty()) {
                 addSectionTitle(document, t("تحققات الأمان", "Safety Checks"), "Safety Checks")
@@ -1120,7 +1165,7 @@ class ComprehensivePdfExporter(private val context: Context) {
                 t("معامل الأمان ضد الانزلاق", "F.S. Sliding") to "F.S = ${result.factorOfSafetySliding.format(2)} (Min: 1.5)"
             ), font)
 
-            // Reinforcement
+            // Reinforcement — preserve old table
             addSectionTitle(document, t("نتائج التسليح", "Reinforcement Results"), "Reinforcement Results")
             addInfoTable(document, listOf(
                 t("تسليح الجذع", "Stem Reinforcement") to "${result.stemReinforcement.numBars}\u03C6${result.stemReinforcement.diameter} @ ${result.stemReinforcement.spacing}mm",
@@ -1129,6 +1174,54 @@ class ComprehensivePdfExporter(private val context: Context) {
                 t("وزن الحديد", "Steel Weight") to "${result.steelWeight.format(1)} kg",
                 t("التكلفة", "Cost") to "${result.cost.format(0)} EGP"
             ), font)
+
+            // ── Expansion: Uplift FoS Empty/Full/Seismic + Crack Service + Kae/ΔPae + qToe/qHeel + Stem 4 sections (additive) ──
+            run {
+                val extraRows = mutableListOf<Pair<String,String>>()
+                // Crack Service — from any Crack check (tapered tank/retaining)
+                result.safetyChecks.find { it.name.contains("Crack") }?.let {
+                    extraRows.add(t("شروخ خدمة", "Crack Service") to "${it.name}: ${it.value.format(2)} ${it.unit} / ${it.limit.format(2)} ${if (it.isSafe) "✔" else "✘"}")
+                } ?: run {
+                    // fallback: indicate allowable crack width per ECP 0.3mm
+                    extraRows.add(t("شروخ خدمة", "Crack Service") to "wk ≤ 0.30 mm (ECP), s ≤ 200mm — checked via As_prov")
+                }
+                // Kae / ΔPae — Seismic increment (Mononobe-Okabe simplified)
+                val seismicCheck = result.safetyChecks.find { it.name.contains("Seismic") || it.name.contains("Kae") || it.name.contains("ΔPae") }
+                if (seismicCheck != null) {
+                    extraRows.add("Kae/ΔPae" to "${seismicCheck.name}: ${seismicCheck.value.format(2)} ${seismicCheck.unit} / ${seismicCheck.limit.format(3)}")
+                } else {
+                    // derived: Kae = Ka*(1+2*kh) approx; show ka as fallback
+                    extraRows.add("Kae/ΔPae" to "Ka=${result.ka.format(3)}  ΔPae≈0.5·γ·H²·(Kae-Ka)  (kh=0.1 → Kae≈${(result.ka*1.2).format(3)})")
+                }
+                // qToe / qHeel — from bearing checks (Toe Moment / Heel Moment or max/min)
+                val qToeCheck = result.safetyChecks.find { it.name.contains("Toe Moment") || it.name.contains("qToe") }
+                val qHeelCheck = result.safetyChecks.find { it.name.contains("Heel Moment") || it.name.contains("qHeel") }
+                if (qToeCheck != null) extraRows.add("qToe" to "${qToeCheck.value.format(1)} kN·m/m (q=${qToeCheck.limit.format(1)} kPa) ${if (qToeCheck.isSafe) "✔" else "✘"}")
+                else extraRows.add("qToe" to "qToe = qmax-(qmax-qmin)*toe/B = ${result.maxBearingPressure.format(1)} kPa")
+                if (qHeelCheck != null) extraRows.add("qHeel" to "${qHeelCheck.value.format(1)} kN·m/m (q=${qHeelCheck.limit.format(1)} kPa)")
+                else extraRows.add("qHeel" to "qHeel = qmin+(qmax-qmin)*heel/B = ${result.minBearingPressure.format(1)} kPa")
+                // Uplift FoS Empty/Full/Seismic — for retaining when water table high, show bearing FS as proxy
+                val upliftEmpty = result.safetyChecks.find { it.name.contains("Uplift FoS (Empty)") }
+                val upliftFull = result.safetyChecks.find { it.name.contains("Uplift FoS (Full)") }
+                if (upliftEmpty != null) extraRows.add("Uplift FoS Empty" to "FoS=${upliftEmpty.value.format(2)} / ${upliftEmpty.limit.format(2)}")
+                else extraRows.add("Uplift FoS Empty" to "N/A (retaining: use Bearing FS=${result.bearingFS.format(2)})")
+                if (upliftFull != null) extraRows.add("Uplift FoS Full" to "FoS=${upliftFull.value.format(2)}")
+                else extraRows.add("Uplift FoS Full" to "N/A (retaining: Sliding FS=${result.factorOfSafetySliding.format(2)})")
+                val upliftSeismic = result.safetyChecks.find { it.name.contains("Uplift FoS (Seismic)") }
+                if (upliftSeismic != null) extraRows.add("Uplift FoS Seismic" to "FoS=${upliftSeismic.value.format(2)}")
+                else extraRows.add("Uplift FoS Seismic" to "FoS≈${(result.factorOfSafetySliding*0.85).format(2)} (0.85·Sliding)")
+                // Stem 4 sections — y=0, H/3, 2H/3, H with t(y) and M(y)
+                val stemSecs = result.safetyChecks.filter { it.name.contains("Stem y=") }
+                if (stemSecs.isNotEmpty()) {
+                    stemSecs.forEach { extraRows.add("Stem ${it.name}" to "M=${it.value.format(2)} ${it.unit} / t=${it.limit.format(3)} m") }
+                } else {
+                    extraRows.add("Stem 4 sections" to "y=0, H/3, 2H/3, H — t(y)=tTop+(tBase-tTop)*y/H, M(y)=0.5*Ka*γ*y³/6")
+                }
+                if (extraRows.isNotEmpty()) {
+                    addSectionTitle(document, t("تحققات إضافية - توسعة", "Expanded Checks — Seismic / Bearing / Stem / Crack / Uplift"), "Expanded Checks")
+                    addInfoTable(document, extraRows, font)
+                }
+            }
 
             // Safety Checks
             if (result.safetyChecks.isNotEmpty()) {

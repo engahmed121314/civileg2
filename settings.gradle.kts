@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "SiteEngineerPro"
 include(":app")
+include(":core:calculations")

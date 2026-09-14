@@ -32,10 +32,11 @@ class ACIColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         
-        // ACI 318-19: No separate alpha factor (removed since ACI 2002)
-        // φ = 0.65 for tied columns per ACI 21.2.1
+        // ACI 318-19 §22.4.2.2: Pn,max = 0.80*Po for tied, 0.85*Po for spiral (حد اللامركزية الدنيا)
+        // ثم φPn,max = φ * Pn,max
+        val alpha = 0.80 // tied column limit
         val phi = PHI_TIED
-        return phi * nominalCapacity / 1000.0 // kN
+        return phi * alpha * nominalCapacity / 1000.0 // kN
     }
     
     /**
@@ -53,8 +54,8 @@ class ACIColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
-        // ACI 318-19: No separate alpha factor
-        return phi * nominalCapacity / 1000.0
+        val alpha = if (isSpiral) 0.85 else 0.80 // ACI 22.4.2.2
+        return phi * alpha * nominalCapacity / 1000.0
     }
     
     /**

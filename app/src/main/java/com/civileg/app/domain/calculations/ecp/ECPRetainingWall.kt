@@ -71,11 +71,20 @@ class ECPRetainingWall : RetainingWallDesign {
         val passivePressure = 0.5 * gamma * tFooting.pow(2) * tan(Math.PI / 4 + phiRad / 2).pow(2)
         val slidingFS = (mu * totalWeight + passivePressure * 0.5) / totalPa
 
-        // Bearing pressure
+        // Bearing pressure - إذا e > B/6 توزيع مثلثي
         val eccentricity = (momentResisting - momentOverturning) / totalWeight
         val e = abs(B / 2.0 - eccentricity)
-        val maxBearing = totalWeight / B * (1 + 6 * e / B)
-        val minBearing = max(0.0, totalWeight / B * (1 - 6 * e / B))
+        val maxBearing: Double
+        val minBearing: Double
+        if (e <= B / 6.0) {
+            maxBearing = totalWeight / B * (1 + 6 * e / B)
+            minBearing = max(0.0, totalWeight / B * (1 - 6 * e / B))
+        } else {
+            // مثلثي: qmax = 2*W / (3*(B/2 - e)) ، qmin =0
+            val y = (B / 2.0 - e).coerceAtLeast(0.01)
+            maxBearing = 2.0 * totalWeight / (3.0 * y)
+            minBearing = 0.0
+        }
         val bearingFS = if (maxBearing > 0) input.soilBearingCapacity / maxBearing else 0.0
 
         // Stem design (cantilever from base)
@@ -88,8 +97,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val b = 1000.0
         val d = (tBase * 1000) - COVER_EARTH - 8.0
 
-        val R = Mu * 1e6 / (fcu / GAMMA_C * b * d * d)
-        val K = R / GAMMA_C
+        val K = Mu * 1e6 / (fcu * b * d * d)
         val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
         val As = Mu * 1e6 / (fy / GAMMA_S * z)
         val AsMin = max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * d
@@ -107,12 +115,13 @@ class ECPRetainingWall : RetainingWallDesign {
         val qcuLimit = 0.45 * sqrt(fcu / GAMMA_C)  // ECP 203
         val needStirrups = qu > qcu  // ECP 203: direct comparison
 
-        // Toe design
-        val toeMoment = max(0.0, maxBearing * toe * toe / 2 - minBearing * toe * toe / 6)
+        // Toe design - q_avg و Δq : M = (q_avg + Δq/3)*toe²/2 حيث q_avg=(max+min)/2, Δq=max-min
+        val qAvg = (maxBearing + minBearing) / 2.0
+        val deltaQ = maxBearing - minBearing
+        val toeMoment = max(0.0, (qAvg + deltaQ / 3.0) * toe * toe / 2.0)
         val toeShear = max(0.0, (maxBearing + minBearing) / 2 * toe)
         val toeD = (tFooting * 1000) - COVER_EARTH - 8.0
-        val toeR = toeMoment * 1e6 / (fcu / GAMMA_C * b * toeD * toeD)
-        val toeK = toeR / GAMMA_C
+        val toeK = toeMoment * 1e6 / (fcu * b * toeD * toeD)
         val toeZ = toeD * (0.5 + sqrt(max(0.0, 0.25 - toeK / 0.893)))
         val toeAs = toeMoment * 1e6 / (fy / GAMMA_S * toeZ)
         val toeAsFinal = max(toeAs, max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * toeD)
@@ -124,8 +133,7 @@ class ECPRetainingWall : RetainingWallDesign {
         val heelMoment = heelLoad * heel * heel / 2 * LOAD_FACTOR_DEAD
         val heelShear = heelLoad * heel * LOAD_FACTOR_DEAD
         val heelD = (tFooting * 1000) - COVER_EARTH - 8.0
-        val heelR = heelMoment * 1e6 / (fcu / GAMMA_C * b * heelD * heelD)
-        val heelK = heelR / GAMMA_C
+        val heelK = heelMoment * 1e6 / (fcu * b * heelD * heelD)
         val heelZ = heelD * (0.5 + sqrt(max(0.0, 0.25 - heelK / 0.893)))
         val heelAs = heelMoment * 1e6 / (fy / GAMMA_S * heelZ)
         val heelAsFinal = max(heelAs, max(0.26 * sqrt(fcu) / fy, MIN_STEEL_RATIO) * b * heelD)

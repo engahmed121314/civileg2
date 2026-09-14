@@ -279,10 +279,10 @@ class SteelBasePlateDesign {
         // A_req = Pu / (φ * f'c)  - المعادلة (2)
         // مع مراعاة معامل التركيز للخرسانة A2/A1
         val Pu_N = input.Pu * 1000.0 // تحويل kN إلى N
-        val phi_fc = PHI_BEARING_CONCRETE * input.fpc // MPa - سعة ضغط الخرسانة المعدلة
+        val phi_fc = PHI_BEARING_CONCRETE * 0.85 * input.fpc // MPa - φ*0.85*f'c per AISC J8
 
         // المساحة المطلوبة مع معامل تركيز مقدرة (A2/A1 ≈ 2)
-        // √(A2/A1) ≤ 2 per AISC 360-16 §J8
+        // √(A2/A1) ≤ 2 per AISC 360-16 §J8, φPp = φ*0.85*f'c*A1*√(A2/A1) ≤ φ*1.7*f'c*A1
         val concentrationFactor = min(sqrt(2.0), 2.0)
         val A_req = Pu_N / (phi_fc * concentrationFactor) // mm²
 
@@ -339,16 +339,16 @@ class SteelBasePlateDesign {
 
         val maxBearingPressure = if (isSmallEccentricity) {
             // معادلة ضغط التحمل مع الانحراف: f_max = P/(BL) × (1 + 6e/B)
-            // باستخدام e الناتج عن العزوم
             val e_normalized = if (B > 0) e_mm / B else 0.0
             f_pu_uniform * (1.0 + 6.0 * e_normalized)
         } else {
-            // للحالة ذات الانحراف الكبير: استخدام طريقة الكابولي
-            f_pu_uniform * 2.0  // تقريب محافظ
+            // للحالة ذات الانحراف الكبير e>B/6: توزيع مثلثي fmax=2*Pu/(3*B*(L/2 - e))
+            val a = if (B > 0) (B / 2.0 - e_mm).coerceAtLeast(1.0) else 1.0
+            (2.0 * Pu_N) / (3.0 * L * a)
         }
 
         // ==================== 1.6 فحص ضغط التحمل على الخرسانة ====================
-        // φ·f'c·√(A2/A1) ≤ 2·φ·f'c  - AISC 360-16 §J8
+        // φ*0.85*f'c*√(A2/A1) ≤ φ*1.7*f'c  - AISC 360-16 §J8
         val concreteCapacity = phi_fc * concentrationFactor
         val bearingRatio = maxBearingPressure / concreteCapacity
 
@@ -379,14 +379,14 @@ class SteelBasePlateDesign {
             m, n, lambda
         ))
 
-        // حساب سماكة اللوح المطلوبة - AISC 360-16 Eq. 14.6
-        // tp = λ × √(2 × Pu / (0.9 × Fy × B × L))
-        // Pu هنا بالنيوتن
-        val tp_required = lambda * sqrt(2.0 * Pu_N / (PHI_BENDING_PLATE * input.Fy * B * L))
+        // حساب سماكة اللوح المطلوبة - AISC 360-16 Eq. 14.6 + DG1 Eq 3.3.7
+        // tp = sqrt(2*Pu_n / (φ*Fy*B*L)) * lambda  حيث lambda = max(m,n,λn)
+        // الصيغة الصحيحة: tp = sqrt(2*Pu * lambda² / (φ*Fy*B*L))
+        val tp_required = sqrt(2.0 * Pu_N * lambda * lambda / (PHI_BENDING_PLATE * input.Fy * B * L))
 
-        // حساب السماكة الأدنى البديلة - المعادلة المحافظة
-        // tp_min = √(2 × Pu × m²) / (0.9 × Fy × B × L)
-        val tp_min_from_m = sqrt(2.0 * Pu_N * m.pow(2)) / (PHI_BENDING_PLATE * input.Fy * B * L)
+        // حساب السماكة الأدنى البديلة - المعادلة المحافظة داخل الجذر
+        // tp_min = sqrt(2 * Pu * m² / (φ*Fy*B*L))
+        val tp_min_from_m = sqrt(2.0 * Pu_N * m.pow(2) / (PHI_BENDING_PLATE * input.Fy * B * L))
 
         // السماكة المطلوبة هي الأكبر
         val tp_calc = max(tp_required, tp_min_from_m)

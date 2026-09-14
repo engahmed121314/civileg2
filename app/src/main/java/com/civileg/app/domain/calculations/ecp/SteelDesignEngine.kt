@@ -153,7 +153,8 @@ class SteelDesignEngine {
     ): SteelCheckResult {
         val L_m = span / 1000.0
         val I_m4 = section.Ix / 1e12 // m⁴
-        val delta = 5 * w_LL * L_m.pow(4) / (384 * E_STEEL / 1e6 * I_m4) * 1000 // mm
+        val E_kN_m2 = E_STEEL * 1000.0 // MPa (N/mm²) -> kN/m² : 1 MPa = 1000 kN/m²
+        val delta = 5 * w_LL * L_m.pow(4) / (384 * E_kN_m2 * I_m4) * 1000 // mm
         val ratio = delta / maxDeflection
 
         return SteelCheckResult(
@@ -239,8 +240,10 @@ class SteelDesignEngine {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // نسبة النحافة
-        val lambda = (K * L) / section.ry
+        // نسبة النحافة - نأخذ الأكبر بين المحورين rx,ry
+        val lambdaX = (K * L) / section.rx.coerceAtLeast(1.0)
+        val lambdaY = (K * L) / section.ry.coerceAtLeast(1.0)
+        val lambda = max(lambdaX, lambdaY)
         val isSlender = lambda > 100.0 // ECP 205: حد النحافة ~100
 
         // إجهاد الانبعاج الحرج Fcr
@@ -299,9 +302,14 @@ class SteelDesignEngine {
         val compressionResult = checkColumnCompression(Pu, section, grade, K, L)
         val phiPn = PHI_COMPRESSION * calculateFcr(compressionResult.slendernessRatio, grade) * section.A / 1000.0
 
-        // 2. فحص الانحناء حول X
-        val Mnx = PHI_BENDING * grade.fy * section.Zx / 1e6  // kN.m
-        val Mny = PHI_BENDING * grade.fy * section.Zy / 1e6  // kN.m
+        // 2. فحص الانحناء حول X مع LTB (إن وجد Lb)
+        // استخدم LTB capacity إذا كان متاحاً وإلا البلاستيكي
+        val MnxFull = grade.fy * section.Zx / 1e6
+        val MnyFull = grade.fy * section.Zy / 1e6
+        // للتبسيط: إذا كان العمود طويل غير مدعوم جانبياً، خفّض Mnx بـ LTB
+        val MnxLTB = if (L > 0) calculateLtbCapacity(MnxFull, L, section, grade) else MnxFull
+        val Mnx = PHI_BENDING * min(MnxFull, MnxLTB)  // kN.m
+        val Mny = PHI_BENDING * MnyFull  // kN.m
 
         // 3. معادلة التفاعل (AISC H1-1a) عندما Pu/φPn ≥ 0.2:
         // Pu/(φPn) + 8/9 × (Mux/φMnx + Muy/φMny) ≤ 1.0
@@ -361,15 +369,24 @@ class SteelDesignEngine {
         val Lp = 1.76 * ry * sqrt(E_STEEL / grade.fy) // mm
 
         // Lr حساب حسب AISC F2-6
-        // rt = √(√(Iyc × Cw) / Sx) - تقريبي للمقاطع المدرفلة
-        val Iyc = section.Iy
+        // Cw للمقطع I المتماثل: Cw = Iy * h² /4 حيث h = المسافة بين مركزي الشفتين
+        val h0 = (section.h - section.tf).coerceAtLeast(1.0)
+        val Iyc = section.Iy / 2.0 // تقريباً نصف Iy لكل شفة
         val Cw = if (section.tw > 0 && section.tf > 0) {
-            val h_web = (section.h - 2 * section.tf).coerceAtLeast(1.0)
-            h_web * h_web * section.b * section.b * section.tw / 12.0
+            section.Iy * h0 * h0 / 4.0
         } else {
             section.Iy * 1000.0
         }
-        val rt = sqrt(sqrt(Iyc * Cw) / section.Sx) * 0.9
+        // rt حسب AISC 360-16 Commentary F2: rt = b / sqrt(12*(1 + (h*tw)/(6*b*tf)))
+        val rt = if (section.b > 0 && section.tf > 0) {
+            val b = section.b
+            val tf = section.tf
+            val tw = section.tw
+            val h = section.h
+            b / sqrt(12.0 * (1.0 + (h * tw) / (6.0 * b * tf).coerceAtLeast(1.0)))
+        } else {
+            sqrt(sqrt(Iyc * Cw) / section.Sx) * 0.9
+        }
         // Lr = 1.95 × rt × √(E / (0.7 × Fy)) (AISC F2-6)
         val Lr = 1.95 * rt * sqrt(E_STEEL / (0.7 * grade.fy))
 
@@ -413,9 +430,9 @@ class SteelDesignEngine {
      * ECP 205 Table 5.1 / AISC Table B4.1a
      */
     private fun checkLocalBuckling(section: SectionProperties, grade: SteelGrade): SteelCheckResult {
-        // فحص الشفة: λf = (b - tw) / (2 × tf)
+        // فحص الشفة: λf = (b - tw) / (2 × tf) - AISC B4.1a Case 1: λpf =0.38√(E/Fy) للانحناء
         val lambdaFlange = (section.b - section.tw) / (2 * section.tf)
-        val lambdaFlangeLimit = 0.56 * sqrt(E_STEEL / grade.fy)
+        val lambdaFlangeLimit = 0.38 * sqrt(E_STEEL / grade.fy)
         val flangeCompact = lambdaFlange <= lambdaFlangeLimit
 
         // فحص الجذع: λw = h / tw

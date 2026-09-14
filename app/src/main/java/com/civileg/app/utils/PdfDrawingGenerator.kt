@@ -1554,7 +1554,13 @@ object PdfDrawingGenerator {
         verticalRebarDia: Double, verticalRebarSpacing: Double,
         horizontalRebarDia: Double, horizontalRebarSpacing: Double,
         waterLevel: Double = 0.0,
-        foundationDepth: Double = 0.0
+        foundationDepth: Double = 0.0,
+        // ── Expansion: tapered stem + shear key + GWT + base extension (additive, defaults preserve old drawing) ──
+        wallTopThickness: Double = 0.0,
+        baseExtension: Double = 0.0,
+        hasShearKey: Boolean = false,
+        shearKeyDepth: Double = 150.0,
+        groundWaterDepth: Double = 0.0
     ): Bitmap {
         val W = 1200; val H = 900
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1569,38 +1575,113 @@ object PdfDrawingGenerator {
 
         val drawW = totalW.toFloat() * scale
         val drawH = totalH.toFloat() * scale
-        val wtPx = wallThickness.toFloat() * scale
+        // Tapered stem: wallTopThickness < wallThickness => top narrower
+        val wtBottom = wallThickness
+        val wtTopEff = if (wallTopThickness > 0 && wallTopThickness < wallThickness) wallTopThickness else wallThickness
+        val isTapered = wtTopEff < wtBottom - 0.5
+        val wtBottomPx = wallThickness.toFloat() * scale
+        val wtTopPx = wtTopEff.toFloat() * scale
         val btPx = baseThickness.toFloat() * scale
         val hPx = height.toFloat() * scale
+        val extPx = baseExtension.toFloat() * scale
 
         val baseBottom = csTop + drawH
         val baseTop = baseBottom - btPx
         val wallTop = baseTop - hPx
-        val leftWallRight = csLeft + wtPx
-        val rightWallLeft = csLeft + drawW - wtPx
+        // Base extension: base slab extends beyond outer walls by baseExtension on each side
+        val baseLeft = csLeft - extPx
+        val baseRight = csLeft + drawW + extPx
+        val baseDrawW = drawW + 2 * extPx
+        // Wall geometry (inner vertical, outer sloped when tapered)
+        val leftWallBottomOuter = csLeft
+        val leftWallBottomInner = csLeft + wtBottomPx
+        val leftWallTopOuter = csLeft + (wtBottomPx - wtTopPx)
+        val leftWallTopInner = leftWallBottomInner
+        val leftWallRight = leftWallBottomInner // inner face for water
+        val rightWallBottomOuter = csLeft + drawW
+        val rightWallBottomInner = csLeft + drawW - wtBottomPx
+        val rightWallTopOuter = csLeft + drawW - (wtBottomPx - wtTopPx)
+        val rightWallTopInner = rightWallBottomInner
+        val rightWallLeft = rightWallBottomInner
 
-        // Soil outside/below
-        canvas.drawRect(csLeft - 40f, wallTop - 10f, csLeft, baseBottom, fillPaint(SOIL_BROWN))
-        canvas.drawRect(rightWallLeft, wallTop - 10f, rightWallLeft + 40f, baseBottom, fillPaint(SOIL_BROWN))
+        // Soil outside/below (respect base extension)
+        canvas.drawRect(baseLeft - 40f, wallTop - 10f, leftWallBottomOuter, baseBottom, fillPaint(SOIL_BROWN))
+        canvas.drawRect(rightWallBottomOuter, wallTop - 10f, baseRight + 40f, baseBottom, fillPaint(SOIL_BROWN))
         if (foundationDepth > 0) {
             val fdPx = foundationDepth.toFloat() * scale
-            canvas.drawRect(csLeft - 40f, baseBottom, csLeft + drawW + 40f, baseBottom + fdPx, fillPaint(SOIL_BROWN))
+            canvas.drawRect(baseLeft - 40f, baseBottom, baseRight + 40f, baseBottom + fdPx, fillPaint(SOIL_BROWN))
         }
 
-        // Base slab concrete
-        canvas.drawRect(csLeft, baseTop, csLeft + drawW, baseBottom, fillPaint(CONCRETE))
-        canvas.drawRect(csLeft, baseTop, csLeft + drawW, baseBottom, outlineP)
-        canvas.drawHatch(csLeft, baseTop, drawW, btPx, 10f)
+        // Base slab concrete (with extension)
+        canvas.drawRect(baseLeft, baseTop, baseRight, baseBottom, fillPaint(CONCRETE))
+        canvas.drawRect(baseLeft, baseTop, baseRight, baseBottom, outlineP)
+        canvas.drawHatch(baseLeft, baseTop, baseDrawW, btPx, 10f)
+        // Base extension hint
+        if (extPx > 1f) {
+            val extP = createPaint(DIM_TEXT, 1f)
+            canvas.drawLine(baseLeft, baseBottom + 8f, csLeft, baseBottom + 8f, extP)
+            canvas.drawLine(baseRight, baseBottom + 8f, csLeft + drawW, baseBottom + 8f, extP)
+        }
 
-        // Left wall concrete
-        canvas.drawRect(csLeft, wallTop, leftWallRight, baseTop, fillPaint(CONCRETE))
-        canvas.drawRect(csLeft, wallTop, leftWallRight, baseTop, outlineP)
-        canvas.drawHatch(csLeft, wallTop, wtPx, hPx, 10f)
+        // Left wall concrete (tapered if needed — preserves old rect when wtTop==wtBottom)
+        if (isTapered) {
+            val p = Path().apply {
+                moveTo(leftWallBottomOuter, baseTop); lineTo(leftWallBottomInner, baseTop)
+                lineTo(leftWallTopInner, wallTop); lineTo(leftWallTopOuter, wallTop); close()
+            }
+            canvas.drawPath(p, fillPaint(CONCRETE))
+            canvas.drawPath(p, outlineP)
+        } else {
+            canvas.drawRect(csLeft, wallTop, leftWallRight, baseTop, fillPaint(CONCRETE))
+            canvas.drawRect(csLeft, wallTop, leftWallRight, baseTop, outlineP)
+            canvas.drawHatch(csLeft, wallTop, wtBottomPx, hPx, 10f)
+        }
 
         // Right wall concrete
-        canvas.drawRect(rightWallLeft, wallTop, csLeft + drawW, baseTop, fillPaint(CONCRETE))
-        canvas.drawRect(rightWallLeft, wallTop, csLeft + drawW, baseTop, outlineP)
-        canvas.drawHatch(rightWallLeft, wallTop, wtPx, hPx, 10f)
+        if (isTapered) {
+            val p = Path().apply {
+                moveTo(rightWallBottomInner, baseTop); lineTo(rightWallBottomOuter, baseTop)
+                lineTo(rightWallTopOuter, wallTop); lineTo(rightWallTopInner, wallTop); close()
+            }
+            canvas.drawPath(p, fillPaint(CONCRETE))
+            canvas.drawPath(p, outlineP)
+        } else {
+            canvas.drawRect(rightWallLeft, wallTop, csLeft + drawW, baseTop, fillPaint(CONCRETE))
+            canvas.drawRect(rightWallLeft, wallTop, csLeft + drawW, baseTop, outlineP)
+            canvas.drawHatch(rightWallLeft, wallTop, wtBottomPx, hPx, 10f)
+        }
+        // Hatch for tapered walls (approximate)
+        if (isTapered) {
+            canvas.drawHatch(leftWallTopOuter, wallTop, wtTopPx, hPx * 0.3f, 10f)
+            canvas.drawHatch(rightWallTopInner, wallTop, wtTopPx, hPx * 0.3f, 10f)
+        }
+
+        // Shear key below base (centered) — new expansion
+        if (hasShearKey) {
+            val keyW = 30f.coerceAtMost(baseDrawW * 0.2f)
+            val keyH = shearKeyDepth.toFloat() * scale * 0.5f
+            val keyHclamped = keyH.coerceIn(12f, 40f)
+            val keyLeft = baseLeft + baseDrawW / 2f - keyW / 2f
+            canvas.drawRect(keyLeft, baseBottom, keyLeft + keyW, baseBottom + keyHclamped, fillPaint(CONCRETE))
+            canvas.drawRect(keyLeft, baseBottom, keyLeft + keyW, baseBottom + keyHclamped, outlineP)
+            canvas.drawHatch(keyLeft, baseBottom, keyW, keyHclamped, 8f)
+        }
+
+        // GWT dashed line (horizontal, blue, dashed) — new expansion
+        if (groundWaterDepth > 0) {
+            val gwtY = wallTop + groundWaterDepth.toFloat() * scale
+            if (gwtY in wallTop..baseBottom + 60f) {
+                val gwtPaint = createPaint(Color.parseColor("#29B6F6"), 2f)
+                gwtPaint.pathEffect = DashPathEffect(floatArrayOf(14f, 10f), 0f)
+                canvas.drawLine(baseLeft - 30f, gwtY, baseRight + 30f, gwtY, gwtPaint)
+                gwtPaint.pathEffect = null
+                val gwtLabel = textPaint(Color.parseColor("#29B6F6"), 14f, true)
+                canvas.drawText("GWT", baseRight + 36f, gwtY + 5f, gwtLabel)
+                canvas.drawPath(Path().apply {
+                    moveTo(baseLeft - 30f, gwtY); lineTo(baseLeft - 22f, gwtY - 6f); lineTo(baseLeft - 22f, gwtY + 6f); close()
+                }, fillPaint(Color.parseColor("#29B6F6")))
+            }
+        }
 
         // Water level inside
         if (waterLevel > 0) {
@@ -1714,7 +1795,10 @@ object PdfDrawingGenerator {
         fsOverturning: Double = 2.0,
         fsSliding: Double = 1.5,
         maxBearingPressure: Double = 0.0,
-        allowableBearingPressure: Double = 200.0
+        allowableBearingPressure: Double = 200.0,
+        // ── Expansion: base extension + GWT dashed (additive, defaults preserve old drawing) ──
+        baseExtension: Double = 0.0,
+        groundWaterDepth: Double = 0.0
     ): Bitmap {
         val W = 1200; val H = 800
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1725,15 +1809,16 @@ object PdfDrawingGenerator {
         val totalH = wallHeight + baseThickness
         val scale = min(500f / baseWidth.toFloat(), 500f / totalH.toFloat()) * 0.65f
 
-        val bwPx = baseWidth.toFloat() * scale
+        val extPx = baseExtension.toFloat() * scale
+        val bwPx = baseWidth.toFloat() * scale + extPx
         val bhPx = baseThickness.toFloat() * scale
         val whPx = wallHeight.toFloat() * scale
         val wttPx = wallTopThickness.toFloat() * scale
         val wbtPx = wallBottomThickness.toFloat() * scale
         val toePx = toeLength.toFloat() * scale
-        val heelPx = heelLength.toFloat() * scale
+        val heelPx = (heelLength.toFloat() * scale + extPx)
 
-        // Base slab position
+        // Base slab position (with base extension: extra length on heel side)
         val baseLeft = marginL
         val baseTop = marginT + whPx
         val baseRight = baseLeft + bwPx
@@ -1771,18 +1856,38 @@ object PdfDrawingGenerator {
         // Soil below base
         canvas.drawRect(baseLeft - 30f, baseBottom, baseRight + 30f, baseBottom + 40f, fillPaint(SOIL_BROWN))
 
-        // Base slab
+        // Base slab (with extension: bwPx already includes extPx)
         canvas.drawRect(baseLeft, baseTop, baseRight, baseBottom, fillPaint(CONCRETE))
         canvas.drawRect(baseLeft, baseTop, baseRight, baseBottom, outlineP)
         canvas.drawHatch(baseLeft, baseTop, bwPx, bhPx, 10f)
 
-        // Shear key
+        // Shear key — tapered stem + shear key already drawn; keep old + enhanced depth
         if (hasKey) {
             val keyW = 30f
             val keyPx = min(keyDepth.toFloat() * scale * 0.5f, 40f)
             val keyX = wallBottomRight - keyW / 2f
             canvas.drawRect(keyX, baseBottom, keyX + keyW, baseBottom + keyPx, fillPaint(CONCRETE))
             canvas.drawRect(keyX, baseBottom, keyX + keyW, baseBottom + keyPx, outlineP)
+            canvas.drawHatch(keyX, baseBottom, keyW, keyPx, 8f)
+        }
+
+        // GWT dashed line (new expansion) — behind retained soil
+        if (groundWaterDepth > 0) {
+            val gwtY = groundY + groundWaterDepth.toFloat() * scale * 0.6f
+            if (gwtY in wallTopY..groundY + whPx * 1.2f) {
+                val gwtPaint = createPaint(Color.parseColor("#29B6F6"), 2f)
+                gwtPaint.pathEffect = DashPathEffect(floatArrayOf(14f, 10f), 0f)
+                canvas.drawLine(wallBottomRight, gwtY, groundRight, gwtY, gwtPaint)
+                gwtPaint.pathEffect = null
+                val gwtLabel = textPaint(Color.parseColor("#29B6F6"), 13f, true)
+                canvas.drawText("GWT", groundRight - 30f, gwtY - 6f, gwtLabel)
+            }
+        }
+        // Base extension annotation
+        if (extPx > 1f) {
+            val extP = createPaint(DIM_TEXT, 1f)
+            canvas.drawLine(baseRight - extPx, baseBottom + 12f, baseRight, baseBottom + 12f, extP)
+            canvas.drawText("ext=${baseExtension.toInt()}", baseRight - extPx/2f - 18f, baseBottom + 28f, textPaint(DIM_TEXT, 12f))
         }
 
         // Trapezoidal stem

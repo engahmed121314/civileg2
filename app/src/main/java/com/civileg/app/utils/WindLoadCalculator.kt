@@ -189,15 +189,29 @@ class WindLoadCalculator {
             )
         }
 
-        // 8) Base shear
+        // 8) Base shear - يشمل windward + leeward suction: F = (Cp_w - Cp_l)*pz*Area
+        // نحسب leeward pressures per floor بنفس توزيع الضغط
+        val pressureDistributionLeeward = zVsHeightProfile.map { (z, vz) ->
+            val dynPressure = DYNAMIC_PRESSURE_COEFF * AIR_DENSITY * vz.pow(2) / 1000.0
+            val designPressure = dynPressure * gustFactor
+            val extPLee = designPressure * cpLeeward
+            val intP = designPressure * cpi
+            extPLee + intP // suction + suction
+        }
         val totalBaseShear = calculateBaseShear(
             pressures = pressureDistribution,
+            leewardPressures = pressureDistributionLeeward,
             width = input.buildingWidth,
             floorHeight = floorHeight
         )
 
-        // 9) Overturning moment
-        val shearPerFloor = pressureDistribution.map { it.height to (it.netPressure * input.buildingWidth * floorHeight) }
+        // 9) Overturning moment - مجموع Fi*hi لكل طابق
+        val shearPerFloor = pressureDistribution.mapIndexed { idx, pd ->
+            val netWind = abs(pd.netPressure)
+            val netLee = abs(pressureDistributionLeeward[idx])
+            val totalP = netWind + netLee
+            pd.height to (totalP * input.buildingWidth * floorHeight)
+        }
         val overturningMoment = calculateOverturningMoment(shearPerFloor)
 
         return WindLoadResult(
@@ -373,19 +387,23 @@ class WindLoadCalculator {
     // ----------------------------------------------------------
 
     /**
-     * Total base shear: sum of (net pressure × tributary width × floor height)
-     * for all floors. Considers both windward and leeward contributions.
+     * Total base shear: sum of (|p_windward| + |p_leeward|) × width × floorHeight
+     * per AISC/ASCE: F = (Cp_w - Cp_l)*pz*Area حيث Cp_l سالب
      */
     fun calculateBaseShear(
         pressures: List<WindPressureAtHeight>,
+        leewardPressures: List<Double>? = null,
         width: Double,
         floorHeight: Double
     ): Double {
         var totalShear = 0.0
         for (i in pressures.indices) {
-            // Tributary height: for first floor, full floor height; for others, full floor height
             val tribHeight = floorHeight
-            totalShear += abs(pressures[i].netPressure) * width * tribHeight
+            val pw = abs(pressures[i].netPressure)
+            val pl = leewardPressures?.getOrNull(i)?.let { abs(it) } ?: 0.0
+            // إذا توفر leeward نجمعه، وإلا نستخدم تقدير 1.3× windward كحد أدنى محافظ
+            val totalP = if (leewardPressures != null) pw + pl else pw * 1.3
+            totalShear += totalP * width * tribHeight
         }
         return totalShear
     }
