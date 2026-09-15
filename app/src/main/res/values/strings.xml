@@ -13,6 +13,8 @@
 
     <string name="home_pile">Piles</string>
     <string name="home_pile_sub">Pile Foundation Design</string>
+    <string name="home_strap_footing">Strap Footing</string>
+    <string name="home_strap_footing_sub">Design for Boundary Columns</string>
     <string name="home_flat_slab">Flat Slab</string>
     <string name="home_flat_slab_sub">Flat Slab with Drop Panels</string>
     <string name="home_shear_wall">Shear Wall</string>

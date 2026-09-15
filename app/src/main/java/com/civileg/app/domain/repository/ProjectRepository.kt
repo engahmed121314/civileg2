@@ -1,14 +1,14 @@
 package com.civileg.app.domain.repository
 
-import com.civileg.app.domain.entities.Project
+import com.civileg.app.domain.entities.DomainProject
 import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
-    fun getAllProjects(): Flow<List<Project>>
-    fun getProjectsByType(elementType: String): Flow<List<Project>>
-    suspend fun getProject(id: Int): Project?
-    suspend fun saveProject(project: Project): Long
-    suspend fun deleteProject(project: Project)
+    fun getAllProjects(): Flow<List<DomainProject>>
+    fun getProjectsByType(elementType: String): Flow<List<DomainProject>>
+    suspend fun getProject(id: Int): DomainProject?
+    suspend fun saveProject(project: DomainProject): Long
+    suspend fun deleteProject(project: DomainProject)
     suspend fun deleteProjectById(id: Int)
     
     // Material Prices & Settings

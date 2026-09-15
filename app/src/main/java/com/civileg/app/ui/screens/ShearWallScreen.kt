@@ -7,7 +7,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.VerifiedUser
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -309,7 +316,7 @@ fun ShearWallScreen(
                 }
 
                 // Shear Design Results
-                item { DesignSectionHeader(stringResource(R.string.sw_shear_design), Icons.Default.CompareArrows) }
+                item { DesignSectionHeader(stringResource(R.string.sw_shear_design), Icons.AutoMirrored.Default.CompareArrows) }
 
                 item {
                     ResultCard(isSafe = result.shearOk) {
@@ -392,7 +399,7 @@ fun ShearWallScreen(
                 }
 
                 // Safety Checks
-                item { DesignSectionHeader(stringResource(R.string.safety_checks), Icons.Default.VerifiedUser) }
+                item { DesignSectionHeader(stringResource(R.string.safety_checks), Icons.Outlined.VerifiedUser) }
 
                 item {
                     Card(
@@ -413,7 +420,7 @@ fun ShearWallScreen(
 
                 // Code Notes
                 if (result.codeNotes.isNotEmpty()) {
-                    item { DesignSectionHeader("Code Notes", Icons.Default.Description) }
+                    item { DesignSectionHeader("Code Notes", Icons.Outlined.Description) }
 
                     item {
                         Card(
@@ -435,7 +442,7 @@ fun ShearWallScreen(
                 }
 
                 // Drawing
-                item { DesignSectionHeader(stringResource(R.string.sw_wall_drawing), Icons.Default.Draw) }
+                item { DesignSectionHeader(stringResource(R.string.sw_wall_drawing), Icons.Outlined.Edit) }
 
                 item {
                     Card(
@@ -474,8 +481,6 @@ fun ShearWallScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.sw_export_pdf), fontWeight = FontWeight.Bold)
                     }
                 }
@@ -500,11 +505,11 @@ private fun ResultCard(isSafe: Boolean, content: @Composable () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = if (isSafe) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error
+                Text(
+                    if (isSafe) "✓" else "✗",
+                    color = if (isSafe) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold, fontSize = 18.sp
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(

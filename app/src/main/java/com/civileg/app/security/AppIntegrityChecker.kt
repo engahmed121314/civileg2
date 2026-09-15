@@ -67,9 +67,13 @@ object AppIntegrityChecker {
 
     /**
      * Run all integrity checks and return true if the device is safe.
+     * Note: If EXPECTED_SIGNER_FINGERPRINT is empty, signature check is skipped.
      */
     fun isDeviceSecure(context: Context): Boolean {
-        return !isRooted(context) && !isEmulator() && !isDebuggerAttached() && !isHooked(context)
+        val currentFingerprint = getApkFingerprint(context)
+        val isSignatureValid = EXPECTED_SIGNER_FINGERPRINT.isEmpty() || currentFingerprint == EXPECTED_SIGNER_FINGERPRINT
+        
+        return isSignatureValid && !isRooted(context) && !isEmulator() && !isDebuggerAttached() && !isHooked(context)
     }
 
     /**

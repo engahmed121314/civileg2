@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,7 +52,7 @@ fun BeamComprehensiveResultsCard(
         }
 
         // STRUCTURAL ANALYSIS (PDF-04)
-        BeamExpandableSection("Structural Analysis - BMD/SFD (PDF-04)", Icons.Default.ShowChart, Color(0xFF3498DB), expandedSection == 1, { expandedSection = if (expandedSection == 1) -1 else 1 }) {
+        BeamExpandableSection("Structural Analysis - BMD/SFD (PDF-04)", Icons.Filled.BarChart, Color(0xFF3498DB), expandedSection == 1, { expandedSection = if (expandedSection == 1) -1 else 1 }) {
             BeamDetailRow("Max Moment (+)", "${String.format("%.2f", result.maxMomentPos)} kN.m")
             BeamDetailRow("Max Moment (-)", "${String.format("%.2f", result.maxMomentNeg)} kN.m")
             BeamDetailRow("Max Shear (L/R)", "${String.format("%.2f", result.maxShearLeft)} / ${String.format("%.2f", result.maxShearRight)} kN")

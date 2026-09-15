@@ -211,7 +211,7 @@ fun ConcreteMixScreen(
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = aggExpanded)
                         },
                         modifier = Modifier
-                            .menuAnchor()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(

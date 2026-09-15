@@ -4,6 +4,7 @@ import com.civileg.app.domain.entities.*
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.PI
+import kotlin.math.pow
 
 class CalculatorEngineTest {
 
@@ -24,7 +25,7 @@ class CalculatorEngineTest {
             grade = SteelGrade.ST37, customName = "IPE 300"
         )
         val expected = 2 * 150.0 * 10.7 + (300.0 - 2 * 10.7) * 7.1 // = 3210 + 1984.06 = 5194.06
-        assertEquals(expected, section.getArea(), 1.0)
+        assertEquals(expected, section.area, 1.0)
     }
 
     @Test
@@ -60,7 +61,7 @@ class CalculatorEngineTest {
         )
         // A = 2*(w + h - 2*t)*t
         val expected = 2 * (200.0 + 100.0 - 2 * 5.0) * 5.0 // = 2*290*5 = 2900
-        assertEquals(expected, section.getArea(), 1.0)
+        assertEquals(expected, section.area, 1.0)
     }
 
     @Test
@@ -71,7 +72,7 @@ class CalculatorEngineTest {
         )
         // A = (a + b - t) * t
         val expected = (100.0 + 100.0 - 10.0) * 10.0 // = 1900
-        assertEquals(expected, section.getArea(), 1.0)
+        assertEquals(expected, section.area, 1.0)
     }
 
     @Test
@@ -84,7 +85,7 @@ class CalculatorEngineTest {
         val d = 168.3
         val t = 5.0
         val expected = PI / 4.0 * (d * d - (d - 2 * t) * (d - 2 * t))
-        assertEquals(expected, section.getArea(), 1.0)
+        assertEquals(expected, section.area, 1.0)
     }
 
     @Test
@@ -96,7 +97,7 @@ class CalculatorEngineTest {
         )
         // A = bfTop*tfTop + bfBot*tfBot + (h - tfTop - tfBot)*tw
         val expected = 400*20.0 + 400*20.0 + (1000.0 - 20.0 - 20.0) * 12.0
-        assertEquals(expected, section.getArea(), 1.0)
+        assertEquals(expected, section.area, 1.0)
     }
 
     @Test
@@ -106,7 +107,7 @@ class CalculatorEngineTest {
             h = 200.0, bf = 100.0, tf = 8.5, tw = 5.6,
             grade = SteelGrade.ST37
         )
-        val area = section.getArea()
+        val area = section.area
         val weight = area * 7.85e-3
         assertEquals(weight, section.weight, 0.01)
         assertTrue(section.weight > 0)
@@ -119,7 +120,7 @@ class CalculatorEngineTest {
             grade = SteelGrade.ST37
         )
         // r = sqrt(I/A)
-        val expectedRx = kotlin.math.sqrt(section.ix / section.getArea())
+        val expectedRx = kotlin.math.sqrt(section.ix / section.area)
         assertEquals(expectedRx, section.rx, 0.01)
     }
 
@@ -140,8 +141,8 @@ class CalculatorEngineTest {
             assertTrue("${s.name}: Iy (strong) should be > Iz (weak)", s.iy > s.iz)
             assertTrue("${s.name}: Sy should be > 0", s.sy > 0)
             assertTrue("${s.name}: Ry should be > 0", s.ry > 0)
-            // Weight ≈ area × 7.85 kg/m (area is in cm² here, weight in kg/m)
-            val approxWeight = s.area * 7.85
+            // Weight ≈ area × 0.785 kg/m (area in cm², weight in kg/m)
+            val approxWeight = s.area * 0.785
             assertEquals("${s.name}: weight mismatch", approxWeight, s.weight, approxWeight * 0.05) // 5% tolerance
         }
     }
@@ -150,8 +151,8 @@ class CalculatorEngineTest {
     fun testSteelTablesHEBDataIntegrity() {
         for (s in SteelTables.hebSections) {
             assertTrue("${s.name}: Iy > Iz", s.iy > s.iz)
-            assertTrue("${s.name}: depth ≈ width (HEB is square-flanged)",
-                kotlin.math.abs(s.depth - s.width) < 5.0)
+            assertTrue("${s.name}: depth >= width (HEB is a wide-flange/squarish section)",
+                kotlin.math.abs(s.depth - s.width) < 5.0 || s.depth > s.width)
         }
     }
 

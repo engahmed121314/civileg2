@@ -120,12 +120,12 @@ class DesignRepository @Inject constructor(
             put("fy", fy)
             put("thickness", result.thickness)
             put("load", result.totalLoad)
-            put("type", result.type.name)
+            put("type", result.type.toString())
         }.toString()
         saveGeneralDesign(projectId, DesignType.SLAB, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val slab = Slab(
-            projectId = projectId, type = result.type.name, spanX = spanX, spanY = spanY,
+            projectId = projectId, type = result.type.toString(), spanX = spanX, spanY = spanY,
             thickness = result.thickness, load = result.totalLoad, fcu = fcu, fy = fy,
             reinforcement = result.reinforcementMain.barString,
             concreteVolume = result.concreteVolume, steelWeight = result.steelWeight, cost = result.cost,
@@ -144,7 +144,7 @@ class DesignRepository @Inject constructor(
             put("tread", result.tread)
             put("thickness", result.thickness)
             put("wu", result.wu)
-            put("type", result.type.name)
+            put("type", result.type.toString())
         }.toString()
         saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         

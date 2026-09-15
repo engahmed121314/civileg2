@@ -8,7 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -204,7 +204,7 @@ fun SoilBearingScreen(
                     modifier = Modifier.weight(1f),
                     enabled = !isCalculating
                 ) {
-                    Icon(Icons.Default.CompareArrows, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Default.CompareArrows, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.soil_compare_all))
                 }
@@ -313,7 +313,7 @@ private fun SoilTypeDropdown(
             readOnly = true,
             label = { Text(stringResource(R.string.soil_type_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,

@@ -11,7 +11,6 @@ import kotlin.math.min
  * Professional Pile Section View
  * Features: Deep foundation visualization, spiral reinforcement, hatching, and dimensioning.
  */
-@Deprecated("No Compose equivalent yet")
 class PileSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

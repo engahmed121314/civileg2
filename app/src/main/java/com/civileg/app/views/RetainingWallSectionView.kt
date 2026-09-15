@@ -11,7 +11,6 @@ import kotlin.math.min
  * Professional Retaining Wall Section View
  * Features: Engineering hatching, reinforcement detailing, soil visualization, and dimensioning.
  */
-@Deprecated("Use ProfessionalRetainingWallDrawing")
 class RetainingWallSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -153,6 +152,7 @@ class RetainingWallSectionView @JvmOverloads constructor(
         drawStatusBadge(canvas)
     }
 
+    @Suppress("DEPRECATION")
     private fun drawConcreteHatching(canvas: Canvas, path: Path) {
         canvas.save()
         canvas.clipPath(path)
@@ -178,6 +178,7 @@ class RetainingWallSectionView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    @Suppress("DEPRECATION")
     private fun isPointInPath(path: Path, x: Float, y: Float): Boolean {
         val rect = RectF()
         path.computeBounds(rect, true)

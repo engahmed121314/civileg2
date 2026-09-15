@@ -4,8 +4,8 @@ import androidx.lifecycle.asFlow
 import com.civileg.app.data.local.PreferencesManager
 import com.civileg.app.db.ProjectDao
 import com.civileg.app.db.Project
-import com.civileg.app.domain.entities.Project as DomainProject
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.DomainProject
 import com.civileg.app.domain.entities.ElementType
 import com.civileg.app.domain.repository.ProjectRepository
 import kotlinx.coroutines.flow.Flow

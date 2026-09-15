@@ -34,6 +34,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.CalculatorEngine.StairType
+import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing

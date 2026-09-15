@@ -41,7 +41,13 @@ object PlaySafetyChecker {
      */
     fun isInstalledFromLegitSource(context: Context): Boolean {
         return try {
-            val installer = context.packageManager.getInstallerPackageName(context.packageName)
+            val pm = context.packageManager
+            val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                pm.getInstallSourceInfo(context.packageName).installingPackageName
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getInstallerPackageName(context.packageName)
+            }
             installer != null && (installer.startsWith("com.android.vending") ||
                     installer.startsWith("com.google.android") ||
                     installer == "com.amazon.venezia")

@@ -2,8 +2,7 @@ package com.civileg.app.utils
 
 import android.content.Context
 import android.content.res.Configuration
-import android.util.DisplayMetrics
-import android.view.WindowManager
+import android.util.TypedValue
 import kotlin.math.min
 
 /**
@@ -30,10 +29,6 @@ object ResponsiveDesignManager {
 
     // ==================== Get Device Type ====================
     fun getDeviceType(context: Context): DeviceType {
-        val displayMetrics = DisplayMetrics()
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
-
         val screenInches = getScreenDiagonalInches(context)
 
         return when {
@@ -57,9 +52,7 @@ object ResponsiveDesignManager {
 
     // ==================== Get Screen Dimensions ====================
     fun getScreenDiagonalInches(context: Context): Float {
-        val displayMetrics = DisplayMetrics()
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
+        val displayMetrics = context.resources.displayMetrics
 
         val widthInches = displayMetrics.widthPixels / displayMetrics.xdpi
         val heightInches = displayMetrics.heightPixels / displayMetrics.ydpi
@@ -181,7 +174,7 @@ object ResponsiveDesignManager {
     }
 
     fun spToPx(context: Context, sp: Float): Float {
-        return sp * context.resources.displayMetrics.scaledDensity
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, context.resources.displayMetrics)
     }
 
     // ==================== Landscape Adjustments ====================

@@ -1324,8 +1324,6 @@ private fun pointToSegmentDist(p: Offset, a: Offset, b: Offset): Float {
     return (p - proj).getDistance()
 }
 
-private fun Offset.getDistance(): Float = sqrt(x * x + y * y)
-
 private fun Double.formatValue(decimals: Int): String {
     return if (abs(this) < 0.001) "0"
     else if (abs(this) >= 1000) "%.0f".format(this)

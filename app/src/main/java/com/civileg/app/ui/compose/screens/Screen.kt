@@ -33,6 +33,7 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     
     // New Design Modules
     object PileFoundation : AppScreen("pile_foundation", R.string.home_pile, R.drawable.ic_pile)
+    object StrapFooting : AppScreen("strap_footing", R.string.home_strap_footing, R.drawable.ic_footing)
     object FlatSlab : AppScreen("flat_slab", R.string.home_flat_slab, R.drawable.ic_slab)
     object ShearWall : AppScreen("shear_wall", R.string.home_shear_wall, R.drawable.ic_wall)
     

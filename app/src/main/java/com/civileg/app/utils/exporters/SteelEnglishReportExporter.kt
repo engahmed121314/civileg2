@@ -564,7 +564,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                 propsTable.addHeaderCell(headerCell("Ix (cm4)"))
                 propsTable.addHeaderCell(headerCell("GRADE"))
 
-                val areaCm2 = section.getArea() / 100.0
+                val areaCm2 = section.area / 100.0
                 val ixCm4 = section.ix / 1e4
                 propsTable.addCell(dataCell(section.sectionName, bold = true, fontSize = 7f))
                 propsTable.addCell(dataCell("${section.depth.fmt(1)}", fontSize = 8f))
@@ -599,7 +599,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = section.displayName,
                     h = section.h, bf = section.bf, tw = section.tw, tf = section.tf,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, rootR = section.rootRadius
                 )
                 is SteelSectionType.CSection -> gen.generateAccurateSteelSection(
@@ -607,7 +607,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = section.displayName,
                     h = section.h, bf = section.bf, tw = section.tw, tf = section.tf,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, rootR = section.rootRadius
                 )
                 is SteelSectionType.CHS -> gen.generateAccurateSteelSection(
@@ -615,7 +615,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = section.displayName,
                     h = section.outerDiameter, bf = section.outerDiameter, tw = section.thickness, tf = section.thickness,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, outerDia = section.outerDiameter
                 )
                 is SteelSectionType.RHS -> gen.generateAccurateSteelSection(
@@ -623,7 +623,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = section.displayName,
                     h = section.height, bf = section.width, tw = section.thickness, tf = section.thickness,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, rhsW = section.width, rhsH = section.height, rhsT = section.thickness
                 )
                 is SteelSectionType.LSection -> gen.generateAccurateSteelSection(
@@ -631,7 +631,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = section.displayName,
                     h = section.legA, bf = section.legB, tw = section.thickness, tf = section.thickness,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, legA = section.legA, legB = section.legB, angleThk = section.thickness
                 )
                 is SteelSectionType.TSection -> gen.generateAccurateSteelSection(
@@ -639,7 +639,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = section.displayName,
                     h = section.webDepth + section.flangeThickness, bf = section.flangeWidth, tw = section.webThickness, tf = section.flangeThickness,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, rootR = 0.0
                 )
                 is SteelSectionType.PlateGirder -> gen.generateAccurateSteelSection(
@@ -648,7 +648,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     h = section.h, bf = maxOf(section.bfTop, section.bfBot), tw = section.tw,
                     tf = maxOf(section.tfTop, section.tfBot),
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight,
                     bfTop = section.bfTop, bfBot = section.bfBot, tfTop = section.tfTop, tfBot = section.tfBot
                 )
@@ -657,7 +657,7 @@ class SteelEnglishReportExporter(private val context: Context) {
                     sectionTypeName = "Pipe",
                     h = section.outerDiameter, bf = section.outerDiameter, tw = section.wallThickness, tf = section.wallThickness,
                     gradeName = section.grade.displayName, fy = section.grade.fy, fu = section.grade.fu,
-                    area = section.getArea(), ix = section.ix, sx = section.sx, zx = section.zx,
+                    area = section.area, ix = section.ix, sx = section.sx, zx = section.zx,
                     weight = section.weight, outerDia = section.outerDiameter
                 )
                 is SteelSectionType.BuiltUp -> null // Complex - skip

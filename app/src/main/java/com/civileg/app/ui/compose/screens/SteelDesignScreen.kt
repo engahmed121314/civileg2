@@ -1942,7 +1942,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSteelCode) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp),
                             textStyle = MaterialTheme.typography.bodyMedium
                         )
@@ -2031,7 +2031,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp),
                             textStyle = MaterialTheme.typography.bodySmall
                         )
@@ -2064,7 +2064,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp),
                             textStyle = MaterialTheme.typography.bodySmall
                         )
@@ -2103,7 +2103,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                         
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {
-                                PropertyLine(stringResource(R.string.steel_area), "%.2f cm²".format(section.getArea()/100.0))
+                                PropertyLine(stringResource(R.string.steel_area), "%.2f cm²".format(section.area/100.0))
                                 PropertyLine(stringResource(R.string.steel_weight_per_m), "%.1f kg/m".format(section.weight))
                                 PropertyLine(stringResource(R.string.steel_height), "${section.depth} mm")
                             }
@@ -2577,7 +2577,7 @@ fun SteelResultCard(res: SteelMemberResult) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            ResultRow(stringResource(R.string.steel_section_area), "%.1f mm²".format(res.sectionType.getArea()))
+            ResultRow(stringResource(R.string.steel_section_area), "%.1f mm²".format(res.sectionType.area))
             ResultRow(stringResource(R.string.steel_compress_capacity), "%.1f kN".format(res.axialCapacity))
             ResultRow(stringResource(R.string.steel_flexural_capacity), "%.1f kN.m".format(res.flexuralCapacity))
             ResultRow(stringResource(R.string.steel_util_ratio), "%.2f".format(res.utilizationRatio))
@@ -2699,7 +2699,7 @@ fun BasePlateDesignTab() {
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBoltGrade) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp),
                             textStyle = MaterialTheme.typography.bodySmall
                         )
@@ -2865,7 +2865,7 @@ fun ConnectionDesignTab() {
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBoltGrade) },
-                                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = MaterialTheme.typography.bodySmall
                             )
@@ -2892,7 +2892,7 @@ fun ConnectionDesignTab() {
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPattern) },
-                                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = MaterialTheme.typography.bodySmall
                             )
@@ -2949,7 +2949,7 @@ fun ConnectionDesignTab() {
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedElectrode) },
-                                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = MaterialTheme.typography.bodySmall
                             )

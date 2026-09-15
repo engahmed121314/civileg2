@@ -403,6 +403,7 @@ fun FootingScreen(
                     val footingTypeEnglish = when (selectedType) {
                         CalculatorEngine.FootingType.ISOLATED -> "Isolated"
                         CalculatorEngine.FootingType.COMBINED -> "Combined"
+                        CalculatorEngine.FootingType.STRAP -> "Isolated"
                         CalculatorEngine.FootingType.RAFT -> "Raft"
                         CalculatorEngine.FootingType.STRIP -> "Isolated"
                         CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
@@ -456,6 +457,7 @@ fun FootingScreen(
             val footingTypeEnglish = when (selectedType) {
                 CalculatorEngine.FootingType.ISOLATED -> "Isolated"
                 CalculatorEngine.FootingType.COMBINED -> "Combined"
+                CalculatorEngine.FootingType.STRAP -> "Isolated"
                 CalculatorEngine.FootingType.RAFT -> "Raft"
                 CalculatorEngine.FootingType.STRIP -> "Isolated"
                 CalculatorEngine.FootingType.PILE_CAP -> "Isolated"

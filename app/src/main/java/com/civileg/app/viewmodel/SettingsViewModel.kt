@@ -7,6 +7,7 @@ import com.civileg.app.domain.repository.ProjectRepository
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +36,7 @@ class SettingsViewModel @Inject constructor(
     
     init {
         viewModelScope.launch {
-            combine(
+            val flows = arrayOf<Flow<Any>>(
                 repository.getDefaultDesignCode(),
                 repository.getConcretePrice(),
                 repository.getSteelPrice(),
@@ -44,7 +45,8 @@ class SettingsViewModel @Inject constructor(
                 repository.getUnitSystem(),
                 repository.getThemeMode(),
                 repository.getReportLanguage()
-            ) { args: Array<*> ->
+            )
+            combine(*flows) { args: Array<Any> ->
                 val code = args[0] as String
                 val concrete = args[1] as Double
                 val steel = args[2] as Double

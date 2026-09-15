@@ -13,6 +13,8 @@
 
     <string name="home_pile">الخوازيق</string>
     <string name="home_pile_sub">تصميم الأساسات العميقة</string>
+    <string name="home_strap_footing">القواعد الشداد</string>
+    <string name="home_strap_footing_sub">تصميم القواعد عند حدود الجار</string>
     <string name="home_flat_slab">البلاطات المسطحة</string>
     <string name="home_flat_slab_sub">البلاطات المسطحة مع التيجان</string>
     <string name="home_shear_wall">حوائط القص</string>

@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -146,7 +147,7 @@ private val quickTools = listOf(
     QuickTool(R.string.home_calculator,    R.string.home_calculator_sub,    Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  AppScreen.Calculator.route),
     QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
     QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
-    QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.Default.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+    QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.AutoMirrored.Filled.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
     QuickTool(R.string.home_site_layout_title, R.string.home_site_layout_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
     QuickTool(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, ToolPdfBg, ToolPdfAccent, AppScreen.ExecutionLog.route),
     QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),

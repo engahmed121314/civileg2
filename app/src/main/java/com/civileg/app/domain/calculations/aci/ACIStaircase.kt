@@ -4,23 +4,24 @@ import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
-/**
+ /**
  * تصميم السلالم حسب الكود الأمريكي ACI 318-19
  *
  * المراجع:
- * - ACI 318-19 Chapter 9 (الانحناء - One-way slabs)
- * - ACI 318-19 Chapter 22 (القص)
- * - ACI 318-19 Table 24.2.2 (الانحراف)
- * - IBC Section 1011 (متطلبات السلالم الهندسية)
- * - ASCE 7 (أحمال السلالم: حي 4.8 kN/m² = 100 psf)
+ * - ACI 318-19 Chapter 9 (Flexure - One-way slabs)
+ * - ACI 318-19 Chapter 22 (Shear)
+ * - ACI 318-19 Table 24.2.2 (Deflection)
+ * - ACI 318-19 Table 24.4.3.2 (Shrinkage and temperature reinforcement)
+ * - IBC Section 1011 (Geometric requirements)
+ * - ASCE 7 (Stair loads: Live 4.8 kN/m² = 100 psf)
  *
- * الاختلافات عن ECP:
- * - تحويل fcu → f'c = 0.8 × fcu
- * - معاملات التحميل: 1.2D + 1.6L
- * - معامل الاختزال φ = 0.9 (انحناء)، φ = 0.75 (قص)
- * - طريقة Rn-ρ بدلاً من K-method
- * - الحد الأدنى: ρmin = 0.0018 × b × h
- * - الانحراف: L/240 للأرضيات
+ * Differences from ECP:
+ * - conversion fcu → f'c = 0.8 × fcu
+ * - Load factors: 1.2D + 1.6L
+ * - Reduction φ = 0.9 (flexure), φ = 0.75 (shear)
+ * - Rn-ρ method instead of K-method
+ * - Minimum steel ratio based on fy (Table 24.4.3.2)
+ * - Deflection: L/240 for floors
  */
 class ACIStaircase : StaircaseDesign {
 
@@ -178,13 +179,19 @@ class ACIStaircase : StaircaseDesign {
         // Required steel area
         var astRequired = rho * b * d
 
-        // Minimum steel per ACI 7.6.1.1: ρmin = 0.0018 for Grade 60 slabs
-        val minSteelRatio = 0.0018
+        // Minimum steel per ACI 318-19 Table 24.4.3.2 (Shrinkage & Temp)
+        // - fy < 420 MPa: 0.0020
+        // - fy ≥ 420 MPa: max(0.0018 * 420 / fy, 0.0014)
+        val minSteelRatio = if (input.fy < 420.0) {
+            0.0020
+        } else {
+            max(0.0018 * 420.0 / input.fy, 0.0014)
+        }
         val minSteelArea = minSteelRatio * b * waistThickness
 
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
-            codeNotes.add("Minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (0.0018 × b × h)")
+            codeNotes.add("Minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (Ratio: ${String.format("%.4f", minSteelRatio)})")
         }
 
         safetyChecks.add(StairSafetyCheck(

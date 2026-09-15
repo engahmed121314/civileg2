@@ -241,6 +241,9 @@ fun AppNavigation(
                 composable(AppScreen.PileFoundation.route) {
                     PileFoundationScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.StrapFooting.route) {
+                    StrapFootingScreen(onNavigateBack = { navController.popBackStack() })
+                }
                 composable(AppScreen.FlatSlab.route) {
                     FlatSlabScreen(onNavigateBack = { navController.popBackStack() })
                 }

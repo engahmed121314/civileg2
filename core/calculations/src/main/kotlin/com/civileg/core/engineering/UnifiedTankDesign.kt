@@ -1,5 +1,6 @@
 package com.civileg.core.engineering
 
+import com.civileg.core.calculations.entities.DesignCode
 import kotlin.math.*
 
 // Minimal standalone implementation that preserves original intent
@@ -64,8 +65,9 @@ class UnifiedTankDesign(
     )
 
     /**
-     * designTank مع الحفاظ على التوقيع الأساسي وإضافة معاملات اختيارية في النهاية فقط
-     * توسعة تدريجية: wallTopThicknessMm و baseExtensionMm للجدار المتدرج (tapered) - افتراضي 0.0 للتوافقية
+     * designTank with code-specific partial factors and crack width limits.
+     * Adds code-aware F (safety factor), s_max (crack width limit), and uplift FoS targets
+     * for ECP 203, ACI 318, and SBC 304 without breaking existing calls (default = EGYPTIAN).
      */
     fun designTank(
         lengthMm: Double,
@@ -76,7 +78,8 @@ class UnifiedTankDesign(
         groundWaterDepthMm: Double = Double.POSITIVE_INFINITY,
         freeboardMm: Double = 300.0,
         wallTopThicknessMm: Double = 0.0,
-        baseExtensionMm: Double = 0.0
+        baseExtensionMm: Double = 0.0,
+        code: DesignCode = DesignCode.ECP
     ): Outcome {
         // --- تحويل للوحدات المترية للاستخدام الداخلي ---
         val L = lengthMm / 1000.0

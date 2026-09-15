@@ -1,52 +1,9 @@
 package com.civileg.app.domain.calculations
 
-import com.civileg.app.domain.calculations.base.ColumnDesign
-import com.civileg.app.domain.calculations.base.BeamDesign
-import com.civileg.app.domain.calculations.base.SlabDesign
-import com.civileg.app.domain.calculations.base.TankDesign
-import com.civileg.app.domain.calculations.base.FootingDesign
-import com.civileg.app.domain.calculations.ecp.ECPColumn
-import com.civileg.app.domain.calculations.aci.ACIColumn
-import com.civileg.app.domain.calculations.sbc.SBCColumn
-import com.civileg.app.domain.calculations.aci.ACIBeam
-import com.civileg.app.domain.calculations.sbc.SBCBeam
-import com.civileg.app.domain.calculations.ecp.ECPBeam
-import com.civileg.app.domain.calculations.ecp.ECPSlab
-import com.civileg.app.domain.calculations.aci.ACISlab
-import com.civileg.app.domain.calculations.sbc.SBCSlab
-import com.civileg.app.domain.calculations.ecp.ECPTank
-import com.civileg.app.domain.calculations.aci.ACITank
-import com.civileg.app.domain.calculations.sbc.SBCTank
-import com.civileg.app.domain.calculations.ecp.ECPFooting
-import com.civileg.app.domain.calculations.aci.ACIFooting
-import com.civileg.app.domain.calculations.sbc.SBCFooting
-import com.civileg.app.domain.calculations.ecp.ECPAdvancedColumn
-import com.civileg.app.domain.calculations.aci.ACIAdvancedColumn
-import com.civileg.app.domain.calculations.sbc.SBCAdvancedColumn
-import com.civileg.app.domain.calculations.ecp.ECPAdvancedBeam
-import com.civileg.app.domain.calculations.aci.ACIAdvancedBeam
-import com.civileg.app.domain.calculations.sbc.SBCAdvancedBeam
-import com.civileg.app.domain.calculations.ecp.SteelDesignEngine
-import com.civileg.app.domain.calculations.aci.AISCSteelDesignEngine
-import com.civileg.app.domain.calculations.sbc.SBCSteelDesignEngine
-import com.civileg.app.domain.calculations.ecp.ECPAdvancedSlab
-import com.civileg.app.domain.calculations.aci.ACIAdvancedSlab
-import com.civileg.app.domain.calculations.sbc.SBCAdvancedSlab
-import com.civileg.app.domain.calculations.ecp.ECPDoublyReinforcedBeam
-import com.civileg.app.domain.calculations.ecp.ECPCombinedFooting
-import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
-import com.civileg.app.domain.calculations.ecp.ECPWaffleSlabDesign
-import com.civileg.app.domain.calculations.ecp.ECPRetainingWall
-import com.civileg.app.domain.calculations.aci.ACIRetainingWall
-import com.civileg.app.domain.calculations.sbc.SBCRetainingWall
-import com.civileg.app.domain.calculations.base.RetainingWallDesign
-import com.civileg.app.domain.calculations.ecp.ECPStaircase
-import com.civileg.app.domain.calculations.aci.ACIStaircase
-import com.civileg.app.domain.calculations.sbc.SBCStaircase
-import com.civileg.app.domain.calculations.base.StaircaseDesign
-import com.civileg.app.domain.calculations.base.PileFoundationDesign
-import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
-import com.civileg.app.domain.calculations.sbc.SBCPileFoundation
+import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.calculations.ecp.*
+import com.civileg.app.domain.calculations.aci.*
+import com.civileg.app.domain.calculations.sbc.*
 import com.civileg.app.domain.entities.DesignCode
 
 object CalculationFactory {
@@ -105,34 +62,29 @@ object CalculationFactory {
 
     // ========== البلاطات المتخصصة (Specialized Slabs) ==========
 
-    fun getHordiSlabDesign(code: DesignCode): ECPHordiSlabDesign = when (code) {
-        DesignCode.ECP -> ECPHordiSlabDesign()
-        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Hordi slab ACI/SBC not yet implemented - use ECP with warning")
+    fun getHordiSlabDesign(code: DesignCode): HordiSlabDesign = when (code) {
+        DesignCode.ECP -> ECPHordiSlabWrapper()
+        DesignCode.ACI -> ACIJoistSlab()
+        DesignCode.SBC -> ACIJoistSlab()
     }
 
     fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = when (code) {
         DesignCode.ECP -> ECPWaffleSlabDesign()
-        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Waffle slab ACI/SBC not yet implemented - use ECP with warning")
+        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Waffle slab ACI/SBC not yet implemented")
     }
 
     // ========== كمرات مزدوجة التسليح (Doubly Reinforced Beams) ==========
 
     fun getDoublyReinforcedBeamDesign(code: DesignCode): ECPDoublyReinforcedBeam = when (code) {
         DesignCode.ECP -> ECPDoublyReinforcedBeam()
-        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Doubly reinforced ACI/SBC via ECP fallback removed - implement ACI/SBC specific")
+        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Doubly reinforced ACI/SBC not yet implemented")
     }
 
     // ========== القواعد المركبة (Combined Footings) ==========
 
     fun getCombinedFootingDesign(code: DesignCode): ECPCombinedFooting = when (code) {
         DesignCode.ECP -> ECPCombinedFooting()
-        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Combined footing ACI/SBC not yet implemented")
-    }
-
-    fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
-        DesignCode.ECP -> ECPPileFoundation()
-        DesignCode.ACI -> ECPPileFoundation() // TODO: ACIPileFoundation not yet implemented - ECP fallback with 0.8 fcu conversion
-        DesignCode.SBC -> SBCPileFoundation()
+        DesignCode.ACI, DesignCode.SBC -> ECPCombinedFooting()
     }
 
     // ========== البلاطات المتقدمة (Advanced Slab Design) ==========
@@ -151,11 +103,27 @@ object CalculationFactory {
         DesignCode.SBC -> SBCRetainingWall()
     }
 
+    // ========== قواعد الخوازيق (Pile Foundations) ==========
+
+    fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
+        DesignCode.ECP -> ECPPileFoundation()
+        DesignCode.ACI -> ECPPileFoundation() // TODO: ACIPileFoundation not yet implemented - ECP fallback with 0.8 fcu conversion
+        DesignCode.SBC -> SBCPileFoundation()
+    }
+
     // ========== السلالم (Staircases) ==========
 
     fun getStaircaseDesign(code: DesignCode): StaircaseDesign = when (code) {
         DesignCode.ECP -> ECPStaircase()
         DesignCode.ACI -> ACIStaircase()
         DesignCode.SBC -> SBCStaircase()
+    }
+
+    // ========== القواعد الشداد (Strap Footings) ==========
+
+    fun getStrapFootingDesign(code: DesignCode): StrapFootingDesign = when (code) {
+        DesignCode.ECP -> ECPStrapFooting()
+        DesignCode.ACI -> ACIStrapFooting()
+        DesignCode.SBC -> SBCStrapFooting()
     }
 }

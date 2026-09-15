@@ -477,7 +477,7 @@ object PdfGenerator {
         document.add(createStyledParagraph(t(context, "الخصائص الهندسية", "Geometric Properties"), arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
         
         val propTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-        propTable.addCell(createDataCell("Area (A)", "%.2f cm²".format(result.sectionType.getArea()/100.0), arabicFont))
+        propTable.addCell(createDataCell("Area (A)", "%.2f cm²".format(result.sectionType.area/100.0), arabicFont))
         propTable.addCell(createDataCell("Weight (W)", "%.2f kg/m".format(result.weight), arabicFont))
         
         val section = result.sectionType
@@ -530,7 +530,7 @@ object PdfGenerator {
             val warningList = com.itextpdf.layout.element.List()
             result.warnings.forEach { warning -> 
                 val li = ListItem(warning)
-                if (containsArabic(warning) && arabicFont != null) {
+                if (containsArabic(warning)) {
                     li.setFont(arabicFont).setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
                 }
                 warningList.add(li) 

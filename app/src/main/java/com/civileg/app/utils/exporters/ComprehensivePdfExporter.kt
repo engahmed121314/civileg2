@@ -716,16 +716,14 @@ class ComprehensivePdfExporter(private val context: Context) {
             } ?: emptyList()), font)
 
             // ===== 6. Deflection Check =====
-            if (result.deflectionCheck != null) {
-                addSectionTitle(document, t("التحقق من الهبوط", "Deflection Check"), "Deflection Check")
-                val dc = result.deflectionCheck
-                addInfoTable(document, listOf(
+            val dc = result.deflectionCheck
+            addSectionTitle(document, t("التحقق من الهبوط", "Deflection Check"), "Deflection Check")
+            addInfoTable(document, listOf(
                     t("الهبوط المحسوب", "Calculated Deflection") to "${dc.calculatedDeflection.format(2)} mm",
                     t("الهبوط المسموح", "Allowable Deflection") to "${dc.allowableDeflection.format(2)} mm",
                     t("النسبة", "Ratio") to "${(dc.ratio * 100).format(1)}%",
                     t("الحالة", "Status") to if (dc.isSafe) t("مطابق ✔", "OK ✔") else t("غير مطابق ✘", "NG ✘")
                 ), font)
-            }
 
             // ===== 7. Quantities =====
             addSectionTitle(document, t("الكميات والتكلفة", "Quantities & Cost Estimate"), "Quantities & Cost Estimate")
@@ -785,7 +783,7 @@ class ComprehensivePdfExporter(private val context: Context) {
             addInfoTable(document, listOf(
                 t("نوع القطاع", "Section Type") to sectionType.displayName,
                 t("نوع العضو", "Member Type") to memberType.name,
-                t("المساحة", "Area") to "${(sectionType.getArea() / 100.0).format(2)} cm\u00B2",
+                t("المساحة", "Area") to "${(sectionType.area / 100.0).format(2)} cm\u00B2",
                 t("الوزن", "Weight") to "${result.weight.format(2)} kg/m",
                 t("الطول غير مسنود", "Unbraced Length") to "${inputs.unbracedLength.format(0)} mm",
                 t("الحمل المحوري", "Axial Load") to "${inputs.axialLoad.format(1)} kN",

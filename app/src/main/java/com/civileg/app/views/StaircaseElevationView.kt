@@ -11,7 +11,6 @@ import kotlin.math.*
  * Professional Staircase Elevation View
  * Features: Engineering hatching, dimensioning, reinforcement detailing, and cost summary.
  */
-@Deprecated("Use ProfessionalStairDrawing")
 class StaircaseElevationView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -139,6 +138,7 @@ class StaircaseElevationView @JvmOverloads constructor(
         drawFooter(canvas, footerHeight)
     }
 
+    @Suppress("DEPRECATION")
     private fun drawConcreteHatching(canvas: Canvas, path: Path) {
         canvas.save()
         canvas.clipPath(path)

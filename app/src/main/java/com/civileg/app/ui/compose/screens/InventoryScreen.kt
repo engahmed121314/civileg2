@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -305,7 +306,7 @@ fun InventoryItemCard(item: InventoryItem, context: Context, onUpdateQuantity: (
                             }
                             context.startActivity(android.content.Intent.createChooser(intent, "Request Reorder"))
                         }) {
-                            Icon(Icons.Default.Send, contentDescription = "Request Reorder", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.AutoMirrored.Default.Send, contentDescription = "Request Reorder", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                     IconButton(onClick = onDelete) {
@@ -351,7 +352,7 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
                         readOnly = true,
                         label = { Text(stringResource(R.string.water_level_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                     )
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         InventoryType.entries.forEach { t ->

@@ -277,28 +277,6 @@ class BOQViewModel @Inject constructor(
                         )
                     } else emptyList()
                 }
-                com.civileg.app.db.DesignType.FOOTING -> {
-                    val length = input.optDouble("length", input.optDouble("L", 0.0))
-                    val width = input.optDouble("width", input.optDouble("B", 0.0))
-                    val thickness = input.optDouble("thickness", input.optDouble("t", 0.0))
-                    val fcu = input.optDouble("fcu", input.optDouble("concreteGrade", 25.0))
-                    val astX = input.optDouble("astBottomX", input.optDouble("astX", 0.0))
-                    val astY = input.optDouble("astBottomY", input.optDouble("astY", 0.0))
-                    val rebarDia = input.optDouble("rebarDia", input.optDouble("d1", 12.0))
-                    val spacingX = input.optDouble("rebarSpacingX", input.optDouble("s1", 200.0))
-                    val spacingY = input.optDouble("rebarSpacingY", input.optDouble("s2", 200.0))
-                    val excDepth = input.optDouble("excavationDepth", input.optDouble("excDepth", 0.0))
-                    val cover = input.optDouble("cover", 75.0)
-                    if (length > 0 && width > 0 && thickness > 0) {
-                        calculateElementBoq.calculateFootingBoq(
-                            length, width, thickness, fcu,
-                            if (astX > 0) astX else 100.0,
-                            if (astY > 0) astY else 100.0,
-                            rebarDia, spacingX, spacingY,
-                            prices, excDepth, cover
-                        )
-                    } else emptyList()
-                }
                 com.civileg.app.db.DesignType.STAIRCASE -> {
                     val stairWidth = input.optDouble("stairWidth", input.optDouble("width", 0.0))
                     val totalHeight = input.optDouble("totalHeight", input.optDouble("H", 0.0))

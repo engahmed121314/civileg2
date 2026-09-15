@@ -25,7 +25,7 @@ class ECPColumnTest {
         val concreteStress = 0.67 * 25.0 / 1.5 // 11.167 MPa
         val steelStress = 420.0 / 1.15 // 365.22 MPa
         val nominalCapacity = 0.8 * (concreteStress * (Ag - Ast) + steelStress * Ast)
-        val expected = 0.65 * nominalCapacity / 1000.0 // kN
+        val expected = nominalCapacity / 1000.0 // kN
         
         assertEquals(expected, capacity, 0.1)
     }

@@ -1,87 +1,106 @@
 package com.civileg.app.security
 
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
+import java.security.KeyStore
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 /**
  * Cryptographic utilities for securing sensitive data at rest.
- * Uses AES-256-GCM for encryption.
+ * Uses AES-256-GCM with Android KeyStore for hardware-backed security.
  * Developer: Eng. Ahmed Magdy | eng.ahmedmagdy121314@gmail.com
  */
 object CryptoUtils {
 
+    private const val ANDROID_KEY_STORE = "AndroidKeyStore"
+    private const val KEY_ALIAS = "CivilEngineerPro_MasterKey"
     private const val ALGORITHM = "AES/GCM/NoPadding"
-    private const val KEY_SIZE = 32 // 256 bits
-    private const val IV_SIZE = 12  // GCM recommended IV size
-    private const val TAG_LENGTH = 128 // GCM auth tag length in bits
+    private const val IV_SIZE = 12
+    private const val TAG_LENGTH = 128
 
-    // App-specific key derivation salt (not a secret, but adds uniqueness)
+    // App-specific key derivation salt
     private const val APP_SALT = "CivilEngineerPro_2024_AhmedMagdy"
-
     private val secureRandom = SecureRandom()
 
     /**
-     * Generate a secure random AES-256 key.
+     * Retrieves the master key from Android Keystore or creates it if it doesn't exist.
      */
-    fun generateKey(): ByteArray {
-        val key = ByteArray(KEY_SIZE)
-        secureRandom.nextBytes(key)
-        return key
+    private fun getOrCreateMasterKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE)
+        keyStore.load(null)
+
+        if (!keyStore.containsAlias(KEY_ALIAS)) {
+            val keyGenerator = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES,
+                ANDROID_KEY_STORE
+            )
+            val spec = KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build()
+            
+            keyGenerator.init(spec)
+            return keyGenerator.generateKey()
+        }
+
+        val entry = keyStore.getEntry(KEY_ALIAS, null) as KeyStore.SecretKeyEntry
+        return entry.secretKey
     }
 
     /**
-     * Generate a secure random IV.
+     * Encrypts data using AES-256-GCM with the hardware-backed master key.
      */
-    fun generateIv(): ByteArray {
-        val iv = ByteArray(IV_SIZE)
-        secureRandom.nextBytes(iv)
-        return iv
+    fun encrypt(plaintext: String): String {
+        return try {
+            val cipher = Cipher.getInstance(ALGORITHM)
+            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateMasterKey())
+            cipher.updateAAD(APP_SALT.toByteArray(Charsets.UTF_8))
+
+            val iv = cipher.iv
+            val encrypted = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
+            val combined = iv + encrypted
+
+            Base64.encodeToString(combined, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
-     * Encrypt data using AES-256-GCM.
-     * Returns: Base64(IV + ciphertext + tag)
+     * Decrypts data using AES-256-GCM with the hardware-backed master key.
      */
-    fun encrypt(plaintext: String, key: ByteArray): String {
-        val iv = generateIv()
-        val keySpec = SecretKeySpec(key, "AES")
-        val ivSpec = IvParameterSpec(iv)
+    fun decrypt(encryptedBase64: String): String {
+        return try {
+            val combined = Base64.decode(encryptedBase64, Base64.NO_WRAP)
+            if (combined.size < IV_SIZE) return ""
+            
+            val iv = combined.copyOfRange(0, IV_SIZE)
+            val encrypted = combined.copyOfRange(IV_SIZE, combined.size)
 
-        val cipher = Cipher.getInstance(ALGORITHM)
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec)
-        cipher.updateAAD(APP_SALT.toByteArray(Charsets.UTF_8))
+            val cipher = Cipher.getInstance(ALGORITHM)
+            val spec = GCMParameterSpec(TAG_LENGTH, iv)
+            cipher.init(Cipher.DECRYPT_MODE, getOrCreateMasterKey(), spec)
+            cipher.updateAAD(APP_SALT.toByteArray(Charsets.UTF_8))
 
-        val encrypted = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
-        val combined = iv + encrypted
-
-        return Base64.encodeToString(combined, Base64.NO_WRAP)
+            val decrypted = cipher.doFinal(encrypted)
+            String(decrypted, Charsets.UTF_8)
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
-     * Decrypt data using AES-256-GCM.
-     * Input: Base64(IV + ciphertext + tag)
-     */
-    fun decrypt(encryptedBase64: String, key: ByteArray): String {
-        val combined = Base64.decode(encryptedBase64, Base64.NO_WRAP)
-        val iv = combined.copyOfRange(0, IV_SIZE)
-        val encrypted = combined.copyOfRange(IV_SIZE, combined.size)
-
-        val keySpec = SecretKeySpec(key, "AES")
-        val ivSpec = IvParameterSpec(iv)
-
-        val cipher = Cipher.getInstance(ALGORITHM)
-        cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
-        cipher.updateAAD(APP_SALT.toByteArray(Charsets.UTF_8))
-
-        val decrypted = cipher.doFinal(encrypted)
-        return String(decrypted, Charsets.UTF_8)
-    }
-
-    /**
-     * Generate a secure random token for session management.
+     * Generates a secure random token.
      */
     fun generateSecureToken(length: Int = 32): String {
         val bytes = ByteArray(length)
@@ -90,10 +109,10 @@ object CryptoUtils {
     }
 
     /**
-     * Hash a string using SHA-256 (for non-secret data fingerprinting).
+     * Hashes a string using SHA-256.
      */
     fun sha256(input: String): String {
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = MessageDigest.getInstance("SHA-256")
         val hash = digest.digest(input.toByteArray(Charsets.UTF_8))
         return hash.joinToString("") { "%02x".format(it) }
     }
