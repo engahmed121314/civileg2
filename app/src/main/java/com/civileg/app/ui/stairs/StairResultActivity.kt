@@ -73,8 +73,8 @@ class StairResultActivity : AppCompatActivity() {
 
     private fun setupDrawing() {
         binding.drawingView.setDetails(
-            riser = 150f,
-            tread = 300f,
+            riser = result.riser.toFloat().takeIf { it > 0f } ?: 150f,
+            tread = result.tread.toFloat().takeIf { it > 0f } ?: 300f,
             reinforcement = result.reinforcement.barString,
             volume = result.concreteVolume.toFloat(),
             safe = result.isSafe

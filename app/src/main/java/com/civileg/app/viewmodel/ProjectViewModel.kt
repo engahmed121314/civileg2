@@ -16,12 +16,30 @@ import org.json.JSONObject
 import java.util.Date
 import javax.inject.Inject
 
+import com.civileg.app.data.ProjectSyncManager
+import androidx.lifecycle.MutableLiveData
+
 @HiltViewModel
 class ProjectViewModel @Inject constructor(
     private val projectDao: ProjectDao,
     private val designDao: DesignDao,
-    private val materialDao: MaterialDao
+    private val materialDao: MaterialDao,
+    private val syncManager: ProjectSyncManager
 ) : ViewModel() {
+
+    private val _syncStatus = MutableLiveData<Boolean?>(null)
+    val syncStatus: LiveData<Boolean?> = _syncStatus
+
+    fun syncData() {
+        viewModelScope.launch {
+            val success = syncManager.syncAllProjects()
+            _syncStatus.value = success
+        }
+    }
+
+    fun resetSyncStatus() {
+        _syncStatus.value = null
+    }
 
     // Archive Projects — reuse main projects list sorted by date
     val allArchiveProjects: LiveData<List<Project>> = projectDao.getAllProjects()

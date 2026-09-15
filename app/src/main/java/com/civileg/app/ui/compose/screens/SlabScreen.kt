@@ -369,7 +369,9 @@ fun SlabScreen(
                             dropPanelThickness = dropPanelThickness.toDoubleOrNull() ?: 0.0,
                             columnSize = columnSize.toDoubleOrNull() ?: 400.0,
                             openingWidth = openingWidth.toDoubleOrNull() ?: 0.0,
-                            openingLength = openingLength.toDoubleOrNull() ?: 0.0
+                            openingLength = openingLength.toDoubleOrNull() ?: 0.0,
+                            ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                            ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -693,13 +695,18 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                 Text(res.trimmerReinforcement, fontWeight = FontWeight.Bold)
             }
             
-            Spacer(Modifier.height(8.dp))
-            
-            Text(stringResource(R.string.slab_main_steel_lx), style = MaterialTheme.typography.labelMedium)
-            Text(res.reinforcementMain.barString, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            
-            Text(stringResource(R.string.slab_secondary_steel_ly), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-            Text(res.reinforcementSecondary.barString, fontWeight = FontWeight.Bold)
+            if (res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) {
+                Spacer(Modifier.height(8.dp))
+                Text("Rib Reinforcement", style = MaterialTheme.typography.labelMedium)
+                Text("${res.reinforcementMain.numBars} Ø ${res.reinforcementMain.diameter} per rib", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            } else {
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.slab_main_steel_lx), style = MaterialTheme.typography.labelMedium)
+                Text(res.reinforcementMain.barString, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                
+                Text(stringResource(R.string.slab_secondary_steel_ly), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+                Text(res.reinforcementSecondary.barString, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

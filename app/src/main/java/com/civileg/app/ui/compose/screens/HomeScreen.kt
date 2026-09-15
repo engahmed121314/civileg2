@@ -31,7 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -222,7 +222,20 @@ fun HomeScreen(
             )
         }
 
+    val syncStatus by projectViewModel.syncStatus.observeAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    LaunchedEffect(syncStatus) {
+        syncStatus?.let { success ->
+            snackbarHostState.showSnackbar(
+                if (success) "Cloud sync successful" else "Cloud sync failed"
+            )
+            projectViewModel.resetSyncStatus()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -249,6 +262,13 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { projectViewModel.syncData() }) {
+                        Icon(
+                            Icons.Default.CloudSync,
+                            contentDescription = "Sync",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     IconButton(onClick = onShowSettings) {
                         Icon(
                             Icons.Default.Settings,

@@ -80,7 +80,7 @@ class StaircaseDesignFragment : Fragment() {
                     binding.layoutSteps.visibility = View.VISIBLE
                 }
                 R.id.rbCantilever -> {
-                    selectedType = CalculatorEngine.StairType.SPIRAL // Use spiral for cantilever as fallback
+                    selectedType = CalculatorEngine.StairType.CANTILEVER
                     binding.layoutLandingWidth.visibility = View.GONE
                     binding.layoutSteps.visibility = View.VISIBLE
                 }

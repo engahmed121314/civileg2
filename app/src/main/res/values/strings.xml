@@ -27,6 +27,8 @@
     <string name="home_soil_bearing_sub">Soil Bearing Capacity Analysis</string>
     <string name="home_wind_load">Wind Load</string>
     <string name="home_wind_load_sub">Wind Force Calculations</string>
+    <string name="home_settlement">Soil Settlement</string>
+    <string name="home_settlement_sub">Immediate &amp; Consolidation Analysis</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>

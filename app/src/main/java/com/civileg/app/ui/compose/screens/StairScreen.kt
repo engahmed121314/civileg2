@@ -365,6 +365,9 @@ fun StairScreen(
                                 CalculatorEngine.DesignCode.SAUDI -> 40.0
                                 else -> 25.0
                             }
+                            val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
+                                selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
+                            val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
                             ProfessionalStairDrawing(
                                 stairWidth = 1200.0,
                                 totalHeight = nRisers.toDouble() * res.riser,
@@ -372,11 +375,14 @@ fun StairScreen(
                                 riserHeight = res.riser,
                                 treadWidth = res.tread,
                                 slabThickness = res.thickness,
+                                landingLength = landingLen,
+                                landingThickness = res.thickness,
                                 mainRebarDia = res.reinforcement.diameter.toDouble(),
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
                                 cover = codeAwareCover,
+                                stairType = res.type.displayName,
                                 viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -394,6 +400,9 @@ fun StairScreen(
                 CalculatorEngine.DesignCode.SAUDI -> 40.0
                 else -> 25.0
             }
+            val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
+                selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
+            val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
             ComposeDrawingCaptureUtil.DrawingCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
@@ -407,11 +416,14 @@ fun StairScreen(
                         riserHeight = res.riser,
                         treadWidth = res.tread,
                         slabThickness = res.thickness,
+                        landingLength = landingLen,
+                        landingThickness = res.thickness,
                         mainRebarDia = res.reinforcement.diameter.toDouble(),
                         mainRebarSpacing = res.reinforcement.spacing,
                         distributionDia = res.distributionReinforcement.diameter.toDouble(),
                         distributionSpacing = res.distributionReinforcement.spacing,
                         cover = codeAwareCover,
+                        stairType = res.type.displayName,
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth()
                     )

@@ -34,6 +34,9 @@ import com.civileg.app.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+import com.civileg.app.security.AppIntegrityChecker
+import android.util.Log
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -49,6 +52,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Perform security check
+        if (!AppIntegrityChecker.isDeviceSecure(this)) {
+            Log.w("Security", "Device security compromised - Root, Emulator or Hooking detected")
+            // In a strict financial/engineering app, we might finish() here.
+            // For this app, we will allow but log.
+        }
 
         // Apply saved language before any UI is created
         LocaleHelper.applySavedLocale(this)
@@ -249,6 +259,9 @@ fun AppNavigation(
                 }
                 composable(AppScreen.ShearWall.route) {
                     ShearWallScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.SoilSettlement.route) {
+                    SoilSettlementScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
                 // ═══ QUICK TOOLS ═══

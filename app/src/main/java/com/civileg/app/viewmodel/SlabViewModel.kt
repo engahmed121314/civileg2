@@ -46,7 +46,8 @@ class SlabViewModel @Inject constructor(
         val fcu: Double, val fy: Double, val ts: Double, val preferredDiameter: Int,
         val code: CalculatorEngine.DesignCode, val type: CalculatorEngine.SlabType,
         val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double,
-        val openingWidth: Double = 0.0, val openingLength: Double = 0.0
+        val openingWidth: Double = 0.0, val openingLength: Double = 0.0,
+        val ribWidth: Double = 100.0, val ribSpacing: Double = 500.0
     )
 
     fun calculateSlabPro(
@@ -64,7 +65,9 @@ class SlabViewModel @Inject constructor(
         dropPanelThickness: Double = 0.0,
         columnSize: Double = 400.0,
         openingWidth: Double = 0.0,
-        openingLength: Double = 0.0
+        openingLength: Double = 0.0,
+        ribWidth: Double = 100.0,
+        ribSpacing: Double = 500.0
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -73,7 +76,7 @@ class SlabViewModel @Inject constructor(
                 lastInputs = SlabStoredInputs(
                     lx, ly, deadLoad, liveLoad, fcu, fy, ts, preferredDiameter,
                     code, type, prestressForce, dropPanelThickness, columnSize,
-                    openingWidth, openingLength
+                    openingWidth, openingLength, ribWidth, ribSpacing
                 )
 
                 val res = calculatorEngine.designSlab(
@@ -81,7 +84,8 @@ class SlabViewModel @Inject constructor(
                     fcu = fcu, fy = fy, ts = ts, preferredDiameter = preferredDiameter,
                     code = code, type = type, prestressForce = prestressForce,
                     dropPanelThickness = dropPanelThickness, columnSize = columnSize,
-                    openingWidth = openingWidth, openingLength = openingLength
+                    openingWidth = openingWidth, openingLength = openingLength,
+                    ribWidth = ribWidth, ribSpacing = ribSpacing
                 )
                 
                 // Validate consistency & Dead Load logic

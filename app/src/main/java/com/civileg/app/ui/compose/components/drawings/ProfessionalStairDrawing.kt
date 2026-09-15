@@ -106,6 +106,7 @@ fun ProfessionalStairDrawing(
     distributionSpacing: Double = 0.0, // mm
     cover: Double = 25.0,         // mm
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
+    stairType: String = "Straight Stair", // stair type label shown in the drawing title
     viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
@@ -223,7 +224,7 @@ fun ProfessionalStairDrawing(
         } // end reinforcement table
 
         // 5. Title block (always visible)
-        drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength)
+        drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength, stairType)
     }
 }
 
@@ -1245,10 +1246,11 @@ private fun DrawScope.drawTitleBlock(
     riserHeight: Double,
     treadWidth: Double,
     totalHeight: Double,
-    totalLength: Double
+    totalLength: Double,
+    stairType: String
 ) {
-    val blockW = 200f
-    val blockH = 42f
+    val blockW = 220f
+    val blockH = 50f
     val blockLeft = cw - blockW - 16f
     // Position above the reinforcement table to avoid overlap
     val blockTop = (tableTop - blockH - 6f).coerceAtLeast(4f)
@@ -1266,8 +1268,13 @@ private fun DrawScope.drawTitleBlock(
         color = DimensionWhite, size = 15f
     )
     drawTextAnnotated(
-        text = "${nRisers}R × ${treadWidth.toInt()}T  |  H=${totalHeight.toInt()} mm  L=${totalLength.toInt()} mm",
+        text = stairType.uppercase(),
         x = blockLeft + 8f, y = blockTop + 32f,
+        color = SectionCutColor, size = 12f
+    )
+    drawTextAnnotated(
+        text = "${nRisers}R × ${treadWidth.toInt()}T  |  H=${totalHeight.toInt()} mm  L=${totalLength.toInt()} mm",
+        x = blockLeft + 8f, y = blockTop + 46f,
         color = ExtensionGray, size = 12f
     )
 }

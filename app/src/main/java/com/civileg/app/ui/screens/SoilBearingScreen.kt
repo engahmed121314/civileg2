@@ -602,24 +602,28 @@ private fun FoundationCrossSectionCanvas(
     Df: Double,
     waterTableDepth: Double,
     soilType: SoilType
-) {
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(280.dp)
     ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp)
+        ) {
+        val safeB = if (B.isFinite() && B > 0) B else 1.5
+        val safeL = if (L.isFinite() && L > 0) L else 1.5
+        val safeDf = if (Df.isFinite() && Df > 0) Df else 1.0
+        val safeWt = if (waterTableDepth.isFinite() && waterTableDepth > 0) waterTableDepth else 5.0
         val w = size.width
         val h = size.height
         val cx = w / 2f
 
         // Scale: map physical dimensions to canvas pixels
-        val maxPhysHeight = maxOf(waterTableDepth, Df + B, 5.0)
+        val maxPhysHeight = maxOf(safeWt, safeDf + safeB, 5.0)
         val scale = (h * 0.75f) / maxPhysHeight.toFloat()
         val groundY = h * 0.2f  // ground surface position
-        val foundationPixelW = (B * scale).toFloat().coerceIn(40f, w * 0.7f)
-        val dfPixel = (Df * scale).toFloat().coerceIn(20f, h * 0.4f)
+        val foundationPixelW = (safeB * scale).toFloat().coerceIn(40f, w * 0.7f)
+        val dfPixel = (safeDf * scale).toFloat().coerceIn(20f, h * 0.4f)
         val baseY = groundY + dfPixel
-        val wtPixel = ((waterTableDepth - Df) * scale).toFloat().coerceAtLeast(0f)
+        val wtPixel = ((safeWt - safeDf) * scale).toFloat().coerceAtLeast(0f)
         val waterY = baseY + wtPixel
 
         // --- Sky ---
@@ -639,7 +643,7 @@ private fun FoundationCrossSectionCanvas(
         )
 
         // --- Water table (if within view) ---
-        if (waterTableDepth > Df && waterY < h) {
+        if (safeWt > safeDf && waterY < h) {
             // Water layer below water table
             drawRect(
                 color = WaterBlue.copy(alpha = 0.3f),
@@ -656,7 +660,7 @@ private fun FoundationCrossSectionCanvas(
             )
             // Label
             drawContext.canvas.nativeCanvas.drawText(
-                "WT (Dw=${waterTableDepth}m)",
+                "WT (Dw=${safeWt}m)",
                 12f, waterY.toFloat() - 8f,
                 android.graphics.Paint().apply {
                     this.setColor(WaterBlue.toArgb())
@@ -713,14 +717,14 @@ private fun FoundationCrossSectionCanvas(
         drawDimensionLine(
             x = fRight + 24f,
             y1 = groundY, y2 = baseY,
-            label = "Df=${Df}m"
+            label = "Df=${safeDf}m"
         )
 
         // --- Width dimension line ---
         drawDimensionLineH(
             y = baseY + 24f,
             x1 = fLeft, x2 = fRight,
-            label = "B'=${"%.2f".format(B)}m"
+            label = "B'=${"%.2f".format(safeB)}m"
         )
 
         // --- Pressure arrows (load) ---

@@ -913,6 +913,63 @@ class ComprehensivePdfExporter(private val context: Context) {
         }
     }
 
+    // ==================== Method 5b: Strap Footing Report ====================
+    fun exportStrapFootingReport(
+        projectName: String,
+        designCode: CalculatorEngine.DesignCode,
+        result: CalculatorEngine.StrapFootingResult,
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
+    ): File? {
+        return try {
+            val (_, document, font) = createDocument(outputPath)
+            val codeStr = when (designCode) {
+                CalculatorEngine.DesignCode.EGYPTIAN -> "ECP 203-2020"
+                CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
+                CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+            }
+
+            addReportHeader(document,
+                t("تقرير تصميم قاعدة شداد", "Strap Footing Report"),
+                "Strap Footing Report",
+                "$codeStr | Boundary Footing",
+                font
+            )
+
+            addStatusBanner(document, result.isSafe, "Utilization: ${(result.utilizationRatio * 100).format(1)}%")
+
+            addSectionTitle(document, t("تفاصيل القاعدة الخارجية (1)", "External Footing Details (1)"), "External Footing Details (1)")
+            addInfoTable(document, listOf(
+                t("الأبعاد", "Dimensions") to "${result.footing1.width.toInt()} x ${result.footing1.length.toInt()} x ${result.footing1.thickness.toInt()} mm",
+                t("التسليح", "Reinforcement") to result.footing1.reinforcementBottom.barString,
+                t("رد الفعل R1", "Reaction R1") to "${result.reactions.first.format(1)} kN"
+            ), font)
+
+            addSectionTitle(document, t("تفاصيل القاعدة الداخلية (2)", "Internal Footing Details (2)"), "Internal Footing Details (2)")
+            addInfoTable(document, listOf(
+                t("الأبعاد", "Dimensions") to "${result.footing2.width.toInt()} x ${result.footing2.length.toInt()} x ${result.footing2.thickness.toInt()} mm",
+                t("التسليح", "Reinforcement") to result.footing2.reinforcementBottom.barString,
+                t("رد الفعل R2", "Reaction R2") to "${result.reactions.second.format(1)} kN"
+            ), font)
+
+            addSectionTitle(document, t("الكاميرا الرابطة", "Strap Beam Details"), "Strap Beam Details")
+            addInfoTable(document, listOf(
+                t("العرض", "Width") to "${result.strapBeamWidth.toInt()} mm",
+                t("العمق", "Depth") to "${result.strapBeamDepth.toInt()} mm",
+                t("التسليح العلوي", "Top Rebar") to result.strapTopReinforcement.barString,
+                t("التسليح السفلي", "Bottom Rebar") to result.strapBottomReinforcement.barString
+            ), font)
+
+            addDrawingSection(document, drawingBitmap, "Strap Footing Layout")
+            addFooter(document)
+            document.close()
+            File(outputPath)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     // ==================== Method 6: Tank Report ====================
     fun exportTankReport(
         projectName: String,

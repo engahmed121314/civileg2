@@ -178,6 +178,28 @@ class PileFoundationViewModel @Inject constructor(
                     unit = "mm"
                 ))
 
+                val drawingBitmap = try {
+                    PdfDrawingGenerator.generatePileDrawing(
+                        pileDiameter = res.pileDiameterMm,
+                        pileLength = res.pileLengthM,
+                        numberOfPiles = res.numberOfPiles,
+                        pileSpacing = group.spacing,
+                        pattern = group.pattern,
+                        capWidth = cap.capWidth,
+                        capLength = cap.capLength,
+                        capThickness = cap.capThickness,
+                        columnWidth = res.columnWidth,
+                        columnLength = res.columnLength,
+                        longitBars = reinf.longitudinalBars,
+                        longitDia = reinf.longitudinalDiameter,
+                        tiesDia = reinf.tiesDiameter,
+                        tiesSpacing = reinf.tiesSpacing,
+                        capRebarDia = cap.flexuralReinforcement.diameter,
+                        capRebarCount = cap.flexuralReinforcement.bars,
+                        soilType = res.soilType
+                    )
+                } catch (e: Exception) { e.printStackTrace(); null }
+
                 val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                     titleAr = "تقرير تصميم خوازيق",
                     titleEn = "Pile Foundation Design Report",
@@ -187,7 +209,7 @@ class PileFoundationViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
-                    drawingBitmap = null,
+                    drawingBitmap = drawingBitmap,
                     outputPath = file.absolutePath
                 )
 

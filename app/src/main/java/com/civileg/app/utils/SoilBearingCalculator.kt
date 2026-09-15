@@ -217,18 +217,20 @@ class SoilBearingCalculator {
         // 11. Safety check
         val isSafe = qAllow > 0
 
+        fun Double.safe() = if (isFinite()) this else 0.0
+
         return SoilBearingResult(
-            grossBearingCapacity = qu,
-            netBearingCapacity = qNet,
-            allowableBearingCapacity = qAllow,
+            grossBearingCapacity = qu.safe(),
+            netBearingCapacity = qNet.safe(),
+            allowableBearingCapacity = qAllow.safe(),
             nc = nc, nq = nq, ngamma = ngamma,
             shapeFactorC = sc, shapeFactorQ = sq, shapeFactorGamma = sg,
             depthFactorC = dc, depthFactorQ = dq, depthFactorGamma = dg,
             inclinationFactorC = ic, inclinationFactorQ = iq, inclinationFactorGamma = ig,
-            effectiveWidth = Beff,
-            effectiveLength = Leff,
+            effectiveWidth = Beff.safe(),
+            effectiveLength = Leff.safe(),
             waterTableCorrection = rw,
-            settlement = settlement,
+            settlement = settlement.safe(),
             isSafe = isSafe
         )
     }
@@ -417,7 +419,7 @@ class SoilBearingCalculator {
                 val phi = phiDeg * DEG2RAD
                 val eta = alphaRad
                 val iq = (1.0 - 0.5 * tan(eta)).pow(5)
-                val ic = iq - (1.0 - iq) / (nqVal(phiDeg) * tan(phi)).coerceAtLeast(0.0)
+                val ic = iq - (1.0 - iq) / (nqVal(phiDeg) * tan(phi).let { if (it == 0.0) 1e-10 else it })
                 val ig = (1.0 - 0.5 * tan(eta)).pow(5)
                 Triple(ic.coerceAtLeast(0.1), iq.coerceAtLeast(0.1), ig.coerceAtLeast(0.1))
             }
@@ -492,7 +494,7 @@ class SoilBearingCalculator {
      * Es is estimated from soil type; influence depth ≈ 2B.
      */
     fun estimateSettlement(input: SoilBearingInput, qNet: Double): Double {
-        if (qNet <= 0) return 0.0
+        if (!(qNet > 0)) return 0.0
 
         // Estimated Young's modulus (kPa) by soil type
         val Es = when (input.soilType) {

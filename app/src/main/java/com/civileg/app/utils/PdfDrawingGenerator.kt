@@ -1546,6 +1546,167 @@ object PdfDrawingGenerator {
         }
     }
 
+    // ========== GENERATE PILE FOUNDATION DRAWING ==========
+    fun generatePileDrawing(
+        pileDiameter: Double,
+        pileLength: Double,
+        numberOfPiles: Int,
+        pileSpacing: Double,
+        pattern: String,
+        capWidth: Double,
+        capLength: Double,
+        capThickness: Double,
+        columnWidth: Double,
+        columnLength: Double,
+        longitBars: Int,
+        longitDia: Int,
+        tiesDia: Int,
+        tiesSpacing: Int,
+        capRebarDia: Int,
+        capRebarCount: Int,
+        soilType: String
+    ): Bitmap {
+        val W = 1200; val H = 750
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 1.5f)
+        val titleP = textPaint(Color.WHITE, 24f, true)
+
+        canvas.drawTextCentered(
+            "PILE FOUNDATION DETAIL — $pattern (${numberOfPiles} piles) | L=${pileLength.toInt()}m",
+            W / 2f, 40f, titleP
+        )
+
+        val nCols = runCatching {
+            val parts = pattern.lowercase().split("x")
+            if (parts.size == 2) maxOf(parts[0].trim().toInt(), 1) else when {
+                numberOfPiles <= 1 -> 1
+                numberOfPiles <= 4 -> 2
+                numberOfPiles <= 6 -> 3
+                numberOfPiles <= 9 -> 3
+                else -> 4
+            }
+        }.getOrDefault(2)
+        val nRows = runCatching {
+            val parts = pattern.lowercase().split("x")
+            if (parts.size == 2) maxOf(parts[1].trim().toInt(), 1) else when {
+                numberOfPiles <= 1 -> 1
+                numberOfPiles <= 4 -> 2
+                numberOfPiles <= 6 -> 2
+                numberOfPiles <= 9 -> 3
+                else -> 4
+            }
+        }.getOrDefault(2)
+
+        val safeCapW = capWidth.coerceAtLeast(300.0).toFloat()
+        val safeCapL = capLength.coerceAtLeast(300.0).toFloat()
+        val safeSpacing = pileSpacing.coerceAtLeast(200.0).toFloat()
+        val safeDia = pileDiameter.coerceAtLeast(100.0).toFloat()
+
+        // ── PLAN VIEW (left) ──
+        val planScale = min(420f / safeCapL, 360f / safeCapW)
+        val planL = 90f
+        val planT = 105f
+        val capPxW = safeCapW * planScale
+        val capPxL = safeCapL * planScale
+
+        canvas.drawRect(planL, planT, planL + capPxL, planT + capPxW, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT, planL + capPxL, planT + capPxW, outlineP)
+        canvas.drawHatch(planL, planT, capPxL, capPxW)
+
+        // Piles in grid
+        val pileR = maxOf(safeDia * planScale / 2f, 8f)
+        val pileDrawR = minOf(pileR, safeSpacing * planScale / 2f - 4f)
+        val px0 = planL + safeCapL * 0.5f * planScale  // column center x
+        val py0 = planT + safeCapW * 0.5f * planScale  // column center y
+        for (r in 0 until nRows) {
+            for (c in 0 until nCols) {
+                val xOff = (c - (nCols - 1) / 2f) * safeSpacing * planScale
+                val yOff = (r - (nRows - 1) / 2f) * safeSpacing * planScale
+                canvas.drawCircle(px0 + xOff, py0 + yOff, pileDrawR, createPaint(Color.parseColor("#9E9E9E"), 2f))
+                canvas.drawRect(px0 + xOff - pileDrawR * 0.5f, py0 + yOff - pileDrawR * 0.5f,
+                    px0 + xOff + pileDrawR * 0.5f, py0 + yOff + pileDrawR * 0.5f, createPaint(REBAR_BLUE, 1.5f))
+            }
+        }
+
+        // Column in center
+        val colPxW = columnWidth.coerceAtLeast(100.0).toFloat() * planScale
+        val colPxL = columnLength.coerceAtLeast(100.0).toFloat() * planScale
+        canvas.drawRect(px0 - colPxL / 2f, py0 - colPxW / 2f, px0 + colPxL / 2f, py0 + colPxW / 2f, fillPaint(CONCRETE_SIDE))
+        canvas.drawRect(px0 - colPxL / 2f, py0 - colPxW / 2f, px0 + colPxL / 2f, py0 + colPxW / 2f, outlineP)
+        canvas.drawTextCentered("COLUMN", px0, py0 + 5f, textPaint(DIM_TEXT, 16f, true))
+
+        canvas.drawHDim(planL, planL + capPxL, planT + capPxW + 8f, "${capLength.toInt()} mm (L)")
+        canvas.drawVDim(planT, planT + capPxW, planL + capPxL + 12f, "${capWidth.toInt()} mm (W)")
+        // Spacing dim
+        if (nCols > 1) {
+            val x1 = px0 + (0 - (nCols - 1) / 2f) * safeSpacing * planScale
+            val x2 = px0 + (1 - (nCols - 1) / 2f) * safeSpacing * planScale
+            canvas.drawHDim(x1, x2, planT - 40f, "S=${pileSpacing.toInt()}", 0f)
+        }
+
+        // ── SECTION VIEW (right) ──
+        val secL = W * 0.5f; val secT = 105f
+        val secW = W * 0.45f
+        val soilH = 300f
+        val pileDrawH = (pileLength * 1000f) * 0.12f + 150f  // ~pile embedment visual
+        val capT = capThickness.coerceAtLeast(200.0).toFloat() * 0.4f
+        val secScale = min(secW / (safeCapL * 0.8f), (soilH + capT) / 420f)
+        val secCapL = safeCapL * secScale
+        val secCapT = capT.coerceAtLeast(40f)
+
+        // Soil region
+        canvas.drawRect(secL, secT + secCapT, secL + secCapL, secT + secCapT + soilH, fillPaint(SOIL_BROWN))
+        canvas.drawHatch(secL, secT + secCapT, secCapL, soilH, spacing = 16f)
+
+        // Piles embedded in soil
+        for (i in 0 until nCols) {
+            val px = secL + (i + 0.5f) * secCapL / nCols
+            canvas.drawRect(px - 22f, secT + secCapT + 6f, px + 22f, secT + secCapT + soilH, fillPaint(CONCRETE))
+            canvas.drawRect(px - 22f, secT + secCapT + 6f, px + 22f, secT + secCapT + soilH, outlineP)
+            // Longitudinal bars
+            for (b in 0 until 4) {
+                val bx = px - 14f + b * 9f
+                canvas.drawLine(bx, secT + secCapT + 8f, bx, secT + secCapT + soilH - 10f, createPaint(REBAR_BLUE, 1.5f))
+            }
+        }
+
+        // Cap above soil
+        val capBottomY = secT + secCapT
+        canvas.drawRect(secL, secT, secL + secCapL, capBottomY, fillPaint(CONCRETE_TOP))
+        canvas.drawRect(secL, secT, secL + secCapL, capBottomY, outlineP)
+        canvas.drawHatch(secL, secT, secCapL, capBottomY - secT, spacing = 10f)
+        // Cap bottom rebar
+        for (i in 0 until capRebarCount.coerceAtMost(10)) {
+            val bx = secL + 20f + i * (secCapL - 40f) / maxOf(capRebarCount - 1, 1)
+            canvas.drawRebar(bx, capBottomY - 12f, 4f, REBAR_BLUE)
+        }
+
+        // Column above cap
+        val colSecW = columnLength.coerceAtLeast(100.0).toFloat() * secScale / 2f
+        canvas.drawRect(secL + secCapL / 2f - colSecW / 2f, secT - 50f, secL + secCapL / 2f + colSecW / 2f, secT, fillPaint(CONCRETE_SIDE))
+        canvas.drawRect(secL + secCapL / 2f - colSecW / 2f, secT - 50f, secL + secCapL / 2f + colSecW / 2f, secT, outlineP)
+
+        canvas.drawVDim(secT, capBottomY, secL + secCapL + 18f, "t=${capThickness.toInt()} mm", 0f)
+        canvas.drawTextCentered("SECTION A-A", secL + secCapL / 2f, secT - 12f, textPaint(DIM_TEXT, 20f, true))
+
+        // Soil type label
+        canvas.drawTextCentered("SOIL: $soilType", secL + secCapL / 2f, secT + secCapT + soilH + 20f, textPaint(DIM_TEXT, 16f))
+
+        // ── Rebar table ──
+        drawRebarTable(canvas,
+            x = 80f, y = H * 0.72f,
+            data = listOf(
+                listOf("Mark", "Dia", "No.", "Details"),
+                listOf("P1", "Ø$longitDia", "$longitBars", "Longitudinal L=${pileLength.toInt()}m"),
+                listOf("T1", "Ø$tiesDia", "@$tiesSpacing", "Ties / Spiral"),
+                listOf("C1", "Ø$capRebarDia", "$capRebarCount", "Cap Bottom")
+            )
+        )
+
+        drawTitleBlock(canvas, W - 300f, H - 70f, 280f, 60f, "Pile Foundation — $pattern")
+        return bitmap
+    }
+
     // ========== GENERATE TANK DRAWING ==========
     fun generateTankDrawing(
         tankType: String,

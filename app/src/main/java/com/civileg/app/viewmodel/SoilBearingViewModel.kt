@@ -73,7 +73,8 @@ class SoilBearingViewModel @Inject constructor(
 
     private fun MutableLiveData<String>.doubleValue(default: Double = 0.0): Double {
         return try {
-            value?.toDoubleOrNull() ?: default
+            val d = value?.toDoubleOrNull() ?: default
+            if (d.isFinite()) d else default
         } catch (_: NumberFormatException) {
             default
         }

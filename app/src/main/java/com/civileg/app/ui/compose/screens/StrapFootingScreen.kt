@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.ExportUtils
 import com.civileg.app.viewmodel.StrapFootingViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +37,7 @@ fun StrapFootingScreen(
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val error by viewModel.error.observeAsState()
+    val context = LocalContext.current
 
     var col1Load by remember { mutableStateOf("1200") }
     var col2Load by remember { mutableStateOf("1800") }
@@ -173,6 +175,21 @@ fun StrapFootingScreen(
             result?.let { res ->
                 item {
                     StrapFootingResultCard(res)
+                }
+                
+                item {
+                    Button(
+                        onClick = { viewModel.exportToPdf(context) { file ->
+                            if (file != null) ExportUtils.openPdf(context, file)
+                        } },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.export_pdf))
+                    }
                 }
             }
 
