@@ -266,11 +266,13 @@ class BeamDesignFragment : Fragment() {
             coverValue = 40f,
             topReinforcement = listOf(BeamSectionView.BarInfo(result.reinforcementTop.numBars, result.reinforcementTop.diameter)),
             bottomReinforcement = listOf(BeamSectionView.BarInfo(result.reinforcementBottom.numBars, result.reinforcementBottom.diameter)),
+            stirrupDia = result.stirrups.diameter,
+            stirrupSpac = result.stirrups.spacing.toFloat(),
             momentCap = result.momentCapacity,
             shearCap = result.shearCapacity,
             appMoment = result.appliedMoment,
             appShear = result.appliedShear,
-            naDepth = 0.0,
+            naDepth = result.neutralAxisDepth,
             ratio = result.steelRatio,
             safe = result.isSafe
         )

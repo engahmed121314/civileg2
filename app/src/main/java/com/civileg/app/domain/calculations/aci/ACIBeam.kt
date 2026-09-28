@@ -116,6 +116,10 @@ class ACIBeam : BeamDesign {
         codeNotes.add(CodeReference.ACI.BEAM_FLEXURE)
         codeNotes.add("φ = $PHI_FLEXURE for tension-controlled sections")
         
+        // حساب عمق المحور المحايد: c = a / β1
+        val beta1ForNA = calculateBeta1(fc)
+        val neutralAxisDepth = if (beta1ForNA > 0) a / beta1ForNA else 0.0
+        
         return ReinforcementResult(
             astRequired = astRequired,
             astProvided = astProvided,
@@ -126,7 +130,8 @@ class ACIBeam : BeamDesign {
             isSafe = utilizationRatio <= 1.0 && rho <= rhoMaxTc,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            neutralAxisDepth = neutralAxisDepth
         )
     }
 

@@ -65,6 +65,15 @@
 
         <!-- Design Module Activities — All internal (exported=false) -->
         <activity
+            android:name=".ui.beam.BeamInputActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity
+            android:name=".ui.beam.BeamResultActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
             android:name=".ui.column.ColumnInputActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
@@ -82,14 +91,7 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
-        <activity
-            android:name=".ui.beam.BeamInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.beam.BeamResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        
 
         <activity
             android:name=".ui.stairs.StairInputActivity"

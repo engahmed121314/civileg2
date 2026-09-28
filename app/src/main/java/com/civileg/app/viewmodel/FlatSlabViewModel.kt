@@ -9,6 +9,8 @@ import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.aci.ACIFlatSlab
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
+import com.civileg.app.domain.calculations.sbc.SBCFlatSlab
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -79,6 +81,7 @@ class FlatSlabViewModel @Inject constructor(
 
                 val designer: FlatSlabDesign = when (designCode) {
                     "ACI" -> ACIFlatSlab()
+                    "SBC" -> SBCFlatSlab()
                     else -> ECPFlatSlab()
                 }
 
@@ -140,7 +143,7 @@ class FlatSlabViewModel @Inject constructor(
                 )
 
                 val safetyChecks = res.safetyChecks.map {
-                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    GenericSafetyCheck(
                         name = it.name, calculated = it.calculated, limit = it.limit,
                         unit = it.unit, passed = it.passed
                     )

@@ -1,5 +1,6 @@
 package com.civileg.app.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
@@ -18,6 +19,11 @@ import javax.inject.Inject
 
 import com.civileg.app.data.ProjectSyncManager
 import androidx.lifecycle.MutableLiveData
+import com.civileg.app.utils.ExportUtils
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @HiltViewModel
 class ProjectViewModel @Inject constructor(
@@ -97,9 +103,36 @@ class ProjectViewModel @Inject constructor(
                 totalSteel = totalSteel,
                 totalCost = totalCost,
                 designCount = designs.size,
-                costEfficiencyIndex = 1.0, // Placeholder
+                costEfficiencyIndex = 1.0,
                 costBreakdown = breakdown
             )
+        }
+    }
+
+    fun exportProjectSummaryToPdf(context: Context, projectId: Long, projectName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val designsList = designDao.getDesignsForProjectList(projectId)
+                if (designsList.isEmpty()) return@launch
+                
+                val totalConcrete = designsList.sumOf { it.concreteVolume }
+                val totalSteel = designsList.sumOf { it.steelWeight }
+                val totalCost = designsList.sumOf { it.totalCost }
+                val breakdown = designsList.groupBy { it.type.name }
+                    .mapValues { entry -> entry.value.sumOf { d -> d.totalCost } }
+                
+                val summary = ProjectSummary(totalConcrete, totalSteel, totalCost, designsList.size, 1.0, breakdown)
+                
+                val fileName = "ProjectSummary_${System.currentTimeMillis()}.pdf"
+                val file = File(context.cacheDir, fileName)
+                
+                val exported = ComprehensivePdfExporter(context)
+                    .exportProjectBatchReport(projectName, designsList, summary, file.absolutePath)
+
+                withContext(Dispatchers.Main) {
+                    exported?.let { ExportUtils.openPdf(context, it) }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 

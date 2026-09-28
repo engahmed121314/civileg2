@@ -38,6 +38,7 @@ keystore.properties
 # Sensitive CI/CD
 .env
 secrets.properties
+assistant-bot/config.env
 
 # Node / Web
 node_modules/

@@ -2,6 +2,7 @@ package com.civileg.app.domain.entities
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 @Parcelize
 data class SteelWarehouseInputs(
@@ -55,7 +56,8 @@ data class SteelWarehouseAnalysisResult(
     
     // Mezzanine Result
     val mezzanineArea: Double = 0.0,
-    val mezzanineSteelWeight: Double = 0.0
+    val mezzanineSteelWeight: Double = 0.0,
+    val calculationTrace: @RawValue List<String> = emptyList()
 ) : Parcelable
 
 @Parcelize
@@ -78,7 +80,12 @@ data class MainFrameResult(
     val isSafe: Boolean,
     val utilizationMoment: Double = 0.0,
     val utilizationShear: Double = 0.0,
-    val utilizationAxial: Double = 0.0
+    val utilizationAxial: Double = 0.0,
+    val basePlateThickness: Double = 20.0,
+    val basePlateBoltsCount: Int = 4,
+    val floorBeamSection: SteelSectionType? = null,
+    val floorBeamMaxMoment: Double = 0.0,
+    val floorBeamIsSafe: Boolean = true
 ) : Parcelable
 
 @Parcelize

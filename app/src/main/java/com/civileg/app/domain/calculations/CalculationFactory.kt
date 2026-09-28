@@ -68,16 +68,18 @@ object CalculationFactory {
         DesignCode.SBC -> ACIJoistSlab()
     }
 
-    fun getWaffleSlabDesign(code: DesignCode): ECPWaffleSlabDesign = when (code) {
+    fun getWaffleSlabDesign(code: DesignCode): WaffleSlabDesign = when (code) {
         DesignCode.ECP -> ECPWaffleSlabDesign()
-        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Waffle slab ACI/SBC not yet implemented")
+        DesignCode.ACI -> ACIWaffleSlabDesign()
+        DesignCode.SBC -> SBCWaffleSlabDesign()
     }
 
     // ========== كمرات مزدوجة التسليح (Doubly Reinforced Beams) ==========
 
-    fun getDoublyReinforcedBeamDesign(code: DesignCode): ECPDoublyReinforcedBeam = when (code) {
+    fun getDoublyReinforcedBeamDesign(code: DesignCode): Any = when (code) {
         DesignCode.ECP -> ECPDoublyReinforcedBeam()
-        DesignCode.ACI, DesignCode.SBC -> throw UnsupportedOperationException("Doubly reinforced ACI/SBC not yet implemented")
+        DesignCode.ACI -> ACIDoublyReinforcedBeam()
+        DesignCode.SBC -> SBCDoublyReinforcedBeam()
     }
 
     // ========== القواعد المركبة (Combined Footings) ==========
@@ -95,6 +97,12 @@ object CalculationFactory {
         DesignCode.SBC -> SBCAdvancedSlab()
     }
 
+    fun getFlatSlabDesign(code: DesignCode): FlatSlabDesign = when (code) {
+        DesignCode.ECP -> ECPFlatSlab()
+        DesignCode.ACI -> ACIFlatSlab()
+        DesignCode.SBC -> SBCFlatSlab()
+    }
+
     // ========== حوائط السند (Retaining Walls) ==========
 
     fun getRetainingWallDesign(code: DesignCode): RetainingWallDesign = when (code) {
@@ -107,7 +115,7 @@ object CalculationFactory {
 
     fun getPileFoundationDesign(code: DesignCode): PileFoundationDesign = when (code) {
         DesignCode.ECP -> ECPPileFoundation()
-        DesignCode.ACI -> ECPPileFoundation() // TODO: ACIPileFoundation not yet implemented - ECP fallback with 0.8 fcu conversion
+        DesignCode.ACI -> ACIPileFoundation()
         DesignCode.SBC -> SBCPileFoundation()
     }
 

@@ -29,6 +29,7 @@
     <string name="home_wind_load_sub">Wind Force Calculations</string>
     <string name="home_settlement">Soil Settlement</string>
     <string name="home_settlement_sub">Immediate &amp; Consolidation Analysis</string>
+    <string name="steel_calculation_trace">Detailed Calculation Trace</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
@@ -61,6 +62,8 @@
     <string name="code_egyptian">Egyptian Code (ECP)</string>
     <string name="code_aci">ACI 318 (USA)</string>
     <string name="code_saudi">SBC (Saudi Code)</string>
+    <string name="code_Saud">SBC (Saudi Code)</string>
+    <string name="code_Saud_long">SBC (Saudi Code)</string>
     <string name="design_code">Design Code</string>
 
     <!-- Common Actions -->
@@ -1449,4 +1452,33 @@
     <string name="tank_drawing_title">Tank Drawing</string>
     <string name="tank_drawing_subtitle">Cross Section Detail</string>
     <string name="tank_name_hint">Tank Name</string>
+    <string name="steel_design_connection">Design Connection</string>
+    <string name="steel_bolted_results">Bolted Connection Results</string>
+    <string name="steel_total_capacity">Total Capacity (φRn)</string>
+    <string name="steel_welded_results">Welded Connection Results</string>
+    <string name="steel_baseplate_results">Baseplate Results</string>
+    <string name="steel_baseplate_dims">Plate Dimensions</string>
+    <string name="steel_thickness_mm">Plate Thickness (tp)</string>
+    <string name="steel_bolt_count">Anchor Bolt Count</string>
+    <string name="steel_bolt_dia">Bolt Diameter</string>
+    <string name="steel_warehouse_tab">Industrial Warehouse</string>
+    <string name="steel_sections_tab">Member Design</string>
+    <string name="steel_connections_tab">Connections</string>
+    <string name="steel_baseplate_tab">Baseplate</string>
+    <string name="steel_warehouse_inputs">Warehouse Parameters</string>
+    <string name="steel_span_m">Span (m)</string>
+    <string name="steel_spacing_m">Bay Spacing (m)</string>
+    <string name="steel_height_m">Eave Height (m)</string>
+    <string name="steel_length_m">Total Length (m)</string>
+    <string name="steel_loads_header">Design Loads (kN/m²)</string>
+    <string name="steel_design_warehouse">Analyze Warehouse</string>
+    <string name="steel_design_summary">Project Summary</string>
+    <string name="steel_weight_m2">Weight per m²</string>
+    <string name="steel_status">Safety Status</string>
+    <string name="steel_structural_analysis">Structural Analysis Diagrams</string>
+    <string name="steel_calculate_capacity">Calculate Capacity</string>
+    <string name="steel_calculate_button">Analyze Member</string>
+    <string name="steel_bolt_capacity">Bolted Capacity (φRn)</string>
+    <string name="steel_weld_design">Weld Analysis</string>
+    <string name="steel_bolt_design">Bolt Analysis</string>
 </resources>

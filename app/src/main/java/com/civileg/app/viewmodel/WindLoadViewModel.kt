@@ -4,7 +4,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.civileg.app.utils.*
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.WindLoadCalculator
+import com.civileg.app.utils.WindLoadInput
+import com.civileg.app.utils.WindLoadResult
+import com.civileg.app.utils.BuildingShape
+import com.civileg.app.utils.RoofType
+import com.civileg.app.utils.TerrainCategory
+
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -12,7 +20,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WindLoadViewModel @Inject constructor(
-    private val repository: com.civileg.app.db.DesignRepository
+    private val repository: DesignRepository
 ) : ViewModel() {
 
     // ------------------------------------------------------------------
@@ -24,6 +32,9 @@ class WindLoadViewModel @Inject constructor(
 
     private val _isCalculating = MutableLiveData(false)
     val isCalculating: LiveData<Boolean> = _isCalculating
+
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
 
     fun saveDesign(projectId: Long, name: String) {
         val res = _result.value ?: return
@@ -80,22 +91,34 @@ class WindLoadViewModel @Inject constructor(
     // ------------------------------------------------------------------
 
     private fun buildInput(): WindLoadInput {
+        // Rule 1.4: loud failures — validate before any maths (ADR-010)
+        InputGuard.positive("basicWindSpeed", basicWindSpeed.value?.toDoubleOrNull() ?: 30.0)
+        InputGuard.positive("buildingHeight", buildingHeight.value?.toDoubleOrNull() ?: 20.0)
+        InputGuard.positive("buildingWidth", buildingWidth.value?.toDoubleOrNull() ?: 15.0)
+        InputGuard.positive("buildingDepth", buildingDepth.value?.toDoubleOrNull() ?: 10.0)
+        InputGuard.positive("importanceFactor", importanceFactor.value?.toDoubleOrNull() ?: 1.0)
+        InputGuard.positive("topographyFactor", topographyFactor.value?.toDoubleOrNull() ?: 1.0)
+        InputGuard.positive("numberOfFloors", numberOfFloors.value?.toIntOrNull() ?: 5)
+        InputGuard.positive("naturalFrequency", naturalFrequency.value?.toDoubleOrNull() ?: 1.0)
+        InputGuard.positive("dampingRatio", dampingRatio.value?.toDoubleOrNull() ?: 0.02)
+        InputGuard.inRange("dampingRatio", dampingRatio.value?.toDoubleOrNull() ?: 0.02, 0.001, 0.1)
+
         return WindLoadInput(
-            basicWindSpeed      = basicWindSpeed.doubleValue(30.0),
+            basicWindSpeed      = basicWindSpeed.value?.toDoubleOrNull() ?: 30.0,
             terrainCategory    = terrainCategory.value ?: TerrainCategory.SUBURBAN,
-            buildingHeight     = buildingHeight.doubleValue(20.0),
-            buildingWidth      = buildingWidth.doubleValue(15.0),
-            buildingDepth      = buildingDepth.doubleValue(10.0),
+            buildingHeight     = buildingHeight.value?.toDoubleOrNull() ?: 20.0,
+            buildingWidth      = buildingWidth.value?.toDoubleOrNull() ?: 15.0,
+            buildingDepth      = buildingDepth.value?.toDoubleOrNull() ?: 10.0,
             buildingShape      = buildingShape.value ?: BuildingShape.RECTANGULAR,
             roofType           = roofType.value ?: RoofType.FLAT,
-            roofSlope          = roofSlope.doubleValue(0.0),
-            importanceFactor   = importanceFactor.doubleValue(1.0),
-            topographyFactor   = topographyFactor.doubleValue(1.0),
-            numberOfFloors     = numberOfFloors.intValue(5).coerceAtLeast(1),
+            roofSlope          = roofSlope.value?.toDoubleOrNull() ?: 0.0,
+            importanceFactor   = importanceFactor.value?.toDoubleOrNull() ?: 1.0,
+            topographyFactor   = topographyFactor.value?.toDoubleOrNull() ?: 1.0,
+            numberOfFloors     = numberOfFloors.value?.toIntOrNull() ?: 5,
             openingsInWindward = openingsInWindward.value ?: false,
             isFlexibleStructure = isFlexibleStructure.value ?: false,
-            naturalFrequency   = naturalFrequency.doubleValue(1.0),
-            dampingRatio       = dampingRatio.doubleValue(0.02)
+            naturalFrequency   = naturalFrequency.value?.toDoubleOrNull() ?: 1.0,
+            dampingRatio       = dampingRatio.value?.toDoubleOrNull() ?: 0.02
         )
     }
 
@@ -104,6 +127,7 @@ class WindLoadViewModel @Inject constructor(
     // ------------------------------------------------------------------
 
     fun calculate() {
+        _error.value = null
         _isCalculating.postValue(true)
         viewModelScope.launch(Dispatchers.Default) {
             try {
@@ -111,8 +135,16 @@ class WindLoadViewModel @Inject constructor(
                 val input = buildInput()
                 val res = calculator.calculate(input)
                 _result.postValue(res)
+            } catch (e: IllegalArgumentException) {
+                _result.postValue(null)
+                _error.postValue("مدخلات غير صالحة: ${e.message}")
+            } catch (e: ArithmeticException) {
+                _result.postValue(null)
+                _error.postValue("خطأ حسابي: ${e.message}")
             } catch (e: Exception) {
                 _result.postValue(null)
+                _error.postValue("خطأ غير متوقع: ${e.message}")
+                android.util.Log.e("WindLoadVM", "calculate crash", e)
             } finally {
                 _isCalculating.postValue(false)
             }
@@ -124,10 +156,25 @@ class WindLoadViewModel @Inject constructor(
     // ------------------------------------------------------------------
 
     fun updateK2Table() {
-        val terrain = terrainCategory.value ?: TerrainCategory.SUBURBAN
-        val height = buildingHeight.doubleValue(20.0)
-        val calculator = WindLoadCalculator()
-        _k2Table.postValue(calculator.getK2Table(terrain, height))
+        _error.value = null
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                val terrain = terrainCategory.value ?: TerrainCategory.SUBURBAN
+                val height = buildingHeight.doubleValue(20.0)
+                val calculator = WindLoadCalculator()
+                _k2Table.postValue(calculator.getK2Table(terrain, height))
+            } catch (e: IllegalArgumentException) {
+                _k2Table.postValue(emptyList())
+                _error.postValue("مدخلات غير صالحة: ${e.message}")
+            } catch (e: ArithmeticException) {
+                _k2Table.postValue(emptyList())
+                _error.postValue("خطأ حسابي: ${e.message}")
+            } catch (e: Exception) {
+                _k2Table.postValue(emptyList())
+                _error.postValue("خطأ غير متوقع: ${e.message}")
+                android.util.Log.e("WindLoadVM", "updateK2Table crash", e)
+            }
+        }
     }
 
     // ------------------------------------------------------------------

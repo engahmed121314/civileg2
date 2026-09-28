@@ -58,8 +58,10 @@ data class SteelInputs(
     val moment: Double,         // Mu (kN.m)
     val shear: Double,          // Vu (kN)
     val unbracedLength: Double, // Lb (mm)
-    val length: Double = 0.0    // Total member length (mm)
+    val length: Double = 0.0,   // Total member length (mm)
+    val grade: SteelGrade = SteelGrade.ST37
 ) : Parcelable
+
 
 @Parcelize
 data class ColumnAlternative(

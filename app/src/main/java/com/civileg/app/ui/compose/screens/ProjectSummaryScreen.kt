@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -10,7 +11,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.entities.ProjectSummary
+import com.civileg.app.viewmodel.ProjectViewModel
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
@@ -23,8 +27,12 @@ import java.util.Locale
 fun ProjectSummaryScreen(
     summary: ProjectSummary,
     projectName: String,
+    projectId: Long,
+    viewModel: ProjectViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -32,6 +40,15 @@ fun ProjectSummaryScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            viewModel.exportProjectSummaryToPdf(context, projectId, projectName)
+                        }
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, null)
                     }
                 }
             )
@@ -84,10 +101,18 @@ fun ProjectSummaryScreen(
 
 @Composable
 fun SummaryKPIRow(summary: ProjectSummary) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        KPICard("Total Cost", "${String.format(Locale.US, "%,.0f", summary.totalCost)}", "EGP", Modifier.weight(1f))
-        KPICard("Concrete", "${String.format(Locale.US, "%.1f", summary.totalConcrete)}", "m³", Modifier.weight(1f))
-        KPICard("Steel", "${String.format(Locale.US, "%,.0f", summary.totalSteel)}", "kg", Modifier.weight(1f))
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            KPICard("Total Cost", "${String.format(Locale.US, "%,.0f", summary.totalCost)}", "EGP", Modifier.weight(1f))
+            KPICard("Concrete", "${String.format(Locale.US, "%.1f", summary.totalConcrete)}", "m³", Modifier.weight(1f))
+            KPICard("Steel", "${String.format(Locale.US, "%,.0f", summary.totalSteel)}", "kg", Modifier.weight(1f))
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val steelDensity = if (summary.totalConcrete > 0) summary.totalSteel / summary.totalConcrete else 0.0
+            KPICard("Steel Density", "${String.format(Locale.US, "%.1f", steelDensity)}", "kg/m³", Modifier.weight(1f))
+            KPICard("Design Count", "${summary.designCount}", "Elements", Modifier.weight(1f))
+            KPICard("Avg Cost/Elem", "${if(summary.designCount > 0) (summary.totalCost/summary.designCount).toInt() else 0}", "EGP", Modifier.weight(1f))
+        }
     }
 }
 

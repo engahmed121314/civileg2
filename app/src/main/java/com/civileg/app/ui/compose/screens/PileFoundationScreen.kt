@@ -25,8 +25,10 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
+import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.PileFoundationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,6 +85,9 @@ fun PileFoundationScreen(
     var columnWidth by remember { mutableStateOf("400") }
     var columnLength by remember { mutableStateOf("400") }
 
+    // ── Design code (ADR-002: per-code engine dispatch) ──
+    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+
     // ── Expandable sections ──
     var showSoilParams by remember { mutableStateOf(true) }
     var showCapParams by remember { mutableStateOf(true) }
@@ -123,6 +128,14 @@ fun PileFoundationScreen(
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
+            }
+
+            // ─── DESIGN CODE ────────────────────────────────────
+            item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
             }
 
             // ─── PILE TYPE & SOIL TYPE ────────────────────────────
@@ -496,7 +509,8 @@ fun PileFoundationScreen(
                             scourDepth = scourDepth.toDoubleOrNull() ?: 0.0,
                             capConcreteCover = capCover.toDoubleOrNull() ?: 75.0,
                             columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                            columnLength = columnLength.toDoubleOrNull() ?: 400.0
+                            columnLength = columnLength.toDoubleOrNull() ?: 400.0,
+                            code = selectedCode.toDomain()
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),

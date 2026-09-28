@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.entities.StirrupZone
+import com.civileg.app.utils.CalculatorEngine
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -111,6 +112,7 @@ fun ProfessionalBeamDrawing(
     topRebarDia: Double = 0.0,
     topRebarCount: Int = 0,
     zones: List<StirrupZone> = emptyList(),
+    supportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED,
     modifier: Modifier = Modifier,
     viewMode: Int = 0
 ) {
@@ -128,8 +130,6 @@ fun ProfessionalBeamDrawing(
         val angleY = 0.20f          // vertical skew factor
 
         // ── Layout zones (vertical) ────────────────────────────────────
-        // Elevation: 0–40%  |  Section inset: 46–62%  |  Table: 66–100%
-        // Adjust zones based on viewMode
         val elevationFrac = when (viewMode) {
             1 -> 0.88f  // Elevation-only: use most of the height
             0 -> 0.40f  // All: normal split
@@ -150,7 +150,7 @@ fun ProfessionalBeamDrawing(
         val mainRight = cw - sideMargin
         val mainTop = 50f
 
-        // Scaling: fit span into horizontal space (use larger 0.90 multiplier)
+        // Scaling: fit span into horizontal space
         val availableW = mainRight - mainLeft
         val availableH = mainBottom - mainTop - 60f
         val scaleW = availableW / span.toFloat()
@@ -182,7 +182,7 @@ fun ProfessionalBeamDrawing(
             drawSupports(
                 beamLeft = beamLeft, beamTop = beamTop,
                 beamBottom = beamBottom, beamRight = beamRight,
-                isContinuous = isContinuous
+                isContinuous = isContinuous, supportType = supportType
             )
 
             drawCutawayReinforcement(
@@ -398,110 +398,93 @@ private fun DrawScope.drawAutoDimensions(
 private fun DrawScope.drawSupports(
     beamLeft: Float, beamTop: Float,
     beamBottom: Float, beamRight: Float,
-    isContinuous: Boolean
+    isContinuous: Boolean,
+    supportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
 ) {
     val supportH = 22f
     val supportW = 22f
     val circleR = 3f
     val lineW = 2.dp.toPx()
-
     val supportPaint = SupportColor
     val groundY = beamBottom + supportH + circleR * 2 + 6f
 
-    // --- Left Pin Support ---
-    if (!isContinuous) {
-        // Triangle
-        val triPath = Path().apply {
-            moveTo(beamLeft, beamBottom)
-            lineTo(beamLeft - supportW / 2, beamBottom + supportH)
-            lineTo(beamLeft + supportW / 2, beamBottom + supportH)
-            close()
+    when (supportType) {
+        CalculatorEngine.SupportType.CANTILEVER -> {
+            // FIXED WALL ON LEFT, FREE RIGHT END
+            drawFixedWallSupport(beamLeft, beamTop - 15f, beamBottom + 15f, isLeft = true)
         }
-        drawPath(path = triPath, color = supportPaint)
-        drawPath(
-            path = triPath, color = supportPaint,
-            style = Stroke(width = lineW, join = StrokeJoin.Miter)
-        )
-        // Pin circle at bottom
-        drawCircle(
-            color = supportPaint, radius = circleR,
-            center = Offset(beamLeft, beamBottom + supportH + circleR + 2f)
-        )
-        // Ground line
-        drawLine(
-            color = supportPaint,
-            start = Offset(beamLeft - supportW, groundY + circleR * 2 + 4f),
-            end = Offset(beamLeft + supportW, groundY + circleR * 2 + 4f),
-            strokeWidth = lineW
-        )
-        // Ground hatching
-        for (i in 0..4) {
-            val hx = beamLeft - supportW + i * (supportW * 2 / 4)
-            drawLine(
-                color = supportPaint,
-                start = Offset(hx, groundY + circleR * 2 + 4f),
-                end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
-                strokeWidth = 1.5f
-            )
+        CalculatorEngine.SupportType.FIXED_FIXED -> {
+            // FIXED WALL LEFT & RIGHT
+            drawFixedWallSupport(beamLeft, beamTop - 15f, beamBottom + 15f, isLeft = true)
+            drawFixedWallSupport(beamRight, beamTop - 15f, beamBottom + 15f, isLeft = false)
         }
-    } else {
-        // Continuous beam — fixed support indication
-        drawLine(
-            color = supportPaint,
-            start = Offset(beamLeft, beamBottom),
-            end = Offset(beamLeft, beamBottom + 20f),
-            strokeWidth = lineW
-        )
-        // Small hatching for fixed
-        for (i in 0..3) {
-            val yy = beamBottom + i * 6f
-            drawLine(
-                color = supportPaint,
-                start = Offset(beamLeft, yy),
-                end = Offset(beamLeft - 8f, yy + 6f),
-                strokeWidth = 1.5f
-            )
+        CalculatorEngine.SupportType.FIXED_HINGED -> {
+            // FIXED WALL LEFT, ROLLER RIGHT
+            drawFixedWallSupport(beamLeft, beamTop - 15f, beamBottom + 15f, isLeft = true)
+            drawRollerSupport(beamRight, beamBottom, supportW, supportH, circleR, groundY, lineW, supportPaint)
+        }
+        else -> {
+            // HINGED_HINGED / ROLLER_HINGED: PIN LEFT, ROLLER RIGHT
+            if (!isContinuous) {
+                drawPinSupport(beamLeft, beamBottom, supportW, supportH, circleR, groundY, lineW, supportPaint)
+            } else {
+                drawFixedWallSupport(beamLeft, beamTop - 15f, beamBottom + 15f, isLeft = true)
+            }
+            drawRollerSupport(beamRight, beamBottom, supportW, supportH, circleR, groundY, lineW, supportPaint)
         }
     }
+}
 
-    // --- Right Roller Support ---
-    // Triangle
+private fun DrawScope.drawFixedWallSupport(x: Float, topY: Float, bottomY: Float, isLeft: Boolean) {
+    val wallThick = 14f
+    val wallLeft = if (isLeft) x - wallThick else x
+    val wallRight = if (isLeft) x else x + wallThick
+
+    drawRect(color = SupportColor, topLeft = Offset(wallLeft, topY), size = Size(wallThick, bottomY - topY))
+    drawLine(color = Color.White, start = Offset(x, topY), end = Offset(x, bottomY), strokeWidth = 3f)
+
+    val numHatches = 7
+    val hStep = (bottomY - topY) / numHatches
+    for (i in 0..numHatches) {
+        val hy = topY + i * hStep
+        val hX1 = if (isLeft) wallLeft - 10f else wallRight
+        val hX2 = if (isLeft) wallLeft else wallRight + 10f
+        drawLine(color = ExtensionGray, start = Offset(hX1, hy + 6f), end = Offset(hX2, hy), strokeWidth = 1.5f)
+    }
+}
+
+private fun DrawScope.drawPinSupport(x: Float, beamBottom: Float, supportW: Float, supportH: Float, circleR: Float, groundY: Float, lineW: Float, supportPaint: Color) {
+    val triPath = Path().apply {
+        moveTo(x, beamBottom)
+        lineTo(x - supportW / 2, beamBottom + supportH)
+        lineTo(x + supportW / 2, beamBottom + supportH)
+        close()
+    }
+    drawPath(path = triPath, color = supportPaint)
+    drawPath(path = triPath, color = supportPaint, style = Stroke(width = lineW, join = StrokeJoin.Miter))
+    drawCircle(color = supportPaint, radius = circleR, center = Offset(x, beamBottom + supportH + circleR + 2f))
+    drawLine(color = supportPaint, start = Offset(x - supportW, groundY + circleR * 2 + 4f), end = Offset(x + supportW, groundY + circleR * 2 + 4f), strokeWidth = lineW)
+    for (i in 0..4) {
+        val hx = x - supportW + i * (supportW * 2 / 4)
+        drawLine(color = supportPaint, start = Offset(hx, groundY + circleR * 2 + 4f), end = Offset(hx - 5f, groundY + circleR * 2 + 8f), strokeWidth = 1.5f)
+    }
+}
+
+private fun DrawScope.drawRollerSupport(x: Float, beamBottom: Float, supportW: Float, supportH: Float, circleR: Float, groundY: Float, lineW: Float, supportPaint: Color) {
     val triPathR = Path().apply {
-        moveTo(beamRight, beamBottom)
-        lineTo(beamRight - supportW / 2, beamBottom + supportH)
-        lineTo(beamRight + supportW / 2, beamBottom + supportH)
+        moveTo(x, beamBottom)
+        lineTo(x - supportW / 2, beamBottom + supportH)
+        lineTo(x + supportW / 2, beamBottom + supportH)
         close()
     }
     drawPath(path = triPathR, color = supportPaint)
-    drawPath(
-        path = triPathR, color = supportPaint,
-        style = Stroke(width = lineW, join = StrokeJoin.Miter)
-    )
-    // Roller circles
-    drawCircle(
-        color = supportPaint, radius = circleR,
-        center = Offset(beamRight - 6f, beamBottom + supportH + circleR + 2f)
-    )
-    drawCircle(
-        color = supportPaint, radius = circleR,
-        center = Offset(beamRight + 6f, beamBottom + supportH + circleR + 2f)
-    )
-    // Ground line
-    drawLine(
-        color = supportPaint,
-        start = Offset(beamRight - supportW, groundY + circleR * 2 + 4f),
-        end = Offset(beamRight + supportW, groundY + circleR * 2 + 4f),
-        strokeWidth = lineW
-    )
-    // Ground hatching
+    drawPath(path = triPathR, color = supportPaint, style = Stroke(width = lineW, join = StrokeJoin.Miter))
+    drawCircle(color = supportPaint, radius = circleR, center = Offset(x - 6f, beamBottom + supportH + circleR + 2f))
+    drawCircle(color = supportPaint, radius = circleR, center = Offset(x + 6f, beamBottom + supportH + circleR + 2f))
+    drawLine(color = supportPaint, start = Offset(x - supportW, groundY + circleR * 2 + 4f), end = Offset(x + supportW, groundY + circleR * 2 + 4f), strokeWidth = lineW)
     for (i in 0..4) {
-        val hx = beamRight - supportW + i * (supportW * 2 / 4)
-        drawLine(
-            color = supportPaint,
-            start = Offset(hx, groundY + circleR * 2 + 4f),
-            end = Offset(hx - 5f, groundY + circleR * 2 + 8f),
-            strokeWidth = 1.5f
-        )
+        val hx = x - supportW + i * (supportW * 2 / 4)
+        drawLine(color = supportPaint, start = Offset(hx, groundY + circleR * 2 + 4f), end = Offset(hx - 5f, groundY + circleR * 2 + 8f), strokeWidth = 1.5f)
     }
 }
 

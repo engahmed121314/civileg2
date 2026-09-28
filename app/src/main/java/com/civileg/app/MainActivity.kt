@@ -324,6 +324,8 @@ fun AppNavigation(
                     ProjectSummaryScreen(
                         summary = summaryFlow.value,
                         projectName = project?.name ?: "Summary",
+                        projectId = projectId,
+                        viewModel = projectViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -337,8 +339,8 @@ fun AppNavigation(
                     val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull() ?: 0L
                     val project = allProjects.find { it.id == projectId }
                     MasterBbsScreen(
+                        projectId = projectId,
                         projectName = project?.name ?: "Master BBS",
-                        allEntries = emptyList(), // Needs wiring to fetch all designs' BBS
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

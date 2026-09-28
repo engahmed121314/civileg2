@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.io.File
 import android.graphics.Bitmap
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import javax.inject.Inject
 
 @HiltViewModel
@@ -133,7 +134,7 @@ class TankViewModel @Inject constructor(
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
                         limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                     )

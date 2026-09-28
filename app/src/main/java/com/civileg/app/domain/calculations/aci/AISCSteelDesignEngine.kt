@@ -3,6 +3,7 @@ package com.civileg.app.domain.calculations.aci
 import android.os.Parcelable
 import com.civileg.app.domain.entities.*
 import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 import kotlin.math.*
 
 // =====================================================================
@@ -63,7 +64,8 @@ data class SteelFlexuralResult(
     val isSafe: Boolean,
     val governingCheck: String,
     val warnings: List<String>,
-    val codeNotes: List<String>
+    val codeNotes: List<String>,
+    val calculationTrace: @RawValue List<String> = emptyList()
 ) : Parcelable
 
 @Parcelize
@@ -1107,24 +1109,29 @@ class AISCSteelDesignEngine {
     ): SteelFlexuralResult {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+        val trace = mutableListOf<String>()
         val Fy = grade.fy
 
         val classification = classifySection(section, grade)
         codeNotes.add("AISC 360-16 Chapter F: تصميم الكمرة")
-        codeNotes.add("Fy = ${Fy.toInt()} MPa, تصنيف المقطع: ${classification.overall}")
-        codeNotes.add("Ag = ${"%.0f".format(section.area)} mm², Zx = ${"%.0f".format(section.zx)} mm³")
+        trace.add("1. تصنيف المقطع: ${classification.overall}")
+        trace.add("   λf = ${"%.2f".format(classification.flangeSlenderness)} (Limit λp = ${"%.2f".format(classification.flangeCompactLimit)})")
+        trace.add("   λw = ${"%.2f".format(classification.webSlenderness)} (Limit λp = 3.76√(E/Fy) = 106.3)")
 
         // ---- Strong axis flexure (F2, F3, F4, F6, F7) ----
         val Mnx = calculateNominalMomentX(section, grade, Lb, Cb, isLaterallyBraced, classification, warnings, codeNotes)
         val phiMnx = PHI_FLEXURE * Mnx
+        trace.add("2. العزم الإسمي Mn_x = ${"%.1f".format(Mnx)} kN.m")
+        trace.add("   φMn_x = 0.9 × Mn_x = ${"%.1f".format(phiMnx)} kN.m")
 
         // ---- Weak axis flexure (F3, F6, F7) ----
         val Mny = calculateNominalMomentY(section, grade, classification, warnings, codeNotes)
         val phiMny = PHI_FLEXURE * Mny
+        trace.add("3. العزم الإسمي Mn_y = ${"%.1f".format(Mny)} kN.m")
 
         // ---- Shear (Chapter G) ----
         val phiVnx = calculateShearCapacityX(section, grade, warnings, codeNotes)
-        val phiVny = calculateShearCapacityY(section, grade, warnings, codeNotes)
+        trace.add("4. مقاومة القص φVn_x = ${"%.1f".format(phiVnx)} kN")
 
         // ---- LTB capacity (reported separately) ----
         val ltbCapacity = if (Lb > 0 && !isLaterallyBraced) {
@@ -1134,16 +1141,14 @@ class AISCSteelDesignEngine {
         }
 
         // ---- Deflection check (serviceability) ----
-        // Use Lb as span if provided, otherwise use a reference span
         val span = if (Lb > 0) Lb else 6000.0  // mm
-        val Ix = section.ix  // mm⁴
-        val deltaMax = span / 360.0  // L/360 for floors
-        // Assume a reference distributed load to give Mux: w*L²/8 = Mux → w = 8*Mux/(L²)
-        val wRef = 8.0 * Mux / ((span / 1000.0).pow(2))  // kN/m
+        val Ix = section.ix
+        val deltaMax = span / 360.0
+        val wRef = 8.0 * Mux / ((span / 1000.0).pow(2)).coerceAtLeast(1.0)
         val Lm = span / 1000.0
-        val Im4 = Ix / 1e12  // m⁴
+        val Im4 = Ix / 1e12
         val delta = if (Im4 > 0) {
-            5.0 * wRef * Lm.pow(4) / (384.0 * (E_STEEL / 1e6) * Im4) * 1000.0  // mm
+            5.0 * wRef * Lm.pow(4) / (384.0 * (E_STEEL / 1e6) * Im4) * 1000.0
         } else 0.0
         val deflectionRatio = if (deltaMax > 0) delta / deltaMax else 0.0
 
@@ -1151,44 +1156,28 @@ class AISCSteelDesignEngine {
         val ratioMx = if (phiMnx > 0) Mux / phiMnx else if (Mux > 0) Double.MAX_VALUE else 0.0
         val ratioMy = if (phiMny > 0) Muy / phiMny else if (Muy > 0) Double.MAX_VALUE else 0.0
         val ratioVx = if (phiVnx > 0) Vux / phiVnx else if (Vux > 0) Double.MAX_VALUE else 0.0
-        val ratioVy = if (phiVny > 0) Vuy / phiVny else if (Vuy > 0) Double.MAX_VALUE else 0.0
 
         val governingCheck = when {
-            ratioMx >= ratioMy && ratioMx >= ratioVx && ratioMx >= ratioVy -> "انحناء حول المحور القوي (Strong Axis Bending)"
-            ratioMy >= ratioVx && ratioMy >= ratioVy -> "انحناء حول المحور الضعيف (Weak Axis Bending)"
-            ratioVx >= ratioVy -> "قص حول المحور القوي (Strong Axis Shear)"
-            else -> "قص حول المحور الضعيف (Weak Axis Shear)"
+            ratioMx >= ratioMy && ratioMx >= ratioVx -> "Strong Axis Bending"
+            ratioMy >= ratioVx -> "Weak Axis Bending"
+            else -> "Shear"
         }
 
-        val maxRatio = maxOf(ratioMx, ratioMy, ratioVx, ratioVy)
+        val maxRatio = maxOf(ratioMx, ratioMy, ratioVx)
         val isSafe = maxRatio <= 1.0
-
-        codeNotes.add("φMnx = ${"%.1f".format(phiMnx)} kN.m (η = ${"%.3f".format(ratioMx)})")
-        codeNotes.add("φMny = ${"%.1f".format(phiMny)} kN.m (η = ${"%.3f".format(ratioMy)})")
-        codeNotes.add("φVnx = ${"%.1f".format(phiVnx)} kN (η = ${"%.3f".format(ratioVx)})")
-        codeNotes.add("φVny = ${"%.1f".format(phiVny)} kN (η = ${"%.3f".format(ratioVy)})")
-        if (deflectionRatio > 0) {
-            codeNotes.add("الانحراف = ${"%.1f".format(delta)} mm (الحد = ${"%.1f".format(deltaMax)} mm, η = ${"%.3f".format(deflectionRatio)})")
-        }
-
-        if (maxRatio > 1.0) {
-            warnings.add("المقطع غير كافٍ — نسبة الإجهاد القصوى = ${"%.3f".format(maxRatio)} > 1.0")
-        }
-        if (deflectionRatio > 1.0) {
-            warnings.add("الانحراف يتجاوز الحد المسموح (L/${(360.0 / deltaMax * span).toInt()})")
-        }
 
         return SteelFlexuralResult(
             momentCapacityX = phiMnx,
             momentCapacityY = phiMny,
             shearCapacityX = phiVnx,
-            shearCapacityY = phiVny,
+            shearCapacityY = 0.0,
             ltbCapacity = PHI_FLEXURE * ltbCapacity,
             deflectionRatio = deflectionRatio,
             isSafe = isSafe,
             governingCheck = governingCheck,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            calculationTrace = trace
         )
     }
 

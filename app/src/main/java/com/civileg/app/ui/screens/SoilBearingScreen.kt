@@ -88,23 +88,6 @@ fun SoilBearingScreen(
     var loadInclinationY by remember { mutableStateOf(viewModel.loadInclinationY.value ?: "0.0") }
     var safetyFactor by remember { mutableStateOf(viewModel.safetyFactor.value ?: "3.0") }
 
-    // Sync local → ViewModel on change
-    val sync: (String) -> (MutableList<String>?) -> Unit = { newVal ->
-        { _ ->
-            viewModel.foundationWidth.postValue(foundationWidth)
-            viewModel.foundationLength.postValue(foundationLength)
-            viewModel.foundationDepth.postValue(foundationDepth)
-            viewModel.cohesion.postValue(cohesion)
-            viewModel.frictionAngle.postValue(frictionAngle)
-            viewModel.unitWeight.postValue(unitWeight)
-            viewModel.waterTableDepth.postValue(waterTableDepth)
-            viewModel.eccentricityX.postValue(eccentricityX)
-            viewModel.eccentricityY.postValue(eccentricityY)
-            viewModel.loadInclinationX.postValue(loadInclinationX)
-            viewModel.loadInclinationY.postValue(loadInclinationY)
-            viewModel.safetyFactor.postValue(safetyFactor)
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -186,7 +169,18 @@ fun SoilBearingScreen(
             ) {
                 Button(
                     onClick = {
-                        sync("")(null)
+                        viewModel.foundationWidth.postValue(foundationWidth)
+                        viewModel.foundationLength.postValue(foundationLength)
+                        viewModel.foundationDepth.postValue(foundationDepth)
+                        viewModel.cohesion.postValue(cohesion)
+                        viewModel.frictionAngle.postValue(frictionAngle)
+                        viewModel.unitWeight.postValue(unitWeight)
+                        viewModel.waterTableDepth.postValue(waterTableDepth)
+                        viewModel.eccentricityX.postValue(eccentricityX)
+                        viewModel.eccentricityY.postValue(eccentricityY)
+                        viewModel.loadInclinationX.postValue(loadInclinationX)
+                        viewModel.loadInclinationY.postValue(loadInclinationY)
+                        viewModel.safetyFactor.postValue(safetyFactor)
                         viewModel.calculate()
                     },
                     modifier = Modifier.weight(1f),
@@ -198,7 +192,18 @@ fun SoilBearingScreen(
                 }
                 OutlinedButton(
                     onClick = {
-                        sync("")(null)
+                        viewModel.foundationWidth.postValue(foundationWidth)
+                        viewModel.foundationLength.postValue(foundationLength)
+                        viewModel.foundationDepth.postValue(foundationDepth)
+                        viewModel.cohesion.postValue(cohesion)
+                        viewModel.frictionAngle.postValue(frictionAngle)
+                        viewModel.unitWeight.postValue(unitWeight)
+                        viewModel.waterTableDepth.postValue(waterTableDepth)
+                        viewModel.eccentricityX.postValue(eccentricityX)
+                        viewModel.eccentricityY.postValue(eccentricityY)
+                        viewModel.loadInclinationX.postValue(loadInclinationX)
+                        viewModel.loadInclinationY.postValue(loadInclinationY)
+                        viewModel.safetyFactor.postValue(safetyFactor)
                         viewModel.compareAllMethods()
                     },
                     modifier = Modifier.weight(1f),

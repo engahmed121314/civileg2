@@ -7,6 +7,7 @@ import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -110,7 +111,7 @@ object PdfExportHelper {
         designType: String = "",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
-        safetyChecks: List<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck> = emptyList(),
+        safetyChecks: List<GenericSafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: android.graphics.Bitmap? = null,
         fileName: String
@@ -154,7 +155,7 @@ object PdfExportHelper {
         designType: String = "",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
-        safetyChecks: List<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck> = emptyList(),
+        safetyChecks: List<GenericSafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: android.graphics.Bitmap? = null,
         fileName: String

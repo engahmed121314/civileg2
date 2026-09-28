@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,7 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.core.engineering.SettlementAnalysisEngine
 import com.civileg.app.viewmodel.SoilSettlementViewModel
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +37,10 @@ fun SoilSettlementScreen(
     viewModel: SoilSettlementViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val isExporting by viewModel.isExporting.observeAsState(false)
 
     var pressure by remember { mutableStateOf("150") }
     var width by remember { mutableStateOf("2.0") }
@@ -50,6 +58,12 @@ fun SoilSettlementScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.exportToPdf(context) { } }, enabled = result != null && !isExporting) {
+                        if (isExporting) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.PictureAsPdf, null)
                     }
                 }
             )
@@ -104,12 +118,20 @@ fun SoilSettlementScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
                 ) {
-                    Icon(Icons.Default.Calculate, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Analyze Settlement")
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else {
+                        Icon(Icons.Default.Calculate, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Analyze Settlement")
+                    }
                 }
+            }
+            
+            item {
+                SettlementVisualizer(layers)
             }
 
             result?.let { res ->
@@ -119,6 +141,35 @@ fun SoilSettlementScreen(
             }
 
             item { Spacer(Modifier.height(32.dp)) }
+        }
+    }
+}
+
+@Composable
+fun SettlementVisualizer(layers: List<SettlementAnalysisEngine.SoilLayer>) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(200.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2C3E50)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            val w = size.width
+            val h = size.height
+            val totalThickness = layers.sumOf { it.thickness }.coerceAtLeast(1.0)
+            
+            var currentY = 0f
+            layers.forEachIndexed { i, layer ->
+                val layerH = (layer.thickness / totalThickness * h).toFloat()
+                val color = if (i % 2 == 0) Color(0xFF8B4513).copy(alpha = 0.6f) else Color(0xFFD2B48C).copy(alpha = 0.6f)
+                
+                drawRect(color, Offset(0f, currentY), Size(w, layerH))
+                drawLine(Color.White.copy(alpha = 0.3f), Offset(0f, currentY), Offset(w, currentY), 1f)
+                
+                currentY += layerH
+            }
+            
+            val footW = w * 0.4f
+            drawRect(Color.LightGray, Offset(w/2 - footW/2, 0f), Size(footW, 15f))
         }
     }
 }

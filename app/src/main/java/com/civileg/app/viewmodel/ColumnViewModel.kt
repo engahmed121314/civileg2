@@ -268,7 +268,7 @@ class ColumnViewModel @Inject constructor(
                     }
                 }
                 val safetyChecks = res.safetyChecks.map { chk ->
-                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
                         limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                     )

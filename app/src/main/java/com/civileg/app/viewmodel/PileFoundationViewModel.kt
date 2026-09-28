@@ -7,8 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.PileFoundationDesign
-import com.civileg.app.domain.calculations.ecp.ECPPileFoundation
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +24,6 @@ import javax.inject.Inject
 class PileFoundationViewModel @Inject constructor(
     private val repository: DesignRepository
 ) : ViewModel() {
-
-    private val designEngine: PileFoundationDesign = ECPPileFoundation()
 
     private val _result = MutableLiveData<PileDesignResult?>()
     val result: LiveData<PileDesignResult?> = _result
@@ -64,11 +65,29 @@ class PileFoundationViewModel @Inject constructor(
         scourDepth: Double,
         capConcreteCover: Double,
         columnWidth: Double,
-        columnLength: Double
+        columnLength: Double,
+        code: DesignCode = DesignCode.ECP
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // Rule 1.4: loud failures — validate before any maths (ADR-010)
+                InputGuard.positive("pileDiameter", pileDiameter)
+                InputGuard.positive("pileLength", pileLength)
+                InputGuard.positive("fcu", fcu)
+                InputGuard.positive("fy", fy)
+                InputGuard.positive("safetyFactor", safetyFactor)
+                InputGuard.positive("numberOfPiles", numberOfPiles)
+                InputGuard.nonNegative("axialLoad", axialLoad)
+                InputGuard.nonNegative("lateralLoad", lateralLoad)
+                InputGuard.nonNegative("momentLoad", momentLoad)
+                InputGuard.positive("spacing", spacing)
+                InputGuard.inRange("phi", phi, 0.0, 45.0)
+                InputGuard.positive("gammaSoil", gammaSoil)
+
+                // Per-code engine dispatch (ADR-002: Factory only)
+                val designEngine: PileFoundationDesign =
+                    CalculationFactory.getPileFoundationDesign(code)
                 val input = PileInput(
                     pileType = pileType,
                     pileDiameter = pileDiameter,
@@ -100,7 +119,12 @@ class PileFoundationViewModel @Inject constructor(
                 val res = designEngine.designPile(input)
                 _result.value = res
                 _error.value = null
+            } catch (e: IllegalArgumentException) {
+                _error.value = "مدخلات غير صالحة: ${e.message}"
+            } catch (e: ArithmeticException) {
+                _error.value = "خطأ حسابي: ${e.message}"
             } catch (e: Exception) {
+                android.util.Log.e("PileFoundationVM", "designPile crash", e)
                 _error.value = "Error: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -152,31 +176,37 @@ class PileFoundationViewModel @Inject constructor(
                 )
 
                 val safetyChecks = res.warnings.map { w ->
-                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    GenericSafetyCheck(
                         name = w, passed = false, calculated = 0.0, limit = 0.0, unit = ""
                     )
                 }.toMutableList()
-                safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                    name = "Punching Shear",
-                    passed = cap.punchingShearOk,
-                    calculated = cap.punchingShearStress,
-                    limit = cap.punchingShearCapacity,
-                    unit = "MPa"
-                ))
-                safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                    name = "Beam Shear",
-                    passed = cap.beamShearOk,
-                    calculated = cap.beamShearStress,
-                    limit = cap.beamShearCapacity,
-                    unit = "MPa"
-                ))
-                safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                    name = "Settlement",
-                    passed = settlement.isOk,
-                    calculated = settlement.totalSettlement,
-                    limit = settlement.allowableSettlement,
-                    unit = "mm"
-                ))
+                safetyChecks.add(
+                    GenericSafetyCheck(
+                        name = "Punching Shear",
+                        passed = cap.punchingShearOk,
+                        calculated = cap.punchingShearStress,
+                        limit = cap.punchingShearCapacity,
+                        unit = "MPa"
+                    )
+                )
+                safetyChecks.add(
+                    GenericSafetyCheck(
+                        name = "Beam Shear",
+                        passed = cap.beamShearOk,
+                        calculated = cap.beamShearStress,
+                        limit = cap.beamShearCapacity,
+                        unit = "MPa"
+                    )
+                )
+                safetyChecks.add(
+                    GenericSafetyCheck(
+                        name = "Settlement",
+                        passed = settlement.isOk,
+                        calculated = settlement.totalSettlement,
+                        limit = settlement.allowableSettlement,
+                        unit = "mm"
+                    )
+                )
 
                 val drawingBitmap = try {
                     PdfDrawingGenerator.generatePileDrawing(

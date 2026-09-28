@@ -944,7 +944,7 @@ class CorrectedEquationsTest {
 
         // ACI falls back to ECPPileFoundation (TODO: ACI-specific not yet implemented)
         val aciPile = CalculationFactory.getPileFoundationDesign(DesignCode.ACI)
-        assertTrue("ACI pile should fallback to ECPPileFoundation", aciPile is ECPPileFoundation)
+        assertTrue("ACI pile should be ACIPileFoundation", aciPile is ACIPileFoundation)
     }
 
     // =====================================================================

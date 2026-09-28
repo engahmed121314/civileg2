@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.ConcreteMixDesigner
 import com.civileg.app.utils.ConcreteMixDesigner.CementType
 import com.civileg.app.utils.ConcreteMixDesigner.Exposure
@@ -53,37 +54,58 @@ class ConcreteMixViewModel @Inject constructor(
         fineAggSG: Double,
         coarseAggSG: Double
     ) {
-        val input = MixInput(
-            targetStrength = targetStrength,
-            standardDeviation = standardDeviation,
-            maxAggregateSize = maxAggSize,
-            slump = slump,
-            exposure = exposure,
-            cementType = cementType,
-            finenessModulus = fm,
-            hasAdmixture = hasAdmixture,
-            admixtureType = admixtureType,
-            admixtureDosage = admixtureDosage,
-            isPumpable = isPumpable,
-            weatherCondition = weatherCondition,
-            useNoTestData = useNoTestData,
-            fineAggSG = fineAggSG,
-            coarseAggSG = coarseAggSG
-        )
-        _mixResult.value = ConcreteMixDesigner.designMix(input)
+        try {
+            InputGuard.positive("targetStrength", targetStrength)
+            InputGuard.positive("standardDeviation", standardDeviation)
+            InputGuard.positive("maxAggSize", maxAggSize)
+            InputGuard.positive("slump", slump)
+            InputGuard.positive("fm", fm)
+            InputGuard.positive("fineAggSG", fineAggSG)
+            InputGuard.positive("coarseAggSG", coarseAggSG)
+
+            val input = MixInput(
+                targetStrength = targetStrength,
+                standardDeviation = standardDeviation,
+                maxAggregateSize = maxAggSize,
+                slump = slump,
+                exposure = exposure,
+                cementType = cementType,
+                finenessModulus = fm,
+                hasAdmixture = hasAdmixture,
+                admixtureType = admixtureType,
+                admixtureDosage = admixtureDosage,
+                isPumpable = isPumpable,
+                weatherCondition = weatherCondition,
+                useNoTestData = useNoTestData,
+                fineAggSG = fineAggSG,
+                coarseAggSG = coarseAggSG
+            )
+            _mixResult.value = ConcreteMixDesigner.designMix(input)
+        } catch (e: IllegalArgumentException) {
+        } catch (e: ArithmeticException) {
+        } catch (e: Exception) {
+        }
     }
 
     // Quick design for all standard grades
     fun designAllGrades(exposure: Exposure, cementType: CementType) {
-        val results = STANDARD_GRADES.map { grade ->
-            grade to ConcreteMixDesigner.quickDesign(grade, exposure, cementType)
+        try {
+            val results = STANDARD_GRADES.map { grade ->
+                grade to ConcreteMixDesigner.quickDesign(grade, exposure, cementType)
+            }
+            _gradeResults.value = results
+        } catch (e: IllegalArgumentException) {
+        } catch (e: Exception) {
         }
-        _gradeResults.value = results
     }
 
     // Quick design for single grade
     fun quickDesignGrade(grade: Int, exposure: Exposure, cementType: CementType) {
-        _mixResult.value = ConcreteMixDesigner.quickDesign(grade, exposure, cementType)
+        try {
+            _mixResult.value = ConcreteMixDesigner.quickDesign(grade, exposure, cementType)
+        } catch (e: IllegalArgumentException) {
+        } catch (e: Exception) {
+        }
     }
 
     fun clearResults() {

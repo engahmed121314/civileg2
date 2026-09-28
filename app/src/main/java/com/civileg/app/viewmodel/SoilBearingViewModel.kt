@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.SoilBearingCalculator
 import com.civileg.app.utils.SoilBearingInput
@@ -16,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SoilBearingViewModel @Inject constructor(
-    private val repository: com.civileg.app.db.DesignRepository
+    private val repository: DesignRepository
 ) : ViewModel() {
 
     // ------------------------------------------------------------------
@@ -32,13 +34,8 @@ class SoilBearingViewModel @Inject constructor(
     private val _comparisonResults = MutableLiveData<Map<BearingMethod, SoilBearingResult>>(emptyMap())
     val comparisonResults: LiveData<Map<BearingMethod, SoilBearingResult>> = _comparisonResults
 
-    fun saveDesign(projectId: Long, name: String) {
-        val res = _result.value ?: return
-        val m = method.value?.name ?: "TERZAGHI"
-        viewModelScope.launch {
-            repository.saveSoilBearingDesign(projectId, name, res, m)
-        }
-    }
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
 
     // ------------------------------------------------------------------
     // Input fields (two-way via MutableLiveData)
@@ -66,40 +63,41 @@ class SoilBearingViewModel @Inject constructor(
     val safetyFactor = MutableLiveData("3.0")
 
     // ------------------------------------------------------------------
-    // Validation helpers
-    // ------------------------------------------------------------------
-
-    private fun Double?.orDefault(default: Double) = this ?: default
-
-    private fun MutableLiveData<String>.doubleValue(default: Double = 0.0): Double {
-        return try {
-            val d = value?.toDoubleOrNull() ?: default
-            if (d.isFinite()) d else default
-        } catch (_: NumberFormatException) {
-            default
-        }
-    }
-
-    // ------------------------------------------------------------------
     // Build input object from current LiveData values
     // ------------------------------------------------------------------
 
     private fun buildInput(): SoilBearingInput {
+        // Rule 1.4: loud failures — validate before any maths (ADR-010)
+        val width = InputGuard.positive("foundationWidth", foundationWidth.value?.toDoubleOrNull() ?: 1.5)
+        val length = InputGuard.positive("foundationLength", foundationLength.value?.toDoubleOrNull() ?: 1.5)
+        val depth = InputGuard.positive("foundationDepth", foundationDepth.value?.toDoubleOrNull() ?: 1.0)
+        val load = InputGuard.positive("cohesion", cohesion.value?.toDoubleOrNull() ?: 25.0) // used as load proxy
+        InputGuard.positive("frictionAngle", frictionAngle.value?.toDoubleOrNull() ?: 30.0)
+        InputGuard.inRange("frictionAngle", frictionAngle.value?.toDoubleOrNull() ?: 30.0, 0.0, 45.0)
+        InputGuard.positive("unitWeight", unitWeight.value?.toDoubleOrNull() ?: 18.0)
+        InputGuard.positive("safetyFactor", safetyFactor.value?.toDoubleOrNull() ?: 3.0)
+        InputGuard.nonNegative("waterTableDepth", waterTableDepth.value?.toDoubleOrNull() ?: 5.0)
+        InputGuard.nonNegative("eccentricityX", eccentricityX.value?.toDoubleOrNull() ?: 0.0)
+        InputGuard.nonNegative("eccentricityY", eccentricityY.value?.toDoubleOrNull() ?: 0.0)
+        InputGuard.nonNegative("loadInclinationX", loadInclinationX.value?.toDoubleOrNull() ?: 0.0)
+        InputGuard.nonNegative("loadInclinationY", loadInclinationY.value?.toDoubleOrNull() ?: 0.0)
+        InputGuard.positive("safetyFactor", safetyFactor.value?.toDoubleOrNull() ?: 3.0)
+
         return SoilBearingInput(
             method      = method.value ?: BearingMethod.TERZAGHI,
             soilType    = soilType.value ?: SoilType.CLAY,
-            foundationWidth    = foundationWidth.doubleValue(1.5),
-            foundationLength   = foundationLength.doubleValue(1.5),
-            foundationDepth    = foundationDepth.doubleValue(1.0),
-            cohesion           = cohesion.doubleValue(25.0),
-            frictionAngle      = frictionAngle.doubleValue(30.0),
-            unitWeight         = unitWeight.doubleValue(18.0),
-            waterTableDepth    = waterTableDepth.doubleValue(5.0),
-            eccentricityX      = eccentricityX.doubleValue(0.0),
-            eccentricityY      = eccentricityY.doubleValue(0.0),
-            loadInclinationX   = loadInclinationX.doubleValue(0.0),
-            loadInclinationY   = loadInclinationY.doubleValue(0.0),
-            safetyFactor       = safetyFactor.doubleValue(3.0)
+            foundationWidth    = foundationWidth.value?.toDoubleOrNull() ?: 1.5,
+            foundationLength   = foundationLength.value?.toDoubleOrNull() ?: 1.5,
+            foundationDepth    = foundationDepth.value?.toDoubleOrNull() ?: 1.0,
+            cohesion           = cohesion.value?.toDoubleOrNull() ?: 25.0,
+            frictionAngle      = frictionAngle.value?.toDoubleOrNull() ?: 30.0,
+            unitWeight         = unitWeight.value?.toDoubleOrNull() ?: 18.0,
+            waterTableDepth    = waterTableDepth.value?.toDoubleOrNull() ?: 5.0,
+            eccentricityX      = eccentricityX.value?.toDoubleOrNull() ?: 0.0,
+            eccentricityY      = eccentricityY.value?.toDoubleOrNull() ?: 0.0,
+            loadInclinationX   = loadInclinationX.value?.toDoubleOrNull() ?: 0.0,
+            loadInclinationY   = loadInclinationY.value?.toDoubleOrNull() ?: 0.0,
+            safetyFactor       = safetyFactor.value?.toDoubleOrNull() ?: 3.0
         )
     }
 
@@ -109,6 +107,7 @@ class SoilBearingViewModel @Inject constructor(
 
     /** Run the selected method and post the result. */
     fun calculate() {
+        _error.value = null
         _isCalculating.postValue(true)
         viewModelScope.launch(Dispatchers.Default) {
             try {
@@ -121,8 +120,16 @@ class SoilBearingViewModel @Inject constructor(
                     BearingMethod.VESIC    -> calculator.calculateVesic(input)
                 }
                 _result.postValue(res)
+            } catch (e: IllegalArgumentException) {
+                _result.postValue(null)
+                _error.postValue("مدخلات غير صالحة: ${e.message}")
+            } catch (e: ArithmeticException) {
+                _result.postValue(null)
+                _error.postValue("خطأ حسابي: ${e.message}")
             } catch (e: Exception) {
                 _result.postValue(null)
+                _error.postValue("خطأ غير متوقع: ${e.message}")
+                android.util.Log.e("SoilBearingVM", "calculate crash", e)
             } finally {
                 _isCalculating.postValue(false)
             }
@@ -131,6 +138,7 @@ class SoilBearingViewModel @Inject constructor(
 
     /** Compare all four methods and post results. */
     fun compareAllMethods() {
+        _error.value = null
         _isCalculating.postValue(true)
         viewModelScope.launch(Dispatchers.Default) {
             try {
@@ -140,9 +148,19 @@ class SoilBearingViewModel @Inject constructor(
                 _comparisonResults.postValue(map)
                 // Also set the single result to the selected method
                 _result.postValue(map[input.method])
+            } catch (e: IllegalArgumentException) {
+                _result.postValue(null)
+                _comparisonResults.postValue(emptyMap())
+                _error.postValue("مدخلات غير صالحة: ${e.message}")
+            } catch (e: ArithmeticException) {
+                _result.postValue(null)
+                _comparisonResults.postValue(emptyMap())
+                _error.postValue("خطأ حسابي: ${e.message}")
             } catch (e: Exception) {
                 _result.postValue(null)
                 _comparisonResults.postValue(emptyMap())
+                _error.postValue("خطأ غير متوقع: ${e.message}")
+                android.util.Log.e("SoilBearingVM", "compareAll crash", e)
             } finally {
                 _isCalculating.postValue(false)
             }

@@ -140,7 +140,8 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.home_frame_sub,    listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree),
     DesignModuleItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP"),              StatCardGreen,   Icons.Default.Foundation),
     DesignModuleItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI"),      CardAccentSlab,    Icons.Default.Dashboard),
-    DesignModuleItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    CardAccentWall,    Icons.Default.SensorDoor)
+    DesignModuleItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    CardAccentWall,    Icons.Default.SensorDoor),
+    DesignModuleItem(AppScreen.SoilSettlement, R.string.home_settlement, R.string.home_settlement_sub, listOf("ECP", "ACI"), StatCardOrange, Icons.Default.VerticalAlignBottom)
 )
 
 private val quickTools = listOf(

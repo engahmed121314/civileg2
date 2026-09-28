@@ -6,6 +6,8 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.compose.ui.geometry.Offset
+import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
+import com.civileg.app.domain.entities.SteelWarehouseInputs
 import kotlin.math.*
 
 /**
@@ -60,6 +62,193 @@ object PdfDrawingGenerator {
     /** Pick Arabic or English label based on current locale */
     fun t(ar: String, en: String): String =
         if (LocaleHelper.isArabic()) ar else en
+
+    fun generateWarehouseDrawing(
+        inputs: SteelWarehouseInputs,
+        result: SteelWarehouseAnalysisResult
+    ): Bitmap {
+        val (bitmap, canvas) = createCanvas(1200, 1600)
+        val paintMain = createPaint(Color.WHITE, 3f)
+        val paintDim = createPaint(DIM_LINE, 1.5f)
+        val paintText = textPaint(DIM_TEXT, 22f, true)
+        
+        // --- 1. Front Elevation (Top) ---
+        drawWarehouseElevationCanvas(canvas, inputs, 600f, 300f, 1000f, 400f, paintMain, paintDim, paintText)
+        
+        // --- 2. Plan View (Middle) ---
+        drawWarehousePlanCanvas(canvas, inputs, 600f, 800f, 1000f, 400f, paintMain, paintDim, paintText)
+        
+        // --- 3. 3D View (Bottom) ---
+        drawWarehouse3DCanvas(canvas, inputs, 600f, 1300f, 1000f, 400f, paintMain, paintDim, paintText)
+        
+        return bitmap
+    }
+
+    private fun drawWarehouseElevationCanvas(canvas: Canvas, inputs: SteelWarehouseInputs, cx: Float, cy: Float, w: Float, h: Float, pMain: Paint, pDim: Paint, pText: Paint) {
+        val span = inputs.span
+        val eh = inputs.eaveHeight
+        val rh = inputs.ridgeHeight
+        val scale = (w * 0.8f) / span.toFloat()
+        
+        val dw = span.toFloat() * scale
+        val deh = eh.toFloat() * scale
+        val drh = rh.toFloat() * scale
+        
+        val x1 = cx - dw/2
+        val x2 = cx + dw/2
+        val xMid = cx
+        val yBase = cy + h/2 - 40f
+        val yEave = yBase - deh
+        val yRidge = yBase - drh
+        
+        val path = Path().apply {
+            moveTo(x1, yBase); lineTo(x1, yEave); lineTo(xMid, yRidge); lineTo(x2, yEave); lineTo(x2, yBase)
+        }
+        canvas.drawPath(path, pMain)
+        canvas.drawLine(cx - w/2, yBase, cx + w/2, yBase, pDim)
+        
+        canvas.drawBilingualText("FRONT ELEVATION | مسقط رأسي", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("${span}m", cx, yBase + 30f, DIM_TEXT, 20f, true)
+    }
+
+    private fun drawWarehousePlanCanvas(canvas: Canvas, inputs: SteelWarehouseInputs, cx: Float, cy: Float, w: Float, h: Float, pMain: Paint, pDim: Paint, pText: Paint) {
+        val length = inputs.length
+        val span = inputs.span
+        val bay = inputs.baySpacing
+        val scale = min((w * 0.8f) / length.toFloat(), (h * 0.8f) / span.toFloat())
+        
+        val dl = length.toFloat() * scale
+        val ds = span.toFloat() * scale
+        val db = bay.toFloat() * scale
+        
+        val xStart = cx - dl/2
+        val yStart = cy - ds/2
+        
+        canvas.drawRect(xStart, yStart, xStart + dl, yStart + ds, pMain)
+        val numBays = (length / bay).toInt()
+        for (i in 0..numBays) {
+            val x = xStart + i * db
+            canvas.drawLine(x, yStart, x, yStart + ds, pDim)
+        }
+        
+        canvas.drawBilingualText("PLAN VIEW | مسقط أفقي", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("L = ${length}m, B = ${span}m", cx, yStart + ds + 35f, DIM_TEXT, 20f, true)
+    }
+
+    private fun drawWarehouse3DCanvas(canvas: Canvas, inputs: SteelWarehouseInputs, cx: Float, cy: Float, w: Float, h: Float, pMain: Paint, pDim: Paint, pText: Paint) {
+        val s = inputs.span.toFloat()
+        val l = inputs.length.toFloat()
+        val eh = inputs.eaveHeight.toFloat()
+        val rh = inputs.ridgeHeight.toFloat()
+        
+        val scale = min(w / s, h / eh) * 0.4f
+        val ds = s * scale
+        val dl = l * scale * 0.5f
+        val deh = eh * scale
+        val drh = rh * scale
+        
+        val ang = Math.toRadians(30.0)
+        val dx = (cos(ang) * ds).toFloat()
+        val dy = (sin(ang) * ds).toFloat()
+        val dzx = (cos(ang) * dl).toFloat()
+        val dzy = (sin(ang) * dl).toFloat()
+        
+        val b1 = Offset(cx, cy + 50f)
+        val e1 = Offset(b1.x, b1.y - deh)
+        val a1 = Offset(b1.x + dx/2, e1.y - (drh - deh))
+        
+        val b2 = Offset(b1.x + dx, b1.y - dy)
+        val e2 = Offset(b2.x, b2.y - deh)
+        
+        canvas.drawLine(b1.x, b1.y, e1.x, e1.y, pMain)
+        canvas.drawLine(b2.x, b2.y, e2.x, e2.y, pMain)
+        canvas.drawLine(e1.x, e1.y, a1.x, a1.y, pMain)
+        canvas.drawLine(e2.x, e2.y, a1.x, a1.y, pMain)
+        
+        canvas.drawBilingualText("3D WIREFRAME | منظور هيكلي", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+    }
+
+    fun generateBasePlateDrawing(
+        plateWidth: Double,
+        plateLength: Double,
+        plateThickness: Double,
+        colBf: Double,
+        colDepth: Double,
+        boltDiameter: Double,
+        boltCount: Int,
+        isSafe: Boolean
+    ): Bitmap {
+        val (bitmap, canvas) = createCanvas(1000, 1000)
+        val paintPlate = fillPaint(Color.parseColor("#95A5A6"))
+        val paintPlateOutline = createPaint(Color.DKGRAY, 3f)
+        val paintColumn = fillPaint(Color.parseColor("#34495E"))
+        val paintBolt = fillPaint(Color.parseColor("#F39C12"))
+        val paintText = textPaint(DIM_TEXT, 24f, true)
+        val paintDim = createPaint(DIM_LINE, 1.5f)
+
+        val cx = 500f
+        val cy = 500f
+        
+        // Scale to fit 70% of canvas
+        val maxDim = max(plateWidth, plateLength).coerceAtLeast(100.0)
+        val scale = 700f / maxDim.toFloat()
+        
+        val drawW = plateWidth.toFloat() * scale
+        val drawL = plateLength.toFloat() * scale
+        val drawColW = colBf.toFloat() * scale
+        val drawColL = colDepth.toFloat() * scale
+        
+        // Draw Plate
+        canvas.drawRect(cx - drawW/2, cy - drawL/2, cx + drawW/2, cy + drawL/2, paintPlate)
+        canvas.drawRect(cx - drawW/2, cy - drawL/2, cx + drawW/2, cy + drawL/2, paintPlateOutline)
+        
+        // Draw Column Section (I-Shape approx)
+        val tw = (drawColW * 0.1f).coerceAtLeast(5f)
+        val tf = (drawColL * 0.1f).coerceAtLeast(8f)
+        
+        // Flanges
+        canvas.drawRect(cx - drawColW/2, cy - drawColL/2, cx + drawColW/2, cy - drawColL/2 + tf, paintColumn)
+        canvas.drawRect(cx - drawColW/2, cy + drawColL/2 - tf, cx + drawColW/2, cy + drawColL/2, paintColumn)
+        // Web
+        canvas.drawRect(cx - tw/2, cy - drawColL/2 + tf, cx + tw/2, cy + drawColL/2 - tf, paintColumn)
+        
+        // Draw Bolts (Assuming 4 bolts at corners if not specified otherwise)
+        val boltR = (boltDiameter.toFloat() * scale / 2f).coerceIn(8f, 20f)
+        val edgeDist = 50f * scale
+        val bx1 = cx - drawW/2 + edgeDist
+        val bx2 = cx + drawW/2 - edgeDist
+        val by1 = cy - drawL/2 + edgeDist
+        val by2 = cy + drawL/2 - edgeDist
+        
+        canvas.drawCircle(bx1, by1, boltR, paintBolt)
+        canvas.drawCircle(bx2, by1, boltR, paintBolt)
+        canvas.drawCircle(bx1, by2, boltR, paintBolt)
+        canvas.drawCircle(bx2, by2, boltR, paintBolt)
+        
+        // Dimensions
+        canvas.drawHDim(cx - drawW/2, cx + drawW/2, cy + drawL/2 + 40f, "${plateWidth.toInt()} mm")
+        canvas.drawVDim(cy - drawL/2, cy + drawL/2, cx + drawW/2 + 40f, "${plateLength.toInt()} mm")
+        
+        canvas.drawBilingualText("BASE PLATE PLAN | مسقط أفقي لقاعدة العمود", cx, 60f, DIM_TEXT, 24f, true)
+        val statusColor = if (isSafe) Color.parseColor("#2E7D32") else Color.RED
+        canvas.drawBilingualText(if (isSafe) "SAFE ✓" else "UNSAFE ✗", cx, cy + drawL/2 + 100f, statusColor, 32f, true)
+        
+        return bitmap
+    }
+
+    fun generateWarehouse3DDrawing(
+        inputs: SteelWarehouseInputs,
+        result: SteelWarehouseAnalysisResult
+    ): Bitmap {
+        val (bitmap, canvas) = createCanvas(1200, 800)
+        val paintMain = createPaint(Color.WHITE, 3f)
+        val paintDim = createPaint(DIM_LINE, 1.5f)
+        val paintText = textPaint(DIM_TEXT, 22f, true)
+        
+        drawWarehouse3DCanvas(canvas, inputs, 600f, 400f, 1100f, 700f, paintMain, paintDim, paintText)
+        
+        return bitmap
+    }
 
     private fun createCanvas(width: Int, height: Int): Pair<Bitmap, Canvas> {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)

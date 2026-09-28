@@ -96,18 +96,20 @@ object NFactorTable {
      * is performed for Terzaghi Nγ; the others are computed exactly.
      */
     fun lookup(phi: Double): Triple<Double, Double, Double> {
-        val nq = SoilBearingCalculator.bearingNq(phi)
-        val nc = SoilBearingCalculator.bearingNc(phi, nq)
-        // Nγ – interpolate from table
+        val clampedPhi = phi.coerceIn(0.0, 45.0)
+        val nq = SoilBearingCalculator.bearingNq(clampedPhi)
+        val nc = SoilBearingCalculator.bearingNc(clampedPhi, nq)
         val keys = terzaghiTable.keys.sorted()
-        val lower = keys.lastOrNull { it <= ceil(phi).toInt() } ?: 0
-        val upper = keys.firstOrNull { it >= ceil(phi).toInt() } ?: 45
-        val ngamma = if (lower == upper) {
-            terzaghiTable[lower]!!.ngammaTerzaghi
+        val intPhi = ceil(clampedPhi).toInt()
+        val lower = keys.lastOrNull { it <= intPhi } ?: 0
+        val upper = keys.firstOrNull { it >= intPhi } ?: 45
+        val ngamma = if (lower == upper || terzaghiTable[lower] == null || terzaghiTable[upper] == null) {
+            terzaghiTable[lower]?.ngammaTerzaghi ?: 0.0
         } else {
             val fL = terzaghiTable[lower]!!
             val fU = terzaghiTable[upper]!!
-            val t = (ceil(phi).toInt() - lower).toDouble() / (upper - lower)
+            val diff = (upper - lower).toDouble()
+            val t = if (diff > 0.0) (intPhi - lower).toDouble() / diff else 0.0
             fL.ngammaTerzaghi + t * (fU.ngammaTerzaghi - fL.ngammaTerzaghi)
         }
         return Triple(nc, nq, ngamma)

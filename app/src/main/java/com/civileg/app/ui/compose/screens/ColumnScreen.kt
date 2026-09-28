@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import kotlin.math.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +43,7 @@ import com.civileg.app.ui.compose.components.drawings.BarInfo
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import com.civileg.app.domain.entities.StirrupZone
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.launch
@@ -445,10 +447,15 @@ fun ColumnScreen(
                                 columnWidth = result.width.toDouble(),
                                 columnDepth = result.depth.toDouble(),
                                 columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
-                                longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
+                                longitudinalBars = generateBarPositions(
+                                    result.width.toDouble(), result.depth.toDouble(),
+                                    uiState.manualNumBars.toIntOrNull() ?: result.reinforcement.numBars,
+                                    (uiState.preferredDiameter.toIntOrNull() ?: result.reinforcement.diameter).toDouble(),
+                                    result.columnType.contains("CIRCULAR", ignoreCase = true)
+                                ),
                                 tieDia = result.stirrups.diameter.toDouble(),
                                 tieSpacing = result.stirrups.spacing.toDouble(),
-                                cover = 40.0, // standard clear cover for columns
+                                cover = 40.0,
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                                 zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
@@ -472,13 +479,18 @@ fun ColumnScreen(
                         columnWidth = result.width.toDouble(),
                         columnDepth = result.depth.toDouble(),
                         columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
-                        longitudinalBars = generateBarPositions(result.width.toDouble(), result.depth.toDouble(), result.reinforcement.numBars, result.reinforcement.diameter.toDouble()),
+                        longitudinalBars = generateBarPositions(
+                            result.width.toDouble(), result.depth.toDouble(),
+                            uiState.manualNumBars.toIntOrNull() ?: result.reinforcement.numBars,
+                            (uiState.preferredDiameter.toIntOrNull() ?: result.reinforcement.diameter).toDouble(),
+                            result.columnType.contains("CIRCULAR", ignoreCase = true)
+                        ),
                         tieDia = result.stirrups.diameter.toDouble(),
                         tieSpacing = result.stirrups.spacing.toDouble(),
                         cover = 40.0,
                         isSpiral = false,
                         sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
-                        zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
+                        zones = result.stirrups.zones.map { StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -758,41 +770,62 @@ private fun LoadCombinationSelector(selected: LoadCombination, onSelected: (Load
     }
 }
 
-private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double): List<BarInfo> {
+private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double, isCircular: Boolean = false): List<BarInfo> {
     val cover = 40.0
-    val cx = width / 2.0
-    val cy = depth / 2.0
-    val effectiveW = width - 2 * cover
-    val effectiveD = depth - 2 * cover
+    val totalBars = maxOf(4, numBars)
     val positions = mutableListOf<BarInfo>()
-    val barsPerSide = maxOf(2, numBars / 4)
-    val corners = 4
 
-    // Corner bars
-    listOf(
-        BarInfo(cover + diameter/2, cover + diameter/2, diameter, isCorner = true),
-        BarInfo(width - cover - diameter/2, cover + diameter/2, diameter, isCorner = true),
-        BarInfo(cover + diameter/2, depth - cover - diameter/2, diameter, isCorner = true),
-        BarInfo(width - cover - diameter/2, depth - cover - diameter/2, diameter, isCorner = true)
-    ).forEach { positions.add(it) }
-
-    // Distribute remaining bars along sides
-    val remaining = numBars - 4
-    if (remaining > 0) {
-        val perSide = remaining / 4
-        for (side in 0 until 4) {
-            val count = if (side < remaining % 4) perSide + 1 else perSide
-            for (i in 1..count) {
-                val t = i.toDouble() / (count + 1)
-                val pos = when (side) {
-                    0 -> BarInfo(cover + diameter/2 + t * effectiveW, cover + diameter/2, diameter)
-                    1 -> BarInfo(width - cover - diameter/2, cover + diameter/2 + t * effectiveD, diameter)
-                    2 -> BarInfo(width - cover - diameter/2 - t * effectiveW, depth - cover - diameter/2, diameter)
-                    else -> BarInfo(cover + diameter/2, depth - cover - diameter/2 - t * effectiveD, diameter)
-                }
-                positions.add(pos)
-            }
+    if (isCircular) {
+        val radius = (minOf(width, depth) - 2 * cover) / 2.0
+        val cx = width / 2.0
+        val cy = depth / 2.0
+        for (i in 0 until totalBars) {
+            val angle = 2.0 * Math.PI * i / totalBars
+            val x = cx + radius * cos(angle)
+            val y = cy + radius * sin(angle)
+            positions.add(BarInfo(x, y, diameter, isCorner = true))
         }
+        return positions
     }
+
+    val xMin = cover
+    val xMax = width - cover
+    val yMin = cover
+    val yMax = depth - cover
+    val effW = width - 2 * cover
+    val effD = depth - 2 * cover
+
+    positions.add(BarInfo(xMin, yMin, diameter, isCorner = true))
+    positions.add(BarInfo(xMax, yMin, diameter, isCorner = true))
+    positions.add(BarInfo(xMax, yMax, diameter, isCorner = true))
+    positions.add(BarInfo(xMin, yMax, diameter, isCorner = true))
+
+    val remaining = totalBars - 4
+    if (remaining <= 0) return positions
+
+    val aspect = effW / effD
+    val barsY = maxOf(0, round((remaining / (2.0 * (aspect + 1.0)))).toInt())
+    val barsX = maxOf(0, (remaining - 2 * barsY) / 2)
+    var leftover = remaining - 2 * (barsX + barsY)
+
+    for (i in 1..barsX + (if (leftover > 0) 1 else 0)) {
+        if (leftover > 0 && i == barsX + 1) leftover--
+        val t = i.toDouble() / (barsX + 1 + (if (leftover > 0) 1 else 0))
+        positions.add(BarInfo(xMin + t * effW, yMin, diameter))
+    }
+    for (i in 1..barsX + (if (leftover > 0) 1 else 0)) {
+        if (leftover > 0 && i == barsX + 1) leftover--
+        val t = i.toDouble() / (barsX + 1 + (if (leftover > 0) 1 else 0))
+        positions.add(BarInfo(xMin + t * effW, yMax, diameter))
+    }
+    for (i in 1..barsY) {
+        val t = i.toDouble() / (barsY + 1)
+        positions.add(BarInfo(xMin, yMin + t * effD, diameter))
+    }
+    for (i in 1..barsY) {
+        val t = i.toDouble() / (barsY + 1)
+        positions.add(BarInfo(xMax, yMin + t * effD, diameter))
+    }
+
     return positions
 }

@@ -11,6 +11,7 @@ import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import javax.inject.Inject
 
 @HiltViewModel
@@ -151,7 +152,7 @@ class RetainingWallViewModel @Inject constructor(
                         "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg"
                     )
                     val safetyChecks = currentResult.safetyChecks.map { chk ->
-                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                        GenericSafetyCheck(
                             name = chk.name, calculated = chk.value,
                             limit = chk.limit, unit = chk.unit, passed = chk.isSafe
                         )

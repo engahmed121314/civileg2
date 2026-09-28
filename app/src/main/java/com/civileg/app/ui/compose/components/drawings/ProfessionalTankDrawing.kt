@@ -88,19 +88,26 @@ fun ProfessionalTankDrawing(
         val mainRight = cw - 60f
 
         // ── Scaling ──
-        val effectiveHeight = height + baseThickness / 1000.0 + foundationDepth
-        val effectiveLength = length
+        val lengthM = if (length > 50) length / 1000.0 else length
+        val heightM = if (height > 50) height / 1000.0 else height
+        val wallThickM = if (wallThickness > 50) wallThickness / 1000.0 else wallThickness
+        val baseThickM = if (baseThickness > 50) baseThickness / 1000.0 else baseThickness
+        val waterLevelM = if (waterLevel > 50) waterLevel / 1000.0 else waterLevel
+        val foundationDepthM = if (foundationDepth > 50) foundationDepth / 1000.0 else foundationDepth
+
+        val effectiveHeight = heightM + baseThickM + foundationDepthM
+        val effectiveLength = lengthM
         val scaleX = (mainRight - mainLeft) / effectiveLength.toFloat()
         val scaleY = (mainBottom - mainTop) / effectiveHeight.toFloat()
         val scale = min(scaleX, scaleY) * 0.85f
 
-        val drawL = length.toFloat() * scale
-        val drawH = height.toFloat() * scale
-        val drawWT = (wallThickness / 1000.0 * scale).toFloat()
-        val drawBT = (baseThickness / 1000.0 * scale).toFloat()
-        val drawWL = waterLevel.toFloat() * scale
-        val drawFD = foundationDepth.toFloat() * scale
-        val cover = 50f * scale
+        val drawL = lengthM.toFloat() * scale
+        val drawH = heightM.toFloat() * scale
+        val drawWT = wallThickM.toFloat() * scale
+        val drawBT = baseThickM.toFloat() * scale
+        val drawWL = waterLevelM.toFloat() * scale
+        val drawFD = foundationDepthM.toFloat() * scale
+        val cover = (0.05 * scale).toFloat()
 
         val tankLeft = mainLeft + (mainRight - mainLeft - drawL) / 2f
         val tankTop = mainTop + 20f + (if (isUnderground) drawFD else 0f)

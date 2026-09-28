@@ -112,6 +112,10 @@ class ECPBeam : BeamDesign {
         codeNotes.add(CodeReference.ECP.BEAM_FLEXURE)
         codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MIN)
         
+        // حساب عمق المحور المحايد: c = 2*(d - z) / β1
+        val beta1 = 0.85
+        val neutralAxisDepth = 2.0 * (effectiveDepth - leverArm) / beta1
+        
         return ReinforcementResult(
             astRequired = astRequired,
             astProvided = astProvided,
@@ -122,7 +126,8 @@ class ECPBeam : BeamDesign {
             isSafe = utilizationRatio <= 1.0 && astRequired <= maxSteel,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            neutralAxisDepth = neutralAxisDepth
         )
     }
 

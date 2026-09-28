@@ -427,24 +427,28 @@ class FrameAnalysisViewModel @Inject constructor(
                 }
 
                 // Safety checks from design results
-                val safetyChecks = mutableListOf<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck>()
+                val safetyChecks = mutableListOf<GenericSafetyCheck>()
                 concreteRes.forEach { cr ->
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "${cr.memberName} Moment",
-                        calculated = (cr.momentUtilization * 100),
-                        limit = 100.0,
-                        unit = "%",
-                        passed = cr.isSafe
-                    ))
+                    safetyChecks.add(
+                        GenericSafetyCheck(
+                            name = "${cr.memberName} Moment",
+                            calculated = (cr.momentUtilization * 100),
+                            limit = 100.0,
+                            unit = "%",
+                            passed = cr.isSafe
+                        )
+                    )
                 }
                 steelRes.forEach { sr ->
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "${sr.memberName} Combined",
-                        calculated = (sr.combinedUtilization * 100),
-                        limit = 100.0,
-                        unit = "%",
-                        passed = sr.isSafe
-                    ))
+                    safetyChecks.add(
+                        GenericSafetyCheck(
+                            name = "${sr.memberName} Combined",
+                            calculated = (sr.combinedUtilization * 100),
+                            limit = 100.0,
+                            unit = "%",
+                            passed = sr.isSafe
+                        )
+                    )
                 }
 
                 val isAllSafe = (concreteRes.all { it.isSafe } && steelRes.all { it.isSafe })

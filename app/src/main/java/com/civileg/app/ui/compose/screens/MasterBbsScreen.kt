@@ -8,24 +8,35 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.BbsEntry
 import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.viewmodel.MasterBbsViewModel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MasterBbsScreen(
+    projectId: Long,
     projectName: String,
-    allEntries: List<BbsEntry>,
+    viewModel: MasterBbsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
-    val combinedBbs = remember(allEntries) { BbsGenerator.combineProjectBbs(listOf(allEntries)) }
+    val allEntries by viewModel.bbsEntries.observeAsState(emptyList())
+    val isLoading by viewModel.isLoading.observeAsState(false)
+
+    LaunchedEffect(projectId) {
+        viewModel.loadProjectBbs(projectId)
+    }
+
+    val combinedBbs = remember(allEntries) { allEntries }
     val optimization = remember(combinedBbs) { BbsGenerator.optimizeCutting(combinedBbs) }
 
     Scaffold(
@@ -40,27 +51,41 @@ fun MasterBbsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Text(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-                Text("Factory Fabrication List", style = MaterialTheme.typography.bodyMedium)
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("Factory Fabrication List", style = MaterialTheme.typography.bodyMedium)
+                }
 
-            item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f))) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(Modifier.width(12.dp))
-                        Text(optimization, style = MaterialTheme.typography.labelMedium)
+                if (combinedBbs.isNotEmpty()) {
+                    item {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f))) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
+                                Spacer(Modifier.width(12.dp))
+                                Text(optimization, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    items(combinedBbs) { entry ->
+                        BbsListItem(entry)
+                    }
+                } else {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
+                            Text("No design data found for BBS generation.", color = Color.Gray)
+                        }
                     }
                 }
-            }
-
-            items(combinedBbs) { entry ->
-                BbsListItem(entry)
             }
         }
     }

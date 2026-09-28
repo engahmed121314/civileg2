@@ -3,6 +3,7 @@ package com.civileg.app.utils.exporters
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.DeviceRgb
@@ -793,7 +794,7 @@ object ProfessionalEnglishPdfReporter {
         designType: String,
         inputs: Map<String, String>,
         results: Map<String, String>,
-        safetyChecks: List<ComprehensivePdfExporter.GenericSafetyCheck>,
+        safetyChecks: List<GenericSafetyCheck>,
         isSafe: Boolean,
         drawingBitmap: Bitmap?,
         outputPath: String

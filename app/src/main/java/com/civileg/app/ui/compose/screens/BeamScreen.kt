@@ -360,6 +360,7 @@ fun BeamScreen(
                                     1.3 * ld
                                 }(),
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
+                                supportType = res.supportType,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
                                 topRebarDia = res.reinforcementTop.diameter.toDouble(),
                                 topRebarCount = res.reinforcementTop.numBars,
@@ -421,6 +422,7 @@ fun BeamScreen(
                             1.3 * ld
                         }(),
                         isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
+                        supportType = res.supportType,
                         hasTopSteel = res.reinforcementTop.numBars > 0,
                         topRebarDia = res.reinforcementTop.diameter.toDouble(),
                         topRebarCount = res.reinforcementTop.numBars,

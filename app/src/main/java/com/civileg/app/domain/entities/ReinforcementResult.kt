@@ -20,7 +20,8 @@ data class ReinforcementResult(
     val warnings: List<String> = emptyList(), // تحذيرات إن وجدت
     val codeNotes: List<String> = emptyList(), // ملاحظات خاصة بالكود
     val spacing: Double = 0.0,
-    val description: String = ""
+    val description: String = "",
+    val neutralAxisDepth: Double = 0.0  // mm - عمق المحور المحايد
 ) : Parcelable {
     val barString: String get() = if (numberOfBars > 0) "${numberOfBars}Ø${barDiameter.toInt()}" else if (spacing > 0) "${(1000/spacing).toInt()}Ø${barDiameter.toInt()}/m" else description
 

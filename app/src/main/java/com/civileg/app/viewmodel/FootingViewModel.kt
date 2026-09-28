@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import android.graphics.Bitmap
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import javax.inject.Inject
 
 @HiltViewModel
@@ -178,7 +179,7 @@ class FootingViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = res.safetyChecks.map {
-                        com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                        GenericSafetyCheck(
                             it.name, it.value, it.limit, it.unit, it.isSafe
                         )
                     },

@@ -278,6 +278,7 @@ class BeamSectionView @JvmOverloads constructor(
     fun updateFromCalculation(
         width: Float, height: Float, coverValue: Float,
         topReinforcement: List<BarInfo>, bottomReinforcement: List<BarInfo>,
+        stirrupDia: Int, stirrupSpac: Float,
         momentCap: Double, shearCap: Double, appMoment: Double, appShear: Double,
         naDepth: Double, ratio: Double, safe: Boolean
     ) {
@@ -286,6 +287,8 @@ class BeamSectionView @JvmOverloads constructor(
         this.cover = coverValue
         this.topBars = topReinforcement
         this.bottomBars = bottomReinforcement
+        this.stirrupDiameter = stirrupDia
+        this.stirrupSpacing = stirrupSpac
         this.momentCapacity = momentCap
         this.shearCapacity = shearCap
         this.appliedMoment = appMoment

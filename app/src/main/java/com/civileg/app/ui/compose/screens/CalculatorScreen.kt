@@ -2,11 +2,13 @@ package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.*
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +33,7 @@ fun CalculatorScreen(
     var result by remember { mutableStateOf("0") }
     var history by remember { mutableStateOf(listOf<String>()) }
     var isNewCalculation by remember { mutableStateOf(true) }
+    var showHistory by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -38,6 +42,13 @@ fun CalculatorScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                },
+                actions = {
+                    if (history.isNotEmpty()) {
+                        IconButton(onClick = { showHistory = !showHistory }) {
+                            Icon(Icons.Default.History, contentDescription = "History")
+                        }
                     }
                 }
             )
@@ -48,6 +59,7 @@ fun CalculatorScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -55,33 +67,31 @@ fun CalculatorScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
-                shape = RoundedCornerShape(20.dp),
+                    .height(130.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp),
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.Bottom
                 ) {
-                    // Expression
                     Text(
                         text = expression,
                         color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    // Result
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = result,
                         color = Color.White,
-                        fontSize = 36.sp,
+                        fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -91,28 +101,31 @@ fun CalculatorScreen(
                 }
             }
 
-            // History
-            if (history.isNotEmpty()) {
+            // History collapsible
+            if (showHistory && history.isNotEmpty()) {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         Text(
                             stringResource(R.string.calc_history),
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        history.takeLast(3).reversed().forEach { h ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        history.takeLast(10).reversed().forEach { h ->
                             Text(
                                 h,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(vertical = 1.dp)
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 2.dp)
                             )
                         }
                     }
@@ -149,7 +162,7 @@ fun CalculatorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Row 1: C, (, ), ÷
+                // Row 1: C, ⌫, ^, ÷
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CalcButton("C", Modifier.weight(1f), Color(0xFFD32F2F)) {
                         expression = ""; result = "0"; isNewCalculation = true
@@ -250,217 +263,155 @@ private fun ScientificFuncButton(
     label: String,
     onClick: () -> Unit
 ) {
-    Surface(
+    Button(
         onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.height(40.dp)
+        modifier = Modifier
+            .height(40.dp)
+            .widthIn(min = 52.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 10.dp)) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
-private fun appendNumber(num: String, getExpr: () -> String, getIsNew: () -> Boolean, set: (String) -> Unit) {
-    val expanded = when (num) {
-        "π" -> "3.14159265"
-        "e" -> "2.71828183"
-        else -> num
-    }
+private fun appendNumber(
+    num: String,
+    getExpr: () -> String,
+    getIsNew: () -> Boolean,
+    setExpr: (String) -> Unit
+) {
+    val expr = getExpr()
     if (getIsNew()) {
-        set(expanded)
+        setExpr(num)
     } else {
-        set(getExpr() + expanded)
+        setExpr(expr + num)
     }
 }
 
-private fun appendFunc(func: String, getExpr: () -> String, getIsNew: () -> Boolean, set: (String) -> Unit) {
-    if (getIsNew()) {
-        set("$func(")
+private fun appendFunc(
+    func: String,
+    getExpr: () -> String,
+    getIsNew: () -> Boolean,
+    setExpr: (String) -> Unit
+) {
+    val expr = getExpr()
+    if (getIsNew() || expr == "0") {
+        setExpr("$func(")
     } else {
-        set(getExpr() + "$func(")
+        setExpr(expr + "$func(")
     }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Expression Evaluator with proper precedence
-// ═══════════════════════════════════════════════════════════════
 
 private fun evaluateExpression(expr: String): Double {
-    val tokens = tokenize(expr)
-    val parser = ExprParser(tokens)
-    val result = parser.parseExpression()
-    return result
-}
+    val sanitized = expr
+        .replace("×", "*")
+        .replace("÷", "/")
+        .replace("π", PI.toString())
+        .replace("e", E.toString())
 
-private fun tokenize(expr: String): List<Token> {
-    val tokens = mutableListOf<Token>()
-    var i = 0
-    val s = expr.replace("×", "*").replace("÷", "/").replace("π", "3.14159265").replace("e", "2.71828183")
+    return object : Any() {
+        var pos = -1
+        var ch = 0
 
-    while (i < s.length) {
-        val c = s[i]
-        when {
-            c.isWhitespace() -> i++
-            c.isDigit() || c == '.' -> {
-                val start = i
-                while (i < s.length && (s[i].isDigit() || s[i] == '.')) i++
-                tokens.add(Token.Number(s.substring(start, i).toDouble()))
+        fun nextChar() {
+            ch = if (++pos < sanitized.length) sanitized[pos].toInt() else -1
+        }
+
+        fun eat(charToEat: Int): Boolean {
+            while (ch == ' '.toInt()) nextChar()
+            if (ch == charToEat) {
+                nextChar()
+                return true
             }
-            c == '+' -> { tokens.add(Token.Plus); i++ }
-            c == '-' -> {
-                if (tokens.isEmpty() || tokens.last() is Token.Plus || tokens.last() is Token.Minus ||
-                    tokens.last() is Token.Multiply || tokens.last() is Token.Divide || tokens.last() is Token.Power ||
-                    tokens.last() is Token.LParen) {
-                    tokens.add(Token.UnaryMinus); i++
+            return false
+        }
+
+        fun parse(): Double {
+            nextChar()
+            val x = parseExpression()
+            if (pos < sanitized.length) throw RuntimeException("Unexpected: " + ch.toChar())
+            return x
+        }
+
+        fun parseExpression(): Double {
+            var x = parseTerm()
+            while (true) {
+                if (eat('+'.toInt())) x += parseTerm() // addition
+                else if (eat('-'.toInt())) x -= parseTerm() // subtraction
+                else return x
+            }
+        }
+
+        fun parseTerm(): Double {
+            var x = parseFactor()
+            while (true) {
+                if (eat('*'.toInt())) x *= parseFactor() // multiplication
+                else if (eat('/'.toInt())) x /= parseFactor() // division
+                else return x
+            }
+        }
+
+        fun parseFactor(): Double {
+            if (eat('+'.toInt())) return parseFactor()
+            if (eat('-'.toInt())) return -parseFactor()
+
+            var x: Double
+            val startPos = pos
+            if (eat('('.toInt())) {
+                x = parseExpression()
+                eat(')'.toInt())
+            } else if ((ch >= '0'.toInt() && ch <= '9'.toInt()) || ch == '.'.toInt()) {
+                while ((ch >= '0'.toInt() && ch <= '9'.toInt()) || ch == '.'.toInt()) nextChar()
+                x = sanitized.substring(startPos, pos).toDouble()
+            } else if (ch >= 'a'.toInt() && ch <= 'z'.toInt()) {
+                while (ch >= 'a'.toInt() && ch <= 'z'.toInt()) nextChar()
+                val func = sanitized.substring(startPos, pos)
+                if (eat('('.toInt())) {
+                    x = parseExpression()
+                    eat(')'.toInt())
                 } else {
-                    tokens.add(Token.Minus); i++
+                    x = parseFactor()
                 }
+                x = when (func) {
+                    "sin" -> sin(Math.toRadians(x))
+                    "cos" -> cos(Math.toRadians(x))
+                    "tan" -> tan(Math.toRadians(x))
+                    "log" -> log10(x)
+                    "ln" -> ln(x)
+                    "sqrt", "√" -> sqrt(x)
+                    "abs" -> abs(x)
+                    else -> throw RuntimeException("Unknown function: $func")
+                }
+            } else {
+                throw RuntimeException("Unexpected: " + ch.toChar())
             }
-            c == '*' -> { tokens.add(Token.Multiply); i++ }
-            c == '/' -> { tokens.add(Token.Divide); i++ }
-            c == '^' -> { tokens.add(Token.Power); i++ }
-            c == '(' -> { tokens.add(Token.LParen); i++ }
-            c == ')' -> { tokens.add(Token.RParen); i++ }
-            c == '!' -> { tokens.add(Token.Factorial); i++ }
-            c.isLetter() -> {
-                val start = i
-                while (i < s.length && s[i].isLetter()) i++
-                val func = s.substring(start, i)
-                tokens.add(Token.Function(func))
+
+            if (eat('^'.toInt())) x = x.pow(parseFactor()) // exponentiation
+            if (eat('!'.toInt())) {
+                var fact = 1.0
+                for (i in 1..x.toInt()) fact *= i.toDouble()
+                x = fact
             }
-            else -> i++
+
+            return x
         }
-    }
-    return tokens
+    }.parse()
 }
 
-private sealed class Token {
-    data class Number(val value: Double) : Token()
-    object Plus : Token()
-    object Minus : Token()
-    object UnaryMinus : Token()
-    object Multiply : Token()
-    object Divide : Token()
-    object Power : Token()
-    object LParen : Token()
-    object RParen : Token()
-    object Factorial : Token()
-    data class Function(val name: String) : Token()
-}
-
-private class ExprParser(private val tokens: List<Token>) {
-    private var pos = 0
-
-    fun parseExpression(): Double {
-        return parseAddSub()
-    }
-
-    private fun parseAddSub(): Double {
-        var left = parseMulDiv()
-        while (pos < tokens.size && (tokens[pos] is Token.Plus || tokens[pos] is Token.Minus)) {
-            val op = tokens[pos]
-            pos++
-            val right = parseMulDiv()
-            left = if (op is Token.Minus) left - right else left + right
-        }
-        return left
-    }
-
-    private fun parseMulDiv(): Double {
-        var left = parsePower()
-        while (pos < tokens.size && (tokens[pos] is Token.Multiply || tokens[pos] is Token.Divide)) {
-            val op = tokens[pos]
-            pos++
-            val right = parsePower()
-            left = if (op is Token.Divide) left / right else left * right
-        }
-        return left
-    }
-
-    private fun parsePower(): Double {
-        var base = parseUnary()
-        if (pos < tokens.size && tokens[pos] is Token.Power) {
-            pos++
-            val exp = parsePower() // right-associative
-            base = base.pow(exp)
-        }
-        return base
-    }
-
-    private fun parseUnary(): Double {
-        if (pos < tokens.size && tokens[pos] is Token.UnaryMinus) {
-            pos++
-            return -parseUnary()
-        }
-        return parsePostfix()
-    }
-
-    private fun parsePostfix(): Double {
-        var value = parsePrimary()
-        while (pos < tokens.size && tokens[pos] is Token.Factorial) {
-            pos++
-            value = factorial(value.toInt())
-        }
-        return value
-    }
-
-    private fun parsePrimary(): Double {
-        if (pos >= tokens.size) return 0.0
-        return when (val tok = tokens[pos]) {
-            is Token.Number -> { pos++; tok.value }
-            is Token.LParen -> {
-                pos++
-                val parenValue = parseExpression()
-                if (pos < tokens.size && tokens[pos] is Token.RParen) pos++
-                parenValue
-            }
-            is Token.Function -> {
-                pos++
-                val funcName = tok.name
-                if (pos < tokens.size && tokens[pos] is Token.LParen) pos++
-                val arg = parseExpression()
-                if (pos < tokens.size && tokens[pos] is Token.RParen) pos++
-                applyFunction(funcName, arg)
-            }
-            else -> 0.0
-        }
-    }
-
-    private fun applyFunction(name: String, arg: Double): Double {
-        val degrees = Math.toRadians(arg)
-        return when (name.lowercase()) {
-            "sin" -> sin(degrees)
-            "cos" -> cos(degrees)
-            "tan" -> tan(degrees)
-            "log" -> log10(arg)
-            "ln" -> ln(arg)
-            "√", "sqrt" -> sqrt(arg)
-            "abs" -> abs(arg)
-            "1/" -> 1.0 / arg
-            else -> arg
-        }
-    }
-
-    private fun factorial(n: Int): Double {
-        if (n < 0) return Double.NaN
-        var result = 1.0
-        for (i in 2..n) result *= i
-        return result
-    }
-}
-
-private fun formatResult(value: Double, errorString: String): String {
-    if (value.isNaN() || value.isInfinite()) return errorString
-    return if (value == value.toLong().toDouble()) {
-        value.toLong().toString()
+private fun formatResult(value: Double, errorMsg: String): String {
+    if (!value.isFinite()) return errorMsg
+    return if (value == value.toInt().toDouble()) {
+        value.toInt().toString()
     } else {
-        String.format("%.8f", value).trimEnd('0').trimEnd('.')
+        String.format(Locale.US, "%.6f", value).trimEnd('0').trimEnd('.')
     }
 }

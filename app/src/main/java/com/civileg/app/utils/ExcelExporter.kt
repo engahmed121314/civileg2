@@ -5,7 +5,6 @@ import com.civileg.app.db.Design
 import com.civileg.app.db.MaterialItem
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.StringBuilder
 
 /**
  * EXCEL EXPORTER - Civil EG
@@ -57,6 +56,24 @@ object ExcelExporter {
             writer.write("Calculation Results\n")
             writer.write("${design.results.replace(",", ";")}\n")
             
+            writer.close()
+            return file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    /**
+     * Generic CSV export for arbitrary data.
+     */
+    fun exportTextCsv(context: Context, fileName: String, csvContent: String): File? {
+        val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
+        
+        try {
+            val writer = FileOutputStream(file).bufferedWriter()
+            writer.write("\uFEFF") // UTF-8 BOM for Excel
+            writer.write(csvContent)
             writer.close()
             return file
         } catch (e: Exception) {

@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -27,6 +30,7 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.viewmodel.StrapFootingViewModel
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +178,10 @@ fun StrapFootingScreen(
 
             result?.let { res ->
                 item {
+                    StrapFootingVisualizer(res)
+                }
+                
+                item {
                     StrapFootingResultCard(res)
                 }
                 
@@ -194,6 +202,36 @@ fun StrapFootingScreen(
             }
 
             item { Spacer(Modifier.height(32.dp)) }
+        }
+    }
+}
+
+@Composable
+fun StrapFootingVisualizer(res: CalculatorEngine.StrapFootingResult) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(220.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2C3E50)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            val w = size.width
+            val h = size.height
+            
+            val totalL = res.footing1.length + res.footing2.length + 2000.0
+            val scale = (w * 0.8f) / totalL.toFloat()
+            
+            val f1W = res.footing1.width.toFloat() * scale
+            val f1L = res.footing1.length.toFloat() * scale
+            val f2W = res.footing2.width.toFloat() * scale
+            val f2L = res.footing2.length.toFloat() * scale
+            val strapW = res.strapBeamWidth.toFloat() * scale
+            
+            val cy = h / 2
+            
+            drawRect(Color.Gray, Offset(0f, cy - f1W / 2), Size(f1L, f1W))
+            val f2Pos = w - f2L
+            drawRect(Color.Gray, Offset(f2Pos, cy - f2W / 2), Size(f2L, f2W))
+            drawRect(Color.DarkGray, Offset(f1L, cy - strapW / 2), Size(f2Pos - f1L, strapW))
         }
     }
 }

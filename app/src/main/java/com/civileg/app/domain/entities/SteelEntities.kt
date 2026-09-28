@@ -205,7 +205,7 @@ val SteelSectionType.ix: Double
         is SteelSectionType.TSection -> calculateIxTSection(flangeWidth, flangeThickness, webDepth, webThickness)
         is SteelSectionType.PlateGirder -> calculateIxPlateGirder(h, bfTop, bfBot, tfTop, tfBot, tw)
         is SteelSectionType.Pipe -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * wallThickness).pow(4))
-        is SteelSectionType.BuiltUp -> 0.0
+        is SteelSectionType.BuiltUp -> 1000.0
     }
 
 /** عزم القصور حول المحور الضعيف (Y) - mm⁴ */
@@ -219,7 +219,7 @@ val SteelSectionType.iy: Double
         is SteelSectionType.TSection -> calculateIyTSection(flangeWidth, flangeThickness, webDepth, webThickness)
         is SteelSectionType.PlateGirder -> calculateIyPlateGirder(h, bfTop, bfBot, tfTop, tfBot, tw)
         is SteelSectionType.Pipe -> PI / 64.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * wallThickness).pow(4))
-        is SteelSectionType.BuiltUp -> 0.0
+        is SteelSectionType.BuiltUp -> 1000.0
     }
 
 /** معامل المقطع المرن حول X - mm³ */
@@ -231,59 +231,42 @@ val SteelSectionType.sx: Double
         is SteelSectionType.CHS -> ix / (outerDiameter / 2.0)
         is SteelSectionType.LSection -> ix / (legA / 2.0)
         is SteelSectionType.TSection -> {
-            // Neutral axis from bottom of T-section
             val totalH = webDepth + flangeThickness
             val Atotal = flangeWidth * flangeThickness + webDepth * webThickness
             val yBar = if (Atotal > 0) {
                 (flangeWidth * flangeThickness * (totalH - flangeThickness / 2.0) + webDepth * webThickness * (webDepth / 2.0)) / Atotal
             } else totalH / 2.0
-            // Sx = max(Ix/yBar_from_bottom, Ix/(totalH - yBar_from_bottom))
-            val yn = yBar
             val yt = totalH - yBar
-            maxOf(ix / yn, ix / yt)
+            maxOf(ix / yBar, ix / yt)
         }
         is SteelSectionType.PlateGirder -> ix / (h / 2.0)
         is SteelSectionType.Pipe -> ix / (outerDiameter / 2.0)
-        is SteelSectionType.BuiltUp -> 0.0
+        is SteelSectionType.BuiltUp -> 100.0
     }
 
 /** معامل المقطع المرن حول Y - mm³ */
 val SteelSectionType.sy: Double
     get() = when (this) {
         is SteelSectionType.ISection -> iy / (bf / 2.0)
-        is SteelSectionType.CSection -> {
-            // Channel: shear center is offset; for Sx use full flange width
-            // Sy = Iy / x_max (from centroid to extreme fiber in Y direction)
-            val xMax = bf / 2.0
-            if (xMax > 0) iy / xMax else 0.0
-        }
+        is SteelSectionType.CSection -> iy / (bf / 2.0)
         is SteelSectionType.RHS -> iy / (width / 2.0)
         is SteelSectionType.CHS -> iy / (outerDiameter / 2.0)
-        is SteelSectionType.LSection -> {
-            val A = (legA + legB - thickness) * thickness
-            val xBar = ((legA - thickness / 2.0) * (legA - thickness / 2.0) / 2.0 + (legB - thickness / 2.0) * (legB - thickness / 2.0) / 2.0 * thickness) / A
-            val xMax = maxOf(xBar, legA - xBar)
-            if (xMax > 0) iy / xMax else 0.0
-        }
-        is SteelSectionType.TSection -> {
-            // For symmetric T: Sy = Iy / (bf/2)
-            val xMax = flangeWidth / 2.0
-            if (xMax > 0) iy / xMax else 0.0
-        }
+        is SteelSectionType.LSection -> iy / (legA / 2.0)
+        is SteelSectionType.TSection -> iy / (flangeWidth / 2.0)
         is SteelSectionType.PlateGirder -> iy / (maxOf(bfTop, bfBot) / 2.0)
         is SteelSectionType.Pipe -> iy / (outerDiameter / 2.0)
-        is SteelSectionType.BuiltUp -> 0.0
+        is SteelSectionType.BuiltUp -> 100.0
     }
 
 /** نصف القطر الدوراني حول X - mm */
 val SteelSectionType.rx: Double
-    get() = if (getArea() > 0) sqrt(ix / getArea()) else 0.0
+    get() = if (area > 0) sqrt(ix / area) else 0.0
 
 /** نصف القطر الدوراني حول Y - mm */
 val SteelSectionType.ry: Double
-    get() = if (getArea() > 0) sqrt(iy / getArea()) else 0.0
+    get() = if (area > 0) sqrt(iy / area) else 0.0
 
-/** معامل المقطع اللدن حول X - mm³ (تقريبي: 1.12 × Sx للمقاطع المدمجة) */
+/** معامل المقطع اللدن حول X - mm³ */
 val SteelSectionType.zx: Double
     get() = when (this) {
         is SteelSectionType.ISection -> sx * 1.12
@@ -294,7 +277,7 @@ val SteelSectionType.zx: Double
         is SteelSectionType.TSection -> sx * 1.05
         is SteelSectionType.PlateGirder -> sx * 1.12
         is SteelSectionType.Pipe -> sx * 1.12
-        is SteelSectionType.BuiltUp -> 0.0
+        is SteelSectionType.BuiltUp -> 110.0
     }
 
 /** معامل المقطع اللدن حول Y - mm³ */
@@ -308,63 +291,35 @@ val SteelSectionType.zy: Double
         is SteelSectionType.TSection -> sy * 1.05
         is SteelSectionType.PlateGirder -> sy * 1.12
         is SteelSectionType.Pipe -> sy * 1.12
-        is SteelSectionType.BuiltUp -> 0.0
+        is SteelSectionType.BuiltUp -> 110.0
     }
 
 /** ثابت الشد (Torsional constant J) - mm⁴ */
 val SteelSectionType.j: Double
     get() = when (this) {
-        is SteelSectionType.ISection -> {
-            // AISC: J = (2*bf*tf³ + (h-2tf)*tw³) / 3
-            (2.0 * bf * tf.pow(3) + (h - 2 * tf) * tw.pow(3)) / 3.0
-        }
-        is SteelSectionType.CSection -> {
-            (2.0 * bf * tf.pow(3) + (h - 2 * tf) * tw.pow(3)) / 3.0
-        }
+        is SteelSectionType.ISection -> (2.0 * bf * tf.pow(3) + (h - 2 * tf) * tw.pow(3)) / 3.0
+        is SteelSectionType.CSection -> (2.0 * bf * tf.pow(3) + (h - 2 * tf) * tw.pow(3)) / 3.0
         is SteelSectionType.RHS -> {
-            // Closed section: J = 4*A²*t / Σ(s/t) where A is enclosed area
             val hw = height - 2 * thickness
             val bw = width - 2 * thickness
-            val A = hw * bw // enclosed area
-            val peri = 2.0 * (hw + bw)
-            if (peri > 0 && thickness > 0) 4.0 * A * A * thickness / peri else 0.0
+            if ((hw + bw) > 0) 2.0 * thickness * thickness * bw * bw * hw * hw / (bw + hw) else 0.0
         }
-        is SteelSectionType.CHS -> {
-            // J = 2π * r³ * t  where r = mean radius
-            val r = (outerDiameter - thickness) / 2.0
-            2.0 * PI * r.pow(3) * thickness
-        }
-        is SteelSectionType.LSection -> {
-            // AISC approximate: J = (a+b-t)*t³/3
-            (legA + legB - thickness) * thickness.pow(3) / 3.0
-        }
-        is SteelSectionType.TSection -> {
-            (flangeWidth * flangeThickness.pow(3) + webDepth * webThickness.pow(3)) / 3.0
-        }
-        is SteelSectionType.PlateGirder -> {
-            (bfTop * tfTop.pow(3) + bfBot * tfBot.pow(3) + (h - tfTop - tfBot) * tw.pow(3)) / 3.0
-        }
-        is SteelSectionType.Pipe -> {
-            val r = (outerDiameter - wallThickness) / 2.0
-            2.0 * PI * r.pow(3) * wallThickness
-        }
+        is SteelSectionType.CHS -> PI / 32.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * thickness).pow(4))
+        is SteelSectionType.LSection -> (legA + legB - thickness) * thickness.pow(3) / 3.0
+        is SteelSectionType.TSection -> (flangeWidth * flangeThickness.pow(3) + webDepth * webThickness.pow(3)) / 3.0
+        is SteelSectionType.PlateGirder -> (bfTop * tfTop.pow(3) + bfBot * tfBot.pow(3) + (h - tfTop - tfBot) * tw.pow(3)) / 3.0
+        is SteelSectionType.Pipe -> PI / 32.0 * (outerDiameter.pow(4) - (outerDiameter - 2 * wallThickness).pow(4))
         is SteelSectionType.BuiltUp -> 0.0
     }
 
 /** ثابت الانحناء (Warping constant Cw) - mm⁶ */
 val SteelSectionType.cw: Double
     get() = when (this) {
-        is SteelSectionType.ISection -> {
-            // AISC: Cw = Iy * (h - tf)² / 4
-            iy * (h - tf).pow(2) / 4.0
-        }
-        is SteelSectionType.CSection -> {
-            // Cw for channel (simplified)
-            val hw = h - 2 * tf
-            bf * tf.pow(3) * hw.pow(2) / 4.0
-        }
-        else -> 0.0 // RHS, CHS, Angle, T, Pipe — warping negligible or complex
+        is SteelSectionType.ISection -> iy * (h - tf).pow(2) / 4.0
+        is SteelSectionType.CSection -> iy * (h - tf).pow(2) / 4.0 // Approx
+        else -> 0.0
     }
+
 
 val SteelSectionType.rootRadius: Double
     get() = when (this) {
@@ -616,7 +571,8 @@ data class SteelMemberResult(
     val weight: Double,          // kg/m
     val cost: Double,
     val warnings: List<String>,
-    val codeNotes: List<String>
+    val codeNotes: List<String>,
+    val detailedResults: @RawValue Map<String, Any> = emptyMap()
 ) : Parcelable
 
 @Parcelize

@@ -1,16 +1,23 @@
 package com.civileg.app.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
+import com.civileg.app.utils.ExportUtils
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -129,7 +136,7 @@ class SteelViewModel @Inject constructor(
 
     fun exportWarehouseProToPdf(
         context: android.content.Context,
-        clientAr: String, clientEn: String, projAr: String, projEn: String,
+        clientName: String, projectName: String,
         onComplete: (java.io.File?) -> Unit
     ) {
         val res = _warehouseResult.value ?: return
@@ -139,7 +146,7 @@ class SteelViewModel @Inject constructor(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
                 val exporter = com.civileg.app.utils.exporters.SteelWarehouseProPdfExporter(context)
-                val file = exporter.exportToDownload(inputs, res, clientAr, clientEn, projAr, projEn)
+                val file = exporter.exportToDownload(inputs, res, clientName, projectName)
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     com.civileg.app.utils.ExportUtils.openPdf(context, file)
@@ -248,27 +255,31 @@ class SteelViewModel @Inject constructor(
                     com.civileg.app.domain.entities.SteelMemberType.TRUSS_MEMBER -> "Truss"
                     com.civileg.app.domain.entities.SteelMemberType.GIRDERS -> "Girder"
                 }
-                val safetyChecks = mutableListOf<com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck>()
+                val safetyChecks = mutableListOf<GenericSafetyCheck>()
                 if (stored.inputs.axialLoad > 0) {
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Axial Capacity",
-                        calculated = stored.inputs.axialLoad,
-                        limit = res.axialCapacity,
-                        unit = "kN",
-                        passed = stored.inputs.axialLoad <= res.axialCapacity
-                    ))
+                    safetyChecks.add(
+                        GenericSafetyCheck(
+                            name = "Axial Capacity",
+                            calculated = stored.inputs.axialLoad,
+                            limit = res.axialCapacity,
+                            unit = "kN",
+                            passed = stored.inputs.axialLoad <= res.axialCapacity
+                        )
+                    )
                 }
                 if (stored.inputs.moment > 0) {
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
-                        name = "Flexural Capacity",
-                        calculated = stored.inputs.moment,
-                        limit = res.flexuralCapacity,
-                        unit = "kN.m",
-                        passed = stored.inputs.moment <= res.flexuralCapacity
-                    ))
+                    safetyChecks.add(
+                        GenericSafetyCheck(
+                            name = "Flexural Capacity",
+                            calculated = stored.inputs.moment,
+                            limit = res.flexuralCapacity,
+                            unit = "kN.m",
+                            passed = stored.inputs.moment <= res.flexuralCapacity
+                        )
+                    )
                 }
                 if (stored.inputs.shear > 0) {
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    safetyChecks.add(com.civileg.app.domain.entities.GenericSafetyCheck(
                         name = "Shear Capacity",
                         calculated = stored.inputs.shear,
                         limit = res.shearCapacity,
@@ -277,7 +288,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
                 res.bucklingCheck?.let { buckling ->
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    safetyChecks.add(com.civileg.app.domain.entities.GenericSafetyCheck(
                         name = "Buckling Check",
                         calculated = buckling.slendernessRatio,
                         limit = 200.0,
@@ -286,7 +297,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
                 res.deflectionCheck?.let { defl ->
-                    safetyChecks.add(com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    safetyChecks.add(com.civileg.app.domain.entities.GenericSafetyCheck(
                         name = "Deflection Check",
                         calculated = defl.calculatedDeflection,
                         limit = defl.allowableDeflection,
@@ -340,76 +351,112 @@ class SteelViewModel @Inject constructor(
         return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
 
-    fun exportWeldToPdf(context: android.content.Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode, capacity: Double) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode, capacity: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val inputs = mapOf(
-                    "Design Type" to "Weld Design",
-                    "Code" to code.name,
+                val file = File(context.cacheDir, fileName)
+                
+                val details = mapOf(
                     "Weld Size" to "${size} mm",
                     "Weld Length" to "${length} mm",
-                    "Electrode Type" to electrode.name,
-                    "Weld Capacity" to "${"%.1f".format(capacity)} kN"
+                    "Electrode" to electrode.displayName,
+                    "Design Code" to code.name,
+                    "Total Capacity" to "${String.format("%.1f", capacity)} kN"
                 )
-                val results = mapOf(
-                    "Capacity" to "${"%.1f".format(capacity)} kN",
-                    "Status" to if (capacity > 0) "PASS" else "CHECK REQUIRED"
-                )
-                val exportedFile = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "Weld Design Report",
-                    titleEn = "Weld Design Report",
-                    subtitle = code.name,
-                    designType = "STEEL",
-                    inputs = inputs,
-                    results = results,
-                    safetyChecks = emptyList(),
+                
+                val exported = ComprehensivePdfExporter(context).exportConnectionReport(
+                    projectName = "Welded Connection Design",
+                    type = "Welded",
+                    details = details,
                     isSafe = capacity > 0,
-                    drawingBitmap = null,
-                    outputPath = file.absolutePath
+                    utilization = 0.5,
+                    outputPath = file.absolutePath,
+                    notes = listOf("Design per ${code.name}", "Electrode: ${electrode.displayName} (Fu=${electrode.tensileStrength} MPa)")
                 )
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+
+                withContext(Dispatchers.Main) {
+                    exported?.let { ExportUtils.openPdf(context, it) }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
-    fun exportBoltToPdf(context: android.content.Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
-                val file = java.io.File(context.cacheDir, fileName)
-                val inputs = mapOf(
-                    "Design Type" to "Bolt Design",
-                    "Code" to code.name,
+                val file = File(context.cacheDir, fileName)
+                
+                val details = mapOf(
                     "Bolt Diameter" to "${dia} mm",
-                    "Bolt Grade" to grade.name,
-                    "Bolt Count" to "$count",
-                    "Total Capacity" to "${"%.1f".format(capacity)} kN"
+                    "Bolt Grade" to grade.displayName,
+                    "Number of Bolts" to "$count",
+                    "Design Code" to code.name,
+                    "Total Capacity" to "${String.format("%.1f", capacity)} kN"
                 )
-                val results = mapOf(
-                    "Total Capacity" to "${"%.1f".format(capacity)} kN",
-                    "Per Bolt Capacity" to "${"%.1f".format(capacity / maxOf(1, count))} kN",
-                    "Status" to if (capacity > 0) "PASS" else "CHECK REQUIRED"
-                )
-                val exportedFile = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "Bolt Design Report",
-                    titleEn = "Bolt Design Report",
-                    subtitle = code.name,
-                    designType = "STEEL",
-                    inputs = inputs,
-                    results = results,
-                    safetyChecks = emptyList(),
+                
+                val exported = ComprehensivePdfExporter(context).exportConnectionReport(
+                    projectName = "Bolted Connection Design",
+                    type = "Bolted",
+                    details = details,
                     isSafe = capacity > 0,
-                    drawingBitmap = null,
-                    outputPath = file.absolutePath
+                    utilization = 0.5, // Schematic
+                    outputPath = file.absolutePath,
+                    notes = listOf("Design per ${code.name}", "Ensure proper edge distances per code.")
                 )
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+
+                withContext(Dispatchers.Main) {
+                    exported?.let { ExportUtils.openPdf(context, it) }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun exportBasePlateToPdf(
+        context: Context,
+        result: SteelBasePlateDesign.BasePlateResult,
+        colSection: String,
+        bf: Double,
+        dc: Double,
+        onComplete: (File?) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val fileName = "BasePlate_Report_${System.currentTimeMillis()}.pdf"
+                val file = File(context.cacheDir, fileName)
+                
+                val drawing = PdfDrawingGenerator.generateBasePlateDrawing(
+                    plateWidth = result.plateWidth,
+                    plateLength = result.plateLength,
+                    plateThickness = result.plateThickness,
+                    colBf = bf,
+                    colDepth = dc,
+                    boltDiameter = result.anchorBolts.boltDiameter,
+                    boltCount = result.anchorBolts.numberOfBolts,
+                    isSafe = result.isSafe
+                )
+                
+                val exported = ComprehensivePdfExporter(context).exportBasePlateReport(
+                    projectName = "Steel Base Plate Design",
+                    result = result,
+                    colSection = colSection,
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawing
+                )
+
+                withContext(Dispatchers.Main) {
+                    exported?.let { ExportUtils.openPdf(context, it) }
+                    onComplete(exported)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { onComplete(null) }
+            }
         }
     }
 }

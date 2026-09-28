@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.RebarCalculator
 import com.civileg.app.utils.RebarCalculator.WeightResult
 import com.civileg.app.utils.RebarCalculator.DevelopmentLengthResult
@@ -27,15 +28,23 @@ class RebarToolViewModel : ViewModel() {
 
     fun selectTab(index: Int) { _selectedTab.value = index }
 
-    // ══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════
     //  WEIGHT CALCULATOR
     // ══════════════════════════════════════════════════════════════
     private val _weightResult = MutableStateFlow<WeightResult?>(null)
     val weightResult: StateFlow<WeightResult?> = _weightResult.asStateFlow()
 
     fun calculateWeight(diameter: Double, length: Double, quantity: Int) {
-        val result = RebarCalculator.totalWeight(diameter, length, quantity)
-        _weightResult.value = result
+        try {
+            InputGuard.positive("diameter", diameter)
+            InputGuard.positive("length", length)
+            InputGuard.positive("quantity", quantity.toDouble())
+
+            val result = RebarCalculator.totalWeight(diameter, length, quantity)
+            _weightResult.value = result
+        } catch (e: IllegalArgumentException) {
+        } catch (e: Exception) {
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -53,19 +62,29 @@ class RebarToolViewModel : ViewModel() {
         excessRatio: Double,
         code: DesignCode
     ) {
-        val result = when (code) {
-            DesignCode.ECP_203 -> RebarCalculator.developmentLengthECP(
-                diameter, fy, fcu, isTopBar, isConfined, excessRatio
-            )
-            DesignCode.ACI_318 -> {
-                val fyPsi = fy * 145.038
-                val fcPsi = fcu * 145.038
-                RebarCalculator.developmentLengthACI(
-                    diameter, fyPsi, fcPsi, isTopBar, isConfined, excessRatio
+        try {
+            InputGuard.positive("diameter", diameter)
+            InputGuard.positive("fy", fy)
+            InputGuard.positive("fcu", fcu)
+            InputGuard.nonNegative("excessRatio", excessRatio)
+
+            val result = when (code) {
+                DesignCode.ECP_203 -> RebarCalculator.developmentLengthECP(
+                    diameter, fy, fcu, isTopBar, isConfined, excessRatio
                 )
+                DesignCode.ACI_318 -> {
+                    val fyPsi = fy * 145.038
+                    val fcPsi = fcu * 145.038
+                    RebarCalculator.developmentLengthACI(
+                        diameter, fyPsi, fcPsi, isTopBar, isConfined, excessRatio
+                    )
+                }
             }
+            _devLengthResult.value = result
+        } catch (e: IllegalArgumentException) {
+        } catch (e: ArithmeticException) {
+        } catch (e: Exception) {
         }
-        _devLengthResult.value = result
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -84,10 +103,19 @@ class RebarToolViewModel : ViewModel() {
         isConfined: Boolean,
         spliceClass: String
     ) {
-        val result = RebarCalculator.lapSpliceLength(
-            diameter, fy, fcu, lapType, code, isTopBar, isConfined, spliceClass
-        )
-        _lapResult.value = result
+        try {
+            InputGuard.positive("diameter", diameter)
+            InputGuard.positive("fy", fy)
+            InputGuard.positive("fcu", fcu)
+
+            val result = RebarCalculator.lapSpliceLength(
+                diameter, fy, fcu, lapType, code, isTopBar, isConfined, spliceClass
+            )
+            _lapResult.value = result
+        } catch (e: IllegalArgumentException) {
+        } catch (e: ArithmeticException) {
+        } catch (e: Exception) {
+        }
     }
 
     // ══════════════════════════════════════════════════════════════

@@ -8,6 +8,7 @@ import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import com.civileg.app.domain.calculations.ecp.ECPShearWall
 import com.civileg.app.domain.calculations.aci.ACIShearWall
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -238,7 +239,7 @@ class ShearWallViewModel @Inject constructor(
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%"
                 )
                 val safetyChecks = res.safetyChecks.map {
-                    com.civileg.app.utils.exporters.ComprehensivePdfExporter.GenericSafetyCheck(
+                    GenericSafetyCheck(
                         name = it.name, calculated = it.value,
                         limit = it.limit, unit = it.unit, passed = it.isSafe
                     )

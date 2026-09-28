@@ -123,14 +123,14 @@ fun FlatSlabScreen(
                     }
                 }
 
-                // ── Design Code Selector ─────────────────────────────
-                item {
-                    CodeSelectorChips(
-                        selectedCode = designCode,
-                        codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318"),
-                        onCodeSelected = { designCode = it }
-                    )
-                }
+// ── Design Code Selector ─────────────────────────────
+item {
+    CodeSelectorChips(
+        selectedCode = designCode,
+        codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
+        onCodeSelected = { designCode = it }
+    )
+}
 
                 // ── Geometry ──────────────────────────────────────────
                 item { PremiumSectionHeader(stringResource(R.string.fs_geometry_section), icon = Icons.Default.SquareFoot) }
