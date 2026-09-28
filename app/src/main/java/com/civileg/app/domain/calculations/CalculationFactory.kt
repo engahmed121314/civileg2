@@ -84,9 +84,15 @@ object CalculationFactory {
 
     // ========== القواعد المركبة (Combined Footings) ==========
 
-    fun getCombinedFootingDesign(code: DesignCode): ECPCombinedFooting = when (code) {
-        DesignCode.ECP -> ECPCombinedFooting()
-        DesignCode.ACI, DesignCode.SBC -> ECPCombinedFooting()
+    /**
+     * Returns the code-specific footing engine which implements designCombinedFooting().
+     * Previously hardcoded ECPCombinedFooting for all codes — now properly routes
+     * through the FootingDesign interface so ACI/SBC get their own implementations.
+     */
+    fun getCombinedFootingDesign(code: DesignCode): FootingDesign = when (code) {
+        DesignCode.ECP -> ECPFooting()
+        DesignCode.ACI -> ACIFooting()
+        DesignCode.SBC -> SBCFooting()
     }
 
     // ========== البلاطات المتقدمة (Advanced Slab Design) ==========

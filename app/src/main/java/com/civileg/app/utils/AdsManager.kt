@@ -18,7 +18,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 object AdsManager {
     private const val TAG = "AdsManager"
     
-    // Test Ad Unit IDs (Replace with your own production IDs in gradle.properties or secure store)
+    // TODO: Replace with production AdMob IDs before release.
+    // Test Ad Unit IDs — these are Google's well-known test IDs that serve no real ads.
+    // Configure real IDs in gradle.properties or local.properties:
+    //   admob.banner.id=ca-app-pub-XXXXX/YYYYY
+    //   admob.interstitial.id=ca-app-pub-XXXXX/YYYYY
     private const val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
     private const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
 

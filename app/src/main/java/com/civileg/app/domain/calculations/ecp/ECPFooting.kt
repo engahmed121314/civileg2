@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
@@ -45,10 +46,16 @@ class ECPFooting : FootingDesign {
         loadCombination: LoadCombination,
         constraints: BoundaryConstraints
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-
-        // 1. فحص السمك الأدنى
         if (footingDepth < MIN_THICKNESS) {
             warnings.add("أقل سماكة للقاعدة 300 مم حسب ECP 203 البند 7-1")
         }
@@ -196,6 +203,12 @@ class ECPFooting : FootingDesign {
         punchingShearForce: Double,
         loadCombination: LoadCombination
     ): ShearCheckResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("punchingShearForce", punchingShearForce)
+
         // محيط الاختراق عند بعد d/2 من وجه العمود (ECP 203 البند 4-3-2)
         val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         // القوة القاطعة الفعالة (بعد خصم رد فعل التربة داخل المحيط)
@@ -235,10 +248,14 @@ class ECPFooting : FootingDesign {
         designMoment: Double,  // kN.m/m
         direction: FootingDirection
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("footingWidth", footingWidth)
+        InputGuard.positive("footingLength", footingLength)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-
-        // 1. K-method (ECP 203 البند 4-2-2-1)
         val Mu = designMoment * 1e6  // N.mm/m
         val b = 1000.0  // mm per meter width
         val d = effectiveDepth
@@ -319,6 +336,16 @@ class ECPFooting : FootingDesign {
         columnWidth: Double,
         columnDepth: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("axialLoad1", axialLoad1)
+        InputGuard.positive("axialLoad2", axialLoad2)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -420,6 +447,13 @@ class ECPFooting : FootingDesign {
         soilBearingCapacity: Double,
         raftThickness: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("totalLoads", totalLoads)
+        InputGuard.positive("totalArea", totalArea)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("raftThickness", raftThickness)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -506,10 +540,15 @@ class ECPFooting : FootingDesign {
         pileDiameter: Double,
         columnLoads: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("pileLoad", pileLoad)
+        InputGuard.positive("numberOfPiles", numberOfPiles)
+        InputGuard.positive("pileDiameter", pileDiameter)
+        InputGuard.positive("columnLoads", columnLoads)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-
-        // 1. ترتيب الركائز
         val pileLayout = when {
             numberOfPiles <= 1 -> PileLayout.ONE
             numberOfPiles <= 2 -> PileLayout.TWO
@@ -603,6 +642,10 @@ class ECPFooting : FootingDesign {
         perimeter: Double,
         effectiveDepth: Double
     ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("perimeter", perimeter)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+
         // qp = 0.316 * sqrt(fcu/γc) * bo * d (kN)
         val qp = 0.316 * sqrt(fcu / GAMMA_C)
         return qp * perimeter * effectiveDepth / 1000.0

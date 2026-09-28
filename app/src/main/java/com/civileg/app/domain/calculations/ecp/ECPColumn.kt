@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
@@ -24,6 +25,11 @@ class ECPColumn : ColumnDesign {
         reinforcementArea: Double,
         loadCombination: LoadCombination
     ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+
         val Ag = width * depth                          // مساحة المقطع الكلية (mm²)
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08) // حد أقصى 8%
         
@@ -52,6 +58,11 @@ class ECPColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+
         val Ag = width * depth
         // Pu: الحمل المحوري التصميمي (N) - نستخدمه مباشرة بدون قسمة
         val Pu = axialLoad * 1000.0  // N
@@ -172,6 +183,12 @@ class ECPColumn : ColumnDesign {
         fy: Double,
         cover: Double = 40.0
     ): ColumnShearDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("cover", cover)
+
         val b = width
         val d = depth - cover  // effective depth (mm)
         val codeNotes = mutableListOf<String>()

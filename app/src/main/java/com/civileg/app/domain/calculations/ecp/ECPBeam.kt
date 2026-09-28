@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -24,6 +25,12 @@ class ECPBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("totalDepth", totalDepth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -140,6 +147,11 @@ class ECPBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -203,6 +215,9 @@ class ECPBeam : BeamDesign {
         reinforcementRatio: Double,
         supportCondition: SupportCondition
     ): DeflectionCheckResult {
+        InputGuard.positive("span", span)
+        InputGuard.positive("totalDepth", totalDepth)
+
         // طريقة النسبة (Span/Depth) المبسطة حسب الكود المصري
         val basicRatio = when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> 20.0
@@ -253,6 +268,10 @@ class ECPBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
+        InputGuard.positive("barDiameter", barDiameter)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fcu", fcu)
+
         // حسب الكود المصري: Ld = (fy/γs) * φ / (4 * fb)
         // حيث fb = إجهاد التماسك
         
@@ -357,6 +376,12 @@ class ECPBeam : BeamDesign {
         compressionSteelDia: Double = 16.0,
         d_prime: Double = 50.0 // mm - المسافة من وجه الضغط لمركز حديد الضغط
     ): DoublyReinforcedResult {
+        InputGuard.positive("designMoment", designMoment)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+
         val notes = mutableListOf<String>()
         
         // العمق الفعال (تقدير: الغطاء + كانة + نصف قطر سيخ)

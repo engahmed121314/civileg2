@@ -6,8 +6,17 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.aci.AISCSteelDesignEngine
 import com.civileg.app.domain.calculations.aci.SteelWindEngine
 import com.civileg.app.domain.calculations.base.RetainingWallInput
-import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.calculations.base.StaircaseInput
+import com.civileg.app.domain.calculations.base.SeismicZone
+import com.civileg.app.domain.calculations.base.SoilType
+import com.civileg.app.domain.calculations.base.SeismicDesign
+import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.domain.ShearWallInput
+import com.civileg.app.domain.ShearWallResult
+import com.civileg.app.domain.FlatSlabInput
+import com.civileg.app.domain.FlatSlabResult
+import com.civileg.app.domain.PileInput
+import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.entities.CodeReference
@@ -1054,26 +1063,67 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
-    fun calculateSeismicLoads(input: SeismicInput): SeismicResult {
+    /**
+     * Calculate seismic loads using the code-specific seismic engine via CalculationFactory.
+     * Previously used an inline simplified formula — now delegates to the proper
+     * ECP 201 / ASCE 7 / SBC 301 seismic design implementations.
+     */
+    fun calculateSeismicLoads(input: SeismicInput, code: DesignCode = DesignCode.EGYPTIAN): SeismicResult {
         InputGuard.positive("height", input.height)
         InputGuard.positive("totalWeight", input.totalWeight)
 
-        val height = input.height
-        val weight = input.totalWeight
-        val zone = input.zone.coerceAtLeast(0.05)
-        val R = input.reductionFactor.coerceAtLeast(1.0)
-        val I = input.importance.coerceAtLeast(1.0)
+        val domainCode = code.toDomain()
+        val seismicEngine = CalculationFactory.getSeismicDesign(domainCode)
 
-        val baseShear = (zone * I / R) * weight
-        val timePeriod = 0.075 * height.pow(0.75)
-        val drift = (0.01 * height) / R
+        // Map zone factor to SeismicZone enum
+        val seismicZone = when {
+            input.zone <= 0.10 -> SeismicZone.ZONE_1
+            input.zone <= 0.15 -> SeismicZone.ZONE_2
+            input.zone <= 0.20 -> SeismicZone.ZONE_3
+            input.zone <= 0.30 -> SeismicZone.ZONE_4
+            else -> SeismicZone.ZONE_5
+        }
+
+        // Map soil type string to SoilType enum
+        val soilType = when (input.soilType.uppercase()) {
+            "A" -> SoilType.A
+            "B" -> SoilType.B
+            "D" -> SoilType.D
+            "E" -> SoilType.E
+            else -> SoilType.C
+        }
+
+        val baseShearResult = seismicEngine.calculateBaseShear(
+            totalWeight = input.totalWeight,
+            seismicZone = seismicZone,
+            soilType = soilType,
+            importanceFactor = input.importance.coerceAtLeast(1.0),
+            responseModificationFactor = input.reductionFactor.coerceAtLeast(1.0),
+            buildingHeight = input.height
+        )
+
+        val spectrum = seismicEngine.getResponseSpectrum(
+            period = 0.075 * input.height.pow(0.75),
+            dampingRatio = 0.05,
+            soilType = soilType,
+            importanceFactor = input.importance.coerceAtLeast(1.0)
+        )
+
+        val timePeriod = 0.075 * input.height.pow(0.75)
+        val drift = (0.01 * input.height) / input.reductionFactor.coerceAtLeast(1.0)
 
         return SeismicResult(
-            baseShear = baseShear, storyDrift = drift,
-            timePeriod = timePeriod, spectralAcceleration = zone * I,
-            isSafe = drift <= 0.02 * height, code = DesignCode.EGYPTIAN,
-            zone = zone, importance = I, reductionFactor = R,
-            totalWeight = weight, height = height
+            baseShear = baseShearResult.baseShear,
+            storyDrift = drift,
+            timePeriod = timePeriod,
+            spectralAcceleration = spectrum.spectralAcceleration,
+            isSafe = drift <= 0.02 * input.height,
+            code = code,
+            zone = input.zone,
+            importance = input.importance.coerceAtLeast(1.0),
+            reductionFactor = input.reductionFactor.coerceAtLeast(1.0),
+            totalWeight = input.totalWeight,
+            height = input.height
         )
     }
 
@@ -1093,6 +1143,93 @@ class CalculatorEngine @Inject constructor(
         val phi = 0.75
         val nominalShear = 0.45 * fub * ab
         return (phi * nominalShear * count) / 1000.0
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Missing Bridge Functions — Phase 1 Fix
+    //  These functions connect the UI layer to the CalculationFactory
+    //  routing that was already in place but never bridged.
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Shear Wall Design — delegates to code-specific engine via CalculationFactory.
+     * Covers: flexural design, shear design, boundary elements, coupling beams, slenderness.
+     */
+    fun designShearWall(input: ShearWallInput, code: DesignCode = DesignCode.EGYPTIAN): ShearWallResult {
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+        InputGuard.positive("wallHeight", input.wallHeight)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+
+        val domainCode = code.toDomain()
+        val engine = CalculationFactory.getShearWallDesign(domainCode)
+        return engine.designWall(input)
+    }
+
+    /**
+     * Pile Foundation Design — delegates to code-specific engine via CalculationFactory.
+     * Covers: single pile capacity, pile cap, settlement, group efficiency, lateral load.
+     */
+    fun designPileFoundation(input: PileInput, code: DesignCode = DesignCode.EGYPTIAN): PileDesignResult {
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+
+        val domainCode = code.toDomain()
+        val engine = CalculationFactory.getPileFoundationDesign(domainCode)
+        return engine.designPile(input)
+    }
+
+    /**
+     * Flat Slab Design — delegates to code-specific engine via CalculationFactory.
+     * Covers: DDM/EFM, moment distribution, punching shear, deflection, drop panels.
+     */
+    fun designFlatSlab(input: FlatSlabInput, code: DesignCode = DesignCode.EGYPTIAN): FlatSlabResult {
+        InputGuard.positive("lx", input.lx)
+        InputGuard.positive("ly", input.ly)
+        InputGuard.positive("slabThickness", input.slabThickness)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+
+        val domainCode = code.toDomain()
+        val engine = CalculationFactory.getFlatSlabDesign(domainCode)
+        return engine.design(input)
+    }
+
+    /**
+     * Combined Footing Design — delegates to code-specific engine via CalculationFactory.
+     * Covers: two-column combined footing with soil pressure, flexure, and shear checks.
+     */
+    fun designCombinedFooting(
+        fcu: Double, fy: Double,
+        axialLoad1: Double, axialLoad2: Double,
+        distanceBetweenColumns: Double,
+        soilBearingCapacity: Double,
+        footingDepth: Double,
+        code: DesignCode = DesignCode.EGYPTIAN,
+        columnWidth: Double = 400.0,
+        columnDepth: Double = 400.0
+    ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("axialLoad1", axialLoad1)
+        InputGuard.positive("axialLoad2", axialLoad2)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+
+        val domainCode = code.toDomain()
+        val footingEngine = CalculationFactory.getFootingDesign(domainCode)
+        return footingEngine.designCombinedFooting(
+            fcu = fcu, fy = fy,
+            axialLoad1 = axialLoad1, axialLoad2 = axialLoad2,
+            distanceBetweenColumns = distanceBetweenColumns,
+            soilBearingCapacity = soilBearingCapacity,
+            footingDepth = footingDepth,
+            loadCombination = LoadCombination.ULS,
+            columnWidth = columnWidth, columnDepth = columnDepth
+        )
     }
 
     private fun t(ar: String, en: String): String = if (LocaleHelper.isArabic()) ar else en

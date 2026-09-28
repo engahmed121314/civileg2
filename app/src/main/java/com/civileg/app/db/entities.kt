@@ -1,6 +1,7 @@
 package com.civileg.app.db
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import java.util.Date
 
@@ -22,7 +23,16 @@ enum class ProjectStatus {
     ACTIVE, COMPLETED, ON_HOLD, CANCELLED
 }
 
-@Entity(tableName = "designs", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "designs",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class Design(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -44,7 +54,16 @@ enum class DesignType {
     BEAM, COLUMN, FOOTING, SLAB, STAIRCASE, RETAINING_WALL, WATER_TANK, PILE, SEISMIC, STEEL_MEMBER, STEEL_WAREHOUSE, FRAME_ANALYSIS, PILE_FOUNDATION, FLAT_SLAB, SHEAR_WALL, CONCRETE_MIX, SOIL_BEARING, WIND_LOAD
 }
 
-@Entity(tableName = "footings", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "footings",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class Footing(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -66,7 +85,16 @@ data class Footing(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "columns_table", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "columns_table",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class ColumnEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -83,7 +111,16 @@ data class ColumnEntity(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "slabs", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "slabs",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class Slab(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -101,7 +138,16 @@ data class Slab(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "beams", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "beams",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class Beam(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -119,7 +165,16 @@ data class Beam(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "stairs", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "stairs",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class Stair(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -134,7 +189,16 @@ data class Stair(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "retaining_walls", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "retaining_walls",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class RetainingWall(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -149,7 +213,16 @@ data class RetainingWall(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "tanks", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "tanks",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class Tank(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -165,7 +238,16 @@ data class Tank(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "materials", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "materials",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class MaterialItem(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -201,7 +283,16 @@ enum class InventoryType {
     EQUIPMENT, TOOLS, RAW_MATERIAL, ACCESSORIES
 }
 
-@Entity(tableName = "pour_logs", indices = [androidx.room.Index(value = ["projectId"])])
+@Entity(
+    tableName = "pour_logs",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
 data class PourLog(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -217,12 +308,29 @@ data class PourLog(
     val status: String = "PENDING"
 )
 
-@Entity(tableName = "site_inspections", indices = [androidx.room.Index(value = ["projectId"]), androidx.room.Index(value = ["designId"])])
+@Entity(
+    tableName = "site_inspections",
+    indices = [androidx.room.Index(value = ["projectId"]), androidx.room.Index(value = ["designId"])],
+    foreignKeys = [
+        ForeignKey(
+            entity = Project::class,
+            parentColumns = ["id"],
+            childColumns = ["projectId"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = Design::class,
+            parentColumns = ["id"],
+            childColumns = ["designId"],
+            onDelete = ForeignKey.SET_NULL
+        )
+    ]
+)
 data class SiteInspection(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val projectId: Long,
-    val designId: Long,
+    val designId: Long? = null,
     val inspectorName: String,
     val date: Date = Date(),
     val formworkSafe: Boolean = false,

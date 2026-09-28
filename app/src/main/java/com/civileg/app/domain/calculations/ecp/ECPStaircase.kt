@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -33,6 +34,14 @@ class ECPStaircase : StaircaseDesign {
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("totalRise", input.totalRise)
+        InputGuard.positive("span", input.span)
+        InputGuard.positive("deadLoad", input.deadLoad)
+        InputGuard.positive("liveLoad", input.liveLoad)
+        InputGuard.positive("stairWidth", input.stairWidth)
+
         val safetyChecks = mutableListOf<StairSafetyCheck>()
         val codeNotes = mutableListOf<String>()
 

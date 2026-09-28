@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -20,6 +21,11 @@ class ECPSlab : SlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("clearSpan", clearSpan)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -123,6 +129,13 @@ class ECPSlab : SlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): TwoWaySlabResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("shortSpan", shortSpan)
+        InputGuard.positive("longSpan", longSpan)
+        InputGuard.positive("totalLoad", totalLoad)
+
         // معاملات العزم حسب حالة التثبيت
         val aspectRatio = longSpan / shortSpan.coerceAtLeast(1.0)
         val coefficients = calculateMomentCoefficients(aspectRatio, supportConditions)
@@ -182,6 +195,9 @@ class ECPSlab : SlabDesign {
         fy: Double,
         isTwoWay: Boolean
     ): ThicknessCheckResult {
+        InputGuard.positive("span", span)
+        InputGuard.positive("fy", fy)
+
         val minThickness = getMinSlabThickness(span, supportCondition)
         val providedThickness = max(120.0, ceil(minThickness / 10) * 10) // افتراض سمك مبدئي
         

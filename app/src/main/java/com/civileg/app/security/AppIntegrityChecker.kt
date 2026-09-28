@@ -13,6 +13,11 @@ import java.util.Locale
 object AppIntegrityChecker {
 
     // Expected signing certificate fingerprint (SHA-256) — set during release build
+    // IMPORTANT: Replace with the actual SHA-256 fingerprint of your release signing key
+    // before production deployment. Obtain it via:
+    //   keytool -list -v -keystore your-release-key.jks -alias your-alias
+    // Then paste the SHA-256 value here (e.g., "AB:CD:EF:...:12:34")
+    // When empty, signature verification is effectively disabled (any APK passes).
     private const val EXPECTED_SIGNER_FINGERPRINT = ""
 
     private val SUSPICIOUS_PATHS = arrayOf(

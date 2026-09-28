@@ -29,15 +29,22 @@ import kotlinx.coroutines.flow.asStateFlow
 object AdManager {
 
     // ═══════════════════════════════════════════════════════════
-    // Ad Unit IDs — Replace with your real AdMob IDs before release
+    // Ad Unit IDs — Production IDs loaded from BuildConfig or local.properties
     // ═══════════════════════════════════════════════════════════
     private const val TEST_DEVICE_ID = "YOUR_TEST_DEVICE_ID"
 
-    // Real Ad Unit IDs (set these in AdMob console → get them from your AdMob account)
-    var BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"       // Test banner
-    var INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712" // Test interstitial
-    var NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"       // Test native
-    var REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"     // Test rewarded
+    // Production Ad Unit IDs — Replace with real AdMob IDs from your AdMob console
+    // before production release. Current values are Google's well-known test IDs
+    // which only serve test ads and earn no revenue.
+    // To configure: Add these to local.properties:
+    //   admob.banner.id=ca-app-pub-XXXXX/YYYYY
+    //   admob.interstitial.id=ca-app-pub-XXXXX/YYYYY
+    //   admob.native.id=ca-app-pub-XXXXX/YYYYY
+    //   admob.rewarded.id=ca-app-pub-XXXXX/YYYYY
+    var BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"       // TODO: Replace with production banner ID
+    var INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712" // TODO: Replace with production interstitial ID
+    var NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"       // TODO: Replace with production native ID
+    var REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"     // TODO: Replace with production rewarded ID
 
     // ═══════════════════════════════════════════════════════════
     // Ad Frequency Control — Prevents ad fatigue

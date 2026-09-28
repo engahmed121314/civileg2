@@ -25,7 +25,7 @@ import androidx.room.TypeConverters
         PileFoundationDesignEntity::class,
         ShearWallDesignEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -58,7 +58,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civil_eg_database"
                 )
-                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8)
+                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9)
                 .build()
                 INSTANCE = instance
                 instance

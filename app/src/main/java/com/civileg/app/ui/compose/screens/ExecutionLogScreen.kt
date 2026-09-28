@@ -116,7 +116,7 @@ fun ExecutionLogScreen(
                 viewModel.addInspection(
                     SiteInspection(
                         projectId = projectId,
-                        designId = 0L,
+                        designId = null,
                         inspectorName = "Site Engineer",
                         comments = comments,
                         formworkSafe = fw,

@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
@@ -20,6 +21,16 @@ class ECPRetainingWall : RetainingWallDesign {
     }
 
     override fun designRetainingWall(input: RetainingWallInput): RetainingWallResult {
+        InputGuard.positive("wallHeight", input.wallHeight)
+        InputGuard.positive("stemBaseThickness", input.stemBaseThickness)
+        InputGuard.positive("baseWidth", input.baseWidth)
+        InputGuard.positive("baseThickness", input.baseThickness)
+        InputGuard.positive("soilDensity", input.soilDensity)
+        InputGuard.positive("frictionAngle", input.frictionAngle)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("soilBearingCapacity", input.soilBearingCapacity)
+
         val H = input.wallHeight
         val tBase = input.stemBaseThickness
         val tTop = input.stemTopThickness

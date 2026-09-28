@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.TankDesign
 import com.civileg.app.domain.calculations.base.TankResult
 import com.civileg.app.domain.calculations.base.TankSafetyCheck
@@ -35,6 +36,13 @@ class ECPTank : TankDesign {
         fy: Double,
         type: TankType
     ): TankResult {
+        InputGuard.positive("length", length)
+        InputGuard.positive("width", width)
+        InputGuard.positive("height", height)
+        InputGuard.positive("waterDepth", waterDepth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+
         val warnings = mutableListOf<String>()
         val recommendations = mutableListOf<String>()
         val safetyChecks = mutableListOf<TankSafetyCheck>()
