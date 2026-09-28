@@ -134,4 +134,20 @@ object CalculationFactory {
         DesignCode.ACI -> ACIStrapFooting()
         DesignCode.SBC -> SBCStrapFooting()
     }
+
+    // ========== حوائط القص (Shear Walls) ==========
+
+    fun getShearWallDesign(code: DesignCode): ShearWallDesign = when (code) {
+        DesignCode.ECP -> ECPShearWall()
+        DesignCode.ACI -> ACIShearWall()
+        DesignCode.SBC -> SBCShearWall()
+    }
+
+    // ========== التحليل الزلزالي (Seismic Design) ==========
+
+    fun getSeismicDesign(code: DesignCode): SeismicDesign = when (code) {
+        DesignCode.ECP -> ECPSeismic()
+        DesignCode.ACI -> ACISeismic()
+        DesignCode.SBC -> SBCSeismic()
+    }
 }

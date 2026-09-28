@@ -22,7 +22,7 @@ enum class ProjectStatus {
     ACTIVE, COMPLETED, ON_HOLD, CANCELLED
 }
 
-@Entity(tableName = "designs")
+@Entity(tableName = "designs", indices = [androidx.room.Index(value = ["projectId"])])
 data class Design(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -44,7 +44,7 @@ enum class DesignType {
     BEAM, COLUMN, FOOTING, SLAB, STAIRCASE, RETAINING_WALL, WATER_TANK, PILE, SEISMIC, STEEL_MEMBER, STEEL_WAREHOUSE, FRAME_ANALYSIS, PILE_FOUNDATION, FLAT_SLAB, SHEAR_WALL, CONCRETE_MIX, SOIL_BEARING, WIND_LOAD
 }
 
-@Entity(tableName = "footings")
+@Entity(tableName = "footings", indices = [androidx.room.Index(value = ["projectId"])])
 data class Footing(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -66,7 +66,7 @@ data class Footing(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "columns_table")
+@Entity(tableName = "columns_table", indices = [androidx.room.Index(value = ["projectId"])])
 data class ColumnEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -83,7 +83,7 @@ data class ColumnEntity(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "slabs")
+@Entity(tableName = "slabs", indices = [androidx.room.Index(value = ["projectId"])])
 data class Slab(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -101,7 +101,7 @@ data class Slab(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "beams")
+@Entity(tableName = "beams", indices = [androidx.room.Index(value = ["projectId"])])
 data class Beam(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -119,7 +119,7 @@ data class Beam(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "stairs")
+@Entity(tableName = "stairs", indices = [androidx.room.Index(value = ["projectId"])])
 data class Stair(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -134,7 +134,7 @@ data class Stair(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "retaining_walls")
+@Entity(tableName = "retaining_walls", indices = [androidx.room.Index(value = ["projectId"])])
 data class RetainingWall(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -149,7 +149,7 @@ data class RetainingWall(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "tanks")
+@Entity(tableName = "tanks", indices = [androidx.room.Index(value = ["projectId"])])
 data class Tank(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val projectId: Long,
@@ -165,7 +165,7 @@ data class Tank(
     val utilizationRatio: Double = 0.0
 )
 
-@Entity(tableName = "materials")
+@Entity(tableName = "materials", indices = [androidx.room.Index(value = ["projectId"])])
 data class MaterialItem(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -201,7 +201,7 @@ enum class InventoryType {
     EQUIPMENT, TOOLS, RAW_MATERIAL, ACCESSORIES
 }
 
-@Entity(tableName = "pour_logs")
+@Entity(tableName = "pour_logs", indices = [androidx.room.Index(value = ["projectId"])])
 data class PourLog(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -217,7 +217,7 @@ data class PourLog(
     val status: String = "PENDING"
 )
 
-@Entity(tableName = "site_inspections")
+@Entity(tableName = "site_inspections", indices = [androidx.room.Index(value = ["projectId"]), androidx.room.Index(value = ["designId"])])
 data class SiteInspection(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

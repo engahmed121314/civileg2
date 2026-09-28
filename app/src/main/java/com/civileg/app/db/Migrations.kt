@@ -29,10 +29,27 @@ object Migrations {
      */
     val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(database: SupportSQLiteDatabase) {
-            // No schema changes yet — this is a no-op migration
-            // that establishes the safe migration pattern.
-            // When version 7 introduces actual schema changes,
-            // add the corresponding SQL statements here.
+            // No schema changes between v6 and v7 — no-op migration
+        }
+    }
+
+    /**
+     * Migration from version 7 to 8.
+     * Adds projectId indexes to all child entity tables for O(log n) lookups.
+     * Also adds designId index on site_inspections.
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Add projectId indexes for all child tables
+            val tablesWithProjectId = listOf(
+                "designs", "footings", "columns_table", "slabs", "beams",
+                "stairs", "retaining_walls", "tanks", "materials", "pour_logs", "site_inspections"
+            )
+            for (table in tablesWithProjectId) {
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_${table}_projectId ON $table(projectId)")
+            }
+            // Add designId index on site_inspections
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_site_inspections_designId ON site_inspections(designId)")
         }
     }
 

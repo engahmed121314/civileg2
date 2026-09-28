@@ -18,17 +18,11 @@ class ECPHordiSlabWrapper : HordiSlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
-        // Map ECP results to unified result
-        // For now, return a placeholder or implement mapping
-        return SlabDesignResult(
-            requiredReinforcement = 0.0,
-            providedReinforcement = 0.0,
-            barDiameter = 12.0,
-            barSpacing = ribSpacing,
-            minThickness = totalThickness,
-            shearCapacity = 0.0,
-            isSafe = true,
-            utilizationRatio = 0.0
+        // Delegate to the actual ECPHordiSlabDesign engine
+        // Previously returned zeros with isSafe=true — a silent wrong-answer bug
+        return engine.designHordiSlab(
+            fcu, fy, ribWidth, ribSpacing, totalThickness,
+            toppingThickness, span, designMoment, designShear, loadCombination
         )
     }
 }

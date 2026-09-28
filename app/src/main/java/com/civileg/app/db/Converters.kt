@@ -55,4 +55,18 @@ class Converters {
     fun materialCategoryToString(category: MaterialCategory): String {
         return category.name
     }
+
+    @TypeConverter
+    fun fromInventoryType(value: String): InventoryType {
+        return try {
+            InventoryType.valueOf(value)
+        } catch (e: Exception) {
+            InventoryType.RAW_MATERIAL
+        }
+    }
+
+    @TypeConverter
+    fun inventoryTypeToString(type: InventoryType): String {
+        return type.name
+    }
 }

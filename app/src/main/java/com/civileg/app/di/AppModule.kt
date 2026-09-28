@@ -27,7 +27,7 @@ object AppModule {
             AppDatabase::class.java,
             "civil_eg_database"
         )
-        .fallbackToDestructiveMigration()
+        .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8)
         .build()
     }
 
