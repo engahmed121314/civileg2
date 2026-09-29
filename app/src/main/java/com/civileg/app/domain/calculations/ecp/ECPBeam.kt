@@ -232,9 +232,9 @@ class ECPBeam : BeamDesign {
         // النسخة المبسطة المعتمدة: MF = 0.55 + 0.0075 × fs / (ρ × fy) 
         // حيث fs = 0.58 × fy → MF = 0.55 + 0.0075 / ρ
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        // fy يجب تمريره من المدخل - هنا نستخدم 360 كافتراضي لكن ينصح تمرير fy الحقيقي
-        // سيتم استبدال هذا في النسخة المحسنة التي تستقبل fy كباراميتر
-        val fyEff = 360.0  // ECP 203 default - TODO: مرر fy الفعلي من الواجهة
+        // ECP 203-2020 §6-3-1: fy = 360 MPa هو القيمة الافتراضية لحديد High-Grade المصري
+        // ملاحظة: الواجهة لا تمرر fy — إذا أُضيف باراميتر fy للواجهة مستقبلاً يمكن استخدامه مباشرة
+        val fyEff = 360.0  // ECP 203 default for high-grade steel (360/520)
         val modificationFactor = 0.55 + 477.0 / (fyEff * rhoPercent)
         val allowableRatio = basicRatio * modificationFactor
         

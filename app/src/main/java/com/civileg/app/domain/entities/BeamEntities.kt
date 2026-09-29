@@ -109,7 +109,8 @@ enum class BeamSectionType(val displayName: String) {
     T_SECTION("T-Section"),
     L_SECTION("L-Section"),
     CIRCULAR("Circular"),
-    COMPOSITE("Composite Steel-Concrete")
+    COMPOSITE("Composite Steel-Concrete"),
+    DEEP_BEAM("Deep Beam")  // ECP 203 §4-2-1-4 / ACI 318 §9.9 / SBC 304 §9.9
 }
 
 /**

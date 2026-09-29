@@ -691,13 +691,13 @@ class ECPAdvancedBeam {
             )
         )
 
-        codeNotes.add("NOTE: DEEP_BEAM is not a BeamSectionType enum value; using RECTANGULAR as placeholder")
+        codeNotes.add("Deep beam design per ECP 203-2020 §4-2-1-4 (l/d ≤ 4 for continuous, ≤ 5 for simple)")
         codeNotes.add("As_flexure = ${numBars}Ø${selectedDia.toInt()} (${"%.0f".format(astProvided)} mm²)")
 
         val beamType = BeamType.SimplySupported(span)
         return AdvancedBeamResult(
             beamType = beamType,
-            sectionType = BeamSectionType.RECTANGULAR, // DEEP_BEAM غير موجود في الـ enum
+            sectionType = BeamSectionType.DEEP_BEAM, // ECP 203 §4-2-1-4
             flexureResult = flexureResult,
             shearResult = shearResult,
             deflectionCheck = deflectionResult,
