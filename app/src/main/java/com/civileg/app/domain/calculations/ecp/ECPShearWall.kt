@@ -696,7 +696,13 @@ class ECPShearWall : ShearWallDesign {
 
     /**
      * Calculate neutral axis depth (c) from extreme compression fiber.
-     * Uses iterative strain compatibility / K-method.
+     * Uses iterative strain compatibility / K-method with improved convergence:
+     * - Better initial guess based on input geometry
+     * - Damping factor (α=0.5) to prevent oscillation
+     * - Oscillation detection via history tracking
+     * - Robust fallback for non-convergence
+     *
+     * ECP 203 §4-2: K-method for wall sections under combined M + P
      */
     private fun calculateNeutralAxisDepth(
         Mu: Double, Pu: Double, Lw: Double, bw: Double,
@@ -709,26 +715,75 @@ class ECPShearWall : ShearWallDesign {
         val fsDesign = fy / GAMMA_S
         val beta1 = calculateBeta1(fcu)
 
-        // ── إصلاح bug التقارب: يجب حفظ c القديم قبل التحديث ──
-        var c = 50.0
-        for (i in 1..60) {
-            val cOld = c  // حفظ القيمة السابقة قبل التحديث
+        // ── تحسين: تقدير أولي أفضل بدلاً من c=50 الثابت ──
+        // إذا كان Mu صغيراً نسبياً: c صغير (حوالي 0.1-0.2d)
+        // إذا كان Pu كبيراً: c أكبر
+        val muRatio = if (PuN * d > 0) MuNmm / (PuN * d) else 0.5
+        val initialGuess = (0.1 + 0.3 * muRatio.coerceIn(0.0, 1.0)) * d
+        var c = initialGuess.coerceIn(10.0, 0.5 * d)
+
+        val maxIterations = 80
+        val dampingFactor = 0.5  // α = 0.5: مزيج متساوٍ من القديم والجديد لمنع التذبذب
+        val tolerance = 0.5  // mm — تoleran_ce للتقارب
+
+        var prevC = c
+        var oscillationCount = 0
+        var converged = false
+
+        for (i in 1..maxIterations) {
+            val cOld = c
             val a = beta1 * c
             val leverArm = d - a / 2.0
+
+            // ── حماية: ذراع العزم يجب أن يكون موجباً ──
             if (leverArm <= 0) {
-                c = cOld * 0.5  // تراجع
+                c = cOld * 0.5  // تراجع — منطقة الضغط أكبر من العمق
                 continue
             }
+
+            // تقدير مساحة التسليح من التوازن
             val AsEst = max(0.0, (MuNmm - PuN * (d - Lw / 2.0)) / (fsDesign * leverArm))
-            // C = T + Pu: 0.67*fcu/γc * bw * a = As * fy/γs + Pu
+
+            // C = T + Pu: fc × bw × a = As × fs + Pu
             val newA = if (bw > 0 && fcDesign > 0) {
                 (AsEst * fsDesign + PuN) / (fcDesign * bw)
             } else a
-            c = newA / beta1
-            // ── إصلاح: فحص التقارب بين c القديم والجديد ──
-            if (abs(c - cOld) < 0.1) break  // تقارب حقيقي
+
+            val cNew = (newA / beta1).coerceIn(1.0, 0.9 * d)
+
+            // ── تحسين: damping لمنع التذبذب ──
+            // c_next = (1-α)×cOld + α×cNew
+            c = (1.0 - dampingFactor) * cOld + dampingFactor * cNew
+
+            // ── فحص التقارب ──
+            if (abs(c - cOld) < tolerance) {
+                converged = true
+                break
+            }
+
+            // ── كشف التذبذب: إذا تغيرت الإشارة بين (c-cOld) و (cOld-prevC) ──
+            val deltaCurrent = c - cOld
+            val deltaPrevious = cOld - prevC
+            if (i > 2 && deltaCurrent * deltaPrevious < 0) {
+                oscillationCount++
+                if (oscillationCount > 5) {
+                    // تذبذب مستمر — خفض damping أكثر
+                    c = (cOld + c) / 2.0  // المتوسط البسيط
+                }
+            }
+            prevC = cOld
         }
-        return c.coerceIn(0.0, 0.5 * d)  // limit c/d to 0.5 for ductility
+
+        // ── إذا لم يتقارب: استخدم قيمة تحفظية ──
+        if (!converged) {
+            // تقدير تحفظي: c ≈ Pu / (fc × bw) / β1
+            val fallbackC = if (bw > 0 && fcDesign > 0) {
+                (PuN / (fcDesign * bw)) / beta1
+            } else 0.2 * d
+            c = fallbackC.coerceIn(10.0, 0.5 * d)
+        }
+
+        return c.coerceIn(0.0, 0.5 * d)  // limit c/d ≤ 0.5 for ductility per ECP §4-2-1-3
     }
 
     // ══════════════════════════════════════════════════════════════════

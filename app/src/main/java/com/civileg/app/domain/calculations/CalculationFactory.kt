@@ -95,6 +95,14 @@ object CalculationFactory {
         DesignCode.SBC -> SBCFooting()
     }
 
+    /**
+     * Returns the specialized ECPCombinedFooting class for detailed combined footing design.
+     * ECP 203-2020 §7-1: Returns a standalone engine with full combined footing analysis
+     * including longitudinal/transverse bending, punching shear, and reinforcement design.
+     * For ACI/SBC, use getCombinedFootingDesign() which routes through FootingDesign interface.
+     */
+    fun getECPCombinedFootingSpecialized(): ECPCombinedFooting = ECPCombinedFooting()
+
     // ========== البلاطات المتقدمة (Advanced Slab Design) ==========
 
     fun getAdvancedSlabDesign(code: DesignCode) = when (code) {

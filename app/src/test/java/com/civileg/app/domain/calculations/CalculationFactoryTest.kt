@@ -55,4 +55,23 @@ class CalculationFactoryTest {
         assertNotNull(CalculationFactory.getDoublyReinforcedBeamDesign(DesignCode.ECP))
         assertNotNull(CalculationFactory.getCombinedFootingDesign(DesignCode.ECP))
     }
+
+    @Test
+    fun `all specialized factories work for all codes`() {
+        for (code in DesignCode.entries) {
+            assertNotNull("HordiSlab null for $code", CalculationFactory.getHordiSlabDesign(code))
+            assertNotNull("WaffleSlab null for $code", CalculationFactory.getWaffleSlabDesign(code))
+            assertNotNull("FlatSlab null for $code", CalculationFactory.getFlatSlabDesign(code))
+            assertNotNull("StrapFooting null for $code", CalculationFactory.getStrapFootingDesign(code))
+            assertNotNull("ShearWall null for $code", CalculationFactory.getShearWallDesign(code))
+            assertNotNull("PileFoundation null for $code", CalculationFactory.getPileFoundationDesign(code))
+            assertNotNull("SeismicDesign null for $code", CalculationFactory.getSeismicDesign(code))
+            assertNotNull("DoublyReinforcedBeam null for $code", CalculationFactory.getDoublyReinforcedBeamDesign(code))
+        }
+    }
+
+    @Test
+    fun `ECPCombinedFooting specialized engine is accessible`() {
+        assertNotNull(CalculationFactory.getECPCombinedFootingSpecialized())
+    }
 }
