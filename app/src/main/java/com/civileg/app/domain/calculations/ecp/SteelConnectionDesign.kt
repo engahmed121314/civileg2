@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.BoltConnectionType
 import com.civileg.app.domain.entities.BoltGrade
 import com.civileg.app.domain.entities.BoltPattern
@@ -342,6 +343,10 @@ class SteelConnectionDesign {
         isDoubleShear: Boolean = false,
         includeThreadedArea: Boolean = true
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("boltGrade", boltGrade)
+        InputGuard.positive("boltDiameter", boltDiameter)
+
         // اختيار المساحة المناسبة (مساحة الخيوط أو المساحة الاسمية)
         val ab = if (includeThreadedArea) {
             getBoltThreadedArea(boltDiameter)
@@ -394,6 +399,11 @@ class SteelConnectionDesign {
         spacing: Double,
         holeDiameter: Double = boltDiameter + 2.0
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("boltDiameter", boltDiameter)
+        InputGuard.positive("plateThickness", plateThickness)
+        InputGuard.positive("fuPlate", fuPlate)
+
         // حساب المسافة الصافية Lc عند الحافة
         // Lc = المسافة من الحافة لمركز المسمار - نصف قطر الثقب
         val lcEdge = edgeDistance - holeDiameter / 2.0
@@ -440,6 +450,10 @@ class SteelConnectionDesign {
         boltGrade: BoltGrade,
         boltDiameter: Double
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("boltGrade", boltGrade)
+        InputGuard.positive("boltDiameter", boltDiameter)
+
         // مساحة المقطع المسماري (الخيوط)
         val ab = getBoltThreadedArea(boltDiameter)
 
@@ -479,6 +493,9 @@ class SteelConnectionDesign {
         shearCapacity: Double,
         tensionCapacity: Double
     ): Pair<Boolean, Double> {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("shearCapacity", shearCapacity)
+        InputGuard.positive("tensionCapacity", tensionCapacity)
         // حساب معادلة التفاعل - AISC J3.7
         // (Vu / φVn)² + (Tu / φTn)² ≤ 1.0
         val ratioV = if (shearCapacity > 0) appliedShear / shearCapacity else 0.0
@@ -514,6 +531,10 @@ class SteelConnectionDesign {
         frictionClass: String = "CLASS_A",
         numberOfShearPlanes: Int = 1
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("boltGrade", boltGrade)
+        InputGuard.positive("boltDiameter", boltDiameter)
+
         // معامل الاحتكاك من الجدول - AISC Table J3.8
         val mu = FRICTION_COEFFICIENTS[frictionClass] ?: 0.35
 
@@ -563,6 +584,10 @@ class SteelConnectionDesign {
         fu: Double,
         ubs: Double = 1.0
     ): BlockShearResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fu", fu)
+
         // الحالة الأولى: التمزق في القص والشد - AISC J4.3(a)
         // Rn = 0.6 × Fu × Anv + Ubs × Fu × Ant
         val ruptureStrength = 0.6 * fu * shearAreaNet + ubs * fu * tensionAreaNet
@@ -871,6 +896,11 @@ class SteelConnectionDesign {
         electrodeType: ElectrodeType,
         isLongWeld: Boolean = false
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.positive("weldLength", weldLength)
+        InputGuard.notNull("electrodeType", electrodeType)
+
         // حساب سماكة الحلق الفعالة - AISC J2.2a
         // throat = 0.707 × leg size (للحام بزاوية 90 درجة)
         val throat = 0.707 * weldSize
@@ -912,6 +942,9 @@ class SteelConnectionDesign {
         weldSize: Double,
         weldLength: Double
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.positive("weldLength", weldLength)
         // الحلق = 0.707 × حجم اللحام (للحام بزاوية 90°) - AISC J2.2a
         val throat = 0.707 * weldSize
         return throat * weldLength
@@ -941,6 +974,12 @@ class SteelConnectionDesign {
         plateThickness: Double = 10.0,
         isEdgeWeld: Boolean = false
     ): WeldDesignResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("weldType", weldType)
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.positive("weldLength", weldLength)
+        InputGuard.notNull("electrodeType", electrodeType)
+
         // قائمة التحذيرات وملاحظات الكود
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -1064,6 +1103,11 @@ class SteelConnectionDesign {
         weldLength: Double,
         electrodeType: ElectrodeType
     ): Pair<Boolean, Double> {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.positive("weldLength", weldLength)
+        InputGuard.notNull("electrodeType", electrodeType)
+
         // إجهاد اللحام المسموح - AISC J2.4
         val fw = PHI_WELD * 0.60 * electrodeType.tensileStrength
 
@@ -1108,6 +1152,8 @@ class SteelConnectionDesign {
      * @return العدد الأدنى للمسامير (مُقرب لأعلى)
      */
     fun calculateRequiredBolts(appliedForce: Double, capacityPerBolt: Double): Int {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("capacityPerBolt", capacityPerBolt)
         if (capacityPerBolt <= 0) return Int.MAX_VALUE
         return ceil(appliedForce / capacityPerBolt).toInt()
     }
@@ -1127,6 +1173,9 @@ class SteelConnectionDesign {
         weldSize: Double,
         electrodeType: ElectrodeType
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.notNull("electrodeType", electrodeType)
         val fw = 0.60 * electrodeType.tensileStrength
         val throat = 0.707 * weldSize
 
@@ -1163,6 +1212,10 @@ class SteelConnectionDesign {
         fuPlate: Double = 400.0,
         fyPlate: Double = 250.0
     ): Map<String, Any> {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("connectionType", connectionType)
+        InputGuard.positive("fuPlate", fuPlate)
+        InputGuard.positive("fyPlate", fyPlate)
         val results = mutableMapOf<String, Any>()
 
         when (connectionType) {

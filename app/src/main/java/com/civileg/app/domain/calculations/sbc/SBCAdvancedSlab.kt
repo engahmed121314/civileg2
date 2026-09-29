@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
-import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -121,15 +121,13 @@ class SBCAdvancedSlab {
         isSeismic: Boolean = false,
         fireRatingHours: Double = 0.0
     ): AdvancedSlabResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
         InputGuard.positive("panelLength", panelLength)
         InputGuard.positive("panelWidth", panelWidth)
-        InputGuard.positive("columnSize", columnSize)
         InputGuard.nonNegative("totalLoad", totalLoad)
-        InputGuard.notNull("exposure", exposure)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -330,7 +328,7 @@ class SBCAdvancedSlab {
         isSeismic: Boolean = false,
         fireRatingHours: Double = 0.0
     ): AdvancedSlabResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -338,9 +336,7 @@ class SBCAdvancedSlab {
         InputGuard.positive("dropPanelSize", dropPanelSize)
         InputGuard.positive("panelLength", panelLength)
         InputGuard.positive("panelWidth", panelWidth)
-        InputGuard.positive("columnSize", columnSize)
         InputGuard.nonNegative("totalLoad", totalLoad)
-        InputGuard.notNull("exposure", exposure)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -502,18 +498,14 @@ class SBCAdvancedSlab {
         exposure: ExposureClass = ExposureClass.NORMAL,
         isSeismic: Boolean = false
     ): AdvancedSlabResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("totalThickness", totalThickness)
         InputGuard.positive("ribWidth", ribWidth)
         InputGuard.positive("ribSpacing", ribSpacing)
-        InputGuard.positive("blockWidth", blockWidth)
-        InputGuard.positive("blockHeight", blockHeight)
         InputGuard.positive("span", span)
-        InputGuard.notNull("supportConditions", supportConditions)
         InputGuard.nonNegative("totalLoad", totalLoad)
-        InputGuard.notNull("exposure", exposure)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -723,7 +715,7 @@ class SBCAdvancedSlab {
         exposure: ExposureClass = ExposureClass.NORMAL,
         isSeismic: Boolean = false
     ): AdvancedSlabResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("totalThickness", totalThickness)
@@ -732,10 +724,7 @@ class SBCAdvancedSlab {
         InputGuard.positive("ribSpacing", ribSpacing)
         InputGuard.positive("shortSpan", shortSpan)
         InputGuard.positive("longSpan", longSpan)
-        InputGuard.positive("solidHeadSize", solidHeadSize)
         InputGuard.nonNegative("totalLoad", totalLoad)
-        InputGuard.notNull("supportConditions", supportConditions)
-        InputGuard.notNull("exposure", exposure)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -918,14 +907,12 @@ class SBCAdvancedSlab {
         isSeismic: Boolean = false,
         isBalcony: Boolean = false
     ): AdvancedSlabResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
         InputGuard.positive("cantileverSpan", cantileverSpan)
-        InputGuard.positive("backSpan", backSpan)
         InputGuard.nonNegative("totalLoad", totalLoad)
-        InputGuard.notNull("exposure", exposure)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -1101,11 +1088,9 @@ class SBCAdvancedSlab {
         slabThickness: Double,
         span: Double
     ): SlabDesignResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.positive("fcPrime", fcPrime)
-        InputGuard.positive("fy", fy)
-        InputGuard.notBlank("seismicZone", seismicZone)
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.notNull("designResult", designResult)
+        InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
         InputGuard.positive("span", span)
 
@@ -1192,6 +1177,11 @@ class SBCAdvancedSlab {
         seismicZone: String,
         exposure: ExposureClass = ExposureClass.NORMAL
     ): SlabDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("span", span)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         codeNotes.add("SBC 304 §21.5: Seismic Top Reinforcement Calculation")

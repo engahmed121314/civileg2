@@ -41,11 +41,15 @@ class SBCBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        // ── InputGuard: تحقق صارم (ADR-010) — SBC 304-2018 البند 10 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
         InputGuard.positive("effectiveDepth", effectiveDepth)
         InputGuard.positive("totalDepth", totalDepth)
+        InputGuard.nonNegative("designMoment", designMoment)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         // استخدام حسابات ACI كأساس
         val result = aciBeam.calculateFlexureReinforcement(
             fcu, fy, width, effectiveDepth, totalDepth, designMoment, loadCombination
@@ -90,10 +94,15 @@ class SBCBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        // ── InputGuard (ADR-010) ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
         InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.nonNegative("designShear", designShear)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val result = aciBeam.calculateShearReinforcement(
             fcu, fy, width, effectiveDepth, designShear, axialLoad, loadCombination
         )
@@ -131,8 +140,12 @@ class SBCBeam : BeamDesign {
         reinforcementRatio: Double,
         supportCondition: SupportCondition
     ): DeflectionCheckResult {
+        // ── InputGuard ──
         InputGuard.positive("span", span)
         InputGuard.positive("totalDepth", totalDepth)
+        InputGuard.nonNegative("reinforcementRatio", reinforcementRatio)
+        InputGuard.notNull("supportCondition", supportCondition)
+
         val result = aciBeam.checkDeflection(span, totalDepth, reinforcementRatio, supportCondition)
         // SBC 304 يتبع ACI في نسب الانحراف مع تعديل بسيط
         return result.copy(
@@ -147,9 +160,13 @@ class SBCBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
+        // ── InputGuard ──
         InputGuard.positive("barDiameter", barDiameter)
         InputGuard.positive("fy", fy)
         InputGuard.positive("fcu", fcu)
+        InputGuard.notNull("barLocation", barLocation)
+        InputGuard.notNull("coating", coating)
+
         // SBC 304 البند 25: أطوال التثبيت
         // أساساً مثل ACI مع تعديل الغطاء السعودي
         val baseLength = aciBeam.calculateDevelopmentLength(barDiameter, fy, fcu, barLocation, coating)
@@ -194,7 +211,6 @@ class SBCBeam : BeamDesign {
     }
     
     override fun getDeflectionLimit(span: Double): Double {
-        InputGuard.positive("span", span)
         return aciBeam.getDeflectionLimit(span)
     }
 
@@ -219,12 +235,15 @@ class SBCBeam : BeamDesign {
         compressionSteelDia: Double = 16.0,
         d_prime: Double = 50.0 // mm - المسافة من وجه الضغط لمركز حديد الضغط
     ): DoublyReinforcedResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 البند 10 ──
+        InputGuard.positive("designMoment", designMoment)
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("compressionSteelDia", compressionSteelDia)
         InputGuard.positive("d_prime", d_prime)
+
         val notes = mutableListOf<String>()
         
         // العمق الفعال

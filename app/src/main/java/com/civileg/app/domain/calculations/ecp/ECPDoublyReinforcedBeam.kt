@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -71,6 +72,9 @@ class ECPDoublyReinforcedBeam {
      * with the tension steel reaching its yield strain.
      */
     fun calculateKBal(fcu: Double, fy: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
         val epsilonCu = 0.003
         val epsilonY = fy / (200000.0 * GAMMA_S)
         val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
@@ -87,6 +91,9 @@ class ECPDoublyReinforcedBeam {
      * @return K_bal value
      */
     fun calculateKBalStrainCompatibility(fcu: Double, fy: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
         val epsilonY = fy / (E_S * GAMMA_S)
         val cOverD = EPSILON_CU / (EPSILON_CU + epsilonY)
         val beta = 0.9  // Whitney stress block factor per ECP 203
@@ -125,6 +132,12 @@ class ECPDoublyReinforcedBeam {
         tensionBarDia: Int = 20,
         compBarDia: Int = 16
     ): DoublyReinforcedBeamResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("b", b)
+        InputGuard.positive("h", h)
+        InputGuard.nonNegative("mu", mu)
         val warnings = mutableListOf<String>()
 
         // ==================== Section Geometry ====================
@@ -404,6 +417,11 @@ class ECPDoublyReinforcedBeam {
         asTension: Double,
         asCompression: Double
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("b", b)
+        InputGuard.positive("d", d)
         val fs = fy / GAMMA_S
         val fc = 0.67 * fcu / GAMMA_C
 

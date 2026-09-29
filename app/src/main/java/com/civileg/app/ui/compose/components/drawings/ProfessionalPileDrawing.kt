@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.compose.components.drawings.DrawingColorDefaults
 import kotlin.math.*
 
@@ -44,8 +46,25 @@ fun ProfessionalPileDrawing(
     capRebarDia: Int,              // mm
     capRebarCount: Int,
     soilType: String,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Pile and cap dimensions must be positive; zero/NaN produces invalid geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("pileDiameter", pileDiameter)
+    InputGuard.positive("pileLength", pileLength)
+    InputGuard.positive("pileSpacing", pileSpacing)
+    InputGuard.positive("capWidth", capWidth)
+    InputGuard.positive("capThickness", capThickness)
+    InputGuard.positive("cover", 75.0) // default cover for piles
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: pile capacity per ECP 202-2015, shaft resistance fs
+    // ACI 318-19:  Chapter 18 — soil-structure interaction, φ = 0.70
+    // SBC 304-2018: adopts ACI pile provisions with SBC SRS factors
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()

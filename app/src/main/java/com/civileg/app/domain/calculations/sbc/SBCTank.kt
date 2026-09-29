@@ -33,12 +33,15 @@ class SBCTank : TankDesign {
         length: Double, width: Double, height: Double,
         waterDepth: Double, fcu: Double, fy: Double, type: TankType
     ): TankResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("length", length)
         InputGuard.positive("width", width)
         InputGuard.positive("height", height)
         InputGuard.positive("waterDepth", waterDepth)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
+        InputGuard.notNull("type", type)
+
         val warnings = mutableListOf<String>()
         val safetyChecks = mutableListOf<TankSafetyCheck>()
         val codeNotes = mutableListOf<String>()

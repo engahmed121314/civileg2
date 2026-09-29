@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,9 +32,24 @@ fun InteractiveDrawingScreen(
     onViewModeChanged: (Int) -> Unit = {},
     drawingHeightDp: Int = 620,
     onExportPdf: (() -> Unit)? = null,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
 ) {
+    // ── InputGuard: validate title/subtitle are not blank ────────────────
+    // These are metadata strings used in the drawing header; blank values would
+    // produce an untitled drawing which is not traceable.
+    InputGuard.notBlank("title", title)
+    InputGuard.notBlank("subtitle", subtitle)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // The designCode is passed through to child drawing composables so they can
+    // render code-specific labels (ECP/ACI/SBC) and apply code-specific factors.
+    // ECP 203-2020: γ_c = 1.5, γ_s = 1.15, φ = 0.87
+    // ACI 318-19:  LRFD φ factors, strength design
+    // SBC 304-2018: adopts ACI format with SBC load combinations
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     var showInfo by remember { mutableStateOf(false) }
 
     val resolvedViewModes = if (viewModes.isEmpty()) listOf(

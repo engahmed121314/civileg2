@@ -62,16 +62,15 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
-        // Rule 1.4: loud failures — validate before any maths
-        InputGuard.positive("pileDiameter", input.pileDiameter)
-        InputGuard.positive("pileLength", input.pileLength)
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
-        InputGuard.positive("safetyFactor", input.safetyFactor)
-        InputGuard.positive("numberOfPiles", input.numberOfPiles)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
         InputGuard.nonNegative("axialLoad", input.axialLoad)
-        InputGuard.nonNegative("lateralLoad", input.lateralLoad)
-        InputGuard.nonNegative("momentLoad", input.momentLoad)
+        InputGuard.notNull("pileType", input.pileType)
+        InputGuard.notNull("soilType", input.soilType)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -192,6 +191,15 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun calculatePileCapacity(input: PileInput): PileCapacityResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+        InputGuard.notNull("pileType", input.pileType)
+        InputGuard.notNull("soilType", input.soilType)
+
         val D = input.pileDiameter / 1000.0  // m
         val L = input.pileLength             // m
         val perimeter = PI * D               // m
@@ -362,6 +370,14 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun designPileCap(input: PileCapInput): PileCapResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileSpacing", input.pileSpacing)
+        InputGuard.nonNegative("axialLoad", input.axialLoad)
+
         val warnings = mutableListOf<String>()
 
         val n = input.numberOfPiles
@@ -606,6 +622,12 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun calculateSettlement(input: PileInput): PileSettlementResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+        InputGuard.nonNegative("axialLoad", input.axialLoad)
+
         val D = input.pileDiameter / 1000.0  // m
         val L = input.pileLength
         val loadPerPile = input.axialLoad / input.numberOfPiles
@@ -660,6 +682,12 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun checkGroupEfficiency(input: PileGroupInput): PileGroupResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+        InputGuard.notNull("soilType", input.soilType)
+
         val n = input.numberOfPiles
         val D = input.pileDiameter / 1000.0
         val spacing = D * input.spacing  // actual spacing in m
@@ -719,6 +747,12 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun calculateLateralCapacity(input: PileInput): LateralLoadResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+        InputGuard.nonNegative("lateralLoad", input.lateralLoad)
+
         val D = input.pileDiameter / 1000.0  // m
         val L = input.pileLength
         val H = input.lateralLoad             // kN
@@ -835,6 +869,11 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun calculateNegativeSkinFriction(input: PileInput): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+
         // Negative skin friction occurs when soil settles more than the pile
         // This typically happens in compressible soil layers (clay, fill)
         // Only applies if there is a compressible layer above the bearing stratum
@@ -895,6 +934,13 @@ class ECPPileFoundation : PileFoundationDesign {
         axialLoad: Double,  // kN per pile
         moment: Double      // kN.m per pile
     ): PileReinforcementResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+        InputGuard.nonNegative("moment", moment)
         val D = input.pileDiameter  // mm
         val d = D - PILE_COVER - 20.0  // effective depth (mm), assuming 20mm bar + cover
         val Ag = PI * D * D / 4.0    // gross area mm²

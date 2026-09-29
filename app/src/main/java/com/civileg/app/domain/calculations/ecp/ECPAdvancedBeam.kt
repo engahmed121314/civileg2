@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
@@ -61,6 +62,16 @@ class ECPAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("beamType", beamType)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -153,6 +164,17 @@ class ECPAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("flangeWidth", flangeWidth)
+        InputGuard.positive("flangeThickness", flangeThickness)
+        InputGuard.positive("webWidth", webWidth)
+        InputGuard.positive("webDepth", webDepth)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -353,6 +375,17 @@ class ECPAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("flangeWidth", flangeWidth)
+        InputGuard.positive("flangeThickness", flangeThickness)
+        InputGuard.positive("webWidth", webWidth)
+        InputGuard.positive("webDepth", webDepth)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -526,6 +559,16 @@ class ECPAdvancedBeam {
         deadLoad: Double, liveLoad: Double,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("span", span)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -697,6 +740,16 @@ class ECPAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): List<AdvancedBeamResult> {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notEmpty("spans", spans)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val results = mutableListOf<AdvancedBeamResult>()
         val totalLoad = (deadLoad + liveLoad) * loadCombination.getFactorForCode(DesignCode.ECP)
         val d = depth - COVER
@@ -1170,6 +1223,13 @@ class ECPAdvancedBeam {
         width: Double, depth: Double,
         loadCombination: LoadCombination
     ): TorsionReinforcementResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 

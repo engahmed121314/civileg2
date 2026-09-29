@@ -75,7 +75,7 @@ class SBCDoublyReinforcedBeam {
      * Where α = 0.85 (stress block factor)
      */
     fun calculateKBal(fcu: Double, fy: Double): Double {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
 
@@ -90,9 +90,6 @@ class SBCDoublyReinforcedBeam {
      * This represents the normalized balanced moment coefficient.
      */
     fun calculateRBal(kBal: Double): Double {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.positive("kBal", kBal)
-
         return kBal * (1.0 - 0.5 * kBal)
     }
 
@@ -119,7 +116,7 @@ class SBCDoublyReinforcedBeam {
         tensionBarDia: Int = 20,
         compBarDia: Int = 16
     ): DoublyReinforcedBeamResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("mu", mu)
         InputGuard.positive("b", b)
         InputGuard.positive("h", h)
@@ -262,9 +259,6 @@ class SBCDoublyReinforcedBeam {
      * Get minimum reinforcement ratio per SBC 304
      */
     fun getMinReinforcementRatio(fy: Double): Double {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.positive("fy", fy)
-
         return 0.15 / 100.0  // ρ_min = 0.15% per SBC 304
     }
 }

@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.unit.dp
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -108,8 +110,26 @@ fun ProfessionalStairDrawing(
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
     stairType: String = "Straight Stair", // stair type label shown in the drawing title
     viewMode: Int = 0,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Stair dimensions must be positive; zero/NaN produces invalid geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("stairWidth", stairWidth)
+    InputGuard.positive("totalHeight", totalHeight)
+    InputGuard.positive("totalLength", totalLength)
+    InputGuard.positive("riserHeight", riserHeight)
+    InputGuard.positive("treadWidth", treadWidth)
+    InputGuard.positive("slabThickness", slabThickness)
+    InputGuard.positive("mainRebarDia", mainRebarDia)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: stair waist slab per ECP, load per ECP 201
+    // ACI 318-19:  Chapter 7 — one-way slabs (stair waist slab)
+    // SBC 304-2018: adopts ACI provisions with SBC live load factors
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()

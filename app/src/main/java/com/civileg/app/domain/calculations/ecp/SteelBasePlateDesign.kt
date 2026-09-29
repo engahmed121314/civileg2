@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -255,6 +256,14 @@ class SteelBasePlateDesign {
      * @return نتيجة التصميم الشاملة
      */
     fun designConcentricBasePlate(input: ConcentricInput): BasePlateResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("Fy", input.Fy)
+        InputGuard.positive("fpc", input.fpc)
+        InputGuard.positive("bf", input.bf)
+        InputGuard.positive("dc", input.dc)
+        InputGuard.nonNegative("Pu", input.Pu)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -478,6 +487,14 @@ class SteelBasePlateDesign {
      * @return نتيجة التصميم
      */
     fun designEccentricBasePlate(input: EccentricInput): EccentricBasePlateResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("Fy", input.Fy)
+        InputGuard.positive("fpc", input.fpc)
+        InputGuard.positive("bf", input.bf)
+        InputGuard.positive("dc", input.dc)
+        InputGuard.nonNegative("Pu", input.Pu)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -690,6 +707,12 @@ class SteelBasePlateDesign {
      * @return نتيجة التصميم
      */
     fun designPocketBasePlate(input: PocketInput): PocketBasePlateResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("Fy", input.Fy)
+        InputGuard.positive("fpc", input.fpc)
+        InputGuard.positive("dc", input.dc)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -988,6 +1011,8 @@ class SteelBasePlateDesign {
      * @return المساحة (mm²)
      */
     fun calculateBoltArea(diameter: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("diameter", diameter)
         return PI * diameter.pow(2) / 4.0
     }
 
@@ -1002,6 +1027,9 @@ class SteelBasePlateDesign {
      * @return سعة الشد (kN)
      */
     fun calculateBoltTensionCapacity(diameter: Double, fu: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("diameter", diameter)
+        InputGuard.positive("fu", fu)
         val Ab = calculateBoltArea(diameter)
         return PHI_TENSION_BOLT * fu * Ab / 1000.0 // kN
     }
@@ -1017,6 +1045,9 @@ class SteelBasePlateDesign {
      * @return سعة القص (kN)
      */
     fun calculateBoltShearCapacity(diameter: Double, fu: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("diameter", diameter)
+        InputGuard.positive("fu", fu)
         val Ab = calculateBoltArea(diameter)
         return PHI_TENSION_BOLT * 0.4 * fu * Ab / 1000.0 // kN
     }
@@ -1040,6 +1071,9 @@ class SteelBasePlateDesign {
         phiTn: Double,
         phiVn: Double
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("phiTn", phiTn)
+        InputGuard.positive("phiVn", phiVn)
         if (phiTn <= 0 || phiVn <= 0) return Double.MAX_VALUE
         return (Tu / phiTn) + (Vu / phiVn)
     }
@@ -1064,6 +1098,9 @@ class SteelBasePlateDesign {
         L: Double,
         isMomentAlongB: Boolean = true
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("B", B)
+        InputGuard.positive("L", L)
         val Pu_N = Pu * 1000.0 // kN → N
         val Mu_Nmm = Mu * 1e6  // kN.m → N.mm
         val dimension = if (isMomentAlongB) B else L
@@ -1096,6 +1133,9 @@ class SteelBasePlateDesign {
         A1: Double,
         A2: Double = 0.0
     ): Pair<Double, Double> {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("fpc", fpc)
+        InputGuard.positive("A1", A1)
         // معامل التركيز √(A2/A1) ≤ 2
         val concentrationFactor = if (A2 > A1) {
             min(sqrt(A2 / A1), 2.0)

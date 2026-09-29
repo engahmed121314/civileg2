@@ -1,8 +1,8 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.*
 import com.civileg.app.domain.SoilType
-import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import kotlin.math.*
 
@@ -62,16 +62,15 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
-        // Rule 1.4: loud failures — validate before any maths
-        InputGuard.positive("pileDiameter", input.pileDiameter)
-        InputGuard.positive("pileLength", input.pileLength)
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
-        InputGuard.positive("safetyFactor", input.safetyFactor)
-        InputGuard.positive("numberOfPiles", input.numberOfPiles)
-        InputGuard.nonNegative("axialLoad", input.axialLoad)
-        InputGuard.nonNegative("lateralLoad", input.lateralLoad)
-        InputGuard.nonNegative("momentLoad", input.momentLoad)
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.pileLength", input.pileLength)
+        InputGuard.nonNegative("input.axialLoad", input.axialLoad)
+        InputGuard.notNull("input.soilType", input.soilType)
+        InputGuard.notNull("input.pileType", input.pileType)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -211,6 +210,13 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculatePileCapacity(input: PileInput): PileCapacityResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.pileLength", input.pileLength)
+        InputGuard.notNull("input.soilType", input.soilType)
+        InputGuard.notNull("input.pileType", input.pileType)
+
         val D = input.pileDiameter / 1000.0  // m
         val L = input.pileLength             // m
         val fs = input.safetyFactor
@@ -318,6 +324,12 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPileCap(input: PileCapInput): PileCapResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.pileSpacing", input.pileSpacing)
+        InputGuard.positive("input.numberOfPiles", input.numberOfPiles.toDouble())
+
         val n = input.numberOfPiles
         val dPile = input.pileDiameter
         val s = input.pileSpacing
@@ -432,6 +444,13 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateSettlement(input: PileInput): PileSettlementResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.pileLength", input.pileLength)
+        InputGuard.nonNegative("input.axialLoad", input.axialLoad)
+        InputGuard.notNull("input.soilType", input.soilType)
+
         val Q = input.axialLoad          // kN
         val D = input.pileDiameter / 1000.0  // m
         val L = input.pileLength
@@ -471,6 +490,11 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun checkGroupEfficiency(input: PileGroupInput): PileGroupResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.numberOfPiles", input.numberOfPiles.toDouble())
+
         val n = input.numberOfPiles
         val d = input.pileDiameter / 1000.0  // m
         val s = input.spacing * d             // spacing in m (spacing = xD)
@@ -505,6 +529,12 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateLateralCapacity(input: PileInput): LateralLoadResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.pileLength", input.pileLength)
+        InputGuard.notNull("input.soilType", input.soilType)
+
         val D = input.pileDiameter / 1000.0  // m
         val L = input.pileLength             // m
         val cu = input.cu                    // kPa
@@ -550,6 +580,11 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateNegativeSkinFriction(input: PileInput): Double {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.positive("input.pileLength", input.pileLength)
+
         if (input.waterTableDepth >= input.pileLength) return 0.0
 
         val D = input.pileDiameter / 1000.0  // m
@@ -578,6 +613,14 @@ class SBCPileFoundation : PileFoundationDesign {
         axialLoad: Double,
         moment: Double
     ): PileReinforcementResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.pileDiameter", input.pileDiameter)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+        InputGuard.nonNegative("moment", moment)
+
         val D = input.pileDiameter       // mm
         val cover = input.capConcreteCover  // mm (rebar cover in pile)
         val tieDia = 10.0                // mm

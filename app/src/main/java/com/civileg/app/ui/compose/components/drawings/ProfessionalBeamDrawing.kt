@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.StirrupZone
 import com.civileg.app.utils.CalculatorEngine
 import kotlin.math.max
@@ -113,9 +115,25 @@ fun ProfessionalBeamDrawing(
     topRebarCount: Int = 0,
     zones: List<StirrupZone> = emptyList(),
     supportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier,
     viewMode: Int = 0
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // All structural dimensions must be positive to produce a valid drawing.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("beamWidth", beamWidth)
+    InputGuard.positive("beamDepth", beamDepth)
+    InputGuard.positive("span", span)
+    InputGuard.positive("mainRebarDia", mainRebarDia)
+    InputGuard.positive("cover", cover)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: φ = 0.87, γ_c = 1.5, γ_s = 1.15, lever arm z = 0.87d
+    // ACI 318-19:  φ = 0.90, strength reduction factor, z = 0.9d
+    // SBC 304-2018: adopts ACI φ factors with SBC load combinations
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(
         modifier = modifier.fillMaxSize()
     ) {

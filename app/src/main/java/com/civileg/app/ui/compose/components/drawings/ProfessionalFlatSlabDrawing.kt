@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.PanelType
 import com.civileg.app.domain.RebarResult
 import kotlin.math.*
@@ -45,8 +47,24 @@ fun ProfessionalFlatSlabDrawing(
     midBotRebar: RebarResult,
     isSafe: Boolean = true,
     panelType: PanelType = PanelType.INTERIOR,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Flat slab panel dimensions must be positive for valid layout.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("lx", lx)
+    InputGuard.positive("ly", ly)
+    InputGuard.positive("slabThickness", slabThickness)
+    InputGuard.positive("columnWidth", columnWidth)
+    InputGuard.positive("columnDepth", columnDepth)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: direct design method per ECP, Cm/Cs ratio from ECP
+    // ACI 318-19:  Chapter 13 — two-way slabs, direct design / equivalent frame
+    // SBC 304-2018: adopts ACI Chapter 13 with SBC load factors
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height

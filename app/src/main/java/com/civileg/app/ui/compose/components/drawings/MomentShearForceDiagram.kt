@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -53,6 +55,20 @@ fun MomentShearForceDiagram(
     showShear: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Beam span must be positive; zero/negative produces invalid diagrams.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("span", span)
+    InputGuard.nonNegative("deadLoad", deadLoad)
+    InputGuard.nonNegative("liveLoad", liveLoad)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: γ_f = 1.4D + 1.6L, moment coefficients per ECP
+    // ACI 318-19:  γ_f = 1.2D + 1.6L, moment coefficients per ACI
+    // SBC 304-2018: γ_f = 1.2D + 1.6L (same as ACI)
+    // Note: load factors are already applied via designCode.getDeadLoadFactor/getLiveLoadFactor
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     var selectedPoint by remember { mutableStateOf<Offset?>(null) }
     var selectedMoment by remember { mutableStateOf(0f) }
     var selectedShear by remember { mutableStateOf(0f) }

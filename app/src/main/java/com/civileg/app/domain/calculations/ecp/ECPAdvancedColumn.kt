@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
@@ -83,6 +84,14 @@ class ECPAdvancedColumn : ColumnDesign {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedColumnResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+        InputGuard.notNull("columnType", columnType)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -316,12 +325,23 @@ class ECPAdvancedColumn : ColumnDesign {
     
     override fun calculateAxialCapacity(fcu: Double, fy: Double, width: Double, depth: Double, 
                                        reinforcementArea: Double, loadCombination: LoadCombination): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
         return baseDesign.calculateAxialCapacity(fcu, fy, width, depth, reinforcementArea, loadCombination)
     }
     
     override fun calculateReinforcement(fcu: Double, fy: Double, width: Double, depth: Double,
                                        axialLoad: Double, momentX: Double, momentY: Double,
                                        loadCombination: LoadCombination): ReinforcementResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.notNull("loadCombination", loadCombination)
         return baseDesign.calculateReinforcement(fcu, fy, width, depth, axialLoad, momentX, momentY, loadCombination)
     }
     
@@ -539,6 +559,13 @@ class ECPAdvancedColumn : ColumnDesign {
         Cm: Double = 1.0,                // equivalent moment factor
         isSwayFrame: Boolean = false
     ): MomentMagnificationResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+
         val codeNotes = mutableListOf<String>()
         val L = unsupportedLength * 1000.0   // m → mm
         val K = effectiveLengthFactor
@@ -673,6 +700,13 @@ class ECPAdvancedColumn : ColumnDesign {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedColumnResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("diameter", diameter)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -820,6 +854,12 @@ class ECPAdvancedColumn : ColumnDesign {
         endConditions: ColumnEndConditions,
         columnType: ColumnType
     ): ColumnSlendernessResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.notNull("columnType", columnType)
+
         val notes = mutableListOf<String>()
 
         // ── K factor: max of top and bottom conditions ──
@@ -1108,6 +1148,13 @@ class ECPAdvancedColumn : ColumnDesign {
         totalAs: Double,
         endConditions: ColumnEndConditions
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+
         val L = unsupportedLength * 1000.0  // m → mm
 
         // ── Flexural rigidity ──

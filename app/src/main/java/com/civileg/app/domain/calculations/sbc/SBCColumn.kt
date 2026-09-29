@@ -19,11 +19,14 @@ class SBCColumn : ColumnDesign {
         reinforcementArea: Double,
         loadCombination: LoadCombination
     ): Double {
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
-        InputGuard.positive("reinforcementArea", reinforcementArea)
+        InputGuard.nonNegative("reinforcementArea", reinforcementArea)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
         
@@ -50,10 +53,16 @@ class SBCColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
+        InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.nonNegative("momentX", momentX)
+        InputGuard.nonNegative("momentY", momentY)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val Ag = width * depth
         val Pu = axialLoad * 1000.0  // N - الحمل المحوري التصميمي
         
@@ -149,11 +158,14 @@ class SBCColumn : ColumnDesign {
         fy: Double,
         cover: Double = 40.0
     ): ColumnShearDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304 ──
+        InputGuard.positive("Vu", Vu)
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
-        InputGuard.positive("cover", cover)
+        InputGuard.nonNegative("cover", cover)
+
         val b = width
         val d = depth - cover - 10.0 - 8.0  // deduct tie dia (~10mm) + half bar dia (~8mm) approximation
         // SBC 304: f'c = 0.8 × fcu (cube to cylinder, same as ACI 318)

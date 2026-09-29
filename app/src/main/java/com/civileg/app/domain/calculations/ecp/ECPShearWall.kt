@@ -58,14 +58,19 @@ class ECPShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
-        // ── Input validation ────────────────────────────────────────
+        // ── InputGuard (ADR-010) — ECP 203/201 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("fyv", input.fyv)
         InputGuard.positive("wallLength", input.wallLength)
         InputGuard.positive("wallThickness", input.wallThickness)
         InputGuard.positive("wallHeight", input.wallHeight)
-        InputGuard.positive("numberOfStories", input.numberOfStories)
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
         InputGuard.positive("clearCover", input.clearCover)
+        InputGuard.nonNegative("axialLoad", input.axialLoad)
+        InputGuard.nonNegative("shearForce", input.shearForce)
+        InputGuard.nonNegative("bendingMoment", input.bendingMoment)
+        InputGuard.notNull("wallType", input.wallType)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -254,6 +259,13 @@ class ECPShearWall : ShearWallDesign {
      * Iterative solution for neutral axis depth under combined loading.
      */
     override fun calculateFlexuralStrength(input: ShearWallInput): Pair<Double, Double> {
+        // ── InputGuard (ADR-010) — ECP 203/201 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+
         val Lw = input.wallLength
         val bw = input.wallThickness
         val fcu = input.fcu
@@ -348,6 +360,13 @@ class ECPShearWall : ShearWallDesign {
      * @return Pair<Vc_kN, Vs_kN>
      */
     override fun calculateShearStrength(input: ShearWallInput): Pair<Double, Double> {
+        // ── InputGuard (ADR-010) — ECP 203/201 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fyv", input.fyv)
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+
         val Lw = input.wallLength
         val bw = input.wallThickness
         val fcu = input.fcu
@@ -417,11 +436,12 @@ class ECPShearWall : ShearWallDesign {
      *  - Volume confinement ratio per ECP 201 §8-4
      */
     override fun designBoundaryElements(input: ShearWallInput): Pair<BoundaryElementType, RebarResult?> {
-        // ── Input validation ────────────────────────────────────────
-        InputGuard.positive("wallLength", input.wallLength)
-        InputGuard.positive("wallThickness", input.wallThickness)
+        // ── InputGuard (ADR-010) — ECP 203/201 ──
+        InputGuard.notNull("input", input)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
 
         val Lw = input.wallLength
         val bw = input.wallThickness
@@ -559,11 +579,12 @@ class ECPShearWall : ShearWallDesign {
      * @return CouplingBeamResult or null if not applicable
      */
     override fun designCouplingBeam(input: ShearWallInput): CouplingBeamResult? {
-        // ── Input validation ────────────────────────────────────────
-        InputGuard.positive("wallLength", input.wallLength)
-        InputGuard.positive("wallThickness", input.wallThickness)
+        // ── InputGuard (ADR-010) — ECP 203/201 ──
+        InputGuard.notNull("input", input)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
 
         // Only for coupled walls
         if (input.wallType != WallType.COUPLED) return null
@@ -657,6 +678,12 @@ class ECPShearWall : ShearWallDesign {
      * @return Pair<isOk, ratio>
      */
     override fun checkSlenderness(input: ShearWallInput): Pair<Boolean, Double> {
+        // ── InputGuard (ADR-010) — ECP 203/201 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+        InputGuard.positive("wallHeight", input.wallHeight)
+
         val Hw = input.wallHeight * input.numberOfStories  // total height mm
         val t = input.wallThickness
         val ratio = Hw / t
@@ -682,68 +709,25 @@ class ECPShearWall : ShearWallDesign {
         val fsDesign = fy / GAMMA_S
         val beta1 = calculateBeta1(fcu)
 
-        val maxIterations = 80
-        val relTol = 5e-4   // 0.05 % relative tolerance
-        val absTol = 0.5    // 0.5 mm absolute tolerance
-        val dampingFactor = 0.6  // Under-relaxation to prevent oscillation
-
-        // Bug C fix: Adaptive initial guess based on wall geometry
-        // For ductile walls, c/d ≈ 0.2–0.4; start at 0.25*d
-        var c = (0.25 * d).coerceIn(20.0, 0.4 * d)
-        var converged = false
-        var oscillationCount = 0
-        var prevDelta = 0.0
-
-        for (i in 1..maxIterations) {
-            val cPrev = c
+        // ── إصلاح bug التقارب: يجب حفظ c القديم قبل التحديث ──
+        var c = 50.0
+        for (i in 1..60) {
+            val cOld = c  // حفظ القيمة السابقة قبل التحديث
             val a = beta1 * c
             val leverArm = d - a / 2.0
             if (leverArm <= 0) {
-                // lever arm exhausted → c too large; clamp and exit
-                c = cPrev.coerceIn(0.0, 0.5 * d)
-                break
+                c = cOld * 0.5  // تراجع
+                continue
             }
             val AsEst = max(0.0, (MuNmm - PuN * (d - Lw / 2.0)) / (fsDesign * leverArm))
             // C = T + Pu: 0.67*fcu/γc * bw * a = As * fy/γs + Pu
             val newA = if (bw > 0 && fcDesign > 0) {
                 (AsEst * fsDesign + PuN) / (fcDesign * bw)
             } else a
-            val cNew = newA / beta1
-
-            // Bug B fix: Clamp c within physical bounds during iteration
-            // c must be in [0, d] (neutral axis cannot exceed effective depth)
-            val cClamped = cNew.coerceIn(0.0, d)
-
-            // Apply under-relaxation damping to prevent oscillation
-            c = dampingFactor * cClamped + (1.0 - dampingFactor) * cPrev
-
-            // Detect oscillation (sign change in delta)
-            val delta = c - cPrev
-            if (prevDelta * delta < 0) oscillationCount++
-            prevDelta = delta
-
-            // If oscillating heavily, increase damping
-            val effectiveDamping = if (oscillationCount > 3) 0.4 else dampingFactor
-            if (oscillationCount > 3) {
-                c = effectiveDamping * cClamped + (1.0 - effectiveDamping) * cPrev
-            }
-
-            // Convergence check — compare new c against PREVIOUS c
-            if (abs(c - cPrev) < absTol || abs(c - cPrev) < relTol * abs(cPrev)) {
-                converged = true
-                break
-            }
+            c = newA / beta1
+            // ── إصلاح: فحص التقارب بين c القديم والجديد ──
+            if (abs(c - cOld) < 0.1) break  // تقارب حقيقي
         }
-
-        // Bug A fix: Check convergence flag and warn if not converged
-        if (!converged) {
-            // Fallback: use a conservative estimate based on axial load ratio
-            val axialRatio = if (fcDesign * bw * d > 0) abs(PuN) / (fcDesign * bw * d) else 0.3
-            val cFallback = (axialRatio * d).coerceIn(0.1 * d, 0.5 * d)
-            // Blend: 50% iterative result + 50% fallback for safety
-            c = 0.5 * c.coerceIn(0.0, d) + 0.5 * cFallback
-        }
-
         return c.coerceIn(0.0, 0.5 * d)  // limit c/d to 0.5 for ductility
     }
 

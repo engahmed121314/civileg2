@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
@@ -34,6 +35,14 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribSpacing", ribSpacing)
+        InputGuard.positive("totalThickness", totalThickness)
+        InputGuard.positive("span", span)
+        InputGuard.notNull("loadCombination", loadCombination)
         val fc = fcu / GAMMA_C
         val d = totalThickness - 20.0 - 10.0 // cover + half bar diameter
 

@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.*
 
@@ -40,8 +42,25 @@ fun ProfessionalFootingDrawing(
     soilPressureMax: Double = 0.0,
     soilPressureMin: Double = 0.0,
     viewMode: Int = 0,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Footing dimensions must be positive; zero/NaN produces invalid geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("footingLengthX", footingLengthX)
+    InputGuard.positive("footingLengthY", footingLengthY)
+    InputGuard.positive("footingThickness", footingThickness)
+    InputGuard.positive("columnWidth", columnWidth)
+    InputGuard.positive("columnDepth", columnDepth)
+    InputGuard.positive("cover", cover)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: bearing capacity q_all per ECP 202, punching per ECP 203
+    // ACI 318-19:  Chapter 22 — punching shear, φVc = 0.33√fc·bo·d
+    // SBC 304-2018: adopts ACI shear provisions with SBC partial factors
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()

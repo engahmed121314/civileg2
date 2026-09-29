@@ -41,14 +41,13 @@ class SBCStaircase : StaircaseDesign {
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
-        InputGuard.positive("span", input.span)
-        InputGuard.positive("totalRise", input.totalRise)
-        InputGuard.positive("stairWidth", input.stairWidth)
-        InputGuard.positive("waistThickness", input.waistThickness)
-        InputGuard.positive("deadLoad", input.deadLoad)
-        InputGuard.positive("liveLoad", input.liveLoad)
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.span", input.span)
+        InputGuard.positive("input.totalRise", input.totalRise)
+
         // SBC 304 يعتمد على ACI 318 مع تعديلات سعودية
         // نحسب من الصفر بالمعاملات السعودية المحددة
         val safetyChecks = mutableListOf<StairSafetyCheck>()

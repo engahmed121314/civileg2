@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
-import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
@@ -48,15 +48,16 @@ class SBCFlatSlab : FlatSlabDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun design(input: FlatSlabInput): FlatSlabResult {
-        // ── Input validation ────────────────────────────────────────
-        InputGuard.positive("lx", input.lx)
-        InputGuard.positive("ly", input.ly)
-        InputGuard.positive("slabThickness", input.slabThickness)
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
-        InputGuard.positive("clearCover", input.clearCover)
-        InputGuard.positive("numberOfFloors", input.numberOfFloors)
-        InputGuard.positive("storyHeight", input.storyHeight)
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.slabThickness", input.slabThickness)
+        InputGuard.positive("input.lx", input.lx)
+        InputGuard.positive("input.ly", input.ly)
+        InputGuard.nonNegative("input.deadLoad", input.deadLoad)
+        InputGuard.nonNegative("input.liveLoad", input.liveLoad)
+        InputGuard.notNull("input.designMethod", input.designMethod)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -380,6 +381,14 @@ class SBCFlatSlab : FlatSlabDesign {
         columnWidth: Double, columnDepth: Double,
         cover: Double
     ): FlatSlabDesign.PunchingShearResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.nonNegative("vu", vu)
+
         val d = if (dropThickness > 0) {
             slabThickness + dropThickness - cover - 6.0
         } else {
@@ -457,6 +466,12 @@ class SBCFlatSlab : FlatSlabDesign {
         moment: Double, fcu: Double, fy: Double,
         effectiveDepth: Double, stripWidth: Double, cover: Double
     ): FlatSlabDesign.ReinforcementDesign {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("stripWidth", stripWidth)
+
         if (moment <= 0.001 || effectiveDepth <= 0) {
             val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
             val barArea = PI * 12.0 * 12.0 / 4.0
@@ -546,6 +561,12 @@ class SBCFlatSlab : FlatSlabDesign {
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
     ): FlatSlabDesign.DeflectionResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("span", span)
+        InputGuard.positive("slabThickness", slabThickness)
+
         // Ec = 4700 × √(fcu) MPa (SBC uses fcu directly)
         val Ec = 4700.0 * sqrt(fcu)
         val Ig = 1000.0 * slabThickness * slabThickness * slabThickness / 12.0

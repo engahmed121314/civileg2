@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -94,6 +95,14 @@ class ECPCombinedFooting {
         fcu: Double = 25.0,
         fy: Double = 360.0
     ): CombinedFootingResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
+        InputGuard.positive("footingThickness", footingThickness)
+        InputGuard.nonNegative("p1", p1)
+        InputGuard.nonNegative("p2", p2)
         val warnings = mutableListOf<String>()
 
         // ==================== 1. Service Loads ====================
@@ -514,6 +523,8 @@ class ECPCombinedFooting {
      * @return Shear stress capacity (MPa)
      */
     fun calculateOneWayShearCapacity(fcu: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
         return 0.24 * sqrt(fcu) / GAMMA_C
     }
 
@@ -525,6 +536,8 @@ class ECPCombinedFooting {
      * @return Punching shear stress capacity (MPa)
      */
     fun calculatePunchingShearCapacity(fcu: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
         return 0.316 * sqrt(fcu / GAMMA_C)
     }
 
@@ -572,6 +585,10 @@ class ECPCombinedFooting {
         fcu: Double,
         isDeformed: Boolean = true
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("dia", dia)
+        InputGuard.positive("fcu", fcu)
         val fbd = if (isDeformed) 0.6 * sqrt(fcu) else 0.3 * sqrt(fcu)
         // ECP 203 §5-2-2: Ld = (fy/γs) × φ / (4 × fbd)
         return 0.5 * (fy / GAMMA_S) * dia / fbd.coerceAtLeast(0.1)
@@ -603,6 +620,10 @@ class ECPCombinedFooting {
         soilBearingCapacity: Double,
         fcu: Double
     ): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive(\"fcu\", fcu)
+        InputGuard.positive(\"soilBearingCapacity\", soilBearingCapacity)
+        InputGuard.positive(\"distanceBetweenColumns\", distanceBetweenColumns)
         // Start from minimum thickness and increment by 50mm
         var thickness = MIN_THICKNESS
         for (i in 0..20) {

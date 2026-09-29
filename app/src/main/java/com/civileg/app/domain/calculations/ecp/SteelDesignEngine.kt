@@ -1,5 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -91,6 +93,9 @@ class SteelDesignEngine {
         Lb: Double = 0.0,     // mm - طول الدعم البعرضي (0 = مدعوم بالكامل)
         Cb: Double = 1.0      // معامل التحميل (1.0 للتحميل المنتظم)
     ): SteelCheckResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
         val Zx_mm3 = section.Zx // mm³
         val Mn = grade.fy * Zx_mm3 / 1e6 // kN.m (القدرة الإسمية)
 
@@ -126,6 +131,9 @@ class SteelDesignEngine {
         section: SectionProperties,
         grade: SteelGrade = SteelGrade.ST37
     ): SteelCheckResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
         // [FIX] Shear area uses web depth (h - 2tf), not full depth
         val hw = section.h - 2 * section.tf
         val Aw = hw * section.tw // mm² - مساحة الجذع
@@ -151,6 +159,9 @@ class SteelDesignEngine {
         section: SectionProperties,
         maxDeflection: Double = span / 360.0 // mm
     ): SteelCheckResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("span", span)
+        InputGuard.notNull("section", section)
         val L_m = span / 1000.0
         val I_m4 = section.Ix / 1e12 // m⁴
         val E_kN_m2 = E_STEEL * 1000.0 // MPa (N/mm²) -> kN/m² : 1 MPa = 1000 kN/m²
@@ -174,6 +185,10 @@ class SteelDesignEngine {
         grade: SteelGrade = SteelGrade.ST37,
         Lb: Double = 0.0
     ): BeamDesignResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("span", span)
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -237,6 +252,10 @@ class SteelDesignEngine {
         K: Double = 1.0,      // معامل الطول الفعال
         L: Double = 3000.0    // mm - طول العمود
     ): ColumnDesignResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("L", L)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -295,6 +314,10 @@ class SteelDesignEngine {
         K: Double = 1.0,
         L: Double = 3000.0
     ): ColumnDesignResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("L", L)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -456,6 +479,9 @@ class SteelDesignEngine {
 
     // حساب النحافة (طريقة قديمة للمتوافقية)
     fun calculateSlenderness(k: Double, L: Double, r: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("L", L)
+        InputGuard.positive("r", r)
         return (k * L) / r
     }
 
@@ -466,6 +492,9 @@ class SteelDesignEngine {
         fy: Double,
         zx: Double  // cm³
     ): SteelCheckResult {
+        // ── InputGuard (ADR-010) — ECP 205 ──
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("zx", zx)
         // تحويل Zx من cm³ إلى mm³
         val Zx_mm3 = zx * 1000.0
         val nominalCapacity = fy * Zx_mm3 / 1e6 // kN.m

@@ -65,7 +65,7 @@ object CalculationFactory {
     fun getHordiSlabDesign(code: DesignCode): HordiSlabDesign = when (code) {
         DesignCode.ECP -> ECPHordiSlabWrapper()
         DesignCode.ACI -> ACIJoistSlab()
-        DesignCode.SBC -> SBCJoistSlab()
+        DesignCode.SBC -> SBCHordiSlabDesign()  // SBC 304-2018 مستقل — وليس fallback لـ ACI
     }
 
     fun getWaffleSlabDesign(code: DesignCode): WaffleSlabDesign = when (code) {

@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.compose.components.drawings.DrawingColors
 import com.civileg.app.ui.compose.components.drawings.DrawingColorDefaults
 import kotlin.math.*
@@ -64,8 +66,23 @@ fun ProfessionalShearWallDrawing(
     axialLoad: Double,
     shearForce: Double,
     bendingMoment: Double,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Shear wall dimensions must be positive; zero/NaN produces invalid geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("wallLength", wallLength)
+    InputGuard.positive("wallThickness", wallThickness)
+    InputGuard.positive("totalHeight", totalHeight)
+    InputGuard.positive("storyHeight", storyHeight)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: shear wall per ECP Chapter 8, boundary element per ECP
+    // ACI 318-19:  Chapter 18 — special structural walls, φ = 0.75 (tension), 0.60 (shear)
+    // SBC 304-2018: adopts ACI Chapter 18 with SBC ductility class requirements
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()

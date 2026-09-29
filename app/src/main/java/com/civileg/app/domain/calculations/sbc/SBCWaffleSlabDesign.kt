@@ -45,20 +45,16 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
     }
 
     override fun design(input: WaffleSlabInput): WaffleSlabResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.notNull("input", input)
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
-        InputGuard.positive("lx", input.lx)
-        InputGuard.positive("ly", input.ly)
-        InputGuard.positive("ribSpacing", input.ribSpacing)
-        InputGuard.positive("ribWidth", input.ribWidth)
-        InputGuard.positive("ribHeight", input.ribHeight)
-        InputGuard.positive("toppingThickness", input.toppingThickness)
-        InputGuard.positive("solidHeadSize", input.solidHeadSize)
-        InputGuard.positive("columnWidth", input.columnWidth)
-        InputGuard.nonNegative("deadLoad", input.deadLoad)
-        InputGuard.nonNegative("liveLoad", input.liveLoad)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.lx", input.lx)
+        InputGuard.positive("input.ly", input.ly)
+        InputGuard.positive("input.ribWidth", input.ribWidth)
+        InputGuard.positive("input.ribHeight", input.ribHeight)
+        InputGuard.positive("input.ribSpacing", input.ribSpacing)
+        InputGuard.positive("input.columnWidth", input.columnWidth)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -158,6 +154,16 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): WaffleSlabDesign.RibDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribHeight", ribHeight)
+        InputGuard.positive("ribSpacing", ribSpacing)
+        InputGuard.positive("clearSpan", clearSpan)
+        InputGuard.nonNegative("totalLoad", totalLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -232,6 +238,13 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         moment: Double
     ): WaffleSlabDesign.SolidHeadDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("solidHeadSize", solidHeadSize)
+        InputGuard.positive("columnSize", columnSize)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -279,6 +292,13 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         shear: Double
     ): WaffleSlabDesign.PunchingShearCheck {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("solidHeadSize", solidHeadSize)
+        InputGuard.positive("columnSize", columnSize)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 

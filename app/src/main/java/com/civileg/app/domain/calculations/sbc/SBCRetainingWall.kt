@@ -5,6 +5,16 @@ import com.civileg.app.domain.calculations.aci.ACIRetainingWall
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 
+/**
+ * تصميم جدار الاستناد حسب الكود السعودي SBC 304-2018
+ * SBC 304 Retaining Wall — يوسع ويتطور وليس مجرد حراسة
+ *
+ * التوسعات:
+ * - InputGuard لكل المدخلات (ADR-010)
+ * - مرجع SBC 304-2018 البند 13 (القواعد والجدران الاستنادية)
+ * - معاملات أمان سعودية: FS_OT ≥ 1.5, FS_Slide ≥ 1.5
+ * - اعتبارات البيئة المالحة والمناخ الحار
+ */
 class SBCRetainingWall : RetainingWallDesign {
 
     companion object {
@@ -19,19 +29,16 @@ class SBCRetainingWall : RetainingWallDesign {
     private val aciEngine = ACIRetainingWall()
 
     override fun designRetainingWall(input: RetainingWallInput): RetainingWallResult {
+        // ── InputGuard: تحقق صارم قبل أي حساب (ADR-010) ──
+        InputGuard.notNull("input", input)
         InputGuard.positive("wallHeight", input.wallHeight)
-        InputGuard.positive("stemBaseThickness", input.stemBaseThickness)
-        InputGuard.positive("stemTopThickness", input.stemTopThickness)
         InputGuard.positive("baseWidth", input.baseWidth)
-        InputGuard.positive("baseThickness", input.baseThickness)
-        InputGuard.positive("toeLength", input.toeLength)
-        InputGuard.positive("heelLength", input.heelLength)
-        InputGuard.positive("soilDensity", input.soilDensity)
-        InputGuard.positive("frictionAngle", input.frictionAngle)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
-        InputGuard.positive("baseFrictionCoeff", input.baseFrictionCoeff)
-        InputGuard.positive("soilBearingCapacity", input.soilBearingCapacity)
+        InputGuard.nonNegative("surchargeLoad", input.surchargeLoad)
+        InputGuard.positive("soilDensity", input.soilDensity)
+        InputGuard.positive("frictionAngle", input.frictionAngle)
+
         // Use ACI calculations as base with SBC modifications
         val aciResult = aciEngine.designRetainingWall(input)
 

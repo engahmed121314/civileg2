@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
@@ -65,8 +67,25 @@ fun ProfessionalTankDrawing(
     horizontalRebarSpacing: Double,
     foundationDepth: Double = 0.0,
     viewMode: Int = 0,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Tank dimensions must be positive; zero/NaN produces invalid geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("length", length)
+    InputGuard.positive("width", width)
+    InputGuard.positive("height", height)
+    InputGuard.positive("wallThickness", wallThickness)
+    InputGuard.positive("baseThickness", baseThickness)
+    InputGuard.positive("verticalRebarDia", verticalRebarDia)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: water load γ_w = 10 kN/m³, hydrostatic pressure
+    // ACI 318-19:  Chapter 5 — liquid-containing structures, working stress
+    // SBC 304-2018: adopts ACI provisions with SBC environmental factors
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(
         modifier = modifier.fillMaxSize()
     ) {

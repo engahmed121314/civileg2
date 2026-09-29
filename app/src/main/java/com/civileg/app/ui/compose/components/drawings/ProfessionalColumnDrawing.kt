@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.StirrupZone
 import kotlin.math.cos
 import kotlin.math.min
@@ -82,9 +84,25 @@ fun ProfessionalColumnDrawing(
     zones: List<StirrupZone> = emptyList(),
     interactionPoints: List<Pair<Double, Double>> = emptyList(),
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
+    designCode: DesignCode = DesignCode.ECP,
     viewMode: Int = 0,
     modifier: Modifier = Modifier
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Column dimensions must be positive; zero/NaN would produce degenerate geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("columnWidth", columnWidth)
+    InputGuard.positive("columnDepth", columnDepth)
+    InputGuard.positive("columnHeight", columnHeight)
+    InputGuard.positive("tieDia", tieDia)
+    InputGuard.positive("cover", cover)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: φ = 0.87, min ρ = 0.008, γ_c = 1.5
+    // ACI 318-19:  φ = 0.65 (tied), 0.75 (spiral), min ρ = 0.01
+    // SBC 304-2018: adopts ACI φ factors with SBC material safety format
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     Canvas(modifier = modifier.fillMaxSize()) {
         val W = size.width
         val H = size.height

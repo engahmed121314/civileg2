@@ -11,6 +11,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.max
 import kotlin.math.min
@@ -45,6 +47,7 @@ fun ProfessionalSlabDrawing(
     ribWidth: Double = 0.0,
     ribSpacing: Double = 0.0,
     viewMode: Int = 0,
+    designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier,
     momentX: Double = 0.0,
     momentY: Double = 0.0,
@@ -54,6 +57,21 @@ fun ProfessionalSlabDrawing(
     isSafe: Boolean = true,
     utilizationRatio: Double = 0.0
 ) {
+    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // Slab span and thickness must be positive for valid geometry.
+    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    InputGuard.positive("slabThickness", slabThickness)
+    InputGuard.positive("spanX", spanX)
+    InputGuard.positive("spanY", spanY)
+    InputGuard.positive("mainRebarDia", mainRebarDia)
+    InputGuard.positive("cover", cover)
+
+    // ── Code-reference annotation ──────────────────────────────────────────
+    // ECP 203-2020: z = 0.87d, min ρ = 0.0018 (fy≤400), shrinkage per fy
+    // ACI 318-19:  z = 0.9d, min ρ = 0.0018 (grade 40) / 0.0020 (grade 60)
+    // SBC 304-2018: adopts ACI provisions with SBC minimum steel ratios
+    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+
     // Obtain theme-aware palette (reacts to isSystemInDarkTheme)
     val palette = drawingColors()
 

@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
-import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
@@ -79,17 +79,16 @@ class SBCAdvancedColumn : ColumnDesign {
         isSpiral: Boolean = false,
         isSeismicZone: Boolean = false
     ): AdvancedColumnResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.notNull("columnType", columnType)
+        InputGuard.notNull("endConditions", endConditions)
+        InputGuard.notNull("loadCombination", loadCombination)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.positive("unsupportedLength", unsupportedLength)
         InputGuard.nonNegative("momentX", momentX)
         InputGuard.nonNegative("momentY", momentY)
-        InputGuard.positive("unsupportedLength", unsupportedLength)
-        InputGuard.notNull("endConditions", endConditions)
-        InputGuard.notNull("connectedSlab", connectedSlab)
-        InputGuard.notNull("loadCombination", loadCombination)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -262,11 +261,6 @@ class SBCAdvancedColumn : ColumnDesign {
         isSeismicZone: Boolean,
         isSpiral: Boolean
     ): SeismicCheckOutput {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.notNull("columnType", columnType)
-        InputGuard.positive("fcPrime", fcPrime)
-        InputGuard.positive("axialLoad", axialLoad)
-
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -334,13 +328,6 @@ class SBCAdvancedColumn : ColumnDesign {
         fy: Double,
         fcu: Double = 40.0
     ): SeismicConfinementResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.notNull("columnType", columnType)
-        InputGuard.positive("mainBarDiameter", mainBarDiameter)
-        InputGuard.positive("numberOfBars", numberOfBars)
-        InputGuard.positive("fy", fy)
-        InputGuard.positive("fcu", fcu)
-
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -546,13 +533,6 @@ class SBCAdvancedColumn : ColumnDesign {
         isSpiral: Boolean = false,
         cover: Double = SBC_COVER_NORMAL
     ): List<InteractionDiagramPoint> {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.notNull("columnType", columnType)
-        InputGuard.positive("totalAs", totalAs)
-        InputGuard.positive("cover", cover)
-
         val fcPrime = 0.8 * fcu
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
         val (b, h) = getColumnDimensions(columnType)
@@ -710,16 +690,6 @@ class SBCAdvancedColumn : ColumnDesign {
         As: Double = 0.0,
         isSpiral: Boolean = false
     ): BiaxialCheckResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
-        InputGuard.notNull("type", type)
-        InputGuard.positive("Pu", Pu)
-        InputGuard.nonNegative("Mx", Mx)
-        InputGuard.nonNegative("My", My)
-        InputGuard.positive("PnCapacity", PnCapacity)
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.nonNegative("As", As)
-
         val (b, h) = getColumnDimensions(type)
         val Ag = b * h
         // BUG FIX: use actual fc' from fcu conversion instead of recovering from PnCapacity
@@ -1277,6 +1247,14 @@ class SBCAdvancedColumn : ColumnDesign {
         reinforcementArea: Double,
         loadCombination: LoadCombination
     ): Double {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.nonNegative("reinforcementArea", reinforcementArea)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         return baseDesign.calculateAxialCapacity(fcu, fy, width, depth, reinforcementArea, loadCombination)
     }
 
@@ -1290,6 +1268,16 @@ class SBCAdvancedColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.nonNegative("momentX", momentX)
+        InputGuard.nonNegative("momentY", momentY)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         return baseDesign.calculateReinforcement(fcu, fy, width, depth, axialLoad, momentX, momentY, loadCombination)
     }
 

@@ -33,10 +33,13 @@ class SBCSeismic : SeismicDesign {
         responseModificationFactor: Double,
         buildingHeight: Double
     ): SeismicBaseShearResult {
-        // ── Input validation ────────────────────────────────────────
+        // ── InputGuard: تحقق صارم قبل أي حساب (ADR-010) ──
         InputGuard.positive("totalWeight", totalWeight)
+        InputGuard.notNull("seismicZone", seismicZone)
+        InputGuard.notNull("soilType", soilType)
         InputGuard.positive("importanceFactor", importanceFactor)
         InputGuard.positive("responseModificationFactor", responseModificationFactor)
+        InputGuard.positive("buildingHeight", buildingHeight)
 
         // SBC 301 يتبع ASCE 7 مع خريطة مخاطر سعودية
         val result = aciSeismic.calculateBaseShear(
@@ -59,9 +62,12 @@ class SBCSeismic : SeismicDesign {
         peakGroundAcceleration: Double,
         importanceFactor: Double
     ): SpectrumValue {
-        // ── Input validation ────────────────────────────────────────
+        // ── InputGuard ──
         InputGuard.positive("period", period)
         InputGuard.positive("dampingRatio", dampingRatio)
+        InputGuard.notNull("soilType", soilType)
+        InputGuard.positive("peakGroundAcceleration", peakGroundAcceleration)
+        InputGuard.positive("importanceFactor", importanceFactor)
 
         val result = aciSeismic.getResponseSpectrum(
             period, dampingRatio, soilType, peakGroundAcceleration, importanceFactor
@@ -76,7 +82,7 @@ class SBCSeismic : SeismicDesign {
         floorWeights: List<Double>,
         floorHeights: List<Double>
     ): List<SeismicForceDistribution> {
-        // ── Input validation ────────────────────────────────────────
+        // ── InputGuard ──
         InputGuard.positive("baseShear", baseShear)
         InputGuard.notEmpty("floorWeights", floorWeights)
         InputGuard.notEmpty("floorHeights", floorHeights)

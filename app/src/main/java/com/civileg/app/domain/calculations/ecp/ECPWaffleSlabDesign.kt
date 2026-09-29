@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
@@ -49,6 +50,17 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
     }
 
     override fun design(input: WaffleSlabInput): WaffleSlabResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("lx", input.lx)
+        InputGuard.positive("ly", input.ly)
+        InputGuard.positive("ribHeight", input.ribHeight)
+        InputGuard.positive("ribWidth", input.ribWidth)
+        InputGuard.nonNegative("deadLoad", input.deadLoad)
+        InputGuard.nonNegative("liveLoad", input.liveLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
@@ -164,6 +176,15 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): WaffleSlabDesign.RibDesignResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribHeight", ribHeight)
+        InputGuard.positive("ribSpacing", ribSpacing)
+        InputGuard.positive("clearSpan", clearSpan)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -238,6 +259,13 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         moment: Double
     ): WaffleSlabDesign.SolidHeadDesignResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("solidHeadSize", solidHeadSize)
+        InputGuard.positive("columnSize", columnSize)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -285,6 +313,12 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         shear: Double
     ): WaffleSlabDesign.PunchingShearCheck {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("solidHeadSize", solidHeadSize)
+        InputGuard.positive("columnSize", columnSize)
+        InputGuard.nonNegative("axialLoad", axialLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -321,6 +355,12 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         providedAs: Double,
         loadCombination: LoadCombination
     ): FlatSlabDesign.DeflectionResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("span", span)
+        InputGuard.positive("totalDepth", totalDepth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+
         val fc = fcu / GAMMA_C
         val Ec = 4400.0 * sqrt(fc)
         val Ig = 1000.0 * 300.0 * 300.0 * 300.0 / 12.0

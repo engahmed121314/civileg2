@@ -393,15 +393,83 @@ class CalculatorEngine @Inject constructor(
     }
 
     fun calculateSteelMember(section: SteelSectionType, memberType: SteelMemberType, inputs: SteelInputs, code: DesignCode): SteelMemberResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("memberType", memberType)
+        InputGuard.notNull("inputs", inputs)
+        InputGuard.notNull("code", code)
+
         val area = section.area
-        val fy = 240.0
-        val axialCapacity = (0.85 * fy * area) / 1000.0
+        // ── توسيع: حساب حقيقي حسب الكود (ACI/AISC/SBC) وليس stub ──
+        val fy = section.grade.fy  // استخدم مقاومة الخضوع الفعلية من الدرجة
+        val E = 200000.0  // MPa — معامل مرونة الصلب
+        val phi = 0.90     // معامل الاختزال (AISC 360 / SBC 306)
+
+        // 1. القدرة المحورية: φPn = φ × fy × Ag (tension yielding per AISC D2)
+        val axialCapacity = (phi * fy * area) / 1000.0  // kN
+
+        // 2. القدرة الانحنائية: φMn = φ × fy × Sx (per AISC F2 / SBC 306)
+        val Sx = section.elasticSectionModulus
+        val flexuralCapacity = if (Sx > 0) (phi * fy * Sx) / 1e6 else 0.0  // kN.m
+
+        // 3. قدرة القص: φVn = φ × 0.6 × fy × Aw (per AISC G2 / SBC 306)
+        val tw = section.webThickness
+        val h = section.depth
+        val Aw = h * tw  // مساحة النصل الوبية
+        val shearCapacity = if (Aw > 0) (phi * 0.6 * fy * Aw) / 1000.0 else 0.0  // kN
+
+        // 4. فحص الانبعاج (KL/r) — per AISC E3 / SBC 306
+        val L = inputs.unbracedLength.coerceAtLeast(1.0)
+        val K = inputs.effectiveLengthFactor.coerceIn(0.5, 2.0)
+        val rx = section.radiusOfGyration.coerceAtLeast(1.0)
+        val KLOverR = K * L * 1000.0 / rx  // KL/r
+        val Fe = (PI * PI * E) / (KLOverR * KLOverR)  // Euler stress
+        val isSlender = KLOverR > 4.71 * sqrt(E / fy)
+        val Fcr = if (isSlender) 0.877 * Fe else fy * (1.0 - 0.375 * KLOverR * KLOverR * fy / (PI * PI * E))
+        val compressiveCapacity = (phi * Fcr * area) / 1000.0  // kN
+        val bucklingSafe = !isSlender || (compressiveCapacity > 0)
+
+        // 5. فحص الانحراف: L/250 للأعضاء الرئيسية
+        val deflectionLimit = L * 1000.0 / 250.0  // mm
+        val appliedDeflection = inputs.appliedDeflection  // mm (from user or estimated)
+        val deflectionSafe = appliedDeflection <= 0 || appliedDeflection <= deflectionLimit
+
+        // 6. نسبة الاستغلال
+        val axialDemand = inputs.axialLoad.coerceAtLeast(0.0)
+        val flexDemand = inputs.moment.coerceAtLeast(0.0)
+        val shearDemand = inputs.shear.coerceAtLeast(0.0)
+        val axialRatio = if (axialCapacity > 0) axialDemand / axialCapacity else 0.0
+        val flexRatio = if (flexuralCapacity > 0) flexDemand / flexuralCapacity else 0.0
+        val shearRatio = if (shearCapacity > 0) shearDemand / shearCapacity else 0.0
+        val utilizationRatio = (axialRatio + flexRatio + shearRatio).coerceIn(0.0, 3.0)
+
+        val isSafe = utilizationRatio <= 1.0 && bucklingSafe && deflectionSafe
+
+        val codeRef = when (code) {
+            DesignCode.ACI -> "AISC 360-16"
+            DesignCode.SBC -> "SBC 306-2018"
+            DesignCode.ECP -> "ECP 205-2007 (Steel)"
+        }
+
         return SteelMemberResult(
             sectionType = section, memberType = memberType, axialCapacity = axialCapacity,
-            flexuralCapacity = 100.0, shearCapacity = 100.0, utilizationRatio = 0.5,
-            isSafe = true, connectionDesign = null, bucklingCheck = null, deflectionCheck = null,
+            flexuralCapacity = flexuralCapacity, shearCapacity = shearCapacity,
+            utilizationRatio = utilizationRatio,
+            isSafe = isSafe,
+            connectionDesign = null,
+            bucklingCheck = if (!bucklingSafe) DesignSafetyCheck("Buckling (KL/r=${"%.1f".format(KLOverR)})", 0.0, 1.0, "", false) else null,
+            deflectionCheck = if (!deflectionSafe) DesignSafetyCheck("Deflection (L/250)", appliedDeflection, deflectionLimit, "mm", false) else null,
             weight = area * 1e-6 * 7850, cost = 0.0,
-            warnings = emptyList(), codeNotes = emptyList()
+            warnings = mutableListOf<String>().apply {
+                if (!bucklingSafe) add("$codeRef: Slender member (KL/r=${"%.1f".format(KLOverR)}) — increase section or reduce L")
+                if (!deflectionSafe) add("$codeRef: Deflection ${"%.1f".format(appliedDeflection)}mm > L/250=${"%.1f".format(deflectionLimit)}mm")
+            },
+            codeNotes = mutableListOf<String>().apply {
+                add("$codeRef: Steel member design")
+                add("fy = $fy MPa, φ = $phi")
+                add("φPn = ${"%.1f".format(axialCapacity)} kN, φMn = ${"%.1f".format(flexuralCapacity)} kN.m, φVn = ${"%.1f".format(shearCapacity)} kN")
+                add("KL/r = ${"%.1f".format(KLOverR)}, utilization = ${"%.3f".format(utilizationRatio)}")
+            }
         )
     }
 
@@ -554,13 +622,17 @@ class CalculatorEngine @Inject constructor(
             code = code,
             axialCapacity = res.astProvided * fy / 1.15 + 0.67 * fcu / 1.5 * (width * depth - res.astProvided) / 1000.0,
             appliedAxial = pu,
-            mxCapacity = 0.0,
-            myCapacity = 0.0,
+            // ── توسيع: حساب قدرة العزوم الفعلية وليس صفر ──
+            // Mn_x ≈ 0.5 × As × fy × d (simplified uniaxial moment capacity)
+            mxCapacity = if (mx > 0) res.astProvided * fy / 1.15 * (min(width, depth) - 60.0) / 1e6 else 0.0,
+            myCapacity = if (my > 0) res.astProvided * fy / 1.15 * (min(width, depth) - 60.0) / 1e6 else 0.0,
             slenderness = clearHeight * 1000.0 / min(width, depth),
             isSlender = clearHeight * 1000.0 / min(width, depth) > 30.0,
             utilizationRatio = res.utilizationRatio,
             isDuctile = res.isSafe,
-            confinementLength = 0.0
+            // ── توسيع: طول منطقة الحصر حسب الكود ──
+            // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) للمناطق الزلزالية
+            confinementLength = max(6.0 * res.barDiameter, 450.0)
         )
     }
 
@@ -742,7 +814,9 @@ class CalculatorEngine @Inject constructor(
                 )
             )
         } catch (e: Exception) {
-            SlabResult(thickness = ts, isSafe = true, code = code, type = type)
+            // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
+            SlabResult(thickness = ts, isSafe = false, code = code, type = type,
+                warnings = listOf("Calculation failed: ${e.message?.take(200) ?: "Unknown error"} / فشل الحساب"))
         }
     }
 
@@ -865,7 +939,15 @@ class CalculatorEngine @Inject constructor(
             isSafe = res.isSafe,
             concreteVolume = totalConcreteVol, 
             steelWeight = totalSteelW,
-            utilizationRatio = 0.75
+            // ── توسيع: نسبة الاستغلال الفعلية من ضغط التربة والقدرة ──
+            utilizationRatio = if (res.isSafe) {
+                val maxSoilPressure = maxOf(
+                    res.footing1.soilPressure.coerceAtLeast(0.0),
+                    res.footing2.soilPressure.coerceAtLeast(0.0)
+                )
+                val allowableSoil = inputs.soilBearingCapacity.coerceAtLeast(1.0)
+                (maxSoilPressure / allowableSoil).coerceIn(0.0, 1.5)
+            } else 1.5  // غير آمن → نسبة عالية
         )
     }
 
@@ -934,7 +1016,9 @@ class CalculatorEngine @Inject constructor(
                 suggestions = result.safetyChecks.filterNot { it.isSafe }.map { it.description }
             )
         } catch (e: Exception) {
-            StairResult(type = type, thickness = 150.0, reinforcement = ReinforcementBar(), distributionReinforcement = ReinforcementBar(), isSafe = true, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code, riser = riser, tread = tread)
+            // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
+            StairResult(type = type, thickness = 150.0, reinforcement = ReinforcementBar(), distributionReinforcement = ReinforcementBar(), isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code, riser = riser, tread = tread,
+                suggestions = listOf("Calculation failed: ${e.message?.take(200) ?: "Unknown error"} / فشل الحساب"))
         }
     }
 

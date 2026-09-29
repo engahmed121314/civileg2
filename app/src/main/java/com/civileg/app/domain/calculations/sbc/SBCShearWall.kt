@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
-import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
 
@@ -65,14 +65,15 @@ class SBCShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
-        // ── Input validation ────────────────────────────────────────
-        InputGuard.positive("wallLength", input.wallLength)
-        InputGuard.positive("wallThickness", input.wallThickness)
-        InputGuard.positive("wallHeight", input.wallHeight)
-        InputGuard.positive("numberOfStories", input.numberOfStories)
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
-        InputGuard.positive("clearCover", input.clearCover)
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.wallLength", input.wallLength)
+        InputGuard.positive("input.wallThickness", input.wallThickness)
+        InputGuard.nonNegative("input.axialLoad", input.axialLoad)
+        InputGuard.nonNegative("input.bendingMoment", input.bendingMoment)
+        InputGuard.notNull("input.wallType", input.wallType)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -246,6 +247,13 @@ class SBCShearWall : ShearWallDesign {
      * @return Pair<Mn_kN_m, Pn_kN> (nominal, before φ)
      */
     override fun calculateFlexuralStrength(input: ShearWallInput): Pair<Double, Double> {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.wallLength", input.wallLength)
+        InputGuard.positive("input.wallThickness", input.wallThickness)
+
         val Lw = input.wallLength
         val bw = input.wallThickness
         val fcu = input.fcu
@@ -328,6 +336,14 @@ class SBCShearWall : ShearWallDesign {
      * @return Pair<VcNominal_kN, VsNominal_kN>
      */
     override fun calculateShearStrength(input: ShearWallInput): Pair<Double, Double> {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fyv", input.fyv)
+        InputGuard.positive("input.wallLength", input.wallLength)
+        InputGuard.positive("input.wallThickness", input.wallThickness)
+        InputGuard.nonNegative("input.axialLoad", input.axialLoad)
+
         val Lw = input.wallLength
         val bw = input.wallThickness
         val fcu = input.fcu
@@ -386,6 +402,13 @@ class SBCShearWall : ShearWallDesign {
      *  - Coupled walls: BE when c/d > 0.3
      */
     override fun designBoundaryElements(input: ShearWallInput): Pair<BoundaryElementType, RebarResult?> {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.fcu", input.fcu)
+        InputGuard.positive("input.fy", input.fy)
+        InputGuard.positive("input.wallLength", input.wallLength)
+        InputGuard.positive("input.wallThickness", input.wallThickness)
+
         val Lw = input.wallLength
         val bw = input.wallThickness
         val d = 0.8 * Lw
@@ -488,6 +511,10 @@ class SBCShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designCouplingBeam(input: ShearWallInput): CouplingBeamResult? {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.notNull("input.wallType", input.wallType)
+
         if (input.wallType != WallType.COUPLED) return null
         if (input.couplingBeamLength <= 0 || input.couplingBeamHeight <= 0) return null
 
@@ -560,6 +587,11 @@ class SBCShearWall : ShearWallDesign {
      * SBC 304: walls with H/t > 25 require second-order analysis.
      */
     override fun checkSlenderness(input: ShearWallInput): Pair<Boolean, Double> {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("input.wallThickness", input.wallThickness)
+        InputGuard.positive("input.wallHeight", input.wallHeight)
+
         val Hw = input.wallHeight * input.numberOfStories
         val t = input.wallThickness
         val ratio = Hw / t

@@ -41,15 +41,16 @@ class ECPFlatSlab : FlatSlabDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun design(input: FlatSlabInput): FlatSlabResult {
-        // ── Input validation ────────────────────────────────────────
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
         InputGuard.positive("lx", input.lx)
         InputGuard.positive("ly", input.ly)
         InputGuard.positive("slabThickness", input.slabThickness)
-        InputGuard.positive("fcu", input.fcu)
-        InputGuard.positive("fy", input.fy)
-        InputGuard.positive("clearCover", input.clearCover)
-        InputGuard.positive("numberOfFloors", input.numberOfFloors)
-        InputGuard.positive("storyHeight", input.storyHeight)
+        InputGuard.nonNegative("deadLoad", input.deadLoad)
+        InputGuard.nonNegative("liveLoad", input.liveLoad)
+        InputGuard.notNull("designMethod", input.designMethod)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -386,6 +387,9 @@ class ECPFlatSlab : FlatSlabDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateStaticMoment(wu: Double, ln: Double, l2: Double): Double {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("ln", ln)
+        InputGuard.positive("l2", l2)
         return wu * l2 * ln * ln / 8.0  // kN.m
     }
 
@@ -504,6 +508,13 @@ class ECPFlatSlab : FlatSlabDesign {
         columnWidth: Double, columnDepth: Double,
         cover: Double
     ): FlatSlabDesign.PunchingShearResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+
         // Effective depth at critical section
         val d = if (dropThickness > 0) {
             slabThickness + dropThickness - cover - 6.0
@@ -596,6 +607,11 @@ class ECPFlatSlab : FlatSlabDesign {
         effectiveDepth: Double, stripWidth: Double,
         cover: Double
     ): FlatSlabDesign.ReinforcementDesign {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("stripWidth", stripWidth)
         if (moment <= 0.001 || effectiveDepth <= 0) {
             val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
             val barArea = PI * 12.0 * 12.0 / 4.0
@@ -705,6 +721,13 @@ class ECPFlatSlab : FlatSlabDesign {
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
     ): FlatSlabDesign.DeflectionResult {
+        // ── InputGuard (ADR-010) — ECP 203 ──
+        InputGuard.positive("span", span)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+
         // Ec = 4700 × √(fcu) MPa  (accepted by ECP 203)
         val Ec = 4700.0 * sqrt(fcu)
 
