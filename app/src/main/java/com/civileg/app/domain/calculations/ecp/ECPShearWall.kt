@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
 
@@ -57,6 +58,15 @@ class ECPShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+        InputGuard.positive("wallHeight", input.wallHeight)
+        InputGuard.positive("numberOfStories", input.numberOfStories)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("clearCover", input.clearCover)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
@@ -407,6 +417,12 @@ class ECPShearWall : ShearWallDesign {
      *  - Volume confinement ratio per ECP 201 §8-4
      */
     override fun designBoundaryElements(input: ShearWallInput): Pair<BoundaryElementType, RebarResult?> {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+
         val Lw = input.wallLength
         val bw = input.wallThickness
         val d = 0.8 * Lw
@@ -543,6 +559,12 @@ class ECPShearWall : ShearWallDesign {
      * @return CouplingBeamResult or null if not applicable
      */
     override fun designCouplingBeam(input: ShearWallInput): CouplingBeamResult? {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+
         // Only for coupled walls
         if (input.wallType != WallType.COUPLED) return null
         if (input.couplingBeamLength <= 0 || input.couplingBeamHeight <= 0) return null
@@ -660,8 +682,13 @@ class ECPShearWall : ShearWallDesign {
         val fsDesign = fy / GAMMA_S
         val beta1 = calculateBeta1(fcu)
 
+        val maxIterations = 60
+        val relTol = 5e-4   // 0.05 % relative tolerance
+        val absTol = 0.5    // 0.5 mm absolute tolerance
         var c = 50.0
-        for (i in 1..60) {
+        var converged = false
+        for (i in 1..maxIterations) {
+            val cPrev = c
             val a = beta1 * c
             val leverArm = d - a / 2.0
             if (leverArm <= 0) break
@@ -671,8 +698,11 @@ class ECPShearWall : ShearWallDesign {
                 (AsEst * fsDesign + PuN) / (fcDesign * bw)
             } else a
             c = newA / beta1
-            // Convergence check
-            if (abs(c - (newA / beta1)) < 0.1) break
+            // Convergence check — compare new c against PREVIOUS c
+            if (abs(c - cPrev) < absTol || abs(c - cPrev) < relTol * abs(cPrev)) {
+                converged = true
+                break
+            }
         }
         return c.coerceIn(0.0, 0.5 * d)  // limit c/d to 0.5 for ductility
     }

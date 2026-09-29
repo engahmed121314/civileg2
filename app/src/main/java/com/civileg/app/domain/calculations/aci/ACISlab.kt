@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -31,6 +32,10 @@ class ACISlab : SlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("clearSpan", clearSpan)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -116,6 +121,12 @@ class ACISlab : SlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): TwoWaySlabResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("shortSpan", shortSpan)
+        InputGuard.positive("longSpan", longSpan)
+        InputGuard.positive("totalLoad", totalLoad)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -186,6 +197,8 @@ class ACISlab : SlabDesign {
         fy: Double,
         isTwoWay: Boolean
     ): ThicknessCheckResult {
+        InputGuard.positive("span", span)
+        InputGuard.positive("fy", fy)
         val minT = getMinSlabThickness(span, supportCondition)
         // تعديل حسب fy (ACI Table 7.3.1.1): h_min يتناسب عكسياً مع fy
         val fyFactor = min(1.0, 420.0 / fy.coerceAtLeast(200.0))
@@ -201,6 +214,7 @@ class ACISlab : SlabDesign {
     }
 
     override fun getMinSlabThickness(span: Double, supportCondition: SupportCondition): Double {
+        InputGuard.positive("span", span)
         // ACI 318 Table 7.3.1.1 (لـ fy = 420 MPa, عادي الوزن)
         return when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> span / 20.0

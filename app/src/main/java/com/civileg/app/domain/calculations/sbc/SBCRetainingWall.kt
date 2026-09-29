@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.aci.ACIRetainingWall
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
@@ -18,6 +19,19 @@ class SBCRetainingWall : RetainingWallDesign {
     private val aciEngine = ACIRetainingWall()
 
     override fun designRetainingWall(input: RetainingWallInput): RetainingWallResult {
+        InputGuard.positive("wallHeight", input.wallHeight)
+        InputGuard.positive("stemBaseThickness", input.stemBaseThickness)
+        InputGuard.positive("stemTopThickness", input.stemTopThickness)
+        InputGuard.positive("baseWidth", input.baseWidth)
+        InputGuard.positive("baseThickness", input.baseThickness)
+        InputGuard.positive("toeLength", input.toeLength)
+        InputGuard.positive("heelLength", input.heelLength)
+        InputGuard.positive("soilDensity", input.soilDensity)
+        InputGuard.positive("frictionAngle", input.frictionAngle)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("baseFrictionCoeff", input.baseFrictionCoeff)
+        InputGuard.positive("soilBearingCapacity", input.soilBearingCapacity)
         // Use ACI calculations as base with SBC modifications
         val aciResult = aciEngine.designRetainingWall(input)
 

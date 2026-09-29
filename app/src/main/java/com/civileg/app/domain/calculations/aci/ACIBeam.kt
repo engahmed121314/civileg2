@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -23,6 +24,11 @@ class ACIBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("totalDepth", totalDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -144,6 +150,10 @@ class ACIBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -225,6 +235,8 @@ class ACIBeam : BeamDesign {
         reinforcementRatio: Double,
         supportCondition: SupportCondition
     ): DeflectionCheckResult {
+        InputGuard.positive("span", span)
+        InputGuard.positive("totalDepth", totalDepth)
         // Simplified ratio method per ACI Table 24.2.2
         val basicRatio = when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> 16.0
@@ -266,6 +278,9 @@ class ACIBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
+        InputGuard.positive("barDiameter", barDiameter)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fcu", fcu)
         // ACI 25.4.2: Ld = (fy * ψt * ψe * ψs) / (1.7 * λ * √(fc')) * db
         // λ يظهر في المقام فقط (ليس في البسط)
         
@@ -317,6 +332,10 @@ class ACIBeam : BeamDesign {
         compressionSteelDia: Double = 16.0,
         d_prime: Double = 50.0 // mm - المسافة من وجه الضغط لمركز حديد الضغط
     ): DoublyReinforcedResult {
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
         val notes = mutableListOf<String>()
         
         // العمق الفعال

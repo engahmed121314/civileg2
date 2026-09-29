@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
@@ -18,6 +19,11 @@ class SBCColumn : ColumnDesign {
         reinforcementArea: Double,
         loadCombination: LoadCombination
     ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("reinforcementArea", reinforcementArea)
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
         
@@ -44,6 +50,10 @@ class SBCColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
         val Ag = width * depth
         val Pu = axialLoad * 1000.0  // N - الحمل المحوري التصميمي
         
@@ -139,6 +149,11 @@ class SBCColumn : ColumnDesign {
         fy: Double,
         cover: Double = 40.0
     ): ColumnShearDesignResult {
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("cover", cover)
         val b = width
         val d = depth - cover - 10.0 - 8.0  // deduct tie dia (~10mm) + half bar dia (~8mm) approximation
         // SBC 304: f'c = 0.8 × fcu (cube to cylinder, same as ACI 318)

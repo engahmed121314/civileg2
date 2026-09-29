@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
@@ -41,6 +42,11 @@ class ACISeismic : SeismicDesign {
         responseModificationFactor: Double,
         buildingHeight: Double
     ): SeismicBaseShearResult {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("totalWeight", totalWeight)
+        InputGuard.positive("importanceFactor", importanceFactor)
+        InputGuard.positive("responseModificationFactor", responseModificationFactor)
+
         val warnings = mutableListOf<String>()
         
         // في ASCE 7: Cs = SDS / (R / Ie)
@@ -79,6 +85,10 @@ class ACISeismic : SeismicDesign {
         peakGroundAcceleration: Double,
         importanceFactor: Double
     ): SpectrumValue {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("period", period)
+        InputGuard.positive("dampingRatio", dampingRatio)
+
         // ASCE 7 Design Response Spectrum
         // إذا لم يُمرر SDS/SD1، نستخدم ag لتقديرها
         // SDS ≈ Fa × ag, SD1 ≈ Fv × ag (تقريبي)
@@ -122,6 +132,11 @@ class ACISeismic : SeismicDesign {
         floorWeights: List<Double>,
         floorHeights: List<Double>
     ): List<SeismicForceDistribution> {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("baseShear", baseShear)
+        InputGuard.notEmpty("floorWeights", floorWeights)
+        InputGuard.notEmpty("floorHeights", floorHeights)
+
         val n = floorWeights.size
         if (n == 0) return emptyList()
         

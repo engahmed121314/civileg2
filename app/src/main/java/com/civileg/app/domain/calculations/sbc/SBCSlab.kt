@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -29,6 +30,10 @@ class SBCSlab : SlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("clearSpan", clearSpan)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -105,6 +110,12 @@ class SBCSlab : SlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): TwoWaySlabResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("shortSpan", shortSpan)
+        InputGuard.positive("longSpan", longSpan)
+        InputGuard.positive("totalLoad", totalLoad)
         // SBC 304 يتبع ACI 318 في البلاطات ذات الاتجاهين
         val fc_prime = 0.8 * fcu
         val ly = longSpan / 1000.0
@@ -156,6 +167,8 @@ class SBCSlab : SlabDesign {
         fy: Double,
         isTwoWay: Boolean
     ): ThicknessCheckResult {
+        InputGuard.positive("span", span)
+        InputGuard.positive("fy", fy)
         val minT = getMinSlabThickness(span, supportCondition)
         val fyFactor = min(1.0, 420.0 / fy.coerceAtLeast(200.0))
         val adjustedMin = if (fy != 420.0) minT * fyFactor else minT
@@ -170,6 +183,7 @@ class SBCSlab : SlabDesign {
     }
 
     override fun getMinSlabThickness(span: Double, supportCondition: SupportCondition): Double {
+        InputGuard.positive("span", span)
         return when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> span / 20.0
             SupportCondition.CONTINUOUS -> span / 28.0

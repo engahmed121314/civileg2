@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
@@ -32,6 +33,12 @@ class SBCTank : TankDesign {
         length: Double, width: Double, height: Double,
         waterDepth: Double, fcu: Double, fy: Double, type: TankType
     ): TankResult {
+        InputGuard.positive("length", length)
+        InputGuard.positive("width", width)
+        InputGuard.positive("height", height)
+        InputGuard.positive("waterDepth", waterDepth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
         val warnings = mutableListOf<String>()
         val safetyChecks = mutableListOf<TankSafetyCheck>()
         val codeNotes = mutableListOf<String>()

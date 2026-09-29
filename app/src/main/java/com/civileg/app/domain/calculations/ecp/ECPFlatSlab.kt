@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
@@ -40,6 +41,16 @@ class ECPFlatSlab : FlatSlabDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun design(input: FlatSlabInput): FlatSlabResult {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("lx", input.lx)
+        InputGuard.positive("ly", input.ly)
+        InputGuard.positive("slabThickness", input.slabThickness)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("clearCover", input.clearCover)
+        InputGuard.positive("numberOfFloors", input.numberOfFloors)
+        InputGuard.positive("storyHeight", input.storyHeight)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()

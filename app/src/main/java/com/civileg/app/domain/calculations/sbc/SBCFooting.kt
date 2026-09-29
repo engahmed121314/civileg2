@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
@@ -26,9 +27,15 @@ class SBCFooting : FootingDesign {
         soilBearingCapacity: Double, footingDepth: Double, loadCombination: LoadCombination,
         constraints: BoundaryConstraints
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-        
+
         // 1. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
         val factor = loadCombination.getFactorForCode(DesignCode.SBC)
         val P_service = axialLoad / factor
@@ -162,6 +169,10 @@ class SBCFooting : FootingDesign {
     }
 
     override fun checkPunchingShear(fcu: Double, columnWidth: Double, columnDepth: Double, effectiveDepth: Double, punchingShearForce: Double, loadCombination: LoadCombination): ShearCheckResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         // SBC 304-2018 / ACI 318: فحص قص الاختراق
         // محيط الاختراق عند بعد d/2 من وجه العمود
         val b0 = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
@@ -195,6 +206,11 @@ class SBCFooting : FootingDesign {
     }
 
     override fun calculateFootingReinforcement(fcu: Double, fy: Double, footingWidth: Double, footingLength: Double, effectiveDepth: Double, designMoment: Double, direction: FootingDirection): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("footingWidth", footingWidth)
+        InputGuard.positive("footingLength", footingLength)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -277,6 +293,13 @@ class SBCFooting : FootingDesign {
         columnWidth: Double,
         columnDepth: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
         // SBC 304 closely follows ACI 318
         val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.SBC)
         val p2Working = axialLoad2 / loadCombination.getFactorForCode(DesignCode.SBC)
@@ -327,6 +350,11 @@ class SBCFooting : FootingDesign {
         soilBearingCapacity: Double,
         raftThickness: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("totalArea", totalArea)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("raftThickness", raftThickness)
         val soilPressure = totalLoads / totalArea
         val effectiveDepth = raftThickness - getMinCover() - 10.0
         
@@ -361,6 +389,10 @@ class SBCFooting : FootingDesign {
         pileDiameter: Double,
         columnLoads: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("numberOfPiles", numberOfPiles)
+        InputGuard.positive("pileDiameter", pileDiameter)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -434,6 +466,9 @@ class SBCFooting : FootingDesign {
     override fun getMinFootingThickness(): Double = 300.0
     override fun getMinCover(): Double = 75.0
     override fun getPunchingShearCapacity(fcu: Double, perimeter: Double, effectiveDepth: Double): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("perimeter", perimeter)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         // SBC 304 / ACI 318: φ × vc × bo × d
         val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val vc = 0.33 * sqrt(fc_prime)  // MPa

@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
 
@@ -64,6 +65,15 @@ class SBCShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("wallLength", input.wallLength)
+        InputGuard.positive("wallThickness", input.wallThickness)
+        InputGuard.positive("wallHeight", input.wallHeight)
+        InputGuard.positive("numberOfStories", input.numberOfStories)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("clearCover", input.clearCover)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()

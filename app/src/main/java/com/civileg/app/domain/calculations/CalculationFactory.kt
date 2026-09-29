@@ -65,7 +65,7 @@ object CalculationFactory {
     fun getHordiSlabDesign(code: DesignCode): HordiSlabDesign = when (code) {
         DesignCode.ECP -> ECPHordiSlabWrapper()
         DesignCode.ACI -> ACIJoistSlab()
-        DesignCode.SBC -> ACIJoistSlab()
+        DesignCode.SBC -> SBCJoistSlab()
     }
 
     fun getWaffleSlabDesign(code: DesignCode): WaffleSlabDesign = when (code) {

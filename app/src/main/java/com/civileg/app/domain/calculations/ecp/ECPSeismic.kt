@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
@@ -50,6 +51,11 @@ class ECPSeismic : SeismicDesign {
         responseModificationFactor: Double,
         buildingHeight: Double
     ): SeismicBaseShearResult {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("totalWeight", totalWeight)
+        InputGuard.positive("importanceFactor", importanceFactor)
+        InputGuard.positive("responseModificationFactor", responseModificationFactor)
+
         val warnings = mutableListOf<String>()
         
         // ارتفاع المنشأ - يُقدر من الوزن إذا لم يُحدد
@@ -108,6 +114,10 @@ class ECPSeismic : SeismicDesign {
         peakGroundAcceleration: Double,
         importanceFactor: Double
     ): SpectrumValue {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("period", period)
+        InputGuard.positive("dampingRatio", dampingRatio)
+
         val ag = if (peakGroundAcceleration > 0) peakGroundAcceleration else 0.15
         val i = importanceFactor
         val p = SOIL_PARAMS[soilType] ?: SOIL_PARAMS[SoilType.C]!!
@@ -140,6 +150,11 @@ class ECPSeismic : SeismicDesign {
         floorWeights: List<Double>,
         floorHeights: List<Double>
     ): List<SeismicForceDistribution> {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("baseShear", baseShear)
+        InputGuard.notEmpty("floorWeights", floorWeights)
+        InputGuard.notEmpty("floorHeights", floorHeights)
+
         val n = floorWeights.size
         if (n == 0 || n != floorHeights.size) return emptyList()
         

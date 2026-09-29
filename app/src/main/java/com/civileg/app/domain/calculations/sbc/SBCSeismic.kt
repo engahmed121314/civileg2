@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.aci.ACISeismic
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.CodeReference
@@ -32,6 +33,11 @@ class SBCSeismic : SeismicDesign {
         responseModificationFactor: Double,
         buildingHeight: Double
     ): SeismicBaseShearResult {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("totalWeight", totalWeight)
+        InputGuard.positive("importanceFactor", importanceFactor)
+        InputGuard.positive("responseModificationFactor", responseModificationFactor)
+
         // SBC 301 يتبع ASCE 7 مع خريطة مخاطر سعودية
         val result = aciSeismic.calculateBaseShear(
             totalWeight, seismicZone, soilType, importanceFactor, responseModificationFactor, buildingHeight
@@ -53,6 +59,10 @@ class SBCSeismic : SeismicDesign {
         peakGroundAcceleration: Double,
         importanceFactor: Double
     ): SpectrumValue {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("period", period)
+        InputGuard.positive("dampingRatio", dampingRatio)
+
         val result = aciSeismic.getResponseSpectrum(
             period, dampingRatio, soilType, peakGroundAcceleration, importanceFactor
         )
@@ -66,6 +76,11 @@ class SBCSeismic : SeismicDesign {
         floorWeights: List<Double>,
         floorHeights: List<Double>
     ): List<SeismicForceDistribution> {
+        // ── Input validation ────────────────────────────────────────
+        InputGuard.positive("baseShear", baseShear)
+        InputGuard.notEmpty("floorWeights", floorWeights)
+        InputGuard.notEmpty("floorHeights", floorHeights)
+
         return aciSeismic.distributeSeismicForces(baseShear, floorWeights, floorHeights)
     }
 

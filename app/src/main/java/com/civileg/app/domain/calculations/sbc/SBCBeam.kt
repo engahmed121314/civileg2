@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.aci.ACIBeam
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
@@ -40,6 +41,11 @@ class SBCBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("totalDepth", totalDepth)
         // استخدام حسابات ACI كأساس
         val result = aciBeam.calculateFlexureReinforcement(
             fcu, fy, width, effectiveDepth, totalDepth, designMoment, loadCombination
@@ -84,6 +90,10 @@ class SBCBeam : BeamDesign {
         axialLoad: Double,
         loadCombination: LoadCombination
     ): ShearReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         val result = aciBeam.calculateShearReinforcement(
             fcu, fy, width, effectiveDepth, designShear, axialLoad, loadCombination
         )
@@ -121,6 +131,8 @@ class SBCBeam : BeamDesign {
         reinforcementRatio: Double,
         supportCondition: SupportCondition
     ): DeflectionCheckResult {
+        InputGuard.positive("span", span)
+        InputGuard.positive("totalDepth", totalDepth)
         val result = aciBeam.checkDeflection(span, totalDepth, reinforcementRatio, supportCondition)
         // SBC 304 يتبع ACI في نسب الانحراف مع تعديل بسيط
         return result.copy(
@@ -135,6 +147,9 @@ class SBCBeam : BeamDesign {
         barLocation: BarLocation,
         coating: CoatingType
     ): Double {
+        InputGuard.positive("barDiameter", barDiameter)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fcu", fcu)
         // SBC 304 البند 25: أطوال التثبيت
         // أساساً مثل ACI مع تعديل الغطاء السعودي
         val baseLength = aciBeam.calculateDevelopmentLength(barDiameter, fy, fcu, barLocation, coating)
@@ -179,6 +194,7 @@ class SBCBeam : BeamDesign {
     }
     
     override fun getDeflectionLimit(span: Double): Double {
+        InputGuard.positive("span", span)
         return aciBeam.getDeflectionLimit(span)
     }
 
@@ -203,6 +219,12 @@ class SBCBeam : BeamDesign {
         compressionSteelDia: Double = 16.0,
         d_prime: Double = 50.0 // mm - المسافة من وجه الضغط لمركز حديد الضغط
     ): DoublyReinforcedResult {
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("compressionSteelDia", compressionSteelDia)
+        InputGuard.positive("d_prime", d_prime)
         val notes = mutableListOf<String>()
         
         // العمق الفعال

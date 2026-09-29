@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.SoilType
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import kotlin.math.*
 
@@ -61,6 +62,17 @@ class ECPPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
+        // Rule 1.4: loud failures — validate before any maths
+        InputGuard.positive("pileDiameter", input.pileDiameter)
+        InputGuard.positive("pileLength", input.pileLength)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("safetyFactor", input.safetyFactor)
+        InputGuard.positive("numberOfPiles", input.numberOfPiles)
+        InputGuard.nonNegative("axialLoad", input.axialLoad)
+        InputGuard.nonNegative("lateralLoad", input.lateralLoad)
+        InputGuard.nonNegative("momentLoad", input.momentLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 

@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
@@ -22,6 +23,10 @@ class ACIColumn : ColumnDesign {
         reinforcementArea: Double,
         loadCombination: LoadCombination
     ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
         
@@ -47,6 +52,10 @@ class ACIColumn : ColumnDesign {
         fcu: Double, fy: Double, width: Double, depth: Double,
         reinforcementArea: Double, isSpiral: Boolean
     ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
         val Ag = width * depth
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
         val fc_prime = 0.8 * fcu
@@ -68,6 +77,11 @@ class ACIColumn : ColumnDesign {
         width: Double, depth: Double, // mm
         fcu: Double, reinforcementRatio: Double = 0.01
     ): Triple<Double, Boolean, Double> {
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.positive("effectiveLengthFactor", effectiveLengthFactor)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
         val Ag = width * depth
         // نصف القطر الدوراني (المحور الأضع)
         val minDimension = min(width, depth)
@@ -104,6 +118,10 @@ class ACIColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
         val Ag = width * depth
         val Pu = axialLoad * 1000.0  // N - الحمل المحوري التصميمي (مضروب في معامل التحميل بالفعل)
         
@@ -221,6 +239,11 @@ class ACIColumn : ColumnDesign {
         fy: Double,
         cover: Double = 40.0
     ): ColumnShearDesignResult {
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("cover", cover)
         val b = width
         val d = depth - cover
         val fc = 0.8 * fcu  // cylinder strength

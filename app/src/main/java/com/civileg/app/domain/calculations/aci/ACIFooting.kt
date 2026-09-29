@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
@@ -30,6 +31,12 @@ class ACIFooting : FootingDesign {
         loadCombination: LoadCombination,
         constraints: BoundaryConstraints
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -183,6 +190,10 @@ class ACIFooting : FootingDesign {
         punchingShearForce: Double,
         loadCombination: LoadCombination
     ): ShearCheckResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         // ACI 318-22: فحص قص الاختراق
         // b0 = 2(c1 + c2) + 4d (محيط الاختراق)
         val b0 = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
@@ -218,6 +229,11 @@ class ACIFooting : FootingDesign {
         designMoment: Double,
         direction: FootingDirection
     ): ReinforcementResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("footingWidth", footingWidth)
+        InputGuard.positive("footingLength", footingLength)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -297,6 +313,13 @@ class ACIFooting : FootingDesign {
         columnWidth: Double,
         columnDepth: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
         val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.ACI)
         val p2Working = axialLoad2 / loadCombination.getFactorForCode(DesignCode.ACI)
         val totalWorkingLoad = p1Working + p2Working
@@ -346,6 +369,11 @@ class ACIFooting : FootingDesign {
         soilBearingCapacity: Double,
         raftThickness: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("totalArea", totalArea)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("raftThickness", raftThickness)
         val soilPressure = totalLoads / totalArea
         val effectiveDepth = raftThickness - getMinCover() - 10.0
         
@@ -380,6 +408,10 @@ class ACIFooting : FootingDesign {
         pileDiameter: Double,
         columnLoads: Double
     ): FootingDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("numberOfPiles", numberOfPiles)
+        InputGuard.positive("pileDiameter", pileDiameter)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -454,6 +486,9 @@ class ACIFooting : FootingDesign {
     override fun getMinFootingThickness(): Double = 300.0
     override fun getMinCover(): Double = 75.0
     override fun getPunchingShearCapacity(fcu: Double, perimeter: Double, effectiveDepth: Double): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("perimeter", perimeter)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
         val fc_prime = 0.8 * fcu
         return PHI_SHEAR * 0.33 * sqrt(fc_prime) * perimeter * effectiveDepth / 1000.0
     }

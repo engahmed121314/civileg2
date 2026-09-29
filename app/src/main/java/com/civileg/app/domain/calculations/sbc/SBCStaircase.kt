@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -40,6 +41,14 @@ class SBCStaircase : StaircaseDesign {
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("span", input.span)
+        InputGuard.positive("totalRise", input.totalRise)
+        InputGuard.positive("stairWidth", input.stairWidth)
+        InputGuard.positive("waistThickness", input.waistThickness)
+        InputGuard.positive("deadLoad", input.deadLoad)
+        InputGuard.positive("liveLoad", input.liveLoad)
         // SBC 304 يعتمد على ACI 318 مع تعديلات سعودية
         // نحسب من الصفر بالمعاملات السعودية المحددة
         val safetyChecks = mutableListOf<StairSafetyCheck>()
