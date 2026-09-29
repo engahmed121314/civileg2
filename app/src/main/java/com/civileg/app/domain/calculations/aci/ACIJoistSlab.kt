@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -21,6 +22,17 @@ class ACIJoistSlab : HordiSlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribSpacing", ribSpacing)
+        InputGuard.positive("totalThickness", totalThickness)
+        InputGuard.positive("toppingThickness", toppingThickness)
+        InputGuard.positive("span", span)
+        InputGuard.nonNegative("designMoment", designMoment)
+        InputGuard.nonNegative("designShear", designShear)
+
         val fc = fcu * 0.8
         val b = ribSpacing
         val bw = ribWidth

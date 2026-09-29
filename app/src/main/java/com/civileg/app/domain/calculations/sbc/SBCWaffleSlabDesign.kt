@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
@@ -44,6 +45,21 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
     }
 
     override fun design(input: WaffleSlabInput): WaffleSlabResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("lx", input.lx)
+        InputGuard.positive("ly", input.ly)
+        InputGuard.positive("ribSpacing", input.ribSpacing)
+        InputGuard.positive("ribWidth", input.ribWidth)
+        InputGuard.positive("ribHeight", input.ribHeight)
+        InputGuard.positive("toppingThickness", input.toppingThickness)
+        InputGuard.positive("solidHeadSize", input.solidHeadSize)
+        InputGuard.positive("columnWidth", input.columnWidth)
+        InputGuard.nonNegative("deadLoad", input.deadLoad)
+        InputGuard.nonNegative("liveLoad", input.liveLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()

@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
@@ -80,6 +81,19 @@ class ACIAdvancedColumn : ColumnDesign {
         clearCover: Double = CLEAR_COVER,
         slabDepth: Double = 200.0
     ): AdvancedColumnResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("columnType", columnType)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.nonNegative("momentX", momentX)
+        InputGuard.nonNegative("momentY", momentY)
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.notNull("endConditions", endConditions)
+        InputGuard.notNull("loadCombination", loadCombination)
+        InputGuard.positive("clearCover", clearCover)
+        InputGuard.positive("slabDepth", slabDepth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val fcPrime = 0.8 * fcu // Cube to cylinder conversion for ACI

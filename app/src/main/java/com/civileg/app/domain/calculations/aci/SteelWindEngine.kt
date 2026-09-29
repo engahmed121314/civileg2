@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -17,6 +18,11 @@ object SteelWindEngine {
         isWindward: Boolean,
         exposureCategory: String = "C"
     ): Double {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("velocityKmh", velocityKmh)
+        InputGuard.positive("heightM", heightM)
+        InputGuard.notBlank("exposureCategory", exposureCategory)
+
         // qz = 0.613 * Kz * Kzt * Kd * V² * 1e-3 (kN/m²)
         val v = velocityKmh / 3.6 // m/s
         val kz = calculateKz(heightM, exposureCategory)

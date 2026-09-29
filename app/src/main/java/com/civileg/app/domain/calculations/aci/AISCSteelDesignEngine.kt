@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import android.os.Parcelable
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
@@ -614,6 +615,12 @@ class AISCSteelDesignEngine {
         Pu: Double,
         connectionType: ConnectionType
     ): SteelTensionResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("Pu", Pu)
+        InputGuard.notNull("connectionType", connectionType)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val Ag = section.area  // mm²
@@ -869,6 +876,15 @@ class AISCSteelDesignEngine {
         Ly: Double,
         @Suppress("UNUSED_PARAMETER") isBraced: Boolean = true
     ): SteelCompressionResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("Pu", Pu)
+        InputGuard.positive("Kx", Kx)
+        InputGuard.positive("Ky", Ky)
+        InputGuard.positive("Lx", Lx)
+        InputGuard.positive("Ly", Ly)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val Ag = section.area  // mm²
@@ -1107,6 +1123,16 @@ class AISCSteelDesignEngine {
         Cb: Double = 1.0,
         isLaterallyBraced: Boolean = false
     ): SteelFlexuralResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.nonNegative("Mux", abs(Mux))
+        InputGuard.nonNegative("Muy", abs(Muy))
+        InputGuard.nonNegative("Vux", abs(Vux))
+        InputGuard.nonNegative("Vuy", abs(Vuy))
+        InputGuard.nonNegative("Lb", Lb)
+        InputGuard.positive("Cb", Cb)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val trace = mutableListOf<String>()
@@ -1638,6 +1664,15 @@ class AISCSteelDesignEngine {
         Cb: Double = 1.0,
         isSwayFrame: Boolean = false
     ): CombinedLoadingResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("Kx", Kx)
+        InputGuard.positive("Ky", Ky)
+        InputGuard.positive("Lx", Lx)
+        InputGuard.positive("Ly", Ly)
+        InputGuard.positive("Cb", Cb)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -1737,6 +1772,13 @@ class AISCSteelDesignEngine {
         unbracedLength: Double,
         connectionType: ConnectionType
     ): SteelBracingResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.positive("unbracedLength", unbracedLength)
+        InputGuard.notNull("connectionType", connectionType)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -1829,6 +1871,17 @@ class AISCSteelDesignEngine {
         Mu: Double,
         span: Double
     ): CompositeBeamResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("steelSection", steelSection)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("effectiveWidth", effectiveWidth)
+        InputGuard.positive("studDiameter", studDiameter)
+        InputGuard.positive("studSpacing", studSpacing)
+        InputGuard.positive("Mu", Mu)
+        InputGuard.positive("span", span)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val Fy = grade.fy

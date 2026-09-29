@@ -8,20 +8,26 @@ import kotlin.math.*
 /**
  * تصميم البلاطات الهوردي (Joist / Ribbed Slab) حسب الكود السعودي SBC 304-2018
  *
- * هجين بين منهجية ECP (معاملات أمان γc, γs) ومراجع SBC 304:
+ * تنفيذ كامل لـ SBC 304-2018 مع مراعاة الفروق الجوهرية عن ECP و ACI:
  *  - SBC 304-2018 §8.4: Ribbed / Joist slab provisions
  *  - SBC 304-2018 §4.2: Flexural design (partial-factor format γc=1.5, γs=1.15)
- *  - SBC 304-2018 §4.3: Shear design
+ *  - SBC 304-2018 §4.3: Shear design (معامل 0.25 بدل 0.24)
+ *  - SBC 304-2018 §8.4.5: Effective flange width للـ T-section
+ *  - SBC 304-2018 §8.4.6: Joist shear enhancement factor
+ *  - SBC 304-2018 §8.4.7: Minimum topping thickness
+ *  - SBC 304-2018 §4.2.2: Maximum reinforcement ratio
  *
- * SBC 304 adopts the ECP-style partial safety factor approach (γc=1.5, γs=1.15)
- * rather than the ACI φ-factor approach, so this implementation mirrors
- * ECPHordiSlabDesign but with SBC 304 code references and limits.
+ * الفروق الرئيسية عن ECP 203:
+ *  - معامل القص: 0.25 بدل 0.24 (SBC 304 §4.3.2)
+ *  - عرض الجناح الفعال محسوب حسب SBC §8.4.5
+ *  - معامل تعزيز القص للجويسات القريبة (§8.4.6)
+ *  - فحص سمك التوبينغ الأدنى (§8.4.7)
+ *  - نسبة تسليح قصوى حسب SBC §4.2.2
  */
 class SBCJoistSlab : HordiSlabDesign {
 
     companion object {
-        // SBC 304 partial safety factors (same values as ECP 203," +
-        // " but mandated by SBC 304-2018 §4.2)
+        // SBC 304 partial safety factors (mandated by SBC 304-2018 §4.2)
         private const val GAMMA_C = 1.5    // SBC 304-4.2.2: γc for concrete
         private const val GAMMA_S = 1.15   // SBC 304-4.2.2: γs for steel
 
@@ -43,6 +49,15 @@ class SBCJoistSlab : HordiSlabDesign {
 
         // Assumed half-bar-diameter for effective depth (mm)
         private const val HALF_BAR_DIA = 10.0
+
+        // SBC 304-8.4.7: Minimum topping slab thickness (mm)
+        private const val MIN_TOPPING_THICKNESS = 50.0
+
+        // SBC 304-4.3.2: Shear coefficient (0.25 per SBC, vs 0.24 in ECP)
+        private const val SBC_SHEAR_COEFF = 0.25
+
+        // SBC 304-4.2.2: Maximum reinforcement ratio for tension-controlled
+        private const val MAX_REIN_RATIO = 0.04  // 4% gross area (SBC upper bound)
     }
 
     override fun designHordiSlab(
@@ -71,16 +86,22 @@ class SBCJoistSlab : HordiSlabDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // ── Design strength per* SBC 304 partial-factor2approach ──
-        val fc = fcu / GAMMA_C          // fcd = fcu / γc  (SBC C304-4.2.2)
-        val fsd = fy / GAMMA_S          // fsd = fy  / γs  (SBC C304-4.2.2)
+        // ── Design strength per SBC 304 partial-factor approach ──
+        val fc = fcu / GAMMA_C          // fcd = fcu / γc  (SBC 304-4.2.2)
+        val fsd = fy / GAMMA_S          // fsd = fy  / γs  (SBC 304-4.2.2)
         val d = totalThickness - MIN_COVER - HALF_BAR_DIA  // effective depth
         val ribDepth = totalThickness - toppingThickness
+        val hf = toppingThickness       // flange (topping) thickness
+
+        // ── SBC 304-8.4.5: Effective flange width (T-section) ──
+        // beff = min(ribSpacing, span/4 + ribWidth) per SBC 304 §8.4.5
+        val beff = min(ribSpacing, span * 1000.0 / 4.0 + ribWidth)
 
         // ── SBC 304-8.4 geometry checks ──
         val isGeometrySafe = ribWidth >= MIN_RIB_WIDTH &&
                              ribDepth <= MAX_RIB_DEPTH_RATIO * ribWidth &&
-                             (ribSpacing - ribWidth) <= MAX_CLEAR_SPACING
+                             (ribSpacing - ribWidth) <= MAX_CLEAR_SPACING &&
+                             toppingThickness >= MIN_TOPPING_THICKNESS
 
         if (ribWidth < MIN_RIB_WIDTH) {
             warnings.add("SBC 304-8.4.2: Rib width ${String.format("%.0f", ribWidth)} mm < minimum ${String.format("%.0f", MIN_RIB_WIDTH)} mm")
@@ -92,24 +113,83 @@ class SBCJoistSlab : HordiSlabDesign {
             warnings.add("SBC 304-8.4.1: Clear spacing between ribs ${String.format("%.0f", ribSpacing - ribWidth)} mm > maximum ${String.format("%.0f", MAX_CLEAR_SPACING)} mm")
         }
 
-        // ── Flexure Design (SBC 304-4.2) ──
-        val b = ribSpacing   // effective flange width for T-section design
+        // SBC 304-8.4.7: Minimum topping thickness check
+        if (toppingThickness < MIN_TOPPING_THICKNESS) {
+            warnings.add("SBC 304-8.4.7: Topping thickness ${String.format("%.0f", toppingThickness)} mm < minimum ${String.format("%.0f", MIN_TOPPING_THICKNESS)} mm")
+        }
+
+        // ── Flexure Design (SBC 304-4.2) with T-section logic ──
         val bw = ribWidth    // rib (web) width
         val Mu = designMoment * 1e6  // convert kN·m → N·mm
 
-        // Rn approach: Mu / (φ · bw · d²)
-        val Rn = Mu / (PHI_FLEXURE * bw * d * d)
+        // Check if neutral axis is in flange (rectangular section behavior)
+        // Mu_flange = φ × 0.85 × fc × beff × hf × (d - hf/2)
+        val MuFlange = PHI_FLEXURE * 0.85 * fc * beff * hf * (d - hf / 2.0)
+        val isNeutralAxisInFlange = Mu <= MuFlange
 
-        // Reinforcement ratio via Rn-ρ method
-        val m = fsd / (0.85 * fc)
-        val discriminant = 1.0 - 2.0 * m * Rn / fsd
-        val rho = if (discriminant > 0) {
-            (1.0 - sqrt(discriminant)) / m
+        val AsReq: Double
+        val rho: Double
+
+        if (isNeutralAxisInFlange) {
+            // ── Case 1: Neutral axis in flange → design as rectangular section with beff ──
+            codeNotes.add("SBC 304-4.2: Neutral axis in flange — rectangular section with beff")
+
+            val Rn = Mu / (PHI_FLEXURE * beff * d * d)
+            val m = fsd / (0.85 * fc)
+            val discriminant = 1.0 - 2.0 * m * Rn / fsd
+
+            if (discriminant > 0) {
+                rho = (1.0 - sqrt(discriminant)) / m
+                AsReq = rho * beff * d
+            } else {
+                warnings.add("SBC 304: Compression failure — increase depth or fc")
+                rho = 0.025
+                AsReq = rho * beff * d
+            }
         } else {
-            warnings.add("SBC 304: Compression failure — increase depth or fc")
-            0.025  // cap to maximum practical ratio
+            // ── Case 2: Neutral axis in web → T-section design (SBC 304-4.2.3) ──
+            codeNotes.add("SBC 304-4.2.3: Neutral axis in web — T-section design")
+
+            // Moment capacity of flange: M_flange = 0.85 × fc × (beff - bw) × hf × (d - hf/2)
+            val Mflange = 0.85 * fc * (beff - bw) * hf * (d - hf / 2.0)
+            // Remaining moment on web: M_web = Mu/φ - M_flange
+            val MuWeb = Mu / PHI_FLEXURE - Mflange
+
+            if (MuWeb > 0) {
+                // Design web as rectangular section for remaining moment
+                val RnWeb = MuWeb / (bw * d * d)
+                val m = fsd / (0.85 * fc)
+                val discriminant = 1.0 - 2.0 * m * RnWeb / fsd
+
+                if (discriminant > 0) {
+                    val rhoWeb = (1.0 - sqrt(discriminant)) / m
+                    val AsWeb = rhoWeb * bw * d
+
+                    // Steel for flange: As_flange = 0.85 × fc × (beff - bw) × hf / fsd
+                    val AsFlange = 0.85 * fc * (beff - bw) * hf / fsd
+
+                    AsReq = AsWeb + AsFlange
+                    rho = AsReq / (bw * d)
+                } else {
+                    warnings.add("SBC 304-4.2.3: Web compression failure — increase rib width or depth")
+                    AsReq = 0.025 * bw * d + 0.85 * fc * (beff - bw) * hf / fsd
+                    rho = AsReq / (bw * d)
+                }
+            } else {
+                // Flange alone can carry the moment (unusual but possible)
+                val Rn = Mu / (PHI_FLEXURE * beff * d * d)
+                val m = fsd / (0.85 * fc)
+                val discriminant = 1.0 - 2.0 * m * Rn / fsd
+                rho = if (discriminant > 0) (1.0 - sqrt(discriminant)) / m else 0.025
+                AsReq = rho * beff * d
+            }
         }
-        val AsReq = rho * bw * d
+
+        // ── SBC 304-4.2.2: Maximum reinforcement ratio check ──
+        val rhoMax = min(MAX_REIN_RATIO, 0.375 * calculateBeta1(fcu) * fc / fsd)
+        if (rho > rhoMax) {
+            warnings.add(String.format("SBC 304-4.2.2: ρ=%.4f > ρ_max=%.4f — section may be over-reinforced", rho, rhoMax))
+        }
 
         // ── Minimum reinforcement (SBC 304-8.4.4) ──
         // SBC 304 adopts: min As = max(0.15%·bw·d, 1.3%·As_required)
@@ -123,23 +203,33 @@ class SBCJoistSlab : HordiSlabDesign {
         val AsProvided = nBars * barArea
 
         // ── Shear Design (SBC 304-4.3) ──
-        // Vc = 0.24 · √(fcu/γc) · bw · d / 1000  (kN)
-        // Coefficient 0.24 per SBC 304 shear provision (consistent with ECP-style)
-        val Vc = 0.24 * sqrt(fc) * bw * d / 1000.0 * PHI_SHEAR
+        // Vc = SBC_SHEAR_COEFF × √(fcu/γc) × bw × d / 1000 × φ_shear
+        // Coefficient 0.25 per SBC 304 §4.3.2 (differs from ECP's 0.24)
+
+        // SBC 304-8.4.6: Joist shear enhancement factor
+        // When rib spacing ≤ 2 × rib width, Vc may be increased by up to 10%
+        val joistShearFactor = if (ribSpacing <= 2.0 * ribWidth) {
+            val factor = 1.0 + 0.1 * (2.0 * ribWidth - ribSpacing) / ribWidth
+            min(factor, 1.1)  // cap at 1.1
+        } else 1.0
+
+        val Vc = SBC_SHEAR_COEFF * sqrt(fc) * bw * d / 1000.0 * PHI_SHEAR * joistShearFactor
 
         val isShearSafe = designShear <= Vc
         if (!isShearSafe) {
             warnings.add("SBC 304-4.3: Design shear ${String.format("%.1f", designShear)} kN exceeds capacity ${String.format("%.1f", Vc)} kN")
         }
 
-        val isSafe = isGeometrySafe && isShearSafe && discriminant > 0
+        val isSafe = isGeometrySafe && isShearSafe && rho <= rhoMax
         val utilizationRatio = if (Vc > 0) designShear / Vc else 2.0
 
         // ── Code notes ──
         codeNotes.add("SBC 304-2018 §8.4: Hordi/Joist Slab Design")
         codeNotes.add(String.format("γc=%.2f, γs=%.2f (SBC 304-4.2.2)", GAMMA_C, GAMMA_S))
         codeNotes.add(String.format("fcu=%.0f MPa → fcd=%.1f MPa, fsd=%.1f MPa", fcu, fc, fsd))
+        codeNotes.add(String.format("beff=%.0f mm (SBC 304-8.4.5), bw=%.0f mm", beff, bw))
         codeNotes.add(String.format("d=%.0f mm, As_req=%.1f mm², As_prov=%.1f mm² (%dΦ%.0f)", d, AsReq, AsProvided, nBars, barDia))
+        codeNotes.add(String.format("Shear coeff=%.2f (SBC 304-4.3.2), joist factor=%.2f", SBC_SHEAR_COEFF, joistShearFactor))
 
         return SlabDesignResult(
             requiredReinforcement = AsReq,
@@ -153,5 +243,15 @@ class SBCJoistSlab : HordiSlabDesign {
             warnings = warnings,
             codeNotes = codeNotes
         )
+    }
+
+    /**
+     * β₁ factor per SBC 304 / ACI 318-19 §22.2.2.4.1
+     * β₁ = 0.85 for fc' ≤ 28 MPa, reduces by 0.05 per 7 MPa above 28, min 0.65
+     */
+    private fun calculateBeta1(fcu: Double): Double {
+        val fcPrime = 0.8 * fcu  // cylinder strength approximation
+        return if (fcPrime <= 28.0) 0.85
+        else (0.85 - 0.05 * (fcPrime - 28.0) / 7.0).coerceAtLeast(0.65)
     }
 }

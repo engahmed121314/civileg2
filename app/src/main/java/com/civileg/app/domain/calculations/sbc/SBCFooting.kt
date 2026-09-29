@@ -295,49 +295,85 @@ class SBCFooting : FootingDesign {
     ): FootingDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
+        InputGuard.atLeastOne("axialLoad1" to axialLoad1, "axialLoad2" to axialLoad2)
         InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
         InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
         InputGuard.positive("footingDepth", footingDepth)
         InputGuard.positive("columnWidth", columnWidth)
         InputGuard.positive("columnDepth", columnDepth)
-        // SBC 304 closely follows ACI 318
-        val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.SBC)
-        val p2Working = axialLoad2 / loadCombination.getFactorForCode(DesignCode.SBC)
+
+        // SBC 304 closely follows ACI 318 for combined footing design
+        val code = DesignCode.SBC
+        val factor = loadCombination.getFactorForCode(code)
+        val p1Working = axialLoad1 / factor
+        val p2Working = axialLoad2 / factor
         val totalWorkingLoad = p1Working + p2Working
-        
-        val xResultant = (p2Working * distanceBetweenColumns) / totalWorkingLoad
-        val s1 = 600.0 // Distance from edge to first column
-        val footingLength = 2 * (xResultant + s1)
-        
-        val requiredArea = (totalWorkingLoad * 1.1) / soilBearingCapacity
+
+        // ── Step 1: Locate resultant of column loads ──
+        val xResultant = if (totalWorkingLoad > 0) (p2Working * distanceBetweenColumns) / totalWorkingLoad else distanceBetweenColumns / 2.0
+
+        // ── Step 2: Determine footing length ──
+        val s1 = (columnDepth / 2.0 + 150.0).coerceIn(300.0, 800.0)
+        val footingLength = 2.0 * (xResultant + s1)
+
+        // ── Step 3: Determine footing width ──
+        val requiredArea = totalWorkingLoad / soilBearingCapacity
         var footingWidth = (requiredArea * 1e6) / footingLength
-        footingWidth = ceil(footingWidth / 50) * 50
-        
+        footingWidth = ceil(footingWidth / 50.0) * 50.0
+
         val actualArea = (footingLength * footingWidth) / 1e6
         val soilPressure = totalWorkingLoad / actualArea
-        
+
+        // ── Step 4: Eccentricity and max/min soil pressure ──
+        val centroidFromLeft = footingLength / 2.0
+        val e = (xResultant + s1) - centroidFromLeft
+        val I = footingWidth * footingLength.pow(3) / 12.0 / 1e6
+        val M_ecc = totalWorkingLoad * e / 1000.0
+        val S_section = I / (footingLength / 2000.0)
+        val maxSoilPressure = if (S_section > 0) soilPressure + M_ecc / S_section else soilPressure
+        val minSoilPressure = if (S_section > 0) (soilPressure - M_ecc / S_section).coerceAtLeast(0.0) else soilPressure
+
+        // ── Step 5: Ultimate net soil pressure ──
         val effectiveDepth = footingDepth - getMinCover() - 10.0
         val qu_ultimate = (axialLoad1 + axialLoad2) / actualArea
-        
-        // Simplified moment for reinforcement (SBC/ACI)
-        val maxMoment = qu_ultimate * (footingLength / 2000.0).pow(2) / 8.0 
-        
+
+        // ── Step 6: Longitudinal bending (positive + negative) ──
+        val L_m = footingLength / 1000.0
+        val maxPosMoment = qu_ultimate * footingWidth / 1000.0 * L_m.pow(2) / 8.0
+        val cantileverL1 = s1 / 1000.0
+        val negMoment1 = qu_ultimate * footingWidth / 1000.0 * cantileverL1.pow(2) / 2.0
+        val maxMoment = maxOf(maxPosMoment, negMoment1)
+
         val reinforcement = calculateFootingReinforcement(
             fcu, fy, footingWidth, footingLength, effectiveDepth,
             maxMoment, FootingDirection.LONG
         )
-        
+
+        // ── Step 7: Punching shear at both columns ──
         val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
-        
+        val punching2 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad2, loadCombination)
+
+        // ── Step 8: One-way shear check ──
+        val shearDistance = footingLength / 2.0 - columnDepth / 2.0 - effectiveDepth
+        val Vu_oneWay = if (shearDistance > 0) qu_ultimate * footingWidth / 1000.0 * shearDistance / 1000.0 else 0.0
+        val fcDesign = fcu / 1.5
+        val Vc_oneWay = 0.25 * sqrt(fcDesign) * footingWidth * effectiveDepth / 1000.0 * 0.75
+        val isOneWayShearSafe = Vu_oneWay <= Vc_oneWay
+
+        val isSafe = maxSoilPressure <= soilBearingCapacity * 1.05 &&
+                     punching1.isSafe && punching2.isSafe &&
+                     isOneWayShearSafe &&
+                     minSoilPressure >= 0.0
+
         return FootingDesignResult(
             requiredWidth = footingWidth,
             requiredLength = footingLength,
             requiredThickness = footingDepth,
             soilPressure = soilPressure,
-            maxSoilPressure = soilPressure,
+            maxSoilPressure = maxSoilPressure,
             reinforcement = reinforcement,
             punchingShearCheck = punching1,
-            isSafe = soilPressure <= soilBearingCapacity && punching1.isSafe
+            isSafe = isSafe
         )
     }
 

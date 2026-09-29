@@ -315,48 +315,97 @@ class ACIFooting : FootingDesign {
     ): FootingDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
+        InputGuard.atLeastOne("axialLoad1" to axialLoad1, "axialLoad2" to axialLoad2)
         InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
         InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
         InputGuard.positive("footingDepth", footingDepth)
         InputGuard.positive("columnWidth", columnWidth)
         InputGuard.positive("columnDepth", columnDepth)
-        val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.ACI)
-        val p2Working = axialLoad2 / loadCombination.getFactorForCode(DesignCode.ACI)
+
+        val code = DesignCode.ACI
+        val factor = loadCombination.getFactorForCode(code)
+        val p1Working = axialLoad1 / factor
+        val p2Working = axialLoad2 / factor
         val totalWorkingLoad = p1Working + p2Working
-        
-        val xResultant = (p2Working * distanceBetweenColumns) / totalWorkingLoad
-        val s1 = 600.0 // Default offset
-        val footingLength = 2 * (xResultant + s1)
-        
-        val requiredArea = (totalWorkingLoad * 1.1) / soilBearingCapacity
+
+        // ── Step 1: Locate resultant of column loads ──
+        // Distance from column 1 to resultant
+        val xResultant = if (totalWorkingLoad > 0) (p2Working * distanceBetweenColumns) / totalWorkingLoad else distanceBetweenColumns / 2.0
+
+        // ── Step 2: Determine footing length ──
+        // Place resultant at centroid: L/2 = xResultant + s1 (overhang from col1)
+        val s1 = (columnDepth / 2.0 + 150.0).coerceIn(300.0, 800.0)  // overhang past column 1 edge
+        val footingLength = 2.0 * (xResultant + s1)
+
+        // ── Step 3: Determine footing width ──
+        val requiredArea = totalWorkingLoad / soilBearingCapacity
         var footingWidth = (requiredArea * 1e6) / footingLength
-        footingWidth = ceil(footingWidth / 50) * 50
-        
-        val actualArea = (footingLength * footingWidth) / 1e6
-        val soilPressure = totalWorkingLoad / actualArea
-        
+        footingWidth = ceil(footingWidth / 50.0) * 50.0  // round up to 50mm
+
+        val actualArea = (footingLength * footingWidth) / 1e6  // m²
+        val soilPressure = totalWorkingLoad / actualArea  // kN/m²
+
+        // ── Step 4: Compute eccentricity and max/min soil pressure ──
+        // Centroid distance from left edge
+        val centroidFromLeft = footingLength / 2.0
+        // Eccentricity of resultant from centroid
+        val e = (xResultant + s1) - centroidFromLeft
+        // Soil pressure with eccentricity (trapezoidal distribution)
+        val I = footingWidth * footingLength.pow(3) / 12.0 / 1e6  // m⁴ (section modulus)
+        val M_ecc = totalWorkingLoad * e / 1000.0  // kN.m (moment due to eccentricity)
+        val S_section = I / (footingLength / 2000.0)  // m³ (section modulus)
+        val maxSoilPressure = if (S_section > 0) soilPressure + M_ecc / S_section else soilPressure
+        val minSoilPressure = if (S_section > 0) (soilPressure - M_ecc / S_section).coerceAtLeast(0.0) else soilPressure
+
+        // ── Step 5: Ultimate net soil pressure for reinforcement design ──
         val effectiveDepth = footingDepth - getMinCover() - 10.0
-        val qu_ultimate = (axialLoad1 + axialLoad2) / actualArea
-        
-        // Simplified moment for reinforcement
-        val maxMoment = qu_ultimate * (footingLength / 2000.0).pow(2) / 8.0 
-        
+        val qu_ultimate = (axialLoad1 + axialLoad2) / actualArea  // kN/m² (factored)
+
+        // ── Step 6: Longitudinal bending — positive moment (between columns) ──
+        // Treat as beam loaded by qu, with point loads at column locations
+        // Maximum positive moment between columns (approximate: at resultant location)
+        val L_m = footingLength / 1000.0  // m
+        val maxPosMoment = qu_ultimate * footingWidth / 1000.0 * L_m.pow(2) / 8.0  // kN.m
+
+        // ── Step 7: Longitudinal bending — negative moment (cantilever at col1 side) ──
+        // Cantilever from edge to column 1
+        val cantileverL1 = s1 / 1000.0  // m
+        val negMoment1 = qu_ultimate * footingWidth / 1000.0 * cantileverL1.pow(2) / 2.0  // kN.m
+
+        // Take the larger moment for reinforcement design
+        val maxMoment = maxOf(maxPosMoment, negMoment1)
+
         val reinforcement = calculateFootingReinforcement(
             fcu, fy, footingWidth, footingLength, effectiveDepth,
             maxMoment, FootingDirection.LONG
         )
-        
+
+        // ── Step 8: Punching shear check at both columns ──
         val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
-        
+        val punching2 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad2, loadCombination)
+
+        // ── Step 9: One-way shear check at critical section (d from column face) ──
+        // V at distance d from column face: V = qu × B × (L/2 - colDepth/2 - d)
+        val shearDistance = footingLength / 2.0 - columnDepth / 2.0 - effectiveDepth
+        val Vu_oneWay = if (shearDistance > 0) qu_ultimate * footingWidth / 1000.0 * shearDistance / 1000.0 else 0.0  // kN
+        val fcPrime = 0.8 * fcu
+        val Vc_oneWay = 0.17 * sqrt(fcPrime) * footingWidth * effectiveDepth / 1000.0 * PHI_SHEAR  // kN (ACI 22.5.5.1)
+        val isOneWayShearSafe = Vu_oneWay <= Vc_oneWay
+
+        val isSafe = maxSoilPressure <= soilBearingCapacity * 1.05 &&  // allow 5% over for rounding
+                     punching1.isSafe && punching2.isSafe &&
+                     isOneWayShearSafe &&
+                     minSoilPressure >= 0.0  // no tension under footing
+
         return FootingDesignResult(
             requiredWidth = footingWidth,
             requiredLength = footingLength,
             requiredThickness = footingDepth,
             soilPressure = soilPressure,
-            maxSoilPressure = soilPressure,
+            maxSoilPressure = maxSoilPressure,
             reinforcement = reinforcement,
             punchingShearCheck = punching1,
-            isSafe = soilPressure <= soilBearingCapacity && punching1.isSafe
+            isSafe = isSafe
         )
     }
 

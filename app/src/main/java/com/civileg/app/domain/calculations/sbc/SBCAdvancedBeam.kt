@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
@@ -85,6 +86,17 @@ class SBCAdvancedBeam {
         loadCombination: LoadCombination,
         isCorrosiveEnvironment: Boolean = false
     ): AdvancedBeamResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("beamType", beamType)
+        InputGuard.notNull("sectionType", sectionType)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -276,6 +288,18 @@ class SBCAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("flangeWidth", flangeWidth)
+        InputGuard.positive("flangeThickness", flangeThickness)
+        InputGuard.positive("webWidth", webWidth)
+        InputGuard.positive("webDepth", webDepth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.positive("span", span)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -563,6 +587,16 @@ class SBCAdvancedBeam {
         liveLoad: Double,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("span", span)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -762,6 +796,16 @@ class SBCAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): List<AdvancedBeamResult> {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notEmpty("spans", spans)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val allResults = mutableListOf<AdvancedBeamResult>()
         val globalCodeNotes = mutableListOf<String>()
         val globalWarnings = mutableListOf<String>()
@@ -1025,6 +1069,13 @@ class SBCAdvancedBeam {
         fy: Double,
         totalLoad: Double
     ): Pair<List<String>, List<String>> {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("totalLoad", totalLoad)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val fcPrime = 0.8 * fcu
@@ -1087,6 +1138,14 @@ class SBCAdvancedBeam {
         effectiveDepth: Double,
         designShear: Double
     ): ShearReinforcementResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("shearResult", shearResult)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.nonNegative("designShear", designShear)
+
         val warnings = shearResult.warnings.toMutableList()
         val codeNotes = shearResult.codeNotes.toMutableList()
         val fcPrime = 0.8 * fcu
@@ -1164,6 +1223,13 @@ class SBCAdvancedBeam {
         effectiveDepth: Double,
         fy: Double
     ): Triple<Double, Boolean, List<String>> {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.nonNegative("columnSumMoment", columnSumMoment)
+        InputGuard.nonNegative("beamTopReinforcement", beamTopReinforcement)
+        InputGuard.nonNegative("beamBottomReinforcement", beamBottomReinforcement)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+        InputGuard.positive("fy", fy)
+
         val notes = mutableListOf<String>()
         notes.add("SBC 304-2018 §21.6: Strong Column - Weak Beam Check")
 

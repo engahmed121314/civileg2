@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
@@ -63,6 +64,14 @@ class ACIAdvancedSlab {
         inventory: RebarInventory? = null,
         loadCombination: LoadCombination
     ): AdvancedSlabResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("slabType", slabType)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -658,6 +667,15 @@ class ACIAdvancedSlab {
         liveLoad: Double,           // kN/m²
         loadCombination: LoadCombination
     ): AdvancedSlabResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("thickness", thickness)
+        InputGuard.positive("cantileverLength", cantileverLength)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 

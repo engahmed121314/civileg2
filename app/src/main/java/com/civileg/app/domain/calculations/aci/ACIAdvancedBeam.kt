@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.AnalyzeRebarInventory
@@ -64,6 +65,17 @@ class ACIAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("beamType", beamType)
+        InputGuard.notNull("sectionType", sectionType)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 

@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
@@ -44,6 +45,17 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
     }
 
     override fun design(input: WaffleSlabInput): WaffleSlabResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("input", input)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+        InputGuard.positive("lx", input.lx)
+        InputGuard.positive("ly", input.ly)
+        InputGuard.positive("ribWidth", input.ribWidth)
+        InputGuard.positive("ribHeight", input.ribHeight)
+        InputGuard.positive("ribSpacing", input.ribSpacing)
+        InputGuard.positive("columnWidth", input.columnWidth)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()

@@ -20,6 +20,7 @@ import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.entities.CodeReference
+import com.civileg.app.domain.calculations.base.FootingDesignResult
 import com.civileg.core.engineering.StrapFootingDesignEngine
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
@@ -1227,7 +1228,7 @@ class CalculatorEngine @Inject constructor(
             distanceBetweenColumns = distanceBetweenColumns,
             soilBearingCapacity = soilBearingCapacity,
             footingDepth = footingDepth,
-            loadCombination = LoadCombination.ULS,
+            loadCombination = LoadCombination.DEAD_LIVE,
             columnWidth = columnWidth, columnDepth = columnDepth
         )
     }

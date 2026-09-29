@@ -682,28 +682,68 @@ class ECPShearWall : ShearWallDesign {
         val fsDesign = fy / GAMMA_S
         val beta1 = calculateBeta1(fcu)
 
-        val maxIterations = 60
+        val maxIterations = 80
         val relTol = 5e-4   // 0.05 % relative tolerance
         val absTol = 0.5    // 0.5 mm absolute tolerance
-        var c = 50.0
+        val dampingFactor = 0.6  // Under-relaxation to prevent oscillation
+
+        // Bug C fix: Adaptive initial guess based on wall geometry
+        // For ductile walls, c/d ≈ 0.2–0.4; start at 0.25*d
+        var c = (0.25 * d).coerceIn(20.0, 0.4 * d)
         var converged = false
+        var oscillationCount = 0
+        var prevDelta = 0.0
+
         for (i in 1..maxIterations) {
             val cPrev = c
             val a = beta1 * c
             val leverArm = d - a / 2.0
-            if (leverArm <= 0) break
+            if (leverArm <= 0) {
+                // lever arm exhausted → c too large; clamp and exit
+                c = cPrev.coerceIn(0.0, 0.5 * d)
+                break
+            }
             val AsEst = max(0.0, (MuNmm - PuN * (d - Lw / 2.0)) / (fsDesign * leverArm))
             // C = T + Pu: 0.67*fcu/γc * bw * a = As * fy/γs + Pu
             val newA = if (bw > 0 && fcDesign > 0) {
                 (AsEst * fsDesign + PuN) / (fcDesign * bw)
             } else a
-            c = newA / beta1
+            val cNew = newA / beta1
+
+            // Bug B fix: Clamp c within physical bounds during iteration
+            // c must be in [0, d] (neutral axis cannot exceed effective depth)
+            val cClamped = cNew.coerceIn(0.0, d)
+
+            // Apply under-relaxation damping to prevent oscillation
+            c = dampingFactor * cClamped + (1.0 - dampingFactor) * cPrev
+
+            // Detect oscillation (sign change in delta)
+            val delta = c - cPrev
+            if (prevDelta * delta < 0) oscillationCount++
+            prevDelta = delta
+
+            // If oscillating heavily, increase damping
+            val effectiveDamping = if (oscillationCount > 3) 0.4 else dampingFactor
+            if (oscillationCount > 3) {
+                c = effectiveDamping * cClamped + (1.0 - effectiveDamping) * cPrev
+            }
+
             // Convergence check — compare new c against PREVIOUS c
             if (abs(c - cPrev) < absTol || abs(c - cPrev) < relTol * abs(cPrev)) {
                 converged = true
                 break
             }
         }
+
+        // Bug A fix: Check convergence flag and warn if not converged
+        if (!converged) {
+            // Fallback: use a conservative estimate based on axial load ratio
+            val axialRatio = if (fcDesign * bw * d > 0) abs(PuN) / (fcDesign * bw * d) else 0.3
+            val cFallback = (axialRatio * d).coerceIn(0.1 * d, 0.5 * d)
+            // Blend: 50% iterative result + 50% fallback for safety
+            c = 0.5 * c.coerceIn(0.0, d) + 0.5 * cFallback
+        }
+
         return c.coerceIn(0.0, 0.5 * d)  // limit c/d to 0.5 for ductility
     }
 

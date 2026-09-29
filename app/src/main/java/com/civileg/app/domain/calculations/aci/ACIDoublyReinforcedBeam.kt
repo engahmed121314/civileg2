@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.aci
 
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -81,6 +82,16 @@ class ACIDoublyReinforcedBeam {
         tensionBarDia: Int = 20,
         compBarDia: Int = 16
     ): DoublyReinforcedBeamResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("mu", mu)
+        InputGuard.positive("b", b)
+        InputGuard.positive("h", h)
+        InputGuard.positive("fcPrime", fcPrime)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("cover", cover)
+        InputGuard.positive("tensionBarDia", tensionBarDia)
+        InputGuard.positive("compBarDia", compBarDia)
+
         val warnings = mutableListOf<String>()
 
         // ==================== Section Geometry ====================
@@ -237,6 +248,8 @@ class ACIDoublyReinforcedBeam {
     }
 
     fun calculateRMax(fcPrime: Double, fy: Double): Double {
+        InputGuard.positive("fcPrime", fcPrime)
+        InputGuard.positive("fy", fy)
         val beta1 = if (fcPrime <= 28.0) 0.85 else (0.85 - 0.05 * (fcPrime - 28.0) / 7.0).coerceAtLeast(0.65)
         val cOverDMax = EPSILON_CU / (EPSILON_CU + 0.005)
         val aOverD = beta1 * cOverDMax
@@ -244,6 +257,8 @@ class ACIDoublyReinforcedBeam {
     }
 
     fun calculateKBal(fcPrime: Double, fy: Double): Double {
+        InputGuard.positive("fcPrime", fcPrime)
+        InputGuard.positive("fy", fy)
         val beta1 = if (fcPrime <= 28.0) 0.85 else (0.85 - 0.05 * (fcPrime - 28.0) / 7.0).coerceAtLeast(0.65)
         val cOverDBal = EPSILON_CU / (EPSILON_CU + fy / E_S)
         return 0.85 * beta1 * (fcPrime / fy) * cOverDBal * (1.0 - 0.5 * 0.85 * cOverDBal)

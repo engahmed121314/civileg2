@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.sbc
 
+import com.civileg.app.domain.calculations.InputGuard
 import android.os.Parcelable
 import com.civileg.app.domain.entities.*
 import kotlinx.parcelize.Parcelize
@@ -241,6 +242,16 @@ class SBCSteelDesignEngine {
         isCoastal: Boolean = false,
         isSeismic: Boolean = false
     ): SteelFlexuralResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.nonNegative("Mu", Mu)
+        InputGuard.nonNegative("Vu", Vu)
+        InputGuard.nonNegative("w_LL", w_LL)
+        InputGuard.positive("span", span)
+        InputGuard.nonNegative("Lb", Lb)
+        InputGuard.positive("Cb", Cb)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -395,6 +406,17 @@ class SBCSteelDesignEngine {
         isCoastal: Boolean = false,
         isSeismic: Boolean = false
     ): SteelCompressionResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("Pu", Pu)
+        InputGuard.nonNegative("Mux", Mux)
+        InputGuard.nonNegative("Muy", Muy)
+        InputGuard.positive("Kx", Kx)
+        InputGuard.positive("Ky", Ky)
+        InputGuard.positive("Lx", Lx)
+        InputGuard.positive("Ly", Ly)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -540,6 +562,17 @@ class SBCSteelDesignEngine {
         Lx: Double, Ly: Double,
         isCoastal: Boolean = false
     ): CombinedLoadingResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("Pu", Pu)
+        InputGuard.nonNegative("Mux", Mux)
+        InputGuard.nonNegative("Muy", Muy)
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("Kx", Kx)
+        InputGuard.positive("Ky", Ky)
+        InputGuard.positive("Lx", Lx)
+        InputGuard.positive("Ly", Ly)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -619,6 +652,12 @@ class SBCSteelDesignEngine {
         grade: SteelGrade,
         isSeismic: Boolean = false
     ): ConnectionDesignResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("connectionType", connectionType)
+        InputGuard.positive("appliedForce", appliedForce)
+        InputGuard.positive("plateThickness", plateThickness)
+        InputGuard.notNull("grade", grade)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val calculations = StringBuilder()
@@ -894,6 +933,14 @@ class SBCSteelDesignEngine {
         fcu: Double,
         isGrouted: Boolean = true
     ): BasePlateResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.positive("Pu", Pu)
+        InputGuard.nonNegative("Mux", Mux)
+        InputGuard.nonNegative("Muy", Muy)
+        InputGuard.notNull("columnSection", columnSection)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("fcu", fcu)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -1024,6 +1071,13 @@ class SBCSteelDesignEngine {
         unbracedLength: Double,
         connectionType: ConnectionType
     ): SteelBracingResult {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("axialLoad", axialLoad)
+        InputGuard.positive("unbracedLength", unbracedLength)
+        InputGuard.notNull("connectionType", connectionType)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
@@ -1250,6 +1304,12 @@ class SBCSteelDesignEngine {
         deadLoad: Double, liveLoad: Double,
         windLoad: Double = 0.0, seismicLoad: Double = 0.0
     ): List<SBCLoadCombination> {
+        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.nonNegative("windLoad", windLoad)
+        InputGuard.nonNegative("seismicLoad", seismicLoad)
+
         val combinations = mutableListOf<SBCLoadCombination>()
 
         // 1. SBC 306 / ASCE 7-16: 1.2D + 1.6L (الحمل الأساسي)
