@@ -209,6 +209,7 @@ class ACIFooting : FootingDesign {
             0.083 * (2.0 + alphaS * effectiveDepth / b0) * sqrt(fc_prime)
         )
         val capacity = PHI_SHEAR * vn * b0 * effectiveDepth / 1000.0
+        // Note: ACI 318 applies φ=0.75 directly on capacity side (vc), so no 0.90 reduction on demand side is needed. SBC/ECP apply 0.90 on Vu side as an approximation for soil reaction within the critical perimeter.
         val isSafe = punchingShearForce <= capacity
         
         return ShearCheckResult(

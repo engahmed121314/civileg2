@@ -452,3 +452,31 @@ Stage Summary:
 
 - Next: commit + push to trigger CI build, then download APK to
   /home/z/my-project/download/civileg-latest.apk
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix all 5 CRITICAL remaining issues + 4 HIGH issues in SBC engines
+
+Work Log:
+- Added InputGuard to SBCFooting.designCombinedFooting() — 10 parameters validated
+- Added InputGuard to SBCFooting.designRaftFoundation() — 6 parameters validated
+- Added InputGuard to SBCFooting.designPileCap() — 6 parameters validated
+- Added InputGuard to SBCFooting.getPunchingShearCapacity() — 3 parameters validated
+- Added InputGuard to SBCWaffleSlabDesign.checkDeflection() — 8 parameters validated
+- Replaced placeholder `wService = 1.0 * fc` with real self-weight estimation from geometry (concrete + superimposed + live load)
+- Replaced hardcoded `w_kN_per_mm = 0.01` with computed service load per rib based on actual geometry
+- Replaced hardcoded `s1 = 600.0` with `columnWidth.coerceAtLeast(300.0)` in designCombinedFooting
+- Replaced hardcoded `600.0, 600.0` column sizes with `estimatedColSize` from raft area in designRaftFoundation
+- Replaced hardcoded `colSize = 400.0` with `max(pileDiameter * 1.5, 300.0)` in designPileCap
+- Added InputGuard + default-value warning to SBCAdvancedColumn.designSeismicConfinement()
+- Added InputGuard to SBCAdvancedColumn.checkBiaxialLoading()
+- Added InputGuard to SBCAdvancedColumn.getEpoxyCoatedDevelopmentLength()
+- Committed and pushed to origin/master: `0482f34`
+
+Stage Summary:
+- 5 CRITICAL issues resolved ✅ (InputGuard × 4 + placeholder loads × 1)
+- 4 HIGH issues resolved ✅ (hardcoded column sizes × 3 + default fcu warning × 1)
+- 3 files modified: SBCFooting.kt (+42), SBCWaffleSlabDesign.kt (+34/-4), SBCAdvancedColumn.kt (+19)
+- Total InputGuard calls in SBCFooting: 48 (was 40)
+- Total InputGuard calls in SBCWaffleSlabDesign: 35 (was 27)
+- Total InputGuard calls in SBCAdvancedColumn: 35 (was 32)

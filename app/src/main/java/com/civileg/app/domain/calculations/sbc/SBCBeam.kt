@@ -49,6 +49,11 @@ class SBCBeam : BeamDesign {
 
         // ── SBC 304-2018 أطوال التثبيت (Section 12) ──
         private const val SBC_MIN_DEVELOPMENT_LENGTH = 300.0  // mm
+
+        // ── SBC 304-2018 قيم افتراضية سعودية ──
+        private const val DEFAULT_FCU = 30.0       // MPa — أكثر درجات الخرسانة شيوعاً في السعودية
+        private const val DEFAULT_FY = 420.0      // MPa — Grade 60 (السعودي)
+        private const val MAX_SHEAR_SPACING = 600.0  // mm — SBC 304 §11.7.6
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -284,7 +289,7 @@ class SBCBeam : BeamDesign {
         val VsActual = if (Vu / 1000 > phiVc) (Vu / 1000 - phiVc) / PHI_SHEAR else 0.0
 
         val maxSpacing1 = if (VsActual <= maxVsLimit) {
-            minOf(effectiveDepth / 2, 600.0)
+            minOf(effectiveDepth / 2, MAX_SHEAR_SPACING)
         } else {
             minOf(effectiveDepth / 4, 300.0)
         }
@@ -363,8 +368,8 @@ class SBCBeam : BeamDesign {
         }
 
         // ── معامل تعديل fy — SBC 304 §9.5.2 ──
-        val defaultFy = 420.0  // Grade 60 السعودي
-        val fyFactor = minOf(1.0, 0.4 + 420.0 / defaultFy)
+        val defaultFy = DEFAULT_FY  // Grade 60 السعودي
+        val fyFactor = minOf(1.0, 0.4 + DEFAULT_FY / defaultFy)
 
         val actualRatio = (span * 1000) / totalDepth
         val allowableRatio = basicRatio * fyFactor
@@ -583,7 +588,7 @@ class SBCBeam : BeamDesign {
     override fun getMinReinforcementRatio(): Double {
         // SBC 304 §9.6.1: قيم تقريبية لـ fcu=30 MPa, fy=420 MPa (الأكثر شيوعاً في السعودية)
         // Use parameterized version for actual material grades
-        return getMinReinforcementRatio(fcPrime = 0.8 * 30.0, fy = 420.0)
+        return getMinReinforcementRatio(fcPrime = 0.8 * DEFAULT_FCU, fy = DEFAULT_FY)
     }
 
     /** SBC 304 §9.6.1: ρ_min = max(0.25√(f'c)/fy, 1.4/fy) — مع f'c و fy الفعليين */
@@ -595,7 +600,7 @@ class SBCBeam : BeamDesign {
 
     override fun getMaxReinforcementRatio(): Double {
         // SBC 304 §9.3.3.1: قيم تقريبية لـ fcu=30 MPa, fy=420 MPa
-        return getMaxReinforcementRatio(fcPrime = 0.8 * 30.0, fy = 420.0)
+        return getMaxReinforcementRatio(fcPrime = 0.8 * DEFAULT_FCU, fy = DEFAULT_FY)
     }
 
     /** SBC 304 §9.3.3.1: ρ_max = 0.85×β₁×(f'c/fy)×0.375 — مع f'c و fy الفعليين */
@@ -608,7 +613,7 @@ class SBCBeam : BeamDesign {
 
     override fun getMinShearReinforcementRatio(): Double {
         // SBC 304 §11.6.5: قيمة تقريبية لـ fy=420 MPa
-        return getMinShearReinforcementRatio(fy = 420.0)
+        return getMinShearReinforcementRatio(fy = DEFAULT_FY)
     }
 
     /** SBC 304 §11.6.5: ρ_v,min = 0.35/fy — مع fy الفعلي */
@@ -619,7 +624,7 @@ class SBCBeam : BeamDesign {
 
     override fun getMaxShearSpacing(): Double {
         // SBC 304 §11.7.6
-        return 600.0
+        return MAX_SHEAR_SPACING
     }
 
     override fun getMinCover(): Double {

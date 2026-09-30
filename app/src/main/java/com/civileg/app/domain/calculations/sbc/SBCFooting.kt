@@ -17,6 +17,7 @@ class SBCFooting : FootingDesign {
         private const val GAMMA_S = 1.15
         private const val MIN_REIN_RATIO = 0.0018  // 0.18% min for footings (ACI 318-13.3.1)
         private const val MIN_THICKNESS = 300.0  // mm
+        private const val PUNCHING_SHEAR_REDUCTION = 0.90  // SBC/ECP: approximate reduction for soil reaction within critical perimeter
     }
     
     // SBC 304 follows ACI 318 closely for footing design
@@ -200,7 +201,7 @@ class SBCFooting : FootingDesign {
         val phi = 0.75
         // القوة القاطعة المطبقة (خصم رد فعل التربة داخل المحيط)
         val punchingArea = (columnWidth + 2.0 * effectiveDepth) * (columnDepth + 2.0 * effectiveDepth)
-        val V_net = punchingShearForce * 0.90  // 90% تقريباً من الحمل
+        val V_net = punchingShearForce * PUNCHING_SHEAR_REDUCTION  // 90% تقريباً من الحمل
         val vp_applied = (V_net * 1000.0) / (b0 * effectiveDepth)  // MPa
 
         val capacity = phi * vc * b0 * effectiveDepth / 1000.0  // kN

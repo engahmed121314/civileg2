@@ -19,6 +19,7 @@ class SBCSlab : SlabDesign {
         private const val PHI_FLEXURE = 0.90
         private const val PHI_SHEAR = 0.75
         private const val MIN_REIN_RATIO = 0.0018  // SBC 304-8.4
+        private const val DEFAULT_FY = 420.0  // MPa — Grade 60 السعودي
     }
 
     override fun designOneWaySlab(
@@ -182,8 +183,8 @@ class SBCSlab : SlabDesign {
         InputGuard.positive("fy", fy)
 
         val minT = getMinSlabThickness(span, supportCondition)
-        val fyFactor = min(1.0, 420.0 / fy.coerceAtLeast(200.0))
-        val adjustedMin = if (fy != 420.0) minT * fyFactor else minT
+        val fyFactor = min(1.0, DEFAULT_FY / fy.coerceAtLeast(200.0))
+        val adjustedMin = if (fy != DEFAULT_FY) minT * fyFactor else minT
 
         return ThicknessCheckResult(
             requiredThickness = adjustedMin,

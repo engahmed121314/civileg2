@@ -13,6 +13,7 @@ class ACIBeam : BeamDesign {
         private const val BETA_1 = 0.85          // عامل كتلة الإجهاد (لـ fc' ≤ 28 MPa)
         private const val LAMBDA = 1.0           // عامل الوزن للخرسانة العادية
         private var ACI_MIN_DEVELOPMENT_LENGTH = 300.0  // mm - قابل للتعديل حسب المتطلبات
+        private const val DEFAULT_FY = 420.0  // MPa — Grade 60
     }
 
     override fun calculateFlexureReinforcement(
@@ -245,8 +246,8 @@ class ACIBeam : BeamDesign {
         }
         
         // Modification for fy (ACI Table 7.3.1.1), assume Grade 60 (fy=420 MPa) as default
-        val defaultFy = 420.0
-        val fyFactor = minOf(1.0, 0.4 + 420.0 / defaultFy)
+        val defaultFy = DEFAULT_FY
+        val fyFactor = minOf(1.0, 0.4 + DEFAULT_FY / defaultFy)
         
         val actualRatio = (span * 1000) / totalDepth
         val allowableRatio = basicRatio * fyFactor

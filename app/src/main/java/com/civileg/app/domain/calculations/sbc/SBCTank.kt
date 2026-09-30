@@ -27,6 +27,9 @@ class SBCTank : TankDesign {
         private const val CRACK_WIDTH_LIMIT = 0.25
         private const val MIN_RHO_ENV = 0.0020
         private const val FLUID_LOAD_FACTOR = 1.4
+        private const val DEFAULT_STEEL_RATIO_KG_M3 = 120.0
+        private const val CONCRETE_COST_PER_M3 = 5000.0
+        private const val STEEL_COST_PER_TON = 55000.0
     }
 
     override fun calculateTank(
@@ -93,9 +96,9 @@ class SBCTank : TankDesign {
         }
         val baseArea = L * B * baseThicknessM
         val concreteVolume = wallArea + baseArea
-        val steelWeightKgPerM3 = 120.0
+        val steelWeightKgPerM3 = DEFAULT_STEEL_RATIO_KG_M3
         val steelWeight = concreteVolume * steelWeightKgPerM3
-        val cost = concreteVolume * 5000.0 + (steelWeight / 1000.0) * 55000.0
+        val cost = concreteVolume * CONCRETE_COST_PER_M3 + (steelWeight / 1000.0) * STEEL_COST_PER_TON
 
         // 8. فحص الرفع
         var upliftFS = 0.0

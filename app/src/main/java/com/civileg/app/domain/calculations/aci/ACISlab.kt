@@ -21,6 +21,7 @@ class ACISlab : SlabDesign {
         private const val PHI_FLEXURE = 0.90
         private const val PHI_SHEAR = 0.75
         private const val MIN_REIN_RATIO = 0.0018  // ACI 7.6.1.1
+        private const val DEFAULT_FY = 420.0  // MPa — Grade 60
     }
 
     override fun designOneWaySlab(
@@ -59,7 +60,7 @@ class ACISlab : SlabDesign {
 
         // الحد الأدنى للتسليح (ACI 7.6.1.1 for slabs, NOT ACI 9.6.1.2 for beams)
         // ACI 7.6.1.1(a): As_min = max(0.0018, 0.0018 × 420/fy) × b × h
-        val rhoMinSlab = max(0.0018, 0.0018 * 420.0 / fy)
+        val rhoMinSlab = max(0.0018, 0.0018 * DEFAULT_FY / fy)
         val rhoMin = max(MIN_REIN_RATIO, rhoMinSlab)
         val rhoMax = 0.025  // ACI الحد الأقصى
         val rhoFinal = rho.coerceIn(0.0, rhoMax)
@@ -201,8 +202,8 @@ class ACISlab : SlabDesign {
         InputGuard.positive("fy", fy)
         val minT = getMinSlabThickness(span, supportCondition)
         // تعديل حسب fy (ACI Table 7.3.1.1): h_min يتناسب عكسياً مع fy
-        val fyFactor = min(1.0, 420.0 / fy.coerceAtLeast(200.0))
-        val adjustedMin = if (fy != 420.0) minT * fyFactor else minT
+        val fyFactor = min(1.0, DEFAULT_FY / fy.coerceAtLeast(200.0))
+        val adjustedMin = if (fy != DEFAULT_FY) minT * fyFactor else minT
 
         return ThicknessCheckResult(
             requiredThickness = adjustedMin,

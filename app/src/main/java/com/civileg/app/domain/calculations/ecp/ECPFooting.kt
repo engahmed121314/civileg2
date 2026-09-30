@@ -30,6 +30,7 @@ class ECPFooting : FootingDesign {
         private const val MIN_REIN_RATIO = 0.0015 // 0.15% للقواعد per ECP 203 Table 4-8
         // أقل سماكة للقواعد ECP 203
         private const val MIN_THICKNESS = 300.0 // mm
+        private const val PUNCHING_SHEAR_REDUCTION = 0.90  // ECP/SBC: approximate reduction for soil reaction within critical perimeter
     }
 
     // ===================== القاعدة المنفصلة =====================
@@ -213,7 +214,7 @@ class ECPFooting : FootingDesign {
         val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         // القوة القاطعة الفعالة (بعد خصم رد فعل التربة داخل المحيط)
         val punchArea = (columnWidth + 2.0 * effectiveDepth) * (columnDepth + 2.0 * effectiveDepth)
-        val V_punch = punchingShearForce * 0.90
+        val V_punch = punchingShearForce * PUNCHING_SHEAR_REDUCTION
 
         // ضغط القص المُطبَّق
         val qp_applied = (V_punch * 1000.0) / (bo * effectiveDepth)

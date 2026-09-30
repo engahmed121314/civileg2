@@ -42,6 +42,8 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         private const val STEEL_UNIT_WEIGHT = 7850.0
         private const val COVER = 20.0
         private const val PI = 3.141592653589793
+        private const val CONCRETE_COST_PER_M3 = 500.0
+        private const val STEEL_COST_PER_KG = 1.5
     }
 
     override fun design(input: WaffleSlabInput): WaffleSlabResult {
@@ -125,7 +127,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
                 (input.lx / input.ribSpacing * input.ly / input.ribSpacing)
         val concreteVolume = ribVolume + toppingVolume + solidHeadVolume
         val providedSteel = ribDesign.flexureReinforcement.providedArea
-        val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
+        val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * STEEL_UNIT_WEIGHT
 
         // ── 7. Aggregate safety from all sub-checks ───────────────────
         val ribSafe = ribDesign.isSafe
@@ -159,7 +161,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
             deflectionCheck = deflectionCheck,
             concreteVolume = concreteVolume,
             steelWeight = steelWeight,
-            cost = concreteVolume * 500.0 + steelWeight * 1.5
+            cost = concreteVolume * CONCRETE_COST_PER_M3 + steelWeight * STEEL_COST_PER_KG
         )
     }
 
