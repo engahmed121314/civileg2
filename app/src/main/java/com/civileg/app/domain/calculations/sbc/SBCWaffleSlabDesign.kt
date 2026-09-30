@@ -412,6 +412,16 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         providedAs: Double,
         loadCombination: LoadCombination
     ): FlatSlabDesign.DeflectionResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("span", span)
+        InputGuard.positive("totalDepth", totalDepth)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribHeight", ribHeight)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("providedAs", providedAs)
+        InputGuard.notNull("loadCombination", loadCombination)
+
         val fc = fcu / GAMMA_C
         val Ec = 4400.0 * sqrt(fc.coerceAtLeast(1.0))
 
@@ -450,19 +460,31 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         val Mcr = if (Ig > 0 && yBar > 0 && yBar < h) {
             (0.62 * sqrt(fc.coerceAtLeast(1.0)) * Ig / yBar) / 1e6  // kN.m
         } else 0.0
-        val Ma = if (span > 0 && totalArea > 0) {
-            // Approximate service moment: w×L²/16
-            val wService = 1.0 * fc  // placeholder service load approximation
-            wService * (span / 1000.0).pow(2) / 16.0
+        // ── Service load estimation from geometry (SBC 304 §6-3) ──
+        // Self-weight: concrete × [topping + rib fraction]
+        //   topping = (totalDepth - ribHeight) in meters
+        //   rib contribution ≈ 35% of ribHeight (typical waffle rib/solid ratio)
+        val toppingThickness_m = (totalDepth - ribHeight) / 1000.0
+        val ribFraction = 0.35  // typical rib-to-solid area ratio for waffle slabs
+        val selfWeight = CONCRETE_UNIT_WEIGHT * (toppingThickness_m + ribFraction * ribHeight / 1000.0)  // kN/m²
+        val superimposedDL = 3.0   // kN/m² — typical SBC: finishes + partitions
+        val liveLoad = 3.0         // kN/m² — typical SBC office/residential
+        val wServiceTotal = selfWeight + superimposedDL + liveLoad  // kN/m² total service load
+
+        val Ma = if (span > 0) {
+            // Service moment: w×L²/16 (approximate for interior span)
+            wServiceTotal * (span / 1000.0).pow(2) / 16.0  // kN.m
         } else 1.0
         val ratioMaMcr = if (Mcr > 0) (Ma / Mcr).pow(3) else 1.0
         val Ie = if (Ma >= Mcr && Icr > 0) {
             (ratioMaMcr * Ig + (1.0 - ratioMaMcr) * Icr).coerceIn(Icr, Ig)
         } else Ig
 
-        // Immediate deflection — 5wL⁴/(384EI)
+        // Immediate deflection — 5wL⁴/(384EI) — SBC 304 §6-3
+        // w = total service load (kN/m²) × rib spacing (≈4×ribWidth typical)
         val L_mm = span
-        val w_kN_per_mm = 0.01  // approximate service load for deflection check
+        val ribSpacingEstimate = min(4.0 * ribWidth, span / 4.0)  // mm — effective spacing
+        val w_kN_per_mm = wServiceTotal * (ribSpacingEstimate / 1000.0) / 1000.0  // kN/mm (load per rib)
         val immediate = if (Ec > 0 && Ie > 0) {
             5.0 * w_kN_per_mm * L_mm.pow(4) / (384.0 * Ec * Ie) * 1000.0  // mm
         } else 0.0

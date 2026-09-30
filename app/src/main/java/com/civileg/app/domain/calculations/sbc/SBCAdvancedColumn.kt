@@ -328,8 +328,15 @@ class SBCAdvancedColumn : ColumnDesign {
         fy: Double,
         fcu: Double = 40.0
     ): SeismicConfinementResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("mainBarDiameter", mainBarDiameter)
+        InputGuard.positive("numberOfBars", numberOfBars.toDouble())
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fcu", fcu)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+        if (fcu == 40.0) warnings.add("⚠ fcu defaulting to 40 MPa — caller should specify actual value")
 
         val (b, h) = getColumnDimensions(columnType)
         val Ag = b * h
@@ -690,6 +697,12 @@ class SBCAdvancedColumn : ColumnDesign {
         As: Double = 0.0,
         isSpiral: Boolean = false
     ): BiaxialCheckResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("Pu", Pu)
+        InputGuard.positive("PnCapacity", PnCapacity)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+
         val (b, h) = getColumnDimensions(type)
         val Ag = b * h
         // BUG FIX: use actual fc' from fcu conversion instead of recovering from PnCapacity
@@ -805,6 +818,12 @@ class SBCAdvancedColumn : ColumnDesign {
         isSeismicZone: Boolean = false,
         fcu: Double = 40.0
     ): Double {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("barDiameter", barDiameter)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("cover", cover)
+        InputGuard.positive("fcu", fcu)
+
         val ldBase = calculateDevelopmentLength(barDiameter, fy, cover, isSeismicZone, fcu = fcu)
 
         if (!isEpoxyCoated) return ldBase

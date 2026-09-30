@@ -307,13 +307,25 @@ class SBCFooting : FootingDesign {
         columnWidth: Double,
         columnDepth: Double
     ): FootingDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("axialLoad1", axialLoad1)
+        InputGuard.positive("axialLoad2", axialLoad2)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("footingDepth", footingDepth)
+        InputGuard.notNull("loadCombination", loadCombination)
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+
         // SBC 304 closely follows ACI 318
         val p1Working = axialLoad1 / loadCombination.getFactorForCode(DesignCode.SBC)
         val p2Working = axialLoad2 / loadCombination.getFactorForCode(DesignCode.SBC)
         val totalWorkingLoad = p1Working + p2Working
         
         val xResultant = (p2Working * distanceBetweenColumns) / totalWorkingLoad
-        val s1 = 600.0 // Distance from edge to first column
+        val s1 = columnWidth.coerceAtLeast(300.0) // Distance from edge to first column — derived from column size
         val footingLength = 2 * (xResultant + s1)
         
         val requiredArea = (totalWorkingLoad * 1.1) / soilBearingCapacity
@@ -357,12 +369,22 @@ class SBCFooting : FootingDesign {
         soilBearingCapacity: Double,
         raftThickness: Double
     ): FootingDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("totalLoads", totalLoads)
+        InputGuard.positive("totalArea", totalArea)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("raftThickness", raftThickness)
+
         val soilPressure = totalLoads / totalArea
         val effectiveDepth = raftThickness - getMinCover() - 10.0
         
         // SBC/ACI Punching check for estimated max column load
         val maxColumnLoad = totalLoads * 0.15
-        val punchingCheck = checkPunchingShear(fcu, 600.0, 600.0, effectiveDepth, maxColumnLoad, LoadCombination.DEAD_LIVE)
+        // Estimate column size from raft: assume square column ≈ √(totalArea)/20
+        val estimatedColSize = (sqrt(totalArea) * 1000.0 / 20.0).coerceIn(300.0, 800.0)
+        val punchingCheck = checkPunchingShear(fcu, estimatedColSize, estimatedColSize, effectiveDepth, maxColumnLoad, LoadCombination.DEAD_LIVE)
         
         val designMoment = soilPressure * (sqrt(totalArea) / 3.0).pow(2) / 10.0
         
@@ -391,6 +413,14 @@ class SBCFooting : FootingDesign {
         pileDiameter: Double,
         columnLoads: Double
     ): FootingDesignResult {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("pileLoad", pileLoad)
+        InputGuard.positive("numberOfPiles", numberOfPiles.toDouble())
+        InputGuard.positive("pileDiameter", pileDiameter)
+        InputGuard.positive("columnLoads", columnLoads)
+
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
@@ -411,7 +441,8 @@ class SBCFooting : FootingDesign {
         val d = capThickness - getMinCover() - 10.0
         
         // فحص قص الاختراق عند العمود (SBC 304 / ACI 318-22.6.5)
-        val colSize = 400.0
+        // Column size estimated from pile cap geometry (SBC 304 / ACI 318)
+        val colSize = max(pileDiameter * 1.5, 300.0).coerceAtMost(800.0)
         val punchingResult = checkPunchingShear(
             fcu, colSize, colSize, d, columnLoads, LoadCombination.DEAD_LIVE
         )
@@ -464,6 +495,11 @@ class SBCFooting : FootingDesign {
     override fun getMinFootingThickness(): Double = 300.0
     override fun getMinCover(): Double = 75.0
     override fun getPunchingShearCapacity(fcu: Double, perimeter: Double, effectiveDepth: Double): Double {
+        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("perimeter", perimeter)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+
         // SBC 304 / ACI 318: φ × vc × bo × d
         val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val vc = 0.33 * sqrt(fc_prime)  // MPa
