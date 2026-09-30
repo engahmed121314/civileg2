@@ -55,7 +55,7 @@ class SBCFlatSlab : FlatSlabDesign {
         InputGuard.positive("input.slabThickness", input.slabThickness)
         InputGuard.positive("input.lx", input.lx)
         InputGuard.positive("input.ly", input.ly)
-        InputGuard.nonNegative("input.deadLoad", input.deadLoad)
+        // deadLoad is computed from self-weight, not an input field
         InputGuard.nonNegative("input.liveLoad", input.liveLoad)
         InputGuard.notNull("input.designMethod", input.designMethod)
 

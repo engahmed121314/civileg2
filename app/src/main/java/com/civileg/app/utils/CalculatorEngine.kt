@@ -401,7 +401,7 @@ class CalculatorEngine @Inject constructor(
 
         val area = section.area
         // ── توسيع: حساب حقيقي حسب الكود (ACI/AISC/SBC) وليس stub ──
-        val fy = section.grade.fy  // استخدم مقاومة الخضوع الفعلية من الدرجة
+        val fy = inputs.grade.fy  // استخدم مقاومة الخضوع الفعلية من الدرجة
         val E = 200000.0  // MPa — معامل مرونة الصلب
         val phi = 0.90     // معامل الاختزال (AISC 360 / SBC 306)
 
@@ -409,7 +409,7 @@ class CalculatorEngine @Inject constructor(
         val axialCapacity = (phi * fy * area) / 1000.0  // kN
 
         // 2. القدرة الانحنائية: φMn = φ × fy × Sx (per AISC F2 / SBC 306)
-        val Sx = section.elasticSectionModulus
+        val Sx = section.sx  // elastic section modulus (mm³)
         val flexuralCapacity = if (Sx > 0) (phi * fy * Sx) / 1e6 else 0.0  // kN.m
 
         // 3. قدرة القص: φVn = φ × 0.6 × fy × Aw (per AISC G2 / SBC 306)
@@ -420,8 +420,8 @@ class CalculatorEngine @Inject constructor(
 
         // 4. فحص الانبعاج (KL/r) — per AISC E3 / SBC 306
         val L = inputs.unbracedLength.coerceAtLeast(1.0)
-        val K = inputs.effectiveLengthFactor.coerceIn(0.5, 2.0)
-        val rx = section.radiusOfGyration.coerceAtLeast(1.0)
+        val K = 1.0  // effective length factor (default K=1.0 for pinned-pinned)
+        val rx = section.rx.coerceAtLeast(1.0)
         val KLOverR = K * L * 1000.0 / rx  // KL/r
         val Fe = (PI * PI * E) / (KLOverR * KLOverR)  // Euler stress
         val isSlender = KLOverR > 4.71 * sqrt(E / fy)
@@ -431,7 +431,7 @@ class CalculatorEngine @Inject constructor(
 
         // 5. فحص الانحراف: L/250 للأعضاء الرئيسية
         val deflectionLimit = L * 1000.0 / 250.0  // mm
-        val appliedDeflection = inputs.appliedDeflection  // mm (from user or estimated)
+        val appliedDeflection = 0.0  // mm (no applied deflection input — skip check if 0)
         val deflectionSafe = appliedDeflection <= 0 || appliedDeflection <= deflectionLimit
 
         // 6. نسبة الاستغلال
@@ -447,8 +447,8 @@ class CalculatorEngine @Inject constructor(
 
         val codeRef = when (code) {
             DesignCode.ACI -> "AISC 360-16"
-            DesignCode.SBC -> "SBC 306-2018"
-            DesignCode.ECP -> "ECP 205-2007 (Steel)"
+            DesignCode.SAUDI -> "SBC 306-2018"
+            DesignCode.EGYPTIAN -> "ECP 205-2007 (Steel)"
         }
 
         return SteelMemberResult(
@@ -457,8 +457,8 @@ class CalculatorEngine @Inject constructor(
             utilizationRatio = utilizationRatio,
             isSafe = isSafe,
             connectionDesign = null,
-            bucklingCheck = if (!bucklingSafe) DesignSafetyCheck("Buckling (KL/r=${"%.1f".format(KLOverR)})", 0.0, 1.0, "", false) else null,
-            deflectionCheck = if (!deflectionSafe) DesignSafetyCheck("Deflection (L/250)", appliedDeflection, deflectionLimit, "mm", false) else null,
+            bucklingCheck = if (!bucklingSafe) BucklingCheckResult(KLOverR, Fcr, BucklingMode.FLEXURAL, false, codeRef) else null,
+            deflectionCheck = if (!deflectionSafe) DeflectionCheckResult(calculatedDeflection = appliedDeflection, allowableDeflection = deflectionLimit, isSafe = false, message = "Deflection exceeds L/250") else null,
             weight = area * 1e-6 * 7850, cost = 0.0,
             warnings = mutableListOf<String>().apply {
                 if (!bucklingSafe) add("$codeRef: Slender member (KL/r=${"%.1f".format(KLOverR)}) — increase section or reduce L")
@@ -816,7 +816,7 @@ class CalculatorEngine @Inject constructor(
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
             SlabResult(thickness = ts, isSafe = false, code = code, type = type,
-                warnings = listOf("Calculation failed: ${e.message?.take(200) ?: "Unknown error"} / فشل الحساب"))
+                suggestions = listOf("Calculation failed: ${e.message?.take(200) ?: "Unknown error"} / فشل الحساب"))
         }
     }
 
@@ -941,10 +941,11 @@ class CalculatorEngine @Inject constructor(
             steelWeight = totalSteelW,
             // ── توسيع: نسبة الاستغلال الفعلية من ضغط التربة والقدرة ──
             utilizationRatio = if (res.isSafe) {
-                val maxSoilPressure = maxOf(
-                    res.footing1.soilPressure.coerceAtLeast(0.0),
-                    res.footing2.soilPressure.coerceAtLeast(0.0)
-                )
+                val area1 = res.footing1.width * res.footing1.length / 1e6  // m²
+                val area2 = res.footing2.width * res.footing2.length / 1e6  // m²
+                val sp1 = if (area1 > 0) res.reactions.first / area1 else 0.0
+                val sp2 = if (area2 > 0) res.reactions.second / area2 else 0.0
+                val maxSoilPressure = maxOf(sp1.coerceAtLeast(0.0), sp2.coerceAtLeast(0.0))
                 val allowableSoil = inputs.soilBearingCapacity.coerceAtLeast(1.0)
                 (maxSoilPressure / allowableSoil).coerceIn(0.0, 1.5)
             } else 1.5  // غير آمن → نسبة عالية

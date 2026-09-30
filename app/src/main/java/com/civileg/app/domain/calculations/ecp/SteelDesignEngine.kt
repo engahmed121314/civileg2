@@ -1,7 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**

@@ -621,9 +621,9 @@ class ECPCombinedFooting {
         fcu: Double
     ): Double {
         // ── InputGuard (ADR-010) — ECP 203 ──
-        InputGuard.positive(\"fcu\", fcu)
-        InputGuard.positive(\"soilBearingCapacity\", soilBearingCapacity)
-        InputGuard.positive(\"distanceBetweenColumns\", distanceBetweenColumns)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
         // Start from minimum thickness and increment by 50mm
         var thickness = MIN_THICKNESS
         for (i in 0..20) {

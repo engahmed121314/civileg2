@@ -144,10 +144,10 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         if (!isSafe) warnings.add("⚠ Waffle slab failed one or more SBC 304 checks")
         if (utilizationRatio > 1.0) warnings.add("⚠ Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
 
-        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.isSafe, ribDesign.utilizationRatio, "SBC 304 §4-2"))
-        safetyChecks.add(SafetyCheckItem("Solid head", solidHeadDesign.isSafe, 0.0, "SBC 304 §6-4"))
-        safetyChecks.add(SafetyCheckItem("Punching shear", punchingShearCheck.isSafe, punchingShearCheck.utilizationRatio, "SBC 304 §4-3"))
-        safetyChecks.add(SafetyCheckItem("Deflection", deflectionCheck.isSafe, deflUtil, "SBC 304 §6-3"))
+        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.utilizationRatio, 1.0, "ratio", ribDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Solid head", 0.0, 1.0, "ratio", solidHeadDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Punching shear", punchingShearCheck.utilizationRatio, 1.0, "ratio", punchingShearCheck.isSafe))
+        safetyChecks.add(SafetyCheckItem("Deflection", deflUtil, 1.0, "ratio", deflectionCheck.isSafe))
 
         return WaffleSlabResult(
             isSafe = isSafe,
@@ -479,7 +479,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         } else 1.0
         val ratioMaMcr = if (Mcr > 0) (Ma / Mcr).pow(3) else 1.0
         val Ie = if (Ma >= Mcr && Icr > 0) {
-            (ratioMaMcr * Ig + (1.0 - ratioMaMcr) * Icr).coerceIn(Icr, Ig)
+            (ratioMaMcr * Ig + (1.0 - ratioMaMcr) * Icr).coerceIn(minOf(Icr, Ig), maxOf(Icr, Ig))
         } else Ig
 
         // Immediate deflection — 5wL⁴/(384EI) — SBC 304 §6-3

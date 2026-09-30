@@ -127,7 +127,7 @@ class SBCIndependentEnginesTest {
     }
 
     @Test
-    fun `SBCRetainingWall - safety factors use SBC limits (FS_OT >= 1_5)`() {
+    fun `SBCRetainingWall - safety factors use SBC limits (FS_OT ge 1_5)`() {
         val wall = com.civileg.app.domain.calculations.sbc.SBCRetainingWall()
         val input = RetainingWallInput(
             wallHeight = 4.0, stemBaseThickness = 0.4, stemTopThickness = 0.25,

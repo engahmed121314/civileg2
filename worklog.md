@@ -480,3 +480,38 @@ Stage Summary:
 - Total InputGuard calls in SBCFooting: 48 (was 40)
 - Total InputGuard calls in SBCWaffleSlabDesign: 35 (was 27)
 - Total InputGuard calls in SBCAdvancedColumn: 35 (was 32)
+---
+Task ID: 5
+Agent: Main Agent
+Task: Phase 5 — named constants, cost/weight extraction, SBCFooting+SBCColumn tests, dependabot
+
+Work Log:
+- SBCBeam: Added DEFAULT_FCU=30, DEFAULT_FY=420, MAX_SHEAR_SPACING=600 to companion object; replaced 5 inline literals
+- SBCSlab: Added DEFAULT_FY=420; replaced 2 inline 420.0 literals
+- ACIBeam: Added DEFAULT_FY=420; replaced 2 inline literals
+- ACISlab: Added DEFAULT_FY=420; replaced 3 inline 420.0 literals
+- SBCTank: Added DEFAULT_STEEL_RATIO_KG_M3, CONCRETE_COST_PER_M3, STEEL_COST_PER_TON; replaced 3 hardcoded values
+- ACITank: Same pattern as SBCTank (matching ECPTank model)
+- SBCWaffleSlabDesign: Added CONCRETE_COST_PER_M3, STEEL_COST_PER_KG; used STEEL_UNIT_WEIGHT from companion
+- SBCFooting: Added PUNCHING_SHEAR_REDUCTION=0.90 named constant
+- ECPFooting: Added PUNCHING_SHEAR_REDUCTION=0.90 named constant
+- ACIFooting: Documented V_net parity decision (ACI 318 applies φ on capacity side, not demand side)
+- Created SBCFootingColumnTest.kt with 25 tests covering:
+  - Punching shear: 7 tests (perimeter at d/2, capacity scaling, isSafe, utilizationRatio, InputGuard)
+  - Isolated footing: 5 tests (design, soil pressure, punching populated, load scaling, InputGuard)
+  - getPunchingShearCapacity: 3 tests (positive, fcu scaling, InputGuard)
+  - SBCColumn axial capacity: 6 tests (formula verification against manual calc, section scaling, fcu scaling, InputGuard)
+  - SBCColumn reinforcement: 4 tests (normal, axial load scaling, min ratio, InputGuard)
+  - Combined footing: 2 tests (normal, InputGuard)
+  - Raft foundation: 2 tests (normal, InputGuard)
+  - Pile cap: 3 tests (derived column size, InputGuard)
+- Created .github/dependabot.yml for weekly Gradle + monthly Actions scanning
+- Committed and pushed to origin/master: `11278cd`
+
+Stage Summary:
+- All MEDIUM issues resolved (named constants in 4 files)
+- All LOW issues resolved (cost/weight/reduction named in 6 files + parity doc)
+- 25 new tests for SBCFooting + SBCColumn (previously 0 coverage)
+- Total test count: 162 + 25 = 187
+- Dependabot configured for automated dependency scanning
+- 14 files modified: +475 insertions, -22 deletions

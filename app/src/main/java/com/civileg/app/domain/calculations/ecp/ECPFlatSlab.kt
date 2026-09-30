@@ -48,7 +48,7 @@ class ECPFlatSlab : FlatSlabDesign {
         InputGuard.positive("lx", input.lx)
         InputGuard.positive("ly", input.ly)
         InputGuard.positive("slabThickness", input.slabThickness)
-        InputGuard.nonNegative("deadLoad", input.deadLoad)
+        // deadLoad is computed from self-weight, not an input field
         InputGuard.nonNegative("liveLoad", input.liveLoad)
         InputGuard.notNull("designMethod", input.designMethod)
 
