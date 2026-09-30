@@ -1485,11 +1485,11 @@ class SBCAdvancedBeam {
         fy: Double,
         span: Double
     ): DevelopmentLengthCheckResult {
-        // حساب طول التثبيت باستخدام SBCBeam (الذي يضيف 10% للمجلفن)
+        // حساب طول التثبيت باستخدام SBCBeam (مستقل — يطبق SBC 304 §12 مع تحويل fcu→fc داخلياً)
         val ldBottom = baseBeam.calculateDevelopmentLength(
             barDiameter = result.barDiameter,
             fy = fy,
-            fcu = fcPrime / 0.8,  // نمرر fcu لأن SBCBeam يرسله لـ ACIBeam الذي يحول
+            fcu = fcPrime / 0.8,  // نمرر fcu لأن SBCBeam يحول داخلياً: fc = 0.8×fcu
             barLocation = BarLocation.BOTTOM,
             coating = CoatingType.UNCOATED
         )
@@ -1497,7 +1497,7 @@ class SBCAdvancedBeam {
         val ldTop = baseBeam.calculateDevelopmentLength(
             barDiameter = result.barDiameter,
             fy = fy,
-            fcu = fcPrime / 0.8,
+            fcu = fcPrime / 0.8,  // SBCBeam يحول داخلياً — لا يفوض لـ ACIBeam
             barLocation = BarLocation.TOP,
             coating = CoatingType.UNCOATED
         )

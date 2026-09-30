@@ -257,7 +257,10 @@ class SBCSeismic : SeismicDesign {
      * T ≈ 0.08 × H^0.75 للمباني العامة
      */
     private fun estimatePeriod(buildingHeight: Double): Double {
-        if (buildingHeight <= 0) return 0.5  // افتراضي
+        if (buildingHeight <= 0) {
+            // SBC 301: لا يمكن تقدير الدور لارتفاع غير صالح — نُبلغ بالخطأ بدل قيمة افتراضية خاطئة
+            throw IllegalArgumentException("buildingHeight must be positive for period estimation (SBC 301 §4.4.2), got: $buildingHeight")
+        }
         // SBC 301 تقريب: T = 0.08 × H^0.75 (H بالأمتار)
         return 0.08 * buildingHeight.pow(0.75)
     }

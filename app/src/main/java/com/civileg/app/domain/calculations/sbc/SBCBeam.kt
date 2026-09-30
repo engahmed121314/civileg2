@@ -581,18 +581,40 @@ class SBCBeam : BeamDesign {
     // ══════════════════════════════════════════════════════════════════════
 
     override fun getMinReinforcementRatio(): Double {
-        // SBC 304 §9.6.1: ρ_min = max(0.25√(28)/420, 1.4/420) ≈ 0.0033
-        return max(0.25 * sqrt(28.0) / 420.0, 1.4 / 420.0)
+        // SBC 304 §9.6.1: قيم تقريبية لـ fcu=30 MPa, fy=420 MPa (الأكثر شيوعاً في السعودية)
+        // Use parameterized version for actual material grades
+        return getMinReinforcementRatio(fcPrime = 0.8 * 30.0, fy = 420.0)
+    }
+
+    /** SBC 304 §9.6.1: ρ_min = max(0.25√(f'c)/fy, 1.4/fy) — مع f'c و fy الفعليين */
+    fun getMinReinforcementRatio(fcPrime: Double, fy: Double): Double {
+        InputGuard.positive("fcPrime", fcPrime)
+        InputGuard.positive("fy", fy)
+        return max(0.25 * sqrt(fcPrime) / fy, 1.4 / fy)
     }
 
     override fun getMaxReinforcementRatio(): Double {
-        // SBC 304 §9.3.3.1: ρ_max للمقاطع المحكومة بالشد
-        return 0.85 * BETA_1_DEFAULT * (28.0 / 420.0) * 0.375
+        // SBC 304 §9.3.3.1: قيم تقريبية لـ fcu=30 MPa, fy=420 MPa
+        return getMaxReinforcementRatio(fcPrime = 0.8 * 30.0, fy = 420.0)
+    }
+
+    /** SBC 304 §9.3.3.1: ρ_max = 0.85×β₁×(f'c/fy)×0.375 — مع f'c و fy الفعليين */
+    fun getMaxReinforcementRatio(fcPrime: Double, fy: Double): Double {
+        InputGuard.positive("fcPrime", fcPrime)
+        InputGuard.positive("fy", fy)
+        val beta1 = calculateBeta1(fcPrime)
+        return 0.85 * beta1 * (fcPrime / fy) * 0.375
     }
 
     override fun getMinShearReinforcementRatio(): Double {
-        // SBC 304 §11.6.5
-        return 0.35 / 420.0
+        // SBC 304 §11.6.5: قيمة تقريبية لـ fy=420 MPa
+        return getMinShearReinforcementRatio(fy = 420.0)
+    }
+
+    /** SBC 304 §11.6.5: ρ_v,min = 0.35/fy — مع fy الفعلي */
+    fun getMinShearReinforcementRatio(fy: Double): Double {
+        InputGuard.positive("fy", fy)
+        return 0.35 / fy
     }
 
     override fun getMaxShearSpacing(): Double {
