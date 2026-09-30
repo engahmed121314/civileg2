@@ -34,6 +34,7 @@ fun SiteLayoutScreen() {
     
     val columns = remember { mutableStateListOf<ColumnLoad>() }
     var recommendation by remember { mutableStateOf<LayoutRecommendation?>(null) }
+    var siteError by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(stringResource(R.string.site_layout_title), style = MaterialTheme.typography.headlineSmall)
@@ -66,13 +67,18 @@ fun SiteLayoutScreen() {
 
         Button(
             onClick = {
-                recommendation = LayoutOptimizer.analyzeLayout(
-                    plotWidth.toDoubleOrNull() ?: 20.0,
-                    plotLength.toDoubleOrNull() ?: 30.0,
-                    columns,
-                    soilCapacity.toDoubleOrNull() ?: 200.0,
-                    CalculatorEngine.DesignCode.EGYPTIAN
-                )
+                try {
+                    siteError = null
+                    recommendation = LayoutOptimizer.analyzeLayout(
+                        plotWidth.toDoubleOrNull() ?: 20.0,
+                        plotLength.toDoubleOrNull() ?: 30.0,
+                        columns,
+                        soilCapacity.toDoubleOrNull() ?: 200.0,
+                        CalculatorEngine.DesignCode.EGYPTIAN
+                    )
+                } catch (e: Throwable) {
+                    siteError = "خطأ في التحليل: ${e.message?.take(100) ?: "Unknown"}"
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -86,14 +92,19 @@ fun SiteLayoutScreen() {
             
             Button(
                 onClick = {
-                    val dxfExporter = DxfExporter(context)
-                    val file = dxfExporter.exportSiteLayout(
-                        columns,
-                        plotWidth.toDoubleOrNull() ?: 20.0,
-                        plotLength.toDoubleOrNull() ?: 30.0,
-                        File(context.cacheDir, "Site_Layout.dxf").absolutePath
-                    )
-                    ExportUtils.openFile(context, file, "application/dxf")
+                    try {
+                        siteError = null
+                        val dxfExporter = DxfExporter(context)
+                        val file = dxfExporter.exportSiteLayout(
+                            columns,
+                            plotWidth.toDoubleOrNull() ?: 20.0,
+                            plotLength.toDoubleOrNull() ?: 30.0,
+                            File(context.cacheDir, "Site_Layout.dxf").absolutePath
+                        )
+                        ExportUtils.openFile(context, file, "application/dxf")
+                    } catch (e: Throwable) {
+                        siteError = "خطأ في التصدير: ${e.message?.take(100) ?: "Unknown"}"
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
@@ -101,6 +112,16 @@ fun SiteLayoutScreen() {
                 Icon(Icons.Default.FileDownload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.export_autocad_dxf))
+            }
+        }
+
+        // Error display
+        siteError?.let { err ->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Text(err, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
     }

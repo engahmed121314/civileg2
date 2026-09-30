@@ -73,6 +73,7 @@ fun SoilBearingScreen(
     val comparisonResults by viewModel.comparisonResults.observeAsState(emptyMap())
     val selectedMethod by viewModel.method.observeAsState(BearingMethod.TERZAGHI)
     val selectedSoilType by viewModel.soilType.observeAsState(SoilType.CLAY)
+    val error by viewModel.error.observeAsState()
 
     // Local state for text fields (controlled by ViewModel)
     var foundationWidth by remember { mutableStateOf(viewModel.foundationWidth.value ?: "1.5") }
@@ -229,6 +230,29 @@ fun SoilBearingScreen(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+
+            // ---- Error message display (was missing — root cause of perceived "crash") ----
+            error?.let { errMsg ->
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("⚠️", fontSize = 20.sp)
+                        Text(
+                            errMsg,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
             }
 
             // ---- Results ----

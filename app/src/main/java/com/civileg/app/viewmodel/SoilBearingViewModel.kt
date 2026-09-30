@@ -71,7 +71,7 @@ class SoilBearingViewModel @Inject constructor(
         val width = InputGuard.positive("foundationWidth", foundationWidth.value?.toDoubleOrNull() ?: 1.5)
         val length = InputGuard.positive("foundationLength", foundationLength.value?.toDoubleOrNull() ?: 1.5)
         val depth = InputGuard.positive("foundationDepth", foundationDepth.value?.toDoubleOrNull() ?: 1.0)
-        val load = InputGuard.positive("cohesion", cohesion.value?.toDoubleOrNull() ?: 25.0) // used as load proxy
+        val load = InputGuard.nonNegative("cohesion", cohesion.value?.toDoubleOrNull() ?: 25.0) // cohesion can be 0 for sand
         InputGuard.positive("frictionAngle", frictionAngle.value?.toDoubleOrNull() ?: 30.0)
         InputGuard.inRange("frictionAngle", frictionAngle.value?.toDoubleOrNull() ?: 30.0, 0.0, 45.0)
         InputGuard.positive("unitWeight", unitWeight.value?.toDoubleOrNull() ?: 18.0)
@@ -126,9 +126,9 @@ class SoilBearingViewModel @Inject constructor(
             } catch (e: ArithmeticException) {
                 _result.postValue(null)
                 _error.postValue("خطأ حسابي: ${e.message}")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _result.postValue(null)
-                _error.postValue("خطأ غير متوقع: ${e.message}")
+                _error.postValue("خطأ: ${e.message?.take(100) ?: "Unknown error"}")
                 android.util.Log.e("SoilBearingVM", "calculate crash", e)
             } finally {
                 _isCalculating.postValue(false)
@@ -156,10 +156,10 @@ class SoilBearingViewModel @Inject constructor(
                 _result.postValue(null)
                 _comparisonResults.postValue(emptyMap())
                 _error.postValue("خطأ حسابي: ${e.message}")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _result.postValue(null)
                 _comparisonResults.postValue(emptyMap())
-                _error.postValue("خطأ غير متوقع: ${e.message}")
+                _error.postValue("خطأ: ${e.message?.take(100) ?: "Unknown error"}")
                 android.util.Log.e("SoilBearingVM", "compareAll crash", e)
             } finally {
                 _isCalculating.postValue(false)

@@ -137,18 +137,22 @@ class SoilBearingCalculator {
         private const val DEG2RAD = PI / 180.0
         private const val SUBMERGED_UNIT_WEIGHT = 9.81  // kN/m³ (γ_sub ≈ γ_w)
 
-        /** Nq = e^(π·tan φ) · tan²(π/4 + φ/2) */
+        /** Nq = e^(π·tan φ) · tan²(π/4 + φ/2)  — clamped to φ ∈ [0°, 45°] */
         internal fun bearingNq(phiDeg: Double): Double {
-            if (phiDeg == 0.0) return 1.0
-            val phi = phiDeg * (PI / 180.0)
+            val phiClamped = phiDeg.coerceIn(0.0, 45.0)
+            if (phiClamped == 0.0) return 1.0
+            val phi = phiClamped * (PI / 180.0)
             return exp(PI * tan(phi)) * tan(PI / 4 + phi / 2).pow(2)
         }
 
-        /** Nc = (Nq − 1) · cot φ  ;  Nc = 5.14 when φ = 0 */
+        /** Nc = (Nq − 1) · cot φ  ;  Nc = 5.14 when φ = 0 — clamped to φ ∈ [0°, 45°] */
         internal fun bearingNc(phiDeg: Double, nq: Double): Double {
-            if (phiDeg == 0.0) return 5.14
-            val phi = phiDeg * (PI / 180.0)
-            return (nq - 1.0) * (1.0 / tan(phi))
+            val phiClamped = phiDeg.coerceIn(0.0, 45.0)
+            if (phiClamped == 0.0) return 5.14
+            val phi = phiClamped * (PI / 180.0)
+            val tanPhi = tan(phi)
+            if (tanPhi == 0.0) return 5.14  // guard against cot(0) = ∞
+            return (nq - 1.0) / tanPhi
         }
     }
 
@@ -173,48 +177,57 @@ class SoilBearingCalculator {
     // ----------------------------------------------------------
 
     private fun calculate(input: SoilBearingInput, method: BearingMethod): SoilBearingResult {
-        val phiRad = input.frictionAngle * DEG2RAD
+        // ── Internal defensive clamps (ADR-010) — engine is safe even without InputGuard ──
+        val phiClamped = input.frictionAngle.coerceIn(0.0, 45.0)
+        val widthSafe = input.foundationWidth.coerceAtLeast(0.01)
+        val lengthSafe = input.foundationLength.coerceAtLeast(0.01)
+        val depthSafe = input.foundationDepth.coerceAtLeast(0.0)
+        val gammaSafe = input.unitWeight.coerceAtLeast(0.1)
+        val sfSafe = input.safetyFactor.coerceAtLeast(1.0)
+        val phiRad = phiClamped * DEG2RAD
 
         // 1. Effective dimensions (one-way eccentricity reduction)
         val (Beff, Leff) = calculateEffectiveDimensions(
-            input.foundationWidth, input.foundationLength,
-            input.eccentricityX, input.eccentricityY
+            widthSafe, lengthSafe,
+            input.eccentricityX.coerceAtLeast(0.0),
+            input.eccentricityY.coerceAtLeast(0.0)
         )
 
         // 2. Bearing-capacity factors
-        val (nc, nq, ngamma) = getBearingCapacityFactors(input.frictionAngle, method)
+        val (nc, nq, ngamma) = getBearingCapacityFactors(phiClamped, method)
 
         // 3. Shape factors
-        val (sc, sq, sg) = getShapeFactors(method, Beff, Leff, input.frictionAngle)
+        val (sc, sq, sg) = getShapeFactors(method, Beff, Leff, phiClamped)
 
         // 4. Depth factors
-        val (dc, dq, dg) = getDepthFactors(method, input.foundationDepth, Beff, input.frictionAngle)
+        val (dc, dq, dg) = getDepthFactors(method, depthSafe, Beff, phiClamped)
 
         // 5. Inclination factors (resultant from two components)
         val (ic, iq, ig) = getInclinationFactors(
-            method, input.frictionAngle,
-            input.loadInclinationX, input.loadInclinationY
+            method, phiClamped,
+            input.loadInclinationX.coerceIn(0.0, 90.0),
+            input.loadInclinationY.coerceIn(0.0, 90.0)
         )
 
         // 6. Water-table correction
         val rw = applyWaterTableCorrection(input, 0.0) // returns factor for γ
-        val gammaEffective = input.unitWeight * rw
+        val gammaEffective = gammaSafe * rw
 
         // 7. Surcharge
-        val q = gammaEffective * input.foundationDepth
+        val q = gammaEffective * depthSafe
 
         // 8. Gross ultimate bearing capacity
-        val termC = input.cohesion * nc * sc * dc * ic
+        val termC = input.cohesion.coerceAtLeast(0.0) * nc * sc * dc * ic
         val termQ = q * nq * sq * dq * iq
         val termG = 0.5 * gammaEffective * Beff * ngamma * sg * dg * ig
         val qu = termC + termQ + termG
 
         // 9. Net & allowable
         val qNet = qu - q  // subtract overburden pressure at base
-        val qAllow = qNet / input.safetyFactor
+        val qAllow = qNet / sfSafe
 
         // 10. Settlement estimate
-        val settlement = estimateSettlement(input, qNet)
+        val settlement = estimateSettlement(input.copy(foundationWidth = widthSafe), qNet)
 
         // 11. Safety check
         val isSafe = qAllow > 0
@@ -454,9 +467,9 @@ class SoilBearingCalculator {
      *   - Water table deeper than B below base: rw = 1.0
      */
     fun applyWaterTableCorrection(input: SoilBearingInput, qu: Double): Double {
-        val Dw = input.waterTableDepth  // depth below ground surface
-        val Df = input.foundationDepth
-        val B  = input.foundationWidth
+        val Dw = input.waterTableDepth.coerceAtLeast(0.0)  // depth below ground surface
+        val Df = input.foundationDepth.coerceAtLeast(0.0)
+        val B  = input.foundationWidth.coerceAtLeast(0.01)  // prevent division by zero
 
         return when {
             Dw <= Df -> 0.5
