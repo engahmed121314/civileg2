@@ -416,7 +416,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         val Ec = 4400.0 * sqrt(fc.coerceAtLeast(1.0))
 
         // Gross moment of inertia of T-section (rib + topping flange)
-        val bf = min(ribSpacing, span / 4.0)  // effective flange width — SBC 304 §6-2
+        val bf = min(ribWidth * 4.0, span / 4.0)  // effective flange width — SBC 304 §6-2 (≈4×ribWidth typical spacing)
         val h = totalDepth  // total depth (rib + topping)
         val hf = h - ribHeight  // topping thickness
         val bw = ribWidth  // rib width
