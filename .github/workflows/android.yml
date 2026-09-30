@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-report
           path: app/build/reports/lint-results-debug.html
@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-report
           path: app/build/reports/tests/
@@ -134,7 +134,7 @@ jobs:
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: civileg2-debug
           path: app/build/outputs/apk/debug/*.apk
@@ -179,7 +179,7 @@ jobs:
         run: ./gradlew bundleRelease --no-daemon
 
       - name: Upload release AAB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: civileg2-release
           path: app/build/outputs/bundle/release/*.aab
