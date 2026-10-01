@@ -1521,8 +1521,6 @@
     <string name="frame_default_steel_section">IPE 300</string>
     <string name="frame_nodal_load_values">Fx=%1$s, Fy=%2$s kN, M=%3$s kN.m</string>
     <string name="frame_member_label">Member %d</string>
-    <string name="frame_node_label">Node %d</string>
-    <string name="frame_on_member">On: %1$s (#%2$d)</string>
     <string name="frame_member_load_value">%1$s: %2$s kN/m</string>
     <string name="frame_nodal_load_add">Add Nodal Load</string>
     <string name="frame_node_number">Node Number</string>
@@ -1534,8 +1532,6 @@
     <string name="frame_member_load_add">Add Member Load</string>
     <string name="frame_member_number">Member Number</string>
     <string name="frame_load_type_label">Load Type:</string>
-    <string name="frame_load_value">Load Value</string>
-    <string name="frame_load_position">Position from start (m)</string>
     <string name="frame_disp_dx">dx: %.3f mm</string>
     <string name="frame_disp_dy">dy: %.3f mm</string>
     <string name="frame_disp_theta">θ: %.4f rad</string>
@@ -1679,18 +1675,13 @@
     <string name="steel_structure">Steel Structure</string>
     <string name="steel_bmd">BMD</string>
     <string name="steel_sfd">SFD</string>
-    <string name="steel_deflection_label">Deflection</string>
     <string name="steel_frame_analysis_results">Frame Analysis Results</string>
     <string name="steel_3d_perspective">3D Perspective</string>
-    <string name="steel_detailed_design_drawings">Detailed Design Drawings</string>
     <string name="steel_engineering_recommendations">Engineering Recommendations</string>
-    <string name="steel_grade_label">Steel Grade</string>
     <string name="steel_search_placeholder">IPE 300, HEB 240…</string>
     <string name="steel_member_type">Member Type</string>
     <string name="steel_member_detail">Steel Member Detail</string>
-    <string name="steel_connection_visualization">Connection Visualization</string>
     <string name="steel_grade_format">Grade %s</string>
-    <string name="steel_detailed_design_results">Detailed Design Results</string>
     <string name="steel_axial_capacity">Axial Capacity (ΦPn)</string>
     <string name="steel_moment_capacity">Moment Capacity (ΦMn)</string>
     <string name="steel_shear_capacity">Shear Capacity (ΦVn)</string>
