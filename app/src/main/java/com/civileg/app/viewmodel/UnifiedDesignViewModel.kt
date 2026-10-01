@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 data class UnifiedDesignUiState(
     val selectedElementType: ElementType? = null,

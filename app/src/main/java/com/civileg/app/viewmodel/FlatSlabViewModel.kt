@@ -11,6 +11,7 @@ import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
 import com.civileg.app.domain.calculations.sbc.SBCFlatSlab
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,6 +64,18 @@ class FlatSlabViewModel @Inject constructor(
         storyHeight: Double,   // m
         designCode: String = "ECP"
     ) {
+        InputGuard.positive("lx", lx)
+        InputGuard.positive("ly", ly)
+        InputGuard.positive("slabThickness", slabThickness)
+        InputGuard.positive("dropThickness", dropThickness)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.nonNegative("floorFinish", floorFinish)
+        InputGuard.positive("numberOfFloors", numberOfFloors)
+        InputGuard.positive("clearCover", clearCover)
+        InputGuard.positive("storyHeight", storyHeight)
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null

@@ -49,7 +49,8 @@ fun FrameAnalysisScreen(
     val members by viewModel.members.observeAsState(emptyList())
     val nodalLoads by viewModel.nodalLoads.observeAsState(emptyList())
     val memberLoads by viewModel.memberLoads.observeAsState(emptyList())
-    val settings by viewModel.settings.observeAsState(FrameAnalysisSettings())
+    val settingsVal by viewModel.settings.observeAsState(FrameAnalysisSettings())
+    val steelFyVal by viewModel.steelFy.observeAsState(355.0)
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val errorMsg by viewModel.errorMessage.observeAsState()
@@ -214,10 +215,10 @@ fun FrameAnalysisScreen(
                 when (selectedTab) {
                     0 -> DrawingTab(
                         modifier = Modifier.fillMaxSize(),
-                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, settings, viewModel
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, settingsVal, steelFyVal, viewModel
                     )
                     1 -> NodesTab(nodes, members, viewModel)
-                    2 -> MembersTab(nodes, members, settings, viewModel)
+                    2 -> MembersTab(nodes, members, settingsVal, viewModel)
                     3 -> LoadsTab(nodes, members, nodalLoads, memberLoads, viewModel)
                     4 -> ResultsTab(result, concreteResults, steelResults, selectedMemberId, viewModel)
                 }
@@ -239,7 +240,8 @@ private fun DrawingTab(
     result: FrameAnalysisResult?,
     diagramType: DiagramType,
     selectedMemberId: Int?,
-    settings: FrameAnalysisSettings,
+    settingsVal: FrameAnalysisSettings,
+    steelFyVal: Double,
     viewModel: FrameAnalysisViewModel
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
@@ -267,7 +269,7 @@ private fun DrawingTab(
                 Spacer(modifier = Modifier.width(8.dp))
                 for (code in DesignCode.entries) {
                     FilterChip(
-                        selected = settings.designCode == code,
+                        selected = settingsVal.designCode == code,
                         onClick = { viewModel.updateDesignCode(code) },
                         label = { Text(code.displayName, fontSize = 11.sp) },
                         modifier = Modifier.padding(end = 4.dp),
@@ -278,7 +280,7 @@ private fun DrawingTab(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                Text("fy=${String.format("%.0f", settings.steelFy)} MPa", fontSize = 11.sp, color = Color.Gray)
+                Text("fy=${String.format("%.0f", steelFyVal)} MPa", fontSize = 11.sp, color = Color.Gray)
             }
         }
 

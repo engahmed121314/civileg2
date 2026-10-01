@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 data class AppSettings(
     val defaultCode: DesignCode = DesignCode.ECP,

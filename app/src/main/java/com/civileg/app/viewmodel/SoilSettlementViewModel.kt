@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class SoilSettlementViewModel @Inject constructor() : ViewModel() {
@@ -45,6 +46,12 @@ class SoilSettlementViewModel @Inject constructor() : ViewModel() {
         pressure: Double, width: Double, length: Double,
         layers: List<SettlementAnalysisEngine.SoilLayer>, limit: Double
     ) {
+        InputGuard.positive("pressure", pressure)
+        InputGuard.positive("width", width)
+        InputGuard.positive("length", length)
+        InputGuard.positive("limit", limit)
+        InputGuard.notEmpty("layers", layers)
+
         lastInputs = SettlementInputs(pressure, width, length, layers, limit)
         viewModelScope.launch {
             _isLoading.value = true

@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import android.graphics.Bitmap
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import javax.inject.Inject
 
 @HiltViewModel
@@ -53,6 +54,12 @@ class TankViewModel @Inject constructor(
         preferredDiameter: Int,
         code: CalculatorEngine.DesignCode
     ) {
+        InputGuard.positive("capacity", capacity)
+        InputGuard.positive("height", height)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+
         viewModelScope.launch {
             _isLoading.value = true
             try {

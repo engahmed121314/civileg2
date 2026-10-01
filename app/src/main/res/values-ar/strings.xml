@@ -1570,4 +1570,41 @@
     <string name="water_level_pdf_reading_m">القراءة (م)</string>
     <string name="water_level_pdf_rl_m">المنسوب (م)</string>
     <string name="water_level_pdf_max_rl_format">أقصى منسوب: %.3f م  |  أدنى منسوب: %.3f م  |  الفرق: %.3f م</string>
+    <string name="steel_1_floor_standard">طابق واحد (هنغار قياسي)</string>
+    <string name="steel_dead_load_kn_m2">الحمل الميت (kN/m²)</string>
+    <string name="steel_live_load_kn_m2">الحمل الحي (kN/m²)</string>
+    <string name="steel_wind_km_h">الرياح (km/h)</string>
+    <string name="steel_eng_calc_trace">تتبع الحسابات الهندسية</string>
+    <string name="steel_export_pdf_title">تصدير تقرير PDF احترافي</string>
+    <string name="steel_project_name">اسم المشروع</string>
+    <string name="steel_client_name">اسم العميل</string>
+    <string name="steel_export_report_note">سيتم إنشاء التقرير باللغة الإنجليزية فقط مع الحسابات والرسومات وجدول الكميات.</string>
+    <string name="steel_structure">الهيكل الفولاذي</string>
+    <string name="steel_bmd">رسم عزوم الانحناء</string>
+    <string name="steel_sfd">رسم قوى القص</string>
+    <string name="steel_frame_analysis_results">نتائج تحليل الإطار</string>
+    <string name="steel_3d_perspective"> منظور ثلاثي الأبعاد</string>
+    <string name="steel_engineering_recommendations">التوصيات الهندسية</string>
+    <string name="steel_search_placeholder">IPE 300, HEB 240…</string>
+    <string name="steel_member_type">نوع العنصر</string>
+    <string name="steel_member_detail">تفاصيل العنصر الفولاذي</string>
+    <string name="steel_grade_format">الدرجة %s</string>
+    <string name="steel_axial_capacity">قدرة محورية (ΦPn)</string>
+    <string name="steel_moment_capacity">قدرة انحنائية (ΦMn)</string>
+    <string name="steel_shear_capacity">قدرة قصية (ΦVn)</string>
+
+    <!-- ExecutionLogScreen migrated strings -->
+    <string name="execution_quality_checklist">قائمة فحص الجودة</string>
+    <string name="execution_comments">ملاحظات</string>
+    <string name="execution_formwork_check">الشدات مستقرة والأبعاد صحيحة</string>
+    <string name="execution_rebar_check">أعداد وأقطار الحديد مطابقة للتصميم</string>
+    <string name="execution_cover_check">فواصل الغطاء الخرساني في مكانها</string>
+    <string name="execution_cleanliness_check">المنطقة نظيفة وخالية من الحطام</string>
+    <string name="execution_approve_save">اعتماد وحفظ</string>
+    <string name="execution_record_pour">تسجيل صب خرسانة</string>
+    <string name="execution_element_id_hint">معرف العنصر (مثال B1-L2)</string>
+    <string name="execution_slump_hint">الهطول (مم)</string>
+    <string name="execution_volume_hint">الحجم (م³)</string>
+    <string name="execution_record">تسجيل</string>
+    <string name="execution_inspection_format">فحص: %s</string>
 </resources>

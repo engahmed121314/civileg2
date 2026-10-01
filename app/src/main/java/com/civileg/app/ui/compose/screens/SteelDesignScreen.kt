@@ -973,7 +973,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                 var selectedViewMode by remember { mutableIntStateOf(0) }
                 AppInteractiveDrawingScreen(
                     title = stringResource(R.string.steel_section_drawing),
-                    subtitle = "Steel Member Detail",
+                    subtitle = stringResource(R.string.steel_member_detail),
                     viewModes = listOf(
                         stringResource(R.string.steel_view_all),
                         stringResource(R.string.steel_view_longitudinal),
@@ -1623,7 +1623,7 @@ fun BasePlateDesignTab(viewModel: SteelViewModel) {
                         ) {
                             for (grade in boltGradeOptions) {
                                 DropdownMenuItem(
-                                    text = { Text("Grade $grade") },
+                                    text = { Text(stringResource(R.string.steel_grade_format, grade)) },
                                     onClick = { selectedBoltGrade = grade; expandedBoltGrade = false }
                                 )
                             }

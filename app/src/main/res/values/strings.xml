@@ -1521,6 +1521,8 @@
     <string name="frame_default_steel_section">IPE 300</string>
     <string name="frame_nodal_load_values">Fx=%1$s, Fy=%2$s kN, M=%3$s kN.m</string>
     <string name="frame_member_label">Member %d</string>
+    <string name="frame_node_label">Node %d</string>
+    <string name="frame_on_member">On: %1$s (#%2$d)</string>
     <string name="frame_member_load_value">%1$s: %2$s kN/m</string>
     <string name="frame_nodal_load_add">Add Nodal Load</string>
     <string name="frame_node_number">Node Number</string>
@@ -1532,6 +1534,8 @@
     <string name="frame_member_load_add">Add Member Load</string>
     <string name="frame_member_number">Member Number</string>
     <string name="frame_load_type_label">Load Type:</string>
+    <string name="frame_load_value">Load Value</string>
+    <string name="frame_load_position">Position from start (m)</string>
     <string name="frame_disp_dx">dx: %.3f mm</string>
     <string name="frame_disp_dy">dy: %.3f mm</string>
     <string name="frame_disp_theta">θ: %.4f rad</string>
@@ -1581,6 +1585,15 @@
     <string name="steel_deflection_label">Deflection</string>
     <string name="steel_connection_visualization">Connection Visualization</string>
     <string name="steel_detailed_design_results">Detailed Design Results</string>
+    <string name="steel_1_floor_standard">1 Floor (Standard Hangar)</string>
+    <string name="steel_dead_load_kn_m2">D.L (kN/m²)</string>
+    <string name="steel_live_load_kn_m2">L.L (kN/m²)</string>
+    <string name="steel_wind_km_h">Wind (km/h)</string>
+    <string name="steel_eng_calc_trace">ENGINEERING CALCULATION TRACE</string>
+    <string name="steel_export_pdf_title">Export Professional PDF Report</string>
+    <string name="steel_project_name">Project Name</string>
+    <string name="steel_client_name">Client Name</string>
+    <string name="steel_export_report_note">Report will be generated strictly in English with full calculations, sketches, and BOQ.</string>
     <string name="steel_base_plate_thickness">Base Plate Thickness</string>
     <string name="steel_base_plate_anchor_bolts">Base Plate Anchor Bolts</string>
     <string name="steel_intermediate_floor_beam">Intermediate Floor Beam</string>
@@ -1663,4 +1676,37 @@
     <string name="water_level_pdf_reading_m">Reading (m)</string>
     <string name="water_level_pdf_rl_m">RL (m)</string>
     <string name="water_level_pdf_max_rl_format">Max RL: %.3f m  |  Min RL: %.3f m  |  Difference: %.3f m</string>
+    <string name="steel_structure">Steel Structure</string>
+    <string name="steel_bmd">BMD</string>
+    <string name="steel_sfd">SFD</string>
+    <string name="steel_deflection_label">Deflection</string>
+    <string name="steel_frame_analysis_results">Frame Analysis Results</string>
+    <string name="steel_3d_perspective">3D Perspective</string>
+    <string name="steel_detailed_design_drawings">Detailed Design Drawings</string>
+    <string name="steel_engineering_recommendations">Engineering Recommendations</string>
+    <string name="steel_grade_label">Steel Grade</string>
+    <string name="steel_search_placeholder">IPE 300, HEB 240…</string>
+    <string name="steel_member_type">Member Type</string>
+    <string name="steel_member_detail">Steel Member Detail</string>
+    <string name="steel_connection_visualization">Connection Visualization</string>
+    <string name="steel_grade_format">Grade %s</string>
+    <string name="steel_detailed_design_results">Detailed Design Results</string>
+    <string name="steel_axial_capacity">Axial Capacity (ΦPn)</string>
+    <string name="steel_moment_capacity">Moment Capacity (ΦMn)</string>
+    <string name="steel_shear_capacity">Shear Capacity (ΦVn)</string>
+
+    <!-- ExecutionLogScreen migrated strings -->
+    <string name="execution_quality_checklist">Quality Inspection Checklist</string>
+    <string name="execution_comments">Comments</string>
+    <string name="execution_formwork_check">Formwork Stable &amp; Dimensions Correct</string>
+    <string name="execution_rebar_check">Rebar Counts &amp; Diameters Match Design</string>
+    <string name="execution_cover_check">Concrete Cover Spacers in Place</string>
+    <string name="execution_cleanliness_check">Area Clean &amp; Free of Debris</string>
+    <string name="execution_approve_save">Approve &amp; Save</string>
+    <string name="execution_record_pour">Record Concrete Pour</string>
+    <string name="execution_element_id_hint">Element ID (e.g. B1-L2)</string>
+    <string name="execution_slump_hint">Slump (mm)</string>
+    <string name="execution_volume_hint">Volume (m³)</string>
+    <string name="execution_record">Record</string>
+    <string name="execution_inspection_format">Inspection: %s</string>
 </resources>

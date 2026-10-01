@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import javax.inject.Inject
 
 @HiltViewModel
@@ -52,6 +53,14 @@ class RetainingWallViewModel @Inject constructor(
         preferredDiameter: Int,
         code: CalculatorEngine.DesignCode
     ) {
+        InputGuard.positive("height", height)
+        InputGuard.positive("soilDensity", soilDensity)
+        InputGuard.positive("frictionAngle", frictionAngle)
+        InputGuard.nonNegative("surcharge", surcharge)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+
         viewModelScope.launch {
             _isLoading.value = true
             try {

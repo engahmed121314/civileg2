@@ -10,6 +10,7 @@ import com.civileg.app.db.SiteInspection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class ExecutionViewModel @Inject constructor(
@@ -24,6 +25,9 @@ class ExecutionViewModel @Inject constructor(
     }
 
     fun addPourLog(log: PourLog) {
+        InputGuard.notNull("log", log)
+        InputGuard.notBlank("log.elementId", log.elementId)
+
         viewModelScope.launch {
             try {
                 constructionDao.insertPourLog(log)
@@ -38,6 +42,8 @@ class ExecutionViewModel @Inject constructor(
     }
 
     fun addInspection(inspection: SiteInspection) {
+        InputGuard.notNull("inspection", inspection)
+
         viewModelScope.launch {
             try {
                 constructionDao.insertSiteInspection(inspection)

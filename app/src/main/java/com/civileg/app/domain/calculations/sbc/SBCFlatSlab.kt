@@ -57,6 +57,8 @@ class SBCFlatSlab : FlatSlabDesign {
         InputGuard.positive("input.ly", input.ly)
         // deadLoad is computed from self-weight, not an input field
         InputGuard.nonNegative("input.floorFinish", input.floorFinish)
+        val deadLoad = CONCRETE_UNIT_WEIGHT * input.slabThickness / 1000.0 + input.floorFinish
+        InputGuard.nonNegative("input.deadLoad", deadLoad)
         InputGuard.nonNegative("input.liveLoad", input.liveLoad)
         InputGuard.notNull("input.designMethod", input.designMethod)
 

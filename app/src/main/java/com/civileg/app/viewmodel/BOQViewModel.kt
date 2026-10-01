@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
 import kotlin.math.pow
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class BOQViewModel @Inject constructor(
@@ -42,6 +43,8 @@ class BOQViewModel @Inject constructor(
      * أو يحلل inputData JSON لاستخراج المعلمات التفصيلية إذا توفر.
      */
     fun calculateDesignBoq(design: Design, prices: MaterialPrices = MaterialPrices()) {
+        InputGuard.notNull("design", design)
+
         viewModelScope.launch {
             _isLoading.value = true
             try {

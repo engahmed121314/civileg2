@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import android.graphics.Bitmap
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 data class ColumnUiState(
     val width: String = "300",
@@ -136,6 +137,13 @@ class ColumnViewModel @Inject constructor(
     }
 
     fun calculateColumnPro(width: Double, depth: Double, height: Double, fcu: Double, fy: Double, load: Double, diameter: Int, code: CalculatorEngine.DesignCode) {
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("height", height)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("diameter", diameter)
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {

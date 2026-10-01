@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class MasterBbsViewModel @Inject constructor(
@@ -30,6 +31,8 @@ class MasterBbsViewModel @Inject constructor(
     private val gson = Gson()
 
     fun loadProjectBbs(projectId: Long) {
+        InputGuard.positive("projectId", projectId)
+
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { _isLoading.value = true }
             try {

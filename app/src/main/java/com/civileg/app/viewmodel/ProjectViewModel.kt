@@ -24,6 +24,7 @@ import com.civileg.app.utils.exporters.ComprehensivePdfExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class ProjectViewModel @Inject constructor(
@@ -67,6 +68,8 @@ class ProjectViewModel @Inject constructor(
 
     // --- Main Project Methods ---
     fun insert(project: Project) {
+        InputGuard.notNull("project", project)
+
         viewModelScope.launch {
             projectDao.insertProject(project)
         }

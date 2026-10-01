@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
@@ -90,6 +91,11 @@ class SteelViewModel @Inject constructor(
         inputs: SteelInputs,
         code: CalculatorEngine.DesignCode
     ) {
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("inputs", inputs)
+        InputGuard.positive("inputs.unbracedLength", inputs.unbracedLength)
+        InputGuard.positive("inputs.length", inputs.length)
+
         // Store actual inputs for PDF export
         lastMemberInputs = SteelMemberStoredInputs(section, memberType, inputs, code)
 
@@ -114,6 +120,13 @@ class SteelViewModel @Inject constructor(
     }
 
     fun calculateWarehouse(inputs: SteelWarehouseInputs) {
+        InputGuard.notNull("inputs", inputs)
+        InputGuard.positive("inputs.span", inputs.span)
+        InputGuard.positive("inputs.length", inputs.length)
+        InputGuard.positive("inputs.eaveHeight", inputs.eaveHeight)
+        InputGuard.positive("inputs.ridgeHeight", inputs.ridgeHeight)
+        InputGuard.positive("inputs.baySpacing", inputs.baySpacing)
+
         lastWarehouseInputs = inputs
         viewModelScope.launch {
             _isLoading.value = true

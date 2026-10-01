@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import javax.inject.Inject
 
 @HiltViewModel
@@ -63,6 +64,15 @@ class BeamViewModel @Inject constructor(
         code: CalculatorEngine.DesignCode,
         supportType: CalculatorEngine.SupportType
     ) {
+        InputGuard.positive("width", width)
+        InputGuard.positive("height", height)
+        InputGuard.positive("span", span)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+
         viewModelScope.launch {
             _isLoading.value = true
             try {

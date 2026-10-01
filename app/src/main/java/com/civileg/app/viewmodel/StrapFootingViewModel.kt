@@ -15,6 +15,7 @@ import android.graphics.Bitmap
 import java.io.File
 import android.content.Context
 import android.os.Environment
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class StrapFootingViewModel @Inject constructor(
@@ -46,6 +47,18 @@ class StrapFootingViewModel @Inject constructor(
         soil: Double, fcu: Double, fy: Double,
         code: CalculatorEngine.DesignCode, preferredDiameter: Int, strapWidth: Double
     ) {
+        InputGuard.positive("col1Load", col1Load)
+        InputGuard.positive("col2Load", col2Load)
+        InputGuard.positive("distance", distance)
+        InputGuard.positive("col1W", col1W)
+        InputGuard.positive("col1D", col1D)
+        InputGuard.positive("col2W", col2W)
+        InputGuard.positive("col2D", col2D)
+        InputGuard.positive("soil", soil)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("strapWidth", strapWidth)
+
         lastCode = code
         viewModelScope.launch {
             _isLoading.value = true

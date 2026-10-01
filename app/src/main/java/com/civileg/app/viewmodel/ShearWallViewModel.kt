@@ -11,6 +11,7 @@ import com.civileg.app.domain.calculations.base.ShearWallDesign
 import com.civileg.app.domain.calculations.ecp.ECPShearWall
 import com.civileg.app.domain.calculations.aci.ACIShearWall
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -167,6 +168,15 @@ class ShearWallViewModel @Inject constructor(
         val cbLen = state.couplingBeamLength.toDoubleOrNull() ?: 0.0
         val cbH = state.couplingBeamHeight.toDoubleOrNull() ?: 0.0
         val cbSpan = state.couplingBeamClearSpan.toDoubleOrNull() ?: 0.0
+
+        InputGuard.positive("wallLength", wallLen)
+        InputGuard.positive("wallThickness", wallThk)
+        InputGuard.positive("storyHeight", storyH)
+        InputGuard.positive("numberOfStories", numStories)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fyv", fyv)
+        InputGuard.positive("clearCover", cover)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }

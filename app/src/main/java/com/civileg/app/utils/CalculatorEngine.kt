@@ -449,6 +449,7 @@ class CalculatorEngine @Inject constructor(
             DesignCode.ACI -> "AISC 360-16"
             DesignCode.SAUDI -> "SBC 306-2018"
             DesignCode.EGYPTIAN -> "ECP 205-2007 (Steel)"
+            else -> "Unknown Code"
         }
 
         return SteelMemberResult(

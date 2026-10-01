@@ -32,6 +32,13 @@ object InputGuard {
         return value
     }
 
+    fun positive(name: String, value: Long): Long {
+        require(value > 0L) {
+            "Input '$name' must be positive, got $value / يجب أن يكون '$name' موجباً، القيمة: $value"
+        }
+        return value
+    }
+
     fun nonNegative(name: String, value: Double): Double {
         require(value.isFinite() && value >= 0) {
             "Input '$name' must be finite and non-negative, got $value / يجب أن يكون '$name' غير سالب ومنتهياً، القيمة: $value"

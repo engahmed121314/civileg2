@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import android.graphics.Bitmap
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import javax.inject.Inject
 
 @HiltViewModel
@@ -67,6 +68,15 @@ class FootingViewModel @Inject constructor(
         maxLeft: Double? = null,
         maxRight: Double? = null
     ) {
+        InputGuard.positive("p", p)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("soil", soil)
+        InputGuard.positive("colB", colB)
+        InputGuard.positive("colT", colT)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+        InputGuard.positive("preferredSpacing", preferredSpacing)
+
         viewModelScope.launch {
             _isLoading.value = true
             try {

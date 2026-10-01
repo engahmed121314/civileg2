@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 data class ColumnComposeUiState(
     val width: Double = 300.0,
@@ -98,6 +99,11 @@ class ColumnComposeViewModel @Inject constructor(
 
     private fun calculate() {
         val state = _uiState.value
+        InputGuard.positive("width", state.width)
+        InputGuard.positive("depth", state.depth)
+        InputGuard.positive("fcu", state.fcu)
+        InputGuard.positive("fy", state.fy)
+
         _uiState.update { it.copy(calculationResult = CalculationResult.Loading) }
 
         viewModelScope.launch(Dispatchers.Default) {

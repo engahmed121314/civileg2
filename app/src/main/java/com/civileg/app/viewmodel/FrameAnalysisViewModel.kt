@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class FrameAnalysisViewModel @Inject constructor(
@@ -36,6 +37,7 @@ class FrameAnalysisViewModel @Inject constructor(
     val nodalLoads: LiveData<List<NodalLoad>> get() = _nodalLoads
     val memberLoads: LiveData<List<MemberLoad>> get() = _memberLoads
     val settings: LiveData<FrameAnalysisSettings> get() = _settings
+    val steelFy: LiveData<Double> get() = _steelFy
 
     // === Results ===
     private val _result = MutableLiveData<FrameAnalysisResult?>()
@@ -266,6 +268,10 @@ class FrameAnalysisViewModel @Inject constructor(
     // ========================================================================
 
     fun loadSimplePortalFrame(span: Double, height: Double, udl: Double) {
+        InputGuard.positive("span", span)
+        InputGuard.positive("height", height)
+        InputGuard.nonNegative("udl", udl)
+
         clearAll()
         val (nodes, members, loads) = FrameAnalysisEngine.createSimplePortalFrame(span, height, udl)
         _nodes.value = nodes
@@ -274,6 +280,11 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun loadTwoStoryFrame(span: Double, height1: Double, height2: Double, udl: Double) {
+        InputGuard.positive("span", span)
+        InputGuard.positive("height1", height1)
+        InputGuard.positive("height2", height2)
+        InputGuard.nonNegative("udl", udl)
+
         clearAll()
         val (ns, ms, ls) = FrameAnalysisEngine.createMultiStoryFrame(
             listOf(span), listOf(height1, height2), udl

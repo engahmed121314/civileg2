@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
 import javax.inject.Inject
 
 @HiltViewModel
@@ -73,6 +74,15 @@ class SlabViewModel @Inject constructor(
         ribWidth: Double = 100.0,
         ribSpacing: Double = 500.0
     ) {
+        InputGuard.positive("lx", lx)
+        InputGuard.positive("ly", ly)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("ts", ts)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+
         viewModelScope.launch {
             _isLoading.value = true
             try {
