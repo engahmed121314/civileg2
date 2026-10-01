@@ -819,8 +819,8 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                                 PropertyLine("tf", "${section.flangeThickness} mm")
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                PropertyLine("Area", "${String.format("%.1f", section.area / 100.0)} cm\u00B2")
-                                PropertyLine("Weight", "${String.format("%.1f", section.weight)} kg/m")
+                                PropertyLine(stringResource(R.string.steel_section_area), "${String.format("%.1f", section.area / 100.0)} cm\u00B2")
+                                PropertyLine(stringResource(R.string.steel_section_weight), "${String.format("%.1f", section.weight)} kg/m")
                                 PropertyLine("Ix", "${String.format("%.0f", section.ix / 10000.0)} cm\u2074")
                                 PropertyLine("Zx", "${String.format("%.0f", section.zx / 1000.0)} cm\u00B3")
                             }

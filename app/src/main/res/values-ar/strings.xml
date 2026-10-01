@@ -1592,6 +1592,8 @@
     <string name="steel_axial_capacity">قدرة محورية (ΦPn)</string>
     <string name="steel_moment_capacity">قدرة انحنائية (ΦMn)</string>
     <string name="steel_shear_capacity">قدرة قصية (ΦVn)</string>
+    <string name="steel_generate_full_english_pdf_report">إنشاء تقرير PDF إنجليزي كامل</string>
+    <string name="steel_section_weight">وزن القطاع</string>
 
     <!-- ExecutionLogScreen migrated strings -->
     <string name="execution_quality_checklist">قائمة فحص الجودة</string>
@@ -1607,4 +1609,5 @@
     <string name="execution_volume_hint">الحجم (م³)</string>
     <string name="execution_record">تسجيل</string>
     <string name="execution_inspection_format">فحص: %s</string>
+    <string name="execution_default_inspector_name">مهندس الموقع</string>
 </resources>

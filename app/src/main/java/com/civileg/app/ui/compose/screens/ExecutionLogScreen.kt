@@ -45,6 +45,7 @@ fun ExecutionLogScreen(
     }
     var showAddPourDialog by remember { mutableStateOf(false) }
     var showAddInspectionDialog by remember { mutableStateOf(false) }
+    val defaultInspectorName = stringResource(R.string.execution_default_inspector_name)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
