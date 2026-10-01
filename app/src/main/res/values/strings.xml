@@ -1553,4 +1553,114 @@
     <string name="frame_axial">Axial:  </string>
     <string name="frame_combined">Combined:   </string>
     <string name="frame_warning_format">⚠ %s</string>
+
+    <!-- SteelDesignScreen migrated strings -->
+    <string name="steel_calculating">Calculating…</string>
+    <string name="steel_hangar_floors_config">Hangar Floors Config:</string>
+    <string name="steel_1_floor_standard_hangar">1 Floor (Standard Hangar)</string>
+    <string name="steel_2_floors_mezzanine">2 Floors (Multi-Story/Mezzanine)</string>
+    <string name="steel_cost_structure_feasibility">Cost Structure &amp; Feasibility</string>
+    <string name="steel_engineering_calc_trace">ENGINEERING CALCULATION TRACE</string>
+    <string name="steel_export_pro_pdf_dialog">Export Professional PDF Report</string>
+    <string name="steel_project_name_label">Project Name</string>
+    <string name="steel_client_name_label">Client Name</string>
+    <string name="steel_report_english_note">Report will be generated strictly in English with full calculations, sketches, and BOQ.</string>
+    <string name="steel_export_now">Export Now</string>
+    <string name="steel_generate_english_pdf">GENERATE FULL ENGLISH PDF REPORT</string>
+    <string name="steel_frame_analysis_results_label">Frame Analysis Results</string>
+    <string name="steel_detailed_design_drawings">Detailed Design Drawings</string>
+    <string name="steel_section_format">Section: %s</string>
+    <string name="steel_weight_format">Weight: %.1f kg/m</string>
+    <string name="steel_purlins_format">Purlins: %s</string>
+    <string name="steel_girts_format">Girts: %s</string>
+    <string name="steel_connection_name_format">Connection: %s</string>
+    <string name="steel_capacity_demand_format">Capacity: %.1f kN (Demand: %.1f kN)</string>
+    <string name="steel_grade_label">Steel Grade</string>
+    <string name="steel_section_placeholder">IPE 300, HEB 240…</string>
+    <string name="steel_member_type_label">Member Type</string>
+    <string name="steel_deflection_label">Deflection</string>
+    <string name="steel_connection_visualization">Connection Visualization</string>
+    <string name="steel_detailed_design_results">Detailed Design Results</string>
+    <string name="steel_base_plate_thickness">Base Plate Thickness</string>
+    <string name="steel_base_plate_anchor_bolts">Base Plate Anchor Bolts</string>
+    <string name="steel_intermediate_floor_beam">Intermediate Floor Beam</string>
+    <string name="steel_floor_beam_moment">Floor Beam Moment</string>
+    <string name="steel_cost_structure">Cost Structure</string>
+    <string name="steel_steel_structure_label">Steel Structure</string>
+    <string name="steel_cladding_roof">Cladding &amp; Roof</string>
+    <string name="steel_foundation_label">Foundation</string>
+    <string name="steel_axial_capacity_label">Axial Capacity (ΦPn)</string>
+    <string name="steel_moment_capacity_label">Moment Capacity (ΦMn)</string>
+    <string name="steel_shear_capacity_label">Shear Capacity (ΦVn)</string>
+    <string name="steel_utilization_ratio_label">Utilization Ratio</string>
+    <string name="steel_axial_pu_kn">Axial Pu (kN)</string>
+    <string name="steel_moment_mu_knm">Moment Mu (kN.m)</string>
+    <string name="steel_shear_vu_kn">Shear Vu (kN)</string>
+    <string name="steel_length_m_label">Length (m)</string>
+    <string name="steel_dl_knm2">D.L (kN/m²)</string>
+    <string name="steel_ll_knm2">L.L (kN/m²)</string>
+    <string name="steel_wind_kmh">Wind (km/h)</string>
+    <string name="steel_view_front_elevation">Front Elevation</string>
+    <string name="steel_view_plan">Plan View</string>
+    <string name="steel_view_side_elevation">Side Elevation</string>
+    <string name="steel_view_3d_perspective">3D Perspective</string>
+    <string name="steel_max_deflection">Max Deflection</string>
+    <string name="steel_status_safe">SAFE ✓</string>
+    <string name="steel_status_unsafe">UNSAFE ✗</string>
+
+    <!-- ExecutionLogScreen migrated strings -->
+    <string name="exec_inspection_format">Inspection: %s</string>
+    <string name="exec_checklist_title">Quality Inspection Checklist</string>
+    <string name="exec_comments_label">Comments</string>
+    <string name="exec_formwork_check">Formwork Stable &amp; Dimensions Correct</string>
+    <string name="exec_rebar_check">Rebar Counts &amp; Diameters Match Design</string>
+    <string name="exec_cover_check">Concrete Cover Spacers in Place</string>
+    <string name="exec_clean_check">Area Clean &amp; Free of Debris</string>
+    <string name="exec_approve_save">Approve &amp; Save</string>
+    <string name="exec_record_pour_title">Record Concrete Pour</string>
+    <string name="exec_element_id_label">Element ID (e.g. B1-L2)</string>
+    <string name="exec_slump_mm_label">Slump (mm)</string>
+    <string name="exec_volume_m3_label">Volume (m³)</string>
+    <string name="exec_record_button">Record</string>
+    <string name="exec_site_engineer">Site Engineer</string>
+
+    <!-- FrameAnalysisScreen migrated strings -->
+    <string name="frame_node_id_header">ID</string>
+    <string name="frame_x_m_header">X (m)</string>
+    <string name="frame_y_m_header">Y (m)</string>
+    <string name="frame_b_mm_label">b (mm)</string>
+    <string name="frame_h_mm_label">h (mm)</string>
+    <string name="frame_fc_mpa_label">f\'c (MPa)</string>
+    <string name="frame_fy_mpa_label">fy (MPa)</string>
+    <string name="frame_simple_portal_desc">Simple Portal Frame</string>
+    <string name="frame_two_story_desc">Two-Story Frame</string>
+    <string name="frame_node_label_format">Node %d</string>
+    <string name="frame_member_label_format">Member %s</string>
+
+    <!-- SlabScreen migrated strings -->
+    <string name="slab_advanced_detailing_pro">Advanced Detailing (Pro)</string>
+    <string name="slab_drop_thick_mm">Drop Thick (mm)</string>
+    <string name="slab_col_width_mm">Col Width (mm)</string>
+    <string name="slab_prestress_force_kn">Prestress Force (kN)</string>
+    <string name="slab_openings_shafts">Slab Openings (Shafts)</string>
+    <string name="slab_open_width_mm">Open. Width (mm)</string>
+    <string name="slab_open_length_mm">Open. Length (mm)</string>
+    <string name="slab_calculating">Calculating…</string>
+    <string name="slab_opening_support">Slab Opening Support</string>
+    <string name="slab_rib_reinforcement">Rib Reinforcement</string>
+
+    <!-- WaterLevelScreen migrated strings -->
+    <string name="water_level_bm_bs">BM + BS</string>
+    <string name="water_level_benchmark_label">Benchmark</string>
+    <string name="water_level_back_sight_label">Back Sight</string>
+    <string name="water_level_fore_sight_label">Fore Sight</string>
+    <string name="water_level_pdf_title">Water Level Survey Report</string>
+    <string name="water_level_pdf_bm_rl">Benchmark RL: </string>
+    <string name="water_level_pdf_back_sight">Back Sight: </string>
+    <string name="water_level_pdf_hi_label">Height of Instrument (HI): </string>
+    <string name="water_level_pdf_point">Point</string>
+    <string name="water_level_pdf_type">Type</string>
+    <string name="water_level_pdf_reading_m">Reading (m)</string>
+    <string name="water_level_pdf_rl_m">RL (m)</string>
+    <string name="water_level_pdf_max_rl_format">Max RL: %.3f m  |  Min RL: %.3f m  |  Difference: %.3f m</string>
 </resources>

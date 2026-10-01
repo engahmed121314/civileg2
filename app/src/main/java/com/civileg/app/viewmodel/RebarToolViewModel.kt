@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.RebarCalculator
@@ -22,6 +24,14 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class RebarToolViewModel : ViewModel() {
 
+    // ── Error message ──
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
+    // ── Loading state ──
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     // ── Tab state ──
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
@@ -35,6 +45,7 @@ class RebarToolViewModel : ViewModel() {
     val weightResult: StateFlow<WeightResult?> = _weightResult.asStateFlow()
 
     fun calculateWeight(diameter: Double, length: Double, quantity: Int) {
+        _isLoading.value = true
         try {
             InputGuard.positive("diameter", diameter)
             InputGuard.positive("length", length)
@@ -43,7 +54,11 @@ class RebarToolViewModel : ViewModel() {
             val result = RebarCalculator.totalWeight(diameter, length, quantity)
             _weightResult.value = result
         } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
         } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -62,6 +77,7 @@ class RebarToolViewModel : ViewModel() {
         excessRatio: Double,
         code: DesignCode
     ) {
+        _isLoading.value = true
         try {
             InputGuard.positive("diameter", diameter)
             InputGuard.positive("fy", fy)
@@ -82,8 +98,13 @@ class RebarToolViewModel : ViewModel() {
             }
             _devLengthResult.value = result
         } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
         } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
         } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -103,6 +124,7 @@ class RebarToolViewModel : ViewModel() {
         isConfined: Boolean,
         spliceClass: String
     ) {
+        _isLoading.value = true
         try {
             InputGuard.positive("diameter", diameter)
             InputGuard.positive("fy", fy)
@@ -113,8 +135,13 @@ class RebarToolViewModel : ViewModel() {
             )
             _lapResult.value = result
         } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
         } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
         } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -170,10 +197,15 @@ class RebarToolViewModel : ViewModel() {
         coverToBarCenter: Double,
         limitingWidth: Double
     ) {
-        _crackResult.value = RebarCalculator.crackWidth(
-            steelStress, barDiameter, barSpacing, coverToBarCenter,
-            limitingWidth = limitingWidth
-        )
+        _isLoading.value = true
+        try {
+            _crackResult.value = RebarCalculator.crackWidth(
+                steelStress, barDiameter, barSpacing, coverToBarCenter,
+                limitingWidth = limitingWidth
+            )
+        } finally {
+            _isLoading.value = false
+        }
     }
 
     // ── Bar table ──

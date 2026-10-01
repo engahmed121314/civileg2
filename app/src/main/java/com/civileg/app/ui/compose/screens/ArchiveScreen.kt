@@ -39,6 +39,13 @@ fun ArchiveScreen(
     val projects = projectsState.value
     val designsState = viewModel.allDesigns.observeAsState(initial = emptyList())
     val allDesigns = designsState.value
+    val errorMessage by viewModel.errorMessage.observeAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
@@ -75,6 +82,7 @@ fun ArchiveScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {

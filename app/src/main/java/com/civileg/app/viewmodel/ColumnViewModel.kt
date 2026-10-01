@@ -2,6 +2,7 @@ package com.civileg.app.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -49,6 +50,9 @@ class ColumnViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ColumnUiState())
     val uiState: StateFlow<ColumnUiState> = _uiState.asStateFlow()
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
     
     init {
         // Initialize with default code from settings
@@ -146,6 +150,7 @@ class ColumnViewModel @Inject constructor(
                 _uiState.update { it.copy(result = res, isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errors = listOf(e.message ?: "Error")) }
+                _errorMessage.value = "Column calculation error / خطأ في حساب العمود: ${e.message}"
             }
         }
     }
@@ -194,6 +199,7 @@ class ColumnViewModel @Inject constructor(
                 _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList()) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
+                _errorMessage.value = "Column calculation error / خطأ في حساب العمود: ${e.message}"
             }
         }
     }
@@ -296,6 +302,7 @@ class ColumnViewModel @Inject constructor(
             } catch (e: Throwable) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false, errors = listOf("PDF Error: ${e.message}")) }
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message}"
                     onComplete(null)
                 }
             }
@@ -304,9 +311,13 @@ class ColumnViewModel @Inject constructor(
 
     fun saveColumn(projectId: Long, name: String, result: CalculatorEngine.ColumnResult) {
         viewModelScope.launch {
-            val fcuVal = _uiState.value.fcu.toDoubleOrNull() ?: 25.0
-            val fyVal = _uiState.value.fy.toDoubleOrNull() ?: 400.0
-            repository.saveColumnDesign(projectId, name, result, fcuVal, fyVal)
+            try {
+                val fcuVal = _uiState.value.fcu.toDoubleOrNull() ?: 25.0
+                val fyVal = _uiState.value.fy.toDoubleOrNull() ?: 400.0
+                repository.saveColumnDesign(projectId, name, result, fcuVal, fyVal)
+            } catch (e: Exception) {
+                _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
+            }
         }
     }
 

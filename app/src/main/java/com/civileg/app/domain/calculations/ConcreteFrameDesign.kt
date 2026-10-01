@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -30,6 +31,9 @@ object ConcreteFrameDesign {
         memberDiagrams: List<MemberDiagram>,
         code: DesignCode
     ): List<ConcreteMemberDesignResult> {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notEmpty("members", members)
+        InputGuard.notEmpty("memberForces", memberForces)
         return members.filter { it.materialType == FrameMaterialType.Concrete }.map { member ->
             val forces = memberForces.find { it.memberId == member.id }
             val diagram = memberDiagrams.find { it.memberId == member.id }
@@ -46,6 +50,8 @@ object ConcreteFrameDesign {
         diagram: MemberDiagram?,
         code: DesignCode
     ): ConcreteMemberDesignResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("member", member)
         val section = member.concreteSection ?: ConcreteSectionProps(250.0, 500.0)
         val b = section.width
         val h = section.depth

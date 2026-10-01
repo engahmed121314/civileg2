@@ -92,12 +92,12 @@ fun FrameAnalysisScreen(
                     IconButton(onClick = {
                         viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
                     }) {
-                        Icon(Icons.Default.Home, "Simple Portal Frame", tint = Color.White)
+                        Icon(Icons.Default.Home, stringResource(R.string.frame_simple_portal_desc), tint = Color.White)
                     }
                     IconButton(onClick = {
                         viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
                     }) {
-                        Icon(Icons.Default.Layers, "Two-Story Frame", tint = Color.White)
+                        Icon(Icons.Default.Layers, stringResource(R.string.frame_two_story_desc), tint = Color.White)
                     }
                     IconButton(onClick = { viewModel.clearAll() }) {
                         Icon(Icons.Default.DeleteSweep, stringResource(R.string.frame_clear_all), tint = Color.White)
@@ -106,6 +106,7 @@ fun FrameAnalysisScreen(
                     if (result?.hasResults == true) {
                         val frameShareReport = stringResource(R.string.frame_share_report)
                         val framePdfErrorMsg = stringResource(R.string.frame_pdf_error)
+                        val frameReportSubject = stringResource(R.string.frame_report_subject)
                         val scope = rememberCoroutineScope()
                         var isFrameExporting by remember { mutableStateOf(false) }
                         IconButton(enabled = !isFrameExporting, onClick = {
@@ -125,7 +126,7 @@ fun FrameAnalysisScreen(
                                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                                 type = "application/pdf"
                                                 putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Frame Analysis Report")
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, frameReportSubject)
                                                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                             }
                                             context.startActivity(Intent.createChooser(intent, frameShareReport))
@@ -246,10 +247,10 @@ private fun DrawingTab(
     val vmViewMode by viewModel.drawingViewMode.observeAsState(0)
     LaunchedEffect(vmViewMode) { viewMode = vmViewMode }
     val viewModes = listOf(
-        "Frame" to "الإطار",
-        "Long. Section" to "قطاع طولي",
-        "Cross Section" to "قطاع عرضي",
-        "Plan" to "مسقط أفقي"
+        stringResource(R.string.frame_view_frame_en) to stringResource(R.string.frame_view_frame_ar),
+        stringResource(R.string.frame_view_long_section_en) to stringResource(R.string.frame_view_long_section_ar),
+        stringResource(R.string.frame_view_cross_section_en) to stringResource(R.string.frame_view_cross_section_ar),
+        stringResource(R.string.frame_view_plan_en) to stringResource(R.string.frame_view_plan_ar)
     )
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -423,9 +424,9 @@ private fun NodesTab(
                 .background(Color(0xFFE3F2FD))
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text("ID", modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("X (m)", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("Y (m)", modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(stringResource(R.string.frame_node_id_header), modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(stringResource(R.string.frame_x_m_header), modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(stringResource(R.string.frame_y_m_header), modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Text(stringResource(R.string.frame_support), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Text("", modifier = Modifier.width(60.dp))
         }
@@ -670,20 +671,20 @@ private fun MembersTab(
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(value = editWidth, onValueChange = { editWidth = it },
-                                    label = { Text("b (mm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    label = { Text(stringResource(R.string.frame_b_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.weight(1f))
                                 OutlinedTextField(value = editDepth, onValueChange = { editDepth = it },
-                                    label = { Text("h (mm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    label = { Text(stringResource(R.string.frame_h_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.weight(1f))
                             }
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(value = editFcu, onValueChange = { editFcu = it },
-                                    label = { Text("f'c (MPa)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    label = { Text(stringResource(R.string.frame_fc_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f))
                                 OutlinedTextField(value = editFy, onValueChange = { editFy = it },
-                                    label = { Text("fy (MPa)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    label = { Text(stringResource(R.string.frame_fy_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f))
                             }
                         }
@@ -944,10 +945,10 @@ private fun ResultsTab(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("عقدة ${nr.nodeId}", modifier = Modifier.width(50.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text("dx: ${String.format("%.3f", nr.dx * 1000)} mm", modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
-                                Text("dy: ${String.format("%.3f", nr.dy * 1000)} mm", modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
-                                Text("θ: ${String.format("%.4f", nr.rz)} rad", modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                Text(stringResource(R.string.frame_node_label_format, nr.nodeId), modifier = Modifier.width(50.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.frame_disp_dx, nr.dx * 1000), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                Text(stringResource(R.string.frame_disp_dy, nr.dy * 1000), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                Text(stringResource(R.string.frame_disp_theta, nr.rz), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
                             }
                             HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
                         }
@@ -965,7 +966,7 @@ private fun ResultsTab(
                         Spacer(Modifier.height(4.dp))
                         for (nr in result.nodeResults.filter { abs(it.reactionFx) > 0.01 || abs(it.reactionFy) > 0.01 || abs(it.reactionMz) > 0.01 }) {
                             Text(
-                                "عقدة ${nr.nodeId}: Rx=${String.format("%.2f", nr.reactionFx)} kN, Ry=${String.format("%.2f", nr.reactionFy)} kN, M=${String.format("%.2f", nr.reactionMz)} kN.m",
+                                stringResource(R.string.frame_reaction_format, nr.nodeId, nr.reactionFx, nr.reactionFy, nr.reactionMz),
                                 fontSize = 11.sp
                             )
                         }
@@ -980,10 +981,10 @@ private fun ResultsTab(
                         Text(stringResource(R.string.frame_internal_forces), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (mf in result.memberEndForces) {
-                            val mname = viewModel.members.value?.find { it.id == mf.memberId }?.name ?: "عضو ${mf.memberId}"
-                            Text("عضو $mname (#${mf.memberId}):", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text("  I: N=${String.format("%.1f", mf.fi_x)} kN, V=${String.format("%.1f", mf.fi_y)} kN, M=${String.format("%.1f", mf.mi_z)} kN.m", fontSize = 10.sp, color = Color.Gray)
-                            Text("  J: N=${String.format("%.1f", mf.fj_x)} kN, V=${String.format("%.1f", mf.fj_y)} kN, M=${String.format("%.1f", mf.mj_z)} kN.m", fontSize = 10.sp, color = Color.Gray)
+                            val mname = viewModel.members.value?.find { it.id == mf.memberId }?.name ?: stringResource(R.string.frame_member_label_format, mf.memberId)
+                            Text(stringResource(R.string.frame_member_force_header, mname, mf.memberId), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.frame_member_end_i, mf.fi_x, mf.fi_y, mf.mi_z), fontSize = 10.sp, color = Color.Gray)
+                            Text(stringResource(R.string.frame_member_end_j, mf.fj_x, mf.fj_y, mf.mj_z), fontSize = 10.sp, color = Color.Gray)
                             Spacer(Modifier.height(4.dp))
                         }
                     }
@@ -1011,33 +1012,33 @@ private fun ResultsTab(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("${cr.memberName} (#${cr.memberId})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(stringResource(R.string.frame_result_member_id, cr.memberName, cr.memberId), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text("القطاع: ${cr.section.width}×${cr.section.depth} mm | f'c=${cr.section.fcu} MPa", fontSize = 11.sp, color = Color.Gray)
+                        Text(stringResource(R.string.frame_concrete_section_info, cr.section.width, cr.section.depth, cr.section.fcu), fontSize = 11.sp, color = Color.Gray)
                         Spacer(Modifier.height(2.dp))
-                        Text("Max M=${String.format("%.1f", cr.maxMoment)} kN.m | Max V=${String.format("%.1f", cr.maxShear)} kN | N=${String.format("%.1f", cr.axialForce)} kN", fontSize = 11.sp)
+                        Text(stringResource(R.string.frame_max_forces, cr.maxMoment, cr.maxShear, cr.axialForce), fontSize = 11.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text("التسليح المطلوب: ${String.format("%.0f", cr.asRequired)} mm²", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                        Text(stringResource(R.string.frame_reinforcement_required, cr.asRequired), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
                         if (cr.numBarsBot > 0) {
-                            Text("سفلي: ${cr.numBarsBot}Ø${cr.barDia.toInt()} (As=${String.format("%.0f", cr.asBot)} mm²)", fontSize = 11.sp)
+                            Text(stringResource(R.string.frame_reinforcement_bottom, cr.numBarsBot, cr.barDia.toInt(), cr.asBot), fontSize = 11.sp)
                         }
                         if (cr.numBarsTop > 0) {
-                            Text("علوي: ${cr.numBarsTop}Ø${cr.barDia.toInt()} (As=${String.format("%.0f", cr.asTop)} mm²)", fontSize = 11.sp)
+                            Text(stringResource(R.string.frame_reinforcement_top, cr.numBarsTop, cr.barDia.toInt(), cr.asTop), fontSize = 11.sp)
                         }
                         if (cr.stirrupDia > 0) {
-                            Text("الكانات: Ø${cr.stirrupDia.toInt()} @ ${cr.stirrupSpacing.toInt()} mm", fontSize = 11.sp)
+                            Text(stringResource(R.string.frame_stirrups, cr.stirrupDia.toInt(), cr.stirrupSpacing.toInt()), fontSize = 11.sp)
                         }
                         Spacer(Modifier.height(4.dp))
 
                         // Utilization bars
                         Row {
-                            Text("انحناء: ", fontSize = 11.sp)
+                            Text(stringResource(R.string.frame_bending), fontSize = 11.sp)
                             UtilizationBar(cr.momentUtilization, Modifier.weight(1f))
                         }
                         Spacer(Modifier.height(2.dp))
                         Row {
-                            Text("قص:     ", fontSize = 11.sp)
+                            Text(stringResource(R.string.frame_shear_label), fontSize = 11.sp)
                             UtilizationBar(cr.shearUtilization, Modifier.weight(1f))
                         }
 
@@ -1070,22 +1071,22 @@ private fun ResultsTab(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("${sr.memberName} (#${sr.memberId})", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.frame_result_member_id, sr.memberName, sr.memberId), fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text("القطاع المختار: ${sr.selectedSection}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
-                        Text("الوزن: ${sr.sectionWeight} kg/m | Ix=${sr.sectionIx} cm⁴ | Sx=${sr.sectionSx} cm³", fontSize = 11.sp, color = Color.Gray)
+                        Text(stringResource(R.string.frame_selected_section, sr.selectedSection), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                        Text(stringResource(R.string.frame_steel_section_info, sr.sectionWeight, sr.sectionIx, sr.sectionSx), fontSize = 11.sp, color = Color.Gray)
                         Spacer(Modifier.height(2.dp))
-                        Text("Max M=${String.format("%.1f", sr.maxMoment)} kN.m | Max V=${String.format("%.1f", sr.maxShear)} kN | N=${String.format("%.1f", sr.axialForce)} kN", fontSize = 11.sp)
+                        Text(stringResource(R.string.frame_max_forces, sr.maxMoment, sr.maxShear, sr.axialForce), fontSize = 11.sp)
                         Spacer(Modifier.height(4.dp))
 
-                        Row { Text("انحناء: ", fontSize = 11.sp); UtilizationBar(sr.flexuralUtilization, Modifier.weight(1f)) }
+                        Row { Text(stringResource(R.string.frame_bending), fontSize = 11.sp); UtilizationBar(sr.flexuralUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
-                        Row { Text("قص:     ", fontSize = 11.sp); UtilizationBar(sr.shearUtilization, Modifier.weight(1f)) }
+                        Row { Text(stringResource(R.string.frame_shear_label), fontSize = 11.sp); UtilizationBar(sr.shearUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
-                        Row { Text("محوري:  ", fontSize = 11.sp); UtilizationBar(sr.axialUtilization, Modifier.weight(1f)) }
+                        Row { Text(stringResource(R.string.frame_axial), fontSize = 11.sp); UtilizationBar(sr.axialUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
-                        Row { Text("مدمج:   ", fontSize = 11.sp); UtilizationBar(sr.combinedUtilization, Modifier.weight(1f)) }
+                        Row { Text(stringResource(R.string.frame_combined), fontSize = 11.sp); UtilizationBar(sr.combinedUtilization, Modifier.weight(1f)) }
                     }
                 }
             }

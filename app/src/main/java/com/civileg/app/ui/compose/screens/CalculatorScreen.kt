@@ -29,6 +29,7 @@ import java.util.Locale
 fun CalculatorScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
     var expression by remember { mutableStateOf("") }
     var result by remember { mutableStateOf("0") }
     var history by remember { mutableStateOf(listOf<String>()) }
@@ -36,6 +37,7 @@ fun CalculatorScreen(
     var showHistory by remember { mutableStateOf(false) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_calculator_title), fontWeight = FontWeight.Bold) },

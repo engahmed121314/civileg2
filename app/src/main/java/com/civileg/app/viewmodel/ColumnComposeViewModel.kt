@@ -1,6 +1,8 @@
 package com.civileg.app.viewmodel
 
 import android.content.Context
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.R
@@ -49,6 +51,9 @@ class ColumnComposeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ColumnComposeUiState())
     val uiState: StateFlow<ColumnComposeUiState> = _uiState.asStateFlow()
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     init {
         calculate()
@@ -111,6 +116,7 @@ class ColumnComposeViewModel @Inject constructor(
             }.fold(
                 onSuccess = { CalculationResult.Success(it) },
                 onFailure = { e -> 
+                    _errorMessage.value = "Calculation failed / فشل الحساب: ${e.localizedMessage ?: "Calculation failed"}"
                     CalculationResult.Error(
                         message = e.localizedMessage ?: "Calculation failed",
                         code = ErrorCode.CONVERGENCE_FAILED

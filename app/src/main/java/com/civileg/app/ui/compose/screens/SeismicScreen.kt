@@ -723,6 +723,35 @@ fun SeismicScreen(
         }
     }
 
+    if (isCalculating) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = Color(0xFF1565C0)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Calculating... / جاري الحساب...",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+
     // ── Save Dialog ─────────────────────────────────────────────────────────
     if (showSaveDialog) {
         AlertDialog(

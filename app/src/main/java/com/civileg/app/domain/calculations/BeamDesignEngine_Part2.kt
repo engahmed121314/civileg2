@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -34,6 +35,14 @@ object BeamDesignEnginePart2 {
         fcu: Double, fy: Double,
         code: DesignCode, span: Double
     ): ShearDesignResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("b", b)
+        InputGuard.positive("d", d)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("span", span)
+        InputGuard.nonNegative("vu", vu)
+
         val steps = mutableListOf<CalculationStep>()
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -169,6 +178,16 @@ object BeamDesignEnginePart2 {
         fcu: Double, fy: Double,
         code: DesignCode, cover: Double
     ): TorsionDesignResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("b", b)
+        InputGuard.positive("h", h)
+        InputGuard.positive("d", d)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("Tu", Tu)
+        InputGuard.nonNegative("Vu", Vu)
+        InputGuard.nonNegative("cover", cover)
+
         val steps = mutableListOf<CalculationStep>()
 
         // Torsional threshold (below which torsion can be neglected)
@@ -248,6 +267,16 @@ object BeamDesignEnginePart2 {
         code: DesignCode, asProvided: Double,
         nADepth: Double
     ): DeflectionResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("b", b)
+        InputGuard.positive("h", h)
+        InputGuard.positive("d", d)
+        InputGuard.positive("span", span)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("mu", mu)
+        InputGuard.nonNegative("asProvided", asProvided)
+
         val steps = mutableListOf<CalculationStep>()
 
         val Ec = when(code) {
@@ -331,6 +360,15 @@ object BeamDesignEnginePart2 {
         asProvided: Double, nADepth: Double,
         es: Double, ec: Double
     ): CrackWidthResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("b", b)
+        InputGuard.positive("d", d)
+        InputGuard.positive("span", span)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("es", es)
+        InputGuard.positive("ec", ec)
+
         val allowable = 0.3 // mm (typical for ECP/ACI)
         if (asProvided <= 0) return CrackWidthResult(0.0, allowable, 0.0, 0.0, CalculationStep(0, "", "", "", "", ""))
 
@@ -369,6 +407,13 @@ object BeamDesignEnginePart2 {
         fcu: Double, fy: Double, dia: Int,
         code: DesignCode, span: Double, d: Double
     ): DevLengthResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("dia", dia)
+        InputGuard.positive("span", span)
+        InputGuard.positive("d", d)
+
         val fbd = when(code) {
             DesignCode.ECP -> 0.6 * sqrt(fcu) // ECP 203 §5-2-2: fbd =0.6√fcu for deformed bars (high bond)
             else -> 1.0 * sqrt(fcu * 0.8) / (2.5) // ACI simplified

@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations.utils
 
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.abs
 
 data class RectangularSection(val width: Double, val depth: Double)
@@ -35,6 +36,13 @@ object InteractionDiagramSolver {
         strainLimit: Double = EPSILON_CU,
         c: Double = section.depth * 0.5  // عمق المحور المحايد
     ): InteractionPoint {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("reinforcement", reinforcement)
+        InputGuard.positive("c", c)
+
         val b = section.width
         val h = section.depth
 
@@ -104,6 +112,12 @@ object InteractionDiagramSolver {
         section: RectangularSection,
         reinforcement: InteractionReinforcementInput
     ): List<InteractionPoint> {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("reinforcement", reinforcement)
+
         val points = mutableListOf<InteractionPoint>()
         val h = section.depth
         val d = h - reinforcement.cover - 10.0
@@ -144,6 +158,12 @@ object InteractionDiagramSolver {
         section: RectangularSection,
         reinforcement: InteractionReinforcementInput
     ): InteractionPoint {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("reinforcement", reinforcement)
+
         val d = section.depth - reinforcement.cover - 10.0
         val epsilon_y = fy / ES
         val cb = d * EPSILON_CU / (EPSILON_CU + epsilon_y)

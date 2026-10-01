@@ -1460,4 +1460,114 @@
     <string name="tank_drawing_title">رسم الخزان</string>
     <string name="tank_drawing_subtitle">تفاصيل القطاع العرضي</string>
     <string name="tank_name_hint">اسم الخزان</string>
+
+    <!-- SteelDesignScreen migrated strings -->
+    <string name="steel_calculating">جاري الحساب…</string>
+    <string name="steel_hangar_floors_config">تكوين طوابق الحظيرة:</string>
+    <string name="steel_1_floor_standard_hangar">طابق واحد (حظيرة قياسية)</string>
+    <string name="steel_2_floors_mezzanine">طابقان (متعدد الطوابق/ميزانين)</string>
+    <string name="steel_cost_structure_feasibility">هيكل التكلفة والجدوى</string>
+    <string name="steel_engineering_calc_trace">تتبع الحسابات الهندسية</string>
+    <string name="steel_export_pro_pdf_dialog">تصدير تقرير PDF احترافي</string>
+    <string name="steel_project_name_label">اسم المشروع</string>
+    <string name="steel_client_name_label">اسم العميل</string>
+    <string name="steel_report_english_note">سيتم إنشاء التقرير باللغة الإنجليزية فقط مع الحسابات والرسومات وجدول الكميات.</string>
+    <string name="steel_export_now">تصدير الآن</string>
+    <string name="steel_generate_english_pdf">إنشاء تقرير PDF كامل بالإنجليزية</string>
+    <string name="steel_frame_analysis_results_label">نتائج تحليل الإطار</string>
+    <string name="steel_detailed_design_drawings">رسومات التصميم التفصيلي</string>
+    <string name="steel_section_format">القطاع: %s</string>
+    <string name="steel_weight_format">الوزن: %.1f kg/m</string>
+    <string name="steel_purlins_format">البرولين: %s</string>
+    <string name="steel_girts_format">الجيرت: %s</string>
+    <string name="steel_connection_name_format">وصلة: %s</string>
+    <string name="steel_capacity_demand_format">السعة: %.1f kN (الطلب: %.1f kN)</string>
+    <string name="steel_grade_label">درجة الحديد</string>
+    <string name="steel_section_placeholder">IPE 300, HEB 240…</string>
+    <string name="steel_member_type_label">نوع العنصر</string>
+    <string name="steel_deflection_label">الانحراف</string>
+    <string name="steel_connection_visualization">تصور الوصلة</string>
+    <string name="steel_detailed_design_results">نتائج التصميم التفصيلي</string>
+    <string name="steel_base_plate_thickness">سمك لوحة القاعدة</string>
+    <string name="steel_base_plate_anchor_bolts">مسامير تثبيت لوحة القاعدة</string>
+    <string name="steel_intermediate_floor_beam">عارضة الطابق الوسطي</string>
+    <string name="steel_floor_beam_moment">عزم عارضة الطابق</string>
+    <string name="steel_cost_structure">هيكل التكلفة</string>
+    <string name="steel_steel_structure_label">الهيكل الحديدي</string>
+    <string name="steel_cladding_roof">الكسوة والسقف</string>
+    <string name="steel_foundation_label">الأساسات</string>
+    <string name="steel_axial_capacity_label">السعة المحورية (ΦPn)</string>
+    <string name="steel_moment_capacity_label">سعة الانحناء (ΦMn)</string>
+    <string name="steel_shear_capacity_label">سعة القص (ΦVn)</string>
+    <string name="steel_utilization_ratio_label">نسبة الاستغلال</string>
+    <string name="steel_axial_pu_kn">قوة محورية Pu (kN)</string>
+    <string name="steel_moment_mu_knm">عزم Mu (kN.m)</string>
+    <string name="steel_shear_vu_kn">قص Vu (kN)</string>
+    <string name="steel_length_m_label">الطول (م)</string>
+    <string name="steel_dl_knm2">حمل ميت D.L (kN/m²)</string>
+    <string name="steel_ll_knm2">حمل حي L.L (kN/m²)</string>
+    <string name="steel_wind_kmh">رياح (km/h)</string>
+    <string name="steel_view_front_elevation">واجهة أمامية</string>
+    <string name="steel_view_plan">مخطط</string>
+    <string name="steel_view_side_elevation">واجهة جانبية</string>
+    <string name="steel_view_3d_perspective">منظور ثلاثي الأبعاد</string>
+    <string name="steel_max_deflection">أقصى انحراف</string>
+    <string name="steel_status_safe">آمن ✓</string>
+    <string name="steel_status_unsafe">غير آمن ✗</string>
+
+    <!-- ExecutionLogScreen migrated strings -->
+    <string name="exec_inspection_format">تفتيش: %s</string>
+    <string name="exec_checklist_title">قائمة فحص الجودة</string>
+    <string name="exec_comments_label">ملاحظات</string>
+    <string name="exec_formwork_check">الشدات مستقرة والأبعاد صحيحة</string>
+    <string name="exec_rebar_check">عدد وأقطار الحديد مطابقة للتصميم</string>
+    <string name="exec_cover_check">فواصل الغطاء الخرساني في مكانها</string>
+    <string name="exec_clean_check">المنطقة نظيفة وخالية من الحطام</string>
+    <string name="exec_approve_save">اعتماد وحفظ</string>
+    <string name="exec_record_pour_title">تسجيل صب خرسانة</string>
+    <string name="exec_element_id_label">رقم العنصر (مثل B1-L2)</string>
+    <string name="exec_slump_mm_label">الانهيار (mm)</string>
+    <string name="exec_volume_m3_label">الحجم (m³)</string>
+    <string name="exec_record_button">تسجيل</string>
+    <string name="exec_site_engineer">مهندس الموقع</string>
+
+    <!-- FrameAnalysisScreen migrated strings -->
+    <string name="frame_node_id_header">رقم</string>
+    <string name="frame_x_m_header">X (م)</string>
+    <string name="frame_y_m_header">Y (م)</string>
+    <string name="frame_b_mm_label">ب (مم)</string>
+    <string name="frame_h_mm_label">ح (مم)</string>
+    <string name="frame_fc_mpa_label">f\'c (MPa)</string>
+    <string name="frame_fy_mpa_label">fy (MPa)</string>
+    <string name="frame_simple_portal_desc">إطار بوابة بسيط</string>
+    <string name="frame_two_story_desc">إطار من طابقين</string>
+    <string name="frame_node_label_format">عقدة %d</string>
+    <string name="frame_member_label_format">عضو %s</string>
+
+    <!-- SlabScreen migrated strings -->
+    <string name="slab_advanced_detailing_pro">تسليح تفصيلي متقدم (Pro)</string>
+    <string name="slab_drop_thick_mm">سمك التاج (مم)</string>
+    <string name="slab_col_width_mm">عرض العمود (مم)</string>
+    <string name="slab_prestress_force_kn">قوة ما قبل الشد (kN)</string>
+    <string name="slab_openings_shafts">فتحات البلاطة (آبار)</string>
+    <string name="slab_open_width_mm">عرض الفتحة (مم)</string>
+    <string name="slab_open_length_mm">طول الفتحة (مم)</string>
+    <string name="slab_calculating">جاري الحساب…</string>
+    <string name="slab_opening_support">تسليح حافة الفتحة</string>
+    <string name="slab_rib_reinforcement">تسليح الضلع</string>
+
+    <!-- WaterLevelScreen migrated strings -->
+    <string name="water_level_bm_bs">مرجع + ظهر</string>
+    <string name="water_level_benchmark_label">نقطة مرجعية</string>
+    <string name="water_level_back_sight_label">قراءة خلفية</string>
+    <string name="water_level_fore_sight_label">قراءة أمامية</string>
+    <string name="water_level_pdf_title">تقرير مسح منسوب المياه</string>
+    <string name="water_level_pdf_bm_rl">منسوب النقطة المرجعية: </string>
+    <string name="water_level_pdf_back_sight">قراءة خلفية: </string>
+    <string name="water_level_pdf_hi_label">ارتفاع الجهاز (HI): </string>
+    <string name="water_level_pdf_point">نقطة</string>
+    <string name="water_level_pdf_type">نوع</string>
+    <string name="water_level_pdf_reading_m">القراءة (م)</string>
+    <string name="water_level_pdf_rl_m">المنسوب (م)</string>
+    <string name="water_level_pdf_max_rl_format">أقصى منسوب: %.3f م  |  أدنى منسوب: %.3f م  |  الفرق: %.3f م</string>
 </resources>

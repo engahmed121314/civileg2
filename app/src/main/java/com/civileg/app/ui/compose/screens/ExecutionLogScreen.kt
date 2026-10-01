@@ -36,10 +36,18 @@ fun ExecutionLogScreen(
 ) {
     val pourLogs by viewModel.getPourLogs(projectId).observeAsState(emptyList())
     val inspections by viewModel.getInspections(projectId).observeAsState(emptyList())
+    val errorMessage by viewModel.errorMessage.observeAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
     var showAddPourDialog by remember { mutableStateOf(false) }
     var showAddInspectionDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.execution_logs_title), fontWeight = FontWeight.Bold) },
@@ -109,6 +117,7 @@ fun ExecutionLogScreen(
         )
     }
 
+    val siteEngineerLabel = stringResource(R.string.exec_site_engineer)
     if (showAddInspectionDialog) {
         AddInspectionDialog(
             onDismiss = { showAddInspectionDialog = false },
@@ -117,7 +126,7 @@ fun ExecutionLogScreen(
                     SiteInspection(
                         projectId = projectId,
                         designId = null,
-                        inspectorName = "Site Engineer",
+                        inspectorName = siteEngineerLabel,
                         comments = comments,
                         formworkSafe = fw,
                         rebarMatchesDesign = rb,
@@ -144,7 +153,7 @@ fun InspectionItem(insp: SiteInspection) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Inspection: ${SimpleDateFormat("dd MMM HH:mm", Locale.US).format(insp.date)}", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.exec_inspection_format, SimpleDateFormat("dd MMM HH:mm", Locale.US).format(insp.date)), fontWeight = FontWeight.Bold)
                 Text(insp.comments, fontSize = 12.sp, color = Color.Gray)
                 Text(
                     "FW: ${if(insp.formworkSafe) "OK" else "NG"} | RB: ${if(insp.rebarMatchesDesign) "OK" else "NG"} | CV: ${if(insp.coverAdequate) "OK" else "NG"}",
@@ -166,21 +175,21 @@ fun AddInspectionDialog(onDismiss: () -> Unit, onConfirm: (String, Boolean, Bool
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Quality Inspection Checklist") },
+        title = { Text(stringResource(R.string.exec_checklist_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(value = comments, onValueChange = { comments = it }, label = { Text("Comments") }, modifier = Modifier.fillMaxWidth())
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = fw, onCheckedChange = { fw = it }); Text("Formwork Stable & Dimensions Correct") }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = rb, onCheckedChange = { rb = it }); Text("Rebar Counts & Diameters Match Design") }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cv, onCheckedChange = { cv = it }); Text("Concrete Cover Spacers in Place") }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cl, onCheckedChange = { cl = it }); Text("Area Clean & Free of Debris") }
+                OutlinedTextField(value = comments, onValueChange = { comments = it }, label = { Text(stringResource(R.string.exec_comments_label)) }, modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = fw, onCheckedChange = { fw = it }); Text(stringResource(R.string.exec_formwork_check)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = rb, onCheckedChange = { rb = it }); Text(stringResource(R.string.exec_rebar_check)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cv, onCheckedChange = { cv = it }); Text(stringResource(R.string.exec_cover_check)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cl, onCheckedChange = { cl = it }); Text(stringResource(R.string.exec_clean_check)) }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(comments, fw, rb, cv, cl) }) { Text("Approve & Save") }
+            Button(onClick = { onConfirm(comments, fw, rb, cv, cl) }) { Text(stringResource(R.string.exec_approve_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -193,21 +202,21 @@ fun AddPourLogDialog(onDismiss: () -> Unit, onConfirm: (String, Double, Double) 
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Record Concrete Pour") },
+        title = { Text(stringResource(R.string.exec_record_pour_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text("Element ID (e.g. B1-L2)") })
-                OutlinedTextField(value = slump, onValueChange = { slump = it }, label = { Text("Slump (mm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                OutlinedTextField(value = vol, onValueChange = { vol = it }, label = { Text("Volume (m³)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text(stringResource(R.string.exec_element_id_label)) })
+                OutlinedTextField(value = slump, onValueChange = { slump = it }, label = { Text(stringResource(R.string.exec_slump_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = vol, onValueChange = { vol = it }, label = { Text(stringResource(R.string.exec_volume_m3_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
         },
         confirmButton = {
             Button(onClick = { 
                 onConfirm(elementId, slump.toDoubleOrNull() ?: 100.0, vol.toDoubleOrNull() ?: 0.0)
-            }) { Text("Record") }
+            }) { Text(stringResource(R.string.exec_record_button)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

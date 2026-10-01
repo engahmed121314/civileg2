@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -32,6 +33,10 @@ object FrameAnalysisEngine {
         memberLoads: List<MemberLoad>,
         settings: FrameAnalysisSettings
     ): FrameAnalysisResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notEmpty("nodes", nodes)
+        InputGuard.notEmpty("members", members)
+        InputGuard.notNull("settings", settings)
         try {
             if (nodes.size < 2) return FrameAnalysisResult(errorMessage = "يجب إدخال عقدتين على الأقل")
             if (members.isEmpty()) return FrameAnalysisResult(errorMessage = "يجب إدخال عضو واحد على الأقل")
@@ -558,6 +563,10 @@ object FrameAnalysisEngine {
         height: Double = 4.0,
         udl: Double = 20.0
     ): Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>> {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("span", span)
+        InputGuard.positive("height", height)
+        InputGuard.nonNegative("udl", udl)
         val nodes = listOf(
             FrameNode(1, 0.0, 0.0, SupportType.Fixed),
             FrameNode(2, span, 0.0, SupportType.Fixed),
@@ -584,6 +593,10 @@ object FrameAnalysisEngine {
         storyHeights: List<Double> = listOf(3.5, 3.0),
         udlPerFloor: Double = 15.0
     ): Triple<List<FrameNode>, List<FrameMember>, List<MemberLoad>> {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notEmpty("spans", spans)
+        InputGuard.notEmpty("storyHeights", storyHeights)
+        InputGuard.nonNegative("udlPerFloor", udlPerFloor)
         val numSpans = spans.size
         val numStories = storyHeights.size
         val nodes = mutableListOf<FrameNode>()

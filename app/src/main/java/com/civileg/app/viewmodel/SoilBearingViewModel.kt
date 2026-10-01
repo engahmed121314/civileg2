@@ -37,6 +37,9 @@ class SoilBearingViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     // ------------------------------------------------------------------
     // Input fields (two-way via MutableLiveData)
     // ------------------------------------------------------------------
@@ -123,12 +126,15 @@ class SoilBearingViewModel @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 _result.postValue(null)
                 _error.postValue("مدخلات غير صالحة: ${e.message}")
+                _errorMessage.postValue("Invalid input / مدخلات غير صالحة: ${e.message}")
             } catch (e: ArithmeticException) {
                 _result.postValue(null)
                 _error.postValue("خطأ حسابي: ${e.message}")
+                _errorMessage.postValue("Arithmetic error / خطأ حسابي: ${e.message}")
             } catch (e: Throwable) {
                 _result.postValue(null)
                 _error.postValue("خطأ: ${e.message?.take(100) ?: "Unknown error"}")
+                _errorMessage.postValue("Error / خطأ: ${e.message?.take(100) ?: "Unknown error"}")
                 android.util.Log.e("SoilBearingVM", "calculate crash", e)
             } finally {
                 _isCalculating.postValue(false)
@@ -152,14 +158,17 @@ class SoilBearingViewModel @Inject constructor(
                 _result.postValue(null)
                 _comparisonResults.postValue(emptyMap())
                 _error.postValue("مدخلات غير صالحة: ${e.message}")
+                _errorMessage.postValue("Invalid input / مدخلات غير صالحة: ${e.message}")
             } catch (e: ArithmeticException) {
                 _result.postValue(null)
                 _comparisonResults.postValue(emptyMap())
                 _error.postValue("خطأ حسابي: ${e.message}")
+                _errorMessage.postValue("Arithmetic error / خطأ حسابي: ${e.message}")
             } catch (e: Throwable) {
                 _result.postValue(null)
                 _comparisonResults.postValue(emptyMap())
                 _error.postValue("خطأ: ${e.message?.take(100) ?: "Unknown error"}")
+                _errorMessage.postValue("Error / خطأ: ${e.message?.take(100) ?: "Unknown error"}")
                 android.util.Log.e("SoilBearingVM", "compareAll crash", e)
             } finally {
                 _isCalculating.postValue(false)

@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.ElementType
@@ -24,6 +26,9 @@ data class UnifiedDesignUiState(
 @Deprecated("Unused in current UI. Navigation routes directly to element screens.")
 @HiltViewModel
 class UnifiedDesignViewModel @Inject constructor() : ViewModel() {
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     private val _uiState = MutableStateFlow(UnifiedDesignUiState())
     val uiState: StateFlow<UnifiedDesignUiState> = _uiState.asStateFlow()

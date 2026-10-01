@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.calculations.ecp.*
 import com.civileg.app.domain.calculations.aci.*
@@ -7,23 +8,35 @@ import com.civileg.app.domain.calculations.sbc.*
 import com.civileg.app.domain.entities.DesignCode
 
 object CalculationFactory {
-    
-    fun getColumnDesign(code: DesignCode): ColumnDesign = when (code) {
-        DesignCode.ECP -> ECPColumn()
-        DesignCode.ACI -> ACIColumn()
-        DesignCode.SBC -> SBCColumn()
+
+    fun getColumnDesign(code: DesignCode): ColumnDesign {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ECP -> ECPColumn()
+            DesignCode.ACI -> ACIColumn()
+            DesignCode.SBC -> SBCColumn()
+        }
     }
     
-    fun getBeamDesign(code: DesignCode): BeamDesign = when (code) {
-        DesignCode.ECP -> ECPBeam()
-        DesignCode.ACI -> ACIBeam()
-        DesignCode.SBC -> SBCBeam()
+    fun getBeamDesign(code: DesignCode): BeamDesign {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ECP -> ECPBeam()
+            DesignCode.ACI -> ACIBeam()
+            DesignCode.SBC -> SBCBeam()
+        }
     }
 
-    fun getSlabDesign(code: DesignCode): SlabDesign = when (code) {
-        DesignCode.ECP -> ECPSlab()
-        DesignCode.ACI -> ACISlab()
-        DesignCode.SBC -> SBCSlab()
+    fun getSlabDesign(code: DesignCode): SlabDesign {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ECP -> ECPSlab()
+            DesignCode.ACI -> ACISlab()
+            DesignCode.SBC -> SBCSlab()
+        }
     }
 
     fun getTankDesign(code: DesignCode): TankDesign = when (code) {

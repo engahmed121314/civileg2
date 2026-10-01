@@ -37,6 +37,9 @@ class PileFoundationViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     /**
      * Run the full pile foundation design.
      */
@@ -121,11 +124,14 @@ class PileFoundationViewModel @Inject constructor(
                 _error.value = null
             } catch (e: IllegalArgumentException) {
                 _error.value = "مدخلات غير صالحة: ${e.message}"
+                _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
             } catch (e: ArithmeticException) {
                 _error.value = "خطأ حسابي: ${e.message}"
+                _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
             } catch (e: Exception) {
                 android.util.Log.e("PileFoundationVM", "designPile crash", e)
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -251,6 +257,7 @@ class PileFoundationViewModel @Inject constructor(
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     _error.value = "PDF export failed: ${e.message ?: ""}"
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message ?: ""}"
                     _isExporting.value = false
                     onComplete(null)
                 }

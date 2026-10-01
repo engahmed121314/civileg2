@@ -36,6 +36,9 @@ class WindLoadViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     fun saveDesign(projectId: Long, name: String) {
         val res = _result.value ?: return
         viewModelScope.launch {
@@ -138,12 +141,15 @@ class WindLoadViewModel @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 _result.postValue(null)
                 _error.postValue("مدخلات غير صالحة: ${e.message}")
+                _errorMessage.postValue("Invalid input / مدخلات غير صالحة: ${e.message}")
             } catch (e: ArithmeticException) {
                 _result.postValue(null)
                 _error.postValue("خطأ حسابي: ${e.message}")
+                _errorMessage.postValue("Arithmetic error / خطأ حسابي: ${e.message}")
             } catch (e: Exception) {
                 _result.postValue(null)
                 _error.postValue("خطأ غير متوقع: ${e.message}")
+                _errorMessage.postValue("Unexpected error / خطأ غير متوقع: ${e.message}")
                 android.util.Log.e("WindLoadVM", "calculate crash", e)
             } finally {
                 _isCalculating.postValue(false)
@@ -166,12 +172,15 @@ class WindLoadViewModel @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 _k2Table.postValue(emptyList())
                 _error.postValue("مدخلات غير صالحة: ${e.message}")
+                _errorMessage.postValue("Invalid input / مدخلات غير صالحة: ${e.message}")
             } catch (e: ArithmeticException) {
                 _k2Table.postValue(emptyList())
                 _error.postValue("خطأ حسابي: ${e.message}")
+                _errorMessage.postValue("Arithmetic error / خطأ حسابي: ${e.message}")
             } catch (e: Exception) {
                 _k2Table.postValue(emptyList())
                 _error.postValue("خطأ غير متوقع: ${e.message}")
+                _errorMessage.postValue("Unexpected error / خطأ غير متوقع: ${e.message}")
                 android.util.Log.e("WindLoadVM", "updateK2Table crash", e)
             }
         }

@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.DesignCode
@@ -33,6 +35,9 @@ class SettingsViewModel @Inject constructor(
     
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
     
     init {
         viewModelScope.launch {

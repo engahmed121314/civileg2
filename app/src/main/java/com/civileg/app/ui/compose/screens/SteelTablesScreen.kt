@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 fun SteelTablesScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
     var searchQuery by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(0) }
     var selectedSection by remember { mutableStateOf<SectionProperties?>(null) }
@@ -131,6 +132,7 @@ fun SteelTablesScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_steel_tables_title), fontWeight = FontWeight.Bold) },

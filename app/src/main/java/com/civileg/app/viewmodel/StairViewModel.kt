@@ -32,6 +32,9 @@ class StairViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
@@ -75,6 +78,7 @@ class StairViewModel @Inject constructor(
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -181,6 +185,7 @@ class StairViewModel @Inject constructor(
             } catch (e: Exception) {
                 e.printStackTrace()
                 _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
+                _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message ?: "Unknown error"}"
                 onComplete(null)
             } finally {
                 _isExporting.value = false

@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.ConcreteMixDesigner
@@ -21,6 +23,10 @@ import javax.inject.Inject
 class ConcreteMixViewModel @Inject constructor(
     private val repository: DesignRepository
 ) : ViewModel() {
+
+    // ── Error message ──
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     // ── Tab state ──
     private val _selectedTab = MutableStateFlow(0)
@@ -82,8 +88,11 @@ class ConcreteMixViewModel @Inject constructor(
             )
             _mixResult.value = ConcreteMixDesigner.designMix(input)
         } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
         } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
         } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
         }
     }
 
@@ -95,7 +104,9 @@ class ConcreteMixViewModel @Inject constructor(
             }
             _gradeResults.value = results
         } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
         } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
         }
     }
 
@@ -104,7 +115,9 @@ class ConcreteMixViewModel @Inject constructor(
         try {
             _mixResult.value = ConcreteMixDesigner.quickDesign(grade, exposure, cementType)
         } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
         } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
         }
     }
 

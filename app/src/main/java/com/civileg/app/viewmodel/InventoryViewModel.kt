@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
@@ -23,6 +25,9 @@ data class InventoryUiState(
 class InventoryViewModel @Inject constructor(
     private val repository: DesignRepository
 ) : ViewModel() {
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     private val _uiState = MutableStateFlow(InventoryUiState())
     val uiState: StateFlow<InventoryUiState> = _uiState.asStateFlow()

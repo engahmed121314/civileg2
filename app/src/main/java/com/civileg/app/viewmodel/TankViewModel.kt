@@ -34,6 +34,9 @@ class TankViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
@@ -61,8 +64,10 @@ class TankViewModel @Inject constructor(
                 
                 _result.value = res
                 _error.value = null
+                _errorMessage.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Tank calculation error / خطأ في حساب الخزان: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -76,7 +81,11 @@ class TankViewModel @Inject constructor(
 
     fun saveTank(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
         viewModelScope.launch {
-            repository.saveTankDesign(projectId, name, result)
+            try {
+                repository.saveTankDesign(projectId, name, result)
+            } catch (e: Exception) {
+                _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
+            }
         }
     }
 
@@ -162,6 +171,7 @@ class TankViewModel @Inject constructor(
             } catch (e: Throwable) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _error.value = "PDF Export Error: ${e.message}"
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message}"
                     _isExporting.value = false
                     onComplete(null)
                 }

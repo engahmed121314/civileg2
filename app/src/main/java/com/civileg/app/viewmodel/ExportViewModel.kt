@@ -2,6 +2,8 @@ package com.civileg.app.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
@@ -27,6 +29,9 @@ class ExportViewModel @Inject constructor(
     }
     private val _exportState = MutableStateFlow<ExportState>(ExportState.Idle)
     val exportState: StateFlow<ExportState> = _exportState
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
     
     fun exportColumnReport(
         context: Context,
@@ -67,6 +72,7 @@ class ExportViewModel @Inject constructor(
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
+                _errorMessage.value = "Column export failed / فشل تصدير العمود: ${e.localizedMessage ?: "Export failed"}"
             }
         }
     }
@@ -125,6 +131,7 @@ class ExportViewModel @Inject constructor(
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
+                _errorMessage.value = "Beam export failed / فشل تصدير الكمرة: ${e.localizedMessage ?: "Export failed"}"
             }
         }
     }
@@ -163,6 +170,7 @@ class ExportViewModel @Inject constructor(
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
+                _errorMessage.value = "Slab export failed / فشل تصدير البلاطة: ${e.localizedMessage ?: "Export failed"}"
             }
         }
     }
@@ -229,6 +237,7 @@ class ExportViewModel @Inject constructor(
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
+                _errorMessage.value = "Steel export failed / فشل تصدير القطعة الحديدية: ${e.localizedMessage ?: "Export failed"}"
             }
         }
     }

@@ -198,13 +198,13 @@ fun SlabScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Advanced Detailing (Pro)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.slab_advanced_detailing_pro), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                             if (selectedType == CalculatorEngine.SlabType.FLAT) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedTextField(
                                         value = dropPanelThickness,
                                         onValueChange = { dropPanelThickness = it },
-                                        label = { Text("Drop Thick (mm)") },
+                                        label = { Text(stringResource(R.string.slab_drop_thick_mm)) },
                                         modifier = Modifier.weight(1f),
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         shape = RoundedCornerShape(12.dp)
@@ -212,7 +212,7 @@ fun SlabScreen(
                                     OutlinedTextField(
                                         value = columnSize,
                                         onValueChange = { columnSize = it },
-                                        label = { Text("Col Width (mm)") },
+                                        label = { Text(stringResource(R.string.slab_col_width_mm)) },
                                         modifier = Modifier.weight(1f),
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         shape = RoundedCornerShape(12.dp)
@@ -223,7 +223,7 @@ fun SlabScreen(
                                 OutlinedTextField(
                                     value = prestressForce,
                                     onValueChange = { prestressForce = it },
-                                    label = { Text("Prestress Force (kN)") },
+                                    label = { Text(stringResource(R.string.slab_prestress_force_kn)) },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp)
@@ -231,12 +231,12 @@ fun SlabScreen(
                             }
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            Text("Slab Openings (Shafts)", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.slab_openings_shafts), style = MaterialTheme.typography.labelSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(
                                     value = openingWidth,
                                     onValueChange = { openingWidth = it },
-                                    label = { Text("Open. Width (mm)") },
+                                    label = { Text(stringResource(R.string.slab_open_width_mm)) },
                                     modifier = Modifier.weight(1f),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp)
@@ -244,7 +244,7 @@ fun SlabScreen(
                                 OutlinedTextField(
                                     value = openingLength,
                                     onValueChange = { openingLength = it },
-                                    label = { Text("Open. Length (mm)") },
+                                    label = { Text(stringResource(R.string.slab_open_length_mm)) },
                                     modifier = Modifier.weight(1f),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp)

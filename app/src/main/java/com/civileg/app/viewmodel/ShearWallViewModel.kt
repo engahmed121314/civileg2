@@ -1,6 +1,8 @@
 package com.civileg.app.viewmodel
 
 import android.content.Context
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
@@ -56,6 +58,9 @@ class ShearWallViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ShearWallUiState())
     val uiState: StateFlow<ShearWallUiState> = _uiState.asStateFlow()
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     fun updateWallType(type: WallType) {
         _uiState.update { it.copy(wallType = type) }
@@ -195,6 +200,7 @@ class ShearWallViewModel @Inject constructor(
                 _uiState.update { it.copy(result = result, isLoading = false, errors = emptyList()) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errors = listOf(e.message ?: "Error")) }
+                _errorMessage.value = "Shear wall calculation error / خطأ في حساب حائط القص: ${e.message}"
             }
         }
     }
@@ -266,6 +272,7 @@ class ShearWallViewModel @Inject constructor(
             } catch (e: Throwable) {
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false, errors = listOf("PDF Error: ${e.message}")) }
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message}"
                     onComplete(null)
                 }
             }
@@ -279,7 +286,11 @@ class ShearWallViewModel @Inject constructor(
     fun saveDesign(projectId: Long, name: String) {
         val res = _uiState.value.result ?: return
         viewModelScope.launch {
-            repository.saveShearWallDesign(projectId, name, res)
+            try {
+                repository.saveShearWallDesign(projectId, name, res)
+            } catch (e: Exception) {
+                _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
+            }
         }
     }
 }

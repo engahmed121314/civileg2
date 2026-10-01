@@ -54,8 +54,17 @@ fun BOQScreen(
 ) {
     var selectedMainTab by remember { mutableIntStateOf(1) }
     val mainTabs = listOf(stringResource(R.string.boq_title), stringResource(R.string.boq_subtitle))
+    val errorMessage by boqViewModel.errorMessage.observeAsState()
+    val isLoading by boqViewModel.isLoading.observeAsState(false)
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_boq_title), fontWeight = FontWeight.Bold) },
@@ -86,6 +95,35 @@ fun BOQScreen(
                     onNavigateToMasterBbs = onNavigateToMasterBbs
                 )
                 1 -> SmartEstimatorProContent(boqViewModel)
+            }
+        }
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = Color(0xFF1565C0)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Calculating... / جاري الحساب...",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }

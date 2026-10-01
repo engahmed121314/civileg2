@@ -33,6 +33,9 @@ class FlatSlabViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     // Store last input for PDF export
     private var lastInput: FlatSlabInput? = null
 
@@ -63,6 +66,7 @@ class FlatSlabViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            _errorMessage.value = null
             try {
                 val input = FlatSlabInput(
                     panelType = panelType,
@@ -89,6 +93,7 @@ class FlatSlabViewModel @Inject constructor(
                 _result.value = result
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Flat slab calculation error / خطأ في حساب البلاطة المسطحة: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -168,6 +173,7 @@ class FlatSlabViewModel @Inject constructor(
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _error.value = "PDF export failed: ${e.message}"
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message}"
                     _isExporting.value = false
                     onComplete(null)
                 }
@@ -183,7 +189,11 @@ class FlatSlabViewModel @Inject constructor(
     fun saveDesign(projectId: Long, name: String) {
         val res = _result.value ?: return
         viewModelScope.launch {
-            repository.saveFlatSlabDesign(projectId, name, res)
+            try {
+                repository.saveFlatSlabDesign(projectId, name, res)
+            } catch (e: Exception) {
+                _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
+            }
         }
     }
 }

@@ -48,6 +48,7 @@ fun WaterLevelScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     var benchmarkRL by remember { mutableStateOf("") }
     var backSight by remember { mutableStateOf("") }
     var numPoints by remember { mutableStateOf("3") }
@@ -56,6 +57,7 @@ fun WaterLevelScreen(
     var pointReadings by remember { mutableStateOf(listOf("", "", "")) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_water_level_title), fontWeight = FontWeight.Bold) },
@@ -226,7 +228,7 @@ fun WaterLevelScreen(
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("BM + BS", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text(stringResource(R.string.water_level_bm_bs), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 "%.3f + %.3f".format(bmValue, bsValue),
@@ -264,7 +266,7 @@ fun WaterLevelScreen(
                 // Benchmark row
                 TableRow(
                     pointName = "BM",
-                    typeLabel = "Benchmark",
+                    typeLabel = stringResource(R.string.water_level_benchmark_label),
                     typeColor = Color(0xFF2E7D32),
                     reading = "—",
                     rl = "%.3f".format(bmValue),
@@ -520,17 +522,17 @@ private suspend fun exportWaterLevelPdf(
             var y = margin + 20f
 
             // ── Title ──
-            canvas.drawText("Water Level Survey Report", pageWidth / 2f, y, titlePaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_title), pageWidth / 2f, y, titlePaint)
             y += 30f
 
             // ── Summary ──
-            canvas.drawText("Benchmark RL: ", margin, y, labelPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_bm_rl), margin, y, labelPaint)
             canvas.drawText("%.3f m".format(benchmarkRL), margin + 120f, y, valuePaint)
             y += 20f
-            canvas.drawText("Back Sight: ", margin, y, labelPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_back_sight), margin, y, labelPaint)
             canvas.drawText("%.3f m".format(backSight), margin + 120f, y, valuePaint)
             y += 20f
-            canvas.drawText("Height of Instrument (HI): ", margin, y, labelPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_hi_label), margin, y, labelPaint)
             canvas.drawText("%.3f m".format(hi), margin + 200f, y, valuePaint)
             y += 30f
 
@@ -547,10 +549,10 @@ private suspend fun exportWaterLevelPdf(
             // Header row
             val headerBg = Paint().apply { color = AndroidColor.rgb(21, 101, 192) }
             canvas.drawRect(colX[0], y, colX[4], y + rowHeight, headerBg)
-            canvas.drawText("Point", (colX[0] + colX[1]) / 2f, y + 16f, headerPaint)
-            canvas.drawText("Type", (colX[1] + colX[2]) / 2f, y + 16f, headerPaint)
-            canvas.drawText("Reading (m)", (colX[2] + colX[3]) / 2f, y + 16f, headerPaint)
-            canvas.drawText("RL (m)", (colX[3] + colX[4]) / 2f, y + 16f, headerPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_point), (colX[0] + colX[1]) / 2f, y + 16f, headerPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_type), (colX[1] + colX[2]) / 2f, y + 16f, headerPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_reading_m), (colX[2] + colX[3]) / 2f, y + 16f, headerPaint)
+            canvas.drawText(context.getString(R.string.water_level_pdf_rl_m), (colX[3] + colX[4]) / 2f, y + 16f, headerPaint)
             y += rowHeight
 
             // Row helper
@@ -571,10 +573,10 @@ private suspend fun exportWaterLevelPdf(
             }
 
             // Benchmark row
-            drawRow("BM", "Benchmark", "—", "%.3f".format(benchmarkRL), AndroidColor.rgb(232, 245, 253))
+            drawRow("BM", context.getString(R.string.water_level_benchmark_label), "—", "%.3f".format(benchmarkRL), AndroidColor.rgb(232, 245, 253))
 
             // Back Sight row
-            drawRow("BS", "Back Sight", "%.3f".format(backSight), "—", AndroidColor.rgb(227, 242, 253))
+            drawRow("BS", context.getString(R.string.water_level_back_sight_label), "%.3f".format(backSight), "—", AndroidColor.rgb(227, 242, 253))
 
             // Forward Sight rows
             pointReadings.forEachIndexed { index, point ->
@@ -582,7 +584,7 @@ private suspend fun exportWaterLevelPdf(
                 val bgColor = if (index % 2 == 0) AndroidColor.WHITE else AndroidColor.rgb(245, 245, 245)
                 drawRow(
                     point = point.pointName,
-                    type = "Fore Sight",
+                    type = context.getString(R.string.water_level_fore_sight_label),
                     reading = if (hasReading) "%.3f".format(point.staffReading) else "—",
                     rl = if (hasReading) "%.3f".format(point.rl) else "—",
                     bgColor = bgColor
@@ -596,7 +598,7 @@ private suspend fun exportWaterLevelPdf(
                 if (validResults.isNotEmpty()) {
                     val maxRL = validResults.maxOf { it.rl }
                     val minRL = validResults.minOf { it.rl }
-                    canvas.drawText("Max RL: %.3f m  |  Min RL: %.3f m  |  Difference: %.3f m".format(maxRL, minRL, maxRL - minRL), margin, y, labelPaint)
+                    canvas.drawText(context.getString(R.string.water_level_pdf_max_rl_format, maxRL, minRL, maxRL - minRL), margin, y, labelPaint)
                 }
             }
 

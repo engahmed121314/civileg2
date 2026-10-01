@@ -26,6 +26,9 @@ class BOQViewModel @Inject constructor(
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     // ── Element-level BOQ (CalculateElementBoq integration) ──
     private val _elementBoqItems = MutableLiveData<List<BoqItem>>(emptyList())
     val elementBoqItems: LiveData<List<BoqItem>> = _elementBoqItems
@@ -48,6 +51,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "BOQ calculation error / خطأ حساب الكميات: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -439,6 +443,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Column BOQ error / خطأ كميات العمود: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -465,6 +470,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Beam BOQ error / خطأ كميات الكمرة: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -493,6 +499,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Slab BOQ error / خطأ كميات البلاطة: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -523,6 +530,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Footing BOQ error / خطأ كميات القاعدة: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -553,6 +561,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Stair BOQ error / خطأ كميات السلم: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -583,6 +592,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Tank BOQ error / خطأ كميات الخزان: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -615,6 +625,7 @@ class BOQViewModel @Inject constructor(
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
+                _errorMessage.value = "Retaining wall BOQ error / خطأ كميات الحائط الساند: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -642,6 +653,7 @@ class BOQViewModel @Inject constructor(
                 _estimationResult.value = result
             } catch (e: Exception) {
                 _estimationResult.value = null
+                _errorMessage.value = "Estimation error / خطأ التقدير: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -656,6 +668,7 @@ class BOQViewModel @Inject constructor(
                 _estimationResult.value = result
             } catch (e: Exception) {
                 _estimationResult.value = null
+                _errorMessage.value = "Estimation error / خطأ التقدير: ${e.message}"
             } finally {
                 _isLoading.value = false
             }

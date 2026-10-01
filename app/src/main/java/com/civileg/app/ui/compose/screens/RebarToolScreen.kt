@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,14 @@ fun RebarToolScreen(
     viewModel: RebarToolViewModel = viewModel()
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val isLoading by viewModel.isLoading.observeAsState(false)
+    val errorMessage by viewModel.errorMessage.observeAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
     val tabTitles = listOf(
         stringResource(R.string.rebar_tab_weight),
         stringResource(R.string.rebar_tab_dev),
@@ -51,6 +60,7 @@ fun RebarToolScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.rebar_calculator_title), fontWeight = FontWeight.Bold) },
@@ -95,6 +105,35 @@ fun RebarToolScreen(
                 2 -> LapSpliceTab(viewModel)
                 3 -> RebarScheduleTab(viewModel)
                 4 -> CrackWidthTab(viewModel)
+            }
+        }
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = Color(0xFF1565C0)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Calculating... / جاري الحساب...",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }

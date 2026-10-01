@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 fun UnitConverterScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
     var selectedCategory by remember { mutableStateOf<UnitConverter.UnitCategory>(UnitConverter.UnitCategory.Length) }
     var inputValue by remember { mutableStateOf("1.0") }
     var fromUnit by remember { mutableStateOf("m") }
@@ -55,6 +56,7 @@ fun UnitConverterScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_unit_converter_title), fontWeight = FontWeight.Bold) },

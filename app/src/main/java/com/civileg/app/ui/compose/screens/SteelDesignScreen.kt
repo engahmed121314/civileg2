@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -80,6 +79,12 @@ fun SteelDesignScreen(
     val warehouseResult by viewModel.warehouseResult.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val errorMessage by viewModel.errorMessage.observeAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf(
@@ -90,17 +95,18 @@ fun SteelDesignScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.home_steel), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.resetResult() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
                     }
                 }
             )
@@ -129,8 +135,35 @@ fun SteelDesignScreen(
                 3 -> BasePlateDesignTab(viewModel)
             }
 
-            errorMessage?.let {
-                Toast.makeText(LocalContext.current, it, Toast.LENGTH_LONG).show()
+
+        }
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = Color(0xFF1565C0)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.steel_calculating),
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }
@@ -166,17 +199,17 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                     }
                     
                     Spacer(Modifier.height(4.dp))
-                    Text("Hangar Floors Config:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(stringResource(R.string.steel_hangar_floors_config), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = numberOfStories == 1,
                             onClick = { numberOfStories = 1 },
-                            label = { Text("1 Floor (Standard Hangar)") }
+                            label = { Text(stringResource(R.string.steel_1_floor_standard_hangar)) }
                         )
                         FilterChip(
                             selected = numberOfStories == 2,
                             onClick = { numberOfStories = 2 },
-                            label = { Text("2 Floors (Multi-Story/Mezzanine)") }
+                            label = { Text(stringResource(R.string.steel_2_floors_mezzanine)) }
                         )
                     }
                 }
@@ -188,9 +221,9 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.steel_loads_header), fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(deadLoad, "D.L (kN/m²)", { deadLoad = it }, Modifier.weight(1f))
-                        SteelInputField(liveLoad, "L.L (kN/m²)", { liveLoad = it }, Modifier.weight(1f))
-                        SteelInputField(windSpeed, "Wind (km/h)", { windSpeed = it }, Modifier.weight(1f))
+                        SteelInputField(deadLoad, stringResource(R.string.steel_dl_knm2), { deadLoad = it }, Modifier.weight(1f))
+                        SteelInputField(liveLoad, stringResource(R.string.steel_ll_knm2), { liveLoad = it }, Modifier.weight(1f))
+                        SteelInputField(windSpeed, stringResource(R.string.steel_wind_kmh), { windSpeed = it }, Modifier.weight(1f))
                     }
                 }
             }
@@ -232,7 +265,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             item { WarehouseResultSummary(res) }
             
             item {
-                Text("Cost Structure & Feasibility", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.steel_cost_structure_feasibility), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 FeasibilityChart(res)
             }
 
@@ -244,7 +277,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("ENGINEERING CALCULATION TRACE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                            Text(stringResource(R.string.steel_engineering_calc_trace), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                             Spacer(Modifier.height(8.dp))
                             res.calculationTrace.forEach { step ->
                                 Text("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
@@ -262,21 +295,21 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                 if (showExportDialog) {
                     AlertDialog(
                         onDismissRequest = { showExportDialog = false },
-                        title = { Text("Export Professional PDF Report") },
+                        title = { Text(stringResource(R.string.steel_export_pro_pdf_dialog)) },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(value = projectName, onValueChange = { projectName = it }, label = { Text("Project Name") }, modifier = Modifier.fillMaxWidth())
-                                OutlinedTextField(value = clientName, onValueChange = { clientName = it }, label = { Text("Client Name") }, modifier = Modifier.fillMaxWidth())
-                                Text("Report will be generated strictly in English with full calculations, sketches, and BOQ.", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                                OutlinedTextField(value = projectName, onValueChange = { projectName = it }, label = { Text(stringResource(R.string.steel_project_name_label)) }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = clientName, onValueChange = { clientName = it }, label = { Text(stringResource(R.string.steel_client_name_label)) }, modifier = Modifier.fillMaxWidth())
+                                Text(stringResource(R.string.steel_report_english_note), fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
                             }
                         },
                         confirmButton = {
                             Button(onClick = {
                                 viewModel.exportWarehouseProToPdf(context, clientName, projectName) { }
                                 showExportDialog = false
-                            }) { Text("Export Now") }
+                            }) { Text(stringResource(R.string.steel_export_now)) }
                         },
-                        dismissButton = { TextButton(onClick = { showExportDialog = false }) { Text("Cancel") } }
+                        dismissButton = { TextButton(onClick = { showExportDialog = false }) { Text(stringResource(R.string.cancel)) } }
                     )
                 }
 
@@ -289,7 +322,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                 ) {
                     Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(12.dp))
-                    Text("GENERATE FULL ENGLISH PDF REPORT", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                    Text(stringResource(R.string.steel_generate_english_pdf), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                 }
             }
 
@@ -327,19 +360,23 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
             Text(stringResource(R.string.steel_design_summary), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             ResultRow(stringResource(R.string.steel_total_weight), "${String.format("%.1f", res.totalWeight)} Tons")
             ResultRow(stringResource(R.string.steel_weight_m2), "${String.format("%.1f", res.weightPerM2)} kg/m\u00B2")
-            ResultRow("Base Plate Thickness", "${res.mainFrame.basePlateThickness.toInt()} mm")
-            ResultRow("Base Plate Anchor Bolts", "${res.mainFrame.basePlateBoltsCount}xM24 Bolts")
+            ResultRow(stringResource(R.string.steel_base_plate_thickness), "${res.mainFrame.basePlateThickness.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_base_plate_anchor_bolts), "${res.mainFrame.basePlateBoltsCount}xM24 Bolts")
             if (res.mainFrame.floorBeamSection != null) {
-                ResultRow("Intermediate Floor Beam", res.mainFrame.floorBeamSection.sectionName)
-                ResultRow("Floor Beam Moment", "${String.format("%.1f", res.mainFrame.floorBeamMaxMoment)} kN.m")
+                ResultRow(stringResource(R.string.steel_intermediate_floor_beam), res.mainFrame.floorBeamSection.sectionName)
+                ResultRow(stringResource(R.string.steel_floor_beam_moment), "${String.format("%.1f", res.mainFrame.floorBeamMaxMoment)} kN.m")
             }
-            ResultRow(stringResource(R.string.steel_status), if (res.safetyStatus) "SAFE ✓" else "UNSAFE ✗")
+            ResultRow(stringResource(R.string.steel_status), if (res.safetyStatus) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe))
         }
     }
 }
 
 @Composable
 fun FeasibilityChart(result: SteelWarehouseAnalysisResult) {
+    val costStructureLabel = stringResource(R.string.steel_cost_structure)
+    val steelStructureLabel = stringResource(R.string.steel_steel_structure_label)
+    val claddingRoofLabel = stringResource(R.string.steel_cladding_roof)
+    val foundationLabel = stringResource(R.string.steel_foundation_label)
     AndroidView(
         factory = { context ->
             PieChart(context).apply {
@@ -347,7 +384,7 @@ fun FeasibilityChart(result: SteelWarehouseAnalysisResult) {
                 isRotationEnabled = true
                 holeRadius = 40f
                 setTransparentCircleAlpha(0)
-                setCenterText("Cost Structure")
+                setCenterText(costStructureLabel)
                 setCenterTextSize(10f)
                 setDrawEntryLabels(true)
                 legend.isEnabled = false
@@ -355,9 +392,9 @@ fun FeasibilityChart(result: SteelWarehouseAnalysisResult) {
         },
         update = { chart ->
             val entries = listOf(
-                PieEntry(60f, "Steel Structure"),
-                PieEntry(25f, "Cladding & Roof"),
-                PieEntry(15f, "Foundation")
+                PieEntry(60f, steelStructureLabel),
+                PieEntry(25f, claddingRoofLabel),
+                PieEntry(15f, foundationLabel)
             )
             val dataSet = PieDataSet(entries, "")
             dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
@@ -382,7 +419,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             FilterChip(selected = selectedView == 0, onClick = { selectedView = 0 }, label = { Text("BMD") })
             FilterChip(selected = selectedView == 1, onClick = { selectedView = 1 }, label = { Text("SFD") })
-            FilterChip(selected = selectedView == 2, onClick = { selectedView = 2 }, label = { Text("Deflection") })
+            FilterChip(selected = selectedView == 2, onClick = { selectedView = 2 }, label = { Text(stringResource(R.string.steel_deflection_label)) })
         }
         
         Card(
@@ -458,11 +495,11 @@ fun SummaryLine(label: String, value: String, isPrimary: Boolean = false) {
 fun AnalysisDetailCard(res: MainFrameResult) {
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("Frame Analysis Results", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(stringResource(R.string.steel_frame_analysis_results_label), fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(4.dp))
-            ResultRow("Max Moment", "${String.format("%.1f", res.maxMoment)} kN.m")
-            ResultRow("Max Shear", "${String.format("%.1f", res.maxShear)} kN")
-            ResultRow("Max Deflection", "${String.format("%.1f", res.maxDeflection)} mm")
+            ResultRow(stringResource(R.string.steel_max_moment), "${String.format("%.1f", res.maxMoment)} kN.m")
+            ResultRow(stringResource(R.string.steel_max_shear), "${String.format("%.1f", res.maxShear)} kN")
+            ResultRow(stringResource(R.string.steel_max_deflection), "${String.format("%.1f", res.maxDeflection)} mm")
         }
     }
 }
@@ -470,10 +507,10 @@ fun AnalysisDetailCard(res: MainFrameResult) {
 @Composable
 fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
     var viewMode by remember { mutableIntStateOf(0) } // 0: Front, 1: Plan, 2: Side, 3: 3D
-    val viewModes = listOf("Front Elevation", "Plan View", "Side Elevation", "3D Perspective")
+    val viewModes = listOf(stringResource(R.string.steel_view_front_elevation), stringResource(R.string.steel_view_plan), stringResource(R.string.steel_view_side_elevation), stringResource(R.string.steel_view_3d_perspective))
     
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Detailed Design Drawings", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+        Text(stringResource(R.string.steel_detailed_design_drawings), fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
         
         ScrollableTabRow(selectedTabIndex = viewMode, edgePadding = 0.dp, containerColor = Color.Transparent) {
             viewModes.forEachIndexed { index, title ->
@@ -501,8 +538,8 @@ fun SectionResultCard(title: String, section: SteelSectionType) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            Text("Section: ${section.sectionName}", fontSize = 13.sp)
-            Text("Weight: ${String.format("%.1f", section.weight)} kg/m", fontSize = 12.sp, color = Color.Gray)
+            Text(stringResource(R.string.steel_section_format, section.sectionName), fontSize = 13.sp)
+            Text(stringResource(R.string.steel_weight_format, section.weight), fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -511,9 +548,9 @@ fun SectionResultCard(title: String, section: SteelSectionType) {
 fun SecondaryMembersCard(res: SecondaryMembersResult) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("Secondary Members", fontWeight = FontWeight.Bold)
-            Text("Purlins: ${res.purlinSection.sectionName}", fontSize = 13.sp)
-            Text("Girts: ${res.girtSection.sectionName}", fontSize = 13.sp)
+            Text(stringResource(R.string.steel_secondary_members), fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.steel_purlins_format, res.purlinSection.sectionName), fontSize = 13.sp)
+            Text(stringResource(R.string.steel_girts_format, res.girtSection.sectionName), fontSize = 13.sp)
         }
     }
 }
@@ -522,8 +559,8 @@ fun SecondaryMembersCard(res: SecondaryMembersResult) {
 fun ConnectionDetailCard(detail: SteelConnectionDetail) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("Connection: ${detail.name}", fontWeight = FontWeight.Bold)
-            Text("Capacity: ${String.format("%.1f", detail.capacity)} kN (Demand: ${String.format("%.1f", detail.demand)} kN)", fontSize = 12.sp)
+            Text(stringResource(R.string.steel_connection_name_format, detail.name), fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.steel_capacity_demand_format, detail.capacity, detail.demand), fontSize = 12.sp)
         }
     }
 }
@@ -532,7 +569,7 @@ fun ConnectionDetailCard(detail: SteelConnectionDetail) {
 fun RecommendationsCard(items: List<String>) {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("Engineering Recommendations", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+            Text(stringResource(R.string.steel_recommendations), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
             items.forEach { item ->
                 Text("• $item", fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp))
             }
@@ -608,7 +645,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             }
                         }
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Steel Grade", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(stringResource(R.string.steel_grade_label), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             ExposedDropdownMenuBox(
                                 expanded = expandedGrade,
                                 onExpandedChange = { expandedGrade = !expandedGrade }
@@ -648,7 +685,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     viewModel.searchSections(it)
                 },
                 label = { Text(stringResource(R.string.steel_search_hint)) },
-                placeholder = { Text("IPE 300, HEB 240...") },
+                placeholder = { Text(stringResource(R.string.steel_section_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -799,15 +836,15 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(axialLoad, "Axial Pu (kN)", { axialLoad = it }, Modifier.weight(1f))
-                        SteelInputField(moment, "Moment Mu (kN.m)", { moment = it }, Modifier.weight(1f))
+                        SteelInputField(axialLoad, stringResource(R.string.steel_axial_pu_kn), { axialLoad = it }, Modifier.weight(1f))
+                        SteelInputField(moment, stringResource(R.string.steel_moment_mu_knm), { moment = it }, Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SteelInputField(shear, "Shear Vu (kN)", { shear = it }, Modifier.weight(1f))
-                        SteelInputField(length, "Length (m)", { length = it }, Modifier.weight(1f))
+                        SteelInputField(shear, stringResource(R.string.steel_shear_vu_kn), { shear = it }, Modifier.weight(1f))
+                        SteelInputField(length, stringResource(R.string.steel_length_m_label), { length = it }, Modifier.weight(1f))
                     }
                     
-                    Text("Member Type", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.steel_member_type_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     FlowRow(modifier = Modifier.fillMaxWidth()) {
                         SteelMemberType.entries.forEach { type ->
                             FilterChip(
@@ -1409,7 +1446,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         Text(stringResource(R.string.steel_bolted_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
                         ResultRow(stringResource(R.string.steel_total_capacity), "${String.format("%.1f", res.controllingCapacity)} kN")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
-                        Text(if (res.isSafe) "SAFE ✓" else "UNSAFE ✗", fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+                        Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
                         
                         Button(
                             onClick = { 
@@ -1441,7 +1478,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         Text(stringResource(R.string.steel_welded_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         ResultRow(stringResource(R.string.steel_total_capacity), "${String.format("%.1f", res.capacity)} kN")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
-                        Text(if (res.isSafe) "SAFE ✓" else "UNSAFE ✗", fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+                        Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
                         
                         Button(
                             onClick = {
@@ -1468,7 +1505,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
         
         item {
             if (boltResult != null || weldResult != null) {
-                Text("Connection Visualization", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+                Text(stringResource(R.string.steel_connection_visualization), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
                 SteelConnectionVisualizer(boltResult, weldResult)
             }
         }
@@ -1634,7 +1671,7 @@ fun BasePlateDesignTab(viewModel: SteelViewModel) {
                         ResultRow(stringResource(R.string.steel_bolt_count), "${res.anchorBolts.numberOfBolts}")
                         ResultRow(stringResource(R.string.steel_bolt_dia), "M${res.anchorBolts.boltDiameter.toInt()}")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
-                        Text(if (res.isSafe) "SAFE ✓" else "UNSAFE ✗", color = urColor, fontWeight = FontWeight.Bold)
+                        Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), color = urColor, fontWeight = FontWeight.Bold)
                         
                         Spacer(Modifier.height(8.dp))
                         Button(
@@ -1669,23 +1706,23 @@ fun SteelResultCard(res: SteelMemberResult) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Detailed Design Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.steel_detailed_design_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 IconButton(onClick = { showFormulas = !showFormulas }) {
                     Icon(if (showFormulas) Icons.Default.VisibilityOff else Icons.Default.Functions, contentDescription = null, modifier = Modifier.size(20.dp))
                 }
             }
             
-            ResultRow("Axial Capacity (\u03A6Pn)", "${String.format("%.1f", res.axialCapacity)} kN")
+            ResultRow(stringResource(R.string.steel_axial_capacity_label), "${String.format("%.1f", res.axialCapacity)} kN")
             if (showFormulas) FormulaText("\u03A6Pn = \u03A6 \u00B7 Fcr \u00B7 Ag")
             
-            ResultRow("Moment Capacity (\u03A6Mn)", "${String.format("%.1f", res.flexuralCapacity)} kN.m")
+            ResultRow(stringResource(R.string.steel_moment_capacity_label), "${String.format("%.1f", res.flexuralCapacity)} kN.m")
             if (showFormulas) FormulaText("\u03A6Mn = \u03A6 \u00B7 Fy \u00B7 Zx")
             
-            ResultRow("Shear Capacity (\u03A6Vn)", "${String.format("%.1f", res.shearCapacity)} kN")
+            ResultRow(stringResource(R.string.steel_shear_capacity_label), "${String.format("%.1f", res.shearCapacity)} kN")
             if (showFormulas) FormulaText("\u03A6Vn = \u03A6 \u00B7 0.6 \u00B7 Fy \u00B7 Aw")
             
-            ResultRow("Utilization Ratio", "${(res.utilizationRatio * 100).toInt()}%")
-            ResultRow("Status", if (res.isSafe) "SAFE ✓" else "UNSAFE ✗")
+            ResultRow(stringResource(R.string.steel_utilization_ratio_label), "${(res.utilizationRatio * 100).toInt()}%")
+            ResultRow(stringResource(R.string.status), if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe))
         }
     }
 }

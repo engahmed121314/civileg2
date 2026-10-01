@@ -32,6 +32,9 @@ class StrapFootingViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     private val _isExporting = MutableLiveData(false)
     val isExporting: LiveData<Boolean> = _isExporting
 
@@ -53,8 +56,10 @@ class StrapFootingViewModel @Inject constructor(
                 )
                 _result.value = res
                 _error.value = null
+                _errorMessage.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Strap footing calculation error / خطأ في حساب القاعدة الشريطية: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -80,6 +85,7 @@ class StrapFootingViewModel @Inject constructor(
                 onComplete(success)
             } catch (e: Exception) {
                 onComplete(null)
+                _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message}"
             } finally {
                 _isExporting.value = false
             }

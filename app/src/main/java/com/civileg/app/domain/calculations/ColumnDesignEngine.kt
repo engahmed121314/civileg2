@@ -1,5 +1,6 @@
 package com.civileg.app.domain.calculations
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -58,6 +59,9 @@ object ColumnDesignEngine {
     )
 
     fun getKFactor(isBraced: Boolean, topCond: Int, botCond: Int): Double {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.inRange("topCond", topCond, 1, 4)
+        InputGuard.inRange("botCond", botCond, 1, 4)
         val table = if (isBraced) kTables.braced else kTables.unbraced
         val key = Pair(min(topCond, botCond), max(topCond, botCond))
         return table[key] ?: 1.0
@@ -74,6 +78,16 @@ object ColumnDesignEngine {
         preferredDia: Int,
         code: DesignCode
     ): ColumnDesignResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.positive("b", b)
+        InputGuard.positive("t", t)
+        InputGuard.positive("H", H)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("cover", cover)
+        InputGuard.nonNegative("Pu", Pu)
+        InputGuard.positive("preferredDia", preferredDia)
+
         val steps = mutableListOf<CalculationStep>()
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()

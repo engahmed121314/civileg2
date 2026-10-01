@@ -28,6 +28,7 @@ import java.io.File
 @Composable
 fun SiteLayoutScreen() {
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     var plotWidth by remember { mutableStateOf("20") }
     var plotLength by remember { mutableStateOf("30") }
     var soilCapacity by remember { mutableStateOf("200") }
@@ -36,7 +37,10 @@ fun SiteLayoutScreen() {
     var recommendation by remember { mutableStateOf<LayoutRecommendation?>(null) }
     var siteError by remember { mutableStateOf<String?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+    Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
         Text(stringResource(R.string.site_layout_title), style = MaterialTheme.typography.headlineSmall)
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -124,6 +128,7 @@ fun SiteLayoutScreen() {
                 Text(err, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
+    }
     }
 }
 

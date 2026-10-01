@@ -36,6 +36,9 @@ class FootingViewModel @Inject constructor(
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
     
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
@@ -98,6 +101,7 @@ class FootingViewModel @Inject constructor(
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -196,6 +200,7 @@ class FootingViewModel @Inject constructor(
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     _error.value = "PDF export failed: ${e.message ?: ""}"
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message ?: ""}"
                     _isExporting.value = false
                     onComplete(null)
                 }

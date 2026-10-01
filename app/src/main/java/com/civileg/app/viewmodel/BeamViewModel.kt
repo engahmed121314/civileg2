@@ -32,6 +32,9 @@ class BeamViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
     val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
 
@@ -97,8 +100,10 @@ class BeamViewModel @Inject constructor(
                 _result.value = res
                 lastSpan = span
                 _error.value = null
+                _errorMessage.value = null
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -111,7 +116,11 @@ class BeamViewModel @Inject constructor(
 
     fun saveBeam(projectId: Long, name: String, result: CalculatorEngine.BeamResult) {
         viewModelScope.launch {
-            repository.saveBeamDesign(projectId, name, result, lastSpan, lastFcu, lastFy)
+            try {
+                repository.saveBeamDesign(projectId, name, result, lastSpan, lastFcu, lastFy)
+            } catch (e: Exception) {
+                _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
+            }
         }
     }
 
@@ -236,6 +245,7 @@ class BeamViewModel @Inject constructor(
                 e.printStackTrace()
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
+                    _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message ?: "Unknown error"}"
                     _isExporting.value = false
                     onComplete(null)
                 }

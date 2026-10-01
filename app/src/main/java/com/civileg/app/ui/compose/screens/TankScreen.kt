@@ -52,6 +52,13 @@ fun TankScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val errorMessage by viewModel.errorMessage.observeAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -130,6 +137,7 @@ fun TankScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_tank_title), fontWeight = FontWeight.Bold) },
@@ -444,6 +452,35 @@ fun TankScreen(
                 }
             }
         }
+        }
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = Color(0xFF1565C0)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Calculating... / جاري الحساب...",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
         }
     }
 
