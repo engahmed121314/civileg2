@@ -11,15 +11,10 @@ import com.civileg.app.domain.calculations.ConcreteFrameDesign
 import com.civileg.app.domain.calculations.FrameAnalysisEngine
 import com.civileg.app.domain.calculations.SteelFrameDesign
 import com.civileg.app.domain.entities.*
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -339,150 +334,11 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     // ========================================================================
-    // PDF Export
+    // PDF Export (export logic lives in Screen via FrameAnalysisPdfExporter)
     // ========================================================================
 
-    private val _pdfFilePath = MutableLiveData<String?>(null)
-    val pdfFilePath: LiveData<String?> get() = _pdfFilePath
-
-    private val _isExportingPdf = MutableLiveData(false)
-    val isExportingPdf: LiveData<Boolean> get() = _isExportingPdf
-
-    fun generateFramePdf() {
-        val res = _result.value ?: return
-        val ns = _nodes.value ?: emptyList()
-        val ms = _members.value ?: emptyList()
-        val nl = _nodalLoads.value ?: emptyList()
-        val ml = _memberLoads.value ?: emptyList()
-        val st = _settings.value ?: FrameAnalysisSettings()
-        val concreteRes = _concreteResults.value ?: emptyList()
-        val steelRes = _steelResults.value ?: emptyList()
-
-        _isExportingPdf.value = true
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val fileName = "Frame_Analysis_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.pdf"
-                val directory = getApplication<Application>().getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                    ?: getApplication<Application>().cacheDir
-                directory.mkdirs()
-                val file = File(directory, fileName)
-
-                // Build inputs summary
-                val inputsMap = mutableMapOf<String, String>(
-                    "Design Code" to st.designCode.displayName,
-                    "Nodes" to "${ns.size}",
-                    "Members" to "${ms.size}",
-                    "Nodal Loads" to "${nl.size}",
-                    "Member Loads" to "${ml.size}"
-                )
-                val supports = ns.filter { it.support != SupportType.Free }
-                if (supports.isNotEmpty()) {
-                    inputsMap["Supports"] = supports.joinToString(", ") { "N${it.id}(${it.support.name})" }
-                }
-
-                // Build results summary
-                val resultsMap = mutableMapOf<String, String>()
-
-                // Member forces summary
-                if (res.memberEndForces.isNotEmpty()) {
-                    val maxM = res.memberEndForces.maxOfOrNull { it.maxMoment } ?: 0.0
-                    val maxV = res.memberEndForces.maxOfOrNull { it.maxShear } ?: 0.0
-                    val maxA = res.memberEndForces.maxOfOrNull { it.axialForce } ?: 0.0
-                    resultsMap["Max Moment"] = "${String.format("%.2f", maxM)} kN.m"
-                    resultsMap["Max Shear"] = "${String.format("%.2f", maxV)} kN"
-                    resultsMap["Max Axial"] = "${String.format("%.2f", maxA)} kN"
-                }
-
-                // Reactions summary
-                val reactions = res.nodeResults.filter { it.reactionFx != 0.0 || it.reactionFy != 0.0 || it.reactionMz != 0.0 }
-                if (reactions.isNotEmpty()) {
-                    val sumRy = reactions.sumOf { it.reactionFy }
-                    val sumRx = reactions.sumOf { it.reactionFx }
-                    resultsMap["Sum Reactions Fy"] = "${String.format("%.2f", sumRy)} kN"
-                    resultsMap["Sum Reactions Fx"] = "${String.format("%.2f", sumRx)} kN"
-                }
-
-                // Displacements summary
-                if (res.nodeResults.isNotEmpty()) {
-                    val maxDx = res.nodeResults.maxOfOrNull { kotlin.math.abs(it.dx) } ?: 0.0
-                    val maxDy = res.nodeResults.maxOfOrNull { kotlin.math.abs(it.dy) } ?: 0.0
-                    val maxRz = res.nodeResults.maxOfOrNull { kotlin.math.abs(it.rz) } ?: 0.0
-                    resultsMap["Max Disp X"] = "${String.format("%.4f", maxDx)} m"
-                    resultsMap["Max Disp Y"] = "${String.format("%.4f", maxDy)} m"
-                    resultsMap["Max Rotation"] = "${String.format("%.6f", maxRz)} rad"
-                }
-
-                // Design results summary
-                if (concreteRes.isNotEmpty()) {
-                    val allSafe = concreteRes.all { it.isSafe }
-                    val maxUtil = concreteRes.maxOfOrNull { maxOf(it.momentUtilization, it.shearUtilization) } ?: 0.0
-                    resultsMap["Concrete Members"] = "${concreteRes.size} (all safe=$allSafe)"
-                    resultsMap["Max Concrete Util."] = "${(maxUtil * 100).toInt()}%"
-                }
-                if (steelRes.isNotEmpty()) {
-                    val allSafe = steelRes.all { it.isSafe }
-                    val maxUtil = steelRes.maxOfOrNull { it.combinedUtilization } ?: 0.0
-                    resultsMap["Steel Members"] = "${steelRes.size} (all safe=$allSafe)"
-                    resultsMap["Max Steel Util."] = "${(maxUtil * 100).toInt()}%"
-                }
-
-                // Safety checks from design results
-                val safetyChecks = mutableListOf<GenericSafetyCheck>()
-                concreteRes.forEach { cr ->
-                    safetyChecks.add(
-                        GenericSafetyCheck(
-                            name = "${cr.memberName} Moment",
-                            calculated = (cr.momentUtilization * 100),
-                            limit = 100.0,
-                            unit = "%",
-                            passed = cr.isSafe
-                        )
-                    )
-                }
-                steelRes.forEach { sr ->
-                    safetyChecks.add(
-                        GenericSafetyCheck(
-                            name = "${sr.memberName} Combined",
-                            calculated = (sr.combinedUtilization * 100),
-                            limit = 100.0,
-                            unit = "%",
-                            passed = sr.isSafe
-                        )
-                    )
-                }
-
-                val isAllSafe = (concreteRes.all { it.isSafe } && steelRes.all { it.isSafe })
-
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تحليل إطار",
-                    titleEn = "Frame Analysis Report",
-                    subtitle = "${st.designCode.displayName}  •  ${ns.size} nodes, ${ms.size} members",
-                    designType = "Frame Analysis",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
-                    isSafe = isAllSafe,
-                    drawingBitmap = null,
-                    outputPath = file.absolutePath
-                )
-
-                withContext(Dispatchers.Main) {
-                    _pdfFilePath.value = generated?.absolutePath
-                    _isExportingPdf.value = false
-                }
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    _errorMessage.value = "Frame PDF export failed: ${e.message}"
-                    _isExportingPdf.value = false
-                    _pdfFilePath.value = null
-                }
-            }
-        }
-    }
-
     // ========================================================================
-    // Stored Inputs for PDF Export
+    // Stored Inputs for PDF Export (used by Screen's FrameAnalysisPdfExporter)
     // ========================================================================
 
     data class FrameStoredInputs(
@@ -506,14 +362,13 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 }
 
-enum class DiagramType(val displayNameAr: String) {
-    BMD("مخطط العزوم"),
-    SFD("مخطط القص"),
-    AFD("مخطط المحوري");
+enum class DiagramType(val displayNameAr: String, val displayNameEn: String) {
+    BMD("مخطط العزوم", "Bending Moment"),
+    SFD("مخطط القص", "Shear Force"),
+    AFD("مخطط المحوري", "Axial Force");
 
-    fun localizedDisplayName(): String = when (this) {
-        BMD -> "BMD"
-        SFD -> "SFD"
-        AFD -> "AFD"
-    }
+    /** Bilingual label: English / Arabic */
+    val localizedLabel: String get() = "$displayNameEn / $displayNameAr"
+
+    fun localizedDisplayName(): String = localizedLabel
 }

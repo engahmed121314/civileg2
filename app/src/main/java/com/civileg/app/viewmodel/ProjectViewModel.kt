@@ -36,10 +36,18 @@ class ProjectViewModel @Inject constructor(
     private val _syncStatus = MutableLiveData<Boolean?>(null)
     val syncStatus: LiveData<Boolean?> = _syncStatus
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     fun syncData() {
         viewModelScope.launch {
-            val success = syncManager.syncAllProjects()
-            _syncStatus.value = success
+            try {
+                val success = syncManager.syncAllProjects()
+                _syncStatus.value = success
+            } catch (e: Exception) {
+                _errorMessage.value = "Sync failed: ${e.message ?: "Unknown error"} / فشل المزامنة"
+                _syncStatus.value = false
+            }
         }
     }
 
@@ -132,7 +140,12 @@ class ProjectViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "PDF export failed: ${e.message ?: "Unknown error"} / فشل تصدير PDF"
+                }
+            }
         }
     }
 

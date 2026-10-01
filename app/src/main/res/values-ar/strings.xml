@@ -1221,6 +1221,19 @@
     <string name="frame_node_displacements">إزاحات العقد</string>
     <string name="frame_reactions">ردود أفعال الركائز</string>
     <string name="frame_internal_forces">القوى الداخلية</string>
+    <string name="frame_load_nodal_title">إضافة حمولة عقدية</string>
+    <string name="frame_load_member_title">إضافة حمولة على عضو</string>
+    <string name="frame_load_node_id">رقم العقدة</string>
+    <string name="frame_load_fx">Fx - أفقي (kN)</string>
+    <string name="frame_load_fy">Fy - رأسي (kN) - موجب لأعلى</string>
+    <string name="frame_load_mz">Mz - عزم (kN.m)</string>
+    <string name="frame_load_member_id">رقم العضو</string>
+    <string name="frame_load_type">نوع الحمولة</string>
+    <string name="frame_load_value">قيمة الحمولة</string>
+    <string name="frame_load_position">الموقع من بداية العضو (م)</string>
+    <string name="frame_node_label">عقدة %d</string>
+    <string name="frame_on_member">على: %1$s (#%2$d)</string>
+    <string name="frame_member_format">عقدة %1$d ← عقدة %2$d</string>
 
     <!-- المخزن -->
     <string name="inventory_search_hint">بحث في المخزن...</string>

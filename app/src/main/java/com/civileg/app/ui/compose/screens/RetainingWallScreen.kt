@@ -53,6 +53,7 @@ fun RetainingWallScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val vmError by viewModel.error.observeAsState()
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
@@ -77,6 +78,11 @@ fun RetainingWallScreen(
     var inputError by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(vmError) {
+        vmError?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
 
     // Validation messages (captured in composable scope for use in onClick)
     val rwErrAllPositive = stringResource(R.string.rw_err_all_positive)
@@ -451,6 +457,31 @@ fun RetainingWallScreen(
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+        }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.civileg.app.domain.entities
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
+import com.civileg.app.utils.LocaleHelper
 import kotlin.math.*
 
 // ============================================================================
@@ -34,6 +35,9 @@ enum class SupportType(val displayNameAr: String, val displayNameEn: String) : P
     Roller("بكرة", "Roller"),
     Fixed("تثبيت كامل", "Fixed"),
     VerticalRoller("بكرة رأسية", "Vertical Roller");
+
+    /** Locale-aware display name */
+    val displayName: String get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
 
     fun isRestrained(dx: Boolean, dy: Boolean, rz: Boolean): Boolean = when (this) {
         Free -> false
@@ -107,14 +111,20 @@ data class FrameMember(
 @Parcelize
 enum class FrameMaterialType(val displayNameAr: String, val displayNameEn: String) : Parcelable {
     Concrete("خرسانة", "Concrete"),
-    Steel("حديد", "Steel")
+    Steel("حديد", "Steel");
+
+    /** Locale-aware display name */
+    val displayName: String get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
 }
 
 @Parcelize
 enum class FrameMemberType(val displayNameAr: String, val displayNameEn: String) : Parcelable {
     Beam("كمر", "Beam"),
     Column("عمود", "Column"),
-    Brace("كمرية", "Brace")
+    Brace("كمرية", "Brace");
+
+    /** Locale-aware display name */
+    val displayName: String get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
 }
 
 /**
@@ -166,7 +176,10 @@ enum class MemberLoadType(val displayNameAr: String, val displayNameEn: String) 
     UDL("توزيع منتظم", "Uniform Distributed Load"),
     PointLoad("حمولة مركزة", "Point Load"),
     Moment("عزم", "Applied Moment"),
-    LinearVarying("متغير خطياً", "Linearly Varying Load")
+    LinearVarying("متغير خطياً", "Linearly Varying Load");
+
+    /** Locale-aware display name */
+    val displayName: String get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
 }
 
 // ============================================================================
@@ -313,6 +326,7 @@ data class FrameAnalysisResult(
 @Parcelize
 data class FrameAnalysisSettings(
     val designCode: DesignCode = DesignCode.ECP,
+    val steelFy: Double = 355.0,      // MPa - إجهاد الخضوع للحديد
     val eColumn: Double = 25e6,      // kN/m² (25 MPa default) - معامل المرونة للخرسانة
     val eSteel: Double = 200e6,      // kN/m² (200 GPa) - معامل المرونة للحديد
     val loadCombinations: List<LoadCombinationFrame> = listOf(

@@ -457,8 +457,8 @@ class CalculatorEngine @Inject constructor(
             utilizationRatio = utilizationRatio,
             isSafe = isSafe,
             connectionDesign = null,
-            bucklingCheck = if (!bucklingSafe) BucklingCheckResult(KLOverR, Fcr, BucklingMode.FLEXURAL, false, codeRef) else null,
-            deflectionCheck = if (!deflectionSafe) DeflectionCheckResult(calculatedDeflection = appliedDeflection, allowableDeflection = deflectionLimit, isSafe = false, message = "Deflection exceeds L/250") else null,
+            bucklingCheck = if (!bucklingSafe) BucklingCheckResult(slendernessRatio = KLOverR, criticalStress = Fcr, bucklingMode = BucklingMode.FLEXURAL, isSafe = bucklingSafe, codeReference = codeRef) else null,
+            deflectionCheck = if (!deflectionSafe) DeflectionCheckResult(calculatedDeflection = appliedDeflection, allowableDeflection = deflectionLimit, ratio = if (deflectionLimit > 0) appliedDeflection / deflectionLimit else 0.0, isSafe = deflectionSafe, message = "Deflection exceeds L/250", recommendation = "Increase section depth or reduce span") else null,
             weight = area * 1e-6 * 7850, cost = 0.0,
             warnings = mutableListOf<String>().apply {
                 if (!bucklingSafe) add("$codeRef: Slender member (KL/r=${"%.1f".format(KLOverR)}) — increase section or reduce L")

@@ -1226,6 +1226,19 @@
     <string name="frame_node_displacements">Node Displacements</string>
     <string name="frame_reactions">Support Reactions</string>
     <string name="frame_internal_forces">Internal Forces</string>
+    <string name="frame_load_nodal_title">Add Nodal Load</string>
+    <string name="frame_load_member_title">Add Member Load</string>
+    <string name="frame_load_node_id">Node ID</string>
+    <string name="frame_load_fx">Fx - Horizontal (kN)</string>
+    <string name="frame_load_fy">Fy - Vertical (kN) - Positive Up</string>
+    <string name="frame_load_mz">Mz - Moment (kN.m)</string>
+    <string name="frame_load_member_id">Member ID</string>
+    <string name="frame_load_type">Load Type</string>
+    <string name="frame_load_value">Load Value</string>
+    <string name="frame_load_position">Position from start (m)</string>
+    <string name="frame_node_label">Node %d</string>
+    <string name="frame_on_member">On: %s (#%d)</string>
+    <string name="frame_member_format">Node %d ← Node %d</string>
 
     <!-- Inventory -->
     <string name="inventory_search_hint">Search inventory...</string>
@@ -1481,4 +1494,63 @@
     <string name="steel_bolt_capacity">Bolted Capacity (φRn)</string>
     <string name="steel_weld_design">Weld Analysis</string>
     <string name="steel_bolt_design">Bolt Analysis</string>
+    <!-- Frame Analysis Screen additional strings -->
+    <string name="frame_id_label">ID</string>
+    <string name="frame_b_mm">b (mm)</string>
+    <string name="frame_h_mm">h (mm)</string>
+    <string name="frame_fcu_mpa">f\'c (MPa)</string>
+    <string name="frame_fy_mpa">fy (MPa)</string>
+    <string name="frame_analyzing">Analyzing frame…</string>
+    <string name="frame_diagram_bmd">BMD / Bending Moment</string>
+    <string name="frame_diagram_sfd">SFD / Shear Force</string>
+    <string name="frame_diagram_afd">AFD / Axial Force</string>
+    <string name="frame_design_code_label">Design Code:</string>
+    <string name="frame_simple_portal">Simple Portal Frame</string>
+    <string name="frame_two_story">Two-Story Frame</string>
+    <string name="frame_report_subject">Frame Analysis Report</string>
+    <string name="frame_view_frame_en">Frame</string>
+    <string name="frame_view_frame_ar">الإطار</string>
+    <string name="frame_view_long_section_en">Long. Section</string>
+    <string name="frame_view_long_section_ar">قطاع طولي</string>
+    <string name="frame_view_cross_section_en">Cross Section</string>
+    <string name="frame_view_cross_section_ar">قطاع عرضي</string>
+    <string name="frame_view_plan_en">Plan</string>
+    <string name="frame_view_plan_ar">مسقط أفقي</string>
+    <string name="frame_member_connectivity">Node %1$d → Node %2$d  |  %3$s  |  %4$s</string>
+    <string name="frame_concrete_dims">b=%1$s h=%2$s f\'c=%3$s</string>
+    <string name="frame_default_steel_section">IPE 300</string>
+    <string name="frame_nodal_load_values">Fx=%1$s, Fy=%2$s kN, M=%3$s kN.m</string>
+    <string name="frame_member_label">Member %d</string>
+    <string name="frame_member_load_value">%1$s: %2$s kN/m</string>
+    <string name="frame_nodal_load_add">Add Nodal Load</string>
+    <string name="frame_node_number">Node Number</string>
+    <string name="frame_fx_horizontal">Fx - Horizontal (kN)</string>
+    <string name="frame_fy_vertical_up">Fy - Vertical (kN) - positive up</string>
+    <string name="frame_mz_moment">Mz - Moment (kN.m)</string>
+    <string name="frame_add_action">Add</string>
+    <string name="frame_cancel_action">Cancel</string>
+    <string name="frame_member_load_add">Add Member Load</string>
+    <string name="frame_member_number">Member Number</string>
+    <string name="frame_load_type_label">Load Type:</string>
+    <string name="frame_disp_dx">dx: %.3f mm</string>
+    <string name="frame_disp_dy">dy: %.3f mm</string>
+    <string name="frame_disp_theta">θ: %.4f rad</string>
+    <string name="frame_reaction_format">Node %1$d: Rx=%2$.2f kN, Ry=%3$.2f kN, M=%4$.2f kN.m</string>
+    <string name="frame_member_force_header">Member %1$s (#%2$d):</string>
+    <string name="frame_member_end_i">  I: N=%1$.1f kN, V=%2$.1f kN, M=%3$.1f kN.m</string>
+    <string name="frame_member_end_j">  J: N=%1$.1f kN, V=%2$.1f kN, M=%3$.1f kN.m</string>
+    <string name="frame_result_member_id">%1$s (#%2$d)</string>
+    <string name="frame_concrete_section_info">Section: %1$s×%2$s mm | f\'c=%3$s MPa</string>
+    <string name="frame_max_forces">Max M=%1$.1f kN.m | Max V=%2$.1f kN | N=%3$.1f kN</string>
+    <string name="frame_reinforcement_required">As required: %.0f mm²</string>
+    <string name="frame_reinforcement_bottom">Bottom: %1$dØ%2$d (As=%3$.0f mm²)</string>
+    <string name="frame_reinforcement_top">Top: %1$dØ%2$d (As=%3$.0f mm²)</string>
+    <string name="frame_stirrups">Stirrups: Ø%1$d @ %2$d mm</string>
+    <string name="frame_bending">Bending: </string>
+    <string name="frame_shear_label">Shear:   </string>
+    <string name="frame_selected_section">Selected: %s</string>
+    <string name="frame_steel_section_info">Weight: %1$s kg/m | Ix=%2$s cm⁴ | Sx=%3$s cm³</string>
+    <string name="frame_axial">Axial:  </string>
+    <string name="frame_combined">Combined:   </string>
+    <string name="frame_warning_format">⚠ %s</string>
 </resources>

@@ -24,6 +24,9 @@ class MasterBbsViewModel @Inject constructor(
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     private val gson = Gson()
 
     fun loadProjectBbs(projectId: Long) {
@@ -51,12 +54,19 @@ class MasterBbsViewModel @Inject constructor(
                             else -> emptyList()
                         }
                         if (entries.isNotEmpty()) allEntries.add(entries)
-                    } catch (e: Exception) { e.printStackTrace() }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        // Track per-design errors but continue processing others
+                    }
                 }
                 
                 val combined = BbsGenerator.combineProjectBbs(allEntries)
                 withContext(Dispatchers.Main) {
                     _bbsEntries.value = combined
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "BBS generation failed: ${e.message ?: "Unknown error"} / فشل إنشاء جدول التسليح"
                 }
             } finally {
                 withContext(Dispatchers.Main) { _isLoading.value = false }

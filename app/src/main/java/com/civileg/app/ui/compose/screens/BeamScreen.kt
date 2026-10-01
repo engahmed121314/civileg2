@@ -56,6 +56,14 @@ fun BeamScreen(
     val isExporting by viewModel.isExporting.observeAsState(false)
     val error by viewModel.error.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    // Show errors via Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(error) {
+        error?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -83,6 +91,7 @@ fun BeamScreen(
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_beam_title), fontWeight = FontWeight.Bold) },
@@ -430,6 +439,31 @@ fun BeamScreen(
                         viewMode = 0,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+        }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
                 }
             }
         }

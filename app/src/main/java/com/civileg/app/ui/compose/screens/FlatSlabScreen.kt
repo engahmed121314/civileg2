@@ -61,7 +61,16 @@ fun FlatSlabScreen(
     val isExporting by viewModel.isExporting.observeAsState(false)
     val errorMsg by viewModel.error.observeAsState()
 
+    // Show errors via Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMsg) {
+        errorMsg?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.fs_title), fontWeight = FontWeight.Bold) },
@@ -498,6 +507,31 @@ item {
                     item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
             }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
+                }
+            }
+        }
         }
     }
 }

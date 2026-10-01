@@ -175,7 +175,7 @@ fun FrameAnalysisScreen(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { viewModel.setDiagramType(type) },
-                                label = { Text(type.displayNameAr, fontSize = 13.sp) },
+                                label = { Text(type.localizedLabel, fontSize = 13.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = when (type) {
                                         DiagramType.BMD -> Color(0xFF2196F3)
@@ -213,7 +213,7 @@ fun FrameAnalysisScreen(
                 when (selectedTab) {
                     0 -> DrawingTab(
                         modifier = Modifier.fillMaxSize(),
-                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, viewModel
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, settings, viewModel
                     )
                     1 -> NodesTab(nodes, members, viewModel)
                     2 -> MembersTab(nodes, members, settings, viewModel)
@@ -238,6 +238,7 @@ private fun DrawingTab(
     result: FrameAnalysisResult?,
     diagramType: DiagramType,
     selectedMemberId: Int?,
+    settings: FrameAnalysisSettings,
     viewModel: FrameAnalysisViewModel
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
@@ -252,6 +253,34 @@ private fun DrawingTab(
     )
 
     Column(modifier = modifier.fillMaxSize()) {
+        // Design Code & Steel Fy selector
+        Surface(
+            color = Color(0xFFE3F2FD),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.frame_design_code_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                Spacer(modifier = Modifier.width(8.dp))
+                for (code in DesignCode.entries) {
+                    FilterChip(
+                        selected = settings.designCode == code,
+                        onClick = { viewModel.updateDesignCode(code) },
+                        label = { Text(code.displayName, fontSize = 11.sp) },
+                        modifier = Modifier.padding(end = 4.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF1565C0),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Text("fy=${String.format("%.0f", settings.steelFy)} MPa", fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+
         // View mode selector
         Surface(
             color = Color(0xFF1565C0).copy(alpha = 0.1f),
@@ -414,7 +443,7 @@ private fun NodesTab(
                     Text("${node.id}", modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold)
                     Text("${node.x}", modifier = Modifier.width(60.dp))
                     Text("${node.y}", modifier = Modifier.width(60.dp))
-                    Text(node.support.displayNameAr, modifier = Modifier.weight(1f), fontSize = 12.sp)
+                    Text(node.support.displayName, modifier = Modifier.weight(1f), fontSize = 12.sp)
                     IconButton(onClick = {
                         editingNode = node
                         editX = node.x.toString()
@@ -459,7 +488,7 @@ private fun NodesTab(
                                 selected = editSupport == st,
                                 onClick = { editSupport = st }
                             )
-                            Text(st.displayNameAr, fontSize = 13.sp)
+                            Text(st.displayName, fontSize = 13.sp)
                         }
                     }
                 }
@@ -560,7 +589,7 @@ private fun MembersTab(
                         Column(modifier = Modifier.weight(1f)) {
                             Text("#${member.id} - ${member.name.ifEmpty { stringResource(R.string.frame_no_name) }}", fontWeight = FontWeight.Bold)
                             Text(
-                                "عقدة ${member.nodeI} ← عقدة ${member.nodeJ}  |  ${member.memberType.displayNameAr}  |  ${member.materialType.displayNameAr}",
+                                "${stringResource(R.string.frame_member_format, member.nodeI, member.nodeJ)}  |  ${member.memberType.displayName}  |  ${member.materialType.displayName}",
                                 fontSize = 11.sp, color = Color.Gray
                             )
                             if (member.materialType == FrameMaterialType.Concrete && member.concreteSection != null) {
@@ -615,7 +644,7 @@ private fun MembersTab(
                                 FilterChip(
                                     selected = editMaterial == mt,
                                     onClick = { editMaterial = mt },
-                                    label = { Text(mt.displayNameAr, fontSize = 12.sp) },
+                                    label = { Text(mt.displayName, fontSize = 12.sp) },
                                     modifier = Modifier.padding(end = 4.dp)
                                 )
                             }
@@ -628,7 +657,7 @@ private fun MembersTab(
                                 FilterChip(
                                     selected = editMemberType == mtype,
                                     onClick = { editMemberType = mtype },
-                                    label = { Text(mtype.displayNameAr, fontSize = 12.sp) },
+                                    label = { Text(mtype.displayName, fontSize = 12.sp) },
                                     modifier = Modifier.padding(end = 4.dp)
                                 )
                             }
@@ -754,7 +783,7 @@ private fun LoadsTab(
                         Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                             Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("عقدة ${load.nodeId}", fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.frame_node_label, load.nodeId), fontWeight = FontWeight.Bold)
                                     Text("Fx=${load.fx}, Fy=${load.fy} kN, M=${load.mz} kN.m", fontSize = 11.sp, color = Color.Gray)
                                 }
                                 IconButton(onClick = { viewModel.removeNodalLoad(index) }) {
@@ -781,9 +810,9 @@ private fun LoadsTab(
                         Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                             Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    val mName = members.find { it.id == load.memberId }?.name ?: "عضو ${load.memberId}"
-                                    Text("على: $mName (#${load.memberId})", fontWeight = FontWeight.Bold)
-                                    Text("${load.loadType.displayNameAr}: ${load.value} kN/m", fontSize = 11.sp, color = Color.Gray)
+                                    val mName = members.find { it.id == load.memberId }?.name ?: stringResource(R.string.frame_tab_members, load.memberId)
+                                    Text(stringResource(R.string.frame_on_member, mName, load.memberId), fontWeight = FontWeight.Bold)
+                                    Text("${load.loadType.displayName}: ${load.value} kN/m", fontSize = 11.sp, color = Color.Gray)
                                 }
                                 IconButton(onClick = { viewModel.removeMemberLoad(index) }) {
                                     Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(18.dp))
@@ -800,20 +829,20 @@ private fun LoadsTab(
     if (showNodalDialog) {
         AlertDialog(
             onDismissRequest = { showNodalDialog = false },
-            title = { Text("إضافة حمولة عقدية") },
+            title = { Text(stringResource(R.string.frame_load_nodal_title)) },
             text = {
                 Column {
                     OutlinedTextField(value = nlNodeId, onValueChange = { nlNodeId = it },
-                        label = { Text("رقم العقدة") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        label = { Text(stringResource(R.string.frame_load_node_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = nlFx, onValueChange = { nlFx = it },
-                        label = { Text("Fx - أفقي (kN)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { Text(stringResource(R.string.frame_load_fx)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = nlFy, onValueChange = { nlFy = it },
-                        label = { Text("Fy - رأسي (kN) - موجب لأعلى") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { Text(stringResource(R.string.frame_load_fy)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = nlMz, onValueChange = { nlMz = it },
-                        label = { Text("Mz - عزم (kN.m)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { Text(stringResource(R.string.frame_load_mz)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
@@ -821,9 +850,9 @@ private fun LoadsTab(
                     val nid = nlNodeId.toIntOrNull() ?: return@TextButton
                     viewModel.addNodalLoad(nid, nlFx.toDoubleOrNull() ?: 0.0, nlFy.toDoubleOrNull() ?: 0.0, nlMz.toDoubleOrNull() ?: 0.0, "DL")
                     showNodalDialog = false
-                }) { Text("إضافة", color = Color(0xFF1565C0)) }
+                }) { Text(stringResource(R.string.add), color = Color(0xFF1565C0)) }
             },
-            dismissButton = { TextButton(onClick = { showNodalDialog = false }) { Text("إلغاء") } }
+            dismissButton = { TextButton(onClick = { showNodalDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
@@ -831,26 +860,26 @@ private fun LoadsTab(
     if (showMemberDialog) {
         AlertDialog(
             onDismissRequest = { showMemberDialog = false },
-            title = { Text("إضافة حمولة على عضو") },
+            title = { Text(stringResource(R.string.frame_load_member_title)) },
             text = {
                 Column {
                     OutlinedTextField(value = mlMemberId, onValueChange = { mlMemberId = it },
-                        label = { Text("رقم العضو") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        label = { Text(stringResource(R.string.frame_load_member_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
-                    Text("نوع الحمولة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.frame_load_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Row {
                         for (lt in MemberLoadType.entries) {
                             FilterChip(selected = mlType == lt, onClick = { mlType = lt },
-                                label = { Text(lt.displayNameAr, fontSize = 11.sp) }, modifier = Modifier.padding(end = 4.dp))
+                                label = { Text(lt.displayName, fontSize = 11.sp) }, modifier = Modifier.padding(end = 4.dp))
                         }
                     }
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = mlValue, onValueChange = { mlValue = it },
-                        label = { Text("قيمة الحمولة") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { Text(stringResource(R.string.frame_load_value)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     if (mlType != MemberLoadType.UDL) {
                         Spacer(Modifier.height(4.dp))
                         OutlinedTextField(value = mlPosition, onValueChange = { mlPosition = it },
-                            label = { Text("الموقع من بداية العضو (م)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            label = { Text(stringResource(R.string.frame_load_position)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     }
                 }
             },
@@ -859,9 +888,9 @@ private fun LoadsTab(
                     val mid = mlMemberId.toIntOrNull() ?: return@TextButton
                     viewModel.addMemberLoad(mid, mlType, mlValue.toDoubleOrNull() ?: 0.0, mlPosition.toDoubleOrNull() ?: 0.0, "DL")
                     showMemberDialog = false
-                }) { Text("إضافة", color = Color(0xFF1565C0)) }
+                }) { Text(stringResource(R.string.add), color = Color(0xFF1565C0)) }
             },
-            dismissButton = { TextButton(onClick = { showMemberDialog = false }) { Text("إلغاء") } }
+            dismissButton = { TextButton(onClick = { showMemberDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }

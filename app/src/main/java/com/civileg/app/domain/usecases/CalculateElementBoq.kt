@@ -1,5 +1,6 @@
 package com.civileg.app.domain.usecases
 
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import javax.inject.Inject
 import kotlin.math.PI
@@ -29,6 +30,16 @@ class CalculateElementBoq @Inject constructor() {
         reinforcementResult: ReinforcementResult,
         prices: MaterialPrices
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("width", width)          // mm
+        InputGuard.positive("depth", depth)          // mm
+        InputGuard.positive("height", height)        // mm
+        InputGuard.inRange("width", width, 150.0, 2000.0)
+        InputGuard.inRange("depth", depth, 150.0, 2000.0)
+        InputGuard.inRange("height", height, 500.0, 30000.0)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
 
         // 1. الخرسانة: V = b × d × h  (mm³ → m³)
@@ -68,6 +79,16 @@ class CalculateElementBoq @Inject constructor() {
         shearResult: ShearReinforcementResult,
         prices: MaterialPrices
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("span", span)
+        InputGuard.inRange("width", width, 150.0, 2000.0)
+        InputGuard.inRange("depth", depth, 150.0, 2000.0)
+        InputGuard.inRange("span", span, 0.5, 40.0)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
         val spanMm = span * 1000.0
 
@@ -107,6 +128,20 @@ class CalculateElementBoq @Inject constructor() {
         cover: Double = 25.0,// mm
         prices: MaterialPrices
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("spanX", spanX)
+        InputGuard.positive("spanY", spanY)
+        InputGuard.positive("thickness", thickness)
+        InputGuard.inRange("spanX", spanX, 0.5, 20.0)
+        InputGuard.inRange("spanY", spanY, 0.5, 20.0)
+        InputGuard.inRange("thickness", thickness, 100.0, 1000.0)
+        InputGuard.positive("mainDia", mainDia)
+        InputGuard.positive("mainSpacing", mainSpacing)
+        InputGuard.positive("distDia", distDia)
+        InputGuard.positive("distSpacing", distSpacing)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
         val lxMm = spanX * 1000.0
         val lyMm = spanY * 1000.0
@@ -160,6 +195,19 @@ class CalculateElementBoq @Inject constructor() {
         excavationDepth: Double = 0.0, // m
         concreteCover: Double = 75.0 // mm
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("length", length)
+        InputGuard.positive("width", width)
+        InputGuard.positive("thickness", thickness)
+        InputGuard.inRange("length", length, 300.0, 10000.0)
+        InputGuard.inRange("width", width, 300.0, 10000.0)
+        InputGuard.inRange("thickness", thickness, 150.0, 3000.0)
+        InputGuard.positive("rebarDia", rebarDia)
+        InputGuard.positive("rebarSpacingX", rebarSpacingX)
+        InputGuard.positive("rebarSpacingY", rebarSpacingY)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
 
         // 1. الحفر (Excavation)
@@ -216,6 +264,16 @@ class CalculateElementBoq @Inject constructor() {
         stirrupSpacing: Double = 200.0,
         prices: MaterialPrices
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("stairWidth", stairWidth)
+        InputGuard.positive("totalHeight", totalHeight)
+        InputGuard.positive("stairLength", stairLength)
+        InputGuard.positive("waistThickness", waistThickness)
+        InputGuard.positive("riserHeight", riserHeight)
+        InputGuard.positive("treadWidth", treadWidth)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
         val slope = kotlin.math.sqrt(totalHeight * totalHeight + stairLength * stairLength) / stairLength
         val inclinedLength = kotlin.math.sqrt(totalHeight * totalHeight + stairLength * stairLength)
@@ -261,6 +319,15 @@ class CalculateElementBoq @Inject constructor() {
         prices: MaterialPrices,
         excavationDepth: Double = 0.5 // m
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("tankLength", tankLength)
+        InputGuard.positive("tankWidth", tankWidth)
+        InputGuard.positive("tankHeight", tankHeight)
+        InputGuard.positive("wallThickness", wallThickness)
+        InputGuard.positive("baseThickness", baseThickness)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
         val lMm = tankLength * 1000.0
         val wMm = tankWidth * 1000.0
@@ -320,6 +387,15 @@ class CalculateElementBoq @Inject constructor() {
         excavationDepth: Double = 0.0,
         backfillLength: Double = 0.0 // m (طول الردم خلف الحائط)
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("wallLength", wallLength)
+        InputGuard.positive("totalHeight", totalHeight)
+        InputGuard.positive("baseWidth", baseWidth)
+        InputGuard.positive("baseThickness", baseThickness)
+        InputGuard.positive("mainRebarDia", mainRebarDia)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
         val lMm = wallLength * 1000.0
         val hMm = totalHeight * 1000.0
@@ -376,6 +452,19 @@ class CalculateElementBoq @Inject constructor() {
         excavationDepth: Double = 0.0, // m
         concreteCover: Double = 75.0 // mm
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("length", length)
+        InputGuard.positive("width", width)
+        InputGuard.positive("thickness", thickness)
+        InputGuard.inRange("length", length, 300.0, 10000.0)
+        InputGuard.inRange("width", width, 300.0, 10000.0)
+        InputGuard.inRange("thickness", thickness, 150.0, 3000.0)
+        InputGuard.positive("rebarDia", rebarDia)
+        InputGuard.positive("rebarSpacingX", rebarSpacingX)
+        InputGuard.positive("rebarSpacingY", rebarSpacingY)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
 
         // 1. الحفر (Excavation)
@@ -429,6 +518,19 @@ class CalculateElementBoq @Inject constructor() {
         prices: MaterialPrices,
         excavationDepth: Double = 0.0 // m
     ): List<BoqItem> {
+        // ── InputGuard: حراس المدخلات ──
+        InputGuard.positive("length", length)
+        InputGuard.positive("width", width)
+        InputGuard.positive("thickness", thickness)
+        InputGuard.inRange("length", length, 300.0, 10000.0)
+        InputGuard.inRange("width", width, 300.0, 10000.0)
+        InputGuard.inRange("thickness", thickness, 150.0, 3000.0)
+        InputGuard.positive("rebarDia", rebarDia)
+        InputGuard.positive("rebarSpacingX", rebarSpacingX)
+        InputGuard.positive("rebarSpacingY", rebarSpacingY)
+        InputGuard.positive("concretePerM3", prices.concretePerM3)
+        InputGuard.positive("steelPerTon", prices.steelPerTon)
+
         val items = mutableListOf<BoqItem>()
 
         // 1. الحفر (Excavation)

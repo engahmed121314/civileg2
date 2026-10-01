@@ -58,7 +58,16 @@ fun StairScreen(
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
+    val vmError by viewModel.error.observeAsState()
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+
+    // Show errors via Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(vmError) {
+        vmError?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -75,6 +84,7 @@ fun StairScreen(
     var span by remember { mutableStateOf("4.0") }
     var riser by remember { mutableStateOf("150") }
     var tread by remember { mutableStateOf("300") }
+    var stairWidth by remember { mutableStateOf("1200") }
     var liveLoad by remember { mutableStateOf("4.0") }
     var deadLoad by remember { mutableStateOf("5.0") }
     var fcu by remember { mutableStateOf("25") }
@@ -93,6 +103,7 @@ fun StairScreen(
     val treadRangeMsg = stringResource(R.string.stair_tread_range)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_stair_title), fontWeight = FontWeight.Bold) },
@@ -167,7 +178,10 @@ fun StairScreen(
             }
 
             item {
-                StairInputField(fy, stringResource(R.string.stair_fy_mpa), { fy = it }, Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StairInputField(fy, stringResource(R.string.stair_fy_mpa), { fy = it }, Modifier.weight(1f))
+                    StairInputField(stairWidth, "Width (mm)", { stairWidth = it }, Modifier.weight(1f))
+                }
             }
 
             item {
@@ -369,7 +383,7 @@ fun StairScreen(
                                 selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
                             val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
                             ProfessionalStairDrawing(
-                                stairWidth = 1200.0,
+                                stairWidth = stairWidth.toDoubleOrNull() ?: 1200.0,
                                 totalHeight = nRisers.toDouble() * res.riser,
                                 totalLength = nRisers.toDouble() * res.tread,
                                 riserHeight = res.riser,
@@ -410,7 +424,7 @@ fun StairScreen(
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalStairDrawing(
-                        stairWidth = 1200.0,
+                        stairWidth = stairWidth.toDoubleOrNull() ?: 1200.0,
                         totalHeight = nRisers.toDouble() * res.riser,
                         totalLength = nRisers.toDouble() * res.tread,
                         riserHeight = res.riser,

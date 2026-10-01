@@ -144,10 +144,10 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         if (!isSafe) warnings.add("⚠ Waffle slab failed one or more SBC 304 checks")
         if (utilizationRatio > 1.0) warnings.add("⚠ Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
 
-        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.utilizationRatio, 1.0, "ratio", ribDesign.isSafe))
-        safetyChecks.add(SafetyCheckItem("Solid head", 0.0, 1.0, "ratio", solidHeadDesign.isSafe))
-        safetyChecks.add(SafetyCheckItem("Punching shear", punchingShearCheck.utilizationRatio, 1.0, "ratio", punchingShearCheck.isSafe))
-        safetyChecks.add(SafetyCheckItem("Deflection", deflUtil, 1.0, "ratio", deflectionCheck.isSafe))
+        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.utilizationRatio, 1.0, "", ribDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Solid head", 0.0, 1.0, "", solidHeadDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Punching shear", punchingShearCheck.utilizationRatio, 1.0, "", punchingShearCheck.isSafe))
+        safetyChecks.add(SafetyCheckItem("Deflection", deflUtil, 1.0, "", deflectionCheck.isSafe))
 
         return WaffleSlabResult(
             isSafe = isSafe,

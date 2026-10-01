@@ -28,6 +28,9 @@ class SoilSettlementViewModel @Inject constructor() : ViewModel() {
     private val _isExporting = MutableLiveData(false)
     val isExporting: LiveData<Boolean> = _isExporting
 
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
     private var lastInputs: SettlementInputs? = null
     
     private data class SettlementInputs(
@@ -50,6 +53,7 @@ class SoilSettlementViewModel @Inject constructor() : ViewModel() {
                 _result.value = res
             } catch (e: Exception) {
                 e.printStackTrace()
+                _errorMessage.value = e.localizedMessage ?: e.message ?: "Calculation error — Settlement analysis failed / خطأ في حساب الهبوط"
             } finally {
                 _isLoading.value = false
             }
@@ -107,6 +111,7 @@ class SoilSettlementViewModel @Inject constructor() : ViewModel() {
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
+                    _errorMessage.value = "PDF export failed: ${e.localizedMessage ?: e.message ?: "Unknown error"} / فشل تصدير PDF"
                     _isExporting.value = false
                     onComplete(null)
                 }

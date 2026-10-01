@@ -75,6 +75,16 @@ fun SlabScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val vmError by viewModel.error.observeAsState()
+
+    // Show errors via Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(vmError) {
+        vmError?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
+
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
@@ -95,6 +105,7 @@ fun SlabScreen(
     val slabRangeMsg = stringResource(R.string.slab_err_range_check)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_slab_title), fontWeight = FontWeight.Bold) },
@@ -565,6 +576,31 @@ fun SlabScreen(
                         isSafe = res.isSafe,
                         utilizationRatio = res.utilizationRatio
                     )
+                }
+            }
+        }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
                 }
             }
         }

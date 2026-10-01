@@ -41,6 +41,15 @@ fun SoilSettlementScreen(
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
+    val errorMessage by viewModel.errorMessage.observeAsState()
+
+    // Show errors via Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
 
     var pressure by remember { mutableStateOf("150") }
     var width by remember { mutableStateOf("2.0") }
@@ -52,6 +61,7 @@ fun SoilSettlementScreen(
     ) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.home_settlement), fontWeight = FontWeight.Bold) },
