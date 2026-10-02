@@ -248,6 +248,8 @@ private fun DrawingTab(
     // FIX: Sync local viewMode with ViewModel so it survives tab switches
     val vmViewMode by viewModel.drawingViewMode.observeAsState(0)
     LaunchedEffect(vmViewMode) { viewMode = vmViewMode }
+    val settingsVal by viewModel.settings.observeAsState(FrameAnalysisSettings())
+    val steelFyVal by viewModel.steelFy.observeAsState(355.0)
     val viewModes = listOf(
         stringResource(R.string.frame_view_frame_en) to stringResource(R.string.frame_view_frame_ar),
         stringResource(R.string.frame_view_long_section_en) to stringResource(R.string.frame_view_long_section_ar),

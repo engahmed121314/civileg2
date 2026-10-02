@@ -1519,8 +1519,10 @@
     <string name="frame_member_connectivity">Node %1$d → Node %2$d  |  %3$s  |  %4$s</string>
     <string name="frame_concrete_dims">b=%1$s h=%2$s f\'c=%3$s</string>
     <string name="frame_default_steel_section">IPE 300</string>
+    <string name="frame_node_label">Node %d</string>
     <string name="frame_nodal_load_values">Fx=%1$s, Fy=%2$s kN, M=%3$s kN.m</string>
     <string name="frame_member_label">Member %d</string>
+    <string name="frame_on_member">On: %1$s (#%2$d)</string>
     <string name="frame_member_load_value">%1$s: %2$s kN/m</string>
     <string name="frame_nodal_load_add">Add Nodal Load</string>
     <string name="frame_node_number">Node Number</string>
@@ -1532,6 +1534,8 @@
     <string name="frame_member_load_add">Add Member Load</string>
     <string name="frame_member_number">Member Number</string>
     <string name="frame_load_type_label">Load Type:</string>
+    <string name="frame_load_value">Load Value</string>
+    <string name="frame_load_position">Position from start (m)</string>
     <string name="frame_disp_dx">dx: %.3f mm</string>
     <string name="frame_disp_dy">dy: %.3f mm</string>
     <string name="frame_disp_theta">θ: %.4f rad</string>

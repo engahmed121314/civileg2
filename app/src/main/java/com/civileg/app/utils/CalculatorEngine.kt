@@ -420,7 +420,7 @@ class CalculatorEngine @Inject constructor(
 
         // 4. فحص الانبعاج (KL/r) — per AISC E3 / SBC 306
         val L = inputs.unbracedLength.coerceAtLeast(1.0)
-        val K = 1.0  // effective length factor (default K=1.0 for pinned-pinned)
+        val K = 1.0  // effective length factor (default = 1.0 for braced)
         val rx = section.rx.coerceAtLeast(1.0)
         val KLOverR = K * L * 1000.0 / rx  // KL/r
         val Fe = (PI * PI * E) / (KLOverR * KLOverR)  // Euler stress
@@ -942,11 +942,12 @@ class CalculatorEngine @Inject constructor(
             steelWeight = totalSteelW,
             // ── توسيع: نسبة الاستغلال الفعلية من ضغط التربة والقدرة ──
             utilizationRatio = if (res.isSafe) {
-                val area1 = res.footing1.width * res.footing1.length / 1e6  // m²
-                val area2 = res.footing2.width * res.footing2.length / 1e6  // m²
-                val sp1 = if (area1 > 0) res.reactions.first / area1 else 0.0
-                val sp2 = if (area2 > 0) res.reactions.second / area2 else 0.0
-                val maxSoilPressure = maxOf(sp1.coerceAtLeast(0.0), sp2.coerceAtLeast(0.0))
+                val area1 = res.footing1.width * res.footing1.length
+                val area2 = res.footing2.width * res.footing2.length
+                val maxSoilPressure = maxOf(
+                    if (area1 > 0) (res.reactions.first / (area1 / 1e6)).coerceAtLeast(0.0) else 0.0,
+                    if (area2 > 0) (res.reactions.second / (area2 / 1e6)).coerceAtLeast(0.0) else 0.0
+                )
                 val allowableSoil = inputs.soilBearingCapacity.coerceAtLeast(1.0)
                 (maxSoilPressure / allowableSoil).coerceIn(0.0, 1.5)
             } else 1.5  // غير آمن → نسبة عالية
