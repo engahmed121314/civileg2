@@ -30,8 +30,10 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
+import com.civileg.app.ui.compose.components.drawings.ProfessionalCombinedFootingDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.viewmodel.CombinedFootingViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
@@ -438,25 +440,51 @@ fun FootingScreen(
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
-                            ProfessionalFootingDrawing(
-                                footingType = footingTypeEnglish,
-                                footingLengthX = res.length.toDouble(),
-                                footingLengthY = res.width.toDouble(),
-                                footingThickness = res.thickness.toDouble(),
-                                columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                                columnDepth = colLength.toDoubleOrNull() ?: 600.0,
-                                rebarXDia = res.barDiameter.toDouble(),
-                                rebarXCount = res.barsX,
-                                rebarYDia = res.barDiameter.toDouble(),
-                                rebarYCount = res.barsY,
-                                cover = 70.0,
-                                col1X = col1XPos,
-                                col2X = col2XPos,
-                                soilPressureMax = res.soilPressure,
-                                soilPressureMin = res.soilPressure,
-                                viewMode = selectedViewMode,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                                ProfessionalCombinedFootingDrawing(
+                                    footingLength = res.length.toDouble(),
+                                    footingWidth = res.width.toDouble(),
+                                    footingThickness = res.thickness.toDouble(),
+                                    col1X = col1XPos,
+                                    col1Width = colWidth.toDoubleOrNull() ?: 300.0,
+                                    col1Depth = colLength.toDoubleOrNull() ?: 600.0,
+                                    col2X = col2XPos,
+                                    col2Width = colWidth.toDoubleOrNull() ?: 300.0,
+                                    col2Depth = colLength.toDoubleOrNull() ?: 600.0,
+                                    longBottomDia = res.barDiameter.toDouble(),
+                                    longBottomCount = res.barsX,
+                                    longTopDia = res.barDiameter.toDouble(),
+                                    longTopCount = res.reinforcementTopX,
+                                    transBottomDia = res.barDiameter.toDouble(),
+                                    transBottomCount = res.barsY,
+                                    cover = 70.0,
+                                    soilPressureMax = res.soilPressure,
+                                    soilPressureMin = res.soilPressure,
+                                    viewMode = selectedViewMode,
+                                    designCode = selectedCode.toDomain(),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                ProfessionalFootingDrawing(
+                                    footingType = footingTypeEnglish,
+                                    footingLengthX = res.length.toDouble(),
+                                    footingLengthY = res.width.toDouble(),
+                                    footingThickness = res.thickness.toDouble(),
+                                    columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                                    columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                                    rebarXDia = res.barDiameter.toDouble(),
+                                    rebarXCount = res.barsX,
+                                    rebarYDia = res.barDiameter.toDouble(),
+                                    rebarYCount = res.barsY,
+                                    cover = 70.0,
+                                    col1X = col1XPos,
+                                    col2X = col2XPos,
+                                    soilPressureMax = res.soilPressure,
+                                    soilPressureMin = res.soilPressure,
+                                    viewMode = selectedViewMode,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     )
                 }
@@ -489,25 +517,76 @@ fun FootingScreen(
                 heightPx = screenHeightPx
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    ProfessionalFootingDrawing(
-                        footingType = footingTypeEnglish,
-                        footingLengthX = res.length.toDouble(),
-                        footingLengthY = res.width.toDouble(),
-                        footingThickness = res.thickness.toDouble(),
-                        columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                        columnDepth = colLength.toDoubleOrNull() ?: 600.0,
-                        rebarXDia = res.barDiameter.toDouble(),
-                        rebarXCount = res.barsX,
-                        rebarYDia = res.barDiameter.toDouble(),
-                        rebarYCount = res.barsY,
-                        cover = 70.0,
-                        col1X = col1XPos,
-                        col2X = col2XPos,
-                        soilPressureMax = res.soilPressure,
-                        soilPressureMin = res.soilPressure,
-                        viewMode = 0,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                        ProfessionalCombinedFootingDrawing(
+                            footingLength = res.length.toDouble(),
+                            footingWidth = res.width.toDouble(),
+                            footingThickness = res.thickness.toDouble(),
+                            col1X = col1XPos,
+                            col1Width = colWidth.toDoubleOrNull() ?: 300.0,
+                            col1Depth = colLength.toDoubleOrNull() ?: 600.0,
+                            col2X = col2XPos,
+                            col2Width = colWidth.toDoubleOrNull() ?: 300.0,
+                            col2Depth = colLength.toDoubleOrNull() ?: 600.0,
+                            longBottomDia = res.barDiameter.toDouble(),
+                            longBottomCount = res.barsX,
+                            longTopDia = res.barDiameter.toDouble(),
+                            longTopCount = res.reinforcementTopX,
+                            transBottomDia = res.barDiameter.toDouble(),
+                            transBottomCount = res.barsY,
+                            cover = 70.0,
+                            soilPressureMax = res.soilPressure,
+                            soilPressureMin = res.soilPressure,
+                            viewMode = 0,
+                            designCode = selectedCode.toDomain(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        ProfessionalFootingDrawing(
+                            footingType = footingTypeEnglish,
+                            footingLengthX = res.length.toDouble(),
+                            footingLengthY = res.width.toDouble(),
+                            footingThickness = res.thickness.toDouble(),
+                            columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
+                            columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                            rebarXDia = res.barDiameter.toDouble(),
+                            rebarXCount = res.barsX,
+                            rebarYDia = res.barDiameter.toDouble(),
+                            rebarYCount = res.barsY,
+                            cover = 70.0,
+                            col1X = col1XPos,
+                            col2X = col2XPos,
+                            soilPressureMax = res.soilPressure,
+                            soilPressureMin = res.soilPressure,
+                            viewMode = 0,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
                 }
             }
         }

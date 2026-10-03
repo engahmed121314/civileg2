@@ -257,6 +257,12 @@ fun AppNavigation(
                 composable(AppScreen.FlatSlab.route) {
                     FlatSlabScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.WaffleSlab.route) {
+                    WaffleSlabScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.HordiSlab.route) {
+                    HordiSlabScreen(onNavigateBack = { navController.popBackStack() })
+                }
                 composable(AppScreen.ShearWall.route) {
                     ShearWallScreen(onNavigateBack = { navController.popBackStack() })
                 }

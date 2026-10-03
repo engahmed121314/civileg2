@@ -17,6 +17,10 @@
     <string name="home_strap_footing_sub">تصميم القواعد عند حدود الجار</string>
     <string name="home_flat_slab">البلاطات المسطحة</string>
     <string name="home_flat_slab_sub">البلاطات المسطحة مع التيجان</string>
+    <string name="home_waffle_slab">بلاطة Waffle</string>
+    <string name="home_waffle_slab_sub">بلاطة ذات ضلوع باتجاهين</string>
+    <string name="home_hordi_slab">بلاطة هوردي</string>
+    <string name="home_hordi_slab_sub">بلاطة ذات ضلوع / بلوك مجوف</string>
     <string name="home_shear_wall">حوائط القص</string>
     <string name="home_shear_wall_sub">تصميم حوائط القص الإنشائية</string>
     <string name="home_rebar_tool">أداة الحديد</string>

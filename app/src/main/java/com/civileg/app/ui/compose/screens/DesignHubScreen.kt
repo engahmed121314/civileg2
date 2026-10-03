@@ -50,6 +50,8 @@ private val designHubItems = listOf(
     DesignHubItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP"),              Color(0xFF33691E), Icons.Default.Foundation),
     DesignHubItem(AppScreen.StrapFooting,   R.string.home_strap_footing, R.string.home_strap_footing_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF5D4037), Icons.Default.VerticalAlignCenter),
     DesignHubItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI"),      Color(0xFF004D40), Icons.Default.Dashboard),
+    DesignHubItem(AppScreen.WaffleSlab,    R.string.home_waffle_slab, R.string.home_waffle_slab_sub, listOf("ECP", "ACI"),  Color(0xFF1B5E20), Icons.Default.GridView),
+    DesignHubItem(AppScreen.HordiSlab,     R.string.home_hordi_slab, R.string.home_hordi_slab_sub, listOf("ECP", "ACI"),   Color(0xFF455A64), Icons.Default.ViewAgenda),
     DesignHubItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    Color(0xFF880E4F), Icons.Default.SensorDoor),
     DesignHubItem(AppScreen.SoilSettlement, R.string.home_settlement, R.string.home_settlement_sub, listOf("Theory"),       Color(0xFF795548), Icons.Default.Terrain)
 )

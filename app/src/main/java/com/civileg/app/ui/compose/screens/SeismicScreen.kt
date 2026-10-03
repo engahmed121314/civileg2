@@ -47,6 +47,10 @@ import com.civileg.app.utils.ExportUtils
 import com.civileg.app.ui.compose.components.charts.SeismicResponseChart
 import com.civileg.app.utils.PdfExportHelper
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.viewmodel.SeismicViewModel
+import com.civileg.app.ui.compose.components.drawings.ProfessionalSeismicDrawing
+import com.civileg.app.ui.compose.components.drawings.FloorForce
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import kotlinx.coroutines.launch
 import kotlin.math.pow
 
@@ -73,10 +77,12 @@ private data class SeismicUiResult(
 @Composable
 fun SeismicScreen(
     projectViewModel: ProjectViewModel = hiltViewModel(),
+    viewModel: SeismicViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val uiState by viewModel.uiState.collectAsState()
 
     // ── Code / Zone / Soil selectors ────────────────────────────────────────
     var selectedCode by remember { mutableStateOf(SeismicCodeOption.ECP_201) }
@@ -232,6 +238,26 @@ fun SeismicScreen(
             // ═══ Section 1: Code Selector ═════════════════════════════════════
             item { SectionHeader(stringResource(R.string.seismic_section_code), R.drawable.ic_design) }
 
+            // DesignCode FilterChips (ECP / ACI / SBC)
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SeismicCodeOption.entries.forEach { code ->
+                        FilterChip(
+                            selected = code == selectedCode,
+                            onClick = {
+                                selectedCode = code
+                                viewModel.updateDesignCode(code.designCode.name)
+                            },
+                            label = { Text(code.displayName, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
             item {
                 ExposedDropdownMenuBox(
                     expanded = expandedCode,
@@ -251,7 +277,11 @@ fun SeismicScreen(
                         SeismicCodeOption.entries.forEach { code ->
                             DropdownMenuItem(
                                 text = { Text(code.displayName) },
-                                onClick = { selectedCode = code; expandedCode = false }
+                                onClick = {
+                                    selectedCode = code
+                                    viewModel.updateDesignCode(code.designCode.name)
+                                    expandedCode = false
+                                }
                             )
                         }
                     }
@@ -589,6 +619,47 @@ fun SeismicScreen(
                         designPeriod = res.fundamentalPeriod,
                         modifier = Modifier.fillMaxWidth().height(180.dp)
                     )
+                }
+
+                // ── Professional Seismic Drawing ─────────────────────────────
+                item {
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
+                    ) {
+                        Column {
+                            // View mode selector
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                listOf("All", "Elevation", "Spectrum", "Forces").forEachIndexed { idx, label ->
+                                    FilterChip(
+                                        selected = selectedViewMode == idx,
+                                        onClick = { selectedViewMode = idx },
+                                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                    )
+                                }
+                            }
+                            ProfessionalSeismicDrawing(
+                                buildingHeight = totalHeight,
+                                totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
+                                baseShear = res.baseShearResult.baseShear,
+                                zoneFactor = res.baseShearResult.zoneFactor,
+                                soilFactor = res.baseShearResult.soilFactor,
+                                importanceFactor = res.baseShearResult.importanceFactor,
+                                responseModFactor = res.baseShearResult.responseModification,
+                                numFloors = numFloors.toIntOrNull() ?: 5,
+                                floorForces = res.floorForces.mapIndexed { i, f ->
+                                    FloorForce(i + 1, f.lateralForce, f.floorHeight)
+                                },
+                                viewMode = selectedViewMode,
+                                designCode = selectedCode.designCode,
+                                modifier = Modifier.fillMaxWidth().height(400.dp)
+                            )
+                        }
+                    }
                 }
 
                 // ── Action Buttons (PDF + Save) ──────────────────────────────

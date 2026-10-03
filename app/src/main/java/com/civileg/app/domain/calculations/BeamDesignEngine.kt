@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -51,6 +52,16 @@ object BeamDesignEngine {
         flangeWidth: Double = 0.0,
         flangeThickness: Double = 0.0,
     ): BeamDesignResult {
+        InputGuard.positive("b", b)
+        InputGuard.positive("h", h)
+        InputGuard.positive("span", span)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.inRange("fcu", fcu, 15.0, 80.0)
+        InputGuard.inRange("fy", fy, 200.0, 700.0)
+        InputGuard.positive("preferredDia", preferredDia.toDouble())
+        InputGuard.positive("cover", cover)
+
         val steps = mutableListOf<CalculationStep>()
         var stepNum = 0
 
@@ -341,6 +352,7 @@ object BeamDesignEngine {
     )
 
     fun analyzeBeam(span: Double, wu: Double, supportType: String): AnalysisResult {
+        InputGuard.positive("span", span)
         return when (supportType) {
             "SS", "SIMPLY_SUPPORTED" -> {
                 val mu = wu * span * span / 8.0
@@ -421,6 +433,11 @@ object BeamDesignEngine {
     )
 
     fun designFlexure(b: Double, d: Double, mu: Double, fcu: Double, fy: Double, code: DesignCode, preferredDia: Int): FlexureResult {
+        InputGuard.positive("b", b)
+        InputGuard.positive("d", d)
+        InputGuard.inRange("fcu", fcu, 15.0, 80.0)
+        InputGuard.inRange("fy", fy, 200.0, 700.0)
+        InputGuard.positive("preferredDia", preferredDia.toDouble())
         val steps = mutableListOf<CalculationStep>()
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -636,6 +653,8 @@ object BeamDesignEngine {
     // ==================== HELPER FUNCTIONS ====================
 
     fun calculateKbal(fcu: Double, fy: Double, code: DesignCode): Double {
+        InputGuard.inRange("fcu", fcu, 15.0, 80.0)
+        InputGuard.inRange("fy", fy, 200.0, 700.0)
         return when (code) {
             DesignCode.ECP -> {
                 // Kbal depends on fcu and fy - simplified formula
@@ -655,6 +674,8 @@ object BeamDesignEngine {
     }
 
     fun calculateRnBalanced(fcu: Double, fy: Double, code: DesignCode): Double {
+        InputGuard.inRange("fcu", fcu, 15.0, 80.0)
+        InputGuard.inRange("fy", fy, 200.0, 700.0)
         val fcPrime = fcu * 0.8
         val beta1 = calculateBeta1(fcu, code)
         val rhoBal = 0.85 * fcPrime / fy * beta1 * 0.003 / (0.003 + fy / 200000.0)
@@ -662,6 +683,7 @@ object BeamDesignEngine {
     }
 
     fun calculateBeta1(fcu: Double, code: DesignCode): Double {
+        InputGuard.inRange("fcu", fcu, 15.0, 80.0)
         if (code == DesignCode.ECP) return BETA_WHITNEY
         val fcPrime = fcu * 0.8
         return when {
@@ -672,6 +694,9 @@ object BeamDesignEngine {
     }
 
     fun calculateRhoBalanced(fcu: Double, fy: Double, code: DesignCode, beta1: Double): Double {
+        InputGuard.inRange("fcu", fcu, 15.0, 80.0)
+        InputGuard.inRange("fy", fy, 200.0, 700.0)
+        InputGuard.positive("beta1", beta1)
         val fcPrime = if (code == DesignCode.ECP) fcu else fcu * 0.8
         val epsCu = if (code == DesignCode.ECP) 0.0035 else 0.003
         val fsDivE = fy / 200000.0
@@ -695,6 +720,7 @@ object BeamDesignEngine {
 
     // BMD/SFD diagram data generators (called from UI)
     fun generateBMD(span: Double, wu: Double, supportType: String, n: Int = 50): List<Pair<Float, Float>> {
+        InputGuard.positive("span", span)
         return when (supportType) {
             "SS", "SIMPLY_SUPPORTED" -> (0..n).map { i ->
                 val x = i.toFloat() / n
@@ -725,6 +751,7 @@ object BeamDesignEngine {
     }
 
     fun generateSFD(span: Double, wu: Double, supportType: String, n: Int = 50): List<Pair<Float, Float>> {
+        InputGuard.positive("span", span)
         return when (supportType) {
             "SS", "SIMPLY_SUPPORTED" -> (0..n).map { i ->
                 val x = i.toFloat() / n

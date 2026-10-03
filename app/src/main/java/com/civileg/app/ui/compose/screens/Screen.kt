@@ -35,6 +35,8 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object PileFoundation : AppScreen("pile_foundation", R.string.home_pile, R.drawable.ic_pile)
     object StrapFooting : AppScreen("strap_footing", R.string.home_strap_footing, R.drawable.ic_footing)
     object FlatSlab : AppScreen("flat_slab", R.string.home_flat_slab, R.drawable.ic_slab)
+    object WaffleSlab : AppScreen("waffle_slab", R.string.home_waffle_slab, R.drawable.ic_slab)
+    object HordiSlab : AppScreen("hordi_slab", R.string.home_hordi_slab, R.drawable.ic_slab)
     object ShearWall : AppScreen("shear_wall", R.string.home_shear_wall, R.drawable.ic_wall)
     
     // New Tools

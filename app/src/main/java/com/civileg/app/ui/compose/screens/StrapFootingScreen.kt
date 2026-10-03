@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDrawing
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.viewmodel.StrapFootingViewModel
@@ -186,7 +187,51 @@ fun StrapFootingScreen(
 
             result?.let { res ->
                 item {
-                    StrapFootingVisualizer(res)
+                    var selectedViewMode by remember { mutableStateOf(0) }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
+                    ) {
+                        Column {
+                            // View mode selector
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                listOf("All", "Plan", "Section", "Detail").forEachIndexed { idx, label ->
+                                    FilterChip(
+                                        selected = selectedViewMode == idx,
+                                        onClick = { selectedViewMode = idx },
+                                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                    )
+                                }
+                            }
+                            ProfessionalStrapFootingDrawing(
+                                footing1Length = res.footing1.length,
+                                footing1Width = res.footing1.width,
+                                footing1Thickness = res.footing1.thickness,
+                                footing2Length = res.footing2.length,
+                                footing2Width = res.footing2.width,
+                                footing2Thickness = res.footing2.thickness,
+                                strapWidth = res.strapBeamWidth,
+                                strapThickness = res.strapBeamDepth,
+                                distanceBetweenColumns = (distance.toDoubleOrNull() ?: 5.0) * 1000.0,
+                                col1Width = col1W.toDoubleOrNull() ?: 300.0,
+                                col2Width = col2W.toDoubleOrNull() ?: 300.0,
+                                rebar1Dia = res.footing1.reinforcementBottom.diameter.toDouble(),
+                                rebar1Count = res.footing1.reinforcementBottom.numBars,
+                                rebar2Dia = res.footing2.reinforcementBottom.diameter.toDouble(),
+                                rebar2Count = res.footing2.reinforcementBottom.numBars,
+                                strapDia = res.strapBottomReinforcement.diameter.toDouble(),
+                                strapCount = res.strapBottomReinforcement.numBars,
+                                cover = 75.0,
+                                viewMode = selectedViewMode,
+                                designCode = selectedCode.toDomain(),
+                                modifier = Modifier.fillMaxWidth().height(400.dp)
+                            )
+                        }
+                    }
                 }
                 
                 item {

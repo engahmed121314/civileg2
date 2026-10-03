@@ -7,6 +7,8 @@ import com.civileg.app.R
 import com.civileg.app.db.Design
 import com.civileg.app.domain.calculations.aci.SteelCompressionResult
 import com.civileg.app.domain.calculations.aci.SteelFlexuralResult
+import com.civileg.app.domain.calculations.base.WaffleSlabDesign
+import com.civileg.app.domain.calculations.base.SeismicBaseShearResult
 import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ArabicFontProvider
@@ -288,6 +290,165 @@ class ComprehensivePdfExporter(private val context: Context) {
             document.close()
             File(outputPath)
         } catch (e: Exception) { e.printStackTrace(); null }
+    }
+
+    fun exportSeismicReport(
+        projectName: String,
+        designCode: DesignCode,
+        totalWeight: Double,
+        baseShear: Double,
+        zoneFactor: Double,
+        soilFactor: Double,
+        importanceFactor: Double,
+        responseModFactor: Double,
+        buildingHeight: Double,
+        period: Double,
+        spectralAcceleration: Double,
+        floorForces: List<Pair<Int, Double>>,
+        isSafe: Boolean,
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
+    ): File? {
+        val inputsMap = mapOf(
+            "Total Weight" to "${totalWeight.format(1)} kN",
+            "Zone Factor Z" to zoneFactor.format(2),
+            "Soil Factor S" to soilFactor.format(2),
+            "Importance I" to importanceFactor.format(2),
+            "Response Mod R" to responseModFactor.format(2),
+            "Building Height" to "${buildingHeight.format(1)} m",
+            "Period T" to "${period.format(3)} s",
+            "Spectral Acc Sa" to spectralAcceleration.format(3)
+        )
+        val maxFloorForce = floorForces.maxOfOrNull { it.second } ?: 0.0
+        val minFloorForce = floorForces.minOfOrNull { it.second } ?: 0.0
+        val resultsMap = mapOf(
+            "Base Shear Vb" to "${baseShear.format(1)} kN",
+            "Max Floor Force" to "${maxFloorForce.format(1)} kN",
+            "Min Floor Force" to "${minFloorForce.format(1)} kN",
+            "Total Floors" to "${floorForces.size}"
+        )
+        return exportGenericReport(
+            "تصميم زلزالي", "Seismic Design Report", projectName, "Seismic Base Shear",
+            inputsMap, resultsMap, emptyList(), isSafe, drawingBitmap, outputPath
+        )
+    }
+
+    fun exportWaffleSlabReport(
+        projectName: String,
+        designCode: DesignCode,
+        lx: Double, ly: Double,
+        ribSpacing: Double, ribWidth: Double, ribHeight: Double,
+        toppingThickness: Double,
+        solidHeadSize: Double, columnWidth: Double,
+        fcu: Double, fy: Double,
+        liveLoad: Double, deadLoad: Double,
+        result: WaffleSlabDesign.WaffleSlabResult,
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
+    ): File? {
+        val inputsMap = mapOf(
+            "Lx" to "${lx.format(2)} m",
+            "Ly" to "${ly.format(2)} m",
+            "Rib Spacing" to "${ribSpacing.format(0)} mm",
+            "Rib Width" to "${ribWidth.format(0)} mm",
+            "Rib Height" to "${ribHeight.format(0)} mm",
+            "Topping" to "${toppingThickness.format(0)} mm",
+            "Solid Head" to "${solidHeadSize.format(0)} mm",
+            "Column" to "${columnWidth.format(0)} mm",
+            "fcu" to "${fcu.format(0)} MPa",
+            "fy" to "${fy.format(0)} MPa",
+            "Live Load" to "${liveLoad.format(2)} kN/m²",
+            "Dead Load" to "${deadLoad.format(2)} kN/m²"
+        )
+        val resultsMap = mapOf(
+            "Utilization" to "${(result.utilizationRatio * 100).format(1)}%",
+            "Concrete Volume" to "${result.concreteVolume.format(2)} m³",
+            "Steel Weight" to "${result.steelWeight.format(1)} kg",
+            "Cost" to "${result.cost.format(0)} EGP",
+            "isSafe" to (if (result.isSafe) "PASS" else "FAIL")
+        )
+        val safetyChecks = result.safetyChecks.map {
+            GenericSafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed)
+        }
+        return exportGenericReport(
+            "تصميم بلاطة واffle", "Waffle Slab Report", projectName, "Waffle Slab",
+            inputsMap, resultsMap, safetyChecks, result.isSafe, drawingBitmap, outputPath
+        )
+    }
+
+    fun exportHordiSlabReport(
+        projectName: String,
+        designCode: DesignCode,
+        fcu: Double, fy: Double,
+        ribWidth: Double, ribSpacing: Double,
+        totalThickness: Double, toppingThickness: Double,
+        span: Double,
+        designMoment: Double, designShear: Double,
+        resultAsProvided: Double,
+        isSafe: Boolean,
+        utilizationRatio: Double,
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
+    ): File? {
+        val inputsMap = mapOf(
+            "fcu" to "${fcu.format(0)} MPa",
+            "fy" to "${fy.format(0)} MPa",
+            "Rib Width" to "${ribWidth.format(0)} mm",
+            "Rib Spacing" to "${ribSpacing.format(0)} mm",
+            "Total Thickness" to "${totalThickness.format(0)} mm",
+            "Topping" to "${toppingThickness.format(0)} mm",
+            "Span" to "${span.format(2)} m",
+            "Design Moment" to "${designMoment.format(2)} kN.m",
+            "Design Shear" to "${designShear.format(2)} kN"
+        )
+        val resultsMap = mapOf(
+            "As Provided" to "${resultAsProvided.format(2)} mm²",
+            "Utilization Ratio" to utilizationRatio.format(3),
+            "Safety" to (if (isSafe) "SAFE" else "UNSAFE")
+        )
+        return exportGenericReport(
+            "تصميم بلاطة هوردي", "Hordi Slab Report", projectName, "Hordi Slab",
+            inputsMap, resultsMap, emptyList(), isSafe, drawingBitmap, outputPath
+        )
+    }
+
+    fun exportCombinedFootingReport(
+        projectName: String,
+        designCode: DesignCode,
+        p1: Double, p2: Double,
+        col1Width: Double, col1Depth: Double,
+        col2Width: Double, col2Depth: Double,
+        distanceBetweenColumns: Double,
+        soilBearingCapacity: Double,
+        footingLength: Double, footingWidth: Double, footingThickness: Double,
+        qMax: Double, qMin: Double,
+        isSafe: Boolean,
+        warnings: List<String>,
+        outputPath: String,
+        drawingBitmap: Bitmap? = null
+    ): File? {
+        val inputsMap = mapOf(
+            "P1" to "${p1.format(1)} kN",
+            "P2" to "${p2.format(1)} kN",
+            "Col1" to "${col1Width.format(0)}x${col1Depth.format(0)} mm",
+            "Col2" to "${col2Width.format(0)}x${col2Depth.format(0)} mm",
+            "Distance" to "${distanceBetweenColumns.format(2)} m",
+            "q_all" to "${soilBearingCapacity.format(1)} kN/m²"
+        )
+        val resultsMap = mapOf(
+            "Footing L×W" to "${footingLength.format(0)}x${footingWidth.format(0)} mm",
+            "Thickness" to "${footingThickness.format(0)} mm",
+            "q_max" to "${qMax.format(1)} kN/m²",
+            "q_min" to "${qMin.format(1)} kN/m²",
+            "Safety" to (if (isSafe) "SAFE" else "UNSAFE")
+        )
+        val safetyChecks = warnings.map { warning ->
+            GenericSafetyCheck(warning, 0.0, 0.0, "", false)
+        }
+        return exportGenericReport(
+            "تصميم قاعدة مشتركة", "Combined Footing Report", projectName, "Combined Footing",
+            inputsMap, resultsMap, safetyChecks, isSafe, drawingBitmap, outputPath
+        )
     }
 
     private fun Double.format(decimals: Int): String = String.format(Locale.US, "%.${decimals}f", this)

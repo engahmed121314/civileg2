@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.SteelTables
+import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
@@ -20,6 +21,8 @@ object SteelFrameDesign {
         code: DesignCode,
         steelFy: Double = 355.0
     ): List<SteelMemberDesignResult> {
+        InputGuard.atLeastOne("members" to members.size.toDouble())
+        InputGuard.inRange("steelFy", steelFy, 200.0, 700.0)
         return members.filter { it.materialType == FrameMaterialType.Steel }.map { member ->
             val forces = memberForces.find { it.memberId == member.id }
             val diagram = memberDiagrams.find { it.memberId == member.id }
@@ -37,6 +40,8 @@ object SteelFrameDesign {
         code: DesignCode,
         steelFy: Double
     ): SteelMemberDesignResult {
+        InputGuard.inRange("steelFy", steelFy, 200.0, 700.0)
+        InputGuard.notNull("member", member)
         val maxM = diagram?.maxMoment ?: forces?.maxMoment ?: 0.0
         val maxV = diagram?.maxShear ?: forces?.maxShear ?: 0.0
         val Pu = forces?.axialForce ?: 0.0

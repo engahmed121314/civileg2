@@ -31,7 +31,10 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
+import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
+import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
+import com.civileg.app.viewmodel.WaffleSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
@@ -516,30 +519,72 @@ fun SlabScreen(
                         onViewModeChanged = { selectedViewMode = it },
                         drawingHeightDp = drawingHeight,
                         drawingContent = {
-                            ProfessionalSlabDrawing(
-                                slabType = selectedType.displayName,
-                                slabThickness = res.thickness.toDouble(),
-                                spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                                spanY = longSpan.toDoubleOrNull() ?: 5.0,
-                                mainRebarDia = res.reinforcementMain.diameter.toDouble(),
-                                mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
-                                distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
-                                distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
-                                cover = 25.0,
-                                dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
-                                ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
-                                viewMode = selectedViewMode,
-                                modifier = Modifier.fillMaxWidth(),
-                                // NEW: Pass real design values from the SlabResult
-                                momentX = res.momentX,
-                                momentY = res.momentY,
-                                factoredLoad = res.totalLoad,
-                                fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0,
-                                isSafe = res.isSafe,
-                                utilizationRatio = res.utilizationRatio
-                            )
+                            when (selectedType) {
+                                CalculatorEngine.SlabType.WAFFLE -> {
+                                    ProfessionalWaffleSlabDrawing(
+                                        lx = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
+                                        ly = (longSpan.toDoubleOrNull() ?: 5.0) * 1000.0,
+                                        ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                        ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                                        ribHeight = res.thickness.toDouble() - 50.0,
+                                        toppingThickness = 50.0,
+                                        solidHeadSize = 800.0,
+                                        columnWidth = 400.0,
+                                        ribBottomDia = res.reinforcementMain.diameter.toDouble(),
+                                        ribBottomCount = res.reinforcementMain.numBars.coerceAtLeast(2),
+                                        ribTopDia = res.reinforcementSecondary.diameter.toDouble(),
+                                        ribTopCount = res.reinforcementSecondary.numBars.coerceAtLeast(2),
+                                        headBottomDia = res.reinforcementMain.diameter.toDouble(),
+                                        headBottomCount = 6,
+                                        cover = 25.0,
+                                        viewMode = selectedViewMode,
+                                        designCode = selectedCode.toDomain(),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                CalculatorEngine.SlabType.HOLLOW_BLOCK -> {
+                                    ProfessionalHordiSlabDrawing(
+                                        span = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
+                                        ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                                        ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                        totalThickness = res.thickness.toDouble(),
+                                        toppingThickness = 50.0,
+                                        ribBottomDia = res.reinforcementMain.diameter.toDouble(),
+                                        ribBottomCount = res.reinforcementMain.numBars.coerceAtLeast(2),
+                                        stirrupDia = 8.0,
+                                        stirrupSpacing = 200.0,
+                                        cover = 25.0,
+                                        viewMode = selectedViewMode,
+                                        designCode = selectedCode.toDomain(),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                else -> {
+                                    ProfessionalSlabDrawing(
+                                        slabType = selectedType.displayName,
+                                        slabThickness = res.thickness.toDouble(),
+                                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
+                                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                                        mainRebarDia = res.reinforcementMain.diameter.toDouble(),
+                                        mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
+                                        distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
+                                        distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
+                                        cover = 25.0,
+                                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                                        ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
+                                        ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                                        viewMode = selectedViewMode,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        momentX = res.momentX,
+                                        momentY = res.momentY,
+                                        factoredLoad = res.totalLoad,
+                                        fcu = fcu.toDoubleOrNull() ?: 25.0,
+                                        fy = fy.toDoubleOrNull() ?: 360.0,
+                                        isSafe = res.isSafe,
+                                        utilizationRatio = res.utilizationRatio
+                                    )
+                                }
+                            }
                         }
                     )
                 }
@@ -553,29 +598,97 @@ fun SlabScreen(
                 heightPx = screenHeightPx
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    ProfessionalSlabDrawing(
-                        slabType = selectedType.displayName,
-                        slabThickness = res.thickness.toDouble(),
-                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
-                        mainRebarDia = res.reinforcementMain.diameter.toDouble(),
-                        mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
-                        distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
-                        distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
-                        cover = 25.0,
-                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                        ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
-                        ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
-                        viewMode = 0,
-                        modifier = Modifier.fillMaxWidth(),
-                        momentX = res.momentX,
-                        momentY = res.momentY,
-                        factoredLoad = res.totalLoad,
-                        fcu = fcu.toDoubleOrNull() ?: 25.0,
-                        fy = fy.toDoubleOrNull() ?: 360.0,
-                        isSafe = res.isSafe,
-                        utilizationRatio = res.utilizationRatio
-                    )
+                    when (selectedType) {
+                        CalculatorEngine.SlabType.WAFFLE -> {
+                            ProfessionalWaffleSlabDrawing(
+                                lx = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
+                                ly = (longSpan.toDoubleOrNull() ?: 5.0) * 1000.0,
+                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                                ribHeight = res.thickness.toDouble() - 50.0,
+                                toppingThickness = 50.0,
+                                solidHeadSize = 800.0,
+                                columnWidth = 400.0,
+                                ribBottomDia = res.reinforcementMain.diameter.toDouble(),
+                                ribBottomCount = res.reinforcementMain.numBars.coerceAtLeast(2),
+                                ribTopDia = res.reinforcementSecondary.diameter.toDouble(),
+                                ribTopCount = res.reinforcementSecondary.numBars.coerceAtLeast(2),
+                                headBottomDia = res.reinforcementMain.diameter.toDouble(),
+                                headBottomCount = 6,
+                                cover = 25.0,
+                                viewMode = 0,
+                                designCode = selectedCode.toDomain(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        CalculatorEngine.SlabType.HOLLOW_BLOCK -> {
+                            ProfessionalHordiSlabDrawing(
+                                span = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
+                                ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                totalThickness = res.thickness.toDouble(),
+                                toppingThickness = 50.0,
+                                ribBottomDia = res.reinforcementMain.diameter.toDouble(),
+                                ribBottomCount = res.reinforcementMain.numBars.coerceAtLeast(2),
+                                stirrupDia = 8.0,
+                                stirrupSpacing = 200.0,
+                                cover = 25.0,
+                                viewMode = 0,
+                                designCode = selectedCode.toDomain(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        else -> {
+                            ProfessionalSlabDrawing(
+                                slabType = selectedType.displayName,
+                                slabThickness = res.thickness.toDouble(),
+                                spanX = shortSpan.toDoubleOrNull() ?: 4.0,
+                                spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                                mainRebarDia = res.reinforcementMain.diameter.toDouble(),
+                                mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
+                                distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
+                                distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
+                                cover = 25.0,
+                                dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
+                                ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
+                                ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                                viewMode = 0,
+                                modifier = Modifier.fillMaxWidth(),
+                                momentX = res.momentX,
+                                momentY = res.momentY,
+                                factoredLoad = res.totalLoad,
+                                fcu = fcu.toDoubleOrNull() ?: 25.0,
+                                fy = fy.toDoubleOrNull() ?: 360.0,
+                                isSafe = res.isSafe,
+                                utilizationRatio = res.utilizationRatio
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
                 }
             }
         }
