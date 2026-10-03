@@ -6,10 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
-import com.civileg.app.domain.calculations.aci.ACIFlatSlab
-import com.civileg.app.domain.calculations.base.FlatSlabDesign
-import com.civileg.app.domain.calculations.ecp.ECPFlatSlab
-import com.civileg.app.domain.calculations.sbc.SBCFlatSlab
+import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.calculations.InputGuard
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,6 +37,12 @@ class FlatSlabViewModel @Inject constructor(
 
     // Store last input for PDF export
     private var lastInput: FlatSlabInput? = null
+
+    // Pending drawing bitmap for PDF export (set by UI before export)
+    var pendingDrawingBitmap: android.graphics.Bitmap? = null
+
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
 
     /**
      * Main calculation entry point.
@@ -96,11 +100,12 @@ class FlatSlabViewModel @Inject constructor(
                 )
                 lastInput = input
 
-                val designer: FlatSlabDesign = when (designCode) {
-                    "ACI" -> ACIFlatSlab()
-                    "SBC" -> SBCFlatSlab()
-                    else -> ECPFlatSlab()
+                val domainCode = when (designCode) {
+                    "ACI" -> DesignCode.ACI
+                    "SBC" -> DesignCode.SBC
+                    else -> DesignCode.ECP
                 }
+                val designer = CalculationFactory.getFlatSlabDesign(domainCode)
 
                 val result = designer.design(input)
                 _result.value = result
@@ -174,7 +179,7 @@ class FlatSlabViewModel @Inject constructor(
                     designType = input.panelType.displayName,
                     inputs = inputsMap, results = resultsMap,
                     safetyChecks = safetyChecks, isSafe = res.isSafe,
-                    drawingBitmap = null, outputPath = file.absolutePath
+                    drawingBitmap = pendingDrawingBitmap, outputPath = file.absolutePath
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {

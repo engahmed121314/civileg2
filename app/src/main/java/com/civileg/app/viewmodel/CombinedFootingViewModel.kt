@@ -2,10 +2,13 @@ package com.civileg.app.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FootingDesign
 import com.civileg.app.domain.calculations.ecp.CombinedFootingResult
 import com.civileg.app.domain.calculations.ecp.ECPCombinedFooting
@@ -60,6 +63,9 @@ class CombinedFootingViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
+
     fun updateDesignCode(code: String) {
         _uiState.update { it.copy(designCode = code) }
     }
@@ -109,6 +115,17 @@ class CombinedFootingViewModel @Inject constructor(
         val tFtg = state.footingThickness.toDoubleOrNull() ?: 500.0
         val fcu = state.fcu.toDoubleOrNull() ?: 25.0
         val fy = state.fy.toDoubleOrNull() ?: 360.0
+
+        InputGuard.positive("p1", p1)
+        InputGuard.positive("p2", p2)
+        InputGuard.positive("col1Width", c1w)
+        InputGuard.positive("col1Depth", c1d)
+        InputGuard.positive("col2Width", c2w)
+        InputGuard.positive("col2Depth", c2d)
+        InputGuard.positive("distanceBetweenColumns", dist)
+        InputGuard.positive("soilBearingCapacity", qAll)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }

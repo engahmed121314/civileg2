@@ -21,6 +21,7 @@ import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.base.FootingDesignResult
+import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.core.engineering.StrapFootingDesignEngine
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
@@ -784,7 +785,62 @@ class CalculatorEngine @Inject constructor(
                     safetyChecks = listOf(DesignSafetyCheck("Flexure", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe))
                 )
             }
-            
+
+            if (type == SlabType.WAFFLE) {
+                val waffleDesign = CalculationFactory.getWaffleSlabDesign(domainCode)
+
+                val waffleInput = WaffleSlabDesign.WaffleSlabInput(
+                    lx = lx * 1000.0,
+                    ly = ly * 1000.0,
+                    ribSpacing = ribSpacing,
+                    ribWidth = ribWidth,
+                    ribHeight = ts - 50.0,
+                    toppingThickness = 50.0,
+                    solidHeadSize = columnSize.coerceAtLeast(400.0),
+                    columnWidth = columnSize,
+                    columnDepth = columnSize,
+                    fcu = fcu,
+                    fy = fy,
+                    liveLoad = liveLoad,
+                    deadLoad = deadLoad,
+                    designCode = domainCode
+                )
+
+                val waffleResult = waffleDesign.design(waffleInput)
+
+                val concreteVol = waffleResult.concreteVolume.let { if (it > 0.0) it else lx * ly * ts / 1000.0 }
+                val steelW = waffleResult.steelWeight.let { if (it > 0.0) it else {
+                    val ribArea = waffleResult.ribDesign?.flexureReinforcement?.providedArea ?: 0.0
+                    val headArea = waffleResult.solidHeadDesign?.flexureReinforcement?.providedArea ?: 0.0
+                    (ribArea + headArea) * lx * ly * 7850.0 / 1e6
+                }}
+                val costVal = waffleResult.cost.let { if (it > 0.0) it else concreteVol * 120.0 + steelW * 1.5 }
+
+                val ribDesign = waffleResult.ribDesign
+                val barSpacing = ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 200.0
+                val barDiameter = ribDesign?.flexureReinforcement?.diameter ?: 16
+
+                return SlabResult(
+                    type = type,
+                    thickness = ts,
+                    isSafe = waffleResult.isSafe,
+                    code = code,
+                    reinforcementMain = ReinforcementBar(
+                        spacing = barSpacing,
+                        diameter = barDiameter,
+                        weightKg = steelW
+                    ),
+                    momentX = 0.0,
+                    utilizationRatio = waffleResult.utilizationRatio,
+                    concreteVolume = concreteVol,
+                    steelWeight = steelW,
+                    cost = costVal,
+                    safetyChecks = waffleResult.safetyChecks.map {
+                        DesignSafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed)
+                    }
+                )
+            }
+
             val wu = (1.4 * deadLoad + 1.6 * liveLoad)
             val span = min(lx, ly)
             val mu = wu * span.pow(2) / 8.0
@@ -1318,6 +1374,21 @@ class CalculatorEngine @Inject constructor(
             loadCombination = LoadCombination.DEAD_LIVE,
             columnWidth = columnWidth, columnDepth = columnDepth
         )
+    }
+
+    /**
+     * Waffle Slab Design — delegates to code-specific engine via CalculationFactory.
+     * Covers: rib flexure/shear, solid head design, punching shear, deflection.
+     */
+    fun designWaffleSlab(input: WaffleSlabDesign.WaffleSlabInput, code: DesignCode = DesignCode.EGYPTIAN): WaffleSlabDesign.WaffleSlabResult {
+        InputGuard.positive("lx", input.lx)
+        InputGuard.positive("ly", input.ly)
+        InputGuard.positive("fcu", input.fcu)
+        InputGuard.positive("fy", input.fy)
+
+        val domainCode = code.toDomain()
+        val engine = CalculationFactory.getWaffleSlabDesign(domainCode)
+        return engine.design(input)
     }
 
     private fun t(ar: String, en: String): String = if (LocaleHelper.isArabic()) ar else en

@@ -68,6 +68,7 @@ fun HordiSlabScreen(
     var designShear by remember { mutableStateOf("30") }
     var loadCombination by remember { mutableStateOf(LoadCombination.DEAD_LIVE) }
     var loadCombinationExpanded by remember { mutableStateOf(false) }
+    var cover by remember { mutableStateOf("25") }
 
     // Drawing view mode: 0=All, 1=Plan, 2=Section, 3=Detail
     var viewMode by remember { mutableStateOf(0) }
@@ -191,6 +192,13 @@ fun HordiSlabScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                }
+
+                item {
+                    PremiumInputField(
+                        cover, "Clear Cover (mm)", { cover = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 // Load Combination Dropdown
@@ -396,10 +404,10 @@ fun HordiSlabScreen(
                                 totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
                                 toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
                                 ribBottomDia = res.barDiameter,
-                                ribBottomCount = 2,
+                                ribBottomCount = if (res.barDiameter > 0) maxOf(2, (res.providedReinforcement / (kotlin.math.PI / 4.0 * res.barDiameter * res.barDiameter)).toInt()) else 2,
                                 stirrupDia = 8.0,
                                 stirrupSpacing = 200.0,
-                                cover = 25.0,
+                                cover = cover.toDoubleOrNull() ?: 25.0,
                                 viewMode = viewMode,
                                 designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
                                 modifier = Modifier.fillMaxSize()

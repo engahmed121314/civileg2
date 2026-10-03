@@ -78,6 +78,7 @@ fun StrapFootingScreen(
     var strapWidth by remember { mutableStateOf("400") }
     var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
     var barDia by remember { mutableStateOf("18") }
+    var cover by remember { mutableStateOf("75") }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -151,6 +152,10 @@ fun StrapFootingScreen(
 
             item {
                 StrapInputField(barDia, "Main Bar Diameter (mm)", { barDia = it }, Modifier.fillMaxWidth())
+            }
+
+            item {
+                StrapInputField(cover, "Cover (mm)", { cover = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -238,7 +243,7 @@ fun StrapFootingScreen(
                                 rebar2Count = res.footing2.reinforcementBottom.numBars,
                                 strapDia = res.strapBottomReinforcement.diameter.toDouble(),
                                 strapCount = res.strapBottomReinforcement.numBars,
-                                cover = 75.0,
+                                cover = cover.toDoubleOrNull() ?: 75.0,
                                 viewMode = selectedViewMode,
                                 designCode = selectedCode.toDomain(),
                                 modifier = Modifier.fillMaxWidth().height(400.dp)

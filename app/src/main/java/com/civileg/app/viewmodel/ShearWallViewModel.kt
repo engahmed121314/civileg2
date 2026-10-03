@@ -7,9 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.*
-import com.civileg.app.domain.calculations.base.ShearWallDesign
-import com.civileg.app.domain.calculations.ecp.ECPShearWall
-import com.civileg.app.domain.calculations.aci.ACIShearWall
+import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.calculations.InputGuard
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,6 +61,12 @@ class ShearWallViewModel @Inject constructor(
 
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
+
+    // Pending drawing bitmap for PDF export (set by UI before export)
+    var pendingDrawingBitmap: android.graphics.Bitmap? = null
+
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
 
     fun updateWallType(type: WallType) {
         _uiState.update { it.copy(wallType = type) }
@@ -201,10 +206,12 @@ class ShearWallViewModel @Inject constructor(
                     couplingBeamClearSpan = cbSpan
                 )
 
-                val designer: ShearWallDesign = when (state.designCode) {
-                    "ACI" -> ACIShearWall()
-                    else -> ECPShearWall()
+                val domainCode = when (state.designCode) {
+                    "ACI" -> DesignCode.ACI
+                    "SBC" -> DesignCode.SBC
+                    else -> DesignCode.ECP
                 }
+                val designer = CalculationFactory.getShearWallDesign(domainCode)
 
                 val result = designer.designWall(input)
                 _uiState.update { it.copy(result = result, isLoading = false, errors = emptyList()) }
@@ -270,7 +277,7 @@ class ShearWallViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
-                    drawingBitmap = null,
+                    drawingBitmap = pendingDrawingBitmap,
                     outputPath = file.absolutePath
                 )
 

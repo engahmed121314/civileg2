@@ -451,5 +451,33 @@ class ComprehensivePdfExporter(private val context: Context) {
         )
     }
 
+    fun exportPileReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Pile Foundation", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
+    fun exportSteelWarehouseReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Steel Warehouse", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
+    fun exportShearWallReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Shear Wall", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
+    fun exportConcreteMixReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Concrete Mix", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
+    fun exportSoilBearingReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Soil Bearing", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
+    fun exportWindLoadReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Wind Load", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
+    fun exportFrameAnalysisReport(titleAr: String, titleEn: String, inputs: Map<String, String>, results: Map<String, String>, safetyChecks: List<GenericSafetyCheck>, isSafe: Boolean, drawingBitmap: Bitmap? = null, outputPath: String): File? {
+        return exportGenericReport(titleAr, titleEn, "", "Frame Analysis", inputs, results, safetyChecks, isSafe, drawingBitmap, outputPath)
+    }
+
     private fun Double.format(decimals: Int): String = String.format(Locale.US, "%.${decimals}f", this)
 }

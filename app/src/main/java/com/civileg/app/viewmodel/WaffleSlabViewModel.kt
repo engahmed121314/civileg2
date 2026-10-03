@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
@@ -43,6 +44,9 @@ class WaffleSlabViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
+
     /**
      * Main calculation entry point for waffle slab design.
      */
@@ -63,6 +67,19 @@ class WaffleSlabViewModel @Inject constructor(
         clearCover: Double,       // mm
         designCode: String = "ECP"
     ) {
+        InputGuard.positive("lx", lx)
+        InputGuard.positive("ly", ly)
+        InputGuard.positive("ribSpacing", ribSpacing)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribHeight", ribHeight)
+        InputGuard.positive("toppingThickness", toppingThickness)
+        InputGuard.positive("solidHeadSize", solidHeadSize)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.positive("clearCover", clearCover)
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null

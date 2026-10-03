@@ -40,6 +40,12 @@ class PileFoundationViewModel @Inject constructor(
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
+    @Volatile
+    var pendingDrawingBitmap: android.graphics.Bitmap? = null
+
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
+
     /**
      * Run the full pile foundation design.
      */
@@ -214,7 +220,9 @@ class PileFoundationViewModel @Inject constructor(
                     )
                 )
 
-                val drawingBitmap = try {
+                val composeBitmap = pendingDrawingBitmap
+                pendingDrawingBitmap = null
+                val drawingBitmap = composeBitmap ?: try {
                     PdfDrawingGenerator.generatePileDrawing(
                         pileDiameter = res.pileDiameterMm,
                         pileLength = res.pileLengthM,

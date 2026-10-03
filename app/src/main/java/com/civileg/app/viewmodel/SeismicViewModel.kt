@@ -2,10 +2,13 @@ package com.civileg.app.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
@@ -52,6 +55,9 @@ class SeismicViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
+
     fun updateDesignCode(code: String) {
         _uiState.update { it.copy(designCode = code) }
     }
@@ -92,6 +98,11 @@ class SeismicViewModel @Inject constructor(
 
         val zone = try { SeismicZone.valueOf(state.seismicZone) } catch (_: Exception) { SeismicZone.ZONE_3 }
         val soil = try { SoilType.valueOf(state.soilType) } catch (_: Exception) { SoilType.C }
+
+        InputGuard.positive("totalWeight", totalWt)
+        InputGuard.positive("importanceFactor", impFactor)
+        InputGuard.positive("responseModFactor", respMod)
+        InputGuard.positive("buildingHeight", bldgH)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
