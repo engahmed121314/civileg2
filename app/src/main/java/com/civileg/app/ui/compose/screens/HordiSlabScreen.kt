@@ -16,17 +16,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.viewmodel.HordiSlabViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import kotlinx.coroutines.launch
 
 /**
  * شاشة تصميم بلاطة الهوردي — Hordi (Ribbed/Hollow-Block) Slab Design Screen
@@ -40,6 +47,13 @@ fun HordiSlabScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     // ── Input state ────────────────────────────────────────────────
     var designCode by remember { mutableStateOf("ECP") }
@@ -76,7 +90,7 @@ fun HordiSlabScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Hordi Slab Design", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.hordi_slab_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -96,7 +110,7 @@ fun HordiSlabScreen(
                 // ── Configuration Section ─────────────────────────────
                 item {
                     PremiumSectionHeader(
-                        title = "Configuration",
+                        title = stringResource(R.string.hordi_slab_config),
                         icon = Icons.Default.ViewModule
                     )
                 }
@@ -111,7 +125,7 @@ fun HordiSlabScreen(
                 }
 
                 // ── Material Properties ───────────────────────────────
-                item { PremiumSectionHeader("Material Properties", icon = Icons.Default.Science) }
+                item { PremiumSectionHeader(stringResource(R.string.hordi_slab_material_properties), icon = Icons.Default.Science) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -123,7 +137,7 @@ fun HordiSlabScreen(
                 }
 
                 // ── Geometry ──────────────────────────────────────────
-                item { PremiumSectionHeader("Geometry", icon = Icons.Default.SquareFoot) }
+                item { PremiumSectionHeader(stringResource(R.string.hordi_slab_geometry), icon = Icons.Default.SquareFoot) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -162,7 +176,7 @@ fun HordiSlabScreen(
                 }
 
                 // ── Design Forces ─────────────────────────────────────
-                item { PremiumSectionHeader("Design Forces", icon = Icons.Default.MoneyOff) }
+                item { PremiumSectionHeader(stringResource(R.string.hordi_slab_design_forces), icon = Icons.Default.MoneyOff) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -244,7 +258,7 @@ fun HordiSlabScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            if (isLoading) "Designing..." else "Design Hordi Slab",
+                            if (isLoading) stringResource(R.string.hordi_slab_designing) else stringResource(R.string.hordi_slab_design_button),
                             fontWeight = FontWeight.Bold, fontSize = 15.sp
                         )
                     }
@@ -273,17 +287,17 @@ fun HordiSlabScreen(
                         SafetyStatusCard(
                             utilizationRatio = res.utilizationRatio,
                             isSafe = res.isSafe,
-                            title = "Hordi Slab — $designCode"
+                            title = stringResource(R.string.hordi_slab_safety_title, designCode)
                         )
                     }
 
                     // Reinforcement Result
                     item {
                         ResultDataCard(
-                            "Reinforcement",
+                            stringResource(R.string.hordi_slab_reinforcement),
                             listOf(
-                                "Required As" to String.format("%.1f mm²", res.requiredReinforcement),
-                                "Provided As" to String.format("%.1f mm²", res.providedReinforcement),
+                                stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
+                                stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
                                 "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
                                 "Bar Spacing" to String.format("@%.0f mm", res.barSpacing),
                                 "Bar String" to String.format("φ%.0f @%.0f mm", res.barDiameter, res.barSpacing)
@@ -296,7 +310,7 @@ fun HordiSlabScreen(
                     // Shear Check
                     item {
                         ResultDataCard(
-                            "Shear Check",
+                            stringResource(R.string.hordi_slab_shear_check),
                             listOf(
                                 "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
                                 "Min Thickness" to String.format("%.0f mm", res.minThickness),
@@ -319,7 +333,7 @@ fun HordiSlabScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Warning, "", tint = Color(0xFFFF9800))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Warnings", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
+                                        Text(stringResource(R.string.hordi_slab_warnings), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
@@ -331,7 +345,7 @@ fun HordiSlabScreen(
                     }
 
                     // ── Drawing Section ────────────────────────────────
-                    item { PremiumSectionHeader("Engineering Drawing", icon = Icons.Default.Draw) }
+                    item { PremiumSectionHeader(stringResource(R.string.hordi_slab_engineering_drawing), icon = Icons.Default.Draw) }
 
                     // View mode selector
                     item {
@@ -393,18 +407,71 @@ fun HordiSlabScreen(
                         }
                     }
 
+                    // Invisible capture layer for PDF export
+                    item {
+                        ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                            captureLayer = pdfCaptureLayer,
+                            widthPx = screenWidthPx,
+                            heightPx = screenHeightPx
+                        ) {
+                            Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                                ProfessionalHordiSlabDrawing(
+                                    span = span.toDoubleOrNull() ?: 6000.0,
+                                    ribWidth = ribWidth.toDoubleOrNull() ?: 120.0,
+                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                    totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
+                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
+                                    ribBottomDia = res.barDiameter,
+                                    ribBottomCount = 2,
+                                    stirrupDia = 8.0,
+                                    stirrupSpacing = 200.0,
+                                    cover = 25.0,
+                                    viewMode = viewMode,
+                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+
                     // Code Notes
                     if (res.codeNotes.isNotEmpty()) {
-                        item { FormulaCard(res.codeNotes, title = "Design Calculations") }
+                        item { FormulaCard(res.codeNotes, title = stringResource(R.string.hordi_slab_design_calculations)) }
                     }
 
                     // Export & Save
                     item {
-                        PremiumActionButtons(
-                            onExportPdf = { viewModel.exportToPdf(context) {} },
-                            onSave = {},
-                            isExporting = isExporting
-                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        val captureBitmap = try {
+                                            pdfCaptureLayer.captureToAndroidBitmap()
+                                        } catch (_: Exception) { null }
+                                        viewModel.pendingDrawingBitmap = captureBitmap
+                                        viewModel.exportToPdf(context) { file -> }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = PremiumDesignSystem.ButtonShape,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                enabled = !isExporting
+                            ) {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isExporting) "Exporting..." else "Export PDF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { /* save */ },
+                                modifier = Modifier.weight(1f),
+                                shape = PremiumDesignSystem.ButtonShape,
+                                enabled = false
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
                     }
 
                     item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -431,7 +498,7 @@ fun HordiSlabScreen(
                                 color = Color(0xFF1565C0)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                            Text(stringResource(R.string.hordi_slab_calculating), fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                 }

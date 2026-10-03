@@ -1614,4 +1614,45 @@
     <string name="execution_record">تسجيل</string>
     <string name="execution_inspection_format">فحص: %s</string>
     <string name="execution_default_inspector_name">مهندس الموقع</string>
+
+    <!-- Waffle Slab Screen -->
+    <string name="waffle_slab_title">تصميم بلاطة Waffle</string>
+    <string name="waffle_slab_config">إعدادات</string>
+    <string name="waffle_slab_geometry">الأبعاد</string>
+    <string name="waffle_slab_material_properties">خواص المواد</string>
+    <string name="waffle_slab_loading">الأحمال</string>
+    <string name="waffle_slab_engineering_drawing">الرسم الهندسي</string>
+    <string name="waffle_slab_design_calculations">نتائج التصميم</string>
+    <string name="waffle_slab_design_button">تصميم البلاطة</string>
+    <string name="waffle_slab_designing">جاري التصميم…</string>
+    <string name="waffle_slab_calculating">جاري الحساب…</string>
+    <string name="waffle_slab_safety_title">بلاطة Waffle — %s</string>
+    <string name="waffle_slab_rib_design">تصميم الضلع</string>
+    <string name="waffle_slab_solid_head_design">تصميم الرأس المصمت</string>
+    <string name="waffle_slab_punching_shear_check">تحقق القص الثاقب</string>
+    <string name="waffle_slab_deflection_check">تحقق الترخيم</string>
+    <string name="waffle_slab_quantities">الكميات</string>
+    <string name="waffle_slab_warnings">تحذيرات</string>
+    <string name="waffle_slab_concrete_volume">حجم الخرسانة</string>
+    <string name="waffle_slab_steel_weight">وزن الحديد</string>
+    <string name="waffle_slab_bottom_bars">سيخ سفلي</string>
+    <string name="waffle_slab_shear_reinf">تسليح قص</string>
+
+    <!-- Hordi Slab Screen -->
+    <string name="hordi_slab_title">تصميم بلاطة هوردي</string>
+    <string name="hordi_slab_config">إعدادات</string>
+    <string name="hordi_slab_geometry">الأبعاد</string>
+    <string name="hordi_slab_material_properties">خواص المواد</string>
+    <string name="hordi_slab_design_forces">قوى التصميم</string>
+    <string name="hordi_slab_design_button">تصميم البلاطة</string>
+    <string name="hordi_slab_designing">جاري التصميم…</string>
+    <string name="hordi_slab_calculating">جاري الحساب…</string>
+    <string name="hordi_slab_safety_title">بلاطة هوردي — %s</string>
+    <string name="hordi_slab_reinforcement">التسليح</string>
+    <string name="hordi_slab_shear_check">تحقق القص</string>
+    <string name="hordi_slab_required_as">As مطلوب</string>
+    <string name="hordi_slab_provided_as">As متوفر</string>
+    <string name="hordi_slab_warnings">تحذيرات</string>
+    <string name="hordi_slab_engineering_drawing">الرسم الهندسي</string>
+    <string name="hordi_slab_design_calculations">نتائج التصميم</string>
 </resources>

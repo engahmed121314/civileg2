@@ -9,6 +9,8 @@ import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -180,17 +182,30 @@ class SeismicViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير التحليل الزلزالي",
-                    titleEn = "Seismic Design Report",
-                    subtitle = "Zone ${state.seismicZone} — ${state.designCode}",
-                    designType = "Seismic Analysis",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
+                val floorForces = state.forceDistribution.mapIndexed { idx, f ->
+                    Pair(idx + 1, f.lateralForce)
+                }
+                val res = state.result
+                val spectrumPeriod = state.spectrumValues.firstOrNull()?.period ?: 0.0
+                val spectrumSa = state.spectrumValues.firstOrNull()?.spectralAcceleration ?: 0.0
+                val exporter = ComprehensivePdfExporter(context)
+                exporter.setLanguage(LocaleHelper.getLocale(context))
+                val generated = exporter.exportSeismicReport(
+                    projectName = "Seismic Design",
+                    designCode = DesignCode.valueOf(state.designCode),
+                    totalWeight = state.totalWeight.toDoubleOrNull() ?: 0.0,
+                    baseShear = res.baseShear,
+                    zoneFactor = res.zoneFactor,
+                    soilFactor = res.soilFactor,
+                    importanceFactor = res.importanceFactor,
+                    responseModFactor = res.responseModification,
+                    buildingHeight = state.buildingHeight.toDoubleOrNull() ?: 0.0,
+                    period = spectrumPeriod,
+                    spectralAcceleration = spectrumSa,
+                    floorForces = floorForces,
                     isSafe = true,
-                    drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {

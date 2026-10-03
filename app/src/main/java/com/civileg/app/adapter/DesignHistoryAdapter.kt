@@ -51,6 +51,9 @@ class DesignHistoryAdapter(
                 DesignType.CONCRETE_MIX -> R.drawable.ic_beam
                 DesignType.SOIL_BEARING -> R.drawable.ic_footing
                 DesignType.WIND_LOAD -> R.drawable.ic_search
+                DesignType.WAFFLE_SLAB -> R.drawable.ic_slab
+                DesignType.HORDI_SLAB -> R.drawable.ic_slab
+                DesignType.COMBINED_FOOTING -> R.drawable.ic_footing
             }
             binding.ivDesignType.setImageResource(iconRes)
 

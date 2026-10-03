@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,6 +33,9 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDr
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.viewmodel.StrapFootingViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import kotlinx.coroutines.launch
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +55,15 @@ fun StrapFootingScreen(
         }
     }
     val context = LocalContext.current
+
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+
+    var selectedViewMode by remember { mutableStateOf(0) }
 
     var col1Load by remember { mutableStateOf("1200") }
     var col2Load by remember { mutableStateOf("1800") }
@@ -187,7 +201,6 @@ fun StrapFootingScreen(
 
             result?.let { res ->
                 item {
-                    var selectedViewMode by remember { mutableStateOf(0) }
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -233,23 +246,68 @@ fun StrapFootingScreen(
                         }
                     }
                 }
+
+                // Invisible capture layer for PDF export
+                item {
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                        captureLayer = pdfCaptureLayer,
+                        widthPx = screenWidthPx,
+                        heightPx = screenHeightPx
+                    ) {
+                        Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                            ProfessionalStrapFootingDrawing(
+                                footing1Length = res.footing1.length,
+                                footing1Width = res.footing1.width,
+                                footing1Thickness = res.footing1.thickness,
+                                footing2Length = res.footing2.length,
+                                footing2Width = res.footing2.width,
+                                footing2Thickness = res.footing2.thickness,
+                                strapWidth = res.strapBeamWidth,
+                                strapThickness = res.strapBeamDepth,
+                                distanceBetweenColumns = (distance.toDoubleOrNull() ?: 5.0) * 1000.0,
+                                col1Width = col1W.toDoubleOrNull() ?: 300.0,
+                                col2Width = col2W.toDoubleOrNull() ?: 300.0,
+                                rebar1Dia = res.footing1.reinforcementBottom.diameter.toDouble(),
+                                rebar1Count = res.footing1.reinforcementBottom.numBars,
+                                rebar2Dia = res.footing2.reinforcementBottom.diameter.toDouble(),
+                                rebar2Count = res.footing2.reinforcementBottom.numBars,
+                                strapDia = res.strapBottomReinforcement.diameter.toDouble(),
+                                strapCount = res.strapBottomReinforcement.numBars,
+                                cover = 75.0,
+                                viewMode = selectedViewMode,
+                                designCode = selectedCode.toDomain(),
+                                modifier = Modifier.fillMaxWidth().height(400.dp)
+                            )
+                        }
+                    }
+                }
                 
                 item {
                     StrapFootingResultCard(res)
                 }
                 
                 item {
-                    Button(
-                        onClick = { viewModel.exportToPdf(context) { file ->
-                            if (file != null) ExportUtils.openPdf(context, file)
-                        } },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.PictureAsPdf, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.export_pdf))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file ->
+                                        if (file != null) ExportUtils.openPdf(context, file)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.export_pdf))
+                        }
                     }
                 }
             }

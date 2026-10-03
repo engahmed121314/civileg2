@@ -41,6 +41,10 @@ class StrapFootingViewModel @Inject constructor(
 
     private var lastCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN
 
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
+
     fun calculate(
         col1Load: Double, col2Load: Double, distance: Double,
         col1W: Double, col1D: Double, col2W: Double, col2D: Double,
@@ -88,12 +92,15 @@ class StrapFootingViewModel @Inject constructor(
                 val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
                 val file = File(dir, fileName)
                 
+                val drawingBitmap = pendingDrawingBitmap
+                pendingDrawingBitmap = null  // consume after use
+
                 val success = pdfExporter.exportStrapFootingReport(
                     "Strap Footing Design",
                     lastCode,
                     res,
                     file.absolutePath,
-                    null // No drawing for now
+                    drawingBitmap
                 )
                 onComplete(success)
             } catch (e: Exception) {

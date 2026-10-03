@@ -12,6 +12,8 @@ import com.civileg.app.domain.calculations.ecp.ECPCombinedFooting
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -222,18 +224,45 @@ class CombinedFootingViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم قاعدة مشتركة",
-                    titleEn = "Combined Footing Design Report",
-                    subtitle = "P1=${state.p1}kN, P2=${state.p2}kN — ${state.designCode}",
-                    designType = "Combined Footing",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
-                    isSafe = isSafe,
-                    drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
-                )
+                val exporter = ComprehensivePdfExporter(context)
+                exporter.setLanguage(LocaleHelper.getLocale(context))
+                val generated = if (ecpRes != null) {
+                    exporter.exportCombinedFootingReport(
+                        projectName = "Combined Footing",
+                        designCode = DesignCode.valueOf(state.designCode),
+                        p1 = state.p1.toDoubleOrNull() ?: 0.0,
+                        p2 = state.p2.toDoubleOrNull() ?: 0.0,
+                        col1Width = state.col1Width.toDoubleOrNull() ?: 0.0,
+                        col1Depth = state.col1Depth.toDoubleOrNull() ?: 0.0,
+                        col2Width = state.col2Width.toDoubleOrNull() ?: 0.0,
+                        col2Depth = state.col2Depth.toDoubleOrNull() ?: 0.0,
+                        distanceBetweenColumns = state.distanceBetweenColumns.toDoubleOrNull() ?: 0.0,
+                        soilBearingCapacity = state.soilBearingCapacity.toDoubleOrNull() ?: 0.0,
+                        footingLength = ecpRes.footingLength * 1000.0,
+                        footingWidth = ecpRes.footingWidth * 1000.0,
+                        footingThickness = ecpRes.footingThickness,
+                        qMax = ecpRes.qMax,
+                        qMin = ecpRes.qMin,
+                        isSafe = ecpRes.isSafe,
+                        warnings = emptyList(),
+                        outputPath = file.absolutePath,
+                        drawingBitmap = drawingBitmap
+                    )
+                } else {
+                    val fr = footingRes!!
+                    exporter.exportGenericReport(
+                        titleAr = "\u062a\u0642\u0631\u064a\u0631 \u062a\u0635\u0645\u064a\u0645 \u0642\u0627\u0639\u062f\u0629 \u0645\u0634\u062a\u0631\u0643\u0629",
+                        titleEn = "Combined Footing Design Report",
+                        subtitle = "P1=${state.p1}kN, P2=${state.p2}kN — ${state.designCode}",
+                        designType = "Combined Footing",
+                        inputs = inputsMap,
+                        results = resultsMap,
+                        safetyChecks = emptyList(),
+                        isSafe = fr.isSafe,
+                        drawingBitmap = drawingBitmap,
+                        outputPath = file.absolutePath
+                    )
+                }
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }

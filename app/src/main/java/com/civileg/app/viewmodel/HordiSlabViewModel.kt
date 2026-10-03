@@ -13,6 +13,8 @@ import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -141,17 +143,25 @@ class HordiSlabViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم بلاطة هوردي",
-                    titleEn = "Hordi Slab Design Report",
-                    subtitle = "Span ${params.span / 1000.0}m — ${params.designCode}",
-                    designType = "Hordi/Ribbed Slab",
-                    inputs = inputsMap,
-                    results = resultsMap,
-                    safetyChecks = safetyChecks,
+                val exporter = ComprehensivePdfExporter(context)
+                exporter.setLanguage(LocaleHelper.getLocale(context))
+                val generated = exporter.exportHordiSlabReport(
+                    projectName = "Hordi Slab",
+                    designCode = DesignCode.valueOf(params.designCode),
+                    fcu = params.fcu,
+                    fy = params.fy,
+                    ribWidth = params.ribWidth,
+                    ribSpacing = params.ribSpacing,
+                    totalThickness = params.totalThickness,
+                    toppingThickness = params.toppingThickness,
+                    span = params.span,
+                    designMoment = params.designMoment,
+                    designShear = params.designShear,
+                    resultAsProvided = res.providedReinforcement,
                     isSafe = res.isSafe,
-                    drawingBitmap = drawingBitmap,
-                    outputPath = file.absolutePath
+                    utilizationRatio = res.utilizationRatio,
+                    outputPath = file.absolutePath,
+                    drawingBitmap = drawingBitmap
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {

@@ -15,6 +15,10 @@
     <string name="home_pile_sub">Pile Foundation Design</string>
     <string name="home_strap_footing">Strap Footing</string>
     <string name="home_strap_footing_sub">Design for Boundary Columns</string>
+    <string name="home_waffle_slab">Waffle Slab</string>
+    <string name="home_waffle_slab_sub">Two-Way Ribbed Slab Design</string>
+    <string name="home_hordi_slab">Hordi Slab</string>
+    <string name="home_hordi_slab_sub">One-Way Ribbed/Hollow-Block Slab</string>
     <string name="home_flat_slab">Flat Slab</string>
     <string name="home_flat_slab_sub">Flat Slab with Drop Panels</string>
     <string name="home_shear_wall">Shear Wall</string>
@@ -1519,10 +1523,8 @@
     <string name="frame_member_connectivity">Node %1$d → Node %2$d  |  %3$s  |  %4$s</string>
     <string name="frame_concrete_dims">b=%1$s h=%2$s f\'c=%3$s</string>
     <string name="frame_default_steel_section">IPE 300</string>
-    <string name="frame_node_label">Node %d</string>
     <string name="frame_nodal_load_values">Fx=%1$s, Fy=%2$s kN, M=%3$s kN.m</string>
     <string name="frame_member_label">Member %d</string>
-    <string name="frame_on_member">On: %1$s (#%2$d)</string>
     <string name="frame_member_load_value">%1$s: %2$s kN/m</string>
     <string name="frame_nodal_load_add">Add Nodal Load</string>
     <string name="frame_node_number">Node Number</string>
@@ -1534,8 +1536,6 @@
     <string name="frame_member_load_add">Add Member Load</string>
     <string name="frame_member_number">Member Number</string>
     <string name="frame_load_type_label">Load Type:</string>
-    <string name="frame_load_value">Load Value</string>
-    <string name="frame_load_position">Position from start (m)</string>
     <string name="frame_disp_dx">dx: %.3f mm</string>
     <string name="frame_disp_dy">dy: %.3f mm</string>
     <string name="frame_disp_theta">θ: %.4f rad</string>
@@ -1707,4 +1707,45 @@
     <string name="execution_record">Record</string>
     <string name="execution_inspection_format">Inspection: %s</string>
     <string name="execution_default_inspector_name">Site Engineer</string>
+
+    <!-- Waffle Slab Screen -->
+    <string name="waffle_slab_title">Waffle Slab Design</string>
+    <string name="waffle_slab_config">Configuration</string>
+    <string name="waffle_slab_geometry">Geometry</string>
+    <string name="waffle_slab_material_properties">Material Properties</string>
+    <string name="waffle_slab_loading">Loading</string>
+    <string name="waffle_slab_engineering_drawing">Engineering Drawing</string>
+    <string name="waffle_slab_design_calculations">Design Calculations</string>
+    <string name="waffle_slab_design_button">Design Waffle Slab</string>
+    <string name="waffle_slab_designing">Designing…</string>
+    <string name="waffle_slab_calculating">Calculating…</string>
+    <string name="waffle_slab_safety_title">Waffle Slab — %s</string>
+    <string name="waffle_slab_rib_design">Rib Design</string>
+    <string name="waffle_slab_solid_head_design">Solid Head Design</string>
+    <string name="waffle_slab_punching_shear_check">Punching Shear Check</string>
+    <string name="waffle_slab_deflection_check">Deflection Check</string>
+    <string name="waffle_slab_quantities">Quantities</string>
+    <string name="waffle_slab_warnings">Warnings</string>
+    <string name="waffle_slab_concrete_volume">Concrete Volume</string>
+    <string name="waffle_slab_steel_weight">Steel Weight</string>
+    <string name="waffle_slab_bottom_bars">Bottom Bars</string>
+    <string name="waffle_slab_shear_reinf">Shear Reinf.</string>
+
+    <!-- Hordi Slab Screen -->
+    <string name="hordi_slab_title">Hordi Slab Design</string>
+    <string name="hordi_slab_config">Configuration</string>
+    <string name="hordi_slab_geometry">Geometry</string>
+    <string name="hordi_slab_material_properties">Material Properties</string>
+    <string name="hordi_slab_design_forces">Design Forces</string>
+    <string name="hordi_slab_design_button">Design Hordi Slab</string>
+    <string name="hordi_slab_designing">Designing…</string>
+    <string name="hordi_slab_calculating">Calculating…</string>
+    <string name="hordi_slab_safety_title">Hordi Slab — %s</string>
+    <string name="hordi_slab_reinforcement">Reinforcement</string>
+    <string name="hordi_slab_shear_check">Shear Check</string>
+    <string name="hordi_slab_required_as">Required As</string>
+    <string name="hordi_slab_provided_as">Provided As</string>
+    <string name="hordi_slab_warnings">Warnings</string>
+    <string name="hordi_slab_engineering_drawing">Engineering Drawing</string>
+    <string name="hordi_slab_design_calculations">Design Calculations</string>
 </resources>

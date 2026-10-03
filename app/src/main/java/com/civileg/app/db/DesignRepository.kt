@@ -325,6 +325,78 @@ class DesignRepository @Inject constructor(
         )
     }
 
+    suspend fun saveWaffleSlabDesign(projectId: Long, name: String, result: com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult) {
+        val inputData = JSONObject().apply {
+            put("concreteVolume", result.concreteVolume)
+            put("steelWeight", result.steelWeight)
+            put("isSafe", result.isSafe)
+            put("utilizationRatio", result.utilizationRatio)
+        }.toString()
+        saveGeneralDesign(
+            projectId = projectId,
+            type = DesignType.WAFFLE_SLAB,
+            name = name,
+            isSafe = result.isSafe,
+            utilizationRatio = result.utilizationRatio,
+            concreteVolume = result.concreteVolume,
+            steelWeight = result.steelWeight,
+            totalCost = result.cost,
+            result = result,
+            codeUsed = "ECP/ACI",
+            inputData = inputData
+        )
+    }
+
+    suspend fun saveHordiSlabDesign(projectId: Long, name: String, result: com.civileg.app.domain.entities.SlabDesignResult) {
+        val inputData = JSONObject().apply {
+            put("requiredReinforcement", result.requiredReinforcement)
+            put("providedReinforcement", result.providedReinforcement)
+            put("barDiameter", result.barDiameter)
+            put("barSpacing", result.barSpacing)
+            put("isSafe", result.isSafe)
+            put("utilizationRatio", result.utilizationRatio)
+        }.toString()
+        saveGeneralDesign(
+            projectId = projectId,
+            type = DesignType.HORDI_SLAB,
+            name = name,
+            isSafe = result.isSafe,
+            utilizationRatio = result.utilizationRatio,
+            concreteVolume = 0.0,
+            steelWeight = 0.0,
+            totalCost = 0.0,
+            result = result,
+            codeUsed = "ECP/ACI",
+            inputData = inputData
+        )
+    }
+
+    suspend fun saveCombinedFootingDesign(projectId: Long, name: String, result: com.civileg.app.domain.calculations.ecp.CombinedFootingResult) {
+        val inputData = JSONObject().apply {
+            put("footingLength", result.footingLength)
+            put("footingWidth", result.footingWidth)
+            put("footingThickness", result.footingThickness)
+            put("qMax", result.qMax)
+            put("qMin", result.qMin)
+            put("isSafe", result.isSafe)
+            put("concreteVolume", result.concreteVolume)
+            put("steelWeight", result.steelWeight)
+        }.toString()
+        saveGeneralDesign(
+            projectId = projectId,
+            type = DesignType.COMBINED_FOOTING,
+            name = name,
+            isSafe = result.isSafe,
+            utilizationRatio = 0.0,
+            concreteVolume = result.concreteVolume,
+            steelWeight = result.steelWeight,
+            totalCost = 0.0,
+            result = result,
+            codeUsed = "ECP 203",
+            inputData = inputData
+        )
+    }
+
     suspend fun saveConcreteMixDesign(projectId: Long, name: String, result: com.civileg.app.utils.ConcreteMixDesigner.MixResult) {
         saveGeneralDesign(projectId, DesignType.CONCRETE_MIX, name, true, 0.0, 0.0, 0.0, 0.0, result, "Standard")
     }

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,6 +29,10 @@ import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
 import com.civileg.app.viewmodel.WaffleSlabViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 
 /**
  * شاشة تصميم بلاطة الوافل — Waffle Slab Design Screen
@@ -41,6 +46,13 @@ fun WaffleSlabScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     // ── Input state ────────────────────────────────────────────────
     var designCode by remember { mutableStateOf("ECP") }
@@ -79,7 +91,7 @@ fun WaffleSlabScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Waffle Slab Design", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.waffle_slab_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -99,7 +111,7 @@ fun WaffleSlabScreen(
                 // ── Configuration Section ─────────────────────────────
                 item {
                     PremiumSectionHeader(
-                        title = "Configuration",
+                        title = stringResource(R.string.waffle_slab_config),
                         icon = Icons.Default.ViewModule
                     )
                 }
@@ -114,7 +126,7 @@ fun WaffleSlabScreen(
                 }
 
                 // ── Geometry ──────────────────────────────────────────
-                item { PremiumSectionHeader("Geometry", icon = Icons.Default.SquareFoot) }
+                item { PremiumSectionHeader(stringResource(R.string.waffle_slab_geometry), icon = Icons.Default.SquareFoot) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -183,7 +195,7 @@ fun WaffleSlabScreen(
                 }
 
                 // ── Material Properties ───────────────────────────────
-                item { PremiumSectionHeader("Material Properties", icon = Icons.Default.Science) }
+                item { PremiumSectionHeader(stringResource(R.string.waffle_slab_material_properties), icon = Icons.Default.Science) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -195,7 +207,7 @@ fun WaffleSlabScreen(
                 }
 
                 // ── Loading ───────────────────────────────────────────
-                item { PremiumSectionHeader("Loading", icon = Icons.Default.Layers) }
+                item { PremiumSectionHeader(stringResource(R.string.waffle_slab_loading), icon = Icons.Default.Layers) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -248,7 +260,7 @@ fun WaffleSlabScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            if (isLoading) "Designing..." else "Design Waffle Slab",
+                            if (isLoading) stringResource(R.string.waffle_slab_designing) else stringResource(R.string.waffle_slab_design_button),
                             fontWeight = FontWeight.Bold, fontSize = 15.sp
                         )
                     }
@@ -277,7 +289,7 @@ fun WaffleSlabScreen(
                         SafetyStatusCard(
                             utilizationRatio = res.utilizationRatio,
                             isSafe = res.isSafe,
-                            title = "Waffle Slab — $designCode"
+                            title = stringResource(R.string.waffle_slab_safety_title, designCode)
                         )
                     }
 
@@ -285,12 +297,12 @@ fun WaffleSlabScreen(
                     res.ribDesign?.let { rib ->
                         item {
                             ResultDataCard(
-                                "Rib Design",
+                                stringResource(R.string.waffle_slab_rib_design),
                                 listOf(
-                                    "Bottom Bars" to rib.flexureReinforcement.barString,
+                                    stringResource(R.string.waffle_slab_bottom_bars) to rib.flexureReinforcement.barString,
                                     "As prov/req" to String.format("%.0f / %.0f mm²", rib.flexureReinforcement.providedArea, rib.flexureReinforcement.requiredArea),
-                                    "Shear Reinf." to String.format("φ%.0f @%.0f mm", rib.shearReinforcement.stirrupDiameter, rib.shearReinforcement.stirrupSpacing),
-                                    "Stirrup" to String.format("φ%.0f @%.0f mm", rib.shearReinforcement.stirrupDiameter, rib.shearReinforcement.stirrupSpacing),
+                                    stringResource(R.string.waffle_slab_shear_reinf) to String.format("φ%.0f @%.0f mm", rib.shearReinforcement.stirrupDiameter, rib.shearReinforcement.stirrupSpacing),
+                                    stringResource(R.string.waffle_slab_shear_reinf) to String.format("φ%.0f @%.0f mm", rib.shearReinforcement.stirrupDiameter, rib.shearReinforcement.stirrupSpacing),
                                     "Rib Utilization" to String.format("%.1f%%", rib.utilizationRatio * 100),
                                     "Rib Safe" to if (rib.isSafe) "PASS ✓" else "FAIL ✗"
                                 ),
@@ -304,7 +316,7 @@ fun WaffleSlabScreen(
                     res.solidHeadDesign?.let { head ->
                         item {
                             ResultDataCard(
-                                "Solid Head Design",
+                                stringResource(R.string.waffle_slab_solid_head_design),
                                 listOf(
                                     "Flexure Rebar" to head.flexureReinforcement.barString,
                                     "As prov/req" to String.format("%.0f / %.0f mm²", head.flexureReinforcement.providedArea, head.flexureReinforcement.requiredArea),
@@ -323,7 +335,7 @@ fun WaffleSlabScreen(
                     res.punchingShearCheck?.let { punch ->
                         item {
                             ResultDataCard(
-                                "Punching Shear Check",
+                                stringResource(R.string.waffle_slab_punching_shear_check),
                                 listOf(
                                     "Vu" to String.format("%.1f kN", punch.vu),
                                     "Vc" to String.format("%.1f kN", punch.vc),
@@ -340,7 +352,7 @@ fun WaffleSlabScreen(
                     res.deflectionCheck?.let { defl ->
                         item {
                             ResultDataCard(
-                                "Deflection Check",
+                                stringResource(R.string.waffle_slab_deflection_check),
                                 listOf(
                                     "Immediate" to String.format("%.2f mm", defl.immediate),
                                     "Long-Term" to String.format("%.2f mm", defl.longTerm),
@@ -357,10 +369,10 @@ fun WaffleSlabScreen(
                     // Quantities
                     item {
                         ResultDataCard(
-                            "Quantities",
+                            stringResource(R.string.waffle_slab_quantities),
                             listOf(
-                                "Concrete Volume" to String.format("%.3f m³", res.concreteVolume),
-                                "Steel Weight" to String.format("%.1f kg", res.steelWeight)
+                                stringResource(R.string.waffle_slab_concrete_volume) to String.format("%.3f m³", res.concreteVolume),
+                                stringResource(R.string.waffle_slab_steel_weight) to String.format("%.1f kg", res.steelWeight)
                             ),
                             icon = Icons.Default.Inventory2,
                             accentColor = Color(0xFF6A1B9A)
@@ -387,7 +399,7 @@ fun WaffleSlabScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Warning, "", tint = Color(0xFFFF9800))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Warnings", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
+                                        Text(stringResource(R.string.waffle_slab_warnings), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
@@ -399,7 +411,7 @@ fun WaffleSlabScreen(
                     }
 
                     // ── Drawing Section ────────────────────────────────
-                    item { PremiumSectionHeader("Engineering Drawing", icon = Icons.Default.Draw) }
+                    item { PremiumSectionHeader(stringResource(R.string.waffle_slab_engineering_drawing), icon = Icons.Default.Draw) }
 
                     // View mode selector
                     item {
@@ -466,18 +478,76 @@ fun WaffleSlabScreen(
                         }
                     }
 
+                    // Invisible capture layer for PDF export
+                    item {
+                        ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                            captureLayer = pdfCaptureLayer,
+                            widthPx = screenWidthPx,
+                            heightPx = screenHeightPx
+                        ) {
+                            Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                                ProfessionalWaffleSlabDrawing(
+                                    lx = lx.toDoubleOrNull() ?: 6000.0,
+                                    ly = ly.toDoubleOrNull() ?: 7500.0,
+                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 600.0,
+                                    ribWidth = ribWidth.toDoubleOrNull() ?: 150.0,
+                                    ribHeight = ribHeight.toDoubleOrNull() ?: 300.0,
+                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
+                                    solidHeadSize = solidHeadSize.toDoubleOrNull() ?: 1000.0,
+                                    columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
+                                    ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                    ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
+                                    ribTopDia = 10.0,
+                                    ribTopCount = 2,
+                                    headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                    headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
+                                    cover = clearCover.toDoubleOrNull() ?: 25.0,
+                                    viewMode = viewMode,
+                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+
                     // Code Notes
                     if (res.codeNotes.isNotEmpty()) {
-                        item { FormulaCard(res.codeNotes, title = "Design Calculations") }
+                        item { FormulaCard(res.codeNotes, title = stringResource(R.string.waffle_slab_design_calculations)) }
                     }
 
                     // Export & Save
                     item {
-                        PremiumActionButtons(
-                            onExportPdf = { viewModel.exportToPdf(context) {} },
-                            onSave = {},
-                            isExporting = isExporting
-                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        val captureBitmap = try {
+                                            pdfCaptureLayer.captureToAndroidBitmap()
+                                        } catch (_: Exception) { null }
+                                        viewModel.pendingDrawingBitmap = captureBitmap
+                                        viewModel.exportToPdf(context) { file -> }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = PremiumDesignSystem.ButtonShape,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                enabled = !isExporting
+                            ) {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isExporting) "Exporting..." else "Export PDF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { /* save */ },
+                                modifier = Modifier.weight(1f),
+                                shape = PremiumDesignSystem.ButtonShape,
+                                enabled = false
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
                     }
 
                     item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -504,7 +574,7 @@ fun WaffleSlabScreen(
                                 color = Color(0xFF1565C0)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                            Text(stringResource(R.string.waffle_slab_calculating), fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                 }
