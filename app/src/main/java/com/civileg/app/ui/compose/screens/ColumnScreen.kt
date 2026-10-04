@@ -616,6 +616,12 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
             ResultDataRow("Applied Pu", "${String.format("%.1f", result.appliedAxial)} kN")
+            ResultDataRow("Axial Capacity", "${String.format("%.1f", result.axialCapacity)} kN")
+            if (result.isSlender) {
+                ResultDataRow("Slenderness", "${String.format("%.1f", result.slenderness)} (Slender)")
+            } else {
+                ResultDataRow("Slenderness", "${String.format("%.1f", result.slenderness)} (Short)")
+            }
             if (result.mx != 0.0 || result.my != 0.0) {
                 ResultDataRow("Applied Mx / My", "${result.mx} / ${result.my} kN.m")
             }

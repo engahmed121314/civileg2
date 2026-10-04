@@ -544,6 +544,13 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             }
             ResultRow(stringResource(R.string.beam_max_moment), "${"%.1f".format(result.appliedMoment)} kN.m")
             ResultRow(stringResource(R.string.beam_max_shear), "${"%.1f".format(result.appliedShear)} kN")
+            ResultRow("Moment Capacity", "${"%.1f".format(result.momentCapacity)} kN.m")
+            ResultRow("Shear Capacity", "${"%.1f".format(result.shearCapacity)} kN")
+            ResultRow("Deflection", "${"%.2f".format(result.deflection)} mm")
+            ResultRow("Allowable Deflection", "${"%.2f".format(result.allowableDeflection)} mm")
+            ResultRow("Concrete Volume", "${"%.3f".format(result.concreteVolume)} m³")
+            ResultRow("Steel Weight", "${"%.1f".format(result.steelWeight)} kg")
+            ResultRow("Cost", "${"%.2f".format(result.cost)}")
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
             result.safetyChecks.forEach { check ->

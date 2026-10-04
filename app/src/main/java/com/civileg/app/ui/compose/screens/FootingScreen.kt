@@ -313,6 +313,8 @@ fun FootingScreen(
                             ResultRow(stringResource(R.string.footing_dims), "${res.width.toInt()} x ${res.length.toInt()} mm")
                             ResultRow(stringResource(R.string.footing_thickness_label2), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.column_concrete_vol), "${"%.2f".format(res.concreteVolume)} m³")
+                            ResultRow(stringResource(R.string.column_steel_weight), "${"%.2f".format(res.steelWeight)} kg")
+                            ResultRow("Allowable Pressure", "${"%.1f".format(res.allowablePressure)} kN/m²")
                             ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
                         }
                     }

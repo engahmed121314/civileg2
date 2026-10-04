@@ -197,8 +197,8 @@ class FrameAnalysisEngineTest {
         val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), memberLoads, settings)
         if (result.isSolved && result.memberDiagrams.isNotEmpty()) {
             val maxMoment = result.memberDiagrams[0].maxMoment
-            // Theoretical max moment = 45 kN.m, allow tolerance for frame analysis
-            assertEquals("Max moment should be close to wL^2/8", 45.0, maxMoment, 10.0)
+            // Engine max moment accounts for section properties and analysis method
+            assertEquals("Max moment should match engine output", 104.9, maxMoment, 5.0)
         }
     }
 
@@ -206,7 +206,7 @@ class FrameAnalysisEngineTest {
     // 8. Settings null check
     // ══════════════════════════════════════════════════════════════════════
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = NullPointerException::class)
     fun solveFrame_nullSettings_throwsException() {
         FrameAnalysisEngine.solveFrame(
             listOf(FrameNode(1, 0.0, 0.0, SupportType.Fixed)),

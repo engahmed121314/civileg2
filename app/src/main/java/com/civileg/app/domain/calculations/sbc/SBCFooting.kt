@@ -237,24 +237,28 @@ class SBCFooting : FootingDesign {
         
         // ACI/SBC: K = Mu / (f'c × b × d²) where f'c = 0.8 × fcu
         val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
-        val K = Mu / (fc_prime * b * d * d)
+        // FIX: Use proper ACI Rn-ρ method consistently (no hybrid ECP/ACI mixing)
+        // Rn = Mu / (φ × b × d²)   — ACI 318 §22.2
+        val phiFlexure = 0.90  // φ for flexure (tension-controlled)
+        val Rn = Mu / (phiFlexure * b * d * d)
         
-        // K_bal calculated dynamically using Rn method (ACI/SBC tension-controlled max)
-        val fc = 0.8 * fcu
+        // ρ = (0.85×f'c/fy) × (1 - √(1 - 2Rn/(0.85×f'c)))   — ACI equation
+        val fc = 0.8 * fcu  // f'c = 0.8 × fcu
         val beta1 = if (fc <= 28.0) 0.85 else max(0.65, 0.85 - 0.05 * (fc - 28.0) / 7.0)
         val rho_bal = 0.85 * beta1 * (fc / fy) * (0.003 / (0.003 + fy / 200000.0))
-        val K_bal = rho_bal * fy * (1.0 - 0.5 * rho_bal * fy / (0.85 * fc))
+        val Rn_max = 0.85 * beta1 * (fc / fy) * rho_bal * fy * (1.0 - 0.5 * rho_bal * fy / (0.85 * fc)) / phiFlexure
         
-        if (K > K_bal) {
-            warnings.add(String.format("SBC: K=%.3f > K_bal=%.3f - increase depth", K, K_bal))
+        if (Rn > 0.85 * beta1 * fc * rho_bal * (1.0 - 0.5 * rho_bal * fy / (0.85 * fc))) {
+            warnings.add(String.format("SBC: Rn=%.3f exceeds max - increase depth", Rn))
         }
         
-        // ذراع القوة (ACI approach): z = d × (0.5 + √(0.25 - K/1.25))
-        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 1.25)))
+        // ρ from Rn-ρ method
+        val rho = if (Rn > 0.0 && 0.85 * fc > 0.0) {
+            val discriminant = 1.0 - 2.0 * Rn / (0.85 * fc)
+            if (discriminant > 0.0) (0.85 * fc / fy) * (1.0 - sqrt(discriminant)) else rho_bal
+        } else 0.0
         
-        // As = Mu / (fy/γs × z)
-        val fs = fy / GAMMA_S
-        val asRequired = Mu / (fs * z)
+        val asRequired = rho * b * d
         
         // الحد الأدنى للتسليح (ACI 318-13.3.1): 0.18% × b × d
         val asMin = MIN_REIN_RATIO * b * d
@@ -288,7 +292,7 @@ class SBCFooting : FootingDesign {
             numberOfBars = actualBars,
             tiesDiameter = 0.0,
             tiesSpacing = 0.0,
-            isSafe = utilization <= 1.0 && K <= K_bal,
+            isSafe = utilization <= 1.0 && rho <= rho_bal,
             utilizationRatio = utilization,
             spacing = finalSpacing,
             warnings = warnings,

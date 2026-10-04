@@ -15,7 +15,8 @@ import kotlin.math.*
  *  - SBC 304 §4: Material safety factors (γc = 1.5, γs = 1.15)
  *
  * Key SBC differences from ACI 318:
- *  - Uses fcu directly (cube strength), not f'c = 0.8×fcu
+ *  - Geotechnical: uses fcu directly (cube strength) for bearing capacity
+ *  - Structural: uses f'c = 0.8×fcu for reinforcement design (ACI-compatible)
  *  - Material partial safety factors: γc = 1.5, γs = 1.15
  *  - Strength reduction factors: φ_flexure = 0.9, φ_shear = 0.75
  *  - Load factors: 1.4DL + 1.6LL

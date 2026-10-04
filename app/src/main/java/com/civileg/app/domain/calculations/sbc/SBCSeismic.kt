@@ -114,7 +114,13 @@ class SBCSeismic : SeismicDesign {
         } else csMin
 
         val effectiveCsMin = max(csMin, csMinHighSeismic)
-        val finalCs = cs.coerceIn(effectiveCsMin, csMax)
+        // SBC 301 §4.4.1: When csMax < csMin (e.g. low seismic zones with long periods),
+        // the code minimum governs — use effectiveCsMin rather than throwing.
+        val finalCs = if (csMax >= effectiveCsMin) {
+            cs.coerceIn(effectiveCsMin, csMax)
+        } else {
+            effectiveCsMin
+        }
 
         if (cs < effectiveCsMin) warnings.add("SBC 301 §4.4.1: Cs زِيد للحد الأدنى")
         if (cs > csMax) warnings.add("SBC 301 §4.4.1: Cs خُفِّض للحد الأقصى")

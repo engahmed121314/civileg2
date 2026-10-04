@@ -838,6 +838,18 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                 ResultItem(stringResource(R.string.slab_moment_mx), "${"%.1f".format(res.momentX)} kN.m")
             }
 
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ResultItem("Moment My", "${"%.1f".format(res.momentY)} kN.m")
+                ResultItem("Punching", if (res.punchingSafe) "SAFE ✓" else "UNSAFE ✗")
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ResultItem("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
+                ResultItem("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
+            }
+
+            ResultItem("Cost", "${"%.2f".format(res.cost)}")
+
             if (res.trimmerReinforcement.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text("Slab Opening Support", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)

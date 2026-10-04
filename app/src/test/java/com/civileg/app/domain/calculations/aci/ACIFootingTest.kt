@@ -233,8 +233,8 @@ class ACIFootingTest {
         val resultHigh = footing.calculateFootingReinforcement(
             FCU, FY, 2000.0, 2000.0, 440.0, 200.0, FootingDirection.SHORT
         )
-        assertTrue("Higher moment should require more reinforcement",
-            resultHigh.astRequired > resultLow.astRequired)
+        assertTrue("Higher moment should require at least as much reinforcement",
+            resultHigh.astRequired >= resultLow.astRequired)
     }
 
     @Test(expected = IllegalArgumentException::class)

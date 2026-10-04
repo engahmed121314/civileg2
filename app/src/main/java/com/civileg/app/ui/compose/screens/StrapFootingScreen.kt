@@ -411,8 +411,53 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
             
             ResultRow("Reactions (R1, R2)", "${res.reactions.first.toInt()}, ${res.reactions.second.toInt()} kN")
             
+            Spacer(Modifier.height(8.dp))
+            
+            ResultRow("Utilization Ratio", "${"%.1f".format(res.utilizationRatio * 100)}%")
+            ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
+            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
+            
             if (!res.isSafe) {
                 Text("⚠ Design Unsafe - Check dimensions", color = Color.Red, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+    
+    if (res.safetyChecks.isNotEmpty()) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "Safety Checks",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                res.safetyChecks.forEach { check ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (check.isSafe) "✓" else "✗",
+                            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                        Text(
+                            "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                        )
+                    }
+                }
             }
         }
     }

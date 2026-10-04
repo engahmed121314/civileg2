@@ -221,8 +221,10 @@ object BeamDesignEnginePart2 {
         val Aoh = (b - 2*cover) * (d - 2*cover) // area inside stirrups
         val Ao = 0.85 * Aoh
         val theta = 45.0 // degrees
-        val AtOverS = (Tu * 1e6) / (2.0 * Ao * (fy / GAMMA_S_ECP) * sin(theta * PI / 180.0))
-        val Al = (AtOverS * 2.0 * (b + d) * (fy / GAMMA_S_ECP)) / (fy / GAMMA_S_ECP)
+        // FIX: Use code-appropriate steel stress for torsion (ECP uses fy/γs, ACI uses fy directly with φ)
+        val fsTorsion = when(code) { DesignCode.ECP -> fy / GAMMA_S_ECP else -> fy }
+        val AtOverS = (Tu * 1e6) / (2.0 * Ao * fsTorsion * sin(theta * PI / 180.0))
+        val Al = (AtOverS * 2.0 * (b + d) * fsTorsion) / fsTorsion
         val stirrupSpacingTorsion = (PI * 8.0.pow(2) / 4.0) / AtOverS
         val clampedSpacing = maxOf(75.0, minOf(stirrupSpacingTorsion, b / 4.0, 200.0))
 
@@ -416,7 +418,11 @@ object BeamDesignEnginePart2 {
 
         val fbd = when(code) {
             DesignCode.ECP -> 0.6 * sqrt(fcu) // ECP 203 §5-2-2: fbd =0.6√fcu for deformed bars (high bond)
-            else -> 1.0 * sqrt(fcu * 0.8) / (2.5) // ACI simplified
+            else -> {
+                // FIX: ACI 318-19 §25.4.2.2 (metric): Ld = (fy × ψt × ψe) / (1.7 × λ × √f'c) × db
+                // Simplified for ψt=ψe=λ=1: fbd_equiv = 1.7×√f'c / 4, using 4×fbd form
+                1.7 * sqrt(fcu * 0.8) / 4.0  // bond stress equivalent for ACI Ld formula
+            }
         }
         val fs = when(code) { DesignCode.ECP -> fy / 1.15 else -> fy }
         val Ld = (fs * dia.toDouble()) / (4.0 * fbd)

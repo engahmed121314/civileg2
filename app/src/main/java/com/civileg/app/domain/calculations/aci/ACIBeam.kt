@@ -12,7 +12,7 @@ class ACIBeam : BeamDesign {
         private const val PHI_SHEAR = 0.75       // معامل الاختزال للقص
         private const val BETA_1 = 0.85          // عامل كتلة الإجهاد (لـ fc' ≤ 28 MPa)
         private const val LAMBDA = 1.0           // عامل الوزن للخرسانة العادية
-        private var ACI_MIN_DEVELOPMENT_LENGTH = 300.0  // mm - قابل للتعديل حسب المتطلبات
+        private const val ACI_MIN_DEVELOPMENT_LENGTH = 300.0  // mm — ACI 318 §25.4.2.1 minimum
         private const val DEFAULT_FY = 420.0  // MPa — Grade 60
     }
 

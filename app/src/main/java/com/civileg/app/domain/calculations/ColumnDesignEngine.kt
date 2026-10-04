@@ -45,16 +45,17 @@ object ColumnDesignEngine {
 
     private val kTables = KFactorTable(
         braced = mapOf(
-            Pair(1,1) to 0.75, Pair(1,2) to 0.80, Pair(1,3) to 0.90,
-            Pair(2,1) to 0.80, Pair(2,2) to 0.85, Pair(2,3) to 0.95,
-            Pair(3,1) to 0.90, Pair(3,2) to 0.95, Pair(3,3) to 1.00,
-            Pair(4,1) to 2.20, Pair(4,2) to 2.20, Pair(4,3) to 2.20, Pair(4,4) to 2.20
+            // Normalized keys: (min, max) to ensure lookup consistency
+            Pair(1,1) to 0.75, Pair(1,2) to 0.80, Pair(1,3) to 0.90, Pair(1,4) to 2.20,
+            Pair(2,2) to 0.85, Pair(2,3) to 0.95, Pair(2,4) to 2.20,
+            Pair(3,3) to 1.00, Pair(3,4) to 2.20,
+            Pair(4,4) to 2.20
         ),
         unbraced = mapOf(
-            Pair(1,1) to 1.20, Pair(1,2) to 1.30, Pair(1,3) to 1.60,
-            Pair(2,1) to 1.30, Pair(2,2) to 1.50, Pair(2,3) to 1.80,
-            Pair(3,1) to 1.60, Pair(3,2) to 1.80, Pair(3,3) to 2.00,
-            Pair(4,1) to 2.20, Pair(4,2) to 2.20, Pair(4,3) to 2.20, Pair(4,4) to 2.20
+            Pair(1,1) to 1.20, Pair(1,2) to 1.30, Pair(1,3) to 1.60, Pair(1,4) to 2.20,
+            Pair(2,2) to 1.50, Pair(2,3) to 1.80, Pair(2,4) to 2.20,
+            Pair(3,3) to 2.00, Pair(3,4) to 2.20,
+            Pair(4,4) to 2.20
         )
     )
 
@@ -111,10 +112,29 @@ object ColumnDesignEngine {
 
         // ===== STEP 2: Slenderness Ratios =====
         stepNum++
-        val lambdaIn = (K_in * Ho_in) / t
-        val lambdaOut = (K_out * Ho_out) / b
+        // ECP 203: λ = K·Ho / t (or b)  —  uses least dimension directly
+        // ACI 318/SBC 304: λ = K·Lu / r  where r = dimension/√12 (radius of gyration)
+        val sqrt12 = sqrt(12.0)
+        val (lambdaIn, lambdaOut) = when (code) {
+            DesignCode.ECP -> {
+                // ECP 203 §9-4: slenderness = effective length / least dimension
+                Pair((K_in * Ho_in) / t, (K_out * Ho_out) / b)
+            }
+            else -> {
+                // ACI 318 §6.2.5 / SBC 304: slenderness = K·Lu / r, r = dim/√12
+                val rIn = t / sqrt12
+                val rOut = b / sqrt12
+                Pair((K_in * Ho_in) / rIn, (K_out * Ho_out) / rOut)
+            }
+        }
         val lambdaMax = max(lambdaIn, lambdaOut)
-        val (limitShort, limitLong) = if (isBraced) Pair(15.0, 30.0) else Pair(10.0, 23.0)
+        // ECP limits: Braced Short≤15, Long≤30; Unbraced Short≤10, Long≤23
+        // ACI/SBC limits: Braced Short≤22, Long≤44; Unbraced Short≤15, Long≤34
+        // (adjusted for K·Lu/r vs Lo/t — r = dim/√12 makes λ √12× larger)
+        val (limitShort, limitLong) = when (code) {
+            DesignCode.ECP -> if (isBraced) Pair(15.0, 30.0) else Pair(10.0, 23.0)
+            else -> if (isBraced) Pair(22.0, 44.0) else Pair(15.0, 34.0)
+        }
         val classification = when {
             lambdaMax > limitLong -> "Unsafe_Slender"
             lambdaMax > limitShort -> "Long"
@@ -123,11 +143,18 @@ object ColumnDesignEngine {
         steps_s.add(CalculationStep(
             stepNum, "Slenderness Classification",
             codeReference = when(code) { DesignCode.ECP -> "ECP 203 §9-4"; else -> "ACI 318 §6.2.5" },
-            formula = if (isBraced) "lambda = K*Ho/i, Braced: Short<=15, Long<=30" else "lambda = K*Ho/i, Unbraced: Short<=10, Long<=23",
-            formulaWithValues = "lambda_in = $K_in * ${String.format("%.0f", Ho_in)} / $t = ${String.format("%.2f", lambdaIn)}\n" +
-                    "lambda_out = $K_out * ${String.format("%.0f", Ho_out)} / $b = ${String.format("%.2f", lambdaOut)}\n" +
-                    "lambda_max = max($lambdaIn, $lambdaOut) = ${String.format("%.2f", lambdaMax)} ${if (isBraced) "(Braced: Short<=15, Long<=30)" else "(Unbraced: Short<=10, Long<=23)"}",
-            result = "Classification: $classification (${String.format("%.2f", lambdaMax)} <= $limitLong)",
+            formula = when(code) {
+                DesignCode.ECP -> if (isBraced) "ECP: λ = K·Ho/t, Braced: Short≤15, Long≤30" else "ECP: λ = K·Ho/t, Unbraced: Short≤10, Long≤23"
+                else -> if (isBraced) "ACI/SBC: λ = K·Lu/r (r=t/√12), Braced: Short≤22, Long≤44" else "ACI/SBC: λ = K·Lu/r, Unbraced: Short≤15, Long≤34"
+            },
+            formulaWithValues = when(code) {
+                DesignCode.ECP -> "λ_in = $K_in × ${String.format("%.0f", Ho_in)} / $t = ${String.format("%.2f", lambdaIn)}\n" +
+                    "λ_out = $K_out × ${String.format("%.0f", Ho_out)} / $b = ${String.format("%.2f", lambdaOut)}\n"
+                else -> "r_in = $t / √12 = ${String.format("%.1f", t/sqrt12)} mm,  r_out = $b / √12 = ${String.format("%.1f", b/sqrt12)} mm\n" +
+                    "λ_in = $K_in × ${String.format("%.0f", Ho_in)} / ${String.format("%.1f", t/sqrt12)} = ${String.format("%.2f", lambdaIn)}\n" +
+                    "λ_out = $K_out × ${String.format("%.0f", Ho_out)} / ${String.format("%.1f", b/sqrt12)} = ${String.format("%.2f", lambdaOut)}\n"
+            } + "λ_max = ${String.format("%.2f", lambdaMax)} ${if (isBraced) "(Braced)" else "(Unbraced)"}  Limits: Short≤$limitShort, Long≤$limitLong",
+            result = "Classification: $classification (λ_max = ${String.format("%.2f", lambdaMax)}, limit = $limitLong)",
             unit = "-",
             isPass = classification != "Unsafe_Slender",
             status = if (classification == "Unsafe_Slender") StepStatus.CHECK_FAIL

@@ -234,7 +234,7 @@ class ECPFlatSlabTest {
 
     @Test
     fun `getCodeName_returnsECP`() {
-        assertEquals("ECP", flatSlab.getCodeName())
+        assertEquals("ECP 203-2020", flatSlab.getCodeName())
     }
 
     @Test

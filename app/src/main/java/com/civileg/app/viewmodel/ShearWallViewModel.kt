@@ -178,6 +178,9 @@ class ShearWallViewModel @Inject constructor(
         InputGuard.positive("wallThickness", wallThk)
         InputGuard.positive("storyHeight", storyH)
         InputGuard.positive("numberOfStories", numStories)
+        InputGuard.nonNegative("axialLoad", axial)         // FIX: guard force inputs
+        InputGuard.nonNegative("shearForce", shear)         // FIX: guard force inputs
+        InputGuard.nonNegative("bendingMoment", moment)     // FIX: guard force inputs
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("fyv", fyv)

@@ -342,6 +342,49 @@ fun TankScreen(
                             ResultRow(stringResource(R.string.tank_base_thickness), "${res.baseThickness.toInt()} mm")
                             ResultRow(stringResource(R.string.tank_max_water_pressure), "${"%.1f".format(res.waterPressure)} kN/m²")
                             ResultRow(stringResource(R.string.tank_wall_reinforcement), res.wallReinforcement.barString)
+                            ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
+                            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow("Cost", "${"%.2f".format(res.cost)}")
+                        }
+                    }
+                }
+
+                if (res.safetyChecks.isNotEmpty()) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "Safety Checks",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                res.safetyChecks.forEach { check ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            if (check.isSafe) "✓" else "✗",
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        Text(
+                                            "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

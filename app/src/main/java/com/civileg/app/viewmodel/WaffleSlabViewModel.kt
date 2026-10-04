@@ -230,9 +230,11 @@ class WaffleSlabViewModel @Inject constructor(
                 DesignCode.ACI -> com.civileg.app.utils.CalculatorEngine.DesignCode.ACI
                 DesignCode.SBC -> com.civileg.app.utils.CalculatorEngine.DesignCode.SAUDI
             }
+            // FIX: Use total thickness (topping + rib) instead of corrupted concreteVolume
+            val totalThickness = (lastInput?.toppingThickness ?: 0.0) + (lastInput?.ribHeight ?: 0.0)
             repository.saveSlabDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SlabResult(
                 type = com.civileg.app.utils.CalculatorEngine.SlabType.WAFFLE,
-                thickness = res.concreteVolume,
+                thickness = totalThickness,
                 isSafe = res.isSafe,
                 concreteVolume = res.concreteVolume,
                 steelWeight = res.steelWeight,

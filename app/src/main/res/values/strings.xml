@@ -269,10 +269,6 @@
     <string name="home_column_sub">Concrete Column Design</string>
     <string name="home_slab">Slabs</string>
     <string name="home_slab_sub">Solid &amp; Ribbed Slabs</string>
-    <string name="home_waffle_slab">Waffle Slab</string>
-    <string name="home_waffle_slab_sub">Waffle Slab Design</string>
-    <string name="home_hordi_slab">Hordi Slab</string>
-    <string name="home_hordi_slab_sub">Hollow Block / Ribbed Slab</string>
     <string name="home_footing">Footings</string>
     <string name="home_footing_sub">Isolated Footing Design</string>
     <string name="home_tank">Tanks</string>

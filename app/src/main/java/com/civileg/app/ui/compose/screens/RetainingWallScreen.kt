@@ -270,6 +270,11 @@ fun RetainingWallScreen(
                             ResultRow(stringResource(R.string.rw_base_width), "${"%.2f".format(res.baseWidth / 1000.0)} m")
                             ResultRow(stringResource(R.string.rw_stem_reinforcement), res.stemReinforcement.barString)
                             ResultRow(stringResource(R.string.rw_base_reinforcement), res.baseReinforcement.barString)
+                            ResultRow("FOS Overturning", "${"%.2f".format(res.factorOfSafetyOverturning)}")
+                            ResultRow("FOS Sliding", "${"%.2f".format(res.factorOfSafetySliding)}")
+                            ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
+                            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow("Cost", "${"%.2f".format(res.cost)}")
                         }
                     }
                 }

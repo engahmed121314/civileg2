@@ -248,7 +248,7 @@ class SBCFlatSlabTest {
 
     @Test
     fun `code name is SBC`() {
-        assertEquals("Code name should be SBC", "SBC", engine.getCodeName())
+        assertEquals("Code name should be SBC", "SBC 304", engine.getCodeName())
     }
 
     @Test
