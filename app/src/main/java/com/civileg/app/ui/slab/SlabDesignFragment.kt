@@ -20,7 +20,8 @@ import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.CalculatorEngine.SlabType
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.views.SlabDetailView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -146,56 +147,47 @@ class SlabDesignFragment : Fragment() {
 
     private fun exportToPdf(result: CalculatorEngine.SlabResult) {
         try {
-            val exporter = ComprehensivePdfExporter(requireContext())
             val projectName = projectsList.firstOrNull { it.id == projectId }?.name ?: "Unnamed Project"
             val fileName = "Slab_Report_${System.currentTimeMillis()}.pdf"
             val filePath = File(requireContext().getExternalFilesDir(null) ?: requireContext().cacheDir, fileName).absolutePath
-            
-            val slabTypeDomain = com.civileg.app.domain.entities.SlabType.Solid(
-                thickness = result.thickness, shortSpan = 4.0, longSpan = 5.0,
-                supportConditions = SlabSupportConditions(EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED)
-            )
-            
-            val inputs = SlabInputs(
-                fcu = 25.0, fy = 360.0, thickness = result.thickness, deadLoad = 1.5, liveLoad = 3.0
-            )
-            
-            val advResult = AdvancedSlabResult(
-                slabType = slabTypeDomain,
-                flexureResult = SlabDesignResult(
-                    requiredReinforcement = result.reinforcementMain.area,
-                    providedReinforcement = result.reinforcementMain.area,
-                    barDiameter = result.reinforcementMain.diameter.toDouble(),
-                    barSpacing = result.reinforcementMain.spacing,
-                    minThickness = 120.0, shearCapacity = 50.0, isSafe = result.isSafe, utilizationRatio = 0.7
-                ),
-                shearCheck = ShearCheckResult(10.0, 50.0, true, 0.2),
-                deflectionCheck = DeflectionCheckResult(2.0, 5.0, 7.0, 20.0, 0.35, true),
-                punchingShearCheck = null,
-                reinforcementLayout = ReinforcementLayout(
-                    topBars = BarLayout(10.0, 200.0, BarDirection.BOTH, 5.0, 50),
-                    bottomBars = BarLayout(result.reinforcementMain.diameter.toDouble(), result.reinforcementMain.spacing, BarDirection.BOTH, 5.0, 50),
-                    distributionBars = null, additionalBars = emptyList()
-                ),
-                concreteVolume = result.concreteVolume,
-                formworkArea = 20.0,
-                inventoryAnalysis = null,
-                postTensionCalculations = null,
-                warnings = emptyList(),
-                codeNotes = listOf("Exported from Civil EG")
-            )
 
-            val exportedFile = exporter.exportSlabReport(
-                projectName = projectName,
-                designCode = com.civileg.app.domain.entities.DesignCode.ECP,
-                slabType = slabTypeDomain,
-                inputs = inputs,
-                result = advResult,
+            val codeLabel = when (selectedCodeEnum) {
+                DesignCode.EGYPTIAN -> "ECP 203"
+                DesignCode.ACI -> "ACI 318"
+                DesignCode.SAUDI -> "SBC 304"
+            }
+            val inputsMap = mapOf(
+                "Project" to projectName,
+                "Thickness" to "${result.thickness} mm",
+                "Design Code" to codeLabel
+            )
+            val resultsMap = mapOf(
+                "Main Rebar" to result.reinforcementMain.barString,
+                "Secondary Rebar" to result.reinforcementSecondary.barString,
+                "Moment X" to String.format("%.2f", result.momentX) + " kN.m",
+                "Moment Y" to String.format("%.2f", result.momentY) + " kN.m",
+                "Concrete Volume" to String.format("%.3f m³", result.concreteVolume),
+                "Steel Weight" to String.format("%.1f kg", result.steelWeight),
+                "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+            )
+            val safetyChecks = emptyList<GenericSafetyCheck>()
+
+            val exportedPath = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                titleAr = "تقرير تصميم بلاطة",
+                titleEn = "Slab Design Report",
+                subtitle = "Code: $codeLabel  •  t=${result.thickness}mm",
+                designType = "Slab",
+                inputs = inputsMap,
+                results = resultsMap,
+                safetyChecks = safetyChecks,
+                isSafe = result.isSafe,
+                drawingBitmap = null,
                 outputPath = filePath
             )
-            if (exportedFile != null && exportedFile.exists()) {
+
+            if (exportedPath != null) {
                 Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
-                ExportUtils.openPdf(requireContext(), exportedFile)
+                ExportUtils.openPdf(requireContext(), exportedPath)
             } else {
                 showError("PDF Export failed: exporter returned null. Check logcat for details.")
             }

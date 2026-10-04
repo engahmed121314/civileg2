@@ -13,7 +13,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.ExportUtils
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -370,22 +370,31 @@ class SteelViewModel @Inject constructor(
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
                 
-                val details = mapOf(
+                val inputsMap = mapOf(
                     "Weld Size" to "${size} mm",
                     "Weld Length" to "${length} mm",
                     "Electrode" to electrode.displayName,
-                    "Design Code" to code.name,
-                    "Total Capacity" to "${String.format("%.1f", capacity)} kN"
+                    "Design Code" to code.name
                 )
-                
-                val exported = ComprehensivePdfExporter(context).exportConnectionReport(
-                    projectName = "Welded Connection Design",
-                    type = "Welded",
-                    details = details,
+                val resultsMap = mapOf(
+                    "Total Capacity" to "${String.format("%.1f", capacity)} kN",
+                    "Status" to if (capacity > 0) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = listOf(
+                    GenericSafetyCheck("Weld Capacity", 0.0, capacity, "kN", capacity > 0)
+                )
+
+                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم وصلة ملحومة",
+                    titleEn = "Welded Connection Design Report",
+                    subtitle = "Code: ${code.name}  •  Electrode: ${electrode.displayName}",
+                    designType = "Welded Connection",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
                     isSafe = capacity > 0,
-                    utilization = 0.5,
-                    outputPath = file.absolutePath,
-                    notes = listOf("Design per ${code.name}", "Electrode: ${electrode.displayName} (Fu=${electrode.tensileStrength} MPa)")
+                    drawingBitmap = null,
+                    outputPath = file.absolutePath
                 )
 
                 withContext(Dispatchers.Main) {
@@ -403,22 +412,31 @@ class SteelViewModel @Inject constructor(
                 val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
                 
-                val details = mapOf(
+                val inputsMap = mapOf(
                     "Bolt Diameter" to "${dia} mm",
                     "Bolt Grade" to grade.displayName,
                     "Number of Bolts" to "$count",
-                    "Design Code" to code.name,
-                    "Total Capacity" to "${String.format("%.1f", capacity)} kN"
+                    "Design Code" to code.name
                 )
-                
-                val exported = ComprehensivePdfExporter(context).exportConnectionReport(
-                    projectName = "Bolted Connection Design",
-                    type = "Bolted",
-                    details = details,
+                val resultsMap = mapOf(
+                    "Total Capacity" to "${String.format("%.1f", capacity)} kN",
+                    "Status" to if (capacity > 0) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = listOf(
+                    GenericSafetyCheck("Bolt Capacity", 0.0, capacity, "kN", capacity > 0)
+                )
+
+                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم وصلة مسمارية",
+                    titleEn = "Bolted Connection Design Report",
+                    subtitle = "Code: ${code.name}  •  Grade: ${grade.displayName}",
+                    designType = "Bolted Connection",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
                     isSafe = capacity > 0,
-                    utilization = 0.5, // Schematic
-                    outputPath = file.absolutePath,
-                    notes = listOf("Design per ${code.name}", "Ensure proper edge distances per code.")
+                    drawingBitmap = null,
+                    outputPath = file.absolutePath
                 )
 
                 withContext(Dispatchers.Main) {
@@ -454,12 +472,34 @@ class SteelViewModel @Inject constructor(
                     isSafe = result.isSafe
                 )
                 
-                val exported = ComprehensivePdfExporter(context).exportBasePlateReport(
-                    projectName = "Steel Base Plate Design",
-                    result = result,
-                    colSection = colSection,
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawing
+                val inputsMap = mapOf(
+                    "Column Section" to colSection,
+                    "Plate Width" to "${result.plateWidth} mm",
+                    "Plate Length" to "${result.plateLength} mm",
+                    "Plate Thickness" to "${result.plateThickness} mm"
+                )
+                val resultsMap = mapOf(
+                    "Plate Width" to "${String.format("%.1f", result.plateWidth)} mm",
+                    "Plate Length" to "${String.format("%.1f", result.plateLength)} mm",
+                    "Plate Thickness" to "${String.format("%.1f", result.plateThickness)} mm",
+                    "Anchor Bolt Dia" to "${result.anchorBolts.boltDiameter} mm",
+                    "Number of Bolts" to "${result.anchorBolts.numberOfBolts}",
+                    "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = listOf(
+                    GenericSafetyCheck("Base Plate", 0.0, 1.0, "-", result.isSafe)
+                )
+                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم قاعدة معدنية",
+                    titleEn = "Steel Base Plate Design Report",
+                    subtitle = "Column: $colSection",
+                    designType = "Base Plate",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = result.isSafe,
+                    drawingBitmap = drawing,
+                    outputPath = file.absolutePath
                 )
 
                 withContext(Dispatchers.Main) {

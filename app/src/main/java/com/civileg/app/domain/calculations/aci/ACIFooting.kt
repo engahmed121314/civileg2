@@ -312,7 +312,9 @@ class ACIFooting : FootingDesign {
         footingDepth: Double,
         loadCombination: LoadCombination,
         columnWidth: Double,
-        columnDepth: Double
+        columnDepth: Double,
+        col2Width: Double,   // col2 width passed from ViewModel
+        col2Depth: Double    // col2 depth passed from ViewModel
     ): FootingDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)

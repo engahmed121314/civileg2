@@ -18,7 +18,8 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ContinuousBeamAnalysis
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.views.BeamSectionView
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -295,69 +296,60 @@ class BeamDesignFragment : Fragment() {
 
     private fun exportToPdf(result: CalculatorEngine.BeamResult) {
         try {
-            val exporter = ComprehensivePdfExporter(requireContext())
             val projectName = projectsList.firstOrNull { it.id == projectId }?.name ?: "Unnamed Project"
             val fileName = "Beam_Report_${System.currentTimeMillis()}.pdf"
             val filePath = File(requireContext().getExternalFilesDir(null) ?: requireContext().cacheDir, fileName).absolutePath
-            
-            val beamType = BeamType.SimplySupported(result.depth / 100.0) // Mock span
-            val inputs = BeamInputs(
-                fcu = 25.0, fy = 360.0, width = result.width, totalDepth = result.depth, 
-                effectiveDepth = result.depth - 50, designMoment = result.appliedMoment, 
-                designShear = result.appliedShear
+
+            val codeLabel = when (selectedCode) {
+                DesignCode.ECP -> "ECP 203"
+                DesignCode.ACI -> "ACI 318"
+                DesignCode.SBC -> "SBC 304"
+            }
+            val inputsMap = mapOf(
+                "Project" to projectName,
+                "Width" to "${result.width} mm",
+                "Depth" to "${result.depth} mm",
+                "Span" to String.format("%.2f", result.span / 1000.0) + " m",
+                "fcu" to "25 MPa",
+                "fy" to "360 MPa",
+                "Design Code" to codeLabel
             )
-            
-            val advResult = AdvancedBeamResult(
-                beamType = beamType,
-                sectionType = BeamSectionType.RECTANGULAR,
-                flexureResult = ReinforcementResult(
-                    astRequired = result.reinforcementBottom.area,
-                    astProvided = result.reinforcementBottom.area,
-                    barDiameter = result.reinforcementBottom.diameter.toDouble(),
-                    numberOfBars = result.reinforcementBottom.numBars,
-                    tiesDiameter = result.stirrups.diameter.toDouble(),
-                    tiesSpacing = result.stirrups.spacing,
-                    isSafe = result.isSafe,
-                    utilizationRatio = result.appliedMoment / result.momentCapacity.coerceAtLeast(1.0)
-                ),
-                shearResult = ShearReinforcementResult(
-                    concreteShearCapacity = result.shearCapacity * 0.6,
-                    requiredArea = result.stirrups.area,
-                    providedArea = result.stirrups.area,
-                    requiredShearReinforcement = 200.0,
-                    providedShearReinforcement = 250.0,
-                    stirrupDiameter = result.stirrups.diameter.toDouble(),
-                    stirrupSpacing = result.stirrups.spacing,
-                    isSafe = result.isSafe,
-                    utilizationRatio = result.appliedShear / result.shearCapacity.coerceAtLeast(1.0)
-                ),
-                deflectionCheck = DeflectionCheckResult(
-                    calculatedDeflection = result.deflection, 
-                    allowableDeflection = result.allowableDeflection, 
-                    isSafe = result.deflection <= result.allowableDeflection
-                ),
-                momentDiagram = emptyList(),
-                shearDiagram = emptyList(),
-                inventoryAnalysis = null,
-                crackWidthCheck = null,
-                developmentLengthCheck = null,
-                warnings = emptyList(),
-                codeNotes = listOf("Exported from Civil EG App", "Design Code: ${result.code.displayName}")
+            val resultsMap = mapOf(
+                "Applied Moment" to String.format("%.2f", result.appliedMoment) + " kN.m",
+                "Moment Capacity" to String.format("%.2f", result.momentCapacity) + " kN.m",
+                "Applied Shear" to String.format("%.2f", result.appliedShear) + " kN",
+                "Shear Capacity" to String.format("%.2f", result.shearCapacity) + " kN",
+                "Bottom Rebar" to "${result.reinforcementBottom.numBars}Ø${result.reinforcementBottom.diameter}",
+                "Top Rebar" to "${result.reinforcementTop.numBars}Ø${result.reinforcementTop.diameter}",
+                "Stirrups" to "Ø${result.stirrups.diameter}@${result.stirrups.spacing} mm",
+                "Deflection" to String.format("%.2f", result.deflection) + " mm",
+                "Allowable Defl." to String.format("%.2f", result.allowableDeflection) + " mm",
+                "Concrete Volume" to String.format("%.3f m³", result.concreteVolume),
+                "Steel Weight" to String.format("%.1f kg", result.steelWeight),
+                "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+            )
+            val safetyChecks = listOf(
+                GenericSafetyCheck("Moment", result.appliedMoment, result.momentCapacity, "kN.m", result.appliedMoment <= result.momentCapacity),
+                GenericSafetyCheck("Shear", result.appliedShear, result.shearCapacity, "kN", result.appliedShear <= result.shearCapacity),
+                GenericSafetyCheck("Deflection", result.deflection, result.allowableDeflection, "mm", result.deflection <= result.allowableDeflection)
             )
 
-            val exportedFile = exporter.exportBeamReport(
-                projectName = projectName,
-                designCode = DesignCode.ECP,
-                beamType = beamType,
-                inputs = inputs,
-                result = advResult,
-                inventoryAnalysis = null,
-                momentShearDiagrams = MomentShearDiagrams(emptyList(), emptyList()),
+            val exportedPath = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                titleAr = "تقرير تصميم كمرة",
+                titleEn = "Beam Design Report",
+                subtitle = "Code: $codeLabel  •  ${result.width}×${result.depth} mm",
+                designType = "Beam",
+                inputs = inputsMap,
+                results = resultsMap,
+                safetyChecks = safetyChecks,
+                isSafe = result.isSafe,
+                drawingBitmap = null,
                 outputPath = filePath
             )
-            if (exportedFile != null && exportedFile.exists()) {
+
+            if (exportedPath != null) {
                 Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
-                ExportUtils.openPdf(requireContext(), exportedFile)
+                ExportUtils.openPdf(requireContext(), exportedPath)
             } else {
                 showError("PDF Export failed: exporter returned null. Check logcat for details.")
             }

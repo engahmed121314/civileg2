@@ -310,7 +310,9 @@ class SBCFooting : FootingDesign {
         footingDepth: Double,
         loadCombination: LoadCombination,
         columnWidth: Double,
-        columnDepth: Double
+        columnDepth: Double,
+        col2Width: Double,   // col2 width passed from ViewModel
+        col2Depth: Double    // col2 depth passed from ViewModel
     ): FootingDesignResult {
         // ── InputGuard (ADR-010) — SBC 304-2018 ──
         InputGuard.positive("fcu", fcu)

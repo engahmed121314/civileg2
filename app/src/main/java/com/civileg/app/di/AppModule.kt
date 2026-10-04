@@ -6,7 +6,7 @@ import com.civileg.app.data.local.PreferencesManager
 import com.civileg.app.db.*
 import com.civileg.app.data.repository.ProjectRepositoryImpl
 import com.civileg.app.domain.repository.ProjectRepository
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -82,9 +82,4 @@ object AppModule {
         return ProjectRepositoryImpl(projectDao, preferencesManager)
     }
 
-    @Provides
-    @Singleton
-    fun provideComprehensivePdfExporter(@ApplicationContext context: Context): ComprehensivePdfExporter {
-        return ComprehensivePdfExporter(context)
-    }
 }

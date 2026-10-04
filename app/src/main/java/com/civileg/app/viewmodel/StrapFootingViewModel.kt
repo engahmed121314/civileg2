@@ -10,7 +10,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import android.graphics.Bitmap
 import java.io.File
 import android.content.Context
@@ -20,8 +21,7 @@ import com.civileg.app.domain.calculations.InputGuard
 @HiltViewModel
 class StrapFootingViewModel @Inject constructor(
     private val repository: DesignRepository,
-    private val calculatorEngine: CalculatorEngine,
-    private val pdfExporter: ComprehensivePdfExporter
+    private val calculatorEngine: CalculatorEngine
 ) : ViewModel() {
 
     private val _result = MutableLiveData<CalculatorEngine.StrapFootingResult?>()
@@ -95,14 +95,40 @@ class StrapFootingViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
-                val success = pdfExporter.exportStrapFootingReport(
-                    "Strap Footing Design",
-                    lastCode,
-                    res,
-                    file.absolutePath,
-                    drawingBitmap
+                val codeName = when (lastCode) {
+                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
+                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    else -> "ECP 203"
+                }
+                val inputsMap = mapOf(
+                    "Design Code" to codeName
                 )
-                onComplete(success)
+                val resultsMap = mutableMapOf(
+                    "Footing 1 Width" to String.format("%.0f", res.footing1.width) + " mm",
+                    "Footing 1 Length" to String.format("%.0f", res.footing1.length) + " mm",
+                    "Footing 2 Width" to String.format("%.0f", res.footing2.width) + " mm",
+                    "Footing 2 Length" to String.format("%.0f", res.footing2.length) + " mm",
+                    "Strap Width" to String.format("%.0f", res.strapBeamWidth) + " mm",
+                    "Strap Depth" to String.format("%.0f", res.strapBeamDepth) + " mm",
+                    "Concrete Volume" to String.format("%.3f", res.concreteVolume) + " m³",
+                    "Steel Weight" to String.format("%.1f", res.steelWeight) + " kg",
+                    "Utilization" to String.format("%.0f", res.utilizationRatio * 100) + "%",
+                    "Is Safe" to if (res.isSafe) "YES" else "NO"
+                )
+                val safetyChecks = res.safetyChecks.map { GenericSafetyCheck(it.name, it.value, it.limit, it.unit, it.isSafe) }
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم قاعدة شريطية",
+                    titleEn = "Strap Footing Design Report",
+                    subtitle = "Code: $codeName",
+                    designType = "Strap Footing",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
+                )
+                onComplete(generated)
             } catch (e: Exception) {
                 onComplete(null)
                 _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message}"

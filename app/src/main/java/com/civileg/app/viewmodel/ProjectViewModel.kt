@@ -20,7 +20,8 @@ import javax.inject.Inject
 import com.civileg.app.data.ProjectSyncManager
 import androidx.lifecycle.MutableLiveData
 import com.civileg.app.utils.ExportUtils
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -137,8 +138,29 @@ class ProjectViewModel @Inject constructor(
                 val fileName = "ProjectSummary_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
                 
-                val exported = ComprehensivePdfExporter(context)
-                    .exportProjectBatchReport(projectName, designsList, summary, file.absolutePath)
+                val inputsMap = designsList.mapIndexed { idx, d ->
+                    "Design ${idx + 1}" to "${d.type.name}: ${d.name}"
+                }.toMap()
+                val resultsMap = mapOf(
+                    "Total Concrete" to String.format("%.2f", totalConcrete) + " m³",
+                    "Total Steel" to String.format("%.1f", totalSteel) + " kg",
+                    "Total Cost" to String.format("%.2f", totalCost),
+                    "Design Count" to "${designsList.size}",
+                    "Safe Designs" to "${designsList.count { it.isSafe }}"
+                )
+                val safetyChecks = emptyList<GenericSafetyCheck>()
+                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير ملخص المشروع",
+                    titleEn = "Project Summary Report",
+                    subtitle = "Project: $projectName",
+                    designType = "Project Summary",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = designsList.all { it.isSafe },
+                    drawingBitmap = null,
+                    outputPath = file.absolutePath
+                )
 
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }

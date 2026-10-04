@@ -30,6 +30,9 @@ data class ColumnUiState(
     val mx: String = "0",
     val my: String = "0",
     val isSeismic: Boolean = false,
+    val isCircular: Boolean = false,              // FIX: support circular columns
+    val connectedSlab: String = "SOLID",          // FIX: slab type for K-factor
+    val hasCap: Boolean = false,                  // FIX: column capital
     val designCode: DesignCode = DesignCode.ECP,
     val loadCombination: LoadCombination = LoadCombination.DEAD_LIVE,
     val preferredDiameter: String = "16",
@@ -77,6 +80,9 @@ class ColumnViewModel @Inject constructor(
         mx: String? = null,
         my: String? = null,
         isSeismic: Boolean? = null,
+        isCircular: Boolean? = null,
+        connectedSlab: String? = null,
+        hasCap: Boolean? = null,
         preferredDiameter: String? = null,
         manualNumBars: String? = null
     ) {
@@ -97,6 +103,9 @@ class ColumnViewModel @Inject constructor(
                 mx = mx ?: state.mx,
                 my = my ?: state.my,
                 isSeismic = isSeismic ?: state.isSeismic,
+                isCircular = isCircular ?: state.isCircular,
+                connectedSlab = connectedSlab ?: state.connectedSlab,
+                hasCap = hasCap ?: state.hasCap,
                 preferredDiameter = newPreferredDiameter,
                 manualNumBars = newManualNumBars,
                 autoOptimize = if (shouldDisableAuto) false else state.autoOptimize
@@ -136,13 +145,20 @@ class ColumnViewModel @Inject constructor(
         calculate()
     }
 
-    fun calculateColumnPro(width: Double, depth: Double, height: Double, fcu: Double, fy: Double, load: Double, diameter: Int, code: CalculatorEngine.DesignCode) {
+    fun calculateColumnPro(
+        width: Double, depth: Double, height: Double, fcu: Double, fy: Double,
+        load: Double, diameter: Int, code: CalculatorEngine.DesignCode,
+        mx: Double = 0.0, my: Double = 0.0,
+        isCircular: Boolean = false, connectedSlab: String = "SOLID", hasCap: Boolean = false,
+        isSeismic: Boolean = false
+    ) {
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
         InputGuard.positive("height", height)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("diameter", diameter)
+        InputGuard.nonNegative("load", load)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -151,9 +167,17 @@ class ColumnViewModel @Inject constructor(
                     width = width,
                     depth = depth,
                     pu = load,
+                    mx = mx,
+                    my = my,
                     fcu = fcu,
                     fy = fy,
-                    code = code
+                    code = code,
+                    isCircular = isCircular,
+                    connectedSlab = connectedSlab,
+                    hasCap = hasCap,
+                    clearHeight = height * 1000.0,
+                    preferredDiameter = diameter,
+                    isSeismic = isSeismic
                 )
                 _uiState.update { it.copy(result = res, isLoading = false) }
             } catch (e: Exception) {
@@ -191,6 +215,9 @@ class ColumnViewModel @Inject constructor(
                     fcu = fcuVal,
                     fy = fyVal,
                     code = mapDesignCode(state.designCode),
+                    isCircular = state.isCircular,
+                    connectedSlab = state.connectedSlab,
+                    hasCap = state.hasCap,
                     clearHeight = h * 1000.0,
                     preferredDiameter = dia,
                     autoOptimize = state.autoOptimize,

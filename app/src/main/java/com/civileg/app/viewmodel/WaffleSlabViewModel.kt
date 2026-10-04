@@ -12,8 +12,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
-import com.civileg.app.utils.LocaleHelper
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -179,26 +178,18 @@ class WaffleSlabViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
-                val exporter = ComprehensivePdfExporter(context)
-                exporter.setLanguage(LocaleHelper.getLocale(context))
-                val generated = exporter.exportWaffleSlabReport(
-                    projectName = "Waffle Slab",
-                    designCode = input.designCode,
-                    lx = input.lx,
-                    ly = input.ly,
-                    ribSpacing = input.ribSpacing,
-                    ribWidth = input.ribWidth,
-                    ribHeight = input.ribHeight,
-                    toppingThickness = input.toppingThickness,
-                    solidHeadSize = input.solidHeadSize,
-                    columnWidth = input.columnWidth,
-                    fcu = input.fcu,
-                    fy = input.fy,
-                    liveLoad = input.liveLoad,
-                    deadLoad = input.deadLoad,
-                    result = res,
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
+                val codeName = input.designCode.displayName
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم بلاطة وا فل",
+                    titleEn = "Waffle Slab Design Report",
+                    subtitle = "Code: $codeName  •  Lx=${input.lx/1000.0}m × Ly=${input.ly/1000.0}m",
+                    designType = "Waffle Slab",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {

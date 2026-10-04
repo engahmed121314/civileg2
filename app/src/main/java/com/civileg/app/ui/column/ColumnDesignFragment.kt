@@ -19,7 +19,8 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.views.ColumnSectionView
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -282,60 +283,53 @@ class ColumnDesignFragment : Fragment() {
 
     private fun exportToPdf(result: CalculatorEngine.ColumnResult) {
         try {
-            val exporter = ComprehensivePdfExporter(requireContext())
             val project = projectsList.firstOrNull { it.id == projectId }
             val projectName = project?.name ?: "Unnamed Project"
-            
+
             val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
             val filePath = File(requireContext().getExternalFilesDir(null) ?: requireContext().cacheDir, fileName).absolutePath
-            
-            // Convert CalculatorEngine result to AdvancedColumnResult for the exporter
-            val columnType = if (result.columnType == "CIRCULAR") ColumnType.Circular(result.width) else ColumnType.Rectangular(result.width, result.depth)
-            
-            val advResult = AdvancedColumnResult(
-                columnType = columnType,
-                axialCapacity = result.axialCapacity,
-                momentCapacityX = 0.0,
-                momentCapacityY = 0.0,
-                slendernessRatio = result.slenderness,
-                isSlender = result.isSlender,
-                effectiveLength = 3000.0,
-                reinforcementResult = ReinforcementResult(
-                    astRequired = result.reinforcement.area,
-                    astProvided = result.reinforcement.area,
-                    barDiameter = result.reinforcement.diameter.toDouble(),
-                    numberOfBars = result.reinforcement.numBars,
-                    tiesDiameter = result.stirrups.diameter.toDouble(),
-                    tiesSpacing = result.stirrups.spacing,
-                    isSafe = result.isSafe,
-                    utilizationRatio = result.pu / result.axialCapacity.coerceAtLeast(1.0)
-                ),
-                inventoryAnalysis = null,
-                biaxialCheck = null,
-                punchingCheck = PunchingCheckResult(result.pu, 1000.0, result.punchingSafe, false, 2000.0),
-                warnings = emptyList(),
-                codeNotes = listOf("Exported from Civil EG App")
-            )
 
-            val inputs = ColumnInputs(
-                fcu = 25.0, fy = 360.0, axialLoad = result.pu, momentX = 0.0, momentY = 0.0,
-                loadCombination = LoadCombination.DEAD_LIVE, columnType = columnType
-            )
+            val columnTypeLabel = if (result.columnType == "CIRCULAR") "Circular Ø${result.width}" else "Rectangular ${result.width}×${result.depth}"
+            val codeLabel = selectedCode.name
 
-            val exportedFile = exporter.exportColumnReport(
-                projectName = projectName,
-                designCode = DomainDesignCode.ECP,
-                columnType = columnType,
-                inputs = inputs,
-                result = advResult,
-                inventoryAnalysis = null,
-                alternatives = emptyList(),
+            val inputsMap = mapOf(
+                "Project" to projectName,
+                "Column Type" to columnTypeLabel,
+                "Width" to "${result.width} mm",
+                "Depth" to "${result.depth} mm",
+                "Axial Load" to "${result.pu} kN",
+                "fcu" to "25 MPa",
+                "fy" to "360 MPa",
+                "Design Code" to codeLabel
+            )
+            val resultsMap = mapOf(
+                "Axial Capacity" to String.format("%.1f", result.axialCapacity) + " kN",
+                "Reinforcement" to "${result.reinforcement.numBars}Ø${result.reinforcement.diameter}",
+                "Reinforcement Ratio" to String.format("%.2f%%", result.reinforcementRatio),
+                "Concrete Volume" to String.format("%.3f m³", result.concreteVolume),
+                "Steel Weight" to String.format("%.1f kg", result.steelWeight),
+                "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+            )
+            val safetyChecks = result.safetyChecks.map { check ->
+                GenericSafetyCheck(check.name, check.value, check.limit, check.unit, check.isSafe)
+            }
+
+            val exportedPath = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                titleAr = "تقرير تصميم عمود",
+                titleEn = "Column Design Report",
+                subtitle = "Code: $codeLabel  •  $columnTypeLabel",
+                designType = "Column",
+                inputs = inputsMap,
+                results = resultsMap,
+                safetyChecks = safetyChecks,
+                isSafe = result.isSafe,
+                drawingBitmap = null,
                 outputPath = filePath
             )
 
-            if (exportedFile != null && exportedFile.exists()) {
+            if (exportedPath != null) {
                 Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
-                ExportUtils.openPdf(requireContext(), exportedFile)
+                ExportUtils.openPdf(requireContext(), exportedPath)
             } else {
                 showError("PDF Export failed: exporter returned null. Check logcat for details.")
             }

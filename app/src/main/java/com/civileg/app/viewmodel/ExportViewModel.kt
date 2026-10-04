@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,12 +21,11 @@ import com.civileg.app.domain.calculations.InputGuard
 
 @HiltViewModel
 class ExportViewModel @Inject constructor(
-    private val pdfExporter: ComprehensivePdfExporter,
     private val settingsManager: SettingsManager
 ) : ViewModel() {
     
     private fun applyLanguage() {
-        pdfExporter.setLanguage(settingsManager.language)
+        // ProfessionalEnglishPdfReporter always uses English — no language switch needed
     }
     private val _exportState = MutableStateFlow<ExportState>(ExportState.Idle)
     val exportState: StateFlow<ExportState> = _exportState
@@ -57,19 +56,38 @@ class ExportViewModel @Inject constructor(
                 // Generate drawing if not provided
                 val bitmap = drawingBitmap ?: generateColumnBitmap(columnType, result)
                 
-                val file = pdfExporter.exportColumnReport(
-                    projectName = projectName,
-                    designCode = designCode,
-                    columnType = columnType,
-                    inputs = inputs,
-                    result = result,
-                    inventoryAnalysis = inventoryAnalysis,
-                    alternatives = alternatives,
-                    outputPath = outputFile.absolutePath,
-                    drawingBitmap = bitmap
+                val inputsMap = mapOf(
+                    "Project" to projectName,
+                    "Design Code" to designCode.displayName,
+                    "Column Type" to columnType.displayName
                 )
-                
-                _exportState.value = ExportState.Success(file!!)
+                val resultsMap = mapOf(
+                    "Axial Capacity" to String.format("%.1f", result.axialCapacity) + " kN",
+                    "Slenderness Ratio" to String.format("%.1f", result.slendernessRatio),
+                    "Is Slender" to if (result.isSlender) "Yes" else "No",
+                    "Main Bars" to "${result.reinforcementResult.numberOfBars}Ø${result.reinforcementResult.barDiameter}",
+                    "Ties" to "Ø${result.reinforcementResult.tiesDiameter.toInt()}@${result.reinforcementResult.tiesSpacing.toInt()} mm",
+                    "Status" to if (result.reinforcementResult.isSafe) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = result.reinforcementResult.let { rr ->
+                    listOf(GenericSafetyCheck(
+                        "Column Capacity", 0.0, result.axialCapacity, "kN", rr.isSafe
+                    ))
+                }
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم عمود",
+                    titleEn = "Column Design Report",
+                    subtitle = "Code: ${designCode.displayName}  •  ${columnType.displayName}",
+                    designType = "Column",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = result.reinforcementResult.isSafe,
+                    drawingBitmap = bitmap,
+                    outputPath = outputFile.absolutePath
+                )
+
+                _exportState.value = ExportState.Success(generated!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -116,19 +134,34 @@ class ExportViewModel @Inject constructor(
                     )
                 } else null
                 
-                val file = pdfExporter.exportBeamReport(
-                    projectName = projectName,
-                    designCode = designCode,
-                    beamType = beamType,
-                    inputs = inputs,
-                    result = result,
-                    inventoryAnalysis = inventoryAnalysis,
-                    momentShearDiagrams = diagrams,
-                    outputPath = outputFile.absolutePath,
-                    drawingBitmap = bitmap
+                val inputsMap = mapOf(
+                    "Project" to projectName,
+                    "Design Code" to designCode.displayName,
+                    "Beam Type" to beamType.displayName
                 )
-                
-                _exportState.value = ExportState.Success(file!!)
+                val resultsMap = mapOf(
+                    "Flexural Capacity" to String.format("%.1f", result.flexureResult.astProvided) + " mm²",
+                    "Main Bars" to "${result.flexureResult.numberOfBars}Ø${result.flexureResult.barDiameter}",
+                    "Ties" to "Ø${result.flexureResult.tiesDiameter.toInt()}@${result.flexureResult.tiesSpacing.toInt()} mm",
+                    "Status" to if (result.flexureResult.isSafe) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = listOf(GenericSafetyCheck(
+                    "Beam Capacity", 0.0, result.flexureResult.astProvided, "mm²", result.flexureResult.isSafe
+                ))
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم كمرة",
+                    titleEn = "Beam Design Report",
+                    subtitle = "Code: ${designCode.displayName}  •  ${beamType.displayName}",
+                    designType = "Beam",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = result.flexureResult.isSafe,
+                    drawingBitmap = bitmap,
+                    outputPath = outputFile.absolutePath
+                )
+
+                _exportState.value = ExportState.Success(generated!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -157,17 +190,33 @@ class ExportViewModel @Inject constructor(
                 
                 val bitmap = drawingBitmap ?: generateSlabBitmap(slabType, result)
                 
-                val file = pdfExporter.exportSlabReport(
-                    projectName = projectName,
-                    designCode = designCode,
-                    slabType = slabType,
-                    inputs = inputs,
-                    result = result,
-                    outputPath = outputFile.absolutePath,
-                    drawingBitmap = bitmap
+                val inputsMap = mapOf(
+                    "Project" to projectName,
+                    "Design Code" to designCode.displayName,
+                    "Slab Type" to slabType.displayName
                 )
-                
-                _exportState.value = ExportState.Success(file!!)
+                val resultsMap = mapOf(
+                    "Flexural Rebar" to "${(1000.0 / result.flexureResult.barSpacing).toInt()}Ø${result.flexureResult.barDiameter.toInt()}@${result.flexureResult.barSpacing.toInt()} mm",
+                    "Concrete Volume" to String.format("%.3f", result.concreteVolume) + " m³",
+                    "Status" to if (result.flexureResult.isSafe) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = listOf(GenericSafetyCheck(
+                    "Slab Capacity", 0.0, result.flexureResult.providedReinforcement, "mm²", result.flexureResult.isSafe
+                ))
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم بلاطة",
+                    titleEn = "Slab Design Report",
+                    subtitle = "Code: ${designCode.displayName}  •  ${slabType.displayName}",
+                    designType = "Slab",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = result.flexureResult.isSafe,
+                    drawingBitmap = bitmap,
+                    outputPath = outputFile.absolutePath
+                )
+
+                _exportState.value = ExportState.Success(generated!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
@@ -222,19 +271,53 @@ class ExportViewModel @Inject constructor(
                     isColumn = memberType == SteelMemberType.COLUMN
                 )
                 
-                val file = pdfExporter.exportSteelReport(
-                    projectName = projectName,
-                    designCode = designCode,
-                    sectionType = sectionType,
-                    memberType = memberType,
-                    inputs = inputs,
-                    result = result,
-                    connectionDesign = connectionDesign,
-                    outputPath = outputFile.absolutePath,
-                    drawingBitmap = bitmap
+                val codeName = when (designCode) {
+                    DesignCode.ACI -> "AISC 360-16"
+                    DesignCode.SBC -> "SBC 306"
+                    else -> "ECP 205-2007"
+                }
+                val memberTypeLabel = when (memberType) {
+                    SteelMemberType.COLUMN -> "Column"
+                    SteelMemberType.BEAM -> "Beam"
+                    SteelMemberType.BRACING -> "Bracing"
+                    SteelMemberType.TRUSS_MEMBER -> "Truss"
+                    SteelMemberType.GIRDERS -> "Girder"
+                }
+                val inputsMap = mapOf(
+                    "Project" to projectName,
+                    "Design Code" to codeName,
+                    "Section" to sectionType.displayName,
+                    "Member Type" to memberTypeLabel,
+                    "Length" to "${inputs.length / 1000.0} m",
+                    "Axial Load" to "${inputs.axialLoad} kN",
+                    "Moment" to "${inputs.moment} kN.m",
+                    "Shear" to "${inputs.shear} kN"
                 )
-                
-                _exportState.value = ExportState.Success(file!!)
+                val resultsMap = mapOf(
+                    "Axial Capacity" to String.format("%.2f", result.axialCapacity) + " kN",
+                    "Moment Capacity" to String.format("%.2f", result.flexuralCapacity) + " kN.m",
+                    "Shear Capacity" to String.format("%.2f", result.shearCapacity) + " kN",
+                    "Utilization" to "${(result.utilizationRatio * 100).toInt()}%",
+                    "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+                )
+                val safetyChecks = mutableListOf<GenericSafetyCheck>()
+                if (inputs.axialLoad > 0) safetyChecks.add(GenericSafetyCheck("Axial", inputs.axialLoad, result.axialCapacity, "kN", inputs.axialLoad <= result.axialCapacity))
+                if (inputs.moment > 0) safetyChecks.add(GenericSafetyCheck("Flexural", inputs.moment, result.flexuralCapacity, "kN.m", inputs.moment <= result.flexuralCapacity))
+                if (inputs.shear > 0) safetyChecks.add(GenericSafetyCheck("Shear", inputs.shear, result.shearCapacity, "kN", inputs.shear <= result.shearCapacity))
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم قطاع معدني - ${sectionType.displayName}",
+                    titleEn = "Steel Member Design Report — ${sectionType.displayName}",
+                    subtitle = "Code: $codeName  •  $memberTypeLabel",
+                    designType = "Steel — ${sectionType.displayName}",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = result.isSafe,
+                    drawingBitmap = bitmap,
+                    outputPath = outputFile.absolutePath
+                )
+
+                _exportState.value = ExportState.Success(generated!!)
                 
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")

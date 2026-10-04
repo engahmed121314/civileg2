@@ -12,8 +12,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.exporters.ComprehensivePdfExporter
-import com.civileg.app.utils.LocaleHelper
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -193,30 +192,22 @@ class SeismicViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
-                val floorForces = state.forceDistribution.mapIndexed { idx, f ->
-                    Pair(idx + 1, f.lateralForce)
+                val codeName = when (DesignCode.valueOf(state.designCode)) {
+                    DesignCode.ECP -> "ECP 201-2012"
+                    DesignCode.ACI -> "ASCE 7 / IBC"
+                    DesignCode.SBC -> "SBC 301"
                 }
-                val res = state.result
-                val spectrumPeriod = state.spectrumValues.firstOrNull()?.period ?: 0.0
-                val spectrumSa = state.spectrumValues.firstOrNull()?.spectralAcceleration ?: 0.0
-                val exporter = ComprehensivePdfExporter(context)
-                exporter.setLanguage(LocaleHelper.getLocale(context))
-                val generated = exporter.exportSeismicReport(
-                    projectName = "Seismic Design",
-                    designCode = DesignCode.valueOf(state.designCode),
-                    totalWeight = state.totalWeight.toDoubleOrNull() ?: 0.0,
-                    baseShear = res.baseShear,
-                    zoneFactor = res.zoneFactor,
-                    soilFactor = res.soilFactor,
-                    importanceFactor = res.importanceFactor,
-                    responseModFactor = res.responseModification,
-                    buildingHeight = state.buildingHeight.toDoubleOrNull() ?: 0.0,
-                    period = spectrumPeriod,
-                    spectralAcceleration = spectrumSa,
-                    floorForces = floorForces,
+                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    titleAr = "تقرير تصميم أحمال زلزالية",
+                    titleEn = "Seismic Design Report",
+                    subtitle = "Code: $codeName  •  Zone: ${state.seismicZone}",
+                    designType = "Seismic",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
                     isSafe = true,
-                    outputPath = file.absolutePath,
-                    drawingBitmap = drawingBitmap
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath
                 )
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
