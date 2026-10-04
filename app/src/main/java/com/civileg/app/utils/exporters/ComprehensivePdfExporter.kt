@@ -1,3 +1,8 @@
+@file:Deprecated(
+    message = "Orphaned: No ViewModel uses this exporter. All ViewModels use ProfessionalEnglishPdfReporter instead. Safe to delete.",
+    level = DeprecationLevel.WARNING
+)
+
 package com.civileg.app.utils.exporters
 
 import android.content.Context

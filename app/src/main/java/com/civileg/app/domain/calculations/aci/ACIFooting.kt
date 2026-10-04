@@ -385,7 +385,7 @@ class ACIFooting : FootingDesign {
 
         // ── Step 8: Punching shear check at both columns ──
         val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
-        val punching2 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad2, loadCombination)
+        val punching2 = checkPunchingShear(fcu, col2Width, col2Depth, effectiveDepth, axialLoad2, loadCombination)  // FIX: use col2 dimensions for col2 punching
 
         // ── Step 9: One-way shear check at critical section (d from column face) ──
         // V at distance d from column face: V = qu × B × (L/2 - colDepth/2 - d)

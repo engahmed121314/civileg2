@@ -227,19 +227,73 @@ class CombinedFootingViewModel @Inject constructor(
                     )
                 } else {
                     val fr = footingRes!!
-                    mapOf(
+                    mutableMapOf(
                         "Required Width" to "${"%.0f".format(fr.requiredWidth)} mm",
                         "Required Length" to "${"%.0f".format(fr.requiredLength)} mm",
                         "Soil Pressure" to "${"%.1f".format(fr.soilPressure)} kPa",
                         "Max Soil Pressure" to "${"%.1f".format(fr.maxSoilPressure)} kPa",
-                        "Is Safe" to if (fr.isSafe) "YES" else "NO"
-                    )
+                        "Is Safe" to if (fr.isSafe) "YES" else "NO",
+                        "Punching Col1" to if (fr.punchingShearCheck.isSafe) "PASS" else "FAIL",
+                        "Punching Utilization" to "${"%.2f".format(fr.punchingShearCheck.utilizationRatio)}"
+                    ).also { map ->
+                        if (fr.warnings.isNotEmpty()) {
+                            map["Warnings"] = fr.warnings.joinToString("; ")
+                        }
+                        if (fr.codeNotes.isNotEmpty()) {
+                            map["Code Notes"] = fr.codeNotes.take(3).joinToString("; ")
+                        }
+                    }
                 }
 
                 val isSafe = ecpRes?.isSafe ?: footingRes?.isSafe ?: true
-                val safetyChecks = emptyList<GenericSafetyCheck>()
+                // FIX: Populate safety checks from punching shear results
+                val safetyChecks = if (ecpRes != null) {
+                    listOf(
+                        GenericSafetyCheck("One-Way Shear", 0.0, 0.0, "", ecpRes.oneWayShearSafe),
+                        GenericSafetyCheck("Punching Col 1", 0.0, 0.0, "", ecpRes.punchingCol1Safe),
+                        GenericSafetyCheck("Punching Col 2", 0.0, 0.0, "", ecpRes.punchingCol2Safe)
+                    )
+                } else {
+                    val fr = footingRes
+                    if (fr != null) {
+                        listOf(
+                            GenericSafetyCheck("Punching Shear", fr.punchingShearCheck.appliedShear,
+                                fr.punchingShearCheck.shearCapacity, "kN", fr.punchingShearCheck.isSafe)
+                        )
+                    } else emptyList()
+                }
 
-                val drawingBitmap = pendingDrawingBitmap
+                // FIX: Generate combined footing drawing fallback if no Compose bitmap
+                val drawingBitmap = pendingDrawingBitmap ?: try {
+                    val eR = ecpRes
+                    val fR = footingRes
+                    val c1wDraw = state.col1Width.toDoubleOrNull() ?: 400.0
+                    val c1dDraw = state.col1Depth.toDoubleOrNull() ?: 400.0
+                    val c2wDraw = state.col2Width.toDoubleOrNull() ?: 400.0
+                    val c2dDraw = state.col2Depth.toDoubleOrNull() ?: 400.0
+                    val distDraw = state.distanceBetweenColumns.toDoubleOrNull() ?: 5000.0
+                    if (eR != null) {
+                        com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
+                            footingLength = eR.footingLength * 1000, footingWidth = eR.footingWidth * 1000,
+                            footingThickness = eR.footingThickness,
+                            col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
+                            distanceBetweenColumns = distDraw,
+                            longBarCount = 8, longBarDia = 16.0, longBarSpacing = 150.0,
+                            transBarCount = 6, transBarDia = 12.0, transBarSpacing = 200.0,
+                            soilPressureMax = eR.qMax
+                        )
+                    } else if (fR != null) {
+                        com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
+                            footingLength = fR.requiredLength, footingWidth = fR.requiredWidth,
+                            footingThickness = fR.requiredThickness,
+                            col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
+                            distanceBetweenColumns = distDraw,
+                            longBarCount = 8, longBarDia = 16.0, longBarSpacing = 150.0,
+                            transBarCount = 6, transBarDia = 12.0, transBarSpacing = 200.0,
+                            soilPressureMax = fR.maxSoilPressure
+                        )
+                    } else null
+                } catch (e: Exception) { e.printStackTrace(); null }
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = state.designCode

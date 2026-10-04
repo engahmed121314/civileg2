@@ -1586,6 +1586,124 @@ object PdfDrawingGenerator {
         return bitmap
     }
 
+    // ========== GENERATE COMBINED FOOTING DRAWING ==========
+    /** Draws a combined footing plan + section showing two columns. */
+    fun generateCombinedFootingDrawing(
+        footingLength: Double, footingWidth: Double, footingThickness: Double,
+        col1W: Double, col1D: Double, col2W: Double, col2D: Double,
+        distanceBetweenColumns: Double,
+        longBarCount: Int, longBarDia: Double, longBarSpacing: Double,
+        transBarCount: Int, transBarDia: Double, transBarSpacing: Double,
+        cover: Double = 75.0,
+        soilPressureMax: Double = 0.0
+    ): Bitmap {
+        val W = 1200; val H = 750
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 1.5f)
+
+        // ── Plan View ──
+        val scale = min(500f / footingLength.toFloat(), 300f / footingWidth.toFloat()) * 0.65f
+        val planL = 80f; val planT = 100f
+        val fL = footingLength.toFloat() * scale; val fW = footingWidth.toFloat() * scale
+        val c1W = col1W.toFloat() * scale; val c1D = col1D.toFloat() * scale
+        val c2W = col2W.toFloat() * scale; val c2D = col2D.toFloat() * scale
+
+        // Footing rectangle
+        canvas.drawRect(planL, planT, planL + fL, planT + fW, fillPaint(CONCRETE))
+        canvas.drawRect(planL, planT, planL + fL, planT + fW, outlineP)
+        canvas.drawHatch(planL, planT, fL, fW)
+
+        // Column 1 (left side, centered in width)
+        val col1Lx = planL + fL * 0.15f
+        val col1Ty = planT + (fW - c1D) / 2f
+        canvas.drawRect(col1Lx, col1Ty, col1Lx + c1W, col1Ty + c1D, fillPaint(CONCRETE_SIDE))
+        canvas.drawRect(col1Lx, col1Ty, col1Lx + c1W, col1Ty + c1D, outlineP)
+
+        // Column 2 (right side, at distanceBetweenColumns from col1)
+        val distScaled = distanceBetweenColumns.toFloat() * scale
+        val col2Lx = col1Lx + distScaled
+        val col2Ty = planT + (fW - c2D) / 2f
+        canvas.drawRect(col2Lx, col2Ty, col2Lx + c2W, col2Ty + c2D, fillPaint(CONCRETE_SIDE))
+        canvas.drawRect(col2Lx, col2Ty, col2Lx + c2W, col2Ty + c2D, outlineP)
+
+        // Longitudinal bars (along length)
+        val barP = createPaint(REBAR_BLUE, 2f)
+        for (i in 0 until longBarCount.coerceAtMost(12)) {
+            val by = planT + 20f + i * (fW - 40f) / maxOf(longBarCount - 1, 1)
+            canvas.drawLine(planL + 5f, by, planL + fL - 5f, by, barP)
+        }
+
+        // Transverse bars (along width) — near each column
+        val barP2 = createPaint(TOP_REBAR, 1.5f)
+        for (i in 0 until transBarCount.coerceAtMost(8)) {
+            // Near col1
+            val bx1 = col1Lx - 30f + i * (c1W + 60f) / maxOf(transBarCount - 1, 1)
+            canvas.drawLine(bx1, planT + 5f, bx1, planT + fW - 5f, barP2)
+        }
+
+        // Dimensions
+        canvas.drawHDim(planL, planL + fL, planT + fW + 15f, "${footingLength.toInt()} mm (L)")
+        canvas.drawVDim(planT, planT + fW, planL + fL + 15f, "${footingWidth.toInt()} mm (B)")
+        canvas.drawHDim(col1Lx + c1W / 2f, col2Lx + c2W / 2f, planT - 25f, "${distanceBetweenColumns.toInt()} mm")
+
+        // Labels
+        val titleP = textPaint(Color.WHITE, 20f, true)
+        canvas.drawTextCentered("COMBINED FOOTING PLAN", planL + fL / 2f, planT - 50f, titleP)
+        val labelP = textPaint(DIM_TEXT, 14f, true)
+        canvas.drawTextCentered("Col 1", col1Lx + c1W / 2f, col1Ty + c1D + 15f, labelP)
+        canvas.drawTextCentered("Col 2", col2Lx + c2W / 2f, col2Ty + c2D + 15f, labelP)
+
+        // ── Section View (right side) ──
+        val secL = W * 0.55f; val secT = 100f
+        val secW = fL * 0.5f; val secH = footingThickness.toFloat() * scale * 2f
+
+        // Soil layer
+        canvas.drawRect(secL - 10f, secT + secH, secL + secW + 10f, secT + secH + 25f, fillPaint(Color.parseColor("#8B4513")))
+        // Concrete section
+        canvas.drawRect(secL, secT, secL + secW, secT + secH, fillPaint(CONCRETE))
+        canvas.drawRect(secL, secT, secL + secW, secT + secH, outlineP)
+
+        // Column 1 stub
+        val col1StubW = c1W * 0.5f
+        val col1StubX = secL + secW * 0.2f
+        canvas.drawRect(col1StubX - col1StubW / 2f, secT - 35f, col1StubX + col1StubW / 2f, secT, fillPaint(CONCRETE_TOP))
+        canvas.drawRect(col1StubX - col1StubW / 2f, secT - 35f, col1StubX + col1StubW / 2f, secT, outlineP)
+
+        // Column 2 stub
+        val col2StubW = c2W * 0.5f
+        val col2StubX = secL + secW * 0.8f
+        canvas.drawRect(col2StubX - col2StubW / 2f, secT - 35f, col2StubX + col2StubW / 2f, secT, fillPaint(CONCRETE_TOP))
+        canvas.drawRect(col2StubX - col2StubW / 2f, secT - 35f, col2StubX + col2StubW / 2f, secT, outlineP)
+
+        // Bottom bars
+        val bR = maxOf(longBarDia.toFloat() * 0.3f, 3f)
+        for (i in 0 until longBarCount.coerceAtMost(8)) {
+            val bx = secL + 12f + i * (secW - 24f) / maxOf(longBarCount - 1, 1)
+            canvas.drawRebar(bx, secT + secH - 12f, bR, REBAR_BLUE)
+        }
+
+        canvas.drawTextCentered("SECTION A-A", secL + secW / 2f, secT - 50f, textPaint(DIM_TEXT, 18f, true))
+
+        // ── Rebar Table ──
+        drawRebarTable(canvas,
+            x = 80f, y = H * 0.58f,
+            data = listOf(
+                listOf("Mark", "Dia", "No.", "Spacing", "Dir"),
+                listOf("L1", "${longBarDia.toInt()}mm", "$longBarCount", "${longBarSpacing.toInt()}mm", "Long"),
+                listOf("T1", "${transBarDia.toInt()}mm", "$transBarCount", "${transBarSpacing.toInt()}mm", "Trans")
+            )
+        )
+
+        // Soil pressure info
+        if (soilPressureMax > 0) {
+            val infoP = textPaint(DIM_TEXT, 13f, false)
+            canvas.drawText("q_max = ${"%.1f".format(soilPressureMax)} kN/m²", 80f, H * 0.58f - 15f, infoP)
+        }
+
+        drawTitleBlock(canvas, W - 300f, H - 60f, 300f, 60f, "Combined Footing Detail")
+        return bitmap
+    }
+
     // ========== GENERATE STAIR DRAWING ==========
     fun generateStairDrawing(
         totalHeight: Double, totalLength: Double, stairWidth: Double,

@@ -353,8 +353,17 @@ class SBCFooting : FootingDesign {
             maxMoment, FootingDirection.LONG
         )
         
+        // FIX: Punching shear check at BOTH columns (was only checking col1)
         val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
-        
+        val punching2 = checkPunchingShear(fcu, col2Width, col2Depth, effectiveDepth, axialLoad2, loadCombination)
+
+        // One-way shear check at critical section
+        val shearDistance = footingLength / 2.0 - col2Depth / 2.0 - effectiveDepth
+        val Vu_oneWay = if (shearDistance > 0) qu_ultimate * footingWidth / 1000.0 * shearDistance / 1000.0 else 0.0
+        val fcPrime = 0.8 * fcu
+        val Vc_oneWay = 0.75 * 0.17 * sqrt(fcPrime) * footingWidth * effectiveDepth / 1000.0  // kN (ACI 22.5.5.1)
+        val isOneWayShearSafe = Vu_oneWay <= Vc_oneWay
+
         return FootingDesignResult(
             requiredWidth = footingWidth,
             requiredLength = footingLength,
@@ -362,8 +371,10 @@ class SBCFooting : FootingDesign {
             soilPressure = soilPressure,
             maxSoilPressure = soilPressure,
             reinforcement = reinforcement,
-            punchingShearCheck = punching1,
-            isSafe = soilPressure <= soilBearingCapacity && punching1.isSafe
+            punchingShearCheck = if (punching1.utilizationRatio > punching2.utilizationRatio) punching1 else punching2,
+            isSafe = soilPressure <= soilBearingCapacity
+                && punching1.isSafe && punching2.isSafe
+                && isOneWayShearSafe
         )
     }
 

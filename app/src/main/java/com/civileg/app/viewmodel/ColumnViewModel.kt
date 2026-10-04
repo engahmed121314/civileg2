@@ -258,6 +258,7 @@ class ColumnViewModel @Inject constructor(
 
                 // Generate drawing for PDF
                 // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                val isSpiralTies = res.stirrups.description.contains("SPIRAL", ignoreCase = true)
                 val drawingBitmap = pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateColumnDrawing(
                         columnWidth = res.width,
@@ -268,9 +269,9 @@ class ColumnViewModel @Inject constructor(
                         tieDia = res.stirrups.diameter.toDouble(),
                         tieSpacing = res.stirrups.spacing,
                         cover = 40.0,
-                        isSpiral = false,
-                        spiralPitch = 0.0,
-                        sectionType = if (res.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular"
+                        isSpiral = isSpiralTies,
+                        spiralPitch = if (isSpiralTies) res.stirrups.spacing else 0.0,
+                        sectionType = if (state.isCircular) "Circular" else "Rectangular"
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
                 pendingDrawingBitmap = null  // consume after use
@@ -281,14 +282,17 @@ class ColumnViewModel @Inject constructor(
                     else -> "ECP 203"
                 }
 
-                val inputsMap = mapOf(
+                val inputsMap = mutableMapOf(
                     "Column Type" to res.columnType,
+                    "Shape" to if (state.isCircular) "Circular" else "Rectangular",
                     "Width" to "${res.width} mm",
                     "Depth" to "${res.depth} mm",
                     "Height" to "${h} m",
                     "Axial Load Pu" to "${String.format("%.1f", res.pu)} kN",
                     "f'cu" to "${fcuVal} MPa",
                     "fy" to "${fyVal} MPa",
+                    "Connected Slab" to state.connectedSlab,
+                    "Has Capital" to if (state.hasCap) "Yes" else "No",
                     "Design Code" to codeName,
                     "Load Combination" to state.loadCombination.name
                 )

@@ -418,7 +418,7 @@ class ECPFooting : FootingDesign {
 
         // 11. فحص قص الاختراق عند كل عمود
         val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad1, loadCombination)
-        val punching2 = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad2, loadCombination)
+        val punching2 = checkPunchingShear(fcu, col2Width, col2Depth, d, axialLoad2, loadCombination)  // FIX: use col2 dimensions for col2 punching
 
         codeNotes.add("ECP 203: Combined Footing Design")
         codeNotes.add(String.format("Resultant from Col-1: %.0f mm", xR * 1000))
