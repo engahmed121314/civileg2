@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.civileg.app.databinding.ItemProjectBinding
 import com.civileg.app.db.Project
 import com.civileg.app.db.ProjectStatus
-import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class ProjectAdapter(
@@ -30,14 +30,16 @@ class ProjectAdapter(
     inner class ViewHolder(private val binding: ItemProjectBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        // Thread-safe: DateTimeFormatter is immutable and safe to share across threads
+        private val dateFormat = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault())
 
         fun bind(project: Project) {
             binding.tvProjectName.text = project.name
             binding.tvClient.text = project.clientName
             binding.tvLocation.text = project.location
             binding.tvStatus.text = project.status.name
-            binding.tvDate.text = dateFormat.format(project.createdAt)
+            binding.tvDate.text = dateFormat.format(java.time.Instant.ofEpochMilli(project.createdAt.time)
+                .atZone(java.time.ZoneId.systemDefault()).toLocalDate())
 
             val statusColor = when (project.status) {
                 ProjectStatus.ACTIVE -> android.graphics.Color.parseColor("#4CAF50")

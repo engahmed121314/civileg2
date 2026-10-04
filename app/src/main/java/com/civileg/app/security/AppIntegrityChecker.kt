@@ -2,6 +2,7 @@ package com.civileg.app.security
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
@@ -75,6 +76,9 @@ object AppIntegrityChecker {
      * Note: If EXPECTED_SIGNER_FINGERPRINT is empty, signature check is skipped.
      */
     fun isDeviceSecure(context: Context): Boolean {
+        if (EXPECTED_SIGNER_FINGERPRINT.isEmpty()) {
+            Log.w("AppIntegrityChecker", "Release fingerprint not set — integrity check is disabled")
+        }
         val currentFingerprint = getApkFingerprint(context)
         val isSignatureValid = EXPECTED_SIGNER_FINGERPRINT.isEmpty() || currentFingerprint == EXPECTED_SIGNER_FINGERPRINT
         

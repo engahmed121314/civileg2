@@ -200,16 +200,20 @@ class SlabViewModel @Inject constructor(
                     "Thickness" to "${res.thickness} mm",
                     "Bar Diameter" to "${inputs.preferredDiameter} mm"
                 )
-                val resultsMap = mapOf(
+                val resultsMap = mutableMapOf(
                     "Moment Mx" to "${String.format("%.2f", res.momentX)} kN.m",
                     "Moment My" to "${String.format("%.2f", res.momentY)} kN.m",
                     "Main Reinforcement" to res.reinforcementMain.barString,
                     "Secondary Reinforcement" to res.reinforcementSecondary.barString,
                     "Min Thickness" to "${String.format("%.0f", res.minThickness)} mm",
+                    "Punching Safe" to if (res.punchingSafe) "PASS" else "FAIL",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
                     "Concrete Volume" to "${String.format("%.2f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
+                if (res.punchingStressAtDrop > 0.0) {
+                    resultsMap["Punching Stress at Drop"] = "${String.format("%.2f", res.punchingStressAtDrop)} MPa"
+                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     GenericSafetyCheck(
                         name = chk.name,

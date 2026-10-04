@@ -1,5 +1,6 @@
 package com.civileg.app.db
 
+import android.util.Log
 import androidx.room.TypeConverter
 import java.util.Date
 
@@ -19,6 +20,7 @@ class Converters {
         return try {
             ProjectStatus.valueOf(value)
         } catch (e: Exception) {
+            Log.w("Converters", "Unexpected ProjectStatus value: $value, falling back to ACTIVE", e)
             ProjectStatus.ACTIVE
         }
     }
@@ -33,6 +35,7 @@ class Converters {
         return try {
             DesignType.valueOf(value)
         } catch (e: Exception) {
+            Log.w("Converters", "Unexpected DesignType value: $value, falling back to BEAM", e)
             DesignType.BEAM
         }
     }
@@ -47,6 +50,7 @@ class Converters {
         return try {
             MaterialCategory.valueOf(value)
         } catch (e: Exception) {
+            Log.w("Converters", "Unexpected MaterialCategory value: $value, falling back to CONCRETE", e)
             MaterialCategory.CONCRETE
         }
     }
@@ -61,6 +65,7 @@ class Converters {
         return try {
             InventoryType.valueOf(value)
         } catch (e: Exception) {
+            Log.w("Converters", "Unexpected InventoryType value: $value, falling back to RAW_MATERIAL", e)
             InventoryType.RAW_MATERIAL
         }
     }

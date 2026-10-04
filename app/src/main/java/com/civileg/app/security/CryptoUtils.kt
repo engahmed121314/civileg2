@@ -3,6 +3,7 @@ package com.civileg.app.security
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.Log
 import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -72,6 +73,7 @@ object CryptoUtils {
 
             Base64.encodeToString(combined, Base64.NO_WRAP)
         } catch (e: Exception) {
+            Log.e("CryptoUtils", "encrypt failed", e)
             ""
         }
     }
@@ -95,6 +97,7 @@ object CryptoUtils {
             val decrypted = cipher.doFinal(encrypted)
             String(decrypted, Charsets.UTF_8)
         } catch (e: Exception) {
+            Log.e("CryptoUtils", "decrypt failed", e)
             ""
         }
     }

@@ -141,11 +141,14 @@ class TankViewModel @Inject constructor(
                     "Base Thickness" to "${res.baseThickness} mm",
                     "Design Code" to codeName
                 )
-                val resultsMap = mapOf(
+                val resultsMap = mutableMapOf(
                     "Capacity" to "${String.format("%.2f", res.capacity)} m³",
                     "Water Pressure" to "${String.format("%.2f", res.waterPressure)} kN/m²",
+                    "Soil Pressure" to "${String.format("%.1f", res.soilPressure)} kPa",
+                    "Design Moment" to "${String.format("%.1f", res.mu)} kN.m/m",
                     "Wall Reinforcement" to res.wallReinforcement.barString,
                     "Base Reinforcement" to res.baseReinforcement.barString,
+                    "Utilization" to String.format("%.2f", res.utilizationRatio),
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )

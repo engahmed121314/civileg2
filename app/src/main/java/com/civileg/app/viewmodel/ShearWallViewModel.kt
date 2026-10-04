@@ -253,10 +253,14 @@ class ShearWallViewModel @Inject constructor(
                     "Mu" to "${state.bendingMoment} kN.m",
                     "Design Code" to state.designCode
                 )
-                val resultsMap = mapOf(
+                val resultsMap = mutableMapOf(
                     "Moment Capacity" to "${"%.1f".format(res.momentCapacity)} kN.m",
                     "Axial Capacity" to "${"%.1f".format(res.axialCapacity)} kN",
                     "Shear Capacity" to "${"%.1f".format(res.shearCapacity)} kN",
+                    "Flexural Check" to if (res.flexuralOk) "PASS" else "FAIL",
+                    "Shear Check" to if (res.shearOk) "PASS" else "FAIL",
+                    "Slenderness Check" to if (res.slendernessOk) "PASS" else "FAIL",
+                    "Slenderness Ratio" to String.format("%.1f", res.slendernessRatio),
                     "Vertical Rebar" to "${res.verticalReinforcement.bars}Φ${res.verticalReinforcement.diameter} @ ${res.verticalReinforcement.spacing}mm",
                     "Horizontal Rebar" to "${res.horizontalReinforcement.bars}Φ${res.horizontalReinforcement.diameter} @ ${res.horizontalReinforcement.spacing}mm",
                     "Boundary Element" to res.boundaryElementType.displayName,

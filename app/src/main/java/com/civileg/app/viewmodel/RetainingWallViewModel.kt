@@ -154,13 +154,17 @@ class RetainingWallViewModel @Inject constructor(
                         "Backfill Angle" to "${String.format("%.1f", currentResult.backfillAngle)}°",
                         "Design Code" to codeName
                     )
-                    val resultsMap = mapOf(
+                    val resultsMap = mutableMapOf(
                         "Active Pressure Pa" to "${String.format("%.2f", currentResult.pa)} kN/m",
                         "Stem Moment" to "${String.format("%.2f", currentResult.muStem)} kN.m/m",
                         "Stem Reinforcement" to currentResult.stemReinforcement.barString,
                         "Base Reinforcement" to currentResult.baseReinforcement.barString,
                         "FS Overturning" to String.format("%.2f", currentResult.factorOfSafetyOverturning),
                         "FS Sliding" to String.format("%.2f", currentResult.factorOfSafetySliding),
+                        "Max Bearing Pressure" to "${String.format("%.1f", currentResult.maxBearingPressure)} kPa",
+                        "Min Bearing Pressure" to "${String.format("%.1f", currentResult.minBearingPressure)} kPa",
+                        "Bearing FS" to String.format("%.2f", currentResult.bearingFS),
+                        "Utilization" to String.format("%.2f", currentResult.utilizationRatio),
                         "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
                         "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg"
                     )

@@ -41,10 +41,13 @@ object AdManager {
     //   admob.interstitial.id=ca-app-pub-XXXXX/YYYYY
     //   admob.native.id=ca-app-pub-XXXXX/YYYYY
     //   admob.rewarded.id=ca-app-pub-XXXXX/YYYYY
-    var BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"       // TODO: Replace with production banner ID
-    var INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712" // TODO: Replace with production interstitial ID
-    var NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"       // TODO: Replace with production native ID
-    var REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"     // TODO: Replace with production rewarded ID
+    // Production Ad Unit IDs — made immutable (val) to prevent runtime tampering.
+    // Production IDs should be injected via BuildConfig (e.g. BuildConfig.BANNER_AD_UNIT_ID)
+    // rather than set directly. Current values are Google's well-known test IDs.
+    val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+    val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
+    val NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"
+    val REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
 
     // ═══════════════════════════════════════════════════════════
     // Ad Frequency Control — Prevents ad fatigue

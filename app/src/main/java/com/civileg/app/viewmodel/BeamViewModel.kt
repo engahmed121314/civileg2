@@ -210,6 +210,10 @@ class BeamViewModel @Inject constructor(
                 val resultsMap = mutableMapOf(
                     "Max Moment Mu" to "${String.format("%.2f", res.mu)} kN.m",
                     "Max Shear Vu" to "${String.format("%.2f", res.vu)} kN",
+                    "Moment Capacity" to "${String.format("%.1f", res.momentCapacity)} kN.m",
+                    "Shear Capacity" to "${String.format("%.1f", res.shearCapacity)} kN",
+                    "Neutral Axis Depth" to "${String.format("%.1f", res.neutralAxisDepth)} mm",
+                    "Steel Ratio" to String.format("%.4f", res.steelRatio),
                     "Bottom Reinforcement" to res.reinforcementBottom.barString,
                     "Top Reinforcement" to res.reinforcementTop.barString,
                     "Stirrups" to res.stirrups.description,
