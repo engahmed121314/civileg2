@@ -313,7 +313,7 @@ class SBCFootingColumnTest {
             FCU, FY, 1500.0, 1000.0, 5000.0,
             SOIL_CAPACITY, FOOTING_DEPTH,
             LoadCombination.DEAD_LIVE,
-            COLUMN_WIDTH, COLUMN_DEPTH
+            COLUMN_WIDTH, COLUMN_DEPTH, COLUMN_WIDTH, COLUMN_DEPTH
         )
         assertNotNull(result)
         assertTrue(result.requiredWidth > 0)
@@ -326,7 +326,7 @@ class SBCFootingColumnTest {
             0.0, FY, 1500.0, 1000.0, 5000.0,
             SOIL_CAPACITY, FOOTING_DEPTH,
             LoadCombination.DEAD_LIVE,
-            COLUMN_WIDTH, COLUMN_DEPTH
+            COLUMN_WIDTH, COLUMN_DEPTH, COLUMN_WIDTH, COLUMN_DEPTH
         )
     }
 

@@ -69,7 +69,8 @@ class CombinedFootingViewModelTest {
             soilBearingCapacity = defaultQAll,
             footingDepth = defaultThickness,
             loadCombination = LoadCombination.DEAD_LIVE,
-            columnWidth = defaultCol1W, columnDepth = defaultCol1D
+            columnWidth = defaultCol1W, columnDepth = defaultCol1D,
+            col2Width = defaultCol2W, col2Depth = defaultCol2D
         )
         assertNotNull("ACI combined footing result should not be null", result)
     }
@@ -221,7 +222,8 @@ class CombinedFootingViewModelTest {
             soilBearingCapacity = defaultQAll,
             footingDepth = defaultThickness,
             loadCombination = LoadCombination.DEAD_LIVE,
-            columnWidth = defaultCol1W, columnDepth = defaultCol1D
+            columnWidth = defaultCol1W, columnDepth = defaultCol1D,
+            col2Width = defaultCol2W, col2Depth = defaultCol2D
         )
         assertNotNull("SBC combined footing result should not be null", result)
         assertTrue("Footing width should be positive", result.requiredWidth > 0)

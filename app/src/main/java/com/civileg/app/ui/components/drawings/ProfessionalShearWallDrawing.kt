@@ -22,6 +22,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.compose.components.drawings.DrawingColors
 import com.civileg.app.ui.compose.components.drawings.DrawingColorDefaults
+import com.civileg.app.ui.compose.components.drawings.DrawingResultSummary
 import kotlin.math.*
 
 // ─── Color Palette ───────────────────────────────────────────────
@@ -67,6 +68,7 @@ fun ProfessionalShearWallDrawing(
     shearForce: Double,
     bendingMoment: Double,
     designCode: DesignCode = DesignCode.ECP,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
     // ── InputGuard: validate key dimensions before drawing ─────────────────

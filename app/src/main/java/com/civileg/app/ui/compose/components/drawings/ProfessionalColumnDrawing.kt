@@ -86,6 +86,7 @@ fun ProfessionalColumnDrawing(
     designPoint: Pair<Double, Double> = Pair(0.0, 0.0),
     designCode: DesignCode = DesignCode.ECP,
     viewMode: Int = 0,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
     // ── InputGuard: validate key dimensions before drawing ─────────────────

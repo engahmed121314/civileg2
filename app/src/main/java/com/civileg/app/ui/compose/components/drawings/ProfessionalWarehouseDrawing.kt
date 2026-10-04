@@ -25,6 +25,7 @@ fun ProfessionalWarehouseDrawing(
     inputs: SteelWarehouseInputs,
     result: SteelWarehouseAnalysisResult,
     viewMode: Int = 0, // 0: Front Elevation, 1: Plan View, 2: Side Elevation, 3: 3D
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {

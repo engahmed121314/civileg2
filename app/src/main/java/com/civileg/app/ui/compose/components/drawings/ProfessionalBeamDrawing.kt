@@ -116,6 +116,7 @@ fun ProfessionalBeamDrawing(
     zones: List<StirrupZone> = emptyList(),
     supportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED,
     designCode: DesignCode = DesignCode.ECP,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier,
     viewMode: Int = 0
 ) {

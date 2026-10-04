@@ -43,6 +43,7 @@ fun ProfessionalFootingDrawing(
     soilPressureMin: Double = 0.0,
     viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
     // ── InputGuard: validate key dimensions before drawing ─────────────────

@@ -111,6 +111,7 @@ fun ProfessionalStairDrawing(
     stairType: String = "Straight Stair", // stair type label shown in the drawing title
     viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
     // ── InputGuard: validate key dimensions before drawing ─────────────────

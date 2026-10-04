@@ -48,6 +48,7 @@ fun ProfessionalSlabDrawing(
     ribSpacing: Double = 0.0,
     viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier,
     momentX: Double = 0.0,
     momentY: Double = 0.0,

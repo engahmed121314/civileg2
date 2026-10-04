@@ -1354,7 +1354,9 @@ class CalculatorEngine @Inject constructor(
         footingDepth: Double,
         code: DesignCode = DesignCode.EGYPTIAN,
         columnWidth: Double = 400.0,
-        columnDepth: Double = 400.0
+        columnDepth: Double = 400.0,
+        col2Width: Double = 400.0,
+        col2Depth: Double = 400.0
     ): FootingDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -1372,7 +1374,8 @@ class CalculatorEngine @Inject constructor(
             soilBearingCapacity = soilBearingCapacity,
             footingDepth = footingDepth,
             loadCombination = LoadCombination.DEAD_LIVE,
-            columnWidth = columnWidth, columnDepth = columnDepth
+            columnWidth = columnWidth, columnDepth = columnDepth,
+            col2Width = col2Width, col2Depth = col2Depth
         )
     }
 

@@ -81,6 +81,7 @@ fun ProfessionalSteelDrawing(
     utilizationRatio: Double = 0.0,
     designCode: String = "ECP 205",
     viewMode: Int = 0,
+    resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
     Canvas(
