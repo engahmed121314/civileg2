@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 
 /**
  * Drawing wrapper that adds:
@@ -169,12 +171,12 @@ private fun DrawingToolbar(
     onToggleInfo: () -> Unit,
     showInfo: Boolean,
     onExportPdf: (() -> Unit)? = null,
-    hPadding: dp = 12.dp,
-    vPadding: dp = 8.dp,
-    titleFontSize: sp = 14.sp,
-    subtitleFontSize: sp = 10.sp,
-    iconSize: dp = 20.dp,
-    buttonSize: dp = 32.dp
+    hPadding: Dp = 12.dp,
+    vPadding: Dp = 8.dp,
+    titleFontSize: TextUnit = 14.sp,
+    subtitleFontSize: TextUnit = 10.sp,
+    iconSize: Dp = 20.dp,
+    buttonSize: Dp = 32.dp
 ) {
     Row(
         modifier = Modifier

@@ -1145,7 +1145,8 @@ fun DrawScope.drawScaleBar(
     drawTextAnnotated("SCALE", x + barLengthPx / 2f, y - tickH - textSize * 0.3f, color.copy(alpha = 0.6f), textSize * 0.7f, center = true)
 }
 
-private fun Float.roundToInt(): Int = kotlin.math.roundToInt(this)
+private fun Float.roundToInt(): Int = kotlin.math.round(this).toInt()
+private fun Double.roundToInt(): Int = kotlin.math.round(this).toInt()
 
 /**
  * Draw a combined/merged section indicator.
