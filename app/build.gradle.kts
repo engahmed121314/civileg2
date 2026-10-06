@@ -14,12 +14,12 @@ plugins {
 
 android {
     namespace = "com.civileg.app"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.civileg.app"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 5
         versionName = "1.5.0"
 
