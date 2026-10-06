@@ -51,6 +51,8 @@ fun ProfessionalHordiSlabDrawing(
 
     // ── Code-reference annotation ──────────────────────────────────────────
     val codeLabel = designCode.version
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -87,10 +89,10 @@ fun ProfessionalHordiSlabDrawing(
         val hatchColor = Color(0x55AAAAAA)
 
         // ── Layout zones (viewMode-aware) ────────────────────────
-        val margin = 30f
-        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.35f; else -> h * 0.10f }
-        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.35f; else -> h * 0.10f }
-        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.25f; else -> h * 0.10f }
+        val margin = cfg.margin
+        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * cfg.planHeightFraction; else -> h * 0.10f }
+        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * cfg.planHeightFraction; else -> h * 0.10f }
+        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
 
         val planTop = h * 0.05f
         val planBottom = planTop + planH
@@ -101,17 +103,30 @@ fun ProfessionalHordiSlabDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "HORDI (RIBBED) SLAB DETAIL — $codeLabel",
-            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Section separators & zone labels ───────────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(secTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+            drawSectionSeparator(tblTop - h * 0.01f, w, "SECTION / TABLE", cfg)
+            drawCombinedSectionLabel(h * 0.04f, w, listOf("Plan", "Section", "Table"), cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, tblTop + 4f, "TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW — One-direction ribs + hollow blocks
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 1) {
-            val planLeft = margin + 50f
+            val planLeft = margin * 2f
             val planRight = w - margin
             val planW = planRight - planLeft
             val planDrawH = planBottom - planTop
@@ -186,8 +201,8 @@ fun ProfessionalHordiSlabDrawing(
             )
 
             // Dimensions
-            drawHorizontalDimension(fLeft, fRight, fTop, "L=${spanMm.toInt()}", dimColor, 9f * density, offset = -14f)
-            drawVerticalDimension(fTop, fBottom, fLeft, "W=${(spanMm * 0.6).toInt()}", dimColor, 9f * density, offset = -14f)
+            drawHorizontalDimension(fLeft, fRight, fTop, "L=${spanMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
+            drawVerticalDimension(fTop, fBottom, fLeft, "W=${(spanMm * 0.6).toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
 
             // Rib spacing
             if (numRibs > 2) {
@@ -195,11 +210,11 @@ fun ProfessionalHordiSlabDrawing(
                 val r2 = fTop + 2f * ribStep
                 drawHorizontalDimension(
                     fRight - 40f, fRight,
-                    r1, "s=${safeRibSpacing.toInt()}", C.ExtensionGray, 8f * density, offset = 14f
+                    r1, "s=${safeRibSpacing.toInt()}", C.ExtensionGray, cfg.valueLabelTextSize, offset = 14f
                 )
             }
 
-            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             // Section cut line
             if (viewMode == 0) {
@@ -219,7 +234,7 @@ fun ProfessionalHordiSlabDrawing(
             val secRight = w - margin
             val maxSecW = secRight - secLeft
 
-            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             // Scale section
             val ribSpacingPx = maxSecW * 0.3f
@@ -279,7 +294,7 @@ fun ProfessionalHordiSlabDrawing(
                             size = Size(voidW, ribHPx - 4f),
                             style = Stroke(width = 0.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f)))
                         )
-                        drawTextAnnotated("HOLLOW", (voidLeft + voidRight) / 2f, toppingBottom + ribHPx / 2f, C.ExtensionGray, 7f * density, center = true)
+                        drawTextAnnotated("HOLLOW", (voidLeft + voidRight) / 2f, toppingBottom + ribHPx / 2f, C.ExtensionGray, cfg.annotationTextSmall, center = true)
                     }
                 }
 
@@ -306,8 +321,8 @@ fun ProfessionalHordiSlabDrawing(
             }
 
             // Bar marks
-            drawTextAnnotated("\u2460", tCenterX, tBottom + 12f, barBottomColor, 9f * density, center = true, bold = true)
-            drawTextAnnotated("\u2461", tCenterX + ribSpacingPx / 2f, tBottom + 12f, stirrupColor, 9f * density, center = true, bold = true)
+            drawTextAnnotated("\u2460", tCenterX, tBottom + 12f, barBottomColor, cfg.dimTextSize, center = true, bold = true)
+            drawTextAnnotated("\u2461", tCenterX + ribSpacingPx / 2f, tBottom + 12f, stirrupColor, cfg.dimTextSize, center = true, bold = true)
 
             // Topping outline
             drawRect(
@@ -318,17 +333,17 @@ fun ProfessionalHordiSlabDrawing(
             )
 
             // Dimensions
-            drawVerticalDimension(tTop, tBottom, tCenterX + ribSpacingPx * 1.5f, "h=${safeTotalThick.toInt()}", dimColor, 8f * density, offset = 16f)
-            drawVerticalDimension(tTop, toppingBottom, tCenterX + ribSpacingPx * 1.5f, "tf=${safeTopping.toInt()}", C.SafeGreen, 7f * density, offset = 34f)
+            drawVerticalDimension(tTop, tBottom, tCenterX + ribSpacingPx * 1.5f, "h=${safeTotalThick.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 16f)
+            drawVerticalDimension(tTop, toppingBottom, tCenterX + ribSpacingPx * 1.5f, "tf=${safeTopping.toInt()}", C.SafeGreen, cfg.annotationTextSmall, offset = 34f)
             drawHorizontalDimension(
                 tCenterX - ribWPx / 2f, tCenterX + ribWPx / 2f,
-                tBottom, "bw=${safeRibWidth.toInt()}", dimColor, 8f * density, offset = 10f
+                tBottom, "bw=${safeRibWidth.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 10f
             )
 
             // Cover
             val coverPx = 5f
             drawLine(C.SafeGreen, Offset(tCenterX - ribSpacingPx * 1.5f + 10f, tBottom), Offset(tCenterX - ribSpacingPx * 1.5f + 10f, tBottom - coverPx), strokeWidth = 1f)
-            drawTextAnnotated("c=${cover.toInt()}", tCenterX - ribSpacingPx * 1.5f + 25f, tBottom - coverPx / 2f + 3f, C.SafeGreen, 7f * density)
+            drawTextAnnotated("c=${cover.toInt()}", tCenterX - ribSpacingPx * 1.5f + 25f, tBottom - coverPx / 2f + 3f, C.SafeGreen, cfg.annotationTextSmall)
         } // end section view
 
         // ══════════════════════════════════════════════════════════
@@ -343,8 +358,8 @@ fun ProfessionalHordiSlabDrawing(
 
             val headers = listOf("Mark", "Location", "Dia (mm)", "Count/rib", "Spacing (mm)", "Length (mm)")
             val colWidths = listOf(
-                tblWidth * 0.08f, tblWidth * 0.22f, tblWidth * 0.14f,
-                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * 0.22f
+                tblWidth * 0.08f, tblWidth * cfg.tableHeightFraction, tblWidth * 0.14f,
+                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * cfg.tableHeightFraction
             )
             val rows = listOf(
                 listOf("\u2460", "Rib bottom", ribBottomDia.toInt().toString(), ribBottomCount.toString(), safeRibSpacing.toInt().toString(), ribBarLen.toString()),
@@ -356,13 +371,22 @@ fun ProfessionalHordiSlabDrawing(
                 colWidths = colWidths,
                 headers = headers,
                 rows = rows,
-                rowHeight = 22f,
-                headerHeight = 26f,
+                rowHeight = cfg.tableRowHeight,
+                headerHeight = cfg.tableHeaderHeight,
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = 9f * density
+                textSize = cfg.dimTextSize
             )
         } // end reinforcement table
+
+        // ── Responsive Title Block ───────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - margin * 0.3f,
+            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Hordi Slab Detail",
+            designCode = codeLabel
+        )
     }
 }

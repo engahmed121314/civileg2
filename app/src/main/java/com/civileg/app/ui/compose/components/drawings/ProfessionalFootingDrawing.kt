@@ -47,8 +47,6 @@ fun ProfessionalFootingDrawing(
     modifier: Modifier = Modifier
 ) {
     // ── InputGuard: validate key dimensions before drawing ─────────────────
-    // Footing dimensions must be positive; zero/NaN produces invalid geometry.
-    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
     InputGuard.positive("footingLengthX", footingLengthX)
     InputGuard.positive("footingLengthY", footingLengthY)
     InputGuard.positive("footingThickness", footingThickness)
@@ -56,11 +54,11 @@ fun ProfessionalFootingDrawing(
     InputGuard.positive("columnDepth", columnDepth)
     InputGuard.positive("cover", cover)
 
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
+
     // ── Code-reference annotation ──────────────────────────────────────────
-    // ECP 203-2020: bearing capacity q_all per ECP 202, punching per ECP 203
-    // ACI 318-19:  Chapter 22 — punching shear, φVc = 0.33√fc·bo·d
-    // SBC 304-2018: adopts ACI shear provisions with SBC partial factors
-    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    val codeLabel = designCode.version
 
     Canvas(
         modifier = modifier
@@ -101,18 +99,18 @@ fun ProfessionalFootingDrawing(
         val critSectionColor = C.SafeGreen
         val tableHeaderBg = Color(0x55333333)
 
-        // ── Layout zones (proportional, viewMode-aware) ──────────
-        val margin = 30f
+        // ── Layout zones (proportional, viewMode-aware, responsive) ──────
+        val margin = cfg.margin
         val hasPressure = footingType == "Combined" || footingType == "Raft"
 
         val planH = when (viewMode) {
             1 -> h * 0.82f
-            0 -> h * 0.35f
+            0 -> h * cfg.planHeightFraction
             else -> h * 0.10f
         }
         val sectionH = when (viewMode) {
             2 -> h * 0.50f
-            0 -> h * 0.28f
+            0 -> h * cfg.sectionHeightFraction
             else -> h * 0.10f
         }
         val pressureH = if (hasPressure) when (viewMode) {
@@ -122,7 +120,7 @@ fun ProfessionalFootingDrawing(
         } else 0f
         val tableH = when (viewMode) {
             3 -> h * 0.88f
-            0 -> h * 0.22f
+            0 -> h * cfg.tableHeightFraction
             else -> h * 0.10f
         }
 
@@ -143,11 +141,24 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "FOOTING DETAIL — ${footingType.uppercase()}",
-            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Responsive section separators & zone labels ───────
+        if (viewMode == 0) {
+            val sections = if (hasPressure) listOf("Plan", "Section", "Pressure", "Table") else listOf("Plan", "Section", "Table")
+            drawCombinedSectionLabel(h * 0.015f, w, sections, cfg)
+            drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, tblTop + 4f, "TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW
@@ -192,12 +203,12 @@ fun ProfessionalFootingDrawing(
                     barXColor,
                     Offset(bx, fTop + (cover * scale).toFloat()),
                     Offset(bx, fBottom - (cover * scale).toFloat()),
-                    strokeWidth = 1.8f
+                    strokeWidth = cfg.strokeRebar
                 )
             }
         }
         // Bar mark for X
-        drawTextAnnotated("\u2460", fRight + 16f, fCenterY + 3f, barXColor, 11f * density, bold = true)
+        drawTextAnnotated("\u2460", fRight + 16f, fCenterY + 3f, barXColor, cfg.annotationTextSmall, bold = true)
 
         // ── Bottom reinforcement Y-direction (lighter, horizontal) ─
         if (rebarYCount > 1) {
@@ -215,7 +226,7 @@ fun ProfessionalFootingDrawing(
             }
         }
         // Bar mark for Y
-        drawTextAnnotated("\u2461", fLeft - 16f, fBottom + 14f, barYColor, 11f * density, bold = true)
+        drawTextAnnotated("\u2461", fLeft - 16f, fBottom + 14f, barYColor, cfg.annotationTextSmall, bold = true)
 
         // ── Column(s) ─────────────────────────────────────────────
         val colDrawW = (safeColW * scale).toFloat()
@@ -318,15 +329,15 @@ fun ProfessionalFootingDrawing(
 
         // ── Dimension lines using DrawingUtils ────────────────────
         // Footing L × B
-        drawHorizontalDimension(fLeft, fRight, fTop, "L=${lxMm.toInt()}", dimColor, 9f * density, offset = -14f)
-        drawVerticalDimension(fTop, fBottom, fLeft, "B=${lyMm.toInt()}", dimColor, 9f * density, offset = -14f)
+        drawHorizontalDimension(fLeft, fRight, fTop, "L=${lxMm.toInt()}", dimColor, cfg.dimTextSize, offset = -cfg.dimOffset)
+        drawVerticalDimension(fTop, fBottom, fLeft, "B=${lyMm.toInt()}", dimColor, cfg.dimTextSize, offset = -cfg.dimOffset)
 
         // Column b × h (for isolated)
         if (footingType == "Isolated") {
             val cL = fCenterX - colDrawW / 2f
             val cT = fCenterY - colDrawD / 2f
-            drawHorizontalDimension(cL, cL + colDrawW, fBottom, "b=${safeColW.toInt()}", C.ExtensionGray, 8f * density, offset = 10f)
-            drawVerticalDimension(cT, cT + colDrawD, cL + colDrawW, "h=${safeColD.toInt()}", C.ExtensionGray, 8f * density, offset = 10f)
+            drawHorizontalDimension(cL, cL + colDrawW, fBottom, "b=${safeColW.toInt()}", C.ExtensionGray, cfg.valueLabelTextSize, offset = cfg.coverDimOffset)
+            drawVerticalDimension(cT, cT + colDrawD, cL + colDrawW, "h=${safeColD.toInt()}", C.ExtensionGray, cfg.valueLabelTextSize, offset = cfg.coverDimOffset)
         }
 
         // Edge distances (isolated)
@@ -339,7 +350,7 @@ fun ProfessionalFootingDrawing(
         }
 
         // Plan label
-        drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
+        drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, cfg.sectionLabelTextSize, bold = true)
 
         // Section cut line using DrawingUtils
         if (viewMode == 0) {
@@ -350,6 +361,11 @@ fun ProfessionalFootingDrawing(
             )
         }
         } // end plan view
+
+        // ── Section separator: plan → section ─────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(secTop - h * 0.01f, w, "SECTION / PRESSURE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  SECTION VIEW
@@ -477,7 +493,7 @@ fun ProfessionalFootingDrawing(
         drawTextAnnotated("d/2", colLeft + colWpx + critOffset + 10f, sTop + thickPx / 2f + 3f, critSectionColor, 7f * density)
 
         // Thickness dimension using DrawingUtils
-        drawVerticalDimension(sTop, sBottom, sLeft + secSpanPx, "t=${safeThick.toInt()}", dimColor, 8f * density, offset = 16f)
+        drawVerticalDimension(sTop, sBottom, sLeft + secSpanPx, "t=${safeThick.toInt()}", dimColor, cfg.valueLabelTextSize, offset = cfg.coverDimOffset)
 
         // ══════════════════════════════════════════════════════════
         //  SOIL PRESSURE DIAGRAM (Combined / Raft)
@@ -539,6 +555,11 @@ fun ProfessionalFootingDrawing(
 
         } // end section view
 
+        // ── Section separator: section → table ────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(tblTop - h * 0.01f, w, "REINFORCEMENT TABLE", cfg)
+        }
+
         // ══════════════════════════════════════════════════════════
         //  REINFORCEMENT TABLE using DrawingUtils
         // ══════════════════════════════════════════════════════════
@@ -566,13 +587,22 @@ fun ProfessionalFootingDrawing(
             colWidths = colWidths,
             headers = headers,
             rows = rows,
-            rowHeight = 22f,
-            headerHeight = 26f,
+            rowHeight = cfg.tableRowHeight,
+            headerHeight = cfg.tableHeaderHeight,
             headerBg = tableHeaderBg,
             altRowBg = Color(0x1AFFFFFF),
             textColor = textColor,
-            textSize = 9f * density
+            textSize = cfg.tableTextSize
         )
         } // end reinforcement table
+
+        // ── Responsive title block ─────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Footing Detail",
+            designCode = codeLabel
+        )
     }
 }

@@ -39,28 +39,37 @@ class ECPBeam : BeamDesign {
         
         // K-method حسب ECP 203 البند 4-2-2-1
         // K = Mu / (fcu × b × d²) - نستخدم fcu مباشرة وليس fc
-        val K = Mu / (fcu * width * effectiveDepth * effectiveDepth)
+        val K_denom = fcu * width * effectiveDepth * effectiveDepth
+        val K = if (K_denom > 0) Mu / K_denom else 0.0
+        InputGuard.finite("K", K)
         // K_bal ديناميكي حسب fcu و fy (ECP 203 البند 4-2-2-1)
         val K_bal = calculateKBal(fcu, fy)
         
         // التحقق من أن المقطع غير مفرط التسليح
+        // ECP 203-2020 §4-2-2-2: When K > K_bal, doubly-reinforced design is required
         if (K > K_bal) {
-            warnings.add("Section is over-reinforced! Consider increasing dimensions")
+            warnings.add("Section is over-reinforced (K=${"%.4f".format(K)} > K_bal=${"%.4f".format(K_bal)}! Doubly-reinforced design required per ECP 203 §4-2-2-2")
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
         }
         
         // حساب ذراع العزم الداخلي: z = d × (0.5 + √(0.25 - K/0.893)) حسب ECP 203 K-method
         // 0.893 = γc/(2×0.67) = 1.5/1.34 — the mathematically correct divisor
         val K_DIVISOR = 0.893
-        val leverArm = if (0.25 - K / K_DIVISOR > 0) {
-            effectiveDepth * (0.5 + sqrt(0.25 - K / K_DIVISOR))
+        val discriminant = 0.25 - K / K_DIVISOR
+        val leverArm = if (discriminant > 0) {
+            effectiveDepth * (0.5 + sqrt(discriminant))
         } else {
-            effectiveDepth * 0.7 // Fallback for over-reinforced
+            // ECP 203 §4-2-2-2: When discriminant ≤ 0, section is over-reinforced.
+            // Use maximum lever arm = 0.7d as safe fallback
+            warnings.add("Lever arm discriminant ≤ 0 — using z = 0.7d (doubly-reinforced required)")
+            effectiveDepth * 0.7
         }
+        InputGuard.finite("leverArm", leverArm)
         
-        // مساحة التسليح المطلوبة: As = Mu / (fy/γs × z) حسب ECP 203
+        // مساحة التسليح المطلوبة: As = Mu / (fy/γs × z) حسب ECP 203 §4-2-2-1
         val fs = fy / GAMMA_S
-        var astRequired = Mu / (fs * leverArm)
+        var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0
+        InputGuard.finite("astRequired", astRequired)
         
         // تطبيق حدود التسليح
         val Ag = width * effectiveDepth
@@ -87,6 +96,7 @@ class ECPBeam : BeamDesign {
         // نسبة الاستغلال - يجب حساب capacity قبل البدائل
         val capacity = calculateMomentCapacity(fcu, fy, width, effectiveDepth, astProvided)
         val utilizationRatio = if (capacity > 0) designMoment / capacity else 2.0
+        InputGuard.finite("utilizationRatio", utilizationRatio)
         
         // التحقق من التباعد بين الأسياخ
         val clearSpacing = if (numberOfBars > 1) {
@@ -120,8 +130,9 @@ class ECPBeam : BeamDesign {
         codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MIN)
         
         // حساب عمق المحور المحايد: c = 2*(d - z) / β1
+        // ECP 203 §4-2-2-1: Neutral axis depth from compression face
         val beta1 = 0.85
-        val neutralAxisDepth = 2.0 * (effectiveDepth - leverArm) / beta1
+        val neutralAxisDepth = if (beta1 > 0) 2.0 * (effectiveDepth - leverArm) / beta1 else 0.0
         
         return ReinforcementResult(
             astRequired = astRequired,
@@ -155,12 +166,13 @@ class ECPBeam : BeamDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        val Vu = designShear * 1000  // N (القوة القصية التصميمية)
+        val Vu = abs(designShear) * 1000  // N (القوة القصية التصميمية — always positive)
         
         // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
         // qcu = 0.24 × √(fcu/γc) — ECP 203 §4-3-1-2
         val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
         val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
+        InputGuard.finite("concreteShearCapacity", concreteShearCapacity)
         
         // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
         val minStirrups = getMinShearReinforcementRatio() * width * 1000 // mm²/m
@@ -219,34 +231,39 @@ class ECPBeam : BeamDesign {
         InputGuard.positive("totalDepth", totalDepth)
 
         // طريقة النسبة (Span/Depth) المبسطة حسب الكود المصري
+        // ECP 203-2020 §6-3-1: Basic span/depth ratios
         val basicRatio = when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> 20.0
             SupportCondition.CONTINUOUS -> 26.0
             SupportCondition.CANTILEVER -> 7.0
         }
         
-        // تعديل النسبة حسب نسبة التسليح - ECP 203: MF = 0.55 + (0.45 × M/bd²) / (ρ × fy) أساساً
-        // طريقة مبسطة: MF = 0.55 + 0.45 × (basicRatio × d / span) × (1000 / (ρ% × 100))
-        // الأبسط والأكثر دقة حسب ECP: MF = 0.55 + 0.45 × (K_bal / K) عند K ≤ K_bal
-        // نستخدم الطريقة المباشرة: MF = 0.55 + (477 / (fy × ρ%)) × sqrt(basicRatio × d / span)
-        // النسخة المبسطة المعتمدة: MF = 0.55 + 0.0075 × fs / (ρ × fy) 
-        // حيث fs = 0.58 × fy → MF = 0.55 + 0.0075 / ρ
+        // تعديل النسبة حسب نسبة التسليح
+        // ECP 203-2020 §6-3-1: MF = 0.55 + 477 / (fy × ρ%)
+        // This modification factor accounts for service stress in reinforcement.
+        // When ρ is very small, MF becomes large (more flexible), and must be capped.
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        // ECP 203-2020 §6-3-1: fy = 360 MPa هو القيمة الافتراضية لحديد High-Grade المصري
+        // ECP 203-2020 §6-3-1: fy = 360 MPa default for high-grade steel (360/520)
         // ملاحظة: الواجهة لا تمرر fy — إذا أُضيف باراميتر fy للواجهة مستقبلاً يمكن استخدامه مباشرة
         val fyEff = 360.0  // ECP 203 default for high-grade steel (360/520)
-        val modificationFactor = 0.55 + 477.0 / (fyEff * rhoPercent)
+        val modificationFactor = (0.55 + 477.0 / (fyEff * rhoPercent)).coerceIn(1.0, 2.5)
+        // ECP 203-2020 §6-3-1: Cap MF at 2.5 to prevent unrealistic allowable depths
         val allowableRatio = basicRatio * modificationFactor
         
         val actualRatio = (span * 1000) / totalDepth  // تحويل span إلى مم
         val ratio = actualRatio / allowableRatio
         
+        // ECP 203-2020 §6-3: Deflection estimation using span/depth approach
+        // For more accurate deflection, use cracked section properties:
+        // δ ≈ (5 × w × L^4) / (384 × E_c × I_cr) for simply supported
+        // Here we use the simplified ratio-based estimate
         val calculatedDeflection = if (ratio > 1.0) {
             // تقدير تقريبي للانحراف الزائد
-            (span * 1000) / 250 * ratio  // mm
+            (span * 1000) / 250.0 * ratio  // mm
         } else {
-            (span * 1000) / 250  // الانحراف المسموح الأساسي
+            (span * 1000) / 250.0 * ratio  // Scale proportionally even when OK
         }
+        InputGuard.finite("calculatedDeflection", calculatedDeflection)
         
         val allowableDeflection = getDeflectionLimit(span)
         
@@ -311,8 +328,9 @@ class ECPBeam : BeamDesign {
     override fun getMinCover(): Double = 40.0
     
     override fun getDeflectionLimit(span: Double): Double {
-        // الانحراف المسموح: L/250 للأحمال الكلية (ECP 203 البند 6-3)
-        return (span * 1000) / 250
+        // الانحراف المسموح: L/250 للأحمال الكلية (ECP 203-2020 §6-3)
+        // For spans > 10m under brittle partitions, limit is L/500 per §6-3
+        return (span * 1000) / 250.0
     }
     
     /**
@@ -338,6 +356,7 @@ class ECPBeam : BeamDesign {
     }
     
     // دالة مساعدة لحساب قدرة العزم
+    // ECP 203 §4-2-2-1: Moment capacity of singly reinforced section
     private fun calculateMomentCapacity(
         fcu: Double, fy: Double,
         width: Double, effectiveDepth: Double,
@@ -346,9 +365,13 @@ class ECPBeam : BeamDesign {
         val fc = 0.67 * fcu / GAMMA_C
         val fs = fy / GAMMA_S
         
-        // عمق كتلة الإجهاد
-        val a = (ast * fs) / (fc * width)
-        val leverArm = effectiveDepth - a / 2
+        // عمق كتلة الإجهاد — guard against zero fc or width
+        val denom = (fc * width).coerceAtLeast(0.001)
+        val a = (ast * fs) / denom
+        // ECP 203 §4-2-2-2: If a > effectiveDepth, section is over-reinforced;
+        // cap a to 0.9*d to prevent negative lever arm
+        val aCapped = min(a, 0.9 * effectiveDepth)
+        val leverArm = effectiveDepth - aCapped / 2
         
         // قدرة العزم
         val Mn = ast * fs * leverArm

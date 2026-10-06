@@ -103,6 +103,8 @@ fun ProfessionalColumnDrawing(
     // ACI 318-19:  φ = 0.65 (tied), 0.75 (spiral), min ρ = 0.01
     // SBC 304-2018: adopts ACI φ factors with SBC material safety format
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val W = size.width
@@ -153,10 +155,24 @@ fun ProfessionalColumnDrawing(
         val secBottom = if (viewMode == 0) midY - 10f else if (viewMode == 2) H * 0.92f else tieTop - 4f
         val secTop = secBottom - secH
 
+        // ── Responsive margins ──
+        val margin = cfg.margin
+
+        // ── Section separators & zone labels for phone/tablet clarity ──
+        if (viewMode == 0) {
+            drawSectionSeparator(elevTop - H * 0.02f, W, "ELEVATION / SECTION", cfg)
+            drawSectionSeparator(tableTop - H * 0.01f, W, "REINFORCEMENT TABLE", cfg)
+            drawCombinedSectionLabel(H * 0.015f, W, listOf("Elevation", "Cross Section", "Interaction"), cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, elevTop + 4f, "ELEVATION", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "CROSS SECTION", cfg)
+        }
+
         // 1. 3D Column Elevation (left) — viewMode 0 or 1
         if (viewMode == 0 || viewMode == 1) {
-            val eLeft = if (viewMode == 1) 16f else 16f
-            val eRight = if (viewMode == 1) W - 32f else divX - 32f
+            val eLeft = margin
+            val eRight = if (viewMode == 1) W - margin else divX - margin
             draw3DElevation(eLeft, elevTop, eRight - eLeft, elevBottom - elevTop,
                 columnWidth, columnDepth, columnHeight,
                 longitudinalBars, tieDia, tieSpacing, cover, isSpiral, sectionType, zones)
@@ -164,8 +180,8 @@ fun ProfessionalColumnDrawing(
 
         // 2. Cross-Section View (right-top) — viewMode 0 or 2
         if (viewMode == 0 || viewMode == 2) {
-            val sLeft = if (viewMode == 2) 16f else divX + 16f
-            val sRight = if (viewMode == 2) W - 32f else W - 32f
+            val sLeft = if (viewMode == 2) margin else divX + margin
+            val sRight = W - margin
             drawCrossSection(sLeft, secTop, sRight - sLeft, secBottom - secTop,
                 columnWidth, columnDepth, longitudinalBars, tieDia, cover, isSpiral, sectionType)
             drawSectionDimensions(sLeft, secTop, sRight - sLeft, secBottom - secTop,
@@ -174,8 +190,8 @@ fun ProfessionalColumnDrawing(
 
         // 3. Tie/Spiral Detail Inset — viewMode 0 or 3
         if (viewMode == 0 || viewMode == 3) {
-            val tLeft = if (viewMode == 3) 16f else 16f
-            val tRight = if (viewMode == 3) W - 32f else divX - 32f
+            val tLeft = margin
+            val tRight = if (viewMode == 3) W - margin else divX - margin
             drawTieDetailInset(tLeft, tieTop, tRight - tLeft, tieBottom - tieTop,
                 columnWidth, columnDepth, longitudinalBars, tieDia, tieSpacing, cover,
                 isSpiral, spiralPitch, sectionType)
@@ -187,8 +203,8 @@ fun ProfessionalColumnDrawing(
         // 5. Interaction Diagram (bottom-right) — viewMode 0 or 2
         if (viewMode == 0 || viewMode == 2) {
             if (interactionPoints.isNotEmpty()) {
-                val iLeft = if (viewMode == 2) 16f else divX + 20f
-                val iRight = if (viewMode == 2) W - 32f else W - 36f
+                val iLeft = if (viewMode == 2) margin else divX + margin * 0.5f
+                val iRight = W - margin
                 drawInteractionDiagram(iLeft, tieTop,
                     iRight - iLeft, tieBottom - tieTop, interactionPoints, designPoint)
             }
@@ -196,9 +212,18 @@ fun ProfessionalColumnDrawing(
 
         // 6. Reinforcement Table (bottom) — viewMode 0 or 3
         if (viewMode == 0 || viewMode == 3) {
-            drawReinforcementTable(16f, tableTop, W - 32f, tableBottom - tableTop,
+            drawReinforcementTable(margin, tableTop, W - margin * 2f, tableBottom - tableTop,
                 longitudinalBars, tieDia, tieSpacing, isSpiral, spiralPitch, sectionType)
         }
+
+        // ── Responsive title block ──
+        drawResponsiveTitleBlock(
+            x = W - cfg.titleBlockWidth - margin * 0.3f,
+            y = H - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Column Detail",
+            designCode = codeLabel
+        )
     }
 }
 

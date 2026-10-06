@@ -98,3 +98,19 @@ data class StaircaseResult(
 interface StaircaseDesign {
     fun designStaircase(input: StaircaseInput): StaircaseResult
 }
+
+/**
+ * Gooseneck (حبة البط) detail at re-entrant corner of stair slab
+ * per ECP 203-2020 §4-2
+ */
+data class GooseneckDetailResult(
+    val gooseneckRadius: Double,       // mm - recommended radius at re-entrant corner
+    val minRadius: Double,             // mm - minimum radius (50mm per ECP)
+    val additionalBars: Int,           // number of additional corner bars
+    val additionalBarDia: Double,      // mm - bar diameter at gooseneck
+    val additionalBarArea: Double,     // mm² - total additional steel area
+    val developmentLength: Double,     // mm - development length for gooseneck bars
+    val extensionLength: Double,       // mm - minimum extension each side of corner
+    val gooseneckAngle: Double,        // degrees - stair slope angle
+    val codeNote: String               // code reference note
+)

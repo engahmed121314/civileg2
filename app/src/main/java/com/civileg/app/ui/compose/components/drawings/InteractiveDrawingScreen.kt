@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -20,6 +21,9 @@ import androidx.compose.ui.unit.sp
  * - View mode tabs (Elevation / Section / Plan / All)
  * - Info overlay with drawing title
  * - Dark card background
+ * - Responsive height & layout for phone / tablet
+ * - Device indicator badge (Phone/Tablet) for clarity
+ * - Drawing scale factor display
  *
  * Used to wrap ProfessionalBeamDrawing, ProfessionalColumnDrawing, etc.
  */
@@ -30,25 +34,21 @@ fun InteractiveDrawingScreen(
     viewModes: List<String> = emptyList(),
     selectedViewMode: Int = 0,
     onViewModeChanged: (Int) -> Unit = {},
-    drawingHeightDp: Int = 620,
+    drawingHeightDp: Int = 0, // 0 = auto from device
     onExportPdf: (() -> Unit)? = null,
     designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
 ) {
     // ── InputGuard: validate title/subtitle are not blank ────────────────
-    // These are metadata strings used in the drawing header; blank values would
-    // produce an untitled drawing which is not traceable.
     InputGuard.notBlank("title", title)
     InputGuard.notBlank("subtitle", subtitle)
 
+    // ── Responsive config ───────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
+
     // ── Code-reference annotation ──────────────────────────────────────────
-    // The designCode is passed through to child drawing composables so they can
-    // render code-specific labels (ECP/ACI/SBC) and apply code-specific factors.
-    // ECP 203-2020: γ_c = 1.5, γ_s = 1.15, φ = 0.87
-    // ACI 318-19:  LRFD φ factors, strength design
-    // SBC 304-2018: adopts ACI format with SBC load combinations
-    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    val codeLabel = designCode.version
 
     var showInfo by remember { mutableStateOf(false) }
 
@@ -59,13 +59,28 @@ fun InteractiveDrawingScreen(
         "Plan"
     ) else viewModes
 
+    // Responsive drawing height: use explicit if provided, else from config
+    val resolvedHeightDp = if (drawingHeightDp > 0) drawingHeightDp else cfg.interactiveScreenHeightDp
+
+    // Responsive padding & font sizes
+    val toolbarHPadding = if (cfg.isTablet) 16.dp else 12.dp
+    val toolbarVPadding = if (cfg.isTablet) 10.dp else 8.dp
+    val titleFontSize = if (cfg.isTablet) 16.sp else 14.sp
+    val subtitleFontSize = if (cfg.isTablet) 11.sp else 10.sp
+    val tabFontSize = if (cfg.isTablet) 13.sp else 12.sp
+    val iconSize = if (cfg.isTablet) 24.dp else 20.dp
+    val buttonSize = if (cfg.isTablet) 36.dp else 32.dp
+    val infoFontSize = if (cfg.isTablet) 13.sp else 12.sp
+    val cardRadius = if (cfg.isLargeTablet) 20.dp else if (cfg.isTablet) 18.dp else 16.dp
+    val cardElevation = if (cfg.isTablet) 6.dp else 4.dp
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF1A1A2E)
         ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+        shape = RoundedCornerShape(cardRadius),
+        elevation = CardDefaults.cardElevation(cardElevation)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Top toolbar
@@ -74,7 +89,13 @@ fun InteractiveDrawingScreen(
                 subtitle = subtitle,
                 onToggleInfo = { showInfo = !showInfo },
                 showInfo = showInfo,
-                onExportPdf = onExportPdf
+                onExportPdf = onExportPdf,
+                hPadding = toolbarHPadding,
+                vPadding = toolbarVPadding,
+                titleFontSize = titleFontSize,
+                subtitleFontSize = subtitleFontSize,
+                iconSize = iconSize,
+                buttonSize = buttonSize
             )
 
             // View mode tabs
@@ -87,7 +108,7 @@ fun InteractiveDrawingScreen(
                         selectedTabIndex = selectedViewMode,
                         containerColor = Color.Transparent,
                         contentColor = Color.White,
-                        edgePadding = 16.dp,
+                        edgePadding = if (cfg.isTablet) 24.dp else 16.dp,
                         divider = {},
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -98,7 +119,7 @@ fun InteractiveDrawingScreen(
                                 text = {
                                     Text(
                                         mode,
-                                        fontSize = 12.sp,
+                                        fontSize = tabFontSize,
                                         color = if (selectedViewMode == index)
                                             Color(0xFF4A90D9) else Color(0xAAFFFFFF)
                                     )
@@ -113,24 +134,27 @@ fun InteractiveDrawingScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(drawingHeightDp.dp)
+                    .height(resolvedHeightDp.dp)
                     .background(Color(0xFF1A1A2E))
             ) {
                 drawingContent()
             }
 
-            // Info overlay
+            // Info overlay with more detail on tablets
             if (showInfo) {
                 Surface(
                     color = Color(0xCC000000),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.padding(if (cfg.isTablet) 16.dp else 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (cfg.isTablet) 6.dp else 4.dp)
                     ) {
-                        InfoRow("📌 ${"Title"}", title)
-                        InfoRow("📐 ${"Type"}", subtitle)
+                        InfoRow("📌 Title", title, infoFontSize)
+                        InfoRow("📐 Type", subtitle, infoFontSize)
+                        InfoRow("📋 Code", codeLabel, infoFontSize)
+                        InfoRow("📱 Device", if (cfg.isTablet) "Tablet" else "Phone", infoFontSize)
+                        InfoRow("📐 Scale", String.format("%.1fx", cfg.deviceScale), infoFontSize)
                     }
                 }
             }
@@ -144,12 +168,18 @@ private fun DrawingToolbar(
     subtitle: String,
     onToggleInfo: () -> Unit,
     showInfo: Boolean,
-    onExportPdf: (() -> Unit)? = null
+    onExportPdf: (() -> Unit)? = null,
+    hPadding: dp = 12.dp,
+    vPadding: dp = 8.dp,
+    titleFontSize: sp = 14.sp,
+    subtitleFontSize: sp = 10.sp,
+    iconSize: dp = 20.dp,
+    buttonSize: dp = 32.dp
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = hPadding, vertical = vPadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -158,43 +188,43 @@ private fun DrawingToolbar(
                 Icons.Default.Draw,
                 contentDescription = null,
                 tint = Color(0xFF4A90D9),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(iconSize)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
                     title,
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = titleFontSize,
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     subtitle,
                     color = Color(0xAAFFFFFF),
-                    fontSize = 10.sp
+                    fontSize = subtitleFontSize
                 )
             }
         }
 
         Row {
-            // PDF Export button (only shown if callback provided)
+            // PDF Export button
             if (onExportPdf != null) {
-                IconButton(onClick = onExportPdf, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onExportPdf, modifier = Modifier.size(buttonSize)) {
                     Icon(
                         Icons.Default.PictureAsPdf,
                         contentDescription = "Export PDF",
                         tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size((iconSize.value * 0.9f).dp)
                     )
                 }
             }
             // Info toggle
-            IconButton(onClick = onToggleInfo, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onToggleInfo, modifier = Modifier.size(buttonSize)) {
                 Icon(
                     Icons.Default.Info,
                     contentDescription = "Info",
                     tint = if (showInfo) Color(0xFF4A90D9) else Color.White,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size((iconSize.value * 0.9f).dp)
                 )
             }
         }
@@ -202,12 +232,12 @@ private fun DrawingToolbar(
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(label: String, value: String, fontSize: androidx.compose.ui.unit.TextUnit = 12.sp) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = Color(0xAAFFFFFF), fontSize = 12.sp)
-        Text(value, color = Color.White, fontSize = 12.sp)
+        Text(label, color = Color(0xAAFFFFFF), fontSize = fontSize)
+        Text(value, color = Color.White, fontSize = fontSize)
     }
 }

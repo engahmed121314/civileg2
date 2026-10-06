@@ -47,6 +47,11 @@ fun ConnectionDetailDrawing(
     isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    // ── Responsive config ──────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
+    // ── Code-reference annotation ──────────────────────────────────
+    val codeLabel = "ECP 205"
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -57,6 +62,19 @@ fun ConnectionDetailDrawing(
 
         // Dark background
         drawRect(BackgroundDark, Offset.Zero, size)
+
+        // ── Combined section indicator ──────────────────────────
+        val sectionNames = when (connectionType) {
+            0, 1 -> listOf("Bolted")
+            2 -> listOf("Welded")
+            3 -> listOf("Bolted", "Welded")
+            else -> listOf("Connection")
+        }
+        drawCombinedSectionLabel(cfg.headerHeight, cw, sectionNames, cfg, DrawingColorDefaults.AccentCyan)
+
+        // ── Section separator: Connection zone ──────────────────
+        drawSectionSeparator(cfg.headerHeight + 2f, cw, "CONNECTION DETAIL", cfg, ExtGray, LabelBg)
+        drawZoneLabel(cfg.margin, cfg.headerHeight + cfg.margin, when(connectionType) { 0, 1 -> "BOLT"; 2 -> "WELD"; 3 -> "COMBO"; else -> "CONN" }, cfg, BoltOrange, LabelBg)
 
         if (boltResult != null) {
             if (connectionType <= 1) {
@@ -83,6 +101,15 @@ fun ConnectionDetailDrawing(
             val hint = if (isArabic) "اضغط حساب للعرض" else "Press CALCULATE to view"
             drawTextAnnotated(hint, cw / 2f, ch / 2f, ExtGray, 16f, center = true)
         }
+
+        // ── Responsive title block ────────────────────────────────
+        drawResponsiveTitleBlock(
+            cw - cfg.titleBlockWidth - cfg.margin,
+            ch - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            "CivilEG", "Connection Detail", "NTS", "CD-001", codeLabel,
+            DimWhite, ExtGray
+        )
     }
 }
 

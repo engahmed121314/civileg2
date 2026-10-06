@@ -1,8 +1,4 @@
-@file:Deprecated(
-    message = "Orphaned: No ViewModel uses this exporter. All ViewModels use ProfessionalEnglishPdfReporter instead. Safe to delete.",
-    level = DeprecationLevel.WARNING
-)
-
+// Orphaned: No ViewModel uses this exporter. All ViewModels use ProfessionalEnglishPdfReporter instead. Safe to delete.
 package com.civileg.app.utils.exporters
 
 import android.content.Context
@@ -337,13 +333,13 @@ class ComprehensivePdfExporter(private val context: Context) {
     fun exportSlabReport(projectName: String, designCode: DesignCode, slabType: SlabType, inputs: SlabInputs, result: AdvancedSlabResult, outputPath: String, drawingBitmap: Bitmap? = null): File? {
         val inputsMap = mapOf(
             "Thickness" to "${inputs.thickness} mm",
-            "Span" to "${inputs.span} m",
+            "Span" to "${inputs.shortSpan} m",
             "fcu" to "${inputs.fcu} MPa",
             "fy" to "${inputs.fy} MPa"
         )
         val resultsMap = mapOf(
-            "As Provided" to "${String.format(Locale.US, "%.1f", result.flexureResult.astProvided)} mm²",
-            "As Required" to "${String.format(Locale.US, "%.1f", result.flexureResult.astRequired)} mm²",
+            "As Provided" to "${String.format(Locale.US, "%.1f", result.flexureResult.providedReinforcement)} mm²",
+            "As Required" to "${String.format(Locale.US, "%.1f", result.flexureResult.requiredReinforcement)} mm²",
             "Safety" to (if (result.flexureResult.isSafe) "PASS" else "FAIL")
         )
         return exportGenericReport("تصميم بلاطة", "Slab Design Report", projectName, "RC Slab", inputsMap, resultsMap, emptyList(), result.flexureResult.isSafe, drawingBitmap, outputPath)

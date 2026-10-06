@@ -62,6 +62,8 @@ fun ProfessionalCombinedFootingDrawing(
 
     // ── Code-reference annotation ──────────────────────────────────────────
     val codeLabel = designCode.version
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -104,11 +106,11 @@ fun ProfessionalCombinedFootingDrawing(
         val pressureColor = C.UnsafeRed
 
         // ── Layout zones (viewMode-aware) ────────────────────────
-        val margin = 30f
+        val margin = cfg.margin
         val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.33f; else -> h * 0.10f }
-        val secH = when (viewMode) { 2 -> h * 0.45f; 0 -> h * 0.28f; else -> h * 0.10f }
+        val secH = when (viewMode) { 2 -> h * 0.45f; 0 -> h * cfg.sectionHeightFraction; else -> h * 0.10f }
         val pressH = when (viewMode) { 2 -> h * 0.20f; 0 -> h * 0.08f; else -> 0f }
-        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.22f; else -> h * 0.10f }
+        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
 
         val planTop = h * 0.05f
         val planBottom = planTop + planH
@@ -121,11 +123,23 @@ fun ProfessionalCombinedFootingDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "COMBINED FOOTING DETAIL — $codeLabel",
-            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Responsive section separators & zone labels ───────
+        if (viewMode == 0) {
+            drawCombinedSectionLabel(h * 0.015f, w, listOf("Plan", "Section", "Pressure", "Table"), cfg)
+            drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, tblTop + 4f, "TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW — Rectangular footing + two columns
@@ -162,7 +176,7 @@ fun ProfessionalCombinedFootingDrawing(
                     drawLine(barLongColor, Offset(bx, fTop + 4f), Offset(bx, fBottom - 4f), strokeWidth = 1.6f)
                 }
             }
-            drawTextAnnotated("\u2460", fRight + 14f, fCenterY, barLongColor, 10f * density, bold = true)
+            drawTextAnnotated("\u2460", fRight + 14f, fCenterY, barLongColor, cfg.valueLabelTextSize, bold = true)
 
             // ── Transverse reinforcement (bottom, horizontal lines) ──
             if (transBottomCount > 1) {
@@ -174,7 +188,7 @@ fun ProfessionalCombinedFootingDrawing(
                     drawLine(barTransColor, Offset(fLeft + 4f, by), Offset(fRight - 4f, by), strokeWidth = 1.0f)
                 }
             }
-            drawTextAnnotated("\u2461", fLeft - 14f, fBottom + 12f, barTransColor, 10f * density, bold = true)
+            drawTextAnnotated("\u2461", fLeft - 14f, fBottom + 12f, barTransColor, cfg.valueLabelTextSize, bold = true)
 
             // ── Two columns ──────────────────────────────────────────
             val c1Norm = if (lenMm > 0) (col1X / lenMm).toFloat().coerceIn(0.05f, 0.95f) else 0.2f
@@ -194,22 +208,22 @@ fun ProfessionalCombinedFootingDrawing(
             drawRect(color = colFill, topLeft = Offset(c1Left, c1Top), size = Size(c1DrawW, c1DrawD))
             drawRect(color = colStroke, topLeft = Offset(c1Left, c1Top), size = Size(c1DrawW, c1DrawD), style = Stroke(width = 1.5f))
             drawHatchPattern(c1Left, c1Top, c1DrawW, c1DrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C1", c1Left + c1DrawW / 2f, c1Top + c1DrawD / 2f + 3f, textColor, 8f * density, center = true, bold = true)
+            drawTextAnnotated("C1", c1Left + c1DrawW / 2f, c1Top + c1DrawD / 2f + 3f, textColor, cfg.valueLabelTextSize, center = true, bold = true)
 
             // Column 2
             drawRect(color = colFill, topLeft = Offset(c2Left, c2Top), size = Size(c2DrawW, c2DrawD))
             drawRect(color = colStroke, topLeft = Offset(c2Left, c2Top), size = Size(c2DrawW, c2DrawD), style = Stroke(width = 1.5f))
             drawHatchPattern(c2Left, c2Top, c2DrawW, c2DrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C2", c2Left + c2DrawW / 2f, c2Top + c2DrawD / 2f + 3f, textColor, 8f * density, center = true, bold = true)
+            drawTextAnnotated("C2", c2Left + c2DrawW / 2f, c2Top + c2DrawD / 2f + 3f, textColor, cfg.valueLabelTextSize, center = true, bold = true)
 
             // Border
             drawRect(color = concreteStroke, topLeft = Offset(fLeft, fTop), size = Size(drawLen, drawWid), style = Stroke(width = 3f))
 
             // Dimensions
-            drawHorizontalDimension(fLeft, fRight, fTop, "L=${lenMm.toInt()}", dimColor, 9f * density, offset = -14f)
-            drawVerticalDimension(fTop, fBottom, fLeft, "B=${widMm.toInt()}", dimColor, 9f * density, offset = -14f)
+            drawHorizontalDimension(fLeft, fRight, fTop, "L=${lenMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
+            drawVerticalDimension(fTop, fBottom, fLeft, "B=${widMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
 
-            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             // Section cut line
             if (viewMode == 0) {
@@ -221,6 +235,11 @@ fun ProfessionalCombinedFootingDrawing(
             }
         } // end plan view
 
+        // ── Section separator: plan → section ─────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(secTop - h * 0.01f, w, "SECTION / PRESSURE", cfg)
+        }
+
         // ══════════════════════════════════════════════════════════
         //  SECTION B-B — Longitudinal section through footing
         // ══════════════════════════════════════════════════════════
@@ -229,7 +248,7 @@ fun ProfessionalCombinedFootingDrawing(
             val secRight = w - margin
             val maxSecW = secRight - secLeft - 120f
 
-            drawTextAnnotated("SECTION B-B", secLeft - 50f, secTop + 4f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("SECTION B-B", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             val secScale = maxSecW / lenMm.toFloat()
             val secSpanPx = maxSecW
@@ -262,14 +281,14 @@ fun ProfessionalCombinedFootingDrawing(
             drawRect(color = colFill, topLeft = Offset(c1Left, sTop - colHpx), size = Size(c1Wpx, colHpx))
             drawRect(color = colStroke, topLeft = Offset(c1Left, sTop - colHpx), size = Size(c1Wpx, colHpx), style = Stroke(width = 1.5f))
             drawHatchPattern(c1Left, sTop - colHpx, c1Wpx, colHpx, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C1", c1Left + c1Wpx / 2f, sTop - colHpx / 2f + 3f, textColor, 7f * density, center = true)
+            drawTextAnnotated("C1", c1Left + c1Wpx / 2f, sTop - colHpx / 2f + 3f, textColor, cfg.annotationTextSmall, center = true)
 
             // Column 2
             val c2Left = sLeft + c2xNorm * secSpanPx - c2Wpx / 2f
             drawRect(color = colFill, topLeft = Offset(c2Left, sTop - colHpx), size = Size(c2Wpx, colHpx))
             drawRect(color = colStroke, topLeft = Offset(c2Left, sTop - colHpx), size = Size(c2Wpx, colHpx), style = Stroke(width = 1.5f))
             drawHatchPattern(c2Left, sTop - colHpx, c2Wpx, colHpx, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C2", c2Left + c2Wpx / 2f, sTop - colHpx / 2f + 3f, textColor, 7f * density, center = true)
+            drawTextAnnotated("C2", c2Left + c2Wpx / 2f, sTop - colHpx / 2f + 3f, textColor, cfg.annotationTextSmall, center = true)
 
             // Bottom reinforcement
             val barCountSec = longBottomCount.coerceIn(3, 18)
@@ -278,7 +297,7 @@ fun ProfessionalCombinedFootingDrawing(
                 val bx = sLeft + 8f + i * barStepSec
                 drawRebarCircle(bx, sBottom - 5f, longBottomDia.toFloat(), secScale / 2f, barLongColor)
             }
-            drawTextAnnotated("\u2460", sLeft + secSpanPx / 2f, sBottom + 12f, barLongColor, 9f * density, center = true, bold = true)
+            drawTextAnnotated("\u2460", sLeft + secSpanPx / 2f, sBottom + 12f, barLongColor, cfg.dimTextSize, center = true, bold = true)
 
             // Top reinforcement (if any)
             if (longTopCount > 0) {
@@ -288,19 +307,19 @@ fun ProfessionalCombinedFootingDrawing(
                     val bx = sLeft + 8f + i * topStep
                     drawRebarCircle(bx, sTop + 5f, longTopDia.toFloat(), secScale / 2f, barTopColor)
                 }
-                drawTextAnnotated("\u2462", sLeft + secSpanPx / 2f, sTop - 8f, barTopColor, 9f * density, center = true, bold = true)
+                drawTextAnnotated("\u2462", sLeft + secSpanPx / 2f, sTop - 8f, barTopColor, cfg.dimTextSize, center = true, bold = true)
             }
 
             // Footing border
             drawRect(color = concreteStroke, topLeft = Offset(sLeft, sTop), size = Size(secSpanPx, thickPx), style = Stroke(width = 2.5f))
 
             // Thickness dimension
-            drawVerticalDimension(sTop, sBottom, sRight, "t=${safeThick.toInt()}", dimColor, 8f * density, offset = 16f)
+            drawVerticalDimension(sTop, sBottom, sRight, "t=${safeThick.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 16f)
 
             // Cover
             val coverPx = (cover * secScale).toFloat().coerceIn(3f, 10f)
             drawLine(C.SafeGreen, Offset(sLeft + 15f, sBottom), Offset(sLeft + 15f, sBottom - coverPx), strokeWidth = 1f)
-            drawTextAnnotated("c=${cover.toInt()}", sLeft + 30f, sBottom - coverPx / 2f + 3f, C.SafeGreen, 7f * density)
+            drawTextAnnotated("c=${cover.toInt()}", sLeft + 30f, sBottom - coverPx / 2f + 3f, C.SafeGreen, cfg.annotationTextSmall)
 
             // ══════════════════════════════════════════════════════════
             //  SOIL PRESSURE DIAGRAM (Trapezoidal)
@@ -311,7 +330,7 @@ fun ProfessionalCombinedFootingDrawing(
                 val prLeft = sLeft
                 val prRight = sRight
 
-                drawTextAnnotated("SOIL PRESSURE", prLeft, prTop - 2f, C.ExtensionGray, 8f * density, bold = true)
+                drawTextAnnotated("SOIL PRESSURE", prLeft, prTop - 2f, C.ExtensionGray, cfg.valueLabelTextSize, bold = true)
 
                 val maxP = if (soilPressureMax > 0) soilPressureMax.toFloat() else 250f
                 val minP = if (soilPressureMin > 0) soilPressureMin.toFloat() else 120f
@@ -330,8 +349,8 @@ fun ProfessionalCombinedFootingDrawing(
                 drawPath(path, color = pressureColor.copy(alpha = 0.3f))
                 drawPath(path, color = pressureColor, style = Stroke(width = 1.5f))
 
-                drawTextAnnotated("q_max=${maxP.toInt()}", prLeft + 5f, prBottom - maxBarH - 4f, pressureColor, 8f * density)
-                drawTextAnnotated("q_min=${minP.toInt()}", prRight - 5f, prBottom - minBarH - 4f, pressureColor, 8f * density, center = true)
+                drawTextAnnotated("q_max=${maxP.toInt()}", prLeft + 5f, prBottom - maxBarH - 4f, pressureColor, cfg.valueLabelTextSize)
+                drawTextAnnotated("q_min=${minP.toInt()}", prRight - 5f, prBottom - minBarH - 4f, pressureColor, cfg.valueLabelTextSize, center = true)
 
                 // Resultant
                 val resultantX = prLeft + secSpanPx * 0.5f
@@ -339,9 +358,14 @@ fun ProfessionalCombinedFootingDrawing(
                 drawLine(C.WarningOrange, Offset(resultantX, prBottom), Offset(resultantX, prBottom - resultantH), strokeWidth = 2f)
                 drawLine(C.WarningOrange, Offset(resultantX, prBottom - resultantH), Offset(resultantX - 3f, prBottom - resultantH + 5f), strokeWidth = 2f)
                 drawLine(C.WarningOrange, Offset(resultantX, prBottom - resultantH), Offset(resultantX + 3f, prBottom - resultantH + 5f), strokeWidth = 2f)
-                drawTextAnnotated("R", resultantX, prBottom - resultantH - 6f, C.WarningOrange, 9f * density, center = true, bold = true)
+                drawTextAnnotated("R", resultantX, prBottom - resultantH - 6f, C.WarningOrange, cfg.dimTextSize, center = true, bold = true)
             }
         } // end section view
+
+        // ── Section separator: section → table ────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(tblTop - h * 0.01f, w, "REINFORCEMENT TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  REINFORCEMENT TABLE
@@ -356,8 +380,8 @@ fun ProfessionalCombinedFootingDrawing(
 
             val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Length (mm)")
             val colWidths = listOf(
-                tblWidth * 0.08f, tblWidth * 0.22f, tblWidth * 0.14f,
-                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * 0.22f
+                tblWidth * 0.08f, tblWidth * cfg.tableHeightFraction, tblWidth * 0.14f,
+                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * cfg.tableHeightFraction
             )
             val rows = buildList {
                 add(listOf("\u2460", "Long. bottom", longBottomDia.toInt().toString(), longBottomCount.toString(), longSpacing.toString(), lenMm.toInt().toString()))
@@ -372,13 +396,22 @@ fun ProfessionalCombinedFootingDrawing(
                 colWidths = colWidths,
                 headers = headers,
                 rows = rows,
-                rowHeight = 22f,
-                headerHeight = 26f,
+                rowHeight = cfg.tableRowHeight,
+                headerHeight = cfg.tableHeaderHeight,
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = 9f * density
+                textSize = cfg.dimTextSize
             )
         } // end reinforcement table
+
+        // ── Responsive title block ─────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Combined Footing Detail",
+            designCode = codeLabel
+        )
     }
 }

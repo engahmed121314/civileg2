@@ -65,6 +65,8 @@ fun ProfessionalPileDrawing(
     // ACI 318-19:  Chapter 18 — soil-structure interaction, φ = 0.70
     // SBC 304-2018: adopts ACI pile provisions with SBC SRS factors
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -117,17 +119,19 @@ fun ProfessionalPileDrawing(
             }
         } catch (_: Exception) { Pair(2, 2) }
 
-        val margin = 24f
+        val margin = cfg.margin
         val scale = 0.3f  // drawing scale factor for mm to px
 
         // ══════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 44f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "PILE FOUNDATION DETAIL — $pattern (${numberOfPiles} piles)",
-            w / 2f, 26f, textColor, 11f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Responsive section indicators (moved after layout definitions) ──
 
         // ══════════════════════════════════════════════════
         // PLAN VIEW (top-left)
@@ -137,7 +141,12 @@ fun ProfessionalPileDrawing(
         val planMaxW = w * 0.48f
         val planMaxH = h * 0.36f
 
-        drawTextAnnotated("PLAN", planLeft, planTop - 4f, C.ExtensionGray, 9f * density, bold = true)
+        // ── Responsive section indicators (after layout definitions) ──
+        drawCombinedSectionLabel(h * 0.015f, w, listOf("Plan", "Section", "Elevation", "Table"), cfg)
+        drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+
+        drawTextAnnotated("PLAN", planLeft, planTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+        drawZoneLabel(planLeft, planTop + 10f, "PLAN", cfg)
 
         // Scale plan to fit
         val planScaleX = planMaxW / safeCapL
@@ -202,14 +211,14 @@ fun ProfessionalPileDrawing(
         )
 
         // Cap dimension lines
-        drawHorizontalDimension(capLeft, capLeft + capDrawL, capTop - 2f, "L=${safeCapL.toInt()}", dimColor, 8f * density, offset = -12f)
-        drawVerticalDimension(capTop, capTop + capDrawW, capLeft - 2f, "W=${safeCapW.toInt()}", dimColor, 8f * density, offset = -14f)
+        drawHorizontalDimension(capLeft, capLeft + capDrawL, capTop - 2f, "L=${safeCapL.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -12f)
+        drawVerticalDimension(capTop, capTop + capDrawW, capLeft - 2f, "W=${safeCapW.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
 
         // Spacing dimension between two adjacent piles
         if (nCols > 1) {
             val p1x = capLeft + capDrawL * 0.5f / nCols
             val p2x = capLeft + capDrawL * 1.5f / nCols
-            drawHorizontalDimension(p1x, p2x, capTop + capDrawW + 2f, "s=${safeSpacing.toInt()}", dimColor, 7f * density, offset = 10f)
+            drawHorizontalDimension(p1x, p2x, capTop + capDrawW + 2f, "s=${safeSpacing.toInt()}", dimColor, cfg.annotationTextSmall, offset = 10f)
         }
 
         // Section cut line
@@ -226,7 +235,8 @@ fun ProfessionalPileDrawing(
         val secTop = 75f
         val secMaxSize = min(w * 0.44f, h * 0.36f)
 
-        drawTextAnnotated("PILE SECTION", secLeft, secTop - 4f, C.ExtensionGray, 9f * density, bold = true)
+        drawTextAnnotated("PILE SECTION", secLeft, secTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+        drawZoneLabel(secLeft, secTop + 10f, "SECTION", cfg)
 
         // Scale pile section to fit
         val secScale = ((secMaxSize * 0.6f) / safeDia).toFloat()
@@ -262,17 +272,17 @@ fun ProfessionalPileDrawing(
         // Diameter dimension
         drawHorizontalDimension(
             pileCX - pileDrawR, pileCX + pileDrawR, pileCY + pileDrawR + 2f,
-            "Ø${safeDia.toInt()}", dimColor, 9f * density, offset = 10f
+            "Ø${safeDia.toInt()}", dimColor, cfg.dimTextSize, offset = 10f
         )
 
         // Rebar label
         drawTextAnnotated(
             "${longitBars}Ø$longitDia",
-            pileCX + pileDrawR + 14f, pileCY - 6f, rebarColor, 9f * density, bold = true
+            pileCX + pileDrawR + 14f, pileCY - 6f, rebarColor, cfg.dimTextSize, bold = true
         )
         drawTextAnnotated(
             "ties Ø$tiesDia @$tiesSpacing",
-            pileCX + pileDrawR + 14f, pileCY + 8f, stirrupColor, 8f * density
+            pileCX + pileDrawR + 14f, pileCY + 8f, stirrupColor, cfg.valueLabelTextSize
         )
 
         // ══════════════════════════════════════════════════
@@ -283,7 +293,9 @@ fun ProfessionalPileDrawing(
         val elevW = w * 0.48f
         val elevH = h * 0.45f
 
-        drawTextAnnotated("SECTION A-A (ELEVATION)", elevLeft, elevTop - 4f, C.ExtensionGray, 9f * density, bold = true)
+        drawTextAnnotated("SECTION A-A (ELEVATION)", elevLeft, elevTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+        drawSectionSeparator(elevTop - h * 0.01f, w, "ELEVATION / TABLE", cfg)
+        drawZoneLabel(elevLeft, elevTop + 10f, "ELEVATION", cfg)
 
         // Pile length to drawing height
         val pileDrawLength = (elevH - 50f) * 0.75f
@@ -297,7 +309,7 @@ fun ProfessionalPileDrawing(
 
         // Ground surface line
         drawLine(dimColor, Offset(elevLeft, groundY), Offset(elevLeft + elevW, groundY), 1.5f)
-        drawTextAnnotated("GL ±0.00", elevLeft + elevW - 60f, groundY - 4f, dimColor, 8f * density)
+        drawTextAnnotated("GL ±0.00", elevLeft + elevW - 60f, groundY - 4f, dimColor, cfg.valueLabelTextSize)
 
         // Soil layers
         val soilLayerH = (pileBottomY - groundY) * 0.6f
@@ -310,7 +322,7 @@ fun ProfessionalPileDrawing(
             elevLeft, groundY, elevW, soilLayerH,
             spacing = 10f, angleDeg = -45f, color = soilHatchColor
         )
-        drawTextAnnotated(soilType.uppercase(), elevLeft + 6f, groundY + soilLayerH / 2f - 4f, soilHatchColor, 9f * density, bold = true)
+        drawTextAnnotated(soilType.uppercase(), elevLeft + 6f, groundY + soilLayerH / 2f - 4f, soilHatchColor, cfg.dimTextSize, bold = true)
 
         // Bearing layer
         drawRect(
@@ -322,7 +334,7 @@ fun ProfessionalPileDrawing(
             elevLeft, groundY + soilLayerH, elevW, pileBottomY - groundY - soilLayerH + 10f,
             spacing = 6f, angleDeg = 30f, color = Color(0x885D4037)
         )
-        drawTextAnnotated("BEARING STRATUM", elevLeft + 6f, groundY + soilLayerH + 14f, bearingLayerColor, 9f * density, bold = true)
+        drawTextAnnotated("BEARING STRATUM", elevLeft + 6f, groundY + soilLayerH + 14f, bearingLayerColor, cfg.dimTextSize, bold = true)
 
         // Pile body
         drawRect(
@@ -390,13 +402,13 @@ fun ProfessionalPileDrawing(
         // Pile length dimension
         drawVerticalDimension(
             pileTopY, pileBottomY, eCenterX + pileDrawW / 2f + 4f,
-            "L=${pileLength.toInt()}m", dimColor, 8f * density, offset = 14f
+            "L=${pileLength.toInt()}m", dimColor, cfg.valueLabelTextSize, offset = 14f
         )
 
         // Cap thickness dimension
         drawVerticalDimension(
             pileTopY - capDrawH, pileTopY, eCenterX + capDrawW / 2f + 4f,
-            "${safeCapT.toInt()}", dimColor, 7f * density, offset = -12f
+            "${safeCapT.toInt()}", dimColor, cfg.annotationTextSmall, offset = -12f
         )
 
         // Load arrow at top
@@ -412,7 +424,7 @@ fun ProfessionalPileDrawing(
             },
             color = unsafeColor
         )
-        drawTextAnnotated("P", arrowX, arrowTop - 4f, unsafeColor, 10f * density, center = true, bold = true)
+        drawTextAnnotated("P", arrowX, arrowTop - 4f, unsafeColor, cfg.valueLabelTextSize, center = true, bold = true)
 
         // ══════════════════════════════════════════════════
         // REINFORCEMENT SCHEDULE TABLE (bottom-right)
@@ -421,7 +433,8 @@ fun ProfessionalPileDrawing(
         val tblTop = elevTop
         val tblW = w * 0.44f
 
-        drawTextAnnotated("REINFORCEMENT SCHEDULE", tblLeft, tblTop - 4f, C.ExtensionGray, 9f * density, bold = true)
+        drawTextAnnotated("REINFORCEMENT SCHEDULE", tblLeft, tblTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+        drawZoneLabel(tblLeft, tblTop + 10f, "TABLE", cfg)
 
         val headers = listOf("Mark", "Description", "Dia", "Qty", "Spacing")
         val colWidths = listOf(
@@ -440,21 +453,21 @@ fun ProfessionalPileDrawing(
             colWidths = colWidths,
             headers = headers,
             rows = rows,
-            rowHeight = 22f,
-            headerHeight = 26f,
+            rowHeight = cfg.tableRowHeight,
+            headerHeight = cfg.tableHeaderHeight,
             headerBg = tableHeaderBg,
             altRowBg = Color(0x1AFFFFFF),
             textColor = textColor,
-            textSize = 9f * density
+            textSize = cfg.dimTextSize
         )
 
-        // Title block
-        drawTitleBlock(
-            x = w - 160f, y = h - 44f,
-            width = 160f, height = 44f,
-            drawingTitle = "Pile Foundation",
-            scale = "NTS",
-            drawingNo = "PF-001"
+        // ── Responsive title block ─────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Pile Detail",
+            designCode = codeLabel
         )
     }
 }

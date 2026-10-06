@@ -68,10 +68,12 @@ class ECPFooting : FootingDesign {
         val My_service = momentY / factor
 
         // 3. حساب أبعاد القاعدة المنفصلة
-        // A_req = P / (SBC - gamma_c * t)
+        // A_req = P / (SBC - gamma_c * t) per ECP 203-2020 §7-1
         val t_m = footingDepth / 1000.0
         val netSBC = soilBearingCapacity - GAMMA_CONCRETE * t_m
-        val A_req = if (netSBC > 0) P_service / netSBC else P_service / soilBearingCapacity
+        // Guard: netSBC must be positive — if overburden exceeds bearing, use gross SBC
+        val A_req = if (netSBC > 0.001) P_service / netSBC else P_service / soilBearingCapacity
+        InputGuard.finite("A_req", A_req)
 
         // 4. نسبة العرض للطول
         val L_ratio = sqrt(columnDepth / columnWidth * 1.2)
@@ -97,26 +99,35 @@ class ECPFooting : FootingDesign {
         val A_actual = B * L / 1e6
 
         // 7. ضغط التربة مع الانحراف
-        val q_avg = P_service / A_actual
-        val ex = Mx_service / P_service
-        val ey = My_service / P_service
-        val q_max_x = q_avg * (1 + 6 * ex / (B / 1000.0))
-        val q_max_y = q_avg * (1 + 6 * ey / (L / 1000.0))
+        // ECP 203-2020 §7-1: Bearing pressure with eccentricity
+        val q_avg = if (A_actual > 0) P_service / A_actual else 0.0
+        val ex = if (P_service > 0) Mx_service / P_service else 0.0
+        val ey = if (P_service > 0) My_service / P_service else 0.0
+        val B_m_dim = B / 1000.0
+        val L_m_dim = L / 1000.0
+        val q_max_x = q_avg * (1 + 6 * ex / B_m_dim.coerceAtLeast(0.001))
+        val q_max_y = q_avg * (1 + 6 * ey / L_m_dim.coerceAtLeast(0.001))
         val q_max = max(q_max_x, q_max_y)
         val q_min = min(
-            q_avg * (1 - 6 * ex / (B / 1000.0)),
-            q_avg * (1 - 6 * ey / (L / 1000.0))
+            q_avg * (1 - 6 * ex / B_m_dim.coerceAtLeast(0.001)),
+            q_avg * (1 - 6 * ey / L_m_dim.coerceAtLeast(0.001))
         )
 
+        // ECP 203-2020 §7-1: Bearing check — q_max ≤ SBC, q_min ≥ 0 (no uplift)
         if (q_max > soilBearingCapacity) {
             warnings.add(String.format("ضغط التربة الأقصى %.1f kPa يتجاوز قدرة التربة %.1f kPa", q_max, soilBearingCapacity))
         }
         if (q_min < 0) {
-            warnings.add("انفصال القاعدة عن التربة - زِد الأبعاد")
+            warnings.add("انفصال القاعدة عن التربة (q_min < 0) — زِد الأبعاد حسب ECP 203 §7-1")
         }
 
         // 8. السمك الفعال
         val d = footingDepth - getMinCover() - 10.0
+        // Guard: effective depth must be positive
+        if (d <= 0) {
+            warnings.add("Effective depth ≤ 0 — increase footing thickness")
+        }
+        val dSafe = d.coerceAtLeast(50.0)  // Minimum 50mm effective depth for calculations
 
         // 9. عزم الانحناء في الاتجاه القصير والطويل
         val cantX = (B - columnWidth) / 2.0 / 1000.0  // م
@@ -124,14 +135,14 @@ class ECPFooting : FootingDesign {
         val Mu_x = q_avg * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
         val Mu_y = q_avg * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203 البند 4-3-1-2)
-        val Vu_x = q_avg * (L / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
-        val Vu_y = q_avg * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
+        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203-2020 البند 4-3-1-2)
+        val Vu_x = q_avg * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
+        val Vu_y = q_avg * (B / 1000.0) * max(cantY - dSafe / 2000.0, 0.0)  // kN
 
-        // One-way shear capacity ECP 203 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
+        // One-way shear capacity ECP 203-2020 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
         val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
-        val Vc_x = qcu * (L / 1000.0) * d / 1000.0 * 1000.0  // kN
-        val Vc_y = qcu * (B / 1000.0) * d / 1000.0 * 1000.0  // kN
+        val Vc_x = qcu * (L / 1000.0) * dSafe / 1000.0 * 1000.0  // kN
+        val Vc_y = qcu * (B / 1000.0) * dSafe / 1000.0 * 1000.0  // kN
 
         if (Vu_x > Vc_x) {
             warnings.add("قص أحادي X يتجاوز القدرة - زِد السمك")
@@ -141,14 +152,14 @@ class ECPFooting : FootingDesign {
         }
 
         // 11. فحص قص الاختراق
-        val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad, loadCombination)
+        val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, dSafe, axialLoad, loadCombination)
 
         // 12. تصميم التسليح
         val Mu_x_per_m = Mu_x / (L / 1000.0)
         val Mu_y_per_m = Mu_y / (B / 1000.0)
 
-        val reinfX = calculateFootingReinforcement(fcu, fy, B, L, d, Mu_x_per_m, FootingDirection.SHORT)
-        val reinfY = calculateFootingReinforcement(fcu, fy, B, L, d, Mu_y_per_m, FootingDirection.LONG)
+        val reinfX = calculateFootingReinforcement(fcu, fy, B, L, dSafe, Mu_x_per_m, FootingDirection.SHORT)
+        val reinfY = calculateFootingReinforcement(fcu, fy, B, L, dSafe, Mu_y_per_m, FootingDirection.LONG)
 
         // 13. التسليح التوزيعي (distribution steel) - 20% من التسليح الرئيسي
         val mainAs = max(reinfX.astRequired, reinfY.astRequired)
@@ -210,15 +221,21 @@ class ECPFooting : FootingDesign {
         InputGuard.positive("effectiveDepth", effectiveDepth)
         InputGuard.positive("punchingShearForce", punchingShearForce)
 
-        // محيط الاختراق عند بعد d/2 من وجه العمود (ECP 203 البند 4-3-2)
+        // محيط الاختراق عند بعد d/2 من وجه العمود (ECP 203-2020 البند 4-3-2)
+        // bo = 2(c1 + c2) + 4d for interior column
+        // For edge column: bo = (c1 + 2d) + 2(c2 + d)  — three-sided perimeter
+        // For corner column: bo = 2(c1 + d) + 2(c2 + d) — but only 2 sides
+        // Here we compute for interior column (full perimeter)
         val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
+        InputGuard.finite("criticalPerimeter", bo)
         // القوة القاطعة الفعالة (بعد خصم رد فعل التربة داخل المحيط)
         val punchArea = (columnWidth + 2.0 * effectiveDepth) * (columnDepth + 2.0 * effectiveDepth)
         val V_punch = punchingShearForce * PUNCHING_SHEAR_REDUCTION
 
         // ضغط القص المُطبَّق
-        val qp_applied = (V_punch * 1000.0) / (bo * effectiveDepth)
-        // Punching shear capacity ECP 203 §4-3-2: qp = 0.316 * sqrt(fcu/γc)
+        val denom = (bo * effectiveDepth).coerceAtLeast(0.001)
+        val qp_applied = (V_punch * 1000.0) / denom
+        // Punching shear capacity ECP 203-2020 §4-3-2: qp = 0.316 * sqrt(fcu/γc)
         val qp_capacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
 
         val isSafe = qp_applied <= qp_capacity
@@ -228,11 +245,18 @@ class ECPFooting : FootingDesign {
             warnings.add(String.format("قص الاختراق %.2f MPa > %.2f MPa - زِد سمك القاعدة", qp_applied, qp_capacity))
         }
 
+        // ECP 203-2020 §4-3-2: Check maximum punching shear stress (strut failure limit)
+        // qp_max = 0.7 * sqrt(fcu/γc) — if exceeded, section is inadequate regardless of reinforcement
+        val qp_max = 0.7 * sqrt(fcu / GAMMA_C)
+        if (qp_applied > qp_max) {
+            warnings.add(String.format("قص الاختراق %.2f MPa > qp_max=%.2f MPa — section inadequate! Increase dimensions", qp_applied, qp_max))
+        }
+
         return ShearCheckResult(
             appliedShear = qp_applied,
             shearCapacity = qp_capacity,
-            isSafe = isSafe,
-            utilizationRatio = qp_applied / qp_capacity,
+            isSafe = isSafe && qp_applied <= qp_max,
+            utilizationRatio = qp_applied / qp_capacity.coerceAtLeast(0.001),
             criticalSection = effectiveDepth / 2.0,  // المسافة من وجه العمود (d/2)
             criticalPerimeter = bo,
             warnings = warnings
@@ -262,7 +286,9 @@ class ECPFooting : FootingDesign {
         val d = effectiveDepth
 
         // K = Mu / (fcu * b * d^2)
-        val K = Mu / (fcu * b * d * d)
+        val K_denom = fcu * b * d * d
+        val K = if (K_denom > 0) Mu / K_denom else 0.0
+        InputGuard.finite("K", K)
 
         // K_bal for tension-controlled - strain compatibility per ECP 203
         val epsilonCu = 0.003
@@ -661,6 +687,51 @@ class ECPFooting : FootingDesign {
             val barsPerMeter = ceil(asRequired / area).toInt()
             barsPerMeter in 5..20
         } ?: 16.0
+    }
+
+    /**
+     * Calculate punching shear critical perimeter for different column positions
+     * per ECP 203-2020 §4-3-2
+     *
+     * @param columnWidth column dimension c1 (mm)
+     * @param columnDepth column dimension c2 (mm)
+     * @param effectiveDepth effective depth d (mm)
+     * @param isEdgeColumn true if column is at slab/footing edge
+     * @param isCornerColumn true if column is at corner
+     * @return critical perimeter bo (mm)
+     */
+    fun calculatePunchingPerimeter(
+        columnWidth: Double,
+        columnDepth: Double,
+        effectiveDepth: Double,
+        isEdgeColumn: Boolean = false,
+        isCornerColumn: Boolean = false
+    ): Double {
+        InputGuard.positive("columnWidth", columnWidth)
+        InputGuard.positive("columnDepth", columnDepth)
+        InputGuard.positive("effectiveDepth", effectiveDepth)
+
+        // ECP 203-2020 §4-3-2: Critical section at d/2 from column face
+        val c1 = columnWidth
+        val c2 = columnDepth
+        val d = effectiveDepth
+
+        val bo = when {
+            isCornerColumn -> {
+                // Corner column: two-sided perimeter
+                (c1 + d) + (c2 + d)
+            }
+            isEdgeColumn -> {
+                // Edge column: three-sided perimeter
+                c1 + 2.0 * d + 2.0 * (c2 + d)
+            }
+            else -> {
+                // Interior column: four-sided perimeter
+                2.0 * (c1 + c2) + 4.0 * d
+            }
+        }
+        InputGuard.finite("punchingPerimeter", bo)
+        return bo
     }
 
     /**

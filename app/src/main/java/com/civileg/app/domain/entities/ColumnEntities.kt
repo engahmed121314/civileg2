@@ -146,3 +146,15 @@ data class PunchingCheckResult(
     val hasCap: Boolean,
     val criticalPerimeter: Double
 ) : Parcelable
+
+/**
+ * Slenderness check result per ECP 203-2020 §4-2-3
+ */
+@Parcelize
+data class SlendernessCheckResult(
+    val slendernessRatio: Double,       // λ = KL/r
+    val threshold: Double,              // 15 (braced) or 10 (unbraced)
+    val isShortColumn: Boolean,         // λ ≤ threshold
+    val isBraced: Boolean,
+    val recommendation: String
+) : Parcelable

@@ -66,6 +66,8 @@ fun ProfessionalStrapFootingDrawing(
 
     // ── Code-reference annotation ──────────────────────────────────────────
     val codeLabel = designCode.version
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -116,11 +118,11 @@ fun ProfessionalStrapFootingDrawing(
         val stirrupColor = C.StirrupPurple
 
         // ── Layout zones (viewMode-aware) ────────────────────────
-        val margin = 30f
+        val margin = cfg.margin
         val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.33f; else -> h * 0.10f }
         val secH = when (viewMode) { 2 -> h * 0.45f; 0 -> h * 0.30f; else -> h * 0.10f }
         val detailH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.10f; else -> 0f }
-        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.22f; else -> h * 0.10f }
+        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
 
         val planTop = h * 0.05f
         val planBottom = planTop + planH
@@ -133,11 +135,23 @@ fun ProfessionalStrapFootingDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "STRAP FOOTING DETAIL — $codeLabel",
-            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Responsive section separators & zone labels ───────
+        if (viewMode == 0) {
+            drawCombinedSectionLabel(h * 0.015f, w, listOf("Plan", "Section", "Detail", "Table"), cfg)
+            drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, tblTop + 4f, "TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW — Two footings + strap beam
@@ -228,7 +242,7 @@ fun ProfessionalStrapFootingDrawing(
             drawRect(color = colFill, topLeft = Offset(c1Cx - c1Wpx / 2f, centerY - c1Wpx / 2f), size = Size(c1Wpx, c1Wpx))
             drawRect(color = colStroke, topLeft = Offset(c1Cx - c1Wpx / 2f, centerY - c1Wpx / 2f), size = Size(c1Wpx, c1Wpx), style = Stroke(width = 1.5f))
             drawHatchPattern(c1Cx - c1Wpx / 2f, centerY - c1Wpx / 2f, c1Wpx, c1Wpx, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C1", c1Cx, centerY + 3f, textColor, 7f * density, center = true, bold = true)
+            drawTextAnnotated("C1", c1Cx, centerY + 3f, textColor, cfg.annotationTextSmall, center = true, bold = true)
 
             // Column 2 on footing 2
             val c2Wpx = (safeC2W * scale).toFloat()
@@ -236,7 +250,7 @@ fun ProfessionalStrapFootingDrawing(
             drawRect(color = colFill, topLeft = Offset(c2Cx - c2Wpx / 2f, centerY - c2Wpx / 2f), size = Size(c2Wpx, c2Wpx))
             drawRect(color = colStroke, topLeft = Offset(c2Cx - c2Wpx / 2f, centerY - c2Wpx / 2f), size = Size(c2Wpx, c2Wpx), style = Stroke(width = 1.5f))
             drawHatchPattern(c2Cx - c2Wpx / 2f, centerY - c2Wpx / 2f, c2Wpx, c2Wpx, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C2", c2Cx, centerY + 3f, textColor, 7f * density, center = true, bold = true)
+            drawTextAnnotated("C2", c2Cx, centerY + 3f, textColor, cfg.annotationTextSmall, center = true, bold = true)
 
             // Borders
             drawRect(color = concreteStroke, topLeft = Offset(f1Left, f1Top), size = Size(drawF1L, drawF1W), style = Stroke(width = 2.5f))
@@ -244,18 +258,18 @@ fun ProfessionalStrapFootingDrawing(
             drawRect(color = concreteStroke, topLeft = Offset(strapLeft, strapTop), size = Size(strapRight - strapLeft, drawStrapW), style = Stroke(width = 2f))
 
             // Bar marks
-            drawTextAnnotated("\u2460", f1Right + 10f, f1Bottom + 10f, bar1Color, 9f * density, bold = true)
-            drawTextAnnotated("\u2461", f2Right + 10f, f2Bottom + 10f, bar2Color, 9f * density, bold = true)
-            drawTextAnnotated("\u2462", (strapLeft + strapRight) / 2f, strapBottom + 12f, barStrapColor, 9f * density, center = true, bold = true)
+            drawTextAnnotated("\u2460", f1Right + 10f, f1Bottom + 10f, bar1Color, cfg.dimTextSize, bold = true)
+            drawTextAnnotated("\u2461", f2Right + 10f, f2Bottom + 10f, bar2Color, cfg.dimTextSize, bold = true)
+            drawTextAnnotated("\u2462", (strapLeft + strapRight) / 2f, strapBottom + 12f, barStrapColor, cfg.dimTextSize, center = true, bold = true)
 
             // Dimensions
-            drawHorizontalDimension(f1Left, f1Right, f1Top, "L1=${f1LMm.toInt()}", dimColor, 8f * density, offset = -12f)
-            drawHorizontalDimension(f2Left, f2Right, f2Top, "L2=${f2LMm.toInt()}", dimColor, 8f * density, offset = -12f)
-            drawVerticalDimension(f1Top, f1Bottom, f1Left, "B1=${f1WMm.toInt()}", dimColor, 8f * density, offset = -14f)
-            drawVerticalDimension(f2Top, f2Bottom, f2Right, "B2=${f2WMm.toInt()}", dimColor, 8f * density, offset = 10f)
-            drawHorizontalDimension(f1Right, f2Left, centerY + drawStrapW, "D=${distMm.toInt()}", C.ExtensionGray, 7f * density, offset = 10f)
+            drawHorizontalDimension(f1Left, f1Right, f1Top, "L1=${f1LMm.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -12f)
+            drawHorizontalDimension(f2Left, f2Right, f2Top, "L2=${f2LMm.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -12f)
+            drawVerticalDimension(f1Top, f1Bottom, f1Left, "B1=${f1WMm.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
+            drawVerticalDimension(f2Top, f2Bottom, f2Right, "B2=${f2WMm.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 10f)
+            drawHorizontalDimension(f1Right, f2Left, centerY + drawStrapW, "D=${distMm.toInt()}", C.ExtensionGray, cfg.annotationTextSmall, offset = 10f)
 
-            drawTextAnnotated("PLAN", f1Left + 20f, max(f1Bottom, f2Bottom) + 18f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("PLAN", f1Left + 20f, max(f1Bottom, f2Bottom) + 18f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             // Section cut line
             if (viewMode == 0) {
@@ -267,6 +281,11 @@ fun ProfessionalStrapFootingDrawing(
             }
         } // end plan view
 
+        // ── Section separator: plan → section ─────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(secTop - h * 0.01f, w, "SECTION / DETAIL", cfg)
+        }
+
         // ══════════════════════════════════════════════════════════
         //  SECTION A-A — Longitudinal section
         // ══════════════════════════════════════════════════════════
@@ -275,7 +294,7 @@ fun ProfessionalStrapFootingDrawing(
             val secRight = w - margin
             val maxSecW = secRight - secLeft - 80f
 
-            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             val secScale = maxSecW / totalLen.toFloat()
             val f1LenPx = f1LMm.toFloat() * secScale
@@ -327,14 +346,14 @@ fun ProfessionalStrapFootingDrawing(
             drawRect(color = colFill, topLeft = Offset(c1LeftX, f1TopY - colH), size = Size(c1Wpx, colH))
             drawRect(color = colStroke, topLeft = Offset(c1LeftX, f1TopY - colH), size = Size(c1Wpx, colH), style = Stroke(width = 1.5f))
             drawHatchPattern(c1LeftX, f1TopY - colH, c1Wpx, colH, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C1", c1LeftX + c1Wpx / 2f, f1TopY - colH / 2f + 3f, textColor, 7f * density, center = true)
+            drawTextAnnotated("C1", c1LeftX + c1Wpx / 2f, f1TopY - colH / 2f + 3f, textColor, cfg.annotationTextSmall, center = true)
 
             // Column 2
             val c2LeftX = f2LeftX + f2LenPx / 2f - c2Wpx / 2f
             drawRect(color = colFill, topLeft = Offset(c2LeftX, f1TopY - colH), size = Size(c2Wpx, colH))
             drawRect(color = colStroke, topLeft = Offset(c2LeftX, f1TopY - colH), size = Size(c2Wpx, colH), style = Stroke(width = 1.5f))
             drawHatchPattern(c2LeftX, f1TopY - colH, c2Wpx, colH, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
-            drawTextAnnotated("C2", c2LeftX + c2Wpx / 2f, f1TopY - colH / 2f + 3f, textColor, 7f * density, center = true)
+            drawTextAnnotated("C2", c2LeftX + c2Wpx / 2f, f1TopY - colH / 2f + 3f, textColor, cfg.annotationTextSmall, center = true)
 
             // Bottom reinforcement in footings
             val barCountF1 = rebar1Count.coerceIn(2, 10)
@@ -342,14 +361,14 @@ fun ProfessionalStrapFootingDrawing(
             for (i in 0 until barCountF1) {
                 drawRebarCircle(sLeft + 4f + i * stepF1, f1BottomY - 5f, rebar1Dia.toFloat(), secScale / 2f, bar1Color)
             }
-            drawTextAnnotated("\u2460", sLeft + f1LenPx / 2f, f1BottomY + 10f, bar1Color, 8f * density, center = true, bold = true)
+            drawTextAnnotated("\u2460", sLeft + f1LenPx / 2f, f1BottomY + 10f, bar1Color, cfg.valueLabelTextSize, center = true, bold = true)
 
             val barCountF2 = rebar2Count.coerceIn(2, 10)
             val stepF2 = (f2LenPx - 8f) / (barCountF2 - 1)
             for (i in 0 until barCountF2) {
                 drawRebarCircle(f2LeftX + 4f + i * stepF2, f1BottomY - 5f, rebar2Dia.toFloat(), secScale / 2f, bar2Color)
             }
-            drawTextAnnotated("\u2461", f2LeftX + f2LenPx / 2f, f1BottomY + 10f, bar2Color, 8f * density, center = true, bold = true)
+            drawTextAnnotated("\u2461", f2LeftX + f2LenPx / 2f, f1BottomY + 10f, bar2Color, cfg.valueLabelTextSize, center = true, bold = true)
 
             // Strap beam reinforcement
             val barCountStrap = strapCount.coerceIn(2, 8)
@@ -357,7 +376,7 @@ fun ProfessionalStrapFootingDrawing(
             for (i in 0 until barCountStrap) {
                 drawRebarCircle(strapLeft + 4f + i * stepStrap, strapBottomY - 4f, strapDia.toFloat(), secScale / 2f, barStrapColor)
             }
-            drawTextAnnotated("\u2462", (strapLeft + strapRight) / 2f, strapBottomY + 10f, barStrapColor, 8f * density, center = true, bold = true)
+            drawTextAnnotated("\u2462", (strapLeft + strapRight) / 2f, strapBottomY + 10f, barStrapColor, cfg.valueLabelTextSize, center = true, bold = true)
 
             // Stirrup indicators in strap
             val stirStep = distPx / 6f
@@ -367,14 +386,19 @@ fun ProfessionalStrapFootingDrawing(
             }
 
             // Thickness dimensions
-            drawVerticalDimension(f1TopY, f1BottomY, sRight, "t=${maxThick.toInt()}", dimColor, 7f * density, offset = 14f)
-            drawVerticalDimension(strapTopY, strapBottomY, sRight, "ts=${safeStrapT.toInt()}", dimColor, 7f * density, offset = 30f)
+            drawVerticalDimension(f1TopY, f1BottomY, sRight, "t=${maxThick.toInt()}", dimColor, cfg.annotationTextSmall, offset = 14f)
+            drawVerticalDimension(strapTopY, strapBottomY, sRight, "ts=${safeStrapT.toInt()}", dimColor, cfg.annotationTextSmall, offset = 30f)
 
             // Cover
             val coverPx = 4f
             drawLine(C.SafeGreen, Offset(sLeft + 10f, f1BottomY), Offset(sLeft + 10f, f1BottomY - coverPx), strokeWidth = 1f)
-            drawTextAnnotated("c=${cover.toInt()}", sLeft + 24f, f1BottomY - coverPx / 2f + 3f, C.SafeGreen, 7f * density)
+            drawTextAnnotated("c=${cover.toInt()}", sLeft + 24f, f1BottomY - coverPx / 2f + 3f, C.SafeGreen, cfg.annotationTextSmall)
         } // end section view
+
+        // ── Section separator: section → detail ───────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(detTop - h * 0.01f, w, "STRAP BEAM DETAIL", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  STRAP BEAM DETAIL (cross-section)
@@ -385,7 +409,7 @@ fun ProfessionalStrapFootingDrawing(
                 val detRight = w - margin
                 val detW = detRight - detLeft
 
-                drawTextAnnotated("STRAP BEAM X-SECTION", detLeft, detTop + 2f, C.ExtensionGray, 8f * density, bold = true)
+                drawTextAnnotated("STRAP BEAM X-SECTION", detLeft, detTop + 2f, C.ExtensionGray, cfg.valueLabelTextSize, bold = true)
 
                 val beamW = min(detW * 0.3f, detailH * 0.7f)
                 val beamH = beamW * (safeStrapT / safeStrapW).toFloat().coerceIn(0.5f, 2.5f)
@@ -403,7 +427,7 @@ fun ProfessionalStrapFootingDrawing(
                     val bx = beamLeft + i * barStepX
                     drawRebarCircle(bx, beamTopY + beamH - 5f, strapDia.toFloat(), 0.8f, barStrapColor)
                 }
-                drawTextAnnotated("\u2462", beamLeft + beamW + 14f, beamTopY + beamH - 5f, barStrapColor, 9f * density, bold = true)
+                drawTextAnnotated("\u2462", beamLeft + beamW + 14f, beamTopY + beamH - 5f, barStrapColor, cfg.dimTextSize, bold = true)
 
                 // Top bars (same diameter, 2 bars)
                 for (i in listOf(beamW * 0.33f, beamW * 0.67f)) {
@@ -417,15 +441,20 @@ fun ProfessionalStrapFootingDrawing(
                 drawLine(stirrupColor, Offset(beamLeft + 3f, beamTopY + beamH - 3f), Offset(beamLeft + beamW - 3f, beamTopY + beamH - 3f), strokeWidth = 0.7f)
 
                 // Dimensions
-                drawHorizontalDimension(beamLeft, beamLeft + beamW, beamTopY, "b=${safeStrapW.toInt()}", dimColor, 8f * density, offset = -14f)
-                drawVerticalDimension(beamTopY, beamTopY + beamH, beamLeft + beamW, "h=${safeStrapT.toInt()}", dimColor, 8f * density, offset = 14f)
+                drawHorizontalDimension(beamLeft, beamLeft + beamW, beamTopY, "b=${safeStrapW.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
+                drawVerticalDimension(beamTopY, beamTopY + beamH, beamLeft + beamW, "h=${safeStrapT.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 14f)
 
                 // Cover
                 val cpx = 4f
                 drawLine(C.SafeGreen, Offset(beamLeft + beamW - 2f, beamTopY + beamH), Offset(beamLeft + beamW - 2f, beamTopY + beamH - cpx), strokeWidth = 1f)
-                drawTextAnnotated("c", beamLeft + beamW + 2f, beamTopY + beamH - cpx / 2f + 3f, C.SafeGreen, 7f * density)
+                drawTextAnnotated("c", beamLeft + beamW + 2f, beamTopY + beamH - cpx / 2f + 3f, C.SafeGreen, cfg.annotationTextSmall)
             }
         } // end strap beam detail
+
+        // ── Section separator: detail → table ─────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(tblTop - h * 0.01f, w, "REINFORCEMENT TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  REINFORCEMENT TABLE
@@ -437,7 +466,7 @@ fun ProfessionalStrapFootingDrawing(
             val headers = listOf("Mark", "Location", "Dia (mm)", "Count", "Length (mm)", "Notes")
             val colWidths = listOf(
                 tblWidth * 0.08f, tblWidth * 0.20f, tblWidth * 0.12f,
-                tblWidth * 0.12f, tblWidth * 0.20f, tblWidth * 0.28f
+                tblWidth * 0.12f, tblWidth * 0.20f, tblWidth * cfg.sectionHeightFraction
             )
             val rows = listOf(
                 listOf("\u2460", "Footing 1 bot", rebar1Dia.toInt().toString(), rebar1Count.toString(), f1LMm.toInt().toString(), "Long. direction"),
@@ -450,13 +479,22 @@ fun ProfessionalStrapFootingDrawing(
                 colWidths = colWidths,
                 headers = headers,
                 rows = rows,
-                rowHeight = 22f,
-                headerHeight = 26f,
+                rowHeight = cfg.tableRowHeight,
+                headerHeight = cfg.tableHeaderHeight,
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = 9f * density
+                textSize = cfg.dimTextSize
             )
         } // end reinforcement table
+
+        // ── Responsive title block ─────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Strap Footing Detail",
+            designCode = codeLabel
+        )
     }
 }

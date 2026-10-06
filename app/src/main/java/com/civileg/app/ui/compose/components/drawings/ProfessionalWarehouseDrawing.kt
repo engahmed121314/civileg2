@@ -28,13 +28,44 @@ fun ProfessionalWarehouseDrawing(
     resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
+    // ── Responsive config ──────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
+    // ── Code-reference annotation ──────────────────────────────────
+    val codeLabel = "ECP 205"
+
     Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+
+        // ── Combined section indicator ──────────────────────────
+        drawCombinedSectionLabel(cfg.headerHeight, w, listOf("Front", "Plan", "Side", "3D"), cfg, DrawingColorDefaults.AccentCyan)
+
+        // ── Section separator & zone labels per view mode ───────
+        val zoneLabel = when (viewMode) {
+            0 -> "FRONT ELEVATION"
+            1 -> "PLAN VIEW"
+            2 -> "SIDE ELEVATION"
+            3 -> "3D VOLUMETRIC"
+            else -> "WAREHOUSE"
+        }
+        drawSectionSeparator(cfg.headerHeight + 2f, w, zoneLabel, cfg, DrawingColorDefaults.ExtensionGray, Color(0x55333333))
+        drawZoneLabel(cfg.margin, cfg.headerHeight + cfg.margin, when(viewMode) { 0 -> "FRONT"; 1 -> "PLAN"; 2 -> "SIDE"; 3 -> "3D"; else -> "WH" }, cfg, Color.White, Color(0x55333333))
+
         when (viewMode) {
             0 -> drawWarehouseFront(inputs, result)
             1 -> drawWarehousePlan(inputs, result)
             2 -> drawWarehouseSide(inputs, result)
             3 -> drawWarehouse3D(inputs, result)
         }
+
+        // ── Responsive title block ────────────────────────────────
+        drawResponsiveTitleBlock(
+            w - cfg.titleBlockWidth - cfg.margin,
+            h - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            "CivilEG", "Warehouse Detail", "NTS", "WH-001", codeLabel,
+            DrawingColorDefaults.DimensionWhite, DrawingColorDefaults.ExtensionGray
+        )
     }
 }
 

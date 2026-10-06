@@ -130,6 +130,8 @@ fun ProfessionalStairDrawing(
     // ACI 318-19:  Chapter 7 — one-way slabs (stair waist slab)
     // SBC 304-2018: adopts ACI provisions with SBC live load factors
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -170,8 +172,8 @@ fun ProfessionalStairDrawing(
             else -> ch * 0.92f // tables near bottom
         }
         val rightZoneTop = when (viewMode) {
-            2 -> 28f  // section views start near top
-            0 -> 30f
+            2 -> cfg.margin * 0.5f  // section views start near top
+            0 -> cfg.margin * 0.5f
             else -> 0f
         }
         val rightZoneMid = when (viewMode) {
@@ -180,11 +182,22 @@ fun ProfessionalStairDrawing(
             else -> 0f
         }
 
+        // ── Combined section indicator ──
+        if (viewMode == 0) {
+            drawCombinedSectionLabel(
+                y = cfg.margin * 0.5f,
+                width = cw,
+                sections = listOf("Elevation", "Section", "Plan", "Reinforcement"),
+                cfg = cfg
+            )
+        }
+
         // ── Draw zones based on viewMode ──────────────────────────
         // 1. Main elevation view (left)
         if (viewMode == 0 || viewMode == 1) {
+            drawZoneLabel(cfg.margin, cfg.margin * 0.3f, "ELEVATION", cfg)
         drawElevationView(
-            zoneLeft = 60f, zoneTop = 28f,
+            zoneLeft = cfg.margin, zoneTop = cfg.margin * 0.5f,
             zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
             cw = cw, ch = ch,
             nRisers = nRisers, nTreads = nTreads,
@@ -201,9 +214,19 @@ fun ProfessionalStairDrawing(
         )
         } // end elevation view
 
+        if (viewMode == 0) {
+            drawSectionSeparator(
+                y = rightZoneTop - cfg.margin * 0.3f,
+                width = cw,
+                label = "SECTION & PLAN",
+                cfg = cfg
+            )
+        }
+
         // 2. Cross-section view A-A (right-top) + 3. Plan view (right-bottom)
         if (viewMode == 0 || viewMode == 2) {
-        val secZoneLeft = if (viewMode == 2) 60f else elevZoneRight + 10f
+            drawZoneLabel(cfg.margin, rightZoneTop, "CROSS SECTION", cfg)
+        val secZoneLeft = if (viewMode == 2) cfg.margin else elevZoneRight + 10f
         drawCrossSectionView(
             zoneLeft = secZoneLeft, zoneTop = rightZoneTop,
             zoneRight = cw - 16f, zoneBottom = rightZoneMid - 6f,
@@ -227,8 +250,18 @@ fun ProfessionalStairDrawing(
         )
         } // end section/plan views
 
+        if (viewMode == 0) {
+            drawSectionSeparator(
+                y = tableTop - cfg.margin * 0.3f,
+                width = cw,
+                label = "REINFORCEMENT",
+                cfg = cfg
+            )
+        }
+
         // 4. Reinforcement schedule table (bottom)
         if (viewMode == 0 || viewMode == 3) {
+            drawZoneLabel(cfg.margin, tableTop, "REINFORCEMENT", cfg)
         drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
@@ -246,6 +279,18 @@ fun ProfessionalStairDrawing(
 
         // 5. Title block (always visible)
         drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength, stairType)
+
+        // ── Responsive title block ──
+        drawResponsiveTitleBlock(
+            x = cw - cfg.titleBlockWidth - cfg.margin,
+            y = ch - cfg.titleBlockHeight - cfg.margin,
+            cfg = cfg,
+            projectName = "CivilEG",
+            drawingTitle = "Stair Detail",
+            scale = "NTS",
+            drawingNo = "1",
+            designCode = codeLabel
+        )
     }
 }
 

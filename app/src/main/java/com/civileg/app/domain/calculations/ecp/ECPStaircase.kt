@@ -108,21 +108,37 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add("Slope angle θ = ${String.format("%.1f", slopeAngle)}°")
 
         // ========== 2. سماكة البلاطة ==========
+        // ECP 203-2020 §6-2: Minimum waist slab thickness for stair
         val waistThickness = max(input.waistThickness, MIN_WAIST)
         val cover = COVER_INTERIOR
         val stirrupEstimate = 8.0
         val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
+        // Guard: effective depth must be positive for meaningful calculations
+        val dEffective = effectiveDepth.coerceAtLeast(30.0)
 
         safetyChecks.add(StairSafetyCheck(
             name = "Waist Thickness",
             value = waistThickness, limit = MIN_WAIST, unit = "mm",
             isSafe = waistThickness >= MIN_WAIST,
-            description = "Minimum waist thickness per ECP 203"
+            description = "Minimum waist thickness per ECP 203 §6-2"
+        ))
+
+        // ECP 203-2020 §6-2: Waist slab span/depth check
+        // For stair slabs: L/d ≤ 26 for continuous, 20 for simply supported
+        val waistSpanDepthRatio = (input.span * 1000) / dEffective
+        val waistAllowableRatio = if (input.stairType == StairType.DOG_LEG) 26.0 else 20.0
+        safetyChecks.add(StairSafetyCheck(
+            name = "Waist Span/Depth",
+            value = waistSpanDepthRatio, limit = waistAllowableRatio, unit = "",
+            isSafe = waistSpanDepthRatio <= waistAllowableRatio,
+            description = "ECP 203 §6-3: L/d ≤ ${"%.0f".format(waistAllowableRatio)} for waist slab"
         ))
 
         // ========== 3. الأحمال ==========
         // w_horiz = 1.4×dead/cos(θ) + 1.6×live (مُسقط أفقياً)
-        val horizontalLoad = GAMMA_G * input.deadLoad / cosTheta.coerceAtLeast(0.1) + GAMMA_Q * input.liveLoad
+        // ECP 203 §2-3-1: Load combination factors γg=1.4, γq=1.6
+        val cosThetaSafe = cosTheta.coerceAtLeast(0.1)  // Prevent division by near-zero cos(θ)
+        val horizontalLoad = GAMMA_G * input.deadLoad / cosThetaSafe + GAMMA_Q * input.liveLoad
         val factoredOnSlope = horizontalLoad * cosTheta  // kN/m² on slope
 
         codeNotes.add("Factored horizontal load = ${String.format("%.2f", horizontalLoad)} kN/m²")
@@ -144,10 +160,11 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 5. تصميم الانحناء (K-method) ==========
         val b = 1000.0
-        val d = effectiveDepth
+        val d = dEffective
         val Mu = adjustedMoment * 1e6
 
         val K = if (input.fcu > 0 && d > 0) Mu / (input.fcu * b * d * d) else 0.0
+        InputGuard.finite("K", K)
         val kBal = calculateKBal(input.fcu, input.fy)
 
         codeNotes.add("K = ${String.format("%.4f", K)}, K_bal = ${String.format("%.4f", kBal)}")
@@ -232,19 +249,22 @@ class ECPStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف ==========
+        // ECP 203-2020 §6-3: Span/depth ratio approach for stair slab deflection
         val basicRatio = 20.0
         val rhoPercent = (rho * 100).coerceAtLeast(0.15)
-        val modificationFactor = 0.55 + 0.45 / rhoPercent
+        // ECP 203-2020 §6-3-1: MF = 0.55 + 477/(fy×ρ%), capped at 2.5
+        val modificationFactor = (0.55 + 477.0 / (input.fy * rhoPercent)).coerceIn(1.0, 2.5)
         val allowableRatio = basicRatio * modificationFactor
-        val actualRatio = (span * 1000) / waistThickness
+        val actualRatio = (span * 1000) / dEffective
         val deflectionRatio = actualRatio / allowableRatio
 
         val allowableDeflection = (span * 1000) / 250.0
         val calculatedDeflection = if (deflectionRatio > 1.0) {
             allowableDeflection * deflectionRatio * 1.2
         } else {
-            allowableDeflection * 0.7
+            allowableDeflection * deflectionRatio * 0.7
         }
+        InputGuard.finite("calculatedDeflection", calculatedDeflection)
         val deflectionOk = deflectionRatio <= 1.0
 
         safetyChecks.add(StairSafetyCheck(
@@ -279,6 +299,9 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add("ECP 203-2020: Section 6-2 (Slab reinforcement rules)")
         codeNotes.add("ECP 203-2020: Section 6-3 (Deflection limits L/250)")
         codeNotes.add("ECP 201-2012: Staircase live load = 4.0 kN/m²")
+        if (waistSpanDepthRatio > waistAllowableRatio) {
+            codeNotes.add("WARNING: Waist slab L/d = ${"%.1f".format(waistSpanDepthRatio)} exceeds ${"%.0f".format(waistAllowableRatio)} — increase thickness")
+        }
 
         return StaircaseResult(
             isSafe = safetyChecks.all { it.isSafe },
@@ -321,6 +344,75 @@ class ECPStaircase : StaircaseDesign {
         val epsilonY = fy / (E_S * GAMMA_S)
         val aOverD = 0.9 * epsilonCu / (epsilonCu + epsilonY)
         return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
+    }
+
+    /**
+     * Gooseneck (حبة البط) detail calculation per ECP 203-2020 §4-2
+     * The gooseneck is the re-entrant corner at the junction of the waist slab
+     * and the landing slab where significant tension and stress concentration occurs.
+     *
+     * Key checks:
+     * 1. Minimum gooseneck radius ≥ 50mm to prevent stress concentration cracking
+     * 2. Additional reinforcement at the re-entrant corner (typically 50% extra)
+     * 3. Development length check for bars terminating at gooseneck
+     *
+     * @param riserMm riser height (mm)
+     * @param goingMm tread going (mm)
+     * @param waistThickness waist slab thickness (mm)
+     * @param fy steel yield strength (MPa)
+     * @param fcu concrete cube strength (MPa)
+     * @return GooseneckDetailResult with reinforcement and geometry
+     */
+    fun calculateGooseneckDetail(
+        riserMm: Double,
+        goingMm: Double,
+        waistThickness: Double,
+        fy: Double,
+        fcu: Double
+    ): GooseneckDetailResult {
+        InputGuard.positive("riserMm", riserMm)
+        InputGuard.positive("goingMm", goingMm)
+        InputGuard.positive("waistThickness", waistThickness)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fcu", fcu)
+
+        // ECP 203-2020 §4-2: Minimum radius at re-entrant corner
+        // The gooseneck radius should be at least 50mm to avoid cracking
+        val minGooseneckRadius = 50.0  // mm
+        val recommendedRadius = max(minGooseneckRadius, riserMm * 0.3)
+
+        // ECP 203-2020 §4-2: Additional reinforcement at gooseneck
+        // Diagonal tension at the re-entrant corner requires extra bars
+        // Minimum: 2Ø10 or equivalent at the corner, extending min Ld on each side
+        val fbd = 0.6 * sqrt(fcu)  // Bond strength per ECP 203 §5-2-2
+        val barDia = 10.0  // mm — typical gooseneck bar
+        val barArea = PI * barDia * barDia / 4.0
+        val fs = fy / GAMMA_S
+        val Ld = (fs * barDia / (4 * fbd.coerceAtLeast(0.1))).coerceAtLeast(100.0)
+        val LdRounded = ceil(Ld / 25.0) * 25.0  // Round to 25mm
+
+        // Number of additional gooseneck bars (typically 2-3)
+        // For steep stairs (riser > 170mm), use 3 bars
+        val numGooseneckBars = if (riserMm > 170.0) 3 else 2
+
+        // Angle of the gooseneck (half-angle at re-entrant corner)
+        val slopeAngleRad = atan2(riserMm, goingMm)
+        val gooseneckAngle = Math.toDegrees(slopeAngleRad)
+
+        // Extended length along waist slab (minimum 1/4 span from support)
+        val extensionMin = max(LdRounded, 300.0)  // mm — at least 300mm or Ld
+
+        return GooseneckDetailResult(
+            gooseneckRadius = recommendedRadius,
+            minRadius = minGooseneckRadius,
+            additionalBars = numGooseneckBars,
+            additionalBarDia = barDia,
+            additionalBarArea = numGooseneckBars * barArea,
+            developmentLength = LdRounded,
+            extensionLength = extensionMin,
+            gooseneckAngle = gooseneckAngle,
+            codeNote = "ECP 203 §4-2: ${numGooseneckBars}Ø${barDia.toInt()} at gooseneck, extend min ${extensionMin.toInt()}mm each side, r≥${minGooseneckRadius.toInt()}mm"
+        )
     }
 
     /**

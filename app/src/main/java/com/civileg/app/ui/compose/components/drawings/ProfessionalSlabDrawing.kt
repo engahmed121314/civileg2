@@ -72,6 +72,8 @@ fun ProfessionalSlabDrawing(
     // ACI 318-19:  z = 0.9d, min ρ = 0.0018 (grade 40) / 0.0020 (grade 60)
     // SBC 304-2018: adopts ACI provisions with SBC minimum steel ratios
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     // Obtain theme-aware palette (reacts to isSystemInDarkTheme)
     val palette = drawingColors()
@@ -123,7 +125,7 @@ fun ProfessionalSlabDrawing(
         }
         val sectionH = when (viewMode) {
             2 -> h * 0.90f
-            0 -> h * 0.22f
+            0 -> h * cfg.tableHeightFraction
             else -> h * 0.10f
         }
         val tableH = when (viewMode) {
@@ -131,9 +133,9 @@ fun ProfessionalSlabDrawing(
             0 -> h * 0.24f
             else -> h * 0.10f
         }
-        val margin = 28f
+        val margin = cfg.margin
         val planTop = h * 0.05f
-        val planLeft = margin + 50f
+        val planLeft = margin * 2f
         val planRight = w - margin
         val planBottom = planTop + planH
         val planW = planRight - planLeft
@@ -180,6 +182,19 @@ fun ProfessionalSlabDrawing(
         val statusLabel = if (isSafe) "✓ ${"SAFE"}" else "✗ ${"UNSAFE"}"
         val headerText = "${"SLAB DETAIL"} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%"
         dt(headerText, w / 2f, 24f, textColor, 11f, bold = true)
+
+        // ── Section separators & zone labels ───────────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(h * 0.51f, w, "PLAN / SECTION", cfg)
+            drawSectionSeparator(h * 0.77f, w, "SECTION / TABLE", cfg)
+            drawCombinedSectionLabel(h * 0.04f, w, listOf("Plan", "Section", "Table"), cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, 48f, "SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, 48f, "TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW
@@ -346,11 +361,11 @@ fun ProfessionalSlabDrawing(
             // Dimension lines — use shared DrawingUtils
             drawHorizontalDimension(
                 slabLeft, slabRight, slabTop - 16f,
-                "${(spanX * 1000).toInt()} mm", dimColor, 10f * density, offset = 0f
+                "${(spanX * 1000).toInt()} mm", dimColor, cfg.valueLabelTextSize, offset = 0f
             )
             drawVerticalDimension(
                 slabTop, slabBottom, slabLeft - 16f,
-                "${(spanY * 1000).toInt()} mm", dimColor, 10f * density, offset = 0f
+                "${(spanY * 1000).toInt()} mm", dimColor, cfg.valueLabelTextSize, offset = 0f
             )
             dt("PLAN", slabLeft + 22f, slabBottom + 18f, palette.labelGray, 10f, bold = true)
         }
@@ -620,10 +635,10 @@ fun ProfessionalSlabDrawing(
             val totalRows = rows.size + 1 /* header */ + 1 /* totals */
             val availH = tableH
             val headerRowH = 32f * density
-            val totalsRowH = 28f * density
+            val totalsRowH = 2f * cfg.valueLabelTextSize
             val dataRowH = ((availH - headerRowH - totalsRowH - 16f) / rows.size.toFloat())
                 .coerceAtLeast(22f * density)
-                .coerceAtMost(38f * density)
+                .coerceAtMost(3f * cfg.valueLabelTextSize)
 
             val colWidths = floatArrayOf(
                 tblWidth * 0.06f, tblWidth * 0.22f, tblWidth * 0.07f,
@@ -634,7 +649,7 @@ fun ProfessionalSlabDrawing(
 
             // ── Table Title bar ─────────────────────────────────────
             drawRect(color = palette.tableTitleBg, topLeft = Offset(tblLeft, rowY - 22f * density), size = Size(tblWidth, 22f * density))
-            dt("REINFORCEMENT SCHEDULE", tblLeft + tblWidth / 2f, rowY - 7f * density, Color.White, 11f, bold = true)
+            dt("REINFORCEMENT SCHEDULE", tblLeft + tblWidth / 2f, rowY - cfg.annotationTextSmall, Color.White, 11f, bold = true)
 
             // ── Header row ─────────────────────────────────────────
             drawRect(color = headerBg, topLeft = Offset(tblLeft, rowY), size = Size(tblWidth, headerRowH))
@@ -710,5 +725,14 @@ fun ProfessionalSlabDrawing(
                 drawLine(palette.tableColumnBorder, Offset(cx, tblTop), Offset(cx, rowY), strokeWidth = 0.5f)
             }
         }
+
+        // ── Responsive Title Block ───────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - margin * 0.3f,
+            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Slab Detail",
+            designCode = codeLabel
+        )
     }
 }

@@ -85,6 +85,8 @@ fun ProfessionalRetainingWallDrawing(
     // ACI 318-19:  Chapter 11 — cantilever retaining walls, factored earth pressure
     // SBC 304-2018: adopts ACI provisions with SBC load factors on earth loads
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier.fillMaxSize()
@@ -93,9 +95,9 @@ fun ProfessionalRetainingWallDrawing(
         val ch = size.height
 
         // ── Layout (adjusted per viewMode) ──
-        val mainLeft = 110f
-        val mainRight = cw - 110f
-        val mainTop = 60f
+        val mainLeft = cfg.margin * 2f
+        val mainRight = cw - cfg.margin * 2f
+        val mainTop = cfg.margin
         val mainBottom = when (viewMode) {
             1 -> ch * 0.90f  // Section only: fill most of canvas
             else -> ch * 0.45f
@@ -123,13 +125,24 @@ fun ProfessionalRetainingWallDrawing(
         val stemTopLeftX = mainLeft + (mainRight - mainLeft - drawBaseW) / 2f + drawToe - drawBotT / 2f + (drawBotT - drawTopT) / 2f
         val baseLeft = stemTopLeftX + drawTopT / 2f - drawToe
         val baseRight = baseLeft + drawBaseW
-        val stemTop = mainTop + 30f
+        val stemTop = mainTop + cfg.margin * 0.5f
         val baseTop = stemTop + drawH
         val baseBottom = baseTop + drawBaseT
+
+        // ── Combined section indicator ──
+        if (viewMode == 0) {
+            drawCombinedSectionLabel(
+                y = cfg.margin * 0.5f,
+                width = cw,
+                sections = listOf("Section", "Pressure", "Reinforcement"),
+                cfg = cfg
+            )
+        }
 
         // ── Draw layers ──
         // Zone 1: Wall Section (viewMode 0 or 1)
         if (viewMode == 0 || viewMode == 1) {
+            drawZoneLabel(mainLeft, mainTop - cfg.margin * 0.3f, "WALL SECTION", cfg)
             // 1. Backfill soil
             drawBackfillSoil(baseRight, stemTop, drawHeel, drawH, tanAngle, cw, baseTop)
 
@@ -150,15 +163,35 @@ fun ProfessionalRetainingWallDrawing(
             )
         }
 
+        if (viewMode == 0) {
+            drawSectionSeparator(
+                y = mainBottom + cfg.margin * 0.5f,
+                width = cw,
+                label = "PRESSURE",
+                cfg = cfg
+            )
+        }
+
         // Zone 2: Earth Pressure diagram (viewMode 0 or 2)
         if (viewMode == 0 || viewMode == 2) {
+            drawZoneLabel(cw * 0.55f, mainTop - cfg.margin * 0.3f, "EARTH PRESSURE", cfg)
             drawEarthPressureDiagram(
                 stemTopLeftX, stemTop, drawH, drawTopT, drawBotT, backfillAngle
             )
         }
 
+        if (viewMode == 0) {
+            drawSectionSeparator(
+                y = ch * 0.62f,
+                width = cw,
+                label = "REINFORCEMENT",
+                cfg = cfg
+            )
+        }
+
         // Zone 3: Reinforcement + Stability + Table (viewMode 0 or 3)
         if (viewMode == 0 || viewMode == 3) {
+            drawZoneLabel(mainLeft, ch * 0.62f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
             // 3. Reinforcement
             drawReinforcementDetail(
                 stemTopLeftX, stemTop, drawH, drawTopT, drawBotT,
@@ -183,6 +216,18 @@ fun ProfessionalRetainingWallDrawing(
                 baseRebarDia, baseRebarSpacing, wallHeight
             )
         }
+
+        // ── Responsive title block ──
+        drawResponsiveTitleBlock(
+            x = cw - cfg.titleBlockWidth - cfg.margin,
+            y = ch - cfg.titleBlockHeight - cfg.margin,
+            cfg = cfg,
+            projectName = "CivilEG",
+            drawingTitle = "Retaining Wall Detail",
+            scale = "NTS",
+            drawingNo = "1",
+            designCode = codeLabel
+        )
     }
 }
 

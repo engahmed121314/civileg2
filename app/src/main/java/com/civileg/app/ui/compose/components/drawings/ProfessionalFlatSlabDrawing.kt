@@ -65,6 +65,8 @@ fun ProfessionalFlatSlabDrawing(
     // ACI 318-19:  Chapter 13 — two-way slabs, direct design / equivalent frame
     // SBC 304-2018: adopts ACI Chapter 13 with SBC load factors
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
@@ -95,7 +97,7 @@ fun ProfessionalFlatSlabDrawing(
         drawRect(color = bgDark, topLeft = Offset.Zero, size = size)
 
         // ── Layout calculations ──────────────────────────────────
-        val margin = 40f * density
+        val margin = cfg.margin * density
         val titleH = 32f * density
         val legendH = 90f * density
         val drawAreaW = w - 2 * margin
@@ -127,6 +129,9 @@ fun ProfessionalFlatSlabDrawing(
         // Column strip widths in pixels (convert from mm to m then to px)
         val colStripXPx = (colStripWidthX / 1000.0 * scale).toFloat()
         val colStripYPx = (colStripWidthY / 1000.0 * scale).toFloat()
+
+        // ── Zone label ───────────────────────────────────────────
+        drawZoneLabel(margin, drawTop + 4f, "PLAN", cfg)
 
         // ── Grid lines ───────────────────────────────────────────
         for (i in 1 until 4) {
@@ -337,6 +342,15 @@ fun ProfessionalFlatSlabDrawing(
         drawTextAnnotated(
             "Scale: NTS  |  h = ${slabThickness.toInt()} mm",
             tbX + 6f, tbY + tbH * 0.75f, textColor, 10f
+        )
+
+        // ── Responsive Title Block ───────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - margin * 0.3f,
+            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Flat Slab Detail",
+            designCode = codeLabel
         )
     }
 }

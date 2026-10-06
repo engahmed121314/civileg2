@@ -58,6 +58,8 @@ fun ProfessionalSeismicDrawing(
 
     // ── Code-reference annotation ──────────────────────────────────────────
     val codeLabel = designCode.version
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -93,11 +95,11 @@ fun ProfessionalSeismicDrawing(
         val hatchColor = Color(0x44AAAAAA)
 
         // ── Layout zones (viewMode-aware) ────────────────────────
-        val margin = 30f
+        val margin = cfg.margin
         val elevH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.32f; else -> h * 0.10f }
         val specH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.18f; else -> h * 0.10f }
         val barChartH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.18f; else -> 0f }
-        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.25f; else -> h * 0.10f }
+        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
 
         val elevTop = h * 0.05f
         val elevBottom = elevTop + elevH
@@ -110,11 +112,18 @@ fun ProfessionalSeismicDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "SEISMIC ANALYSIS — $codeLabel",
-            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Combined section indicator ──────────────────────────────
+        drawCombinedSectionLabel(cfg.headerHeight, w, listOf("Elevation", "Spectrum", "Forces", "Table"), cfg, C.AccentCyan)
+
+        // ── Section separator & zone label: Elevation ───────────────
+        drawSectionSeparator(elevTop, w, "ELEVATION", cfg, C.ExtensionGray, headerBg)
+        drawZoneLabel(margin, elevTop + cfg.margin, "ELEV", cfg, forceArrowColor, headerBg)
 
         // ══════════════════════════════════════════════════════════
         //  BUILDING ELEVATION — Stick model with lateral forces
@@ -164,7 +173,7 @@ fun ProfessionalSeismicDrawing(
                     drawLine(forceArrowColor, Offset(arrowEndX, fy), Offset(arrowEndX - 4f, fy + 2.5f), strokeWidth = 1.5f)
 
                     // Force label
-                    drawTextAnnotated("F${i}=${fi.force.toInt()}", arrowEndX + 4f, fy + 3f, forceArrowColor, 7f * density)
+                    drawTextAnnotated("F${i}=${fi.force.toInt()}", arrowEndX + 4f, fy + 3f, forceArrowColor, cfg.annotationTextSmall)
                 }
             }
 
@@ -175,19 +184,23 @@ fun ProfessionalSeismicDrawing(
             drawLine(baseShearColor, Offset(vbStartX, bldBase), Offset(vbEndX, bldBase), strokeWidth = 2.5f)
             drawLine(baseShearColor, Offset(vbEndX, bldBase), Offset(vbEndX + 5f, bldBase - 4f), strokeWidth = 2.5f)
             drawLine(baseShearColor, Offset(vbEndX, bldBase), Offset(vbEndX + 5f, bldBase + 4f), strokeWidth = 2.5f)
-            drawTextAnnotated("Vb=${safeBaseShear.toInt()}", vbEndX - 5f, bldBase - 8f, baseShearColor, 9f * density, bold = true)
+            drawTextAnnotated("Vb=${safeBaseShear.toInt()}", vbEndX - 5f, bldBase - 8f, baseShearColor, cfg.dimTextSize, bold = true)
 
             // Height dimension
-            drawVerticalDimension(bldTopY, bldBase, bldCenterX - 40f, "H=${safeHeight.toInt()}m", dimColor, 8f * density, offset = -30f)
+            drawVerticalDimension(bldTopY, bldBase, bldCenterX - 40f, "H=${safeHeight.toInt()}m", dimColor, cfg.valueLabelTextSize, offset = -30f)
 
             // Floor labels
             for (i in 1..safeNumFloors) {
                 val fy = bldBase - i * floorStep
-                drawTextAnnotated("${i}F", bldCenterX - 30f, fy + 3f, dimColor, 7f * density, center = true)
+                drawTextAnnotated("${i}F", bldCenterX - 30f, fy + 3f, dimColor, cfg.annotationTextSmall, center = true)
             }
 
-            drawTextAnnotated("ELEVATION", elevLeft, bldBase + 18f, dimColor, 9f * density, bold = true)
+            drawTextAnnotated("ELEVATION", elevLeft, bldBase + 18f, dimColor, cfg.dimTextSize, bold = true)
         } // end elevation view
+
+        // ── Section separator & zone label: Spectrum ───────────────
+        drawSectionSeparator(specTop, w, "SPECTRUM", cfg, C.ExtensionGray, headerBg)
+        drawZoneLabel(margin, specTop + cfg.margin, "SPEC", cfg, spectrumColor, headerBg)
 
         // ══════════════════════════════════════════════════════════
         //  RESPONSE SPECTRUM — Sa vs T curve
@@ -197,7 +210,7 @@ fun ProfessionalSeismicDrawing(
             val specRight = w - margin
             val specW = specRight - specLeft
 
-            drawTextAnnotated("RESPONSE SPECTRUM", specLeft, specTop + 4f, dimColor, 9f * density, bold = true)
+            drawTextAnnotated("RESPONSE SPECTRUM", specLeft, specTop + 4f, dimColor, cfg.dimTextSize, bold = true)
 
             val plotLeft = specLeft + 40f
             val plotRight = specRight - 20f
@@ -209,8 +222,8 @@ fun ProfessionalSeismicDrawing(
             // Axes
             drawLine(dimColor, Offset(plotLeft, plotBottom), Offset(plotRight, plotBottom), strokeWidth = 1f)
             drawLine(dimColor, Offset(plotLeft, plotTop), Offset(plotLeft, plotBottom), strokeWidth = 1f)
-            drawTextAnnotated("T (s)", plotRight - 10f, plotBottom + 14f, dimColor, 8f * density)
-            drawTextAnnotated("Sa", plotLeft - 20f, plotTop + 4f, dimColor, 8f * density)
+            drawTextAnnotated("T (s)", plotRight - 10f, plotBottom + 14f, dimColor, cfg.valueLabelTextSize)
+            drawTextAnnotated("Sa", plotLeft - 20f, plotTop + 4f, dimColor, cfg.valueLabelTextSize)
 
             // Spectrum curve: Sa = SDS / (R/Ie) for T > Ts; plateau for T <= Ts
             val sds = zoneFactor * soilFactor * 2.5  // simplified
@@ -238,11 +251,11 @@ fun ProfessionalSeismicDrawing(
             val dpX = plotLeft + (designT / maxT) * plotW
             val dpY = plotBottom - (designSa / maxSa).coerceIn(0f, 1f) * plotH
             drawCircle(spectrumColor, radius = 4f, center = Offset(dpX, dpY))
-            drawTextAnnotated("Design", dpX + 8f, dpY + 3f, spectrumColor, 7f * density)
+            drawTextAnnotated("Design", dpX + 8f, dpY + 3f, spectrumColor, cfg.annotationTextSmall)
 
             // Cs value
-            drawTextAnnotated("Cs=${String.format("%.3f", csMax)}", plotRight - 60f, plotTop + 10f, spectrumColor, 8f * density)
-            drawTextAnnotated("Ts=${String.format("%.2f", ts)}s", plotLeft + plotW * (ts / maxT) + 4f, plotBottom + 14f, dimColor, 7f * density)
+            drawTextAnnotated("Cs=${String.format("%.3f", csMax)}", plotRight - 60f, plotTop + 10f, spectrumColor, cfg.valueLabelTextSize)
+            drawTextAnnotated("Ts=${String.format("%.2f", ts)}s", plotLeft + plotW * (ts / maxT) + 4f, plotBottom + 14f, dimColor, cfg.annotationTextSmall)
 
             // Grid lines
             for (gi in 1..4) {
@@ -252,9 +265,13 @@ fun ProfessionalSeismicDrawing(
             for (gi in 1..4) {
                 val gx = plotLeft + gi * plotW / 4f
                 drawLine(Color(0x22FFFFFF), Offset(gx, plotTop), Offset(gx, plotBottom), strokeWidth = 0.5f)
-                drawTextAnnotated("${gi * maxT / 4f}".take(3), gx, plotBottom + 14f, dimColor, 7f * density, center = true)
+                drawTextAnnotated("${gi * maxT / 4f}".take(3), gx, plotBottom + 14f, dimColor, cfg.annotationTextSmall, center = true)
             }
         } // end spectrum view
+
+        // ── Section separator & zone label: Forces ────────────────
+        drawSectionSeparator(barTop, w, "FORCES", cfg, C.ExtensionGray, headerBg)
+        drawZoneLabel(margin, barTop + cfg.margin, "F-DIST", cfg, barColor, headerBg)
 
         // ══════════════════════════════════════════════════════════
         //  FORCE DISTRIBUTION — Bar chart
@@ -265,7 +282,7 @@ fun ProfessionalSeismicDrawing(
                 val barRight = w - margin
                 val barW = barRight - barLeft
 
-                drawTextAnnotated("FORCE DISTRIBUTION", barLeft, barTop + 2f, dimColor, 8f * density, bold = true)
+                drawTextAnnotated("FORCE DISTRIBUTION", barLeft, barTop + 2f, dimColor, cfg.valueLabelTextSize, bold = true)
 
                 val chartLeft = barLeft + 30f
                 val chartRight = barRight - 20f
@@ -286,11 +303,15 @@ fun ProfessionalSeismicDrawing(
                     val barH = (ff.force / maxForce).toFloat() * chartH
                     drawRect(color = barColor, topLeft = Offset(bx, chartBottom - barH), size = Size(barWidthPx, barH))
                     drawRect(color = barColor.copy(alpha = 0.8f), topLeft = Offset(bx, chartBottom - barH), size = Size(barWidthPx, barH), style = Stroke(width = 1f))
-                    drawTextAnnotated("${ff.floorIndex}F", bx + barWidthPx / 2f, chartBottom + 12f, dimColor, 7f * density, center = true)
+                    drawTextAnnotated("${ff.floorIndex}F", bx + barWidthPx / 2f, chartBottom + 12f, dimColor, cfg.annotationTextSmall, center = true)
                     drawTextAnnotated("${ff.force.toInt()}", bx + barWidthPx / 2f, chartBottom - barH - 4f, textColor, 6f * density, center = true)
                 }
             }
         } // end bar chart
+
+        // ── Section separator & zone label: Table ──────────────────
+        drawSectionSeparator(tblTop, w, "RESULTS", cfg, C.ExtensionGray, headerBg)
+        drawZoneLabel(margin, tblTop + cfg.margin, "TABLE", cfg, C.DimensionWhite, headerBg)
 
         // ══════════════════════════════════════════════════════════
         //  RESULTS TABLE
@@ -300,7 +321,7 @@ fun ProfessionalSeismicDrawing(
             val tblWidth = w - 2 * margin
 
             val headers = listOf("Parameter", "Value", "Unit")
-            val colWidths = listOf(tblWidth * 0.40f, tblWidth * 0.35f, tblWidth * 0.25f)
+            val colWidths = listOf(tblWidth * 0.40f, tblWidth * cfg.planHeightFraction, tblWidth * cfg.tableHeightFraction)
             val rows = listOf(
                 listOf("Base Shear Vb", "${safeBaseShear.toInt()}", "kN"),
                 listOf("Total Weight W", "${safeWeight.toInt()}", "kN"),
@@ -317,13 +338,22 @@ fun ProfessionalSeismicDrawing(
                 colWidths = colWidths,
                 headers = headers,
                 rows = rows,
-                rowHeight = 20f,
-                headerHeight = 24f,
+                rowHeight = cfg.tableRowHeight,
+                headerHeight = cfg.tableHeaderHeight,
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = 9f * density
+                textSize = cfg.dimTextSize
             )
         } // end results table
+
+        // ── Responsive title block ────────────────────────────────
+        drawResponsiveTitleBlock(
+            w - cfg.titleBlockWidth - cfg.margin,
+            h - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            "CivilEG", "Seismic Detail", "1:100", "S-001", codeLabel,
+            C.DimensionWhite, C.ExtensionGray
+        )
     }
 }

@@ -84,6 +84,11 @@ fun ProfessionalSteelDrawing(
     resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
+    // ── Responsive config ──────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
+    // ── Code-reference annotation ──────────────────────────────────
+    val codeLabel = designCode
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -98,13 +103,13 @@ fun ProfessionalSteelDrawing(
         val isAngle = sectionType.contains("ANGLE", ignoreCase = true) || sectionType.contains("L-SECTION", ignoreCase = true)
 
         // ── Layout zones ──
-        val margin = 24f
+        val margin = cfg.margin
         val tableHeight = 110f
         val tableTop = ch - tableHeight - margin
 
         val showDiagrams = showBMD || showSFD
         val elevationAreaHeight = if (showDiagrams) ch * 0.32f else ch * 0.45f
-        val diagramHeight = if (showDiagrams) ch * 0.28f else 0f
+        val diagramHeight = if (showDiagrams) ch * cfg.sectionHeightFraction else 0f
 
         // Elevation view
         val elevLeft = margin + 40f
@@ -129,6 +134,13 @@ fun ProfessionalSteelDrawing(
         val connTop = sectTop
         val connBottom = sectBottom
 
+        // ── Combined section indicator ──────────────────────────
+        drawCombinedSectionLabel(margin + 20f, cw, listOf("Elevation", "Section", "Connection", "Table"), cfg, DrawingColorDefaults.AccentCyan)
+
+        // ── Section separator & zone label: Elevation ─────────────
+        drawSectionSeparator(elevTop, cw, "ELEVATION", cfg, ExtGray, TblHeaderBg)
+        drawZoneLabel(margin, elevTop + cfg.margin, "ELEV", cfg, BoltOrange, TblHeaderBg)
+
         when (viewMode) {
             0 -> { // ALL VIEW (Enhanced)
                 // 1. ELEVATION VIEW
@@ -152,6 +164,10 @@ fun ProfessionalSteelDrawing(
                     )
                 }
 
+                // ── Section separator: Section zone ───────────
+                drawSectionSeparator(sectTop, cw, "CROSS SECTION", cfg, ExtGray, TblHeaderBg)
+                drawZoneLabel(sectLeft, sectTop + cfg.margin, "X-SEC", cfg, SteelGray, TblHeaderBg)
+
                 // 2. CROSS-SECTION VIEW
                 drawCrossSectionView(
                     sectLeft, sectTop, sectRight, sectBottom,
@@ -159,6 +175,10 @@ fun ProfessionalSteelDrawing(
                     depth, flangeWidth, flangeThickness, webThickness, radius,
                     area, ix, sx, zx
                 )
+
+                // ── Section separator: Connection zone ────────
+                drawSectionSeparator(connTop, cw * 0.52f, "CONNECTION", cfg, ExtGray, TblHeaderBg)
+                drawZoneLabel(connLeft, connTop + cfg.margin, "CONN", cfg, WeldRed, TblHeaderBg)
 
                 // 3. CONNECTION DETAIL
                 drawConnectionDetail(
@@ -211,6 +231,15 @@ fun ProfessionalSteelDrawing(
                 drawConnectionDetail(margin + 100f, margin + 100f, cw - margin - 100f, ch - margin - 100f, isIBeam, isHSS, isChannel, isAngle, depth, flangeWidth, flangeThickness, webThickness, boltDia, boltCount, boltGauge, boltPitch, endPlateThickness, weldSize, connectionType, hasMomentConnection, hasStiffener, stiffenerCount, stiffenerThickness, stiffenerWidth, stiffenerHeight)
             }
         }
+
+        // ── Responsive title block ────────────────────────────────
+        drawResponsiveTitleBlock(
+            cw - cfg.titleBlockWidth - cfg.margin,
+            ch - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            "CivilEG", "Steel Detail", "NTS", "ST-001", codeLabel,
+            DimWhite, ExtGray
+        )
     }
 }
 

@@ -59,6 +59,8 @@ fun ProfessionalWaffleSlabDrawing(
 
     // ── Code-reference annotation ──────────────────────────────────────────
     val codeLabel = designCode.version
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier
@@ -101,9 +103,9 @@ fun ProfessionalWaffleSlabDrawing(
         val hatchColor = Color(0x55AAAAAA)
 
         // ── Layout zones (viewMode-aware) ────────────────────────
-        val margin = 30f
-        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.35f; else -> h * 0.10f }
-        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.28f; else -> h * 0.10f }
+        val margin = cfg.margin
+        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * cfg.planHeightFraction; else -> h * 0.10f }
+        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * cfg.sectionHeightFraction; else -> h * 0.10f }
         val headH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.12f; else -> 0f }
         val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.20f; else -> h * 0.10f }
 
@@ -118,17 +120,30 @@ fun ProfessionalWaffleSlabDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, 40f))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
         drawTextAnnotated(
             "WAFFLE SLAB DETAIL — $codeLabel",
-            w / 2f, 27f, textColor, 13f * density, center = true, bold = true
+            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
+
+        // ── Section separators & zone labels ───────────────────────
+        if (viewMode == 0) {
+            drawSectionSeparator(secTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+            drawSectionSeparator(tblTop - h * 0.01f, w, "SECTION / TABLE", cfg)
+            drawCombinedSectionLabel(h * 0.04f, w, listOf("Plan", "Section", "Table"), cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, tblTop + 4f, "TABLE", cfg)
+        }
 
         // ══════════════════════════════════════════════════════════
         //  PLAN VIEW — Waffle grid
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 1) {
-            val planLeft = margin + 50f
+            val planLeft = margin * 2f
             val planRight = w - margin
             val planW = planRight - planLeft
             val planDrawH = planBottom - planTop
@@ -218,17 +233,17 @@ fun ProfessionalWaffleSlabDrawing(
             )
 
             // Dimensions
-            drawHorizontalDimension(fLeft, fRight, fTop, "Lx=${lxMm.toInt()}", dimColor, 9f * density, offset = -14f)
-            drawVerticalDimension(fTop, fBottom, fLeft, "Ly=${lyMm.toInt()}", dimColor, 9f * density, offset = -14f)
+            drawHorizontalDimension(fLeft, fRight, fTop, "Lx=${lxMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
+            drawVerticalDimension(fTop, fBottom, fLeft, "Ly=${lyMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
 
             // Rib spacing label
             if (numRibsX > 1) {
                 val r1 = fLeft + drawLx / (numRibsX + 1f)
                 val r2 = fLeft + drawLx * 2f / (numRibsX + 1f)
-                drawHorizontalDimension(r1, r2, fBottom, "s=${safeRibSpacing.toInt()}", C.ExtensionGray, 8f * density, offset = 10f)
+                drawHorizontalDimension(r1, r2, fBottom, "s=${safeRibSpacing.toInt()}", C.ExtensionGray, cfg.valueLabelTextSize, offset = 10f)
             }
 
-            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             // Section cut line
             if (viewMode == 0) {
@@ -248,7 +263,7 @@ fun ProfessionalWaffleSlabDrawing(
             val secRight = w - margin
             val maxSecW = secRight - secLeft - 120f
 
-            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, 9f * density, bold = true)
+            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
             // Scale rib profile
             val ribSpacingPx = maxSecW * 0.35f
@@ -304,7 +319,7 @@ fun ProfessionalWaffleSlabDrawing(
                     }
                     drawTextAnnotated(
                         "\u2460", ribCenterX, tBottom + 10f,
-                        barBottomColor, 9f * density, center = true, bold = true
+                        barBottomColor, cfg.dimTextSize, center = true, bold = true
                     )
                 }
 
@@ -319,7 +334,7 @@ fun ProfessionalWaffleSlabDrawing(
             }
 
             // Void labels between ribs
-            drawTextAnnotated("VOID", tCenterX, ribTop + ribHPx / 2f, C.ExtensionGray, 8f * density, center = true)
+            drawTextAnnotated("VOID", tCenterX, ribTop + ribHPx / 2f, C.ExtensionGray, cfg.valueLabelTextSize, center = true)
 
             // Topping outline
             drawRect(
@@ -330,20 +345,20 @@ fun ProfessionalWaffleSlabDrawing(
             )
 
             // Dimensions
-            drawVerticalDimension(tTop, tBottom, tCenterX + ribSpacingPx * 1.5f, "h=${totalDepth.toInt()}", dimColor, 8f * density, offset = 16f)
-            drawVerticalDimension(tTop, ribTop, tCenterX + ribSpacingPx * 1.5f, "tf=${safeTopping.toInt()}", C.SafeGreen, 7f * density, offset = 34f)
+            drawVerticalDimension(tTop, tBottom, tCenterX + ribSpacingPx * 1.5f, "h=${totalDepth.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 16f)
+            drawVerticalDimension(tTop, ribTop, tCenterX + ribSpacingPx * 1.5f, "tf=${safeTopping.toInt()}", C.SafeGreen, cfg.annotationTextSmall, offset = 34f)
             drawHorizontalDimension(
                 tCenterX - ribWPx / 2f, tCenterX + ribWPx / 2f,
-                tBottom, "bw=${safeRibWidth.toInt()}", dimColor, 8f * density, offset = 10f
+                tBottom, "bw=${safeRibWidth.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 10f
             )
 
             // Top bar mark
-            drawTextAnnotated("\u2461", tCenterX + ribSpacingPx * 0.5f, tTop + toppingPx + 10f, barTopColor, 9f * density, center = true, bold = true)
+            drawTextAnnotated("\u2461", tCenterX + ribSpacingPx * 0.5f, tTop + toppingPx + 10f, barTopColor, cfg.dimTextSize, center = true, bold = true)
 
             // Cover dimension
             val coverPx = 5f
             drawLine(C.SafeGreen, Offset(tCenterX - ribSpacingPx * 1.5f + 10f, tBottom), Offset(tCenterX - ribSpacingPx * 1.5f + 10f, tBottom - coverPx), strokeWidth = 1f)
-            drawTextAnnotated("c=${cover.toInt()}", tCenterX - ribSpacingPx * 1.5f + 25f, tBottom - coverPx / 2f + 3f, C.SafeGreen, 7f * density)
+            drawTextAnnotated("c=${cover.toInt()}", tCenterX - ribSpacingPx * 1.5f + 25f, tBottom - coverPx / 2f + 3f, C.SafeGreen, cfg.annotationTextSmall)
         } // end section view
 
         // ══════════════════════════════════════════════════════════
@@ -355,7 +370,7 @@ fun ProfessionalWaffleSlabDrawing(
                 val hdRight = w - margin
                 val hdW = hdRight - hdLeft
 
-                drawTextAnnotated("SOLID HEAD DETAIL", hdLeft, headTop + 4f, C.ExtensionGray, 9f * density, bold = true)
+                drawTextAnnotated("SOLID HEAD DETAIL", hdLeft, headTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
                 val headSizePx = min(hdW, headH) * 0.6f
                 val colWPx = headSizePx * 0.3f
@@ -387,12 +402,12 @@ fun ProfessionalWaffleSlabDrawing(
                             placed++
                         }
                     }
-                    drawTextAnnotated("\u2462", headLeft + headSizePx + 14f, headTopY + headSizePx / 2f, barHeadColor, 10f * density, bold = true)
+                    drawTextAnnotated("\u2462", headLeft + headSizePx + 14f, headTopY + headSizePx / 2f, barHeadColor, cfg.valueLabelTextSize, bold = true)
                 }
 
                 // Dimensions
-                drawHorizontalDimension(headLeft, headLeft + headSizePx, headTopY, "SH=${safeSolidHead.toInt()}", dimColor, 8f * density, offset = -14f)
-                drawHorizontalDimension(colLeft, colLeft + colWPx, headTopY + headSizePx, "c=${safeColW.toInt()}", dimColor, 7f * density, offset = 10f)
+                drawHorizontalDimension(headLeft, headLeft + headSizePx, headTopY, "SH=${safeSolidHead.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
+                drawHorizontalDimension(colLeft, colLeft + colWPx, headTopY + headSizePx, "c=${safeColW.toInt()}", dimColor, cfg.annotationTextSmall, offset = 10f)
             }
         }
 
@@ -410,8 +425,8 @@ fun ProfessionalWaffleSlabDrawing(
 
             val headers = listOf("Mark", "Location", "Dia (mm)", "Count/rib", "Spacing (mm)", "Length (mm)")
             val colWidths = listOf(
-                tblWidth * 0.08f, tblWidth * 0.22f, tblWidth * 0.14f,
-                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * 0.22f
+                tblWidth * 0.08f, tblWidth * cfg.tableHeightFraction, tblWidth * 0.14f,
+                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * cfg.tableHeightFraction
             )
             val rows = listOf(
                 listOf("\u2460", "Rib bottom", ribBottomDia.toInt().toString(), ribBottomCount.toString(), ribSpacingMm.toInt().toString(), ribBarLen.toString()),
@@ -424,13 +439,22 @@ fun ProfessionalWaffleSlabDrawing(
                 colWidths = colWidths,
                 headers = headers,
                 rows = rows,
-                rowHeight = 22f,
-                headerHeight = 26f,
+                rowHeight = cfg.tableRowHeight,
+                headerHeight = cfg.tableHeaderHeight,
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = 9f * density
+                textSize = cfg.dimTextSize
             )
         } // end reinforcement table
+
+        // ── Responsive Title Block ───────────────────────────────
+        drawResponsiveTitleBlock(
+            x = w - cfg.titleBlockWidth - margin * 0.3f,
+            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Waffle Slab Detail",
+            designCode = codeLabel
+        )
     }
 }

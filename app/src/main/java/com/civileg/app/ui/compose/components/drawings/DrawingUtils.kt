@@ -17,6 +17,183 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 // ============================================================================
+// RESPONSIVE DRAWING DIMENSIONS CONFIG
+// ============================================================================
+
+/**
+ * Device-aware drawing dimension configuration.
+ * Provides scaled values for text sizes, margins, stroke widths, and layout zones
+ * based on screen size (phone vs tablet).
+ *
+ * Usage: `val cfg = drawingDimensionsConfig()` inside a @Composable,
+ * then pass `cfg.dimTextSize` instead of hardcoded `9f * density`.
+ */
+data class DrawingDimensionsConfig(
+    /** Screen width in pixels */
+    val screenWidthPx: Float,
+    /** Screen height in pixels */
+    val screenHeightPx: Float,
+    /** Screen density (for dp→px) */
+    val density: Float,
+    /** True if device is tablet (sw ≥ 600dp) */
+    val isTablet: Boolean,
+    /** True if device is large tablet (sw ≥ 720dp) */
+    val isLargeTablet: Boolean,
+
+    // ── Text sizes (in px, already scaled by density) ──
+    /** Dimension label text size (e.g. "L=1200mm") */
+    val dimTextSize: Float,
+    /** Small annotation text (e.g. bar marks, cover labels) */
+    val annotationTextSmall: Float,
+    /** Header/title text size */
+    val headerTextSize: Float,
+    /** Table cell text size */
+    val tableTextSize: Float,
+    /** Section label text size (e.g. "PLAN", "SECTION A-A") */
+    val sectionLabelTextSize: Float,
+    /** Force/value label text size */
+    val valueLabelTextSize: Float,
+
+    // ── Stroke widths ──
+    /** Default line stroke */
+    val strokeDefault: Float,
+    /** Bold outline stroke */
+    val strokeBold: Float,
+    /** Rebar line stroke */
+    val strokeRebar: Float,
+    /** Dimension line stroke */
+    val strokeDimension: Float,
+    /** Table border stroke */
+    val strokeTable: Float,
+
+    // ── Spacing & margins ──
+    /** Drawing margin from canvas edge */
+    val margin: Float,
+    /** Header height */
+    val headerHeight: Float,
+    /** Dimension extension line length */
+    val dimExtLen: Float,
+    /** Dimension arrow size */
+    val dimArrowSize: Float,
+    /** Dimension line offset from measured feature */
+    val dimOffset: Float,
+    /** Hatch pattern spacing */
+    val hatchSpacing: Float,
+    /** Table row height */
+    val tableRowHeight: Float,
+    /** Table header height */
+    val tableHeaderHeight: Float,
+    /** Section gap (vertical gap between drawing sections) */
+    val sectionGap: Float,
+    /** Rebar circle minimum radius */
+    val rebarMinRadius: Float,
+    /** Cover dimension offset px */
+    val coverDimOffset: Float,
+    /** Title block width */
+    val titleBlockWidth: Float,
+    /** Title block height */
+    val titleBlockHeight: Float,
+
+    // ── Layout zone proportions ──
+    /** Plan view height fraction in "All" viewMode */
+    val planHeightFraction: Float,
+    /** Section view height fraction in "All" viewMode */
+    val sectionHeightFraction: Float,
+    /** Table height fraction in "All" viewMode */
+    val tableHeightFraction: Float,
+    /** Drawing area height in dp */
+    val drawingAreaHeightDp: Int,
+    /** Interactive drawing screen height in dp */
+    val interactiveScreenHeightDp: Int,
+
+    // ── Scale helpers ──
+    /** Multiplier for phone (1.0) or tablet (1.3-1.6) to enlarge features */
+    val deviceScale: Float
+) {
+    companion object {
+        /**
+         * Create config from screen metrics.
+         * @param widthPx canvas/screen width in pixels
+         * @param heightPx canvas/screen height in pixels
+         * @param density screen density
+         * @param screenWidthDp shortest width in dp (used for tablet detection)
+         */
+        fun fromMetrics(
+            widthPx: Float, heightPx: Float,
+            density: Float, screenWidthDp: Float
+        ): DrawingDimensionsConfig {
+            val isTablet = screenWidthDp >= 600f
+            val isLargeTablet = screenWidthDp >= 720f
+            val deviceScale = when {
+                isLargeTablet -> 1.6f
+                isTablet -> 1.3f
+                else -> 1.0f
+            }
+            val sp = density // shortcut
+
+            return DrawingDimensionsConfig(
+                screenWidthPx = widthPx,
+                screenHeightPx = heightPx,
+                density = density,
+                isTablet = isTablet,
+                isLargeTablet = isLargeTablet,
+                // Text sizes
+                dimTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
+                annotationTextSmall = (if (isLargeTablet) 9f else if (isTablet) 8f else 7f) * sp,
+                headerTextSize = (if (isLargeTablet) 15f else if (isTablet) 14f else 13f) * sp,
+                tableTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
+                sectionLabelTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
+                valueLabelTextSize = (if (isLargeTablet) 10f else if (isTablet) 9f else 8f) * sp,
+                // Stroke widths
+                strokeDefault = if (isTablet) 1.5f else 1f,
+                strokeBold = if (isTablet) 3.5f else 2.5f,
+                strokeRebar = if (isTablet) 2.2f else 1.8f,
+                strokeDimension = if (isTablet) 1.8f else 1.5f,
+                strokeTable = if (isTablet) 2f else 1.5f,
+                // Spacing
+                margin = if (isLargeTablet) 40f else if (isTablet) 35f else 30f,
+                headerHeight = if (isTablet) 48f else 40f,
+                dimExtLen = if (isTablet) 10f else 8f,
+                dimArrowSize = if (isTablet) 5f else 4f,
+                dimOffset = if (isTablet) 24f else 20f,
+                hatchSpacing = if (isTablet) 14f else 12f,
+                tableRowHeight = if (isTablet) 26f else 22f,
+                tableHeaderHeight = if (isTablet) 30f else 26f,
+                sectionGap = if (isTablet) heightPx/2f * 0.025f else heightPx/2f * 0.02f,
+                rebarMinRadius = if (isTablet) 4f else 3f,
+                coverDimOffset = if (isTablet) 20f else 14f,
+                titleBlockWidth = if (isTablet) 200f else 160f,
+                titleBlockHeight = if (isTablet) 52f else 44f,
+                // Layout fractions
+                planHeightFraction = 0.35f,
+                sectionHeightFraction = 0.28f,
+                tableHeightFraction = 0.22f,
+                drawingAreaHeightDp = if (isLargeTablet) 800 else if (isTablet) 700 else 600,
+                interactiveScreenHeightDp = if (isLargeTablet) 850 else if (isTablet) 750 else 620,
+                deviceScale = deviceScale
+            )
+        }
+
+        /** Default phone config (fallback when metrics unavailable) */
+        val Default = fromMetrics(1080f, 1920f, 2.75f, 360f)
+    }
+}
+
+/**
+ * Composable that provides a [DrawingDimensionsConfig] based on the current
+ * screen configuration. Must be called from a @Composable context.
+ */
+@Composable
+fun drawingDimensionsConfig(): DrawingDimensionsConfig {
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val screenWidthDp = configuration.smallestScreenWidthDp.toFloat()
+    val widthPx = configuration.screenWidthDp.toFloat() * density
+    val heightPx = configuration.screenHeightDp.toFloat() * density
+    return DrawingDimensionsConfig.fromMetrics(widthPx, heightPx, density, screenWidthDp)
+}
+
+// ============================================================================
 // SHARED COLOR PALETTE (defaults — not theme-aware)
 // ============================================================================
 
@@ -193,24 +370,27 @@ fun drawingColors(): DrawingColors =
 /**
  * Draw a horizontal dimension line with extension lines and centered text.
  * Extension lines extend 8px above/below, arrows at both ends, text centered.
+ * @param cfg Optional responsive config — when provided, uses device-aware extLen/arrowSize/stroke.
  */
 fun DrawScope.drawHorizontalDimension(
     x1: Float, x2: Float, y: Float,
     text: String,
     color: Color = DrawingColorDefaults.DimensionWhite,
     textSize: Float = 22f,
-    offset: Float = 20f  // how far below the measured points the dimension line sits
+    offset: Float = 20f,  // how far below the measured points the dimension line sits
+    cfg: DrawingDimensionsConfig? = null
 ) {
     val dimY = y + offset
-    val extLen = 8f
-    val arrowSize = 4f
+    val extLen = cfg?.dimExtLen ?: 8f
+    val arrowSize = cfg?.dimArrowSize ?: 4f
+    val stroke = cfg?.strokeDimension ?: 1.5f
 
     // Extension lines
-    drawLine(color, Offset(x1, y + 2f), Offset(x1, dimY + extLen), 1f)
-    drawLine(color, Offset(x2, y + 2f), Offset(x2, dimY + extLen), 1f)
+    drawLine(color, Offset(x1, y + 2f), Offset(x1, dimY + extLen), cfg?.strokeDefault?.coerceAtLeast(0.5f) ?: 1f)
+    drawLine(color, Offset(x2, y + 2f), Offset(x2, dimY + extLen), cfg?.strokeDefault?.coerceAtLeast(0.5f) ?: 1f)
 
     // Dimension line
-    drawLine(color, Offset(x1 + arrowSize, dimY), Offset(x2 - arrowSize, dimY), 1.5f)
+    drawLine(color, Offset(x1 + arrowSize, dimY), Offset(x2 - arrowSize, dimY), stroke)
 
     // Arrows (filled triangles)
     // Left arrow pointing left
@@ -241,24 +421,27 @@ fun DrawScope.drawHorizontalDimension(
 
 /**
  * Draw a vertical dimension line with extension lines and centered text.
+ * @param cfg Optional responsive config — when provided, uses device-aware extLen/arrowSize/stroke.
  */
 fun DrawScope.drawVerticalDimension(
     y1: Float, y2: Float, x: Float,
     text: String,
     color: Color = DrawingColorDefaults.DimensionWhite,
     textSize: Float = 22f,
-    offset: Float = 20f
+    offset: Float = 20f,
+    cfg: DrawingDimensionsConfig? = null
 ) {
     val dimX = x + offset
-    val extLen = 8f
-    val arrowSize = 4f
+    val extLen = cfg?.dimExtLen ?: 8f
+    val arrowSize = cfg?.dimArrowSize ?: 4f
+    val stroke = cfg?.strokeDimension ?: 1.5f
 
     // Extension lines
-    drawLine(color, Offset(x + 2f, y1), Offset(dimX + extLen, y1), 1f)
-    drawLine(color, Offset(x + 2f, y2), Offset(dimX + extLen, y2), 1f)
+    drawLine(color, Offset(x + 2f, y1), Offset(dimX + extLen, y1), cfg?.strokeDefault?.coerceAtLeast(0.5f) ?: 1f)
+    drawLine(color, Offset(x + 2f, y2), Offset(dimX + extLen, y2), cfg?.strokeDefault?.coerceAtLeast(0.5f) ?: 1f)
 
     // Dimension line
-    drawLine(color, Offset(dimX, y1 + arrowSize), Offset(dimX, y2 - arrowSize), 1.5f)
+    drawLine(color, Offset(dimX, y1 + arrowSize), Offset(dimX, y2 - arrowSize), stroke)
 
     // Top arrow pointing up
     drawPath(
@@ -807,4 +990,389 @@ fun DrawScope.drawNorthArrow(
     )
     drawLine(color, Offset(x, y - 4f), Offset(x, y + size - 8f), 1.5f)
     drawTextAnnotated("N", x, y - size - 4f, color, 16f, center = true, bold = true)
+}
+
+// ============================================================================
+// PROFESSIONAL SECTION & ZONE UTILITIES (Responsive)
+// ============================================================================
+
+/**
+ * Draw a horizontal section separator with centered label.
+ * Used to visually divide drawing zones (Elevation / Section / Table / Plan).
+ *
+ * @param y Y position of the separator line
+ * @param width Total width of the separator
+ * @param label Section label text (e.g. "SECTION A-A", "PLAN VIEW", "TABLE")
+ * @param cfg Responsive config for text size and stroke
+ * @param color Line and text color
+ */
+fun DrawScope.drawSectionSeparator(
+    y: Float,
+    width: Float,
+    label: String,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.ExtensionGray,
+    labelBgColor: Color = Color(0xFF1A1A2E)
+) {
+    val labelSize = cfg.sectionLabelTextSize
+    val strokeW = cfg.strokeDefault
+
+    // Full-width thin line
+    drawLine(
+        color = color,
+        start = Offset(0f, y),
+        end = Offset(width, y),
+        strokeWidth = strokeW,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)
+    )
+
+    // Label centered with background pill
+    if (label.isNotBlank()) {
+        val centerX = width / 2f
+        // Estimate text width (rough: 0.6 * textSize per char)
+        val textWidth = label.length * labelSize * 0.55f
+        val pillW = textWidth + cfg.margin * 0.8f
+        val pillH = labelSize * 1.6f
+
+        // Pill background
+        drawRoundRect(
+            color = labelBgColor,
+            topLeft = Offset(centerX - pillW / 2f, y - pillH / 2f),
+            size = Size(pillW, pillH),
+            cornerRadius = CornerRadius(pillH * 0.3f)
+        )
+        // Label text
+        drawTextAnnotated(
+            label, centerX, y + labelSize * 0.35f,
+            color, labelSize, center = true, bold = true
+        )
+    }
+}
+
+/**
+ * Draw a zone/section label badge in the top-left corner of a drawing zone.
+ * Used to clearly identify each section for phone/tablet users.
+ *
+ * @param x, y Top-left corner of the zone
+ * @param label Zone label (e.g. "ELEVATION", "PLAN", "CROSS SECTION")
+ * @param cfg Responsive config
+ */
+fun DrawScope.drawZoneLabel(
+    x: Float, y: Float,
+    label: String,
+    cfg: DrawingDimensionsConfig,
+    accentColor: Color = DrawingColorDefaults.AccentCyan,
+    bgColor: Color = Color(0xCC1A1A2E)
+) {
+    val textSize = cfg.annotationTextSmall
+    val padding = cfg.margin * 0.2f
+    val textWidth = label.length * textSize * 0.55f
+    val badgeW = textWidth + padding * 2f
+    val badgeH = textSize * 1.5f + padding
+
+    // Badge background
+    drawRoundRect(
+        color = bgColor,
+        topLeft = Offset(x, y),
+        size = Size(badgeW, badgeH),
+        cornerRadius = CornerRadius(badgeH * 0.2f)
+    )
+    // Accent left stripe
+    drawRect(
+        color = accentColor,
+        topLeft = Offset(x, y),
+        size = Size(2.5f * cfg.strokeDefault, badgeH)
+    )
+    // Label text
+    drawTextAnnotated(
+        label, x + padding + 2.5f * cfg.strokeDefault, y + badgeH * 0.72f,
+        accentColor, textSize, bold = true
+    )
+}
+
+/**
+ * Draw a scale bar indicating drawing scale.
+ * Essential for phone/tablet users to understand proportions.
+ *
+ * @param x, y Position of the scale bar
+ * @param scale Drawing scale factor (e.g. 0.01 means 1px = 100mm)
+ * @param realLengthMm Real length represented by the bar in mm
+ * @param cfg Responsive config
+ */
+fun DrawScope.drawScaleBar(
+    x: Float, y: Float,
+    scale: Float,
+    realLengthMm: Float = 1000f, // default: 1m
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.DimensionWhite
+) {
+    val barLengthPx = realLengthMm * scale
+    val textSize = cfg.annotationTextSmall
+    val tickH = cfg.dimArrowSize * 1.5f
+    val stroke = cfg.strokeDefault
+
+    // Main bar line
+    drawLine(color, Offset(x, y), Offset(x + barLengthPx, y), stroke)
+
+    // Left tick
+    drawLine(color, Offset(x, y - tickH), Offset(x, y + tickH), stroke)
+    // Right tick
+    drawLine(color, Offset(x + barLengthPx, y - tickH), Offset(x + barLengthPx, y + tickH), stroke)
+    // Mid tick
+    drawLine(color, Offset(x + barLengthPx / 2f, y - tickH * 0.6f), Offset(x + barLengthPx / 2f, y + tickH * 0.6f), stroke * 0.7f)
+
+    // Fill left half with alternating pattern
+    val segW = barLengthPx / 4f
+    for (i in 0 until 4) {
+        if (i % 2 == 0) {
+            drawRect(
+                color = color.copy(alpha = 0.35f),
+                topLeft = Offset(x + i * segW, y - tickH * 0.4f),
+                size = Size(segW, tickH * 0.8f)
+            )
+        }
+    }
+
+    // Scale text
+    val label = if (realLengthMm >= 1000f) {
+        "${(realLengthMm / 1000f).roundToInt()}m"
+    } else {
+        "${realLengthMm.roundToInt()}mm"
+    }
+    drawTextAnnotated(label, x + barLengthPx / 2f, y + tickH + textSize, color, textSize, center = true)
+
+    // "SCALE" label above
+    drawTextAnnotated("SCALE", x + barLengthPx / 2f, y - tickH - textSize * 0.3f, color.copy(alpha = 0.6f), textSize * 0.7f, center = true)
+}
+
+private fun Float.roundToInt(): Int = kotlin.math.roundToInt(this)
+
+/**
+ * Draw a combined/merged section indicator.
+ * When multiple sections are shown together, this marks the boundary
+ * and labels which sections are combined in this view.
+ *
+ * @param y Y position of the separator
+ * @param width Total width
+ * @param sections List of section names being combined (e.g. listOf("Elevation", "Section"))
+ * @param cfg Responsive config
+ */
+fun DrawScope.drawCombinedSectionLabel(
+    y: Float,
+    width: Float,
+    sections: List<String>,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.AccentCyan
+) {
+    if (sections.size < 2) return
+
+    val textSize = cfg.annotationTextSmall
+    val combinedLabel = sections.joinToString(" + ")
+    val fullLabel = "[$combinedLabel]"
+
+    // Bracket lines
+    val bracketH = textSize * 0.6f
+    val bracketW = width * 0.12f
+    val centerX = width / 2f
+
+    // Left bracket
+    drawLine(color, Offset(centerX - bracketW, y - bracketH), Offset(centerX - bracketW, y + bracketH), cfg.strokeDefault)
+    drawLine(color, Offset(centerX - bracketW, y - bracketH), Offset(centerX - bracketW + 4f, y - bracketH), cfg.strokeDefault)
+    drawLine(color, Offset(centerX - bracketW, y + bracketH), Offset(centerX - bracketW + 4f, y + bracketH), cfg.strokeDefault)
+
+    // Right bracket
+    drawLine(color, Offset(centerX + bracketW, y - bracketH), Offset(centerX + bracketW, y + bracketH), cfg.strokeDefault)
+    drawLine(color, Offset(centerX + bracketW, y - bracketH), Offset(centerX + bracketW - 4f, y - bracketH), cfg.strokeDefault)
+    drawLine(color, Offset(centerX + bracketW, y + bracketH), Offset(centerX + bracketW - 4f, y + bracketH), cfg.strokeDefault)
+
+    // Combined label
+    drawTextAnnotated(fullLabel, centerX, y + textSize * 0.35f, color, textSize, center = true, bold = true)
+}
+
+/**
+ * Draw responsive rebar circle using DrawingDimensionsConfig for minimum radius.
+ */
+fun DrawScope.drawResponsiveRebarCircle(
+    x: Float, y: Float, diameter: Float, scale: Float = 1f,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.RebarBlue,
+    label: String? = null,
+    labelColor: Color = DrawingColorDefaults.DimensionWhite
+) {
+    val r = (diameter / 2f) * scale
+    val actualR = maxOf(r, cfg.rebarMinRadius)
+
+    drawCircle(
+        color = color,
+        radius = actualR,
+        center = Offset(x, y)
+    )
+    // Inner dot
+    drawCircle(
+        color = color.copy(alpha = 0.5f),
+        radius = actualR * 0.35f,
+        center = Offset(x, y)
+    )
+
+    if (label != null) {
+        drawTextAnnotated(label, x + actualR + 3f, y - cfg.annotationTextSmall / 3f, labelColor, cfg.annotationTextSmall)
+    }
+}
+
+/**
+ * Draw responsive reinforcement table using DrawingDimensionsConfig.
+ * Ensures table is readable on both phone and tablet.
+ */
+fun DrawScope.drawResponsiveReinforcementTable(
+    x: Float, y: Float,
+    colWidths: List<Float>,
+    headers: List<String>,
+    rows: List<List<String>>,
+    cfg: DrawingDimensionsConfig,
+    headerBg: Color = DrawingColorDefaults.TableHeaderBg,
+    altRowBg: Color = DrawingColorDefaults.TableRowAlt,
+    textColor: Color = DrawingColorDefaults.DimensionWhite
+) {
+    val rowHeight = cfg.tableRowHeight
+    val headerHeight = cfg.tableHeaderHeight
+    val textSize = cfg.tableTextSize
+    val totalW = colWidths.sum()
+    val totalH = headerHeight + rows.size * rowHeight
+
+    // Background
+    drawRect(Color(0x22FFFFFF), Offset(x, y), Size(totalW, totalH))
+
+    // Header background
+    drawRect(headerBg, Offset(x, y), Size(totalW, headerHeight))
+
+    // Header text and dividers
+    var cx = x
+    headers.forEachIndexed { i, header ->
+        if (i > 0) {
+            drawLine(DrawingColorDefaults.ExtensionGray, Offset(cx, y), Offset(cx, y + totalH), cfg.strokeTable * 0.5f)
+        }
+        drawTextAnnotated(
+            header, cx + colWidths[i] / 2f, y + headerHeight / 2f - textSize / 3f,
+            textColor, textSize, center = true, bold = true
+        )
+        cx += colWidths[i]
+    }
+
+    // Rows
+    rows.forEachIndexed { rowIdx, row ->
+        val ry = y + headerHeight + rowIdx * rowHeight
+        // Alternating row background
+        if (rowIdx % 2 == 1) {
+            drawRect(altRowBg, Offset(x, ry), Size(totalW, rowHeight))
+        }
+        // Row text
+        cx = x
+        row.forEachIndexed { colIdx, cell ->
+            drawTextAnnotated(
+                cell, cx + colWidths[colIdx] / 2f, ry + rowHeight / 2f - textSize / 3f,
+                textColor, textSize, center = true
+            )
+            cx += colWidths[colIdx]
+        }
+        // Bottom divider
+        drawLine(
+            DrawingColorDefaults.ExtensionGray, Offset(x, ry + rowHeight),
+            Offset(x + totalW, ry + rowHeight), cfg.strokeTable * 0.3f
+        )
+    }
+
+    // Border
+    drawRect(
+        Color(0x66FFFFFF), Offset(x, y), Size(totalW, totalH),
+        style = Stroke(cfg.strokeTable)
+    )
+}
+
+/**
+ * Draw a responsive cover dimension annotation.
+ * Shows concrete cover distance with proper offset for phone/tablet.
+ */
+fun DrawScope.drawCoverDimension(
+    x: Float, y1: Float, y2: Float,
+    coverValue: Double,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.SafeGreen
+) {
+    val offset = cfg.coverDimOffset
+    val textSize = cfg.annotationTextSmall
+    val coverText = "c=${coverValue.roundToInt()}mm"
+
+    // Cover bracket
+    drawLine(color, Offset(x, y1), Offset(x + offset, y1), cfg.strokeDefault)
+    drawLine(color, Offset(x + offset, y1), Offset(x + offset, y2), cfg.strokeDefault)
+    drawLine(color, Offset(x, y2), Offset(x + offset, y2), cfg.strokeDefault)
+
+    // Cover text
+    val midY = (y1 + y2) / 2f
+    drawTextAnnotated(coverText, x + offset + 3f, midY + textSize / 3f, color, textSize)
+}
+
+/**
+ * Draw a grid overlay for drawing alignment reference.
+ * Very light grid that helps users understand proportions on different devices.
+ */
+fun DrawScope.drawAlignmentGrid(
+    w: Float, h: Float,
+    cfg: DrawingDimensionsConfig,
+    gridSpacing: Float = 50f,
+    color: Color = DrawingColorDefaults.GridLine
+) {
+    val spacing = gridSpacing * cfg.deviceScale
+    var x = spacing
+    while (x < w) {
+        drawLine(color, Offset(x, 0f), Offset(x, h), cfg.strokeDefault * 0.3f)
+        x += spacing
+    }
+    var y = spacing
+    while (y < h) {
+        drawLine(color, Offset(0f, y), Offset(w, y), cfg.strokeDefault * 0.3f)
+        y += spacing
+    }
+}
+
+/**
+ * Draw a responsive title block with device-aware sizing.
+ * Uses DrawingDimensionsConfig for width/height/text sizing.
+ */
+fun DrawScope.drawResponsiveTitleBlock(
+    x: Float, y: Float,
+    cfg: DrawingDimensionsConfig,
+    projectName: String = "CivilEG",
+    drawingTitle: String = "Structural Drawing",
+    scale: String = "NTS",
+    drawingNo: String = "1",
+    designCode: String = "",
+    color: Color = DrawingColorDefaults.DimensionWhite,
+    borderColor: Color = DrawingColorDefaults.ExtensionGray
+) {
+    val width = cfg.titleBlockWidth
+    val height = cfg.titleBlockHeight
+    val smallText = cfg.annotationTextSmall
+    val medText = cfg.annotationTextSmall * 1.15f
+
+    // Background
+    drawRect(Color(0x11FFFFFF), Offset(x, y), Size(width, height))
+    // Border
+    drawRect(borderColor, Offset(x, y), Size(width, height), style = Stroke(cfg.strokeTable))
+
+    // Divider lines
+    drawLine(borderColor, Offset(x, y + height * 0.33f), Offset(x + width, y + height * 0.33f), cfg.strokeDefault)
+    drawLine(borderColor, Offset(x, y + height * 0.66f), Offset(x + width, y + height * 0.66f), cfg.strokeDefault)
+    drawLine(borderColor, Offset(x + width * 0.35f, y), Offset(x + width * 0.35f, y + height), cfg.strokeDefault)
+
+    // Project name (top-left)
+    drawTextAnnotated("Project:", x + 4f, y + height * 0.22f, color, smallText)
+    drawTextAnnotated(projectName, x + width * 0.35f + 4f, y + height * 0.22f, color, medText, bold = true)
+    // Drawing title (middle)
+    drawTextAnnotated("Title:", x + 4f, y + height * 0.55f, color, smallText)
+    drawTextAnnotated(drawingTitle, x + width * 0.35f + 4f, y + height * 0.55f, color, medText, bold = true)
+    // Scale, drawing number, code (bottom)
+    drawTextAnnotated("Scale: $scale", x + 4f, y + height * 0.88f, color, smallText)
+    val codeStr = if (designCode.isNotBlank()) " | $designCode" else ""
+    drawTextAnnotated("No:$drawingNo$codeStr", x + width * 0.35f + 4f, y + height * 0.88f, color, smallText)
 }

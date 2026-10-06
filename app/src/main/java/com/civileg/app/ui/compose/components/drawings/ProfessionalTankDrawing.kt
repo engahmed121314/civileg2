@@ -86,6 +86,8 @@ fun ProfessionalTankDrawing(
     // ACI 318-19:  Chapter 5 — liquid-containing structures, working stress
     // SBC 304-2018: adopts ACI provisions with SBC environmental factors
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier.fillMaxSize()
@@ -98,14 +100,14 @@ fun ProfessionalTankDrawing(
         val isUnderground = foundationDepth > 0
 
         // ── Layout zones (adjusted per viewMode) ──
-        val margin = 30f
-        val mainTop = 50f
+        val margin = cfg.margin
+        val mainTop = margin
         val mainBottom = when (viewMode) {
             1 -> ch * 0.92f  // Elevation only: fill most of canvas
             else -> ch * 0.58f
         }
-        val mainLeft = 60f
-        val mainRight = cw - 60f
+        val mainLeft = margin
+        val mainRight = cw - margin
 
         // ── Scaling ──
         val lengthM = if (length > 50) length / 1000.0 else length
@@ -135,9 +137,20 @@ fun ProfessionalTankDrawing(
         val tankBottom = tankTop + drawH
         val baseBottom = tankBottom + drawBT
 
+        // ── Combined section indicator ──
+        if (viewMode == 0) {
+            drawCombinedSectionLabel(
+                y = cfg.margin * 0.5f,
+                width = cw,
+                sections = listOf("Elevation", "Pressure", "Reinforcement"),
+                cfg = cfg
+            )
+        }
+
         // ── Draw layers ──
         // Zone 1: Elevation / Perspective (viewMode 0 or 1)
         if (viewMode == 0 || viewMode == 1) {
+            drawZoneLabel(mainLeft, mainTop - cfg.margin * 0.3f, "ELEVATION", cfg)
             if (isUnderground) {
                 drawSoilBelowBase(cw, ch, tankLeft, baseBottom, drawWT, tankRight, drawFD, tankTop)
             }
@@ -181,14 +194,34 @@ fun ProfessionalTankDrawing(
             drawPlanView(cw, tankType, length, width, isCircular)
         }
 
+        if (viewMode == 0) {
+            drawSectionSeparator(
+                y = mainBottom + cfg.margin * 0.5f,
+                width = cw,
+                label = "PRESSURE",
+                cfg = cfg
+            )
+        }
+
         // Zone 2: Water Pressure diagram (viewMode 0 or 2)
         if (viewMode == 0 || viewMode == 2) {
-            val pressureTop = if (viewMode == 2) 50f else tankTop
+            drawZoneLabel(mainLeft, mainBottom + cfg.margin * 0.3f, "WATER PRESSURE", cfg)
+            val pressureTop = if (viewMode == 2) margin else tankTop
             drawWaterPressureDiagram(cw, tankLeft, pressureTop, drawL, drawH, drawWL, waterLevel, isElevated)
+        }
+
+        if (viewMode == 0) {
+            drawSectionSeparator(
+                y = ch * 0.65f,
+                width = cw,
+                label = "REINFORCEMENT",
+                cfg = cfg
+            )
         }
 
         // Zone 3: Reinforcement details + table (viewMode 0 or 3)
         if (viewMode == 0 || viewMode == 3) {
+            drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
             // Reinforcement on elevation
             drawElevationReinforcement(
                 tankLeft, tankTop, tankRight, tankBottom, baseBottom,
@@ -205,6 +238,18 @@ fun ProfessionalTankDrawing(
             drawReinforcementTable(cw, ch, tankType, verticalRebarDia, verticalRebarSpacing,
                 horizontalRebarDia, horizontalRebarSpacing, height, length)
         }
+
+        // ── Responsive title block ──
+        drawResponsiveTitleBlock(
+            x = cw - cfg.titleBlockWidth - cfg.margin,
+            y = ch - cfg.titleBlockHeight - cfg.margin,
+            cfg = cfg,
+            projectName = "CivilEG",
+            drawingTitle = "Tank Detail",
+            scale = "NTS",
+            drawingNo = "1",
+            designCode = codeLabel
+        )
     }
 }
 

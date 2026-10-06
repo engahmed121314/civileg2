@@ -134,6 +134,8 @@ fun ProfessionalBeamDrawing(
     // ACI 318-19:  φ = 0.90, strength reduction factor, z = 0.9d
     // SBC 304-2018: adopts ACI φ factors with SBC load combinations
     val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    // ── Responsive config ──────────────────────────────────────────────────
+    val cfg = drawingDimensionsConfig()
 
     Canvas(
         modifier = modifier.fillMaxSize()
@@ -163,11 +165,11 @@ fun ProfessionalBeamDrawing(
         val sectionZoneTop = ch * (elevationFrac + 0.04f)
         val sectionZoneBottom = ch * (elevationFrac + 0.04f + sectionFrac)
 
-        // Main beam drawing area — symmetric margins for proper centering
-        val sideMargin = 60f
+        // Main beam drawing area — responsive margins from config
+        val sideMargin = cfg.margin * 1.5f  // Responsive: phone=45, tablet=52.5, large=60
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
-        val mainTop = 50f
+        val mainTop = cfg.headerHeight  // Responsive: phone=40, tablet=48
 
         // Scaling: fit span into horizontal space
         val availableW = mainRight - mainLeft
@@ -189,6 +191,20 @@ fun ProfessionalBeamDrawing(
         // ---------------------------------------------------------------
         // Draw all layers in order (back-to-front)
         // ---------------------------------------------------------------
+
+        // ═══ SECTION SEPARATORS & ZONE LABELS ═══
+        // Draw section separators for clear zone identification on phone/tablet
+        if (viewMode == 0) {
+            drawSectionSeparator(sectionZoneTop - ch * 0.02f, cw, "ELEVATION / SECTION", cfg)
+            if (sectionZoneBottom + ch * 0.02f < ch * 0.92f) {
+                drawSectionSeparator(sectionZoneBottom + ch * 0.02f, cw, "DETAIL TABLE", cfg)
+            }
+            drawCombinedSectionLabel(ch * 0.02f, cw, listOf("Longitudinal", "Cross Section"), cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(mainLeft + 4f, mainTop - cfg.headerHeight + 4f, "ELEVATION", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(mainLeft + 4f, sectionZoneTop + 4f, "CROSS SECTION", cfg)
+        }
 
         // ═══ ELEVATION VIEW (viewMode 0 or 1) ═══
         if (viewMode == 0 || viewMode == 1) {
@@ -271,6 +287,22 @@ fun ProfessionalBeamDrawing(
                 tableZoneTop = tableZoneTop
             )
         }
+
+        // ═══ SCALE BAR & RESPONSIVE TITLE BLOCK ═══
+        // Scale bar for proportion reference on phone/tablet
+        drawScaleBar(
+            x = mainLeft, y = ch - cfg.margin * 0.8f,
+            scale = scale, realLengthMm = span.toFloat(),
+            cfg = cfg
+        )
+        // Responsive title block (bottom-right)
+        drawResponsiveTitleBlock(
+            x = cw - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = ch - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            drawingTitle = "Beam Detail",
+            designCode = codeLabel
+        )
     }
 }
 
