@@ -25,7 +25,7 @@ class CivilEGApplication : Application() {
             private set
 
         const val DEVELOPER_NAME = "Eng. Ahmed Magdy"
-        const val DEVELOPER_EMAIL = "eng.ahmedmagdy121314@gmail.com"
+        const val DEVELOPER_EMAIL = "eng.ahmed121314@gmail.com"
         const val DEVELOPER_PHONE = "+201012628353"
         const val VERSION_NAME = "1.0.0"
         const val VERSION_CODE = 1

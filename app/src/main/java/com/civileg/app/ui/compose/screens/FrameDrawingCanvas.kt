@@ -257,8 +257,8 @@ private fun DrawScope.drawFrameView(
         )
     }
 
-    // === Draw Deformed Shape (if solved) ===
-    if (showDiagrams) {
+    // === Draw Deformed Shape (only if significant displacement and no diagram overlay) ===
+    if (showDiagrams && diagramType == DiagramType.BMD) {
         drawDeformedShape(
             members, nodes, result?.nodeResults ?: emptyList(),
             toScreen, scale
@@ -353,10 +353,8 @@ private fun DrawScope.drawLongitudinalSection(
             FrameMaterialType.Steel -> Color(0xFFFF9800)
         }
 
-        // Outer thick line (member outline)
-        drawLine(memberColor.copy(alpha = 0.3f), p1, p2, strokeWidth = 14f)
-        // Inner main line
-        drawLine(memberColor, p1, p2, strokeWidth = 6f, cap = StrokeCap.Round)
+        // Clean section member line
+        drawLine(memberColor, p1, p2, strokeWidth = 8f, cap = StrokeCap.Round)
     }
 
     // Draw supports (with proper foundation symbols)

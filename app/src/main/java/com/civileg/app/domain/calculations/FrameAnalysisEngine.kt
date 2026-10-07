@@ -33,6 +33,9 @@ object FrameAnalysisEngine {
         memberLoads: List<MemberLoad>,
         settings: FrameAnalysisSettings
     ): FrameAnalysisResult {
+        // PERFORMANCE METRIC: Measure solver execution time
+        val startTimeNs = System.nanoTime()
+
         // ── InputGuard (ADR-010) ──
         InputGuard.notEmpty("nodes", nodes)
         InputGuard.notEmpty("members", members)
@@ -196,6 +199,9 @@ object FrameAnalysisEngine {
                     reactionMz = if (2 in localRestrained) reactions[idx * 3 + 2] else 0.0
                 )
             }
+
+            val durationMs = (System.nanoTime() - startTimeNs) / 1e6
+            println("Frame analysis solved in ${"%.2f".format(durationMs)} ms ($numNodes nodes, ${members.size} members, $totalDOF DOFs)")
 
             return FrameAnalysisResult(
                 nodeResults = nodeResults,
@@ -362,9 +368,10 @@ object FrameAnalysisEngine {
     ): MemberDiagram {
         val L = member.getLength(nodes)
         val numPoints = 21
-        val momentPoints = mutableListOf<DiagramPoint>()
-        val shearPoints = mutableListOf<DiagramPoint>()
-        val axialPoints = mutableListOf<DiagramPoint>()
+        // PERFORMANCE OPTIMIZATION: Pre-allocate initial list capacities to prevent dynamic reallocations
+        val momentPoints = ArrayList<DiagramPoint>(numPoints + 1)
+        val shearPoints = ArrayList<DiagramPoint>(numPoints + 1)
+        val axialPoints = ArrayList<DiagramPoint>(numPoints + 1)
 
         // End forces in local system
         val vI = fLocalTotal[1]  // shear at I (local y)

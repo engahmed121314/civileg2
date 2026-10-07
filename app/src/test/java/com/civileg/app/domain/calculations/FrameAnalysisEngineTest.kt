@@ -82,7 +82,7 @@ class FrameAnalysisEngineTest {
         val (nodes, members, settings) = createSimplePortalFrame()
         val loads = listOf(NodalLoad(2, fx = -50.0, fy = 0.0, mz = 0.0))
         val result = FrameAnalysisEngine.solveFrame(nodes, members, loads, emptyList(), settings)
-        assertTrue("Frame should solve successfully", result.isSolved)
+        assertTrue("Frame should solve successfully: ${result.errorMessage}", result.isSolved)
     }
 
     @Test

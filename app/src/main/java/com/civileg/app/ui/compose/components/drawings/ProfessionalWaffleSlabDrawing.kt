@@ -154,8 +154,8 @@ fun ProfessionalWaffleSlabDrawing(
             val drawLx = lxMm.toFloat() * scale
             val drawLy = lyMm.toFloat() * scale
 
-            val fLeft = planLeft + (planW - drawLx) / 2f
-            val fTop = planTop + (planDrawH - drawLy) / 2f
+            val fLeft = (w - drawLx) / 2f
+            val fTop = planTop + (planH - drawLy) / 2f
             val fRight = fLeft + drawLx
             val fBottom = fTop + drawLy
             val fCenterX = fLeft + drawLx / 2f

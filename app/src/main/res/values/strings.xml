@@ -433,13 +433,13 @@
     <string name="boq_basement">Basement</string>
     <string name="boq_apartment_area">Apartment Area (m²)</string>
     <string name="boq_generate_report">Generate Quantity &amp; Feasibility Report</string>
-    <string name="boq_data_safety_report">🛡️ Data Safety Report (Trial Run)</string>
+    <string name="boq_data_safety_report">" Data Safety Report (Trial Run)"</string>
     <string name="boq_export_pdf">Export Project BOQ PDF</string>
     <string name="boq_export_failed">Export Failed: %s</string>
     <string name="boq_export_failed_title">Export Failed</string>
     <string name="boq_open_report">Open Report</string>
     <string name="boq_integrated_estimate">Integrated Financial &amp; Technical Estimate</string>
-    <string name="boq_feasibility_section">📊 Feasibility Study</string>
+    <string name="boq_feasibility_section">" Feasibility Study"</string>
     <string name="boq_expected_roi">Expected ROI</string>
     <string name="boq_net_profit">Net Profit</string>
     <string name="boq_profit_margin">Profit Margin</string>

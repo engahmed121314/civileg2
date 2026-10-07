@@ -89,16 +89,32 @@ fun FrameAnalysisScreen(
                     navigationIconContentColor = Color.White
                 ),
                 actions = {
-                    // Template buttons
-                    IconButton(onClick = {
-                        viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
-                    }) {
-                        Icon(Icons.Default.Home, stringResource(R.string.frame_simple_portal_desc), tint = Color.White)
-                    }
-                    IconButton(onClick = {
-                        viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
-                    }) {
-                        Icon(Icons.Default.Layers, stringResource(R.string.frame_two_story_desc), tint = Color.White)
+                    var showTemplatesMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showTemplatesMenu = true }) {
+                            Icon(Icons.Default.Dashboard, contentDescription = "Templates", tint = Color.White)
+                        }
+                        DropdownMenu(
+                            expanded = showTemplatesMenu,
+                            onDismissRequest = { showTemplatesMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.frame_simple_portal_desc)) },
+                                onClick = {
+                                    showTemplatesMenu = false
+                                    viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
+                                },
+                                leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.frame_two_story_desc)) },
+                                onClick = {
+                                    showTemplatesMenu = false
+                                    viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
+                                },
+                                leadingIcon = { Icon(Icons.Default.Layers, contentDescription = null) }
+                            )
+                        }
                     }
                     IconButton(onClick = { viewModel.clearAll() }) {
                         Icon(Icons.Default.DeleteSweep, stringResource(R.string.frame_clear_all), tint = Color.White)
@@ -195,17 +211,18 @@ fun FrameAnalysisScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            // Tab Row
-            TabRow(
+            // Tab Row — Scrollable to prevent any tab from disappearing or truncating
+            ScrollableTabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color(0xFF1565C0).copy(alpha = 0.1f),
-                contentColor = Color(0xFF1565C0)
+                contentColor = Color(0xFF1565C0),
+                edgePadding = 0.dp
             ) {
                 for ((index, title) in tabs.withIndex()) {
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(title, fontSize = 13.sp) }
+                        text = { Text(title, fontSize = 13.sp, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
                     )
                 }
             }
@@ -264,7 +281,10 @@ private fun DrawingTab(
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(stringResource(R.string.frame_design_code_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))

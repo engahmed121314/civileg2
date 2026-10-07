@@ -407,7 +407,7 @@ class ACIFooting : FootingDesign {
             soilPressure = soilPressure,
             maxSoilPressure = maxSoilPressure,
             reinforcement = reinforcement,
-            punchingShearCheck = punching1,
+            punchingShearCheck = if (punching1.utilizationRatio > punching2.utilizationRatio) punching1 else punching2,
             isSafe = isSafe
         )
     }

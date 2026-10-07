@@ -231,10 +231,10 @@ class ACIFootingTest {
             FCU, FY, 2000.0, 2000.0, 440.0, 50.0, FootingDirection.SHORT
         )
         val resultHigh = footing.calculateFootingReinforcement(
-            FCU, FY, 2000.0, 2000.0, 440.0, 200.0, FootingDirection.SHORT
+            FCU, FY, 2000.0, 2000.0, 440.0, 1200.0, FootingDirection.SHORT
         )
-        assertTrue("Higher moment should require at least as much reinforcement",
-            resultHigh.astRequired >= resultLow.astRequired)
+        assertTrue("Higher moment should require more reinforcement",
+            resultHigh.astRequired > resultLow.astRequired)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -259,7 +259,7 @@ class ACIFootingTest {
     fun designCombinedFooting_validInputs_producesResult() {
         val result = footing.designCombinedFooting(
             FCU, FY, 600.0, 400.0, 4000.0, SBC, FOOTING_D,
-            LoadCombination.DEAD_LIVE, COL_W, COL_D, COL_W, COL_D
+            LoadCombination.DEAD_LIVE, COL_W, COL_D
         )
         assertNotNull(result)
         assertTrue("Width must be positive", result.requiredWidth > 0)
@@ -270,7 +270,7 @@ class ACIFootingTest {
     fun designCombinedFooting_zeroDistance_throwsException() {
         footing.designCombinedFooting(
             FCU, FY, 600.0, 400.0, 0.0, SBC, FOOTING_D,
-            LoadCombination.DEAD_LIVE, COL_W, COL_D, COL_W, COL_D
+            LoadCombination.DEAD_LIVE, COL_W, COL_D
         )
     }
 
@@ -278,7 +278,7 @@ class ACIFootingTest {
     fun designCombinedFooting_zeroSBC_throwsException() {
         footing.designCombinedFooting(
             FCU, FY, 600.0, 400.0, 4000.0, 0.0, FOOTING_D,
-            LoadCombination.DEAD_LIVE, COL_W, COL_D, COL_W, COL_D
+            LoadCombination.DEAD_LIVE, COL_W, COL_D
         )
     }
 

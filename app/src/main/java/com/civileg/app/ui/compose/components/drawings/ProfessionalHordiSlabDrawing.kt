@@ -135,8 +135,8 @@ fun ProfessionalHordiSlabDrawing(
             val drawSpan = spanMm.toFloat() * scale
             val drawWidth = (spanMm * 0.6).toFloat() * scale
 
-            val fLeft = planLeft + (planW - drawSpan) / 2f
-            val fTop = planTop + (planDrawH - drawWidth) / 2f
+            val fLeft = (w - drawSpan) / 2f
+            val fTop = planTop + (planH - drawWidth) / 2f
             val fRight = fLeft + drawSpan
             val fBottom = fTop + drawWidth
             val fCenterY = fTop + drawWidth / 2f

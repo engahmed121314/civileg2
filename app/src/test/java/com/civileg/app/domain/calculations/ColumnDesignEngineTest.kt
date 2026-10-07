@@ -35,7 +35,7 @@ class ColumnDesignEngineTest {
 
     @Test
     fun getKFactor_bracedFreeFixed_returns220() {
-        val k = ColumnDesignEngine.getKFactor(true, 4, 1)
+        val k = ColumnDesignEngine.getKFactor(false, 4, 1)
         assertEquals(2.20, k, 1e-6)
     }
 

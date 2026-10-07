@@ -138,10 +138,10 @@
         <!-- Developer Contact Metadata -->
         <meta-data
             android:name="com.civileg.app.developer.name"
-            android:value="Eng. Ahmed Magdy" />
+            android:value="Eng.Ahmed Magdy" />
         <meta-data
             android:name="com.civileg.app.developer.email"
-            android:value="eng.ahmedmagdy121314@gmail.com" />
+            android:value="engahmed121314@gmail.com" />
         <meta-data
             android:name="com.civileg.app.developer.phone"
             android:value="+201012628353" />

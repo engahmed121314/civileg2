@@ -1,12 +1,11 @@
 <resources>
-    <string name="app_name">المهندس المدني برو</string>
+    <string name="app_name">Civil Engineer Pro</string>
     <string name="stirrups_distribution">توزيع الكانات التفصيلي</string>
-    <string name="app_subtitle">مساعدك الهندسي الإنشائي الاحترافي</string>
+    <string name="app_subtitle">"مساعدك الإنشائي "</string>
 
     <string name="disclaimer_title">⚠️ تنبيه هام</string>
     <string name="disclaimer_text">
-        هذا التطبيق للأغراض التعليمية وللتصميم الأولي فقط.
-        يجب مراجعة جميع الحسابات من قبل مهندس إنشائي معتمد.
+        يجب مراجعة جميع الحسابات من قبل مهندس إنشائي.
         المطور غير مسؤول عن أي أخطاء أو أضرار تنتج عن استخدام هذا التطبيق.
     </string>
     <string name="accept">أتفهم ذلك</string>
@@ -33,6 +32,7 @@
     <string name="home_wind_load_sub">حسابات قوى الرياح</string>
 
     <!-- Navigation -->
+    <string name="steel_calculation_trace">تتبع الحساب التفصيلي</string>
     <string name="nav_home">الرئيسية</string>
     <string name="nav_design">أدوات التصميم</string>
     <string name="nav_projects">المشاريع</string>
@@ -430,13 +430,13 @@
     <string name="boq_basement">بدروم</string>
     <string name="boq_apartment_area">مساحة الشقة (م²)</string>
     <string name="boq_generate_report">إصدار تقرير الكميات والجدوى</string>
-    <string name="boq_data_safety_report">🛡️ تقرير سلامة البيانات (تجريبي)</string>
+    <string name="boq_data_safety_report">" تقرير سلامة البيانات (تجريبي)"</string>
     <string name="boq_export_pdf">تصدير مقايسة المشروع PDF</string>
     <string name="boq_export_failed">فشل التصدير: %s</string>
     <string name="boq_export_failed_title">فشل التصدير</string>
     <string name="boq_open_report">فتح التقرير</string>
     <string name="boq_integrated_estimate">تقدير فني ومالي متكامل</string>
-    <string name="boq_feasibility_section">📊 دراسة الجدوى</string>
+    <string name="boq_feasibility_section">" دراسة الجدوى"</string>
     <string name="boq_expected_roi">العائد المتوقع (ROI)</string>
     <string name="boq_net_profit">صافي الربح</string>
     <string name="boq_profit_margin">هامش الربح</string>
@@ -685,8 +685,8 @@
     <string name="pile_struct_reinf_card">تسليح الخازوق الإنشائي</string>
     <string name="pile_longitudinal">طولي</string>
     <string name="pile_steel_ratio">نسبة الحديد</string>
-    <string name="pile_adequate">✓ كافٍ</string>
-    <string name="pile_increase_bars">✗ زيادة الأسياخ</string>
+    <string name="pile_adequate">" كافٍ"</string>
+    <string name="pile_increase_bars">" زيادة الأسياخ"</string>
     <string name="pile_exporting">جاري التصدير...</string>
     <string name="pile_pdf_report">تقرير PDF</string>
     <string name="pile_detail_drawing">تفاصيل الخوازيق</string>
@@ -1655,4 +1655,7 @@
     <string name="hordi_slab_warnings">تحذيرات</string>
     <string name="hordi_slab_engineering_drawing">الرسم الهندسي</string>
     <string name="hordi_slab_design_calculations">نتائج التصميم</string>
+
+    <string name="home_settlement">تسوية التربة</string>
+    <string name="home_settlement_sub">التحليل الفوري</string>
 </resources>

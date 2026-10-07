@@ -31,7 +31,7 @@ class CombinedFootingCol2PunchingTest {
         private const val DIST = 5000.0
         private const val SBC = 200.0
         private const val DEPTH = 600.0
-        private const val LC = LoadCombination.DEAD_LIVE
+        private val LC = LoadCombination.DEAD_LIVE
         private const val COL1_W = 400.0
         private const val COL1_D = 400.0
     }
