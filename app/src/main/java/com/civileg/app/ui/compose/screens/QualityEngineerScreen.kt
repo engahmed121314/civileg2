@@ -213,8 +213,8 @@ private fun ConcreteQCTab(viewModel: QualityEngineerViewModel) {
 
                 QualityCheckRow(
                     label = "الهبوط ضمن الحدود",
-                    passed = uiState.slump.toDoubleOrNull()?.let { it in 50.0..150.0 } ?: false,
-                    detail = "الحد: 50-150 مم"
+                    passed = uiState.slump.toDoubleOrNull()?.let { it in 25.0..100.0 } ?: false,
+                    detail = "الحد: 25-100 مم (ACI 26.12.1.3)"
                 )
 
                 QualityCheckRow(
@@ -427,6 +427,8 @@ private fun SoilFoundationQCTab(viewModel: QualityEngineerViewModel) {
                 }
             }
         }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -1080,6 +1082,37 @@ private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
                 ResultRow("ناجح", "${uiState.passedInspections}")
                 ResultRow("فاشل", "${uiState.failedInspections}")
                 ResultRow("نسبة النجاح", "${String.format("%.1f", uiState.successRate)}%")
+            }
+        }
+
+        if (uiState.categorySummary.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("الملخص حسب التخصص", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    uiState.categorySummary.forEach { row ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(row.category, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "${row.passedCount}/${row.total} ناجح",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                            Text(
+                                "${if (row.total > 0) row.passedCount * 100 / row.total else 0}%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
 

@@ -7,6 +7,15 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * Aggregated pass/fail counts per discipline, returned by [QualityDao.getCategorySummary].
+ */
+data class CategorySummary(
+    val category: String,
+    val total: Int,
+    val passedCount: Int
+)
+
+/**
  * DAO for the Quality Engineer module ([QualityRecord]).
  *
  * Backs the "Quality Reports" tab with reactive statistics and provides
@@ -32,6 +41,13 @@ interface QualityDao {
 
     @Query("SELECT COUNT(*) FROM quality_records WHERE passed = 1")
     fun countPassed(): Flow<Int>
+
+    @Query(
+        "SELECT category AS category, COUNT(*) AS total, " +
+            "SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) AS passedCount " +
+            "FROM quality_records GROUP BY category ORDER BY total DESC"
+    )
+    fun getCategorySummary(): Flow<List<CategorySummary>>
 
     @Query("DELETE FROM quality_records WHERE id = :id")
     suspend fun deleteById(id: Long)

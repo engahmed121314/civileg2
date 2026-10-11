@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.CategorySummary
 import com.civileg.app.db.QualityDao
 import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.entities.GenericSafetyCheck
@@ -54,7 +55,8 @@ data class SoilQCState(
     val foundationLength: String = "1.5",
     val foundationDepth: String = "1.0",
     val safetyFactor: String = "3",
-    val soilResult: SoilBearingResult? = null
+    val soilResult: SoilBearingResult? = null,
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class RebarQCState(
@@ -125,7 +127,8 @@ data class ReportsQCState(
     val passedInspections: Int = 0,
     val failedInspections: Int = 0,
     val successRate: Double = 0.0,
-    val records: List<QualityRecord> = emptyList()
+    val records: List<QualityRecord> = emptyList(),
+    val categorySummary: List<CategorySummary> = emptyList()
 )
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -175,14 +178,16 @@ class QualityEngineerViewModel @Inject constructor(
             combine(
                 qualityDao.getAllRecords(),
                 qualityDao.countAll(),
-                qualityDao.countPassed()
-            ) { records, total, passed ->
+                qualityDao.countPassed(),
+                qualityDao.getCategorySummary()
+            ) { records, total, passed, summary ->
                 ReportsQCState(
                     totalInspections = total,
                     passedInspections = passed,
                     failedInspections = total - passed,
                     successRate = if (total > 0) passed * 100.0 / total else 0.0,
-                    records = records
+                    records = records,
+                    categorySummary = summary
                 )
             }.collect { _reportsState.value = it }
         }
@@ -344,7 +349,6 @@ class QualityEngineerViewModel @Inject constructor(
             BearingMethod.HANSEN -> bearing.calculateHansen(input)
             BearingMethod.VESIC -> bearing.calculateVesic(input)
         }
-        _soilState.value = s.copy(soilResult = result)
 
         // Persist as a quality record (reuse the concrete-style summary path)
         val checks = listOf(
@@ -366,6 +370,7 @@ class QualityEngineerViewModel @Inject constructor(
             utilizationRatio = 0.0,
             summary = "Soil bearing capacity (${method.name}) — ${if (result.isSafe) "safe" else "unsafe"}"
         )
+        _soilState.value = s.copy(soilResult = result, outcome = outcome)
         persist(
             category = QualityControlEngine.Category.SOIL,
             elementId = "FOUNDATION",
