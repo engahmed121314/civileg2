@@ -46,6 +46,7 @@ import com.civileg.app.utils.SoilBearingResult
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.SoilType
+import com.civileg.app.ui.compose.components.charts.DailyTrendChart
 import com.civileg.app.viewmodel.QualityEngineerViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlin.math.*
@@ -68,7 +69,8 @@ fun QualityEngineerScreen(
         stringResource(R.string.quality_tab_bridges),
         stringResource(R.string.quality_tab_tunnels),
         stringResource(R.string.quality_tab_buildings),
-        stringResource(R.string.quality_tab_reports)
+        stringResource(R.string.quality_tab_reports),
+        stringResource(R.string.quality_tab_compliance)
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -118,6 +120,7 @@ fun QualityEngineerScreen(
                 6 -> TunnelsQCTab(viewModel, snackbarHostState, scope)
                 7 -> BuildingsQCTab(viewModel, snackbarHostState, scope)
                 8 -> QualityReportsTab(viewModel, snackbarHostState, scope)
+                9 -> QualityComplianceScreen()
             }
         }
         SnackbarHost(snackbarHostState)
@@ -1335,6 +1338,9 @@ private fun QualityReportsTab(
                 }
             }
         }
+
+        // الاتجاه التاريخي
+        DailyTrendChart(trend = uiState.dailyTrend, modifier = Modifier.fillMaxWidth())
 
         // Search & Filter Bar
         Card(modifier = Modifier.fillMaxWidth()) {

@@ -1678,4 +1678,5 @@
     <string name="quality_tab_tunnels">الأنفاق</string>
     <string name="quality_tab_buildings">المباني</string>
     <string name="quality_tab_reports">التقارير</string>
+    <string name="quality_tab_compliance">الامتثال</string>
 </resources>

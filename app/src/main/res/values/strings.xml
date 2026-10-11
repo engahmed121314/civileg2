@@ -1761,4 +1761,5 @@
     <string name="quality_tab_tunnels">Tunnels</string>
     <string name="quality_tab_buildings">Buildings</string>
     <string name="quality_tab_reports">Reports</string>
+    <string name="quality_tab_compliance">Compliance</string>
 </resources>
