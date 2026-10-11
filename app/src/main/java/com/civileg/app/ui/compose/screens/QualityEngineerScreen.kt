@@ -20,7 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.SolidColor
+
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.entities.DesignCode
@@ -267,6 +273,20 @@ private fun ConcreteQCTab(
         }
 
         QcOutcomeCard(uiState.outcome)
+
+        // Drawing preview
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text("معاينة الرسم - مقطع عمود/كمرة", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                ConcreteDrawingElement(
+                    elementId = uiState.elementId,
+                    width = uiState.volume.toDoubleOrNull() ?: 1.0,
+                    height = 1.0,
+                    depth = 1.0
+                )
+            }
+        }
     }
 }
 
@@ -1682,5 +1702,41 @@ private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
             }
         }
     )
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Simple Drawing Previews (placeholder for PDF export)
+// ═══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun ConcreteDrawingElement(
+    elementId: String,
+    width: Double,
+    height: Double,
+    depth: Double
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .background(Color.White)
+            .border(1.dp, Color.Gray)
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("📐 Concrete Element: $elementId", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Width: ${"%.2f".format(width)} m", fontSize = 14.sp, color = Color.Gray)
+            Text("Height: ${"%.2f".format(height)} m", fontSize = 14.sp, color = Color.Gray)
+            Text("Depth: ${"%.2f".format(depth)} m", fontSize = 14.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("📋 Reinforcement: Main bars Ø16-20, Stirrups Ø8-10", fontSize = 12.sp, color = Color(0xFFB71C1C))
+            Text("📋 Cover: 40mm, Clear spacing: max(Ø, 25mm)", fontSize = 12.sp, color = Color(0xFFB71C1C))
+        }
+    }
 }
 
