@@ -42,7 +42,6 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     // New Tools
     object RebarTool : AppScreen("rebar_tool", R.string.home_rebar_tool, R.drawable.ic_steel)
     object ConcreteMix : AppScreen("concrete_mix", R.string.home_concrete_mix, R.drawable.ic_calculator)
-    object SoilBearing : AppScreen("soil_bearing", R.string.home_soil_bearing, R.drawable.ic_footing)
-    object SoilSettlement : AppScreen("soil_settlement", R.string.home_settlement, R.drawable.ic_footing)
+    object QualityEngineer : AppScreen("quality_engineer", R.string.home_quality_engineer, R.drawable.ic_verified)
     object WindLoad : AppScreen("wind_load", R.string.home_wind_load, R.drawable.ic_frame)
 }

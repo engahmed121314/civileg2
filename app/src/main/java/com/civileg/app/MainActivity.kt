@@ -266,9 +266,7 @@ fun AppNavigation(
                 composable(AppScreen.ShearWall.route) {
                     ShearWallScreen(onNavigateBack = { navController.popBackStack() })
                 }
-                composable(AppScreen.SoilSettlement.route) {
-                    SoilSettlementScreen(onNavigateBack = { navController.popBackStack() })
-                }
+
 
                 // ═══ QUICK TOOLS ═══
                 composable(AppScreen.Calculator.route) {
@@ -297,8 +295,8 @@ fun AppNavigation(
                 composable(AppScreen.ConcreteMix.route) {
                     ConcreteMixScreen(onNavigateBack = { navController.popBackStack() })
                 }
-                composable(AppScreen.SoilBearing.route) {
-                    SoilBearingScreen(onNavigateBack = { navController.popBackStack() })
+                composable(AppScreen.QualityEngineer.route) {
+                    QualityEngineerScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(AppScreen.WindLoad.route) {
                     WindLoadScreen(onNavigateBack = { navController.popBackStack() })

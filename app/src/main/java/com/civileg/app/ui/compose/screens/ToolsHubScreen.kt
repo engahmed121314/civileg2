@@ -44,7 +44,7 @@ private val toolsList = listOf(
     ToolItem(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, Color(0xFF7B1FA2).copy(alpha = 0.12f), Color(0xFF7B1FA2), AppScreen.ExecutionLog.route),
     ToolItem(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, Color(0xFF33691E).copy(alpha = 0.12f), Color(0xFF558B2F), AppScreen.RebarTool.route),
     ToolItem(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, Color(0xFF004D40).copy(alpha = 0.12f), Color(0xFF00695C), AppScreen.ConcreteMix.route),
-    ToolItem(R.string.home_soil_bearing, R.string.home_soil_bearing_sub,  Icons.Default.Landscape, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF6D4C41), AppScreen.SoilBearing.route),
+    ToolItem(R.string.home_quality_engineer, R.string.home_quality_engineer_sub, Icons.Default.Landscape, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF6D4C41), AppScreen.QualityEngineer.route),
     ToolItem(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, Color(0xFF0D47A1).copy(alpha = 0.12f), Color(0xFF1565C0), AppScreen.WindLoad.route)
 )
 

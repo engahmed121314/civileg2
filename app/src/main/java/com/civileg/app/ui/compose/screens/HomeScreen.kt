@@ -141,7 +141,7 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP"),              StatCardGreen,   Icons.Default.Foundation),
     DesignModuleItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI"),      CardAccentSlab,    Icons.Default.Dashboard),
     DesignModuleItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    CardAccentWall,    Icons.Default.SensorDoor),
-    DesignModuleItem(AppScreen.SoilSettlement, R.string.home_settlement, R.string.home_settlement_sub, listOf("ECP", "ACI"), StatCardOrange, Icons.Default.VerticalAlignBottom)
+    DesignModuleItem(AppScreen.QualityEngineer, R.string.home_quality_engineer, R.string.home_quality_engineer_sub, listOf("ECP", "ACI", "SBC"), StatCardGreen, Icons.Default.Verified)
 )
 
 private val quickTools = listOf(
@@ -153,7 +153,7 @@ private val quickTools = listOf(
     QuickTool(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, ToolPdfBg, ToolPdfAccent, AppScreen.ExecutionLog.route),
     QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),
     QuickTool(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, ToolCalcBg, ToolCalcAccent, AppScreen.ConcreteMix.route),
-    QuickTool(R.string.home_soil_bearing, R.string.home_soil_bearing_sub,  Icons.Default.Landscape, ToolSteelBg, ToolSteelAccent, AppScreen.SoilBearing.route),
+    QuickTool(R.string.home_quality_engineer, R.string.home_quality_engineer_sub, Icons.Default.Verified, ToolSteelBg, ToolSteelAccent, AppScreen.QualityEngineer.route),
     QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route)
 )
 

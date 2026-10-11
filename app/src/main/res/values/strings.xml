@@ -1748,4 +1748,17 @@
     <string name="hordi_slab_warnings">Warnings</string>
     <string name="hordi_slab_engineering_drawing">Engineering Drawing</string>
     <string name="hordi_slab_design_calculations">Design Calculations</string>
+
+    <!-- Quality Engineer -->
+    <string name="home_quality_engineer">Quality Engineer</string>
+    <string name="home_quality_engineer_sub">Comprehensive Site Quality Control</string>
+    <string name="quality_tab_concrete">Concrete</string>
+    <string name="quality_tab_soil">Soil</string>
+    <string name="quality_tab_rebar">Rebar</string>
+    <string name="quality_tab_steel">Steel</string>
+    <string name="quality_tab_roads">Roads</string>
+    <string name="quality_tab_bridges">Bridges</string>
+    <string name="quality_tab_tunnels">Tunnels</string>
+    <string name="quality_tab_buildings">Buildings</string>
+    <string name="quality_tab_reports">Reports</string>
 </resources>
