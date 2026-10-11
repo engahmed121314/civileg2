@@ -526,7 +526,7 @@ class SBCBeam : BeamDesign {
                 compressionBars = "None",
                 leverArm = leverArm,
                 neutralAxisDepth = neutralAxisDepth,
-                isSafe = true,
+                isSafe = Rn <= RnBal,
                 utilizationRatio = Rn / max(RnBal, 0.001),
                 codeNotes = notes.joinToString("\n")
             )

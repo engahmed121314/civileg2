@@ -237,7 +237,8 @@ class ACIColumn : ColumnDesign {
         depth: Double,
         fcu: Double,
         fy: Double,
-        cover: Double = 40.0
+        cover: Double = 40.0,
+        longitudinalBarDia: Double = 20.0
     ): ColumnShearDesignResult {
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
@@ -261,9 +262,8 @@ class ACIColumn : ColumnDesign {
             (Vu - phiVc) * 1000.0 / (phi * fy * d)  // mm²/mm
         } else 0.0
 
-        // Max spacing = min(d/2, 48×db_tie, 300mm) for columns
-        val dbTie = 10.0
-        val maxSpacing = minOf(d / 2.0, 48.0 * dbTie, 300.0)
+        // Max spacing per ACI 318-19 §25.7.2.2: min(b/4, 6×db, 150mm)
+        val maxSpacing = minOf(min(width, depth) / 4.0, 6.0 * longitudinalBarDia, 150.0)
 
         // Min Asv per ACI 22.5.10.1: Av,min = 0.062√f'c × b×s / fy  (but not less than 0.35×b×s/fy)
         // As Av/s:  minAvPerS = max(0.062√f'c × b / fy,  0.35 × b / fy)

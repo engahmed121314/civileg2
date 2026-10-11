@@ -845,12 +845,14 @@ private fun DrawScope.drawDevelopmentAndLap(
     scale: Float,
     developmentLength: Double,
     lapLength: Double,
-    mainRebarDia: Double
+    mainRebarDia: Double,
+    cover: Double = 40.0
 ) {
     val laPx = developmentLength.toFloat() * scale
     val lapPx = lapLength.toFloat() * scale
     val barR = max((mainRebarDia / 2f) * scale, 3.0).toFloat()
-    val mainBarY = beamBottom - (beamDrawH * 0.15f)  // approximate bottom bar position
+    val coverPx = (cover * scale).toFloat()
+    val mainBarY = beamBottom - coverPx - max((mainRebarDia / 2f) * scale, 3.0).toFloat()
 
     // --- Development Length (La) on LEFT side ---
     // The bar extends into the support
@@ -1273,6 +1275,8 @@ private fun DrawScope.drawReinforcementSchedule(
     topRebarDia: Double, topRebarCount: Int,
     developmentLength: Double,
     cover: Double,
+    isContinuous: Boolean = false,
+    zones: List<StirrupZone> = emptyList(),
     tableZoneTop: Float = 0f
 ) {
     val tableLeft = 16f
@@ -1357,7 +1361,14 @@ private fun DrawScope.drawReinforcementSchedule(
 
     // --- Row 2: Stirrups ---
     val row2Y = row1Y + rowH
-    val stirrupCount = ((span / stirrupSpacing) + 1).toInt()
+    val stirrupCount = if (zones.isNotEmpty()) {
+        zones.sumOf { zone ->
+            val zoneLength = zone.endLocation - zone.startLocation
+            if (zoneLength > 0 && zone.spacing > 0) ((zoneLength / zone.spacing) + 1).toInt() else 0
+        }
+    } else {
+        ((span / stirrupSpacing) + 1).toInt()
+    }
     val stirrupCutLength = 2 * (beamWidth + beamDepth) - 8 * cover + 2 * 10 * stirrupDia  // 10d hooks per ECP 203
     val stirrupLength = stirrupCutLength
     val row2Data = arrayOf(
@@ -1392,7 +1403,7 @@ private fun DrawScope.drawReinforcementSchedule(
             topLeft = Offset(tableLeft, row3Y),
             size = Size(tableW, rowH)
         )
-        val topBarLength = span * 0.3  // top bars typically shorter
+        val topBarLength = if (isContinuous) span * 0.25 else span * 0.15
         val row3Data = arrayOf(
             "T2",
             "Ø${topRebarDia.toInt()}",

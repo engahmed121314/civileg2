@@ -362,12 +362,8 @@ class ECPBeam : BeamDesign {
         width: Double, effectiveDepth: Double,
         ast: Double
     ): Double {
-        val fc = 0.67 * fcu / GAMMA_C
         val fs = fy / GAMMA_S
-        
-        // عمق كتلة الإجهاد — guard against zero fc or width
-        val denom = (fc * width).coerceAtLeast(0.001)
-        val a = (ast * fs) / denom
+        val a = (ast * fs) / (0.67 * fcu * width)
         // ECP 203 §4-2-2-2: If a > effectiveDepth, section is over-reinforced;
         // cap a to 0.9*d to prevent negative lever arm
         val aCapped = min(a, 0.9 * effectiveDepth)

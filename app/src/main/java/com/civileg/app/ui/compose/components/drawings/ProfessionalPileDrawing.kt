@@ -46,6 +46,7 @@ fun ProfessionalPileDrawing(
     capRebarDia: Int,              // mm
     capRebarCount: Int,
     soilType: String,
+    viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
     resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
@@ -131,335 +132,398 @@ fun ProfessionalPileDrawing(
             w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
         )
 
-        // ── Responsive section indicators (moved after layout definitions) ──
+        // ── Layout zones (viewMode-aware) ─────────────────
+        val planLeft: Float
+        val planTop: Float
+        val planMaxW: Float
+        val planMaxH: Float
 
-        // ══════════════════════════════════════════════════
-        // PLAN VIEW (top-left)
-        // ══════════════════════════════════════════════════
-        val planLeft = margin + 40f
-        val planTop = 75f
-        val planMaxW = w * 0.48f
-        val planMaxH = h * 0.36f
+        val secLeft: Float
+        val secTop: Float
+        val secMaxSize: Float
 
-        // ── Responsive section indicators (after layout definitions) ──
-        drawCombinedSectionLabel(h * 0.015f, w, listOf("Plan", "Section", "Elevation", "Table"), cfg)
-        drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+        val elevTop: Float
+        val elevLeft: Float
+        val elevW: Float
+        val elevH: Float
 
-        drawTextAnnotated("PLAN", planLeft, planTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-        drawZoneLabel(planLeft, planTop + 10f, "PLAN", cfg)
+        val tblLeft: Float
+        val tblTop: Float
+        val tblW: Float
 
-        // Scale plan to fit
-        val planScaleX = planMaxW / safeCapL
-        val planScaleY = planMaxH / safeCapW
-        val pScale = min(planScaleX, planScaleY) * 0.8f
-
-        val capDrawL = (safeCapL * pScale).toFloat()
-        val capDrawW = (safeCapW * pScale).toFloat()
-        val pCenterX = (planLeft + planMaxW / 2f).toFloat()
-        val pCenterY = (planTop + planMaxH / 2f + 4f).toFloat()
-        val capLeft = pCenterX - capDrawL / 2f
-        val capTop = pCenterY - capDrawW / 2f
-
-        // Cap outline
-        drawRect(
-            color = concreteFill,
-            topLeft = Offset(capLeft, capTop),
-            size = Size(capDrawL, capDrawW)
-        )
-        drawHatchPattern(
-            capLeft, capTop, capDrawL, capDrawW,
-            spacing = 14f, angleDeg = 45f, color = Color(0x55AAAAAA)
-        )
-        drawRect(
-            color = capStroke,
-            topLeft = Offset(capLeft, capTop),
-            size = Size(capDrawL, capDrawW),
-            style = Stroke(width = 2.5f)
-        )
-
-        // Pile circles in plan
-        val pileR = (safeDia / 2.0 * pScale).toFloat().coerceAtLeast(4f)
-        for (r in 0 until nRows) {
-            for (c in 0 until nCols) {
-                val px = capLeft + (if (nCols > 1) capDrawL * (c + 0.5f) / nCols else capDrawL / 2f)
-                val py = capTop + (if (nRows > 1) capDrawW * (r + 0.5f) / nRows else capDrawW / 2f)
-                drawCircle(color = Color(0xFF555555), radius = pileR, center = Offset(px, py))
-                drawCircle(color = pileStroke, radius = pileR, center = Offset(px, py), style = Stroke(width = 1.5f))
-                // Cross mark for pile
-                drawLine(Color(0xFF777777), Offset(px - pileR * 0.6f, py - pileR * 0.6f), Offset(px + pileR * 0.6f, py + pileR * 0.6f), 0.8f)
-                drawLine(Color(0xFF777777), Offset(px - pileR * 0.6f, py + pileR * 0.6f), Offset(px + pileR * 0.6f, py - pileR * 0.6f), 0.8f)
+        when (viewMode) {
+            1 -> { // Plan View
+                planLeft = margin + 20f
+                planTop = 75f
+                planMaxW = w - 2 * margin - 40f
+                planMaxH = h * 0.82f
+                secLeft = 0f; secTop = 0f; secMaxSize = 0f
+                elevTop = 0f; elevLeft = 0f; elevW = 0f; elevH = 0f
+                tblLeft = 0f; tblTop = 0f; tblW = 0f
+            }
+            2 -> { // Section View
+                planLeft = 0f; planTop = 0f; planMaxW = 0f; planMaxH = 0f
+                secLeft = margin + 20f
+                secTop = 75f
+                secMaxSize = min(w - 2 * margin - 40f, h * 0.82f)
+                elevTop = 0f; elevLeft = 0f; elevW = 0f; elevH = 0f
+                tblLeft = 0f; tblTop = 0f; tblW = 0f
+            }
+            3 -> { // Elevation & Table View
+                planLeft = 0f; planTop = 0f; planMaxW = 0f; planMaxH = 0f
+                secLeft = 0f; secTop = 0f; secMaxSize = 0f
+                elevTop = 75f
+                elevLeft = margin + 20f
+                elevW = w * 0.50f
+                elevH = h * 0.82f
+                tblLeft = w * 0.54f
+                tblTop = 75f
+                tblW = w * 0.42f
+            }
+            else -> { // All (0)
+                planLeft = margin + 40f
+                planTop = 75f
+                planMaxW = w * 0.48f
+                planMaxH = h * 0.36f
+                secLeft = w * 0.52f
+                secTop = 75f
+                secMaxSize = min(w * 0.44f, h * 0.36f)
+                elevTop = planTop + planMaxH + 30f
+                elevLeft = margin + 40f
+                elevW = w * 0.48f
+                elevH = h * 0.42f
+                tblLeft = w * 0.52f
+                tblTop = elevTop
+                tblW = w * 0.44f
             }
         }
 
-        // Column outline in plan
-        val colDrawW = (safeColL * pScale).toFloat()
-        val colDrawD = (safeColW * pScale).toFloat()
-        drawRect(
-            color = columnFill,
-            topLeft = Offset(pCenterX - colDrawW / 2f, pCenterY - colDrawD / 2f),
-            size = Size(colDrawW, colDrawD)
-        )
-        drawRect(
-            color = columnStroke,
-            topLeft = Offset(pCenterX - colDrawW / 2f, pCenterY - colDrawD / 2f),
-            size = Size(colDrawW, colDrawD),
-            style = Stroke(width = 1.5f)
-        )
-        drawHatchPattern(
-            pCenterX - colDrawW / 2f, pCenterY - colDrawD / 2f,
-            colDrawW, colDrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666)
-        )
-
-        // Cap dimension lines
-        drawHorizontalDimension(capLeft, capLeft + capDrawL, capTop - 2f, "L=${safeCapL.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -12f)
-        drawVerticalDimension(capTop, capTop + capDrawW, capLeft - 2f, "W=${safeCapW.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
-
-        // Spacing dimension between two adjacent piles
-        if (nCols > 1) {
-            val p1x = capLeft + capDrawL * 0.5f / nCols
-            val p2x = capLeft + capDrawL * 1.5f / nCols
-            drawHorizontalDimension(p1x, p2x, capTop + capDrawW + 2f, "s=${safeSpacing.toInt()}", dimColor, cfg.annotationTextSmall, offset = 10f)
+        if (viewMode == 0) {
+            drawCombinedSectionLabel(h * 0.015f, w, listOf("Plan", "Section", "Elevation", "Table"), cfg)
+            drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+        } else if (viewMode == 1) {
+            drawZoneLabel(margin, planTop + 4f, "PLAN VIEW", cfg)
+        } else if (viewMode == 2) {
+            drawZoneLabel(margin, secTop + 4f, "PILE CROSS-SECTION", cfg)
+        } else if (viewMode == 3) {
+            drawZoneLabel(margin, elevTop + 4f, "ELEVATION & SCHEDULE", cfg)
         }
 
-        // Section cut line
-        drawSectionCutLine(
-            x1 = pCenterX, y1 = capTop - 10f,
-            x2 = pCenterX, y2 = capTop + capDrawW + 2f,
-            label = "A", color = C.SectionLine
-        )
-
         // ══════════════════════════════════════════════════
-        // CROSS-SECTION VIEW (top-right)
+        // PLAN VIEW
         // ══════════════════════════════════════════════════
-        val secLeft = w * 0.52f
-        val secTop = 75f
-        val secMaxSize = min(w * 0.44f, h * 0.36f)
+        if (viewMode == 0 || viewMode == 1) {
+            drawTextAnnotated("PLAN", planLeft, planTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+            drawZoneLabel(planLeft, planTop + 10f, "PLAN", cfg)
 
-        drawTextAnnotated("PILE SECTION", secLeft, secTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-        drawZoneLabel(secLeft, secTop + 10f, "SECTION", cfg)
+            // Scale plan to fit
+            val planScaleX = planMaxW / safeCapL
+            val planScaleY = planMaxH / safeCapW
+            val pScale = min(planScaleX, planScaleY) * 0.8f
 
-        // Scale pile section to fit
-        val secScale = ((secMaxSize * 0.6f) / safeDia).toFloat()
-        val pileDrawR = (safeDia / 2.0 * secScale).toFloat().coerceAtLeast(20f)
-        val pileCX = (secLeft + secMaxSize / 2f).toFloat()
-        val pileCY = (secTop + secMaxSize / 2f + 8f).toFloat()
+            val capDrawL = (safeCapL * pScale).toFloat()
+            val capDrawW = (safeCapW * pScale).toFloat()
+            val pCenterX = (planLeft + planMaxW / 2f).toFloat()
+            val pCenterY = (planTop + planMaxH / 2f + 4f).toFloat()
+            val capLeft = pCenterX - capDrawL / 2f
+            val capTop = pCenterY - capDrawW / 2f
 
-        // Pile circle (concrete)
-        drawCircle(color = concreteFill, radius = pileDrawR, center = Offset(pileCX, pileCY))
-        drawCircle(color = pileStroke, radius = pileDrawR, center = Offset(pileCX, pileCY), style = Stroke(width = 2f))
+            // Cap outline
+            drawRect(
+                color = concreteFill,
+                topLeft = Offset(capLeft, capTop),
+                size = Size(capDrawL, capDrawW)
+            )
+            drawHatchPattern(
+                capLeft, capTop, capDrawL, capDrawW,
+                spacing = 14f, angleDeg = 45f, color = Color(0x55AAAAAA)
+            )
+            drawRect(
+                color = capStroke,
+                topLeft = Offset(capLeft, capTop),
+                size = Size(capDrawL, capDrawW),
+                style = Stroke(width = 2.5f)
+            )
 
-        // Concrete hatching (concentric circles)
-        for (i in 1..3) {
-            val hr = pileDrawR * (i / 4f)
-            drawCircle(color = Color(0x33AAAAAA), radius = hr, center = Offset(pileCX, pileCY), style = Stroke(width = 0.5f))
+            // Pile circles in plan
+            val pileR = (safeDia / 2.0 * pScale).toFloat().coerceAtLeast(4f)
+            for (r in 0 until nRows) {
+                for (c in 0 until nCols) {
+                    val px = capLeft + (if (nCols > 1) capDrawL * (c + 0.5f) / nCols else capDrawL / 2f)
+                    val py = capTop + (if (nRows > 1) capDrawW * (r + 0.5f) / nRows else capDrawW / 2f)
+                    drawCircle(color = Color(0xFF555555), radius = pileR, center = Offset(px, py))
+                    drawCircle(color = pileStroke, radius = pileR, center = Offset(px, py), style = Stroke(width = 1.5f))
+                    // Cross mark for pile
+                    drawLine(Color(0xFF777777), Offset(px - pileR * 0.6f, py - pileR * 0.6f), Offset(px + pileR * 0.6f, py + pileR * 0.6f), 0.8f)
+                    drawLine(Color(0xFF777777), Offset(px - pileR * 0.6f, py + pileR * 0.6f), Offset(px + pileR * 0.6f, py - pileR * 0.6f), 0.8f)
+                }
+            }
+
+            // Column outline in plan
+            val colDrawW = (safeColL * pScale).toFloat()
+            val colDrawD = (safeColW * pScale).toFloat()
+            drawRect(
+                color = columnFill,
+                topLeft = Offset(pCenterX - colDrawW / 2f, pCenterY - colDrawD / 2f),
+                size = Size(colDrawW, colDrawD)
+            )
+            drawRect(
+                color = columnStroke,
+                topLeft = Offset(pCenterX - colDrawW / 2f, pCenterY - colDrawD / 2f),
+                size = Size(colDrawW, colDrawD),
+                style = Stroke(width = 1.5f)
+            )
+            drawHatchPattern(
+                pCenterX - colDrawW / 2f, pCenterY - colDrawD / 2f,
+                colDrawW, colDrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666)
+            )
+
+            // Cap dimension lines
+            drawHorizontalDimension(capLeft, capLeft + capDrawL, capTop - 2f, "L=${safeCapL.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -12f)
+            drawVerticalDimension(capTop, capTop + capDrawW, capLeft - 2f, "W=${safeCapW.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
+
+            // Spacing dimension between two adjacent piles
+            if (nCols > 1) {
+                val p1x = capLeft + capDrawL * 0.5f / nCols
+                val p2x = capLeft + capDrawL * 1.5f / nCols
+                drawHorizontalDimension(p1x, p2x, capTop + capDrawW + 2f, "s=${safeSpacing.toInt()}", dimColor, cfg.annotationTextSmall, offset = 10f)
+            }
+
+            // Section cut line
+            drawSectionCutLine(
+                x1 = pCenterX, y1 = capTop - 10f,
+                x2 = pCenterX, y2 = capTop + capDrawW + 2f,
+                label = "A", color = C.SectionLine
+            )
         }
 
-        // Longitudinal reinforcement bars
-        val barDrawR = (longitDia / 2.0 * secScale).toFloat().coerceIn(2f, 6f)
-        val coverPx = (75.0 * secScale).toFloat()
-        val barCircleR = pileDrawR - coverPx
-        for (i in 0 until longitBars) {
-            val angle = 2.0 * PI * i / longitBars
-            val bx = (pileCX + (barCircleR * cos(angle))).toFloat()
-            val by = (pileCY + (barCircleR * sin(angle))).toFloat()
-            drawRebarCircle(bx, by, longitDia.toFloat(), secScale * 0.5f, rebarColor)
+        // ══════════════════════════════════════════════════
+        // CROSS-SECTION VIEW
+        // ══════════════════════════════════════════════════
+        if (viewMode == 0 || viewMode == 2) {
+            drawTextAnnotated("PILE SECTION", secLeft, secTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+            drawZoneLabel(secLeft, secTop + 10f, "SECTION", cfg)
+
+            // Scale pile section to fit
+            val secScale = ((secMaxSize * 0.6f) / safeDia).toFloat()
+            val pileDrawR = (safeDia / 2.0 * secScale).toFloat().coerceAtLeast(20f)
+            val pileCX = (secLeft + secMaxSize / 2f).toFloat()
+            val pileCY = (secTop + secMaxSize / 2f + 8f).toFloat()
+
+            // Pile circle (concrete)
+            drawCircle(color = concreteFill, radius = pileDrawR, center = Offset(pileCX, pileCY))
+            drawCircle(color = pileStroke, radius = pileDrawR, center = Offset(pileCX, pileCY), style = Stroke(width = 2f))
+
+            // Concrete hatching (concentric circles)
+            for (i in 1..3) {
+                val hr = pileDrawR * (i / 4f)
+                drawCircle(color = Color(0x33AAAAAA), radius = hr, center = Offset(pileCX, pileCY), style = Stroke(width = 0.5f))
+            }
+
+            // Longitudinal reinforcement bars
+            val barDrawR = (longitDia / 2.0 * secScale).toFloat().coerceIn(2f, 6f)
+            val coverPx = (75.0 * secScale).toFloat()
+            val barCircleR = pileDrawR - coverPx
+            for (i in 0 until longitBars) {
+                val angle = 2.0 * PI * i / longitBars
+                val bx = (pileCX + (barCircleR * cos(angle))).toFloat()
+                val by = (pileCY + (barCircleR * sin(angle))).toFloat()
+                drawRebarCircle(bx, by, longitDia.toFloat(), secScale * 0.5f, rebarColor)
+            }
+
+            // Ties (stirrup)
+            val tieR = barCircleR + barDrawR + 2f
+            drawCircle(color = stirrupColor, radius = tieR, center = Offset(pileCX, pileCY), style = Stroke(width = 1.2f))
+
+            // Diameter dimension
+            drawHorizontalDimension(
+                pileCX - pileDrawR, pileCX + pileDrawR, pileCY + pileDrawR + 2f,
+                "Ø${safeDia.toInt()}", dimColor, cfg.dimTextSize, offset = 10f
+            )
+
+            // Rebar label
+            drawTextAnnotated(
+                "${longitBars}Ø$longitDia",
+                pileCX + pileDrawR + 14f, pileCY - 6f, rebarColor, cfg.dimTextSize, bold = true
+            )
+            drawTextAnnotated(
+                "ties Ø$tiesDia @$tiesSpacing",
+                pileCX + pileDrawR + 14f, pileCY + 8f, stirrupColor, cfg.valueLabelTextSize
+            )
         }
 
-        // Ties (stirrup)
-        val tieR = barCircleR + barDrawR + 2f
-        drawCircle(color = stirrupColor, radius = tieR, center = Offset(pileCX, pileCY), style = Stroke(width = 1.2f))
+        // ══════════════════════════════════════════════════
+        // ELEVATION / SIDE VIEW
+        // ══════════════════════════════════════════════════
+        if (viewMode == 0 || viewMode == 3) {
+            drawTextAnnotated("SECTION A-A (ELEVATION)", elevLeft, elevTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+            if (viewMode == 0) {
+                drawSectionSeparator(elevTop - h * 0.01f, w, "ELEVATION / TABLE", cfg)
+            }
+            drawZoneLabel(elevLeft, elevTop + 10f, "ELEVATION", cfg)
 
-        // Diameter dimension
-        drawHorizontalDimension(
-            pileCX - pileDrawR, pileCX + pileDrawR, pileCY + pileDrawR + 2f,
-            "Ø${safeDia.toInt()}", dimColor, cfg.dimTextSize, offset = 10f
-        )
+            // Pile length to drawing height
+            val pileDrawLength = (elevH - 50f) * 0.75f
+            val elevScale = (pileDrawLength / pileLength).toFloat()
 
-        // Rebar label
-        drawTextAnnotated(
-            "${longitBars}Ø$longitDia",
-            pileCX + pileDrawR + 14f, pileCY - 6f, rebarColor, cfg.dimTextSize, bold = true
-        )
-        drawTextAnnotated(
-            "ties Ø$tiesDia @$tiesSpacing",
-            pileCX + pileDrawR + 14f, pileCY + 8f, stirrupColor, cfg.valueLabelTextSize
-        )
+            val eCenterX = (elevLeft + elevW / 2f).toFloat()
+            val groundY = (elevTop + 20f).toFloat()
+            val pileTopY = groundY + (safeCapT * elevScale * 0.3f).toFloat()
+            val pileBottomY = pileTopY + pileDrawLength
+            val pileDrawW = (safeDia * elevScale).toFloat().coerceIn(10f, 30f)
+
+            // Ground surface line
+            drawLine(dimColor, Offset(elevLeft, groundY), Offset(elevLeft + elevW, groundY), 1.5f)
+            drawTextAnnotated("GL ±0.00", elevLeft + elevW - 60f, groundY - 4f, dimColor, cfg.valueLabelTextSize)
+
+            // Soil layers
+            val soilLayerH = (pileBottomY - groundY) * 0.6f
+            drawRect(
+                color = soilColor.copy(alpha = 0.3f),
+                topLeft = Offset(elevLeft, groundY),
+                size = Size(elevW, soilLayerH)
+            )
+            drawHatchPattern(
+                elevLeft, groundY, elevW, soilLayerH,
+                spacing = 10f, angleDeg = -45f, color = soilHatchColor
+            )
+            drawTextAnnotated(soilType.uppercase(), elevLeft + 6f, groundY + soilLayerH / 2f - 4f, soilHatchColor, cfg.dimTextSize, bold = true)
+
+            // Bearing layer
+            drawRect(
+                color = bearingLayerColor.copy(alpha = 0.4f),
+                topLeft = Offset(elevLeft, groundY + soilLayerH),
+                size = Size(elevW, pileBottomY - groundY - soilLayerH + 10f)
+            )
+            drawHatchPattern(
+                elevLeft, groundY + soilLayerH, elevW, pileBottomY - groundY - soilLayerH + 10f,
+                spacing = 6f, angleDeg = 30f, color = Color(0x885D4037)
+            )
+            drawTextAnnotated("BEARING STRATUM", elevLeft + 6f, groundY + soilLayerH + 14f, bearingLayerColor, cfg.dimTextSize, bold = true)
+
+            // Pile body
+            drawRect(
+                color = concreteFill,
+                topLeft = Offset(eCenterX - pileDrawW / 2f, pileTopY),
+                size = Size(pileDrawW, pileBottomY - pileTopY)
+            )
+            drawRect(
+                color = pileStroke,
+                topLeft = Offset(eCenterX - pileDrawW / 2f, pileTopY),
+                size = Size(pileDrawW, pileBottomY - pileTopY),
+                style = Stroke(width = 2f)
+            )
+
+            // Pile tip (triangle)
+            drawPath(
+                path = Path().apply {
+                    moveTo(eCenterX - pileDrawW / 2f, pileBottomY)
+                    lineTo(eCenterX, pileBottomY + 8f)
+                    lineTo(eCenterX + pileDrawW / 2f, pileBottomY)
+                    close()
+                },
+                color = concreteFill
+            )
+
+            // Pile cap
+            val capDrawW_elev = (safeCapL * elevScale * 0.25f).toFloat()
+            val capDrawH = (safeCapT * elevScale * 0.3f).toFloat()
+            drawRect(
+                color = concreteFill,
+                topLeft = Offset(eCenterX - capDrawW_elev / 2f, pileTopY - capDrawH),
+                size = Size(capDrawW_elev, capDrawH)
+            )
+            drawRect(
+                color = capStroke,
+                topLeft = Offset(eCenterX - pileDrawW / 2f, pileTopY - capDrawH),
+                size = Size(pileDrawW, capDrawH),
+                style = Stroke(width = 2.5f)
+            )
+
+            // Column on top of cap
+            val colDrawW2 = (safeColL * elevScale * 0.25f).toFloat().coerceAtLeast(12f)
+            val colH = 28f
+            drawRect(
+                color = columnFill,
+                topLeft = Offset(eCenterX - colDrawW2 / 2f, pileTopY - capDrawH - colH),
+                size = Size(colDrawW2, colH)
+            )
+            drawRect(
+                color = columnStroke,
+                topLeft = Offset(eCenterX - colDrawW2 / 2f, pileTopY - capDrawH - colH),
+                size = Size(colDrawW2, colH),
+                style = Stroke(width = 1.5f)
+            )
+            drawHatchPattern(
+                eCenterX - colDrawW2 / 2f, pileTopY - capDrawH - colH,
+                colDrawW2, colH, spacing = 4f, angleDeg = -45f, color = Color(0x66666666)
+            )
+
+            // Rebar in pile (two lines)
+            val rebarOffset = pileDrawW * 0.25f
+            drawLine(rebarColor, Offset(eCenterX - rebarOffset, pileTopY), Offset(eCenterX - rebarOffset, pileBottomY - 4f), 1.2f)
+            drawLine(rebarColor, Offset(eCenterX + rebarOffset, pileTopY), Offset(eCenterX + rebarOffset, pileBottomY - 4f), 1.2f)
+
+            // Pile length dimension
+            drawVerticalDimension(
+                pileTopY, pileBottomY, eCenterX + pileDrawW / 2f + 4f,
+                "L=${pileLength.toInt()}m", dimColor, cfg.valueLabelTextSize, offset = 14f
+            )
+
+            // Cap thickness dimension
+            drawVerticalDimension(
+                pileTopY - capDrawH, pileTopY, eCenterX + capDrawW_elev / 2f + 4f,
+                "${safeCapT.toInt()}", dimColor, cfg.annotationTextSmall, offset = -12f
+            )
+
+            // Load arrow at top
+            val arrowX = eCenterX
+            val arrowTop = pileTopY - capDrawH - colH - 16f
+            drawLine(unsafeColor, Offset(arrowX, arrowTop), Offset(arrowX, arrowTop + 14f), 2f)
+            drawPath(
+                path = Path().apply {
+                    moveTo(arrowX, arrowTop + 14f)
+                    lineTo(arrowX - 4f, arrowTop + 8f)
+                    lineTo(arrowX + 4f, arrowTop + 8f)
+                    close()
+                },
+                color = unsafeColor
+            )
+            drawTextAnnotated("P", arrowX, arrowTop - 4f, unsafeColor, cfg.valueLabelTextSize, center = true, bold = true)
+        }
 
         // ══════════════════════════════════════════════════
-        // ELEVATION / SIDE VIEW (bottom-left)
+        // REINFORCEMENT SCHEDULE TABLE
         // ══════════════════════════════════════════════════
-        val elevTop = planTop + planMaxH + 30f
-        val elevLeft = margin + 40f
-        val elevW = w * 0.48f
-        val elevH = h * 0.45f
+        if (viewMode == 0 || viewMode == 3) {
+            drawTextAnnotated("REINFORCEMENT SCHEDULE", tblLeft, tblTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
+            drawZoneLabel(tblLeft, tblTop + 10f, "TABLE", cfg)
 
-        drawTextAnnotated("SECTION A-A (ELEVATION)", elevLeft, elevTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-        drawSectionSeparator(elevTop - h * 0.01f, w, "ELEVATION / TABLE", cfg)
-        drawZoneLabel(elevLeft, elevTop + 10f, "ELEVATION", cfg)
+            val headers = listOf("Mark", "Description", "Dia", "Qty", "Spacing")
+            val colWidths = listOf(
+                tblW * 0.08f, tblW * 0.34f, tblW * 0.14f,
+                tblW * 0.16f, tblW * 0.28f
+            )
+            val rows = listOf(
+                listOf("\u2460", "Pile Longitudinal", "Ø$longitDia", "$longitBars", "-"),
+                listOf("\u2461", "Pile Ties", "Ø$tiesDia", "-", "@$tiesSpacing"),
+                listOf("\u2462", "Cap Bottom X", "Ø$capRebarDia", "$capRebarCount", "@200"),
+                listOf("\u2463", "Cap Bottom Y", "Ø$capRebarDia", "$capRebarCount", "@200")
+            )
 
-        // Pile length to drawing height
-        val pileDrawLength = (elevH - 50f) * 0.75f
-        val elevScale = (pileDrawLength / pileLength).toFloat()
-
-        val eCenterX = (elevLeft + elevW / 2f).toFloat()
-        val groundY = (elevTop + 20f).toFloat()
-        val pileTopY = groundY + (safeCapT * elevScale * 0.3f).toFloat()
-        val pileBottomY = pileTopY + pileDrawLength
-        val pileDrawW = (safeDia * elevScale).toFloat().coerceIn(10f, 30f)
-
-        // Ground surface line
-        drawLine(dimColor, Offset(elevLeft, groundY), Offset(elevLeft + elevW, groundY), 1.5f)
-        drawTextAnnotated("GL ±0.00", elevLeft + elevW - 60f, groundY - 4f, dimColor, cfg.valueLabelTextSize)
-
-        // Soil layers
-        val soilLayerH = (pileBottomY - groundY) * 0.6f
-        drawRect(
-            color = soilColor.copy(alpha = 0.3f),
-            topLeft = Offset(elevLeft, groundY),
-            size = Size(elevW, soilLayerH)
-        )
-        drawHatchPattern(
-            elevLeft, groundY, elevW, soilLayerH,
-            spacing = 10f, angleDeg = -45f, color = soilHatchColor
-        )
-        drawTextAnnotated(soilType.uppercase(), elevLeft + 6f, groundY + soilLayerH / 2f - 4f, soilHatchColor, cfg.dimTextSize, bold = true)
-
-        // Bearing layer
-        drawRect(
-            color = bearingLayerColor.copy(alpha = 0.4f),
-            topLeft = Offset(elevLeft, groundY + soilLayerH),
-            size = Size(elevW, pileBottomY - groundY - soilLayerH + 10f)
-        )
-        drawHatchPattern(
-            elevLeft, groundY + soilLayerH, elevW, pileBottomY - groundY - soilLayerH + 10f,
-            spacing = 6f, angleDeg = 30f, color = Color(0x885D4037)
-        )
-        drawTextAnnotated("BEARING STRATUM", elevLeft + 6f, groundY + soilLayerH + 14f, bearingLayerColor, cfg.dimTextSize, bold = true)
-
-        // Pile body
-        drawRect(
-            color = concreteFill,
-            topLeft = Offset(eCenterX - pileDrawW / 2f, pileTopY),
-            size = Size(pileDrawW, pileBottomY - pileTopY)
-        )
-        drawRect(
-            color = pileStroke,
-            topLeft = Offset(eCenterX - pileDrawW / 2f, pileTopY),
-            size = Size(pileDrawW, pileBottomY - pileTopY),
-            style = Stroke(width = 2f)
-        )
-
-        // Pile tip (triangle)
-        drawPath(
-            path = Path().apply {
-                moveTo(eCenterX - pileDrawW / 2f, pileBottomY)
-                lineTo(eCenterX, pileBottomY + 8f)
-                lineTo(eCenterX + pileDrawW / 2f, pileBottomY)
-                close()
-            },
-            color = concreteFill
-        )
-
-        // Pile cap
-        val capDrawW_elev = (safeCapL * elevScale * 0.25f).toFloat()
-        val capDrawH = (safeCapT * elevScale * 0.3f).toFloat()
-        drawRect(
-            color = concreteFill,
-            topLeft = Offset(eCenterX - capDrawW_elev / 2f, pileTopY - capDrawH),
-            size = Size(capDrawW_elev, capDrawH)
-        )
-        drawRect(
-            color = capStroke,
-            topLeft = Offset(eCenterX - capDrawW / 2f, pileTopY - capDrawH),
-            size = Size(capDrawW, capDrawH),
-            style = Stroke(width = 2.5f)
-        )
-
-        // Column on top of cap
-        val colDrawW2 = (safeColL * elevScale * 0.25f).toFloat().coerceAtLeast(12f)
-        val colH = 28f
-        drawRect(
-            color = columnFill,
-            topLeft = Offset(eCenterX - colDrawW2 / 2f, pileTopY - capDrawH - colH),
-            size = Size(colDrawW2, colH)
-        )
-        drawRect(
-            color = columnStroke,
-            topLeft = Offset(eCenterX - colDrawW2 / 2f, pileTopY - capDrawH - colH),
-            size = Size(colDrawW2, colH),
-            style = Stroke(width = 1.5f)
-        )
-        drawHatchPattern(
-            eCenterX - colDrawW2 / 2f, pileTopY - capDrawH - colH,
-            colDrawW2, colH, spacing = 4f, angleDeg = -45f, color = Color(0x66666666)
-        )
-
-        // Rebar in pile (two lines)
-        val rebarOffset = pileDrawW * 0.25f
-        drawLine(rebarColor, Offset(eCenterX - rebarOffset, pileTopY), Offset(eCenterX - rebarOffset, pileBottomY - 4f), 1.2f)
-        drawLine(rebarColor, Offset(eCenterX + rebarOffset, pileTopY), Offset(eCenterX + rebarOffset, pileBottomY - 4f), 1.2f)
-
-        // Pile length dimension
-        drawVerticalDimension(
-            pileTopY, pileBottomY, eCenterX + pileDrawW / 2f + 4f,
-            "L=${pileLength.toInt()}m", dimColor, cfg.valueLabelTextSize, offset = 14f
-        )
-
-        // Cap thickness dimension
-        drawVerticalDimension(
-            pileTopY - capDrawH, pileTopY, eCenterX + capDrawW / 2f + 4f,
-            "${safeCapT.toInt()}", dimColor, cfg.annotationTextSmall, offset = -12f
-        )
-
-        // Load arrow at top
-        val arrowX = eCenterX
-        val arrowTop = pileTopY - capDrawH - colH - 16f
-        drawLine(unsafeColor, Offset(arrowX, arrowTop), Offset(arrowX, arrowTop + 14f), 2f)
-        drawPath(
-            path = Path().apply {
-                moveTo(arrowX, arrowTop + 14f)
-                lineTo(arrowX - 4f, arrowTop + 8f)
-                lineTo(arrowX + 4f, arrowTop + 8f)
-                close()
-            },
-            color = unsafeColor
-        )
-        drawTextAnnotated("P", arrowX, arrowTop - 4f, unsafeColor, cfg.valueLabelTextSize, center = true, bold = true)
-
-        // ══════════════════════════════════════════════════
-        // REINFORCEMENT SCHEDULE TABLE (bottom-right)
-        // ══════════════════════════════════════════════════
-        val tblLeft = w * 0.52f
-        val tblTop = elevTop
-        val tblW = w * 0.44f
-
-        drawTextAnnotated("REINFORCEMENT SCHEDULE", tblLeft, tblTop - 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-        drawZoneLabel(tblLeft, tblTop + 10f, "TABLE", cfg)
-
-        val headers = listOf("Mark", "Description", "Dia", "Qty", "Spacing")
-        val colWidths = listOf(
-            tblW * 0.08f, tblW * 0.34f, tblW * 0.14f,
-            tblW * 0.16f, tblW * 0.28f
-        )
-        val rows = listOf(
-            listOf("\u2460", "Pile Longitudinal", "Ø$longitDia", "$longitBars", "-"),
-            listOf("\u2461", "Pile Ties", "Ø$tiesDia", "-", "@$tiesSpacing"),
-            listOf("\u2462", "Cap Bottom X", "Ø$capRebarDia", "$capRebarCount", "@200"),
-            listOf("\u2463", "Cap Bottom Y", "Ø$capRebarDia", "$capRebarCount", "@200")
-        )
-
-        drawReinforcementTable(
-            x = tblLeft, y = tblTop + 4f,
-            colWidths = colWidths,
-            headers = headers,
-            rows = rows,
-            rowHeight = cfg.tableRowHeight,
-            headerHeight = cfg.tableHeaderHeight,
-            headerBg = tableHeaderBg,
-            altRowBg = Color(0x1AFFFFFF),
-            textColor = textColor,
-            textSize = cfg.dimTextSize
-        )
+            drawReinforcementTable(
+                x = tblLeft, y = tblTop + 4f,
+                colWidths = colWidths,
+                headers = headers,
+                rows = rows,
+                rowHeight = cfg.tableRowHeight,
+                headerHeight = cfg.tableHeaderHeight,
+                headerBg = tableHeaderBg,
+                altRowBg = Color(0x1AFFFFFF),
+                textColor = textColor,
+                textSize = cfg.dimTextSize
+            )
+        }
 
         // ── Responsive title block ─────────────────────────────
         drawResponsiveTitleBlock(

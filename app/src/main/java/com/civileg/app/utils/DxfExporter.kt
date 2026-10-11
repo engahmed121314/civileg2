@@ -176,7 +176,7 @@ class DxfExporter(private val context: Context) {
     fun addText(x: Double, y: Double, text: String, height: Double = 100.0, layer: String = "TEXT", rotation: Double = 0.0) {
         sb.append("0\nTEXT\n8\n$layer\n")
         sb.append("10\n$x\n20\n$y\n30\n0.0\n")
-        sb.append("40\n100.0\n")
+        sb.append("40\n$height\n")
         sb.append("1\n$text\n")
         sb.append("50\n$rotation\n")
     }
@@ -238,6 +238,7 @@ class DxfExporter(private val context: Context) {
         columns: List<ColumnLoad>,
         plotWidth: Double,
         plotLength: Double,
+        soilCapacity: Double = 200.0,
         outputPath: String
     ): File {
         val sb = StringBuilder()
@@ -265,7 +266,7 @@ class DxfExporter(private val context: Context) {
         // Columns and Footings
         columns.forEach { col ->
             drawRect(sb, col.x - col.width / 2.0, col.y - col.depth / 2.0, col.width, col.depth, "COLUMNS")
-            val footingSide = Math.sqrt((col.axialLoad * 1.1) / 200.0) * 1000.0
+            val footingSide = Math.sqrt((col.axialLoad * 1.1) / soilCapacity) * 1000.0
             drawRect(sb, col.x - footingSide / 2.0, col.y - footingSide / 2.0, footingSide, footingSide, "FOOTINGS")
             drawText(sb, col.x + col.width / 2.0, col.y + col.depth / 2.0, col.id, "0", 150.0)
         }

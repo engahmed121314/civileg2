@@ -327,10 +327,9 @@ class ECPTank : TankDesign {
         val vertBarsPerMeter = ceil(asVerticalRequired / vertBarArea).toInt().coerceIn(6, 16)
         val vertSpacing = (1000.0 / vertBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
 
-        // فحص الشق
-        val hoopStress = maxHoopTension / (wallThickness / 1000.0)
-        val fct = 0.6 * sqrt(fcu)  // ECP 203: fct = 0.6 * sqrt(fcu)
-        val isCrackSafe = hoopStress <= fct
+        val steelStress = maxHoopTension / (hoopBarsPerMeter / 1000.0 * (PI * hoopBarDia * hoopBarDia / 4)) // MPa
+        val fct = 0.6 * sqrt(fcu)
+        val isCrackSafe = steelStress <= fct * 1000.0
 
         codeNotes.add("ECP 203-2020: Section 8-1 (Circular Tank - Hoop Tension)")
         codeNotes.add("Max Hoop Tension T = γw×H×R = ${String.format("%.1f", maxHoopTension)} kN/m")
@@ -421,8 +420,10 @@ class ECPTank : TankDesign {
             2 * (wallThickness / 1000.0 + d / 1000.0 + wallThickness / 1000.0 + d / 1000.0)
         }
         val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * punchingPerimeter * d / 1000.0 // kN (ECP 203 §4-3-2)
-        val punchingLoad = totalPressure * L * B // kN
-        val punchingCheck = punchingLoad * 0.5 <= punchingShearCapacity // تقريبي
+        val soilPressure = totalPressure / (L * B) // kPa
+        val criticalArea = (wallThickness / 1000.0 + d / 1000.0) * (wallThickness / 1000.0 + d / 1000.0)
+        val punchingLoad = totalPressure * L * B - soilPressure * criticalArea // kN
+        val punchingCheck = punchingLoad <= punchingShearCapacity
 
         safetyChecks.add(TankSafetyCheck(
             "Punching Shear (Base)", punchingLoad * 0.5, punchingShearCapacity, "kN",

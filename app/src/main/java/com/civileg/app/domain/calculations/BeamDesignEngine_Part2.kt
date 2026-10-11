@@ -298,7 +298,7 @@ object BeamDesignEnginePart2 {
             else -> 0.62 * sqrt(fcu * 0.8) // ACI
         }
         val yt = h / 2.0
-        val Mcr = fr * Ig / (yt * 1e6) // kN.m
+        val Mcr = fr * Ig / yt / 1e6 // kN.m
 
         // Effective moment of inertia (Branson equation)
         val Ma = mu // applied moment
@@ -309,7 +309,7 @@ object BeamDesignEnginePart2 {
         }
 
         // Immediate deflection (simply supported UDL: 5wL⁴/384EI)
-        val wu = mu * 8.0 / (span * span) // back-calculate wu from Mu=wuL²/8
+        val wu = mu * 8.0 / (span * span)
         val immediate = (5.0 * wu * (span * 1000.0).pow(4)) / (384.0 * Ec * Ie)
 
         // Long-term multiplier (creep + shrinkage)

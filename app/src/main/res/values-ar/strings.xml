@@ -1238,6 +1238,13 @@
     <string name="frame_node_label">عقدة %d</string>
     <string name="frame_on_member">على: %1$s (#%2$d)</string>
     <string name="frame_member_format">عقدة %1$d ← عقدة %2$d</string>
+    <string name="frame_disp_dx">dx: %.3f مم</string>
+    <string name="frame_disp_dy">dy: %.3f مم</string>
+    <string name="frame_disp_theta">θ: %.4f راديان</string>
+    <string name="frame_reaction_format">عقدة %1$d: Rx = %2$.2f kN, Ry = %3$.2f kN, M = %4$.2f kN.m</string>
+    <string name="frame_member_force_header">عضو %1$s (#%2$d):</string>
+    <string name="frame_member_end_i">  I: N = %1$.1f kN, V = %2$.1f kN, M = %3$.1f kN.m</string>
+    <string name="frame_member_end_j">  J: N = %1$.1f kN, V = %2$.1f kN, M = %3$.1f kN.m</string>
 
     <!-- المخزن -->
     <string name="inventory_search_hint">بحث في المخزن...</string>

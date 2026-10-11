@@ -121,8 +121,12 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
         val providedSteel = ribDesign.flexureReinforcement.providedArea
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
 
-        val isSafe = true
-        val utilizationRatio = 0.7
+        val isSafe = ribDesign.isSafe && solidHeadDesign.isSafe && punchingShearCheck.isSafe && deflectionCheck.isSafe
+        val utilizationRatio = maxOf(
+            ribDesign.utilizationRatio,
+            if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0,
+            if (deflectionCheck.allowable > 0) deflectionCheck.longTerm / deflectionCheck.allowable else 0.0
+        )
 
         return WaffleSlabResult(
             isSafe = isSafe,

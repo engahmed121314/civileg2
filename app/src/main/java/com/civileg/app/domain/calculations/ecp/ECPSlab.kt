@@ -140,18 +140,16 @@ class ECPSlab : SlabDesign {
         val aspectRatio = longSpan / shortSpan.coerceAtLeast(1.0)
         val coefficients = calculateMomentCoefficients(aspectRatio, supportConditions)
         
-        // العزم في الاتجاه القصير
-        val MuShort = coefficients.positiveShort * totalLoad * shortSpan * shortSpan / 1000.0 // kN.m/m
+        val MuShort = coefficients.positiveShort * totalLoad * shortSpan * shortSpan / 1_000_000.0 // kN.m/m
         val resultShort = designOneWaySlab(
-            fcu, fy, slabThickness, shortSpan, 
-            MuShort, totalLoad * shortSpan / 2, loadCombination
+            fcu, fy, slabThickness, shortSpan,
+            MuShort, totalLoad * shortSpan / 2000.0, loadCombination
         )
-        
-        // العزم في الاتجاه الطويل
-        val MuLong = coefficients.positiveLong * totalLoad * longSpan * longSpan / 1000.0 // kN.m/m
+
+        val MuLong = coefficients.positiveLong * totalLoad * longSpan * longSpan / 1_000_000.0 // kN.m/m
         val resultLong = designOneWaySlab(
             fcu, fy, slabThickness, longSpan,
-            MuLong, totalLoad * longSpan / 2, loadCombination
+            MuLong, totalLoad * longSpan / 2000.0, loadCombination
         )
         
         return TwoWaySlabResult(

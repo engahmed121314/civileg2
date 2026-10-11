@@ -59,28 +59,31 @@ fun FrameDrawingCanvas(
         val density = LocalDensity.current
         val canvasW = with(density) { maxWidth.toPx() }
         val canvasH = with(density) { maxHeight.toPx() }
+        if (canvasW <= 0f || canvasH <= 0f) return@BoxWithConstraints
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
         // Calculate scale to fit frame in canvas with padding (all in pixels)
         val paddingPx = with(density) { 8.dp.toPx() }
-        val drawW = canvasW - paddingPx * 2
-        val drawH = canvasH - paddingPx * 2
+        val drawW = max(canvasW - paddingPx * 2, 10f)
+        val drawH = max(canvasH - paddingPx * 2, 10f)
 
         val xRange = if (nodes.isNotEmpty()) (nodes.minOf { it.x }..nodes.maxOf { it.x }) else 0.0..1.0
         val yRange = if (nodes.isNotEmpty()) (nodes.minOf { it.y }..nodes.maxOf { it.y }) else 0.0..1.0
         val xSpan = max(xRange.endInclusive - xRange.start, 1.0)
         val ySpan = max(yRange.endInclusive - yRange.start, 1.0)
 
-        val scale = (min(drawW / xSpan, drawH / ySpan) * 0.92f).toFloat()
+        val scaleRaw = (min(drawW / xSpan, drawH / ySpan) * 0.92f).toFloat()
+        val scale = if (scaleRaw.isFinite() && scaleRaw > 0f) scaleRaw else 50f
 
-        val offsetX = (paddingPx + (drawW - xSpan * scale) / 2 - xRange.start * scale).toFloat()
-        val offsetY = (paddingPx + (drawH - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
+        val offsetXVal = (paddingPx + (drawW - xSpan * scale) / 2 - xRange.start * scale).toFloat()
+        val offsetYVal = (paddingPx + (drawH - ySpan * scale) / 2 + yRange.endInclusive * scale).toFloat()
+        val offsetX = if (offsetXVal.isFinite()) offsetXVal else 0f
+        val offsetY = if (offsetYVal.isFinite()) offsetYVal else 0f
 
         val toScreen: (Double, Double) -> Offset = { x, y ->
-            Offset(
-                (x * scale + offsetX).toFloat(),
-                (-y * scale + offsetY).toFloat()
-            )
+            val sx = (x * scale + offsetX).toFloat()
+            val sy = (-y * scale + offsetY).toFloat()
+            Offset(if (sx.isFinite()) sx else 0f, if (sy.isFinite()) sy else 0f)
         }
 
         Canvas(
@@ -88,21 +91,25 @@ fun FrameDrawingCanvas(
                 .fillMaxSize()
                 .pointerInput(selectedMemberId) {
                     detectTapGestures { tapOffset ->
-                        if (onMemberTap != null) {
-                            var closestMember: Int? = null
-                            var minDist = 30f
-                            for (member in members) {
-                                val ni = nodes.find { it.id == member.nodeI } ?: continue
-                                val nj = nodes.find { it.id == member.nodeJ } ?: continue
-                                val p1 = toScreen(ni.x, ni.y)
-                                val p2 = toScreen(nj.x, nj.y)
-                                val dist = pointToSegmentDist(tapOffset, p1, p2)
-                                if (dist < minDist) {
-                                    minDist = dist
-                                    closestMember = member.id
+                        try {
+                            if (onMemberTap != null && tapOffset.x.isFinite() && tapOffset.y.isFinite()) {
+                                var closestMember: Int? = null
+                                var minDist = 30f
+                                for (member in members) {
+                                    val ni = nodes.find { it.id == member.nodeI } ?: continue
+                                    val nj = nodes.find { it.id == member.nodeJ } ?: continue
+                                    val p1 = toScreen(ni.x, ni.y)
+                                    val p2 = toScreen(nj.x, nj.y)
+                                    val dist = pointToSegmentDist(tapOffset, p1, p2)
+                                    if (dist.isFinite() && dist < minDist) {
+                                        minDist = dist
+                                        closestMember = member.id
+                                    }
                                 }
+                                closestMember?.let { onMemberTap(it) }
                             }
-                            closestMember?.let { onMemberTap(it) }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
                 }
@@ -1244,17 +1251,19 @@ private fun DrawScope.drawDiagrams(
             val offsetMax = maxPt.value * diagramScale
             val annX = p1.x + dx * L * tMax + nx * offsetMax.toFloat()
             val annY = p1.y + dy * L * tMax + ny * offsetMax.toFloat()
-            val unit = when (diagramType) {
-                DiagramType.BMD -> context.getString(R.string.frame_unit_kn_m)
-                DiagramType.SFD, DiagramType.AFD -> context.getString(R.string.frame_unit_kn)
+            if (annX.isFinite() && annY.isFinite()) {
+                val unit = when (diagramType) {
+                    DiagramType.BMD -> context.getString(R.string.frame_unit_kn_m)
+                    DiagramType.SFD, DiagramType.AFD -> context.getString(R.string.frame_unit_kn)
+                }
+                val label = "${abs(maxPt.value).formatValue(2)} $unit"
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = label,
+                    topLeft = Offset(annX + 4, annY - 14),
+                    style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                )
             }
-            val label = "${abs(maxPt.value).formatValue(2)} $unit"
-            drawText(
-                textMeasurer = textMeasurer,
-                text = label,
-                topLeft = Offset(annX + 4, annY - 14),
-                style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            )
         }
     }
 }

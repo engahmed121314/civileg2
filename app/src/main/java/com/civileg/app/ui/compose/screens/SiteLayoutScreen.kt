@@ -103,6 +103,7 @@ fun SiteLayoutScreen() {
                             columns,
                             plotWidth.toDoubleOrNull() ?: 20.0,
                             plotLength.toDoubleOrNull() ?: 30.0,
+                            soilCapacity.toDoubleOrNull() ?: 200.0,
                             File(context.cacheDir, "Site_Layout.dxf").absolutePath
                         )
                         ExportUtils.openFile(context, file, "application/dxf")

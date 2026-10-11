@@ -1,6 +1,5 @@
 package com.civileg.app.domain.calculations
 
-import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -130,7 +129,7 @@ object FrameAnalysisEngine {
             val memberForces = mutableListOf<MemberEndForces>()
             val memberDiagrams = mutableListOf<MemberDiagram>()
 
-            for ((mIdx, member) in members.withIndex()) {
+            for (member in members) {
                 val ni = nodes.indexOfFirst { it.id == member.nodeI }
                 val nj = nodes.indexOfFirst { it.id == member.nodeJ }
                 if (ni < 0 || nj < 0) continue
@@ -141,7 +140,7 @@ object FrameAnalysisEngine {
 
                 // Member stiffness properties
                 val E = getE(member, settings)
-                val (A, I) = getSectionProperties(member, settings, L)
+                val (A, I) = getSectionProperties(member, settings)
                 val k = memberLocalStiffness(E, A, I, L)
 
                 // Local end displacements
@@ -157,7 +156,7 @@ object FrameAnalysisEngine {
                 }
 
                 // Add fixed-end forces for member loads on this member
-                var fefThisMember = DoubleArray(6)
+                val fefThisMember = DoubleArray(6)
                 val memberLoadList = memberLoads.filter { it.memberId == member.id }
                 for (mLoad in memberLoadList) {
                     val fef = getFixedEndForces(member, mLoad, nodes)
@@ -233,7 +232,7 @@ object FrameAnalysisEngine {
         val cosA = member.getCosTheta(nodes)
         val sinA = member.getSinTheta(nodes)
         val E = getE(member, settings)
-        val (A, I) = getSectionProperties(member, settings, L)
+        val (A, I) = getSectionProperties(member, settings)
 
         val kl = memberLocalStiffness(E, A, I, L)
         val T = transformationMatrix(cosA, sinA)
@@ -452,8 +451,7 @@ object FrameAnalysisEngine {
 
     private fun getSectionProperties(
         member: FrameMember,
-        settings: FrameAnalysisSettings,
-        L: Double
+        settings: FrameAnalysisSettings
     ): Pair<Double, Double> {
         // Returns (A in m², I in m⁴) with cracked inertia per ACI 318 §6.6 / ECP 203
         return when (member.materialType) {

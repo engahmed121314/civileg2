@@ -190,11 +190,11 @@ class BeamSectionView @JvmOverloads constructor(
 
     private fun drawReinforcement(canvas: Canvas, startX: Float, startY: Float, drawWidth: Float, drawHeight: Float, scale: Float) {
         // Draw bottom bars (tension)
-        val bottomBarY = startY + drawHeight - cover * scale - (bottomBars.firstOrNull()?.diameter?.toFloat() ?: 0f) * scale / 4
+        val bottomBarY = startY + drawHeight - cover * scale - (bottomBars.firstOrNull()?.diameter?.toFloat() ?: 0f) * scale / 2
         drawBarGroup(canvas, startX, bottomBarY, drawWidth, bottomBars, scale)
 
         // Draw top bars (compression)
-        val topBarY = startY + cover * scale + (topBars.firstOrNull()?.diameter?.toFloat() ?: 0f) * scale / 4
+        val topBarY = startY + cover * scale + (topBars.firstOrNull()?.diameter?.toFloat() ?: 0f) * scale / 2
         drawBarGroup(canvas, startX, topBarY, drawWidth, topBars, scale)
     }
 

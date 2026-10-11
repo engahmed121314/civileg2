@@ -25,10 +25,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.domain.entities.*
+import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.viewmodel.DiagramType
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
 import com.civileg.app.utils.FrameAnalysisPdfExporter
@@ -39,6 +42,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
+/**
+ * Frame Analysis and Design Screen (2D Frames).
+ * Allows creating nodes, members, loads, solving the frame, and viewing diagrams and results.
+ *
+ * @param viewModel The view model managing frame state and calculations.
+ * @param onNavigateBack Callback invoked when navigating back.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FrameAnalysisScreen(
@@ -74,10 +84,19 @@ fun FrameAnalysisScreen(
         errorMsg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
     }
 
-    Scaffold(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.frame_title), fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.frame_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -175,25 +194,35 @@ fun FrameAnalysisScreen(
             )
         },
         bottomBar = {
-            // Diagram type selector (when solved)
-            if (result?.hasResults == true) {
+            // Diagram type selector (shown on Drawing tab when results exist)
+            if (result?.hasResults == true && selectedTab == 0) {
                 Surface(
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 6.dp,
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.Center
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         for (type in DiagramType.entries) {
                             val isSelected = diagramType == type
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { viewModel.setDiagramType(type) },
-                                label = { Text(type.localizedLabel, fontSize = 13.sp) },
+                                label = {
+                                    Text(
+                                        text = type.localizedLabel,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = when (type) {
                                         DiagramType.BMD -> Color(0xFF2196F3)
@@ -242,6 +271,17 @@ fun FrameAnalysisScreen(
             }
         }
     }
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f)),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Color.White)
+        }
+    }
+  }
 }
 
 // ============================================================================
@@ -302,7 +342,7 @@ private fun DrawingTab(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                Text("fy=${String.format("%.0f", steelFyVal)} MPa", fontSize = 11.sp, color = Color.Gray)
+                Text("fy=${String.format(java.util.Locale.ROOT, "%.0f", steelFyVal)} MPa", fontSize = 11.sp, color = Color.Gray)
             }
         }
 
@@ -931,6 +971,27 @@ private fun ResultsTab(
     selectedMemberId: Int?,
     viewModel: FrameAnalysisViewModel
 ) {
+    val nodes by viewModel.nodes.observeAsState(emptyList())
+    val members by viewModel.members.observeAsState(emptyList())
+    ResultsTab(
+        result = result,
+        concreteResults = concreteResults,
+        steelResults = steelResults,
+        selectedMemberId = selectedMemberId,
+        nodes = nodes,
+        members = members
+    )
+}
+
+@Composable
+private fun ResultsTab(
+    result: FrameAnalysisResult?,
+    concreteResults: List<ConcreteMemberDesignResult>,
+    steelResults: List<SteelMemberDesignResult>,
+    selectedMemberId: Int?,
+    nodes: List<FrameNode>,
+    members: List<FrameMember>
+) {
     if (result == null || !result.hasResults) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -950,13 +1011,14 @@ private fun ResultsTab(
         if (steelResults.isNotEmpty()) add(stringResource(R.string.frame_result_steel_design))
     }
 
-    TabRow(selectedTabIndex = resultSubTab) {
-        for ((i, title) in subTabs.withIndex()) {
-            Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = resultSubTab) {
+            for ((i, title) in subTabs.withIndex()) {
+                Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
+            }
         }
-    }
-
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 8.dp)) {
         // === Displacements ===
         if (resultSubTab == 0) {
             item {
@@ -964,7 +1026,7 @@ private fun ResultsTab(
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(stringResource(R.string.frame_node_displacements), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
-                        for (nr in result.nodeResults.filter { it.nodeId in (viewModel.nodes.value?.map { it.id } ?: emptyList()) }) {
+                        for (nr in result.nodeResults.filter { it.nodeId in (nodes.map { it.id }) }) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1005,7 +1067,7 @@ private fun ResultsTab(
                         Text(stringResource(R.string.frame_internal_forces), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (mf in result.memberEndForces) {
-                            val mname = viewModel.members.value?.find { it.id == mf.memberId }?.name ?: stringResource(R.string.frame_member_label_format, mf.memberId)
+                            val mname = members.find { it.id == mf.memberId }?.name ?: stringResource(R.string.frame_member_label_format, mf.memberId)
                             Text(stringResource(R.string.frame_member_force_header, mname, mf.memberId), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(stringResource(R.string.frame_member_end_i, mf.fi_x, mf.fi_y, mf.mi_z), fontSize = 10.sp, color = Color.Gray)
                             Text(stringResource(R.string.frame_member_end_j, mf.fj_x, mf.fj_y, mf.mj_z), fontSize = 10.sp, color = Color.Gray)
@@ -1117,6 +1179,7 @@ private fun ResultsTab(
         }
     }
 }
+}
 
 @Composable
 private fun UtilizationBar(ratio: Double, modifier: Modifier = Modifier) {
@@ -1138,10 +1201,60 @@ private fun UtilizationBar(ratio: Double, modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            "${String.format("%.0f", ratio * 100)}%",
+            "${String.format(java.util.Locale.ROOT, "%.0f", ratio * 100)}%",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = color
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ResultsTabPreview() {
+    CivilEngineerTheme {
+        ResultsTab(
+            result = FrameAnalysisResult(
+                nodeResults = listOf(
+                    NodeResult(nodeId = 1, dx = 0.001, dy = -0.002, rz = 0.01, reactionFx = 10.0, reactionFy = 50.0, reactionMz = 25.0)
+                ),
+                memberEndForces = listOf(
+                    MemberEndForces(memberId = 1, fi_x = 10.0, fi_y = 20.0, mi_z = 30.0, fj_x = 10.0, fj_y = 20.0, mj_z = 30.0)
+                ),
+                isSolved = true
+            ),
+            concreteResults = listOf(
+                ConcreteMemberDesignResult(
+                    memberId = 1,
+                    memberName = "Beam 1",
+                    memberType = FrameMemberType.Beam,
+                    section = ConcreteSectionProps(width = 250.0, depth = 500.0),
+                    maxMoment = 45.0,
+                    maxShear = 25.0,
+                    axialForce = 10.0,
+                    asRequired = 800.0,
+                    asProvided = 1000.0,
+                    barDia = 16.0,
+                    numBarsTop = 2,
+                    numBarsBot = 3,
+                    asTop = 402.12,
+                    asBot = 603.18,
+                    stirrupDia = 8.0,
+                    stirrupSpacing = 200.0,
+                    momentUtilization = 0.85,
+                    shearUtilization = 0.60,
+                    isSafe = true
+                )
+            ),
+            steelResults = emptyList(),
+            selectedMemberId = 1,
+            nodes = listOf(
+                FrameNode(id = 1, x = 0.0, y = 0.0, support = SupportType.Fixed),
+                FrameNode(id = 2, x = 6.0, y = 0.0, support = SupportType.Fixed)
+            ),
+            members = listOf(
+                FrameMember(id = 1, nodeI = 1, nodeJ = 2, name = "Beam 1")
+            )
         )
     }
 }

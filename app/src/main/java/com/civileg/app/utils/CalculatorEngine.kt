@@ -614,7 +614,7 @@ class CalculatorEngine @Inject constructor(
                 spacing = (res.tiesSpacing ?: 200.0).toDouble()
             ),
             safetyChecks = listOf(
-                DesignSafetyCheck("Axial Capacity", pu, res.astProvided * fy / 1.15 + 0.67 * fcu / 1.5 * (width * depth - res.astProvided) / 1000.0, "kN", res.isSafe),
+                DesignSafetyCheck("Axial Capacity", pu, (res.astProvided * fy / 1.15 + 0.67 * fcu / 1.5 * (width * depth - res.astProvided)) / 1000.0, "kN", res.isSafe),
                 DesignSafetyCheck("Utilization", res.utilizationRatio * 100, 100.0, "%", res.isSafe)
             ),
             isSafe = res.isSafe,
@@ -658,7 +658,11 @@ class CalculatorEngine @Inject constructor(
         val selfWeight = if (autoIncludeSelfWeight) 25.0 * (width / 1000.0) * (height / 1000.0) else 0.0
         val wDl = deadLoad + selfWeight
         val wLl = liveLoad
-        val wu = 1.4 * wDl + 1.6 * wLl
+        val wu = when (code) {
+            DesignCode.EGYPTIAN -> 1.4 * wDl + 1.6 * wLl
+            DesignCode.ACI, DesignCode.SAUDI -> 1.2 * wDl + 1.6 * wLl
+            else -> 1.4 * wDl + 1.6 * wLl
+        }
 
         val lM = span
         val mu = customMoment ?: when (supportType) {
@@ -673,7 +677,12 @@ class CalculatorEngine @Inject constructor(
             else -> wu * lM / 2.0
         }
 
-        val cover = 40.0
+        val cover = when (code) {
+            DesignCode.EGYPTIAN -> 40.0
+            DesignCode.ACI -> 40.0
+            DesignCode.SAUDI -> 50.0
+            else -> 40.0
+        }
         val effectiveDepth = max(50.0, height - cover)
 
         val flexRes = beamEngine.calculateFlexureReinforcement(

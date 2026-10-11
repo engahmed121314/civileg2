@@ -156,7 +156,8 @@ class SBCColumn : ColumnDesign {
         depth: Double,
         fcu: Double,
         fy: Double,
-        cover: Double = 40.0
+        cover: Double = 40.0,
+        longitudinalBarDia: Double = 20.0
     ): ColumnShearDesignResult {
         // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("Vu", Vu)
@@ -184,10 +185,8 @@ class SBCColumn : ColumnDesign {
             (Vu - phiVc) * 1000.0 / (phi * fy * d)  // mm²/mm
         } else 0.0
 
-        // SBC seismic stirrup spacing: min(d/2, 48×db_tie, 300mm)
-        // For seismic zones, SBC restricts to min(d/4, 100mm) near plastic hinges
-        val dbTie = 10.0
-        val maxSpacing = minOf(d / 2.0, 48.0 * dbTie, 300.0)
+        // Max spacing per SBC 304-2018 (adopts ACI 318-19 §25.7.2.2): min(b/4, 6×db, 150mm)
+        val maxSpacing = minOf(min(width, depth) / 4.0, 6.0 * longitudinalBarDia, 150.0)
         val seismicMaxSpacing = minOf(d / 4.0, 100.0)  // seismic zone restriction
 
         // Min Asv per ACI 22.5.10.1 (adopted by SBC)

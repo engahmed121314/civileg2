@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -777,11 +778,23 @@ fun PileFoundationScreen(
                 }
 
                 // ─── DRAWING ────────────────────────────────────
-                item {
+                item { var selectedViewMode by remember { mutableStateOf(0) }
+                    val configuration = LocalConfiguration.current
+                    val screenW = configuration.screenWidthDp.dp
+                    val wRatio = screenW.value / 360f
+                    val drawingHeight = when (selectedViewMode) {
+                        1 -> (450 * wRatio).toInt().coerceIn(300, 600)
+                        2 -> (450 * wRatio).toInt().coerceIn(300, 600)
+                        3 -> (500 * wRatio).toInt().coerceIn(350, 650)
+                        else -> (750 * wRatio).toInt().coerceIn(500, 1000)
+                    }
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.pile_detail_drawing),
                         subtitle = stringResource(R.string.pile_drawing_sub),
+                        drawingHeightDp = drawingHeight,
                         viewModes = listOf("All", "Plan", "Section", "Elevation"),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             ProfessionalPileDrawing(
                                 pileDiameter = res.pileDiameterMm,
@@ -801,6 +814,7 @@ fun PileFoundationScreen(
                                 capRebarDia = cap.flexuralReinforcement.diameter,
                                 capRebarCount = cap.flexuralReinforcement.bars,
                                 soilType = res.soilType,
+                                viewMode = selectedViewMode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

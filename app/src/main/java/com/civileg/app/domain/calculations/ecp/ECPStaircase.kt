@@ -202,7 +202,7 @@ class ECPStaircase : StaircaseDesign {
 
         // حديد التوزيع = 20% من الرئيسي (ECP 203)
         val distAreaRequired = 0.2 * mainRebarArea
-        val distAreaMin = 0.0012 * b * waistThickness
+        val distAreaMin = 0.0015 * b * waistThickness
         val distAreaFinal = max(distAreaRequired, distAreaMin)
         val distributionRebar = selectDistBars(distAreaFinal, input.stairWidth)
         val distributionRebarArea = parseDistBarArea(distributionRebar, input.stairWidth)

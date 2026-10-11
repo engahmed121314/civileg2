@@ -128,12 +128,15 @@ fun MomentShearForceDiagram(
                     .height(if (showMoment && showShear) 280.dp else 160.dp)
                     .pointerInput(Unit) {
                         detectTapGestures { offset ->
-                            selectedPoint = offset
-                            // Find nearest x ratio
-                            val xRatio = ((offset.x - 50f) / (size.width - 100f)).coerceIn(0f, 1f)
-                            // Interpolate moment
-                            selectedMoment = interpolate(momentData, xRatio)
-                            selectedShear = interpolate(shearData, xRatio)
+                            try {
+                                selectedPoint = offset
+                                val denom = size.width - 100f
+                                val xRatio = if (denom > 1f && offset.x.isFinite()) ((offset.x - 50f) / denom).coerceIn(0f, 1f) else 0f
+                                selectedMoment = interpolate(momentData, xRatio)
+                                selectedShear = interpolate(shearData, xRatio)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
                         }
                     }
             ) {

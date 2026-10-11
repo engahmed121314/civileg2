@@ -80,6 +80,13 @@ class FrameAnalysisViewModel @Inject constructor(
         addSource(_members) { value = it.any { m -> m.materialType == FrameMaterialType.Steel } }
     }
 
+    private val _savedDesignId = MutableLiveData<Long?>(null)
+    val savedDesignId: LiveData<Long?> get() = _savedDesignId
+
+    init {
+        loadSimplePortalFrame(6.0, 4.0, 20.0)
+    }
+
     // ========================================================================
     // Node Management
     // ========================================================================
@@ -310,9 +317,6 @@ class FrameAnalysisViewModel @Inject constructor(
     // Save Frame Design to Database
     // ========================================================================
 
-    private val _savedDesignId = MutableLiveData<Long?>(null)
-    val savedDesignId: LiveData<Long?> get() = _savedDesignId
-
     fun saveFrameDesign(projectId: Long, name: String) {
         val res = _result.value ?: return
         val ns = _nodes.value ?: emptyList()
@@ -373,13 +377,18 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 }
 
-enum class DiagramType(val displayNameAr: String, val displayNameEn: String) {
-    BMD("مخطط العزوم", "Bending Moment"),
-    SFD("مخطط القص", "Shear Force"),
-    AFD("مخطط المحوري", "Axial Force");
+enum class DiagramType(
+    val displayNameAr: String,
+    val displayNameEn: String,
+    val code: String
+) {
+    BMD("مخطط العزوم", "Bending Moment", "BMD"),
+    SFD("مخطط القص", "Shear Force", "SFD"),
+    AFD("القوة المحورية", "Axial Force", "AFD");
 
-    /** Bilingual label: English / Arabic */
-    val localizedLabel: String get() = "$displayNameEn / $displayNameAr"
+    /** Localized concise label */
+    val localizedLabel: String
+        get() = if (com.civileg.app.utils.LocaleHelper.isArabic()) "$displayNameAr ($code)" else "$displayNameEn ($code)"
 
     fun localizedDisplayName(): String = localizedLabel
 }
