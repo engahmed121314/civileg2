@@ -1,17 +1,36 @@
 package com.civileg.app.viewmodel
 
+import android.content.Context
+import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.db.QualityDao
+import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.*
+import com.civileg.app.utils.BearingMethod
+import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.ExportUtils
+import com.civileg.app.utils.QualityControlEngine
+import com.civileg.app.utils.SoilBearingCalculator
+import com.civileg.app.utils.SoilBearingInput
+import com.civileg.app.utils.SoilBearingResult
+import com.civileg.app.utils.SoilType
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
-import kotlin.math.*
+
+// ═══════════════════════════════════════════════════════════════════════
+// State holders
+// ═══════════════════════════════════════════════════════════════════════
 
 data class ConcreteQCState(
     val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
@@ -21,7 +40,8 @@ data class ConcreteQCState(
     val fcu: String = "25",
     val sampleId: String = "",
     val strength7Days: String = "",
-    val strength28Days: String = ""
+    val strength28Days: String = "",
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class SoilQCState(
@@ -42,19 +62,23 @@ data class RebarQCState(
     val barDiameter: String = "16",
     val numBars: String = "3",
     val fy: String = "400",
+    val fcu: String = "25",
     val cover: String = "40",
     val beamWidth: String = "250",
     val effectiveDepth: String = "560",
-    val rebarChecks: List<GenericSafetyCheck>? = null
+    val rebarChecks: List<GenericSafetyCheck>? = null,
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class SteelQCState(
     val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val sectionKey: String = "IPE 200",
     val appliedMoment: String = "",
     val appliedShear: String = "",
-    val steelFy: String = "400",
+    val steelFy: String = "275",
     val span: String = "",
-    val steelChecks: List<GenericSafetyCheck>? = null
+    val steelChecks: List<GenericSafetyCheck>? = null,
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class RoadsQCState(
@@ -63,38 +87,58 @@ data class RoadsQCState(
     val subbaseLayerThickness: String = "200",
     val compactionPercent: String = "97",
     val asphaltDensity: String = "23",
-    val airVoids: String = "4"
+    val airVoids: String = "4",
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class BridgesQCState(
     val concreteStrength: String = "30",
     val span: String = "20",
-    val naturalFrequency: String = "2.5"
+    val naturalFrequency: String = "2.5",
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class TunnelsQCState(
+    val rockClass: String = "III",
     val tunnelConvergence: String = "20",
-    val supportThickness: String = "150"
+    val tunnelDiameter: String = "6",
+    val supportThickness: String = "150",
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class BuildingsQCState(
     val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val buildingType: String = "Residential",
     val numFloors: String = "5",
     val floorHeight: String = "3",
     val totalWeight: String = "50000",
     val importanceFactor: String = "1",
-    val buildingChecks: List<GenericSafetyCheck>? = null
+    val sds: String = "0.5",
+    val responseR: String = "5",
+    val storyDrift: String = "0.015",
+    val buildingChecks: List<GenericSafetyCheck>? = null,
+    val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class ReportsQCState(
     val totalInspections: Int = 0,
     val passedInspections: Int = 0,
     val failedInspections: Int = 0,
-    val successRate: Double = 0.0
+    val successRate: Double = 0.0,
+    val records: List<QualityRecord> = emptyList()
 )
 
+// ═══════════════════════════════════════════════════════════════════════
+// ViewModel
+// ═══════════════════════════════════════════════════════════════════════
+
 @HiltViewModel
-class QualityEngineerViewModel @Inject constructor() : ViewModel() {
+class QualityEngineerViewModel @Inject constructor(
+    private val qualityDao: QualityDao
+) : ViewModel() {
+
+    private val gson = Gson()
+    private val bearing = SoilBearingCalculator()
 
     private val _concreteState = MutableStateFlow(ConcreteQCState())
     val concreteState: StateFlow<ConcreteQCState> = _concreteState.asStateFlow()
@@ -123,6 +167,30 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
     private val _reportsState = MutableStateFlow(ReportsQCState())
     val reportsState: StateFlow<ReportsQCState> = _reportsState.asStateFlow()
 
+    private val _isExporting = MutableStateFlow(false)
+    val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            combine(
+                qualityDao.getAllRecords(),
+                qualityDao.countAll(),
+                qualityDao.countPassed()
+            ) { records, total, passed ->
+                ReportsQCState(
+                    totalInspections = total,
+                    passedInspections = passed,
+                    failedInspections = total - passed,
+                    successRate = if (total > 0) passed * 100.0 / total else 0.0,
+                    records = records
+                )
+            }.collect { _reportsState.value = it }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Design code
+    // ---------------------------------------------------------------
     fun updateDesignCode(code: CalculatorEngine.DesignCode) {
         _concreteState.value = _concreteState.value.copy(designCode = code)
         _soilState.value = _soilState.value.copy(designCode = code)
@@ -131,6 +199,9 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
         _buildingsState.value = _buildingsState.value.copy(designCode = code)
     }
 
+    // ---------------------------------------------------------------
+    // Field updaters
+    // ---------------------------------------------------------------
     fun updateConcreteField(field: String, value: String) {
         _concreteState.value = when (field) {
             "elementId" -> _concreteState.value.copy(elementId = value)
@@ -163,6 +234,7 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
             "barDiameter" -> _rebarState.value.copy(barDiameter = value)
             "numBars" -> _rebarState.value.copy(numBars = value)
             "fy" -> _rebarState.value.copy(fy = value)
+            "fcu" -> _rebarState.value.copy(fcu = value)
             "cover" -> _rebarState.value.copy(cover = value)
             "beamWidth" -> _rebarState.value.copy(beamWidth = value)
             "effectiveDepth" -> _rebarState.value.copy(effectiveDepth = value)
@@ -172,6 +244,7 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
 
     fun updateSteelField(field: String, value: String) {
         _steelState.value = when (field) {
+            "sectionKey" -> _steelState.value.copy(sectionKey = value)
             "appliedMoment" -> _steelState.value.copy(appliedMoment = value)
             "appliedShear" -> _steelState.value.copy(appliedShear = value)
             "steelFy" -> _steelState.value.copy(steelFy = value)
@@ -182,6 +255,9 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
 
     fun updateRoadsField(field: String, value: String) {
         _roadsState.value = when (field) {
+            "surfaceLayerThickness" -> _roadsState.value.copy(surfaceLayerThickness = value)
+            "baseLayerThickness" -> _roadsState.value.copy(baseLayerThickness = value)
+            "subbaseLayerThickness" -> _roadsState.value.copy(subbaseLayerThickness = value)
             "compactionPercent" -> _roadsState.value.copy(compactionPercent = value)
             "asphaltDensity" -> _roadsState.value.copy(asphaltDensity = value)
             "airVoids" -> _roadsState.value.copy(airVoids = value)
@@ -200,7 +276,9 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
 
     fun updateTunnelsField(field: String, value: String) {
         _tunnelsState.value = when (field) {
+            "rockClass" -> _tunnelsState.value.copy(rockClass = value)
             "tunnelConvergence" -> _tunnelsState.value.copy(tunnelConvergence = value)
+            "tunnelDiameter" -> _tunnelsState.value.copy(tunnelDiameter = value)
             "supportThickness" -> _tunnelsState.value.copy(supportThickness = value)
             else -> _tunnelsState.value
         }
@@ -208,20 +286,44 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
 
     fun updateBuildingsField(field: String, value: String) {
         _buildingsState.value = when (field) {
+            "buildingType" -> _buildingsState.value.copy(buildingType = value)
             "numFloors" -> _buildingsState.value.copy(numFloors = value)
             "floorHeight" -> _buildingsState.value.copy(floorHeight = value)
             "totalWeight" -> _buildingsState.value.copy(totalWeight = value)
             "importanceFactor" -> _buildingsState.value.copy(importanceFactor = value)
+            "sds" -> _buildingsState.value.copy(sds = value)
+            "responseR" -> _buildingsState.value.copy(responseR = value)
+            "storyDrift" -> _buildingsState.value.copy(storyDrift = value)
             else -> _buildingsState.value
         }
     }
 
-    fun saveConcretePour(context: android.content.Context) {
-        viewModelScope.launch {
-            // Save logic here
-        }
+    // ---------------------------------------------------------------
+    // CONCRETE
+    // ---------------------------------------------------------------
+    fun saveConcretePour(context: Context) {
+        val s = _concreteState.value
+        val outcome = QualityControlEngine.concreteQc(
+            code = s.designCode,
+            elementId = s.elementId,
+            volumeM3 = s.volume.toDoubleOrNull() ?: 0.0,
+            slumpMm = s.slump.toDoubleOrNull() ?: 0.0,
+            fcuDesignMpa = s.fcu.toDoubleOrNull() ?: 25.0,
+            strength7DaysMpa = s.strength7Days.toDoubleOrNull() ?: 0.0,
+            strength28DaysMpa = s.strength28Days.toDoubleOrNull() ?: 0.0
+        )
+        _concreteState.value = s.copy(outcome = outcome)
+        persist(
+            category = QualityControlEngine.Category.CONCRETE,
+            elementId = s.elementId.ifBlank { s.sampleId.ifBlank { "CONCRETE" } },
+            code = s.designCode,
+            outcome = outcome
+        )
     }
 
+    // ---------------------------------------------------------------
+    // SOIL
+    // ---------------------------------------------------------------
     fun calculateSoilBearing(method: BearingMethod, soilType: SoilType) {
         val s = _soilState.value
         val input = SoilBearingInput(
@@ -234,88 +336,287 @@ class QualityEngineerViewModel @Inject constructor() : ViewModel() {
             frictionAngle = s.frictionAngle.toDoubleOrNull() ?: 30.0,
             unitWeight = s.unitWeight.toDoubleOrNull() ?: 18.0,
             waterTableDepth = s.waterTableDepth.toDoubleOrNull() ?: 5.0,
-            eccentricityX = 0.0,
-            eccentricityY = 0.0,
-            loadInclinationX = 0.0,
-            loadInclinationY = 0.0,
             safetyFactor = s.safetyFactor.toDoubleOrNull() ?: 3.0
         )
-
-        val calculator = SoilBearingCalculator()
         val result = when (method) {
-            BearingMethod.TERZAGHI -> calculator.calculateTerzaghi(input)
-            BearingMethod.MEYERHOF -> calculator.calculateMeyerhof(input)
-            BearingMethod.HANSEN -> calculator.calculateHansen(input)
-            BearingMethod.VESIC -> calculator.calculateVesic(input)
+            BearingMethod.TERZAGHI -> bearing.calculateTerzaghi(input)
+            BearingMethod.MEYERHOF -> bearing.calculateMeyerhof(input)
+            BearingMethod.HANSEN -> bearing.calculateHansen(input)
+            BearingMethod.VESIC -> bearing.calculateVesic(input)
         }
-
         _soilState.value = s.copy(soilResult = result)
+
+        // Persist as a quality record (reuse the concrete-style summary path)
+        val checks = listOf(
+            GenericSafetyCheck("Allowable bearing capacity", result.allowableBearingCapacity, 0.0, "kPa", result.isSafe),
+            GenericSafetyCheck("Estimated settlement", result.settlement, 25.0, "mm", result.settlement <= 25.0)
+        )
+        val outcome = QualityControlEngine.QcOutcome(
+            title = "Soil & Foundation Quality Control",
+            checks = checks,
+            details = listOf(
+                "Method" to method.name,
+                "Soil type" to soilType.name,
+                "Gross bearing q_u" to "%.1f kPa".format(result.grossBearingCapacity),
+                "Net bearing q_net" to "%.1f kPa".format(result.netBearingCapacity),
+                "Allowable q_all" to "%.1f kPa".format(result.allowableBearingCapacity),
+                "Settlement" to "%.1f mm".format(result.settlement)
+            ),
+            passed = result.isSafe,
+            utilizationRatio = 0.0,
+            summary = "Soil bearing capacity (${method.name}) — ${if (result.isSafe) "safe" else "unsafe"}"
+        )
+        persist(
+            category = QualityControlEngine.Category.SOIL,
+            elementId = "FOUNDATION",
+            code = s.designCode,
+            outcome = outcome
+        )
     }
 
+    // ---------------------------------------------------------------
+    // REBAR
+    // ---------------------------------------------------------------
     fun calculateRebarChecks() {
         val s = _rebarState.value
-        val dia = s.barDiameter.toDoubleOrNull() ?: 16.0
-        val n = s.numBars.toIntOrNull() ?: 3
-        val fy = s.fy.toDoubleOrNull() ?: 400.0
-        val cover = s.cover.toDoubleOrNull() ?: 40.0
-        val b = s.beamWidth.toDoubleOrNull() ?: 250.0
-        val d = s.effectiveDepth.toDoubleOrNull() ?: 560.0
-
-        val barArea = PI * dia * dia / 4.0
-        val totalArea = n * barArea
-        val rho = totalArea / (b * d)
-        val rhoMin = max(0.25 * sqrt(fy) / fy, 1.4 / fy)
-        val rhoMax = 0.04
-
-        val checks = listOf(
-            GenericSafetyCheck("نسبة التسليح ρ", rho * 100, 1.0, "%", rho >= rhoMin),
-            GenericSafetyCheck("الحد الأدنى", rhoMin * 100, rho * 100, "%", rho >= rhoMin),
-            GenericSafetyCheck("الحد الأقصى", rho * 100, rhoMax * 100, "%", rho <= rhoMax)
+        val outcome = QualityControlEngine.rebarQc(
+            code = s.designCode,
+            barDiameterMm = s.barDiameter.toDoubleOrNull() ?: 16.0,
+            numBars = s.numBars.toIntOrNull() ?: 3,
+            fyMpa = s.fy.toDoubleOrNull() ?: 400.0,
+            fcuMpa = s.fcu.toDoubleOrNull() ?: 25.0,
+            coverMm = s.cover.toDoubleOrNull() ?: 40.0,
+            beamWidthMm = s.beamWidth.toDoubleOrNull() ?: 250.0,
+            effectiveDepthMm = s.effectiveDepth.toDoubleOrNull() ?: 560.0
         )
-
-        _rebarState.value = s.copy(rebarChecks = checks)
+        _rebarState.value = s.copy(rebarChecks = outcome.checks, outcome = outcome)
+        persist(
+            category = QualityControlEngine.Category.REBAR,
+            elementId = "REBAR-${s.barDiameter}x${s.numBars}",
+            code = s.designCode,
+            outcome = outcome
+        )
     }
 
+    // ---------------------------------------------------------------
+    // STEEL
+    // ---------------------------------------------------------------
     fun calculateSteelChecks(section: String) {
-        val s = _steelState.value
-        val mu = s.appliedMoment.toDoubleOrNull() ?: 0.0
-        val vu = s.appliedShear.toDoubleOrNull() ?: 0.0
-        val fy = s.steelFy.toDoubleOrNull() ?: 400.0
-        val span = s.span.toDoubleOrNull() ?: 5.0
-
-        val wn = fy * 1000.0 / 1000.0 // Simplified
-        val mn = fy * 1000.0 * span * span / 8.0 / 1e6
-        val checks = listOf(
-            GenericSafetyCheck("قدرة الانحناء", mu, mn, "kN.m", mu <= mn),
-            GenericSafetyCheck("قدرة القص", vu, wn * 0.6, "kN", vu <= wn * 0.6)
+        val s = _steelState.value.copy(sectionKey = section)
+        val outcome = QualityControlEngine.steelQc(
+            code = s.designCode,
+            sectionKey = section,
+            fyMpa = s.steelFy.toDoubleOrNull() ?: 275.0,
+            spanM = s.span.toDoubleOrNull() ?: 5.0,
+            muKnM = s.appliedMoment.toDoubleOrNull() ?: 0.0,
+            vuKn = s.appliedShear.toDoubleOrNull() ?: 0.0
         )
-
-        _steelState.value = s.copy(steelChecks = checks)
+        _steelState.value = s.copy(steelChecks = outcome.checks, outcome = outcome)
+        persist(
+            category = QualityControlEngine.Category.STEEL,
+            elementId = section,
+            code = s.designCode,
+            outcome = outcome
+        )
     }
 
+    // ---------------------------------------------------------------
+    // ROADS
+    // ---------------------------------------------------------------
+    fun calculateRoadsChecks() {
+        val s = _roadsState.value
+        val outcome = QualityControlEngine.roadsQc(
+            surfaceThicknessMm = s.surfaceLayerThickness.toDoubleOrNull() ?: 50.0,
+            baseThicknessMm = s.baseLayerThickness.toDoubleOrNull() ?: 150.0,
+            subbaseThicknessMm = s.subbaseLayerThickness.toDoubleOrNull() ?: 200.0,
+            compactionPercent = s.compactionPercent.toDoubleOrNull() ?: 97.0,
+            asphaltDensityKnM3 = s.asphaltDensity.toDoubleOrNull() ?: 23.0,
+            airVoidsPercent = s.airVoids.toDoubleOrNull() ?: 4.0
+        )
+        _roadsState.value = s.copy(outcome = outcome)
+        persist(QualityControlEngine.Category.ROADS, "PAVEMENT", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
+    }
+
+    // ---------------------------------------------------------------
+    // BRIDGES
+    // ---------------------------------------------------------------
+    fun calculateBridgeChecks() {
+        val s = _bridgesState.value
+        val outcome = QualityControlEngine.bridgeQc(
+            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            concreteStrengthMpa = s.concreteStrength.toDoubleOrNull() ?: 30.0,
+            spanM = s.span.toDoubleOrNull() ?: 20.0,
+            naturalFrequencyHz = s.naturalFrequency.toDoubleOrNull() ?: 2.5
+        )
+        _bridgesState.value = s.copy(outcome = outcome)
+        persist(QualityControlEngine.Category.BRIDGES, "BRIDGE", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
+    }
+
+    // ---------------------------------------------------------------
+    // TUNNELS
+    // ---------------------------------------------------------------
+    fun calculateTunnelChecks() {
+        val s = _tunnelsState.value
+        val outcome = QualityControlEngine.tunnelQc(
+            rockClass = s.rockClass,
+            convergenceMm = s.tunnelConvergence.toDoubleOrNull() ?: 20.0,
+            diameterM = s.tunnelDiameter.toDoubleOrNull() ?: 6.0,
+            supportThicknessMm = s.supportThickness.toDoubleOrNull() ?: 150.0
+        )
+        _tunnelsState.value = s.copy(outcome = outcome)
+        persist(QualityControlEngine.Category.TUNNELS, "TUNNEL-${s.rockClass}", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
+    }
+
+    // ---------------------------------------------------------------
+    // BUILDINGS
+    // ---------------------------------------------------------------
     fun calculateBuildingChecks(buildingType: String) {
-        val s = _buildingsState.value
-        val numFloors = s.numFloors.toIntOrNull() ?: 5
-        val floorHeight = s.floorHeight.toDoubleOrNull() ?: 3.0
-        val totalWeight = s.totalWeight.toDoubleOrNull() ?: 50000.0
-        val importance = s.importanceFactor.toDoubleOrNull() ?: 1.0
-
-        val totalHeight = numFloors * floorHeight
-        val period = 0.075 * totalHeight.pow(0.75)
-        val baseShear = totalWeight * 0.1 * importance
-
-        val checks = listOf(
-            GenericSafetyCheck("الارتفاع الكلي", totalHeight, 100.0, "m", totalHeight <= 100),
-            GenericSafetyCheck("الفترة الأساسية", period, 2.0, "s", period <= 2.0),
-            GenericSafetyCheck("قوة القص القاعدية", baseShear, totalWeight, "kN", true)
+        val s = _buildingsState.value.copy(buildingType = buildingType)
+        val outcome = QualityControlEngine.buildingQc(
+            code = s.designCode,
+            numFloors = s.numFloors.toIntOrNull() ?: 5,
+            floorHeightM = s.floorHeight.toDoubleOrNull() ?: 3.0,
+            totalWeightKn = s.totalWeight.toDoubleOrNull() ?: 50000.0,
+            importanceFactor = s.importanceFactor.toDoubleOrNull() ?: 1.0,
+            sds = s.sds.toDoubleOrNull() ?: 0.5,
+            responseR = s.responseR.toDoubleOrNull() ?: 5.0,
+            storyDrift = s.storyDrift.toDoubleOrNull() ?: 0.015
         )
-
-        _buildingsState.value = s.copy(buildingChecks = checks)
+        _buildingsState.value = s.copy(buildingChecks = outcome.checks, outcome = outcome)
+        persist(
+            category = QualityControlEngine.Category.BUILDINGS,
+            elementId = s.buildingType,
+            code = s.designCode,
+            outcome = outcome
+        )
     }
 
-    fun exportQualityReport() {
-        viewModelScope.launch {
-            // Export logic here
+    // ---------------------------------------------------------------
+    // Persistence
+    // ---------------------------------------------------------------
+    private fun persist(
+        category: String,
+        elementId: String,
+        code: CalculatorEngine.DesignCode,
+        outcome: QualityControlEngine.QcOutcome
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val record = QualityRecord(
+                category = category,
+                elementId = elementId,
+                designCode = QualityControlEngine.codeName(code),
+                passed = outcome.passed,
+                utilizationRatio = outcome.utilizationRatio,
+                summary = outcome.summary,
+                dataJson = gson.toJson(
+                    mapOf(
+                        "title" to outcome.title,
+                        "details" to outcome.details.toMap(),
+                        "checks" to outcome.checks
+                    )
+                )
+            )
+            runCatching { qualityDao.insertRecord(record) }
+        }
+    }
+
+    fun clearAllRecords() {
+        viewModelScope.launch(Dispatchers.IO) { qualityDao.deleteAll() }
+    }
+
+    // ---------------------------------------------------------------
+    // PDF export (English only — ADR-009)
+    // ---------------------------------------------------------------
+    fun exportQualityReport(
+        context: Context,
+        onComplete: (File?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, "Quality_Report_${System.currentTimeMillis()}.pdf")
+
+                val inputMap = LinkedHashMap<String, String>()
+                val resultMap = LinkedHashMap<String, String>()
+                val safetyChecks = mutableListOf<ProfessionalEnglishPdfReporter.SafetyCheck>()
+
+                fun absorb(outcome: QualityControlEngine.QcOutcome?) {
+                    outcome ?: return
+                    outcome.details.forEach { (k, v) -> inputMap["${outcome.title.split(" ").first()} · $k"] = v }
+                    outcome.checks.forEach { c ->
+                        safetyChecks.add(
+                            ProfessionalEnglishPdfReporter.SafetyCheck(
+                                name = "${outcome.title.split(" ").first()}: ${c.name}",
+                                calculated = c.calculated,
+                                limit = c.limit,
+                                unit = c.unit,
+                                passed = c.passed
+                            )
+                        )
+                    }
+                }
+
+                absorb(_concreteState.value.outcome)
+                absorb(_rebarState.value.outcome)
+                absorb(_steelState.value.outcome)
+                absorb(_roadsState.value.outcome)
+                absorb(_bridgesState.value.outcome)
+                absorb(_tunnelsState.value.outcome)
+                absorb(_buildingsState.value.outcome)
+
+                // Soil outcome is stored separately as a bearing result
+                _soilState.value.soilResult?.let { r ->
+                    resultMap["Soil · Allowable bearing"] = "%.1f kPa".format(r.allowableBearingCapacity)
+                    resultMap["Soil · Settlement"] = "%.1f mm".format(r.settlement)
+                    safetyChecks.add(
+                        ProfessionalEnglishPdfReporter.SafetyCheck(
+                            name = "SOIL: Allowable bearing capacity",
+                            calculated = r.allowableBearingCapacity,
+                            limit = 0.0,
+                            unit = "kPa",
+                            passed = r.isSafe
+                        )
+                    )
+                }
+
+                val stats = _reportsState.value
+                resultMap["Session · Total records"] = stats.totalInspections.toString()
+                resultMap["Session · Passed"] = stats.passedInspections.toString()
+                resultMap["Session · Failed"] = stats.failedInspections.toString()
+                resultMap["Session · Success rate"] = "%.1f %%".format(stats.successRate)
+
+                if (inputMap.isEmpty() && safetyChecks.isEmpty() && stats.records.isEmpty()) {
+                    withContext(Dispatchers.Main) { _isExporting.value = false }
+                    onComplete(null)
+                    return@launch
+                }
+
+                val isSafe = safetyChecks.all { it.passed } && stats.failedInspections == 0
+                val generated = ProfessionalEnglishPdfReporter.generateReport(
+                    reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
+                    title = "Site Quality Control Report",
+                    subtitle = "Concrete · Soil · Rebar · Steel · Roads · Bridges · Tunnels · Buildings",
+                    designCode = "ECP 203-2020 / ACI 318-19 / SBC 304-2018",
+                    inputs = inputMap,
+                    results = resultMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = isSafe,
+                    outputPath = file.absolutePath
+                )
+
+                withContext(Dispatchers.Main) {
+                    generated?.let { ExportUtils.openPdf(context, it) }
+                    _isExporting.value = false
+                    onComplete(generated)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
         }
     }
 }

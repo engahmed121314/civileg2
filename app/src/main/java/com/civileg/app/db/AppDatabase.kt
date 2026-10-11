@@ -23,9 +23,10 @@ import androidx.room.TypeConverters
         SiteInspection::class,
         FlatSlabDesignEntity::class,
         PileFoundationDesignEntity::class,
-        ShearWallDesignEntity::class
+        ShearWallDesignEntity::class,
+        QualityRecord::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -46,6 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun flatSlabDao(): FlatSlabDao
     abstract fun pileFoundationDao(): PileFoundationDao
     abstract fun shearWallDao(): ShearWallDao
+    abstract fun qualityDao(): QualityDao
     
     companion object {
         @Volatile
@@ -58,7 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civil_eg_database"
                 )
-                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9)
+                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9, Migrations.MIGRATION_9_10)
                 .build()
                 INSTANCE = instance
                 instance

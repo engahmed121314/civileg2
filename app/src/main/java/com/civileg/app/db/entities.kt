@@ -339,3 +339,30 @@ data class SiteInspection(
     val cleanlinessPassed: Boolean = false,
     val comments: String = ""
 )
+
+/**
+ * Generic quality-control record captured by the Quality Engineer module.
+ *
+ * One row per performed check, covering every discipline
+ * (CONCRETE, SOIL, REBAR, STEEL, ROADS, BRIDGES, TUNNELS, BUILDINGS).
+ * Inputs, computed values and safety checks are stored as a JSON payload so the
+ * record remains forward-compatible without a schema change per discipline.
+ */
+@Entity(
+    tableName = "quality_records",
+    indices = [androidx.room.Index(value = ["category"]), androidx.room.Index(value = ["createdAt"])]
+)
+data class QualityRecord(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectId: Long = 0,
+    val category: String,
+    val elementId: String = "",
+    val designCode: String = "ECP",
+    val passed: Boolean = false,
+    val utilizationRatio: Double = 0.0,
+    val summary: String = "",
+    val dataJson: String = "{}",
+    val notes: String = "",
+    val createdAt: Date = Date()
+)

@@ -27,7 +27,7 @@ object AppModule {
             AppDatabase::class.java,
             "civil_eg_database"
         )
-        .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9)
+        .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9, Migrations.MIGRATION_9_10)
         .build()
     }
 
@@ -66,6 +66,9 @@ object AppModule {
 
     @Provides
     fun provideConstructionDao(database: AppDatabase): ConstructionDao = database.constructionDao()
+
+    @Provides
+    fun provideQualityDao(database: AppDatabase): QualityDao = database.qualityDao()
 
     @Provides
     @Singleton

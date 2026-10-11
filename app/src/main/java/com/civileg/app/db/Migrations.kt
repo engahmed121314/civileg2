@@ -273,6 +273,32 @@ object Migrations {
     }
 
     /**
+     * Migration from version 9 to 10.
+     * Adds the `quality_records` table used by the Quality Engineer module.
+     */
+    val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS quality_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    projectId INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    elementId TEXT NOT NULL,
+                    designCode TEXT NOT NULL,
+                    passed INTEGER NOT NULL,
+                    utilizationRatio REAL NOT NULL,
+                    summary TEXT NOT NULL,
+                    dataJson TEXT NOT NULL,
+                    notes TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL
+                )
+            """)
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_quality_records_category ON quality_records(category)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_quality_records_createdAt ON quality_records(createdAt)")
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

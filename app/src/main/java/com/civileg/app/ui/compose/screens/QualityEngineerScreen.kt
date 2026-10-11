@@ -35,6 +35,7 @@ import com.civileg.app.utils.SoilBearingCalculator
 import com.civileg.app.utils.SoilBearingInput
 import com.civileg.app.utils.SoilBearingResult
 import com.civileg.app.utils.BearingMethod
+import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.SoilType
 import com.civileg.app.viewmodel.QualityEngineerViewModel
 import kotlin.math.*
@@ -235,6 +236,8 @@ private fun ConcreteQCTab(viewModel: QualityEngineerViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
             Text("حفظ وتسجيل")
         }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -504,6 +507,15 @@ private fun RebarQCTab(viewModel: QualityEngineerViewModel) {
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = uiState.fcu,
+                    onValueChange = { viewModel.updateRebarField("fcu", it) },
+                    label = { Text("fcu (MPa)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -652,6 +664,8 @@ private fun SteelStructureQCTab(viewModel: QualityEngineerViewModel) {
                 }
             }
         }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -675,9 +689,31 @@ private fun RoadsQCTab(viewModel: QualityEngineerViewModel) {
                 Text("فحص طبقات الطريق", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                ResultRow("الطبقة السطحية", "${uiState.surfaceLayerThickness} مم")
-                ResultRow("طبقة الأساس", "${uiState.baseLayerThickness} مم")
-                ResultRow("طبقة الأساس المساعد", "${uiState.subbaseLayerThickness} مم")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.surfaceLayerThickness,
+                        onValueChange = { viewModel.updateRoadsField("surfaceLayerThickness", it) },
+                        label = { Text("السطحية (مم)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = uiState.baseLayerThickness,
+                        onValueChange = { viewModel.updateRoadsField("baseLayerThickness", it) },
+                        label = { Text("الأساس (مم)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = uiState.subbaseLayerThickness,
+                    onValueChange = { viewModel.updateRoadsField("subbaseLayerThickness", it) },
+                    label = { Text("الأساس المساعد (مم)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Divider()
@@ -695,12 +731,6 @@ private fun RoadsQCTab(viewModel: QualityEngineerViewModel) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                QualityCheckRow(
-                    label = "الدمك ≥ 95%",
-                    passed = (uiState.compactionPercent.toDoubleOrNull() ?: 0.0) >= 95.0,
-                    detail = "المطلوب: ≥ 95%"
-                )
-
                 OutlinedTextField(
                     value = uiState.asphaltDensity,
                     onValueChange = { viewModel.updateRoadsField("asphaltDensity", it) },
@@ -717,14 +747,19 @@ private fun RoadsQCTab(viewModel: QualityEngineerViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                QualityCheckRow(
-                    label = "الفراغات 3-5%",
-                    passed = (uiState.airVoids.toDoubleOrNull() ?: 0.0) in 3.0..5.0,
-                    detail = "المطلوب: 3-5%"
-                )
             }
         }
+
+        Button(
+            onClick = { viewModel.calculateRoadsChecks() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Calculate, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("فحص طبقات الطريق")
+        }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -787,6 +822,17 @@ private fun BridgesQCTab(viewModel: QualityEngineerViewModel) {
                 )
             }
         }
+
+        Button(
+            onClick = { viewModel.calculateBridgeChecks() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Calculate, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("فحص الجسر")
+        }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -810,15 +856,14 @@ private fun TunnelsQCTab(viewModel: QualityEngineerViewModel) {
                 Text("فحص النفق", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                var rockClass by remember { mutableStateOf("III") }
                 val classes = listOf("I", "II", "III", "IV", "V")
 
                 Text("تصنيف الصخر", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     classes.forEach { cls ->
                         FilterChip(
-                            selected = rockClass == cls,
-                            onClick = { rockClass = cls },
+                            selected = uiState.rockClass == cls,
+                            onClick = { viewModel.updateTunnelsField("rockClass", cls) },
                             label = { Text(cls) }
                         )
                     }
@@ -834,21 +879,35 @@ private fun TunnelsQCTab(viewModel: QualityEngineerViewModel) {
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = uiState.supportThickness,
-                        onValueChange = { viewModel.updateTunnelsField("supportThickness", it) },
-                        label = { Text("سمك الدعم (مم)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        value = uiState.tunnelDiameter,
+                        onValueChange = { viewModel.updateTunnelsField("tunnelDiameter", it) },
+                        label = { Text("القطر (م)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
 
-                QualityCheckRow(
-                    label = "التقارب ضمن الحدود",
-                    passed = (uiState.tunnelConvergence.toDoubleOrNull() ?: 0.0) <= 50.0,
-                    detail = "الحد: ≤ 50 مم"
+                OutlinedTextField(
+                    value = uiState.supportThickness,
+                    onValueChange = { viewModel.updateTunnelsField("supportThickness", it) },
+                    label = { Text("سمك الدعم (مم)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
+
+        Button(
+            onClick = { viewModel.calculateTunnelChecks() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Calculate, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("فحص النفق")
+        }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -936,6 +995,33 @@ private fun BuildingsQCTab(viewModel: QualityEngineerViewModel) {
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.sds,
+                        onValueChange = { viewModel.updateBuildingsField("sds", it) },
+                        label = { Text("S_DS (g)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = uiState.responseR,
+                        onValueChange = { viewModel.updateBuildingsField("responseR", it) },
+                        label = { Text("معامل الاستجابة R") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = uiState.storyDrift,
+                    onValueChange = { viewModel.updateBuildingsField("storyDrift", it) },
+                    label = { Text("الانزلاق النسبي للطابق") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -963,6 +1049,8 @@ private fun BuildingsQCTab(viewModel: QualityEngineerViewModel) {
                 }
             }
         }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -973,6 +1061,8 @@ private fun BuildingsQCTab(viewModel: QualityEngineerViewModel) {
 @Composable
 private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
     val uiState by viewModel.reportsState.collectAsState()
+    val isExporting by viewModel.isExporting.collectAsState()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -994,12 +1084,53 @@ private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
         }
 
         Button(
-            onClick = { viewModel.exportQualityReport() },
+            onClick = { viewModel.exportQualityReport(context) },
+            enabled = !isExporting,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير الجودة PDF")
+            Text(if (isExporting) "جارٍ التصدير..." else "تصدير تقرير الجودة PDF")
+        }
+
+        if (uiState.records.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("السجلات المحفوظة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    uiState.records.forEach { record ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (record.passed) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                contentDescription = null,
+                                tint = if (record.passed) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${record.category} · ${record.elementId}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "${record.designCode} — ${record.summary}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { viewModel.clearAllRecords() }) {
+                        Text("مسح كل السجلات")
+                    }
+                }
+            }
         }
     }
 }
@@ -1046,5 +1177,36 @@ private fun ResultRow(label: String, value: String) {
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
+    outcome ?: return
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (outcome.passed) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                    contentDescription = null,
+                    tint = if (outcome.passed) Color(0xFF4CAF50) else Color(0xFFF44336),
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    outcome.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            outcome.details.forEach { (key, value) ->
+                ResultRow(key, value)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider()
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(outcome.summary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
     }
 }
