@@ -14,7 +14,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +43,7 @@ import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.SoilType
 import com.civileg.app.viewmodel.QualityEngineerViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +52,8 @@ fun QualityEngineerScreen(
     onNavigateBack: () -> Unit,
     viewModel: QualityEngineerViewModel = hiltViewModel()
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
         stringResource(R.string.quality_tab_concrete),
@@ -61,53 +67,56 @@ fun QualityEngineerScreen(
         stringResource(R.string.quality_tab_reports)
     )
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(stringResource(R.string.home_quality_engineer)) },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        )
-
-        ScrollableTabRow(
-            selectedTabIndex = selectedTab,
-            modifier = Modifier.fillMaxWidth(),
-            edgePadding = 0.dp
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = {
-                        Text(
-                            title,
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text(stringResource(R.string.home_quality_engineer)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
+            )
+
+            ScrollableTabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier.fillMaxWidth(),
+                edgePadding = 0.dp
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                title,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                }
+            }
+
+            when (selectedTab) {
+                0 -> ConcreteQCTab(viewModel, snackbarHostState, scope)
+                1 -> SoilFoundationQCTab(viewModel, snackbarHostState, scope)
+                2 -> RebarQCTab(viewModel, snackbarHostState, scope)
+                3 -> SteelStructureQCTab(viewModel, snackbarHostState, scope)
+                4 -> RoadsQCTab(viewModel, snackbarHostState, scope)
+                5 -> BridgesQCTab(viewModel, snackbarHostState, scope)
+                6 -> TunnelsQCTab(viewModel, snackbarHostState, scope)
+                7 -> BuildingsQCTab(viewModel, snackbarHostState, scope)
+                8 -> QualityReportsTab(viewModel, snackbarHostState, scope)
             }
         }
-
-        when (selectedTab) {
-            0 -> ConcreteQCTab(viewModel)
-            1 -> SoilFoundationQCTab(viewModel)
-            2 -> RebarQCTab(viewModel)
-            3 -> SteelStructureQCTab(viewModel)
-            4 -> RoadsQCTab(viewModel)
-            5 -> BridgesQCTab(viewModel)
-            6 -> TunnelsQCTab(viewModel)
-            7 -> BuildingsQCTab(viewModel)
-            8 -> QualityReportsTab(viewModel)
-        }
+        SnackbarHost(snackbarHostState)
     }
 }
 
@@ -116,7 +125,11 @@ fun QualityEngineerScreen(
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun ConcreteQCTab(viewModel: QualityEngineerViewModel) {
+private fun ConcreteQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
     val context = LocalContext.current
     val uiState by viewModel.concreteState.collectAsState()
 
@@ -239,6 +252,22 @@ private fun ConcreteQCTab(viewModel: QualityEngineerViewModel) {
             Text("حفظ وتسجيل")
         }
 
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Concrete Quality Control",
+                    subtitle = "Pour QC Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير الخرسانة PDF")
+        }
+
         QcOutcomeCard(uiState.outcome)
     }
 }
@@ -248,7 +277,12 @@ private fun ConcreteQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun SoilFoundationQCTab(viewModel: QualityEngineerViewModel) {
+private fun SoilFoundationQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.soilState.collectAsState()
     var selectedMethod by remember { mutableStateOf(BearingMethod.TERZAGHI) }
     var selectedSoilType by remember { mutableStateOf(SoilType.CLAY) }
@@ -431,6 +465,22 @@ private fun SoilFoundationQCTab(viewModel: QualityEngineerViewModel) {
         }
 
         QcOutcomeCard(uiState.outcome)
+
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Soil & Foundation Quality Control",
+                    subtitle = "Bearing Capacity Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير التربة PDF")
+        }
     }
 }
 
@@ -439,7 +489,12 @@ private fun SoilFoundationQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun RebarQCTab(viewModel: QualityEngineerViewModel) {
+private fun RebarQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.rebarState.collectAsState()
 
     Column(
@@ -547,6 +602,24 @@ private fun RebarQCTab(viewModel: QualityEngineerViewModel) {
                 }
             }
         }
+
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Reinforcement Quality Control",
+                    subtitle = "Rebar Detail Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير التسليح PDF")
+        }
+
+        QcOutcomeCard(uiState.outcome)
     }
 }
 
@@ -556,7 +629,12 @@ private fun RebarQCTab(viewModel: QualityEngineerViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SteelStructureQCTab(viewModel: QualityEngineerViewModel) {
+private fun SteelStructureQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.steelState.collectAsState()
     var selectedSection by remember { mutableStateOf("IPE 200") }
     val sections = listOf("IPE 100", "IPE 120", "IPE 140", "IPE 160", "IPE 180", "IPE 200", "IPE 220", "IPE 240", "IPE 270", "IPE 300")
@@ -670,6 +748,22 @@ private fun SteelStructureQCTab(viewModel: QualityEngineerViewModel) {
         }
 
         QcOutcomeCard(uiState.outcome)
+
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Steel Structure Quality Control",
+                    subtitle = "Steel Member Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير المعدن PDF")
+        }
     }
 }
 
@@ -678,7 +772,12 @@ private fun SteelStructureQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun RoadsQCTab(viewModel: QualityEngineerViewModel) {
+private fun RoadsQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.roadsState.collectAsState()
 
     Column(
@@ -763,6 +862,22 @@ private fun RoadsQCTab(viewModel: QualityEngineerViewModel) {
             Text("فحص طبقات الطريق")
         }
 
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Roads Quality Control",
+                    subtitle = "Pavement QC Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير الطرق PDF")
+        }
+
         QcOutcomeCard(uiState.outcome)
     }
 }
@@ -772,7 +887,12 @@ private fun RoadsQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun BridgesQCTab(viewModel: QualityEngineerViewModel) {
+private fun BridgesQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.bridgesState.collectAsState()
 
     Column(
@@ -836,6 +956,22 @@ private fun BridgesQCTab(viewModel: QualityEngineerViewModel) {
             Text("فحص الجسر")
         }
 
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Bridges Quality Control",
+                    subtitle = "Bridge QC Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير الجسور PDF")
+        }
+
         QcOutcomeCard(uiState.outcome)
     }
 }
@@ -845,7 +981,12 @@ private fun BridgesQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun TunnelsQCTab(viewModel: QualityEngineerViewModel) {
+private fun TunnelsQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.tunnelsState.collectAsState()
 
     Column(
@@ -911,6 +1052,22 @@ private fun TunnelsQCTab(viewModel: QualityEngineerViewModel) {
             Text("فحص النفق")
         }
 
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Tunnels Quality Control",
+                    subtitle = "Tunnel Support Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير الأنفاق PDF")
+        }
+
         QcOutcomeCard(uiState.outcome)
     }
 }
@@ -920,7 +1077,12 @@ private fun TunnelsQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun BuildingsQCTab(viewModel: QualityEngineerViewModel) {
+private fun BuildingsQCTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
     val uiState by viewModel.buildingsState.collectAsState()
     var buildingType by remember { mutableStateOf("مباني سكنية") }
     val types = listOf("مباني سكنية", "عمائر", "مستشفيات", "مباني تجارية")
@@ -1054,6 +1216,22 @@ private fun BuildingsQCTab(viewModel: QualityEngineerViewModel) {
             }
         }
 
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = "Buildings Quality Control",
+                    subtitle = "High-Rise / Hospitals QC Report",
+                    outcome = uiState.outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير المباني PDF")
+        }
+
         QcOutcomeCard(uiState.outcome)
     }
 }
@@ -1063,7 +1241,11 @@ private fun BuildingsQCTab(viewModel: QualityEngineerViewModel) {
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
+private fun QualityReportsTab(
+    viewModel: QualityEngineerViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
     val uiState by viewModel.reportsState.collectAsState()
     val isExporting by viewModel.isExporting.collectAsState()
     val context = LocalContext.current

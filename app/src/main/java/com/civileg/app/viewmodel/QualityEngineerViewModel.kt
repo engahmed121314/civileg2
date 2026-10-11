@@ -721,4 +721,87 @@ class QualityEngineerViewModel @Inject constructor(
             }
         }
     }
+
+    // ---------------------------------------------------------------
+    // Per-discipline PDF export (uses current tab outcome + drawing)
+    // ---------------------------------------------------------------
+    fun exportDisciplineReport(
+        context: Context,
+        title: String,
+        subtitle: String,
+        outcome: QualityControlEngine.QcOutcome?,
+        drawingBitmap: android.graphics.Bitmap? = null,
+        onComplete: (File?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, "${title.replace(" ", "_")}_${System.currentTimeMillis()}.pdf")
+
+                val projectName = preferencesManager.projectName.first()
+                val engineerName = preferencesManager.engineerName.first()
+                val companyName = preferencesManager.companyName.first()
+
+                val inputMap = LinkedHashMap<String, String>()
+                val resultMap = LinkedHashMap<String, String>()
+                val safetyChecks = mutableListOf<ProfessionalEnglishPdfReporter.SafetyCheck>()
+
+                outcome?.let { o ->
+                    o.details.forEach { (k, v) -> inputMap[k] = v }
+                    o.checks.forEach { c ->
+                        safetyChecks.add(
+                            ProfessionalEnglishPdfReporter.SafetyCheck(
+                                name = c.name,
+                                calculated = c.calculated,
+                                limit = c.limit,
+                                unit = c.unit,
+                                passed = c.passed
+                            )
+                        )
+                    }
+                }
+
+                val isSafe = outcome?.passed == true && safetyChecks.all { it.passed }
+                val generated = ProfessionalEnglishPdfReporter.generateReport(
+                    reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
+                    title = title,
+                    subtitle = subtitle,
+                    designCode = "ECP 203-2020 / ACI 318-19 / SBC 304-2018",
+                    inputs = inputMap,
+                    results = resultMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = isSafe,
+                    drawingBitmap = drawingBitmap,
+                    config = ProfessionalEnglishPdfReporter.ReportConfig(
+                        projectName = projectName,
+                        engineerName = engineerName,
+                        companyName = companyName
+                    ),
+                    outputPath = file.absolutePath
+                )
+
+                withContext(Dispatchers.Main) {
+                    generated?.let { ExportUtils.openPdf(context, it) }
+                    _isExporting.value = false
+                    onComplete(generated)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Capture composable as bitmap for drawing attachment
+    // ---------------------------------------------------------------
+    fun captureComposableAsBitmap(): android.graphics.Bitmap? {
+        // Note: actual implementation requires ComposeView + Bitmap drawing
+        // Placeholder - integrate with a ComposeView in the screen for real capture
+        return null
+    }
 }
