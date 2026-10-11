@@ -4,9 +4,11 @@ import android.content.Context
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.civileg.app.data.local.PreferencesManager
 import com.civileg.app.db.CategorySummary
 import com.civileg.app.db.QualityDao
 import com.civileg.app.db.QualityRecord
+import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.CalculatorEngine
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -137,7 +140,8 @@ data class ReportsQCState(
 
 @HiltViewModel
 class QualityEngineerViewModel @Inject constructor(
-    private val qualityDao: QualityDao
+    private val qualityDao: QualityDao,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val gson = Gson()
@@ -308,19 +312,26 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun saveConcretePour(context: Context) {
         val s = _concreteState.value
+        val volume = InputGuard.nonNegative("volume", s.volume.toDoubleOrNull() ?: 0.0)
+        val slump = InputGuard.inRange("slump", s.slump.toDoubleOrNull() ?: 0.0, 0.0, 500.0)
+        val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: 25.0)
+        val s7 = InputGuard.nonNegative("strength7Days", s.strength7Days.toDoubleOrNull() ?: 0.0)
+        val s28 = InputGuard.nonNegative("strength28Days", s.strength28Days.toDoubleOrNull() ?: 0.0)
+        val elementId = InputGuard.notBlank("elementId", s.elementId.ifBlank { s.sampleId.ifBlank { "CONCRETE" } })
+        
         val outcome = QualityControlEngine.concreteQc(
             code = s.designCode,
-            elementId = s.elementId,
-            volumeM3 = s.volume.toDoubleOrNull() ?: 0.0,
-            slumpMm = s.slump.toDoubleOrNull() ?: 0.0,
-            fcuDesignMpa = s.fcu.toDoubleOrNull() ?: 25.0,
-            strength7DaysMpa = s.strength7Days.toDoubleOrNull() ?: 0.0,
-            strength28DaysMpa = s.strength28Days.toDoubleOrNull() ?: 0.0
+            elementId = elementId,
+            volumeM3 = volume,
+            slumpMm = slump,
+            fcuDesignMpa = fcu,
+            strength7DaysMpa = s7,
+            strength28DaysMpa = s28
         )
         _concreteState.value = s.copy(outcome = outcome)
         persist(
             category = QualityControlEngine.Category.CONCRETE,
-            elementId = s.elementId.ifBlank { s.sampleId.ifBlank { "CONCRETE" } },
+            elementId = elementId,
             code = s.designCode,
             outcome = outcome
         )
@@ -384,20 +395,28 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateRebarChecks() {
         val s = _rebarState.value
+        val barDia = InputGuard.positive("barDiameter", s.barDiameter.toDoubleOrNull() ?: 16.0)
+        val nBars = InputGuard.positive("numBars", s.numBars.toIntOrNull() ?: 3)
+        val fy = InputGuard.positive("fy", s.fy.toDoubleOrNull() ?: 400.0)
+        val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: 25.0)
+        val cover = InputGuard.inRange("cover", s.cover.toDoubleOrNull() ?: 40.0, 10.0, 100.0)
+        val b = InputGuard.positive("beamWidth", s.beamWidth.toDoubleOrNull() ?: 250.0)
+        val d = InputGuard.positive("effectiveDepth", s.effectiveDepth.toDoubleOrNull() ?: 560.0)
+        
         val outcome = QualityControlEngine.rebarQc(
             code = s.designCode,
-            barDiameterMm = s.barDiameter.toDoubleOrNull() ?: 16.0,
-            numBars = s.numBars.toIntOrNull() ?: 3,
-            fyMpa = s.fy.toDoubleOrNull() ?: 400.0,
-            fcuMpa = s.fcu.toDoubleOrNull() ?: 25.0,
-            coverMm = s.cover.toDoubleOrNull() ?: 40.0,
-            beamWidthMm = s.beamWidth.toDoubleOrNull() ?: 250.0,
-            effectiveDepthMm = s.effectiveDepth.toDoubleOrNull() ?: 560.0
+            barDiameterMm = barDia,
+            numBars = nBars,
+            fyMpa = fy,
+            fcuMpa = fcu,
+            coverMm = cover,
+            beamWidthMm = b,
+            effectiveDepthMm = d
         )
         _rebarState.value = s.copy(rebarChecks = outcome.checks, outcome = outcome)
         persist(
             category = QualityControlEngine.Category.REBAR,
-            elementId = "REBAR-${s.barDiameter}x${s.numBars}",
+            elementId = "REBAR-${barDia.toInt()}x${nBars}",
             code = s.designCode,
             outcome = outcome
         )
@@ -408,13 +427,18 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateSteelChecks(section: String) {
         val s = _steelState.value.copy(sectionKey = section)
+        val fy = InputGuard.positive("steelFy", s.steelFy.toDoubleOrNull() ?: 275.0)
+        val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: 5.0)
+        val mu = InputGuard.nonNegative("appliedMoment", s.appliedMoment.toDoubleOrNull() ?: 0.0)
+        val vu = InputGuard.nonNegative("appliedShear", s.appliedShear.toDoubleOrNull() ?: 0.0)
+        
         val outcome = QualityControlEngine.steelQc(
             code = s.designCode,
             sectionKey = section,
-            fyMpa = s.steelFy.toDoubleOrNull() ?: 275.0,
-            spanM = s.span.toDoubleOrNull() ?: 5.0,
-            muKnM = s.appliedMoment.toDoubleOrNull() ?: 0.0,
-            vuKn = s.appliedShear.toDoubleOrNull() ?: 0.0
+            fyMpa = fy,
+            spanM = span,
+            muKnM = mu,
+            vuKn = vu
         )
         _steelState.value = s.copy(steelChecks = outcome.checks, outcome = outcome)
         persist(
@@ -430,13 +454,20 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateRoadsChecks() {
         val s = _roadsState.value
+        val surface = InputGuard.inRange("surfaceLayerThickness", s.surfaceLayerThickness.toDoubleOrNull() ?: 50.0, 20.0, 100.0)
+        val base = InputGuard.inRange("baseLayerThickness", s.baseLayerThickness.toDoubleOrNull() ?: 150.0, 100.0, 500.0)
+        val subbase = InputGuard.inRange("subbaseLayerThickness", s.subbaseLayerThickness.toDoubleOrNull() ?: 200.0, 100.0, 500.0)
+        val compaction = InputGuard.inRange("compactionPercent", s.compactionPercent.toDoubleOrNull() ?: 97.0, 80.0, 100.0)
+        val density = InputGuard.inRange("asphaltDensity", s.asphaltDensity.toDoubleOrNull() ?: 23.0, 20.0, 26.0)
+        val voids = InputGuard.inRange("airVoids", s.airVoids.toDoubleOrNull() ?: 4.0, 0.0, 10.0)
+        
         val outcome = QualityControlEngine.roadsQc(
-            surfaceThicknessMm = s.surfaceLayerThickness.toDoubleOrNull() ?: 50.0,
-            baseThicknessMm = s.baseLayerThickness.toDoubleOrNull() ?: 150.0,
-            subbaseThicknessMm = s.subbaseLayerThickness.toDoubleOrNull() ?: 200.0,
-            compactionPercent = s.compactionPercent.toDoubleOrNull() ?: 97.0,
-            asphaltDensityKnM3 = s.asphaltDensity.toDoubleOrNull() ?: 23.0,
-            airVoidsPercent = s.airVoids.toDoubleOrNull() ?: 4.0
+            surfaceThicknessMm = surface,
+            baseThicknessMm = base,
+            subbaseThicknessMm = subbase,
+            compactionPercent = compaction,
+            asphaltDensityKnM3 = density,
+            airVoidsPercent = voids
         )
         _roadsState.value = s.copy(outcome = outcome)
         persist(QualityControlEngine.Category.ROADS, "PAVEMENT", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
@@ -447,11 +478,15 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateBridgeChecks() {
         val s = _bridgesState.value
+        val concStrength = InputGuard.positive("concreteStrength", s.concreteStrength.toDoubleOrNull() ?: 30.0)
+        val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: 20.0)
+        val freq = InputGuard.inRange("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: 2.5, 0.1, 10.0)
+        
         val outcome = QualityControlEngine.bridgeQc(
             code = CalculatorEngine.DesignCode.EGYPTIAN,
-            concreteStrengthMpa = s.concreteStrength.toDoubleOrNull() ?: 30.0,
-            spanM = s.span.toDoubleOrNull() ?: 20.0,
-            naturalFrequencyHz = s.naturalFrequency.toDoubleOrNull() ?: 2.5
+            concreteStrengthMpa = concStrength,
+            spanM = span,
+            naturalFrequencyHz = freq
         )
         _bridgesState.value = s.copy(outcome = outcome)
         persist(QualityControlEngine.Category.BRIDGES, "BRIDGE", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
@@ -462,11 +497,15 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateTunnelChecks() {
         val s = _tunnelsState.value
+        val convergence = InputGuard.nonNegative("tunnelConvergence", s.tunnelConvergence.toDoubleOrNull() ?: 20.0)
+        val diameter = InputGuard.positive("tunnelDiameter", s.tunnelDiameter.toDoubleOrNull() ?: 6.0)
+        val support = InputGuard.positive("supportThickness", s.supportThickness.toDoubleOrNull() ?: 150.0)
+        
         val outcome = QualityControlEngine.tunnelQc(
             rockClass = s.rockClass,
-            convergenceMm = s.tunnelConvergence.toDoubleOrNull() ?: 20.0,
-            diameterM = s.tunnelDiameter.toDoubleOrNull() ?: 6.0,
-            supportThicknessMm = s.supportThickness.toDoubleOrNull() ?: 150.0
+            convergenceMm = convergence,
+            diameterM = diameter,
+            supportThicknessMm = support
         )
         _tunnelsState.value = s.copy(outcome = outcome)
         persist(QualityControlEngine.Category.TUNNELS, "TUNNEL-${s.rockClass}", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
@@ -477,15 +516,23 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateBuildingChecks(buildingType: String) {
         val s = _buildingsState.value.copy(buildingType = buildingType)
+        val nFloors = InputGuard.inRange("numFloors", s.numFloors.toIntOrNull() ?: 5, 1, 100)
+        val floorH = InputGuard.inRange("floorHeight", s.floorHeight.toDoubleOrNull() ?: 3.0, 2.0, 5.0)
+        val weight = InputGuard.positive("totalWeight", s.totalWeight.toDoubleOrNull() ?: 50000.0)
+        val importance = InputGuard.inRange("importanceFactor", s.importanceFactor.toDoubleOrNull() ?: 1.0, 1.0, 1.5)
+        val sdsVal = InputGuard.positive("sds", s.sds.toDoubleOrNull() ?: 0.5)
+        val rVal = InputGuard.inRange("responseR", s.responseR.toDoubleOrNull() ?: 5.0, 1.0, 10.0)
+        val drift = InputGuard.positive("storyDrift", s.storyDrift.toDoubleOrNull() ?: 0.015)
+        
         val outcome = QualityControlEngine.buildingQc(
             code = s.designCode,
-            numFloors = s.numFloors.toIntOrNull() ?: 5,
-            floorHeightM = s.floorHeight.toDoubleOrNull() ?: 3.0,
-            totalWeightKn = s.totalWeight.toDoubleOrNull() ?: 50000.0,
-            importanceFactor = s.importanceFactor.toDoubleOrNull() ?: 1.0,
-            sds = s.sds.toDoubleOrNull() ?: 0.5,
-            responseR = s.responseR.toDoubleOrNull() ?: 5.0,
-            storyDrift = s.storyDrift.toDoubleOrNull() ?: 0.015
+            numFloors = nFloors,
+            floorHeightM = floorH,
+            totalWeightKn = weight,
+            importanceFactor = importance,
+            sds = sdsVal,
+            responseR = rVal,
+            storyDrift = drift
         )
         _buildingsState.value = s.copy(buildingChecks = outcome.checks, outcome = outcome)
         persist(
@@ -542,6 +589,10 @@ class QualityEngineerViewModel @Inject constructor(
                 val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
                 directory.mkdirs()
                 val file = File(directory, "Quality_Report_${System.currentTimeMillis()}.pdf")
+
+                val projectName = preferencesManager.projectName.first()
+                val engineerName = preferencesManager.engineerName.first()
+                val companyName = preferencesManager.companyName.first()
 
                 val inputMap = LinkedHashMap<String, String>()
                 val resultMap = LinkedHashMap<String, String>()
@@ -608,6 +659,11 @@ class QualityEngineerViewModel @Inject constructor(
                     results = resultMap,
                     safetyChecks = safetyChecks,
                     isSafe = isSafe,
+                    config = ProfessionalEnglishPdfReporter.ReportConfig(
+                        projectName = projectName,
+                        engineerName = engineerName,
+                        companyName = companyName
+                    ),
                     outputPath = file.absolutePath
                 )
 

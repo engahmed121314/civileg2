@@ -21,6 +21,9 @@ class PreferencesManager(private val context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val REPORT_LANGUAGE = stringPreferencesKey("report_language")
         val IS_PREMIUM = booleanPreferencesKey("is_premium_user")
+        val PROJECT_NAME = stringPreferencesKey("project_name")
+        val ENGINEER_NAME = stringPreferencesKey("engineer_name")
+        val COMPANY_NAME = stringPreferencesKey("company_name")
     }
 
     val isPremiumUser: Flow<Boolean> = context.dataStore.data
@@ -49,6 +52,15 @@ class PreferencesManager(private val context: Context) {
     
     val reportLanguage: Flow<String> = context.dataStore.data
         .map { it[REPORT_LANGUAGE] ?: "ar" }
+    
+    val projectName: Flow<String> = context.dataStore.data
+        .map { it[PROJECT_NAME] ?: "Civil EG Project" }
+    
+    val engineerName: Flow<String> = context.dataStore.data
+        .map { it[ENGINEER_NAME] ?: "Structural Engineer" }
+    
+    val companyName: Flow<String> = context.dataStore.data
+        .map { it[COMPANY_NAME] ?: "Civil EG" }
     
     suspend fun setConcretePrice(price: Double) {
         context.dataStore.edit { it[CONCRETE_PRICE] = price }
@@ -80,6 +92,18 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setReportLanguage(lang: String) {
         context.dataStore.edit { it[REPORT_LANGUAGE] = lang }
+    }
+
+    suspend fun setProjectName(name: String) {
+        context.dataStore.edit { it[PROJECT_NAME] = name }
+    }
+
+    suspend fun setEngineerName(name: String) {
+        context.dataStore.edit { it[ENGINEER_NAME] = name }
+    }
+
+    suspend fun setCompanyName(name: String) {
+        context.dataStore.edit { it[COMPANY_NAME] = name }
     }
 
     suspend fun setPremiumUser(isPremium: Boolean) {
