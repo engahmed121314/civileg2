@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.entities.DesignCode
@@ -1116,14 +1118,40 @@ private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.exportQualityReport(context) },
+                enabled = !isExporting,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (isExporting) "جارٍ التصدير..." else "تصدير PDF")
+            }
+            Button(
+                onClick = { viewModel.exportQualityCsv(context) },
+                enabled = !isExporting,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.TableChart, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("تصدير CSV")
+            }
+        }
+
+        var showSettings by remember { mutableStateOf(false) }
+        var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
+
         Button(
-            onClick = { viewModel.exportQualityReport(context) },
-            enabled = !isExporting,
+            onClick = { showSettings = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Icon(Icons.Default.Settings, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(if (isExporting) "جارٍ التصدير..." else "تصدير تقرير الجودة PDF")
+            Text("إعدادات المشروع")
         }
 
         if (uiState.records.isNotEmpty()) {
@@ -1156,6 +1184,9 @@ private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
                                     color = Color.Gray
                                 )
                             }
+                            IconButton(onClick = { showDeleteConfirm = record.id }) {
+                                Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFF44336))
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1164,6 +1195,28 @@ private fun QualityReportsTab(viewModel: QualityEngineerViewModel) {
                     }
                 }
             }
+        }
+
+        if (showSettings) {
+            ProjectSettingsDialog(onDismiss = { showSettings = false })
+        }
+
+        showDeleteConfirm?.let { id ->
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = null },
+                title = { Text("حذف السجل") },
+                text = { Text("هل تريد حذف هذا السجل؟ لا يمكن التراجع.") },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.deleteQualityRecord(id); showDeleteConfirm = null }) {
+                        Text("حذف")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = null }) {
+                        Text("إلغاء")
+                    }
+                }
+            )
         }
     }
 }
@@ -1242,4 +1295,59 @@ private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
             Text(outcome.summary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
     }
+}
+
+@Composable
+private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("project_settings", Context.MODE_PRIVATE) }
+    var projectName by remember { mutableStateOf(prefs.getString("project_name", "Civil EG Project") ?: "Civil EG Project") }
+    var engineerName by remember { mutableStateOf(prefs.getString("engineer_name", "Structural Engineer") ?: "Structural Engineer") }
+    var companyName by remember { mutableStateOf(prefs.getString("company_name", "Civil EG") ?: "Civil EG") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("إعدادات المشروع") },
+        text = {
+            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                OutlinedTextField(
+                    value = projectName,
+                    onValueChange = { projectName = it },
+                    label = { Text("اسم المشروع") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = engineerName,
+                    onValueChange = { engineerName = it },
+                    label = { Text("اسم المهندس") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = companyName,
+                    onValueChange = { companyName = it },
+                    label = { Text("اسم الشركة") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                prefs.edit()
+                    .putString("project_name", projectName)
+                    .putString("engineer_name", engineerName)
+                    .putString("company_name", companyName)
+                    .apply()
+                onDismiss()
+            }) {
+                Text("حفظ")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إلغاء")
+            }
+        }
+    )
 }

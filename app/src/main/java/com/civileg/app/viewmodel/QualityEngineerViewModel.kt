@@ -576,6 +576,47 @@ class QualityEngineerViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) { qualityDao.deleteAll() }
     }
 
+    fun deleteQualityRecord(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) { qualityDao.deleteById(id) }
+    }
+
+    // ---------------------------------------------------------------
+    // CSV export
+    // ---------------------------------------------------------------
+    fun exportQualityCsv(
+        context: Context,
+        onComplete: (File?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, "Quality_Records_${System.currentTimeMillis()}.csv")
+
+                val records = qualityDao.getAllRecords().first()
+                val sb = StringBuilder()
+                sb.appendLine("ID,Category,Element ID,Design Code,Passed,Utilization Ratio,Summary,Created At,Notes")
+                records.forEach { r ->
+                    sb.append("${r.id},${r.category},${r.elementId},${r.designCode},${r.passed},${r.utilizationRatio},${r.summary.replace(",", ";")},${r.createdAt.time},${r.notes.replace(",", ";")}")
+                    sb.appendLine()
+                }
+                file.writeText(sb.toString())
+
+                withContext(Dispatchers.Main) {
+                    ExportUtils.openFile(context, file, "text/csv")
+                    _isExporting.value = false
+                    onComplete(file)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
     // ---------------------------------------------------------------
     // PDF export (English only — ADR-009)
     // ---------------------------------------------------------------
