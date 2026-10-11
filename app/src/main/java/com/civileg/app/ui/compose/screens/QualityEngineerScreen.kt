@@ -3,6 +3,8 @@ package com.civileg.app.ui.compose.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -35,8 +38,15 @@ import androidx.compose.ui.unit.sp
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.SafetyCheckRow
@@ -48,7 +58,10 @@ import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.SoilType
 import com.civileg.app.ui.compose.components.charts.DailyTrendChart
 import com.civileg.app.viewmodel.QualityEngineerViewModel
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1277,7 +1290,21 @@ private fun QualityReportsTab(
     var selectedPassFilter by remember { mutableStateOf<Boolean?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
-    var showImportPicker by remember { mutableStateOf(false) }
+    var detailRecordId by remember { mutableStateOf<Long?>(null) }
+
+    val jsonImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importQualityBackupUri(context, uri) { ok ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        if (ok) "تم استيراد النسخة الاحتياطية بنجاح" else "فشل استيراد النسخة الاحتياطية"
+                    )
+                }
+            }
+        }
+    }
 
     val categories = uiState.records.map { it.category }.distinct().sorted()
 
@@ -1468,7 +1495,7 @@ private fun QualityReportsTab(
                 Text("نسخة احتياطية JSON")
             }
             Button(
-                onClick = { showImportPicker = true },
+                onClick = { jsonImportLauncher.launch(arrayOf("application/json", "text/json", "*/*")) },
                 enabled = !isExporting,
                 modifier = Modifier.weight(1f)
             ) {
@@ -1496,7 +1523,9 @@ private fun QualityReportsTab(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { detailRecordId = record.id }
+                                .padding(vertical = 6.dp, horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -1516,7 +1545,22 @@ private fun QualityReportsTab(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
+                                val photoCount = parsePhotoPaths(record.photoPathsJson).size
+                                if (record.inspectorName.isNotBlank() || photoCount > 0) {
+                                    Text(
+                                        buildString {
+                                            if (record.inspectorName.isNotBlank()) append("المفتش: ${record.inspectorName}")
+                                            if (photoCount > 0) {
+                                                if (isNotEmpty()) append("  ·  ")
+                                                append("$photoCount صورة")
+                                            }
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
+                            Icon(Icons.Default.ChevronRight, contentDescription = "تفاصيل", tint = Color.Gray)
                             IconButton(onClick = { showDeleteConfirm = record.id }) {
                                 Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFF44336))
                             }
@@ -1558,25 +1602,300 @@ private fun QualityReportsTab(
             )
         }
 
-        if (showImportPicker) {
-            // Simple file picker - in production use ActivityResultContracts.OpenDocument
-            AlertDialog(
-                onDismissRequest = { showImportPicker = false },
-                title = { Text("استعادة نسخة احتياطية") },
-                text = { Text("حدد ملف JSON من التخزين. (يتطلب تنفيذ FilePicker)") },
-                confirmButton = {
-                    TextButton(onClick = { showImportPicker = false }) {
-                        Text("حسناً")
-                    }
-                },
-dismissButton = {
-                    TextButton(onClick = { showImportPicker = false }) {
-                        Text("إلغاء")
-                    }
-                }
-            )
+        detailRecordId?.let { id ->
+            uiState.records.firstOrNull { it.id == id }?.let { record ->
+                InspectionDetailDialog(
+                    record = record,
+                    context = context,
+                    onDismiss = { detailRecordId = null },
+                    onSave = { viewModel.updateQualityRecord(it); detailRecordId = null },
+                    onAttachPhoto = { rec, uri, cb -> viewModel.attachPhoto(context, rec, uri, cb) },
+                    onRemovePhoto = { rec, path, cb -> viewModel.removePhoto(rec, path, cb) }
+                )
+            }
         }
     }
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// Inspection detail dialog
+// ═══════════════════════════════════════════════════════════════════════
+
+private fun parsePhotoPaths(json: String): List<String> =
+    runCatching { Gson().fromJson(json, Array<String>::class.java)?.toList() }
+        .getOrNull() ?: emptyList()
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InspectionDetailDialog(
+    record: QualityRecord,
+    context: Context,
+    onDismiss: () -> Unit,
+    onSave: (QualityRecord) -> Unit,
+    onAttachPhoto: (QualityRecord, Uri, (String?) -> Unit) -> Unit,
+    onRemovePhoto: (QualityRecord, String, () -> Unit) -> Unit
+) {
+    var inspectorName by remember(record.id) { mutableStateOf(record.inspectorName) }
+    var location by remember(record.id) { mutableStateOf(record.location) }
+    var weather by remember(record.id) { mutableStateOf(record.weatherConditions) }
+    var inspectionType by remember(record.id) { mutableStateOf(record.inspectionType) }
+    var complianceStandard by remember(record.id) { mutableStateOf(record.complianceStandard) }
+    var notes by remember(record.id) { mutableStateOf(record.notes) }
+    var photos by remember(record.id) { mutableStateOf(parsePhotoPaths(record.photoPathsJson)) }
+
+    val currentRecord = record.copy(
+        inspectorName = inspectorName,
+        location = location,
+        weatherConditions = weather,
+        inspectionType = inspectionType,
+        complianceStandard = complianceStandard,
+        notes = notes,
+        photoPathsJson = Gson().toJson(photos)
+    )
+
+    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val uri = cameraUri
+        if (success && uri != null) {
+            onAttachPhoto(currentRecord, uri) { path ->
+                if (path != null) photos = photos + path
+            }
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            onAttachPhoto(currentRecord, uri) { path ->
+                if (path != null) photos = photos + path
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("تفاصيل الفحص") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "${record.category} · ${record.elementId}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "${record.designCode} — ${record.summary}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+
+                OutlinedTextField(
+                    value = inspectorName,
+                    onValueChange = { inspectorName = it },
+                    label = { Text("اسم المفتش") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("الموقع / المحور") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = weather,
+                    onValueChange = { weather = it },
+                    label = { Text("حالة الجو") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                var typeExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = typeExpanded,
+                    onExpandedChange = { typeExpanded = !typeExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = inspectionTypeLabel(inspectionType),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("نوع الفحص") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
+                        INSPECTION_TYPES.forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = { inspectionType = key; typeExpanded = false }
+                            )
+                        }
+                    }
+                }
+
+                var standardExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = standardExpanded,
+                    onExpandedChange = { standardExpanded = !standardExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = complianceStandard.ifBlank { "غير محدد" },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("كود الامتثال") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = standardExpanded) },
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = standardExpanded, onDismissRequest = { standardExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("غير محدد") },
+                            onClick = { complianceStandard = ""; standardExpanded = false }
+                        )
+                        COMPLIANCE_CODES.forEach { code ->
+                            DropdownMenuItem(
+                                text = { Text(code) },
+                                onClick = { complianceStandard = code; standardExpanded = false }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("ملاحظات") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                HorizontalDivider()
+                Text("الصور (${photos.size})", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            val uri = runCatching {
+                                val dir = File(context.cacheDir, "qc_photos").apply { mkdirs() }
+                                val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
+                                FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                            }.getOrNull()
+                            if (uri != null) {
+                                cameraUri = uri
+                                cameraLauncher.launch(uri)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("كاميرا")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("المعرض")
+                    }
+                }
+
+                if (photos.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        photos.forEach { path ->
+                            Box {
+                                val bmp = remember(path) {
+                                    runCatching { BitmapFactory.decodeFile(path) }.getOrNull()
+                                }
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp.asImageBitmap(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.BrokenImage, contentDescription = null, tint = Color.Gray)
+                                    }
+                                }
+                                IconButton(
+                                    onClick = {
+                                        onRemovePhoto(currentRecord, path) {
+                                            photos = photos.filterNot { it == path }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                        .background(
+                                            Color.Black.copy(alpha = 0.5f),
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "حذف الصورة",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(currentRecord) }) {
+                Text("حفظ")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إلغاء")
+            }
+        }
+    )
+}
+
+private val INSPECTION_TYPES = listOf(
+    "routine" to "اعتيادي",
+    "special" to "خاص",
+    "final" to "نهائي"
+)
+
+private val COMPLIANCE_CODES = listOf("ECP", "ACI", "SBC", "AISC", "AASHTO", "ASCE", "TUNNEL")
+
+private fun inspectionTypeLabel(key: String): String =
+    INSPECTION_TYPES.firstOrNull { it.first == key }?.second ?: key
 
 
 // ═══════════════════════════════════════════════════════════════════════

@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -652,7 +653,13 @@ class QualityEngineerViewModel @Inject constructor(
                             "summary" to r.summary,
                             "dataJson" to r.dataJson,
                             "notes" to r.notes,
-                            "createdAt" to r.createdAt.time
+                            "createdAt" to r.createdAt.time,
+                            "inspectorName" to r.inspectorName,
+                            "location" to r.location,
+                            "weatherConditions" to r.weatherConditions,
+                            "complianceStandard" to r.complianceStandard,
+                            "inspectionType" to r.inspectionType,
+                            "photoPathsJson" to r.photoPathsJson
                         )
                     }
                 )
@@ -697,10 +704,113 @@ class QualityEngineerViewModel @Inject constructor(
                         summary = m.get("summary")?.asString ?: "",
                         dataJson = m.get("dataJson")?.asString ?: "{}",
                         notes = m.get("notes")?.asString ?: "",
-                        createdAt = Date(m.get("createdAt")?.asLong ?: System.currentTimeMillis())
+                        createdAt = Date(m.get("createdAt")?.asLong ?: System.currentTimeMillis()),
+                        inspectorName = m.get("inspectorName")?.asString ?: "",
+                        location = m.get("location")?.asString ?: "",
+                        weatherConditions = m.get("weatherConditions")?.asString ?: "",
+                        complianceStandard = m.get("complianceStandard")?.asString ?: "",
+                        inspectionType = m.get("inspectionType")?.asString ?: "routine",
+                        photoPathsJson = m.get("photoPathsJson")?.asString ?: "[]"
                     )
                     qualityDao.insertRecord(record)
                     imported++
+                }
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(true)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(false)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Record details / photos
+    // ---------------------------------------------------------------
+    fun updateQualityRecord(record: QualityRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { qualityDao.insertRecord(record) }
+        }
+    }
+
+    fun attachPhoto(
+        context: Context,
+        record: QualityRecord,
+        source: Uri,
+        onComplete: (String?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val path = runCatching {
+                val dir = File(context.filesDir, "inspection_photos").apply { mkdirs() }
+                val dest = File(dir, "qc_${record.id}_${System.currentTimeMillis()}.jpg")
+                context.contentResolver.openInputStream(source)?.use { input ->
+                    dest.outputStream().use { output -> input.copyTo(output) }
+                } ?: return@runCatching null
+                dest.absolutePath
+            }.getOrNull()
+
+            if (path == null) {
+                withContext(Dispatchers.Main) { onComplete(null) }
+                return@launch
+            }
+
+            val paths = parsePhotoPaths(record.photoPathsJson) + path
+            qualityDao.insertRecord(record.copy(photoPathsJson = gson.toJson(paths)))
+            withContext(Dispatchers.Main) { onComplete(path) }
+        }
+    }
+
+    fun removePhoto(record: QualityRecord, path: String, onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { File(path).delete() }
+            val paths = parsePhotoPaths(record.photoPathsJson).filterNot { it == path }
+            qualityDao.insertRecord(record.copy(photoPathsJson = gson.toJson(paths)))
+            withContext(Dispatchers.Main) { onComplete() }
+        }
+    }
+
+    private fun parsePhotoPaths(json: String): List<String> =
+        runCatching { gson.fromJson(json, Array<String>::class.java)?.toList() }
+            .getOrNull() ?: emptyList()
+
+    fun importQualityBackupUri(
+        context: Context,
+        uri: Uri,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: throw IllegalStateException("Cannot read backup file")
+                val jsonObject = com.google.gson.JsonParser.parseString(json).asJsonObject
+                val recordsJson = jsonObject.getAsJsonArray("records") ?: com.google.gson.JsonArray()
+                recordsJson.forEach { element ->
+                    val m = element.asJsonObject
+                    val record = QualityRecord(
+                        id = 0,
+                        projectId = m.get("projectId")?.asLong?.toLong() ?: 0,
+                        category = m.get("category")?.asString ?: "",
+                        elementId = m.get("elementId")?.asString ?: "",
+                        designCode = m.get("designCode")?.asString ?: "ECP",
+                        passed = m.get("passed")?.asBoolean ?: false,
+                        utilizationRatio = m.get("utilizationRatio")?.asDouble ?: 0.0,
+                        summary = m.get("summary")?.asString ?: "",
+                        dataJson = m.get("dataJson")?.asString ?: "{}",
+                        notes = m.get("notes")?.asString ?: "",
+                        createdAt = Date(m.get("createdAt")?.asLong ?: System.currentTimeMillis()),
+                        inspectorName = m.get("inspectorName")?.asString ?: "",
+                        location = m.get("location")?.asString ?: "",
+                        weatherConditions = m.get("weatherConditions")?.asString ?: "",
+                        complianceStandard = m.get("complianceStandard")?.asString ?: "",
+                        inspectionType = m.get("inspectionType")?.asString ?: "routine",
+                        photoPathsJson = m.get("photoPathsJson")?.asString ?: "[]"
+                    )
+                    qualityDao.insertRecord(record)
                 }
                 withContext(Dispatchers.Main) {
                     _isExporting.value = false
