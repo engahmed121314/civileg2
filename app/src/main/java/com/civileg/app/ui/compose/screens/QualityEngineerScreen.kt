@@ -14,8 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -1238,8 +1236,9 @@ private fun BuildingsQCTab(
 
 // ═══════════════════════════════════════════════════════════════════════
 // TAB 9: Quality Reports
-// ═══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QualityReportsTab(
     viewModel: QualityEngineerViewModel,
@@ -1249,6 +1248,23 @@ private fun QualityReportsTab(
     val uiState by viewModel.reportsState.collectAsState()
     val isExporting by viewModel.isExporting.collectAsState()
     val context = LocalContext.current
+
+    var searchText by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var selectedPassFilter by remember { mutableStateOf<Boolean?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
+    var showImportPicker by remember { mutableStateOf(false) }
+
+    val categories = uiState.records.map { it.category }.distinct().sorted()
+
+    val filteredRecords = uiState.records.filter { record ->
+        (searchText.isBlank() || record.category.contains(searchText, ignoreCase = true) ||
+            record.elementId.contains(searchText, ignoreCase = true) ||
+            record.summary.contains(searchText, ignoreCase = true)) &&
+        (selectedCategory == null || record.category == selectedCategory) &&
+        (selectedPassFilter == null || record.passed == selectedPassFilter)
+    }
 
     Column(
         modifier = Modifier
@@ -1300,6 +1316,94 @@ private fun QualityReportsTab(
             }
         }
 
+        // Search & Filter Bar
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text("تصفية السجلات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = { searchText = it },
+                    label = { Text("بحث (فئة، عنصر، ملخص)") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    var categoryExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = categoryExpanded,
+                        onExpandedChange = { categoryExpanded = !categoryExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCategory?.takeIf { it.isNotBlank() } ?: "كل الفئات",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("الفئة") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("كل الفئات") },
+                                onClick = { selectedCategory = null; categoryExpanded = false }
+                            )
+                            categories.forEach { cat ->
+                                DropdownMenuItem(
+                                    text = { Text(cat) },
+                                    onClick = { selectedCategory = cat; categoryExpanded = false }
+                                )
+                            }
+                        }
+                    }
+                    var statusExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = statusExpanded,
+                        onExpandedChange = { statusExpanded = !statusExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = when (selectedPassFilter) {
+                                true -> "ناجح فقط"
+                                false -> "فاشل فقط"
+                                null -> "كل الحالات"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("الحالة") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(expanded = statusExpanded, onDismissRequest = { statusExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("كل الحالات") },
+                                onClick = { selectedPassFilter = null; statusExpanded = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("ناجح فقط") },
+                                onClick = { selectedPassFilter = true; statusExpanded = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("فاشل فقط") },
+                                onClick = { selectedPassFilter = false; statusExpanded = false }
+                            )
+                        }
+}
+                    }
+                }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1324,8 +1428,29 @@ private fun QualityReportsTab(
             }
         }
 
-        var showSettings by remember { mutableStateOf(false) }
-        var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.exportQualityBackup(context) },
+                enabled = !isExporting,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Backup, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("نسخة احتياطية JSON")
+            }
+            Button(
+                onClick = { showImportPicker = true },
+                enabled = !isExporting,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Restore, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("استعادة JSON")
+            }
+        }
 
         Button(
             onClick = { showSettings = true },
@@ -1336,12 +1461,12 @@ private fun QualityReportsTab(
             Text("إعدادات المشروع")
         }
 
-        if (uiState.records.isNotEmpty()) {
+        if (filteredRecords.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("السجلات المحفوظة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("السجلات المحفوظة (${filteredRecords.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    uiState.records.forEach { record ->
+                    filteredRecords.forEach { record ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1377,6 +1502,12 @@ private fun QualityReportsTab(
                     }
                 }
             }
+        } else {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("لا توجد سجلات مطابقة", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                }
+            }
         }
 
         if (showSettings) {
@@ -1400,8 +1531,27 @@ private fun QualityReportsTab(
                 }
             )
         }
+
+        if (showImportPicker) {
+            // Simple file picker - in production use ActivityResultContracts.OpenDocument
+            AlertDialog(
+                onDismissRequest = { showImportPicker = false },
+                title = { Text("استعادة نسخة احتياطية") },
+                text = { Text("حدد ملف JSON من التخزين. (يتطلب تنفيذ FilePicker)") },
+                confirmButton = {
+                    TextButton(onClick = { showImportPicker = false }) {
+                        Text("حسناً")
+                    }
+                },
+dismissButton = {
+                    TextButton(onClick = { showImportPicker = false }) {
+                        Text("إلغاء")
+                    }
+                }
+            )
+        }
     }
-}
+
 
 // ═══════════════════════════════════════════════════════════════════════
 // Shared Components
@@ -1533,3 +1683,4 @@ private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
         }
     )
 }
+

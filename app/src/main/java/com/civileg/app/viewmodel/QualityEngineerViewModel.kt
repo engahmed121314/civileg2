@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.Date
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -618,6 +619,99 @@ class QualityEngineerViewModel @Inject constructor(
     }
 
     // ---------------------------------------------------------------
+    // JSON Backup / Restore
+    // ---------------------------------------------------------------
+    fun exportQualityBackup(
+        context: Context,
+        onComplete: (File?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, "Quality_Backup_${System.currentTimeMillis()}.json")
+
+                val records = qualityDao.getAllRecords().first()
+                val backup = mapOf(
+                    "exportedAt" to System.currentTimeMillis(),
+                    "version" to 1,
+                    "records" to records.map { r ->
+                        mapOf(
+                            "id" to r.id,
+                            "projectId" to r.projectId,
+                            "category" to r.category,
+                            "elementId" to r.elementId,
+                            "designCode" to r.designCode,
+                            "passed" to r.passed,
+                            "utilizationRatio" to r.utilizationRatio,
+                            "summary" to r.summary,
+                            "dataJson" to r.dataJson,
+                            "notes" to r.notes,
+                            "createdAt" to r.createdAt.time
+                        )
+                    }
+                )
+                file.writeText(gson.toJson(backup))
+
+                withContext(Dispatchers.Main) {
+                    ExportUtils.openFile(context, file, "application/json")
+                    _isExporting.value = false
+                    onComplete(file)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    fun importQualityBackup(
+        context: Context,
+        file: File,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val json = file.readText()
+                val jsonObject = com.google.gson.JsonParser.parseString(json).asJsonObject
+                val recordsJson = jsonObject.getAsJsonArray("records") ?: com.google.gson.JsonArray()
+                var imported = 0
+                recordsJson.forEach { element ->
+                    val m = element.asJsonObject
+                    val record = QualityRecord(
+                        id = m.get("id")?.asLong?.toLong() ?: 0,
+                        projectId = m.get("projectId")?.asLong?.toLong() ?: 0,
+                        category = m.get("category")?.asString ?: "",
+                        elementId = m.get("elementId")?.asString ?: "",
+                        designCode = m.get("designCode")?.asString ?: "ECP",
+                        passed = m.get("passed")?.asBoolean ?: false,
+                        utilizationRatio = m.get("utilizationRatio")?.asDouble ?: 0.0,
+                        summary = m.get("summary")?.asString ?: "",
+                        dataJson = m.get("dataJson")?.asString ?: "{}",
+                        notes = m.get("notes")?.asString ?: "",
+                        createdAt = Date(m.get("createdAt")?.asLong ?: System.currentTimeMillis())
+                    )
+                    qualityDao.insertRecord(record)
+                    imported++
+                }
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(true)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(false)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
     // PDF export (English only — ADR-009)
     // ---------------------------------------------------------------
     fun exportQualityReport(
@@ -799,9 +893,18 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     // Capture composable as bitmap for drawing attachment
     // ---------------------------------------------------------------
-    fun captureComposableAsBitmap(): android.graphics.Bitmap? {
-        // Note: actual implementation requires ComposeView + Bitmap drawing
-        // Placeholder - integrate with a ComposeView in the screen for real capture
-        return null
+    // Note: Must be called from a Compose context (screen) with a ComposeView.
+    // See screen implementation for usage.
+    fun captureComposableAsBitmap(
+        composeView: androidx.compose.ui.platform.ComposeView,
+        width: Int = 800,
+        height: Int = 600
+    ): android.graphics.Bitmap {
+        composeView.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(height, android.view.View.MeasureSpec.EXACTLY))
+        composeView.layout(0, 0, width, height)
+        val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        composeView.draw(canvas)
+        return bitmap
     }
 }
