@@ -299,6 +299,21 @@ object Migrations {
     }
 
     /**
+     * Migration from version 10 to 11.
+     * Adds extended fields to quality_records for professional use.
+     */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE quality_records ADD COLUMN inspectorName TEXT NOT NULL DEFAULT ''")
+            database.execSQL("ALTER TABLE quality_records ADD COLUMN location TEXT NOT NULL DEFAULT ''")
+            database.execSQL("ALTER TABLE quality_records ADD COLUMN weatherConditions TEXT NOT NULL DEFAULT ''")
+            database.execSQL("ALTER TABLE quality_records ADD COLUMN complianceStandard TEXT NOT NULL DEFAULT ''")
+            database.execSQL("ALTER TABLE quality_records ADD COLUMN inspectionType TEXT NOT NULL DEFAULT 'routine'")
+            database.execSQL("ALTER TABLE quality_records ADD COLUMN photoPathsJson TEXT NOT NULL DEFAULT '[]'")
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

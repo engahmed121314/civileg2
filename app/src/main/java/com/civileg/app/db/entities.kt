@@ -364,5 +364,12 @@ data class QualityRecord(
     val summary: String = "",
     val dataJson: String = "{}",
     val notes: String = "",
-    val createdAt: Date = Date()
+    val createdAt: Date = Date(),
+    // Extended fields for professional use
+    val inspectorName: String = "",
+    val location: String = "",
+    val weatherConditions: String = "",
+    val complianceStandard: String = "",
+    val inspectionType: String = "routine", // routine, special, final
+    val photoPathsJson: String = "[]" // JSON array of photo file paths
 )

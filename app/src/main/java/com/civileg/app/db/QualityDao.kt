@@ -7,6 +7,17 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * Daily trend data point for pass/fail rates over time.
+ */
+data class DailyTrend(
+    val date: String, // YYYY-MM-DD
+    val total: Int,
+    val passed: Int,
+    val failed: Int,
+    val passRate: Double
+)
+
+/**
  * Aggregated pass/fail counts per discipline, returned by [QualityDao.getCategorySummary].
  */
 data class CategorySummary(
@@ -54,4 +65,17 @@ interface QualityDao {
 
     @Query("DELETE FROM quality_records")
     suspend fun deleteAll()
+
+    @Query(
+        "SELECT date(createdAt/1000, 'unixepoch') AS date, " +
+            "COUNT(*) AS total, " +
+            "SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) AS passed, " +
+            "SUM(CASE WHEN passed = 0 THEN 1 ELSE 0 END) AS failed, " +
+            "CASE WHEN COUNT(*) > 0 THEN SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) ELSE 0 END AS passRate " +
+            "FROM quality_records " +
+            "GROUP BY date(createdAt/1000, 'unixepoch') " +
+            "ORDER BY date DESC " +
+            "LIMIT 30"
+    )
+    fun getDailyTrend(): Flow<List<DailyTrend>>
 }

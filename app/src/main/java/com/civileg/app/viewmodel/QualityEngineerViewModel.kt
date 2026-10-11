@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.data.local.PreferencesManager
 import com.civileg.app.db.CategorySummary
+import com.civileg.app.db.DailyTrend
 import com.civileg.app.db.QualityDao
 import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.calculations.InputGuard
@@ -132,7 +133,8 @@ data class ReportsQCState(
     val failedInspections: Int = 0,
     val successRate: Double = 0.0,
     val records: List<QualityRecord> = emptyList(),
-    val categorySummary: List<CategorySummary> = emptyList()
+    val categorySummary: List<CategorySummary> = emptyList(),
+    val dailyTrend: List<DailyTrend> = emptyList()
 )
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -184,15 +186,17 @@ class QualityEngineerViewModel @Inject constructor(
                 qualityDao.getAllRecords(),
                 qualityDao.countAll(),
                 qualityDao.countPassed(),
-                qualityDao.getCategorySummary()
-            ) { records, total, passed, summary ->
+                qualityDao.getCategorySummary(),
+                qualityDao.getDailyTrend()
+            ) { records, total, passed, summary, trend ->
                 ReportsQCState(
                     totalInspections = total,
                     passedInspections = passed,
                     failedInspections = total - passed,
                     successRate = if (total > 0) passed * 100.0 / total else 0.0,
                     records = records,
-                    categorySummary = summary
+                    categorySummary = summary,
+                    dailyTrend = trend
                 )
             }.collect { _reportsState.value = it }
         }

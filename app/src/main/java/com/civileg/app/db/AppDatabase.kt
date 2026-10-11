@@ -26,7 +26,7 @@ import androidx.room.TypeConverters
         ShearWallDesignEntity::class,
         QualityRecord::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -60,7 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civil_eg_database"
                 )
-                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9, Migrations.MIGRATION_9_10)
+                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9, Migrations.MIGRATION_9_10, Migrations.MIGRATION_10_11)
                 .build()
                 INSTANCE = instance
                 instance
