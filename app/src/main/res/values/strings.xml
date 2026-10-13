@@ -1760,6 +1760,21 @@
     <string name="quality_tab_bridges">Bridges</string>
     <string name="quality_tab_tunnels">Tunnels</string>
     <string name="quality_tab_buildings">Buildings</string>
+    <string name="quality_tab_earthworks">Earthworks</string>
+    <string name="quality_tab_piling">Piling</string>
+    <string name="quality_tab_retaining">Retaining</string>
+    <string name="quality_tab_waterproofing">Waterproof</string>
+    <string name="quality_tab_masonry">Masonry</string>
+    <string name="quality_tab_flooring">Flooring</string>
+    <string name="quality_tab_precast">Precast</string>
+    <string name="quality_tab_post_tension">Post-Tension</string>
+    <string name="quality_tab_grouting">Grouting</string>
+    <string name="quality_tab_soil_improvement">Soil Improv.</string>
+    <string name="quality_tab_water_tanks">Water Tanks</string>
+    <string name="quality_tab_drainage">Drainage</string>
+    <string name="quality_tab_painting">Painting</string>
+    <string name="quality_tab_site_works">Site Works</string>
+    <string name="quality_tab_fire_protection">Fire Protection</string>
     <string name="quality_tab_reports">Reports</string>
     <string name="quality_tab_compliance">Compliance</string>
 </resources>

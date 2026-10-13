@@ -24,9 +24,11 @@ import androidx.room.TypeConverters
         FlatSlabDesignEntity::class,
         PileFoundationDesignEntity::class,
         ShearWallDesignEntity::class,
-        QualityRecord::class
+        QualityRecord::class,
+        InspectionTestPlan::class,
+        NonConformity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -60,7 +62,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civil_eg_database"
                 )
-                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9, Migrations.MIGRATION_9_10, Migrations.MIGRATION_10_11)
+                .addMigrations(Migrations.MIGRATION_6_7, Migrations.MIGRATION_7_8, Migrations.MIGRATION_8_9, Migrations.MIGRATION_9_10, Migrations.MIGRATION_10_11, Migrations.MIGRATION_11_12)
                 .build()
                 INSTANCE = instance
                 instance

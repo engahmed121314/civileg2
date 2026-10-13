@@ -314,6 +314,62 @@ object Migrations {
     }
 
     /**
+     * Migration from version 11 to 12.
+     * Adds the ITP (inspection_test_plans) and NCR (non_conformities) tables.
+     */
+    val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS inspection_test_plans (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "projectId INTEGER NOT NULL, " +
+                    "discipline TEXT NOT NULL, " +
+                    "activity TEXT NOT NULL, " +
+                    "inspectionItem TEXT NOT NULL, " +
+                    "referenceCode TEXT NOT NULL, " +
+                    "acceptanceCriteria TEXT NOT NULL, " +
+                    "frequency TEXT NOT NULL, " +
+                    "responsibleParty TEXT NOT NULL, " +
+                    "status TEXT NOT NULL, " +
+                    "resultValue TEXT NOT NULL, " +
+                    "checkedBy TEXT NOT NULL, " +
+                    "witness TEXT NOT NULL, " +
+                    "inspectionDate INTEGER NOT NULL, " +
+                    "remarks TEXT NOT NULL, " +
+                    "createdAt INTEGER NOT NULL" +
+                    ")"
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_inspection_test_plans_discipline ON inspection_test_plans(discipline)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_inspection_test_plans_status ON inspection_test_plans(status)")
+
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS non_conformities (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "projectId INTEGER NOT NULL, " +
+                    "ncrNumber TEXT NOT NULL, " +
+                    "discipline TEXT NOT NULL, " +
+                    "elementId TEXT NOT NULL, " +
+                    "description TEXT NOT NULL, " +
+                    "referenceCode TEXT NOT NULL, " +
+                    "severity TEXT NOT NULL, " +
+                    "rootCause TEXT NOT NULL, " +
+                    "correctiveAction TEXT NOT NULL, " +
+                    "preventiveAction TEXT NOT NULL, " +
+                    "responsibleParty TEXT NOT NULL, " +
+                    "targetDate INTEGER NOT NULL, " +
+                    "status TEXT NOT NULL, " +
+                    "closedBy TEXT NOT NULL, " +
+                    "closedDate INTEGER NOT NULL, " +
+                    "createdAt INTEGER NOT NULL" +
+                    ")"
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_non_conformities_severity ON non_conformities(severity)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_non_conformities_status ON non_conformities(status)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_non_conformities_discipline ON non_conformities(discipline)")
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

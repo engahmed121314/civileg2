@@ -1677,6 +1677,21 @@
     <string name="quality_tab_bridges">الكباري</string>
     <string name="quality_tab_tunnels">الأنفاق</string>
     <string name="quality_tab_buildings">المباني</string>
+    <string name="quality_tab_earthworks">أعمال الحفر</string>
+    <string name="quality_tab_piling">الخوازيق</string>
+    <string name="quality_tab_retaining">الحوائط الساندة</string>
+    <string name="quality_tab_waterproofing">العزل المائي</string>
+    <string name="quality_tab_masonry">المباني واللياسة</string>
+    <string name="quality_tab_flooring">الأرضيات</string>
+    <string name="quality_tab_precast">الخرسانة الجاهزة</string>
+    <string name="quality_tab_post_tension">الشد المسبق</string>
+    <string name="quality_tab_grouting">الحقن</string>
+    <string name="quality_tab_soil_improvement">تحسين التربة</string>
+    <string name="quality_tab_water_tanks">خزانات المياه</string>
+    <string name="quality_tab_drainage">الصرف</string>
+    <string name="quality_tab_painting">الدهانات</string>
+    <string name="quality_tab_site_works">أعمال الموقع</string>
+    <string name="quality_tab_fire_protection">الحماية من الحريق</string>
     <string name="quality_tab_reports">التقارير</string>
     <string name="quality_tab_compliance">الامتثال</string>
 </resources>

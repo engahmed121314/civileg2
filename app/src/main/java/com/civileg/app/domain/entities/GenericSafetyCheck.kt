@@ -9,5 +9,7 @@ data class GenericSafetyCheck(
     val calculated: Double,
     val limit: Double,
     val unit: String,
-    val passed: Boolean
+    val passed: Boolean,
+    val reference: String? = null,
+    val pointType: String? = null
 ) : Parcelable

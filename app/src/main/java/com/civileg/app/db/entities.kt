@@ -373,3 +373,65 @@ data class QualityRecord(
     val inspectionType: String = "routine", // routine, special, final
     val photoPathsJson: String = "[]" // JSON array of photo file paths
 )
+
+/**
+ * Inspection & Test Plan (ITP) line item for a discipline work activity.
+ *
+ * Captures the planned inspection points, acceptance criteria and outcome so the
+ * quality engineer can track progress and witnesses per activity.
+ */
+@Entity(
+    tableName = "inspection_test_plans",
+    indices = [androidx.room.Index(value = ["discipline"]), androidx.room.Index(value = ["status"])]
+)
+data class InspectionTestPlan(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectId: Long = 0,
+    val discipline: String = "",
+    val activity: String = "",
+    val inspectionItem: String = "",
+    val referenceCode: String = "",
+    val acceptanceCriteria: String = "",
+    val frequency: String = "",
+    val responsibleParty: String = "",
+    val status: String = "pending", // pending, in_progress, passed, failed
+    val resultValue: String = "",
+    val checkedBy: String = "",
+    val witness: String = "",
+    val inspectionDate: Date = Date(),
+    val remarks: String = "",
+    val createdAt: Date = Date()
+)
+
+/**
+ * Non-Conformity Report (NCR) raised when a check or inspection fails.
+ */
+@Entity(
+    tableName = "non_conformities",
+    indices = [
+        androidx.room.Index(value = ["severity"]),
+        androidx.room.Index(value = ["status"]),
+        androidx.room.Index(value = ["discipline"])
+    ]
+)
+data class NonConformity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectId: Long = 0,
+    val ncrNumber: String = "",
+    val discipline: String = "",
+    val elementId: String = "",
+    val description: String = "",
+    val referenceCode: String = "",
+    val severity: String = "minor", // minor, major, critical
+    val rootCause: String = "",
+    val correctiveAction: String = "",
+    val preventiveAction: String = "",
+    val responsibleParty: String = "",
+    val targetDate: Date = Date(),
+    val status: String = "open", // open, in_progress, closed
+    val closedBy: String = "",
+    val closedDate: Date = Date(),
+    val createdAt: Date = Date()
+)

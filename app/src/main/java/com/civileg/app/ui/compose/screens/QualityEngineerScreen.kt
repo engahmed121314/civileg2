@@ -55,9 +55,12 @@ import com.civileg.app.utils.SoilBearingInput
 import com.civileg.app.utils.SoilBearingResult
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.QualityControlEngine
+import com.civileg.app.utils.QualityControlEngineNew
+import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.SoilType
 import com.civileg.app.ui.compose.components.charts.DailyTrendChart
 import com.civileg.app.viewmodel.QualityEngineerViewModel
+import com.civileg.app.viewmodel.ReportsQCState
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -82,6 +85,21 @@ fun QualityEngineerScreen(
         stringResource(R.string.quality_tab_bridges),
         stringResource(R.string.quality_tab_tunnels),
         stringResource(R.string.quality_tab_buildings),
+        stringResource(R.string.quality_tab_earthworks),
+        stringResource(R.string.quality_tab_piling),
+        stringResource(R.string.quality_tab_retaining),
+        stringResource(R.string.quality_tab_waterproofing),
+        stringResource(R.string.quality_tab_masonry),
+        stringResource(R.string.quality_tab_flooring),
+        stringResource(R.string.quality_tab_precast),
+        stringResource(R.string.quality_tab_post_tension),
+        stringResource(R.string.quality_tab_grouting),
+        stringResource(R.string.quality_tab_soil_improvement),
+        stringResource(R.string.quality_tab_water_tanks),
+        stringResource(R.string.quality_tab_drainage),
+        stringResource(R.string.quality_tab_painting),
+        stringResource(R.string.quality_tab_site_works),
+        stringResource(R.string.quality_tab_fire_protection),
         stringResource(R.string.quality_tab_reports),
         stringResource(R.string.quality_tab_compliance)
     )
@@ -132,8 +150,23 @@ fun QualityEngineerScreen(
                 5 -> BridgesQCTab(viewModel, snackbarHostState, scope)
                 6 -> TunnelsQCTab(viewModel, snackbarHostState, scope)
                 7 -> BuildingsQCTab(viewModel, snackbarHostState, scope)
-                8 -> QualityReportsTab(viewModel, snackbarHostState, scope)
-                9 -> QualityComplianceScreen()
+                8 -> DisciplineQcTab(viewModel, QcDiscipline.EARTHWORKS, snackbarHostState, scope)
+                9 -> DisciplineQcTab(viewModel, QcDiscipline.PILING, snackbarHostState, scope)
+                10 -> DisciplineQcTab(viewModel, QcDiscipline.RETAINING_WALLS, snackbarHostState, scope)
+                11 -> DisciplineQcTab(viewModel, QcDiscipline.WATERPROOFING, snackbarHostState, scope)
+                12 -> DisciplineQcTab(viewModel, QcDiscipline.MASONRY, snackbarHostState, scope)
+                13 -> DisciplineQcTab(viewModel, QcDiscipline.FLOORING, snackbarHostState, scope)
+                14 -> DisciplineQcTab(viewModel, QcDiscipline.PRECAST, snackbarHostState, scope)
+                15 -> DisciplineQcTab(viewModel, QcDiscipline.POST_TENSION, snackbarHostState, scope)
+                16 -> DisciplineQcTab(viewModel, QcDiscipline.GROUTING, snackbarHostState, scope)
+                17 -> DisciplineQcTab(viewModel, QcDiscipline.SOIL_IMPROVEMENT, snackbarHostState, scope)
+                18 -> DisciplineQcTab(viewModel, QcDiscipline.WATER_TANKS, snackbarHostState, scope)
+                19 -> DisciplineQcTab(viewModel, QcDiscipline.DRAINAGE, snackbarHostState, scope)
+                20 -> DisciplineQcTab(viewModel, QcDiscipline.PAINTING, snackbarHostState, scope)
+                21 -> DisciplineQcTab(viewModel, QcDiscipline.SITE_WORKS, snackbarHostState, scope)
+                22 -> DisciplineQcTab(viewModel, QcDiscipline.FIRE_PROTECTION, snackbarHostState, scope)
+                23 -> QualityReportsTab(viewModel, snackbarHostState, scope)
+                24 -> QualityComplianceScreen()
             }
         }
         SnackbarHost(snackbarHostState)
@@ -1271,6 +1304,637 @@ private fun BuildingsQCTab(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// Discipline QC tabs (Earthworks … Fire Protection)
+// ═══════════════════════════════════════════════════════════════════════
+
+private enum class QcFieldType { NUMBER, TEXT, BOOL }
+
+private data class QcField(
+    val key: String,
+    val label: String,
+    val type: QcFieldType,
+    val default: String = ""
+)
+
+private fun Map<String, String>.num(k: String, def: Double = 0.0) =
+    this[k]?.trim()?.toDoubleOrNull() ?: def
+
+private fun Map<String, String>.intg(k: String, def: Int = 0) =
+    this[k]?.trim()?.toIntOrNull() ?: def
+
+private fun Map<String, String>.bool(k: String) =
+    this[k]?.equals("true", ignoreCase = true) ?: false
+
+private fun Map<String, String>.str(k: String, def: String = "") =
+    this[k]?.trim().takeUnless { it.isNullOrBlank() } ?: def
+
+private enum class QcDiscipline(
+    val category: String,
+    val title: String,
+    val subtitle: String,
+    val elementId: String,
+    val fields: List<QcField>
+) {
+    EARTHWORKS(
+        QualityControlEngine.Category.EARTHWORKS,
+        "Earthworks Quality Control", "Excavation & Backfill", "EARTHWORKS",
+        listOf(
+            QcField("excavationDepth", "عمق الحفر (m)", QcFieldType.NUMBER, "3.0"),
+            QcField("excavationLength", "طول الحفر (m)", QcFieldType.NUMBER, "20.0"),
+            QcField("excavationWidth", "عرض الحفر (m)", QcFieldType.NUMBER, "10.0"),
+            QcField("slopeAngle", "زاوية الميل (°)", QcFieldType.NUMBER, "45"),
+            QcField("soilType", "نوع التربة (CLAY/SAND/ROCK)", QcFieldType.TEXT, "SAND"),
+            QcField("groundwaterLevel", "منسوب المياه (m)", QcFieldType.NUMBER, "5.0"),
+            QcField("backfillType", "نوع الردم", QcFieldType.TEXT, "Compacted Sand"),
+            QcField("compactionMethod", "طريقة الدمك", QcFieldType.TEXT, "Vibratory"),
+            QcField("layerThickness", "سماكة الطبقة (mm)", QcFieldType.NUMBER, "250"),
+            QcField("fieldDensity", "الكثافة الحقلية (kN/m³)", QcFieldType.NUMBER, "19.0"),
+            QcField("maxDryDensity", "أقصى كثافة جافة (kN/m³)", QcFieldType.NUMBER, "20.0"),
+            QcField("optimumMoisture", "الرطوبة المثلى (%)", QcFieldType.NUMBER, "12.0"),
+            QcField("fieldMoisture", "الرطوبة الحقلية (%)", QcFieldType.NUMBER, "12.5")
+        )
+    ),
+    PILING(
+        QualityControlEngine.Category.PILING,
+        "Piling Quality Control", "Deep Foundations", "PILES",
+        listOf(
+            QcField("pileType", "نوع الخازوق (DRIVEN/BORED/CFA)", QcFieldType.TEXT, "BORED"),
+            QcField("pileDiameter", "قطر الخازوق (mm)", QcFieldType.NUMBER, "600"),
+            QcField("pileLength", "طول الخازوق (m)", QcFieldType.NUMBER, "15"),
+            QcField("numberOfPiles", "عدد الخوازيق", QcFieldType.NUMBER, "9"),
+            QcField("pileSpacing", "التباعد (m)", QcFieldType.NUMBER, "1.8"),
+            QcField("axialLoad", "الحمل المحوري (kN)", QcFieldType.NUMBER, "1200"),
+            QcField("lateralLoad", "الحمل الجانبي (kN)", QcFieldType.NUMBER, "80"),
+            QcField("momentLoad", "العزم (kN·m)", QcFieldType.NUMBER, "150"),
+            QcField("cu", "تماسك Cu (kPa)", QcFieldType.NUMBER, "75"),
+            QcField("phi", "زاوية الاحتكاك (°)", QcFieldType.NUMBER, "30"),
+            QcField("gammaSoil", "الوزن النوعي (kN/m³)", QcFieldType.NUMBER, "18"),
+            QcField("waterTableDepth", "عمق المياه (m)", QcFieldType.NUMBER, "3"),
+            QcField("safetyFactor", "معامل الأمان", QcFieldType.NUMBER, "2.5"),
+            QcField("pileGroupPattern", "نمط المجموعة", QcFieldType.TEXT, "3x3"),
+            QcField("scourDepth", "عمق النحر (m)", QcFieldType.NUMBER, "1.0"),
+            QcField("capConcreteCover", "غطاء القاعدة (mm)", QcFieldType.NUMBER, "75"),
+            QcField("columnWidth", "عرض العمود (mm)", QcFieldType.NUMBER, "600"),
+            QcField("columnLength", "طول العمود (mm)", QcFieldType.NUMBER, "600")
+        )
+    ),
+    RETAINING_WALLS(
+        QualityControlEngine.Category.RETAINING_WALLS,
+        "Retaining Walls Quality Control", "Earth Retention", "RETAINING",
+        listOf(
+            QcField("wallHeight", "ارتفاع الجدار (m)", QcFieldType.NUMBER, "5"),
+            QcField("wallThickness", "سماكة الجدار (mm)", QcFieldType.NUMBER, "300"),
+            QcField("soilType", "نوع التربة", QcFieldType.TEXT, "SAND"),
+            QcField("backfillUnitWeight", "وزن الردم (kN/m³)", QcFieldType.NUMBER, "18"),
+            QcField("backfillFrictionAngle", "زاوية احتكاك الردم (°)", QcFieldType.NUMBER, "30"),
+            QcField("backfillCohesion", "تماسك الردم (kPa)", QcFieldType.NUMBER, "0"),
+            QcField("surchargeLoad", "حمل السير (kN/m²)", QcFieldType.NUMBER, "10"),
+            QcField("groundwaterLevel", "منسوب المياه (m)", QcFieldType.NUMBER, "3"),
+            QcField("foundationDepth", "عمق التأسيس (m)", QcFieldType.NUMBER, "1.5"),
+            QcField("foundationWidth", "عرض القاعدة (m)", QcFieldType.NUMBER, "4"),
+            QcField("foundationSoilBearing", "تحمل التربة (kPa)", QcFieldType.NUMBER, "200"),
+            QcField("concreteStrength", "مقاومة الخرسانة (MPa)", QcFieldType.NUMBER, "30"),
+            QcField("steelGrade", "رتبة الحديد (MPa)", QcFieldType.NUMBER, "400"),
+            QcField("seismicCoefficient", "معامل الزلازل", QcFieldType.NUMBER, "0.1")
+        )
+    ),
+    WATERPROOFING(
+        QualityControlEngine.Category.WATERPROOFING,
+        "Waterproofing Quality Control", "Membranes & Coatings", "WATERPROOFING",
+        listOf(
+            QcField("waterproofingType", "نوع العزل", QcFieldType.TEXT, "Bituminous Membrane"),
+            QcField("membraneThickness", "سماكة الغشاء (mm)", QcFieldType.NUMBER, "2.0"),
+            QcField("coatingThickness", "سماكة الطبقة (mm)", QcFieldType.NUMBER, "1.5"),
+            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "0.6"),
+            QcField("overlapWidth", "عرض التراكب (mm)", QcFieldType.NUMBER, "100"),
+            QcField("leakTestResult", "اجتياز اختبار التسريب", QcFieldType.BOOL, "true"),
+            QcField("cornerDetails", "تفاصيل الأركان", QcFieldType.BOOL, "true"),
+            QcField("drainageLayer", "طبقة الصرف", QcFieldType.BOOL, "true"),
+            QcField("protectionLayer", "طبقة الحماية", QcFieldType.BOOL, "true"),
+            QcField("substrateCondition", "حالة السطح", QcFieldType.TEXT, "Dry"),
+            QcField("applicationTemperature", "درجة الحرارة (°C)", QcFieldType.NUMBER, "25"),
+            QcField("curingTime", "زمن التصلد (h)", QcFieldType.NUMBER, "24")
+        )
+    ),
+    MASONRY(
+        QualityControlEngine.Category.MASONRY,
+        "Masonry & Plastering Quality Control", "Walls & Rendering", "MASONRY",
+        listOf(
+            QcField("masonryType", "نوع المباني", QcFieldType.TEXT, "Block"),
+            QcField("blockDimensions", "مقاس الوحدة", QcFieldType.TEXT, "200x200x400"),
+            QcField("mortarType", "نوع المونة", QcFieldType.TEXT, "M10"),
+            QcField("mortarStrength", "مقاومة المونة (MPa)", QcFieldType.NUMBER, "10"),
+            QcField("wallThickness", "سماكة الحائط (mm)", QcFieldType.NUMBER, "200"),
+            QcField("plasterThickness", "سماكة اللياسة (mm)", QcFieldType.NUMBER, "15"),
+            QcField("plasterType", "نوع اللياسة", QcFieldType.TEXT, "Cement"),
+            QcField("surfaceFlatness", "الاستواء (mm/m)", QcFieldType.NUMBER, "2.0"),
+            QcField("verticality", "الرأسية (mm/m)", QcFieldType.NUMBER, "3.0"),
+            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "0.4"),
+            QcField("curingMethod", "طريقة المعالجة", QcFieldType.TEXT, "Wet"),
+            QcField("jointThickness", "سماكة اللحام (mm)", QcFieldType.NUMBER, "10")
+        )
+    ),
+    FLOORING(
+        QualityControlEngine.Category.FLOORING,
+        "Flooring Quality Control", "Slabs & Finishes", "FLOORING",
+        listOf(
+            QcField("flooringType", "نوع الأرضية", QcFieldType.TEXT, "Granite"),
+            QcField("slabThickness", "سماكة البلاطة (mm)", QcFieldType.NUMBER, "150"),
+            QcField("surfaceFlatness", "الاستواء (mm/2m)", QcFieldType.NUMBER, "2.0"),
+            QcField("compressiveStrength", "مقاومة الضغط (MPa)", QcFieldType.NUMBER, "30"),
+            QcField("tensileStrength", "مقاومة الشد (MPa)", QcFieldType.NUMBER, "3"),
+            QcField("jointSpacing", "تباعد الفواصل (m)", QcFieldType.NUMBER, "5"),
+            QcField("jointWidth", "عرض الفاصل (mm)", QcFieldType.NUMBER, "6"),
+            QcField("finishType", "نوع التشطيب", QcFieldType.TEXT, "Polished"),
+            QcField("curingMethod", "طريقة المعالجة", QcFieldType.TEXT, "Wet"),
+            QcField("levelness", "الاستواء الكلي (mm)", QcFieldType.NUMBER, "5")
+        )
+    ),
+    PRECAST(
+        QualityControlEngine.Category.PRECAST,
+        "Pre-cast Concrete Quality Control", "Off-site Elements", "PRECAST",
+        listOf(
+            QcField("elementType", "نوع العنصر", QcFieldType.TEXT, "Beam"),
+            QcField("elementDimensions", "المقاسات", QcFieldType.TEXT, "300x600x6000"),
+            QcField("concreteStrength", "مقاومة الخرسانة (MPa)", QcFieldType.NUMBER, "40"),
+            QcField("steelGrade", "رتبة الحديد (MPa)", QcFieldType.NUMBER, "400"),
+            QcField("coverThickness", "الغطاء (mm)", QcFieldType.NUMBER, "40"),
+            QcField("surfaceFinish", "تشطيب السطح", QcFieldType.TEXT, "Fair"),
+            QcField("liftingAnchors", "مثبتات الرفع", QcFieldType.BOOL, "true"),
+            QcField("connectionDetails", "تفاصيل الوصل", QcFieldType.TEXT, "Bolted"),
+            QcField("transportDamage", "تلف النقل", QcFieldType.BOOL, "false"),
+            QcField("erectionTolerance", "تفاوت التركيب (mm)", QcFieldType.NUMBER, "5"),
+            QcField("groutStrength", "مقاومة الجراوت (MPa)", QcFieldType.NUMBER, "50")
+        )
+    ),
+    POST_TENSION(
+        QualityControlEngine.Category.POST_TENSION,
+        "Post-Tensioning Quality Control", "Tendons & Grouting", "POST_TENSION",
+        listOf(
+            QcField("tendonType", "نوع الكابل", QcFieldType.TEXT, "7-wire strand"),
+            QcField("tendonDiameter", "قطر الكابل (mm)", QcFieldType.NUMBER, "15.2"),
+            QcField("jackingForce", "قوة الشد (kN)", QcFieldType.NUMBER, "1500"),
+            QcField("elongation", "الاستطالة (mm)", QcFieldType.NUMBER, "180"),
+            QcField("expectedElongation", "الاستطالة المتوقعة (mm)", QcFieldType.NUMBER, "180"),
+            QcField("groutStrength", "مقاومة الجراوت (MPa)", QcFieldType.NUMBER, "35"),
+            QcField("groutFlow", "سيولة الجراوت (sec)", QcFieldType.NUMBER, "30"),
+            QcField("anchorageType", "نوع المثبت", QcFieldType.TEXT, "Wedge"),
+            QcField("ductMaterial", "مادة الممر", QcFieldType.TEXT, "HDPE"),
+            QcField("corrosionProtection", "حماية التآكل", QcFieldType.TEXT, "Galvanized"),
+            QcField("stressLoss", "فقد الإجهاد (%)", QcFieldType.NUMBER, "15"),
+            QcField("frictionCoefficient", "معامل الاحتكاك", QcFieldType.NUMBER, "0.20"),
+            QcField("wobbleCoefficient", "معامل التموج", QcFieldType.NUMBER, "0.002")
+        )
+    ),
+    GROUTING(
+        QualityControlEngine.Category.GROUTING,
+        "Grouting Quality Control", "Injection Works", "GROUTING",
+        listOf(
+            QcField("groutType", "نوع الجراوت", QcFieldType.TEXT, "Cementitious"),
+            QcField("flowTime", "زمن السيولة (sec)", QcFieldType.NUMBER, "30"),
+            QcField("shrinkage", "الانكماش (%)", QcFieldType.NUMBER, "0.05"),
+            QcField("compressiveStrength", "مقاومة الضغط (MPa)", QcFieldType.NUMBER, "40"),
+            QcField("viscosity", "اللزوجة (cP)", QcFieldType.NUMBER, "500"),
+            QcField("gelTime", "زمن التجلط (min)", QcFieldType.NUMBER, "10"),
+            QcField("bondStrength", "قوة الترابط (MPa)", QcFieldType.NUMBER, "2.0"),
+            QcField("injectionPressure", "ضغط الحقن (MPa)", QcFieldType.NUMBER, "0.35"),
+            QcField("injectionVolume", "حجم الحقن (L)", QcFieldType.NUMBER, "100"),
+            QcField("curingTime", "زمن التصلد (days)", QcFieldType.NUMBER, "7"),
+            QcField("substrateCondition", "حالة السطح", QcFieldType.TEXT, "Clean")
+        )
+    ),
+    SOIL_IMPROVEMENT(
+        QualityControlEngine.Category.SOIL_IMPROVEMENT,
+        "Soil Improvement Quality Control", "Ground Treatment", "SOIL_IMPROVEMENT",
+        listOf(
+            QcField("improvementType", "نوع التحسين", QcFieldType.TEXT, "Stone Columns"),
+            QcField("improvementDepth", "عمق التحسين (m)", QcFieldType.NUMBER, "8"),
+            QcField("improvementDiameter", "القطر (m)", QcFieldType.NUMBER, "0.8"),
+            QcField("spacing", "التباعد (m)", QcFieldType.NUMBER, "2.0"),
+            QcField("preImprovementBearing", "قبل التحسين (kPa)", QcFieldType.NUMBER, "80"),
+            QcField("postImprovementBearing", "بعد التحسين (kPa)", QcFieldType.NUMBER, "160"),
+            QcField("preImprovementSPT", "SPT قبل", QcFieldType.NUMBER, "8"),
+            QcField("postImprovementSPT", "SPT بعد", QcFieldType.NUMBER, "18"),
+            QcField("settlementBefore", "الهبوط قبل (mm)", QcFieldType.NUMBER, "50"),
+            QcField("settlementAfter", "الهبوط بعد (mm)", QcFieldType.NUMBER, "20"),
+            QcField("improvementMaterial", "مادة التحسين", QcFieldType.TEXT, "Crushed Stone"),
+            QcField("qualityControlTest", "اختبار الجودة", QcFieldType.TEXT, "Plate Load")
+        )
+    ),
+    WATER_TANKS(
+        QualityControlEngine.Category.WATER_TANKS,
+        "Water Tanks Quality Control", "Liquid Retaining Structures", "WATER_TANKS",
+        listOf(
+            QcField("tankType", "نوع الخزان", QcFieldType.TEXT, "Rectangular"),
+            QcField("tankCapacity", "السعة (m³)", QcFieldType.NUMBER, "500"),
+            QcField("tankDimensions", "المقاسات", QcFieldType.TEXT, "20x10x3"),
+            QcField("concreteStrength", "مقاومة الخرسانة (MPa)", QcFieldType.NUMBER, "30"),
+            QcField("steelGrade", "رتبة الحديد (MPa)", QcFieldType.NUMBER, "400"),
+            QcField("wallThickness", "سماكة الجدار (mm)", QcFieldType.NUMBER, "250"),
+            QcField("floorThickness", "سماكة الأرضية (mm)", QcFieldType.NUMBER, "200"),
+            QcField("roofThickness", "سماكة السقف (mm)", QcFieldType.NUMBER, "150"),
+            QcField("waterproofingType", "نوع العزل", QcFieldType.TEXT, "Crystalline"),
+            QcField("leakTestResult", "اجتياز اختبار التسريب", QcFieldType.BOOL, "true"),
+            QcField("hydrostaticTest", "الاختبار الهيدروستاتيكي", QcFieldType.BOOL, "true"),
+            QcField("valveType", "نوع الصمام", QcFieldType.TEXT, "Gate"),
+            QcField("drainageSystem", "نظام الصرف", QcFieldType.BOOL, "true")
+        )
+    ),
+    DRAINAGE(
+        QualityControlEngine.Category.DRAINAGE,
+        "Drainage Quality Control", "Pipes & Manholes", "DRAINAGE",
+        listOf(
+            QcField("pipeMaterial", "مادة المواسير", QcFieldType.TEXT, "RCP"),
+            QcField("pipeDiameter", "القطر (mm)", QcFieldType.NUMBER, "600"),
+            QcField("pipeLength", "الطول (m)", QcFieldType.NUMBER, "100"),
+            QcField("slope", "الميل (%)", QcFieldType.NUMBER, "1.5"),
+            QcField("jointType", "نوع الوصلة", QcFieldType.TEXT, "Rubber Gasket"),
+            QcField("leakTestResult", "اجتياز اختبار التسريب", QcFieldType.BOOL, "true"),
+            QcField("manholeSpacing", "تباعد المطابق (m)", QcFieldType.NUMBER, "40"),
+            QcField("manholeDepth", "عمق المطبق (m)", QcFieldType.NUMBER, "3"),
+            QcField("flowRate", "معدل التصرف (L/s)", QcFieldType.NUMBER, "150"),
+            QcField("invertLevel", "منسوب القاع (mm)", QcFieldType.NUMBER, "0"),
+            QcField("backfillCompaction", "دمك الردم (%)", QcFieldType.NUMBER, "96")
+        )
+    ),
+    PAINTING(
+        QualityControlEngine.Category.PAINTING,
+        "Painting Quality Control", "Coatings & Finishes", "PAINTING",
+        listOf(
+            QcField("paintType", "نوع الدهان", QcFieldType.TEXT, "Epoxy"),
+            QcField("dft", "السماكة الجافة (μm)", QcFieldType.NUMBER, "150"),
+            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "2.0"),
+            QcField("colorUniformity", "انتظام اللون", QcFieldType.BOOL, "true"),
+            QcField("surfacePreparation", "تحضير السطح", QcFieldType.TEXT, "SSPC-SP6"),
+            QcField("numberOfCoats", "عدد الطبقات", QcFieldType.NUMBER, "2"),
+            QcField("coatingThickness", "سماكة الطلاء (mm)", QcFieldType.NUMBER, "0.15"),
+            QcField("fireRating", "تصنيف الحريق", QcFieldType.TEXT, "None"),
+            QcField("curingTime", "زمن التصلد (h)", QcFieldType.NUMBER, "24"),
+            QcField("ambientTemperature", "درجة الحرارة (°C)", QcFieldType.NUMBER, "25"),
+            QcField("humidity", "الرطوبة (%)", QcFieldType.NUMBER, "60")
+        )
+    ),
+    SITE_WORKS(
+        QualityControlEngine.Category.SITE_WORKS,
+        "Site Works Quality Control", "General Site Development", "SITE_WORKS",
+        listOf(
+            QcField("gradingLevel", "منسوب التسوية (m)", QcFieldType.NUMBER, "100"),
+            QcField("slope", "الميل (%)", QcFieldType.NUMBER, "0.5"),
+            QcField("fenceType", "نوع السور", QcFieldType.TEXT, "Chain Link"),
+            QcField("gateType", "نوع البوابة", QcFieldType.TEXT, "Swing"),
+            QcField("lightingType", "نوع الإضاءة", QcFieldType.TEXT, "LED"),
+            QcField("landscapingType", "التنسيق", QcFieldType.TEXT, "Grass"),
+            QcField("pavementType", "نوع الرصف", QcFieldType.TEXT, "Interlock"),
+            QcField("drainageSystem", "نظام الصرف", QcFieldType.BOOL, "true"),
+            QcField("safetySigns", "علامات السلامة", QcFieldType.BOOL, "true"),
+            QcField("fireExtinguishers", "طفايات الحريق", QcFieldType.BOOL, "true"),
+            QcField("firstAidKit", "حقيبة الإسعاف", QcFieldType.BOOL, "true")
+        )
+    ),
+    FIRE_PROTECTION(
+        QualityControlEngine.Category.FIRE_PROTECTION,
+        "Fire Protection Quality Control", "Passive Fire Protection", "FIRE_PROTECTION",
+        listOf(
+            QcField("protectionType", "نوع الحماية", QcFieldType.TEXT, "Intumescent"),
+            QcField("coatingThickness", "سماكة الطلاء (mm)", QcFieldType.NUMBER, "0.8"),
+            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "1.2"),
+            QcField("fireRating", "تصنيف الحريق", QcFieldType.TEXT, "2 hr"),
+            QcField("coverageArea", "المساحة المغطاة (m²)", QcFieldType.NUMBER, "500"),
+            QcField("applicationMethod", "طريقة التطبيق", QcFieldType.TEXT, "Spray"),
+            QcField("curingTime", "زمن التصلد (h)", QcFieldType.NUMBER, "24"),
+            QcField("ambientTemperature", "درجة الحرارة (°C)", QcFieldType.NUMBER, "25"),
+            QcField("humidity", "الرطوبة (%)", QcFieldType.NUMBER, "60"),
+            QcField("surfacePreparation", "تحضير السطح", QcFieldType.TEXT, "SSPC-SP6")
+        )
+    )
+}
+
+private fun computeDisciplineOutcome(
+    d: QcDiscipline,
+    m: Map<String, String>
+): QualityControlEngine.QcOutcome = when (d) {
+    QcDiscipline.EARTHWORKS -> QualityControlEngineNew.earthworksQc(
+        excavationDepth = m.num("excavationDepth"),
+        excavationLength = m.num("excavationLength"),
+        excavationWidth = m.num("excavationWidth"),
+        slopeAngle = m.num("slopeAngle"),
+        soilType = m.str("soilType", "SAND"),
+        groundwaterLevel = m.num("groundwaterLevel"),
+        backfillType = m.str("backfillType"),
+        compactionMethod = m.str("compactionMethod"),
+        layerThickness = m.num("layerThickness"),
+        fieldDensity = m.num("fieldDensity"),
+        maxDryDensity = m.num("maxDryDensity"),
+        optimumMoisture = m.num("optimumMoisture"),
+        fieldMoisture = m.num("fieldMoisture")
+    )
+    QcDiscipline.PILING -> QualityControlEngineNew.pilingQc(
+        pileType = m.str("pileType", "BORED"),
+        pileDiameter = m.num("pileDiameter"),
+        pileLength = m.num("pileLength"),
+        numberOfPiles = m.intg("numberOfPiles"),
+        pileSpacing = m.num("pileSpacing"),
+        axialLoad = m.num("axialLoad"),
+        lateralLoad = m.num("lateralLoad"),
+        momentLoad = m.num("momentLoad"),
+        cu = m.num("cu"),
+        phi = m.num("phi"),
+        gammaSoil = m.num("gammaSoil"),
+        waterTableDepth = m.num("waterTableDepth"),
+        safetyFactor = m.num("safetyFactor", 2.5),
+        pileGroupPattern = m.str("pileGroupPattern"),
+        scourDepth = m.num("scourDepth"),
+        capConcreteCover = m.num("capConcreteCover"),
+        columnWidth = m.num("columnWidth"),
+        columnLength = m.num("columnLength")
+    )
+    QcDiscipline.RETAINING_WALLS -> QualityControlEngineNew.retainingWallQc(
+        wallHeight = m.num("wallHeight"),
+        wallThickness = m.num("wallThickness"),
+        soilType = m.str("soilType", "SAND"),
+        backfillUnitWeight = m.num("backfillUnitWeight"),
+        backfillFrictionAngle = m.num("backfillFrictionAngle"),
+        backfillCohesion = m.num("backfillCohesion"),
+        surchargeLoad = m.num("surchargeLoad"),
+        groundwaterLevel = m.num("groundwaterLevel"),
+        foundationDepth = m.num("foundationDepth"),
+        foundationWidth = m.num("foundationWidth"),
+        foundationSoilBearing = m.num("foundationSoilBearing"),
+        concreteStrength = m.num("concreteStrength"),
+        steelGrade = m.num("steelGrade"),
+        seismicCoefficient = m.num("seismicCoefficient")
+    )
+    QcDiscipline.WATERPROOFING -> QualityControlEngineNew.waterproofingQc(
+        waterproofingType = m.str("waterproofingType"),
+        membraneThickness = m.num("membraneThickness"),
+        coatingThickness = m.num("coatingThickness"),
+        adhesionStrength = m.num("adhesionStrength"),
+        overlapWidth = m.num("overlapWidth"),
+        leakTestResult = m.bool("leakTestResult"),
+        cornerDetails = m.bool("cornerDetails"),
+        drainageLayer = m.bool("drainageLayer"),
+        protectionLayer = m.bool("protectionLayer"),
+        substrateCondition = m.str("substrateCondition"),
+        applicationTemperature = m.num("applicationTemperature"),
+        curingTime = m.num("curingTime")
+    )
+    QcDiscipline.MASONRY -> QualityControlEngineNew.masonryQc(
+        masonryType = m.str("masonryType"),
+        blockDimensions = m.str("blockDimensions"),
+        mortarType = m.str("mortarType"),
+        mortarStrength = m.num("mortarStrength"),
+        wallThickness = m.num("wallThickness"),
+        plasterThickness = m.num("plasterThickness"),
+        plasterType = m.str("plasterType"),
+        surfaceFlatness = m.num("surfaceFlatness"),
+        verticality = m.num("verticality"),
+        adhesionStrength = m.num("adhesionStrength"),
+        curingMethod = m.str("curingMethod"),
+        jointThickness = m.num("jointThickness")
+    )
+    QcDiscipline.FLOORING -> QualityControlEngineNew.flooringQc(
+        flooringType = m.str("flooringType"),
+        slabThickness = m.num("slabThickness"),
+        surfaceFlatness = m.num("surfaceFlatness"),
+        compressiveStrength = m.num("compressiveStrength"),
+        tensileStrength = m.num("tensileStrength"),
+        jointSpacing = m.num("jointSpacing"),
+        jointWidth = m.num("jointWidth"),
+        finishType = m.str("finishType"),
+        curingMethod = m.str("curingMethod"),
+        levelness = m.num("levelness")
+    )
+    QcDiscipline.PRECAST -> QualityControlEngineNew.precastQc(
+        elementType = m.str("elementType"),
+        elementDimensions = m.str("elementDimensions"),
+        concreteStrength = m.num("concreteStrength"),
+        steelGrade = m.num("steelGrade"),
+        coverThickness = m.num("coverThickness"),
+        surfaceFinish = m.str("surfaceFinish"),
+        liftingAnchors = m.bool("liftingAnchors"),
+        connectionDetails = m.str("connectionDetails"),
+        transportDamage = m.bool("transportDamage"),
+        erectionTolerance = m.num("erectionTolerance"),
+        groutStrength = m.num("groutStrength")
+    )
+    QcDiscipline.POST_TENSION -> QualityControlEngineNew.postTensionQc(
+        tendonType = m.str("tendonType"),
+        tendonDiameter = m.num("tendonDiameter"),
+        jackingForce = m.num("jackingForce"),
+        elongation = m.num("elongation"),
+        expectedElongation = m.num("expectedElongation"),
+        groutStrength = m.num("groutStrength"),
+        groutFlow = m.num("groutFlow"),
+        anchorageType = m.str("anchorageType"),
+        ductMaterial = m.str("ductMaterial"),
+        corrosionProtection = m.str("corrosionProtection"),
+        stressLoss = m.num("stressLoss"),
+        frictionCoefficient = m.num("frictionCoefficient"),
+        wobbleCoefficient = m.num("wobbleCoefficient")
+    )
+    QcDiscipline.GROUTING -> QualityControlEngineNew.groutingQc(
+        groutType = m.str("groutType"),
+        flowTime = m.num("flowTime"),
+        shrinkage = m.num("shrinkage"),
+        compressiveStrength = m.num("compressiveStrength"),
+        viscosity = m.num("viscosity"),
+        gelTime = m.num("gelTime"),
+        bondStrength = m.num("bondStrength"),
+        injectionPressure = m.num("injectionPressure"),
+        injectionVolume = m.num("injectionVolume"),
+        curingTime = m.num("curingTime"),
+        substrateCondition = m.str("substrateCondition")
+    )
+    QcDiscipline.SOIL_IMPROVEMENT -> QualityControlEngineNew.soilImprovementQc(
+        improvementType = m.str("improvementType"),
+        improvementDepth = m.num("improvementDepth"),
+        improvementDiameter = m.num("improvementDiameter"),
+        spacing = m.num("spacing"),
+        preImprovementBearing = m.num("preImprovementBearing"),
+        postImprovementBearing = m.num("postImprovementBearing"),
+        preImprovementSPT = m.intg("preImprovementSPT"),
+        postImprovementSPT = m.intg("postImprovementSPT"),
+        settlementBefore = m.num("settlementBefore"),
+        settlementAfter = m.num("settlementAfter"),
+        improvementMaterial = m.str("improvementMaterial"),
+        qualityControlTest = m.str("qualityControlTest")
+    )
+    QcDiscipline.WATER_TANKS -> QualityControlEngineNew.waterTanksQc(
+        tankType = m.str("tankType"),
+        tankCapacity = m.num("tankCapacity"),
+        tankDimensions = m.str("tankDimensions"),
+        concreteStrength = m.num("concreteStrength"),
+        steelGrade = m.num("steelGrade"),
+        wallThickness = m.num("wallThickness"),
+        floorThickness = m.num("floorThickness"),
+        roofThickness = m.num("roofThickness"),
+        waterproofingType = m.str("waterproofingType"),
+        leakTestResult = m.bool("leakTestResult"),
+        hydrostaticTest = m.bool("hydrostaticTest"),
+        valveType = m.str("valveType"),
+        drainageSystem = m.bool("drainageSystem")
+    )
+    QcDiscipline.DRAINAGE -> QualityControlEngineNew.drainageQc(
+        pipeMaterial = m.str("pipeMaterial"),
+        pipeDiameter = m.num("pipeDiameter"),
+        pipeLength = m.num("pipeLength"),
+        slope = m.num("slope"),
+        jointType = m.str("jointType"),
+        leakTestResult = m.bool("leakTestResult"),
+        manholeSpacing = m.num("manholeSpacing"),
+        manholeDepth = m.num("manholeDepth"),
+        flowRate = m.num("flowRate"),
+        invertLevel = m.num("invertLevel"),
+        backfillCompaction = m.num("backfillCompaction")
+    )
+    QcDiscipline.PAINTING -> QualityControlEngineNew.paintingQc(
+        paintType = m.str("paintType"),
+        dft = m.num("dft"),
+        adhesionStrength = m.num("adhesionStrength"),
+        colorUniformity = m.bool("colorUniformity"),
+        surfacePreparation = m.str("surfacePreparation"),
+        numberOfCoats = m.intg("numberOfCoats"),
+        coatingThickness = m.num("coatingThickness"),
+        fireRating = m.str("fireRating"),
+        curingTime = m.num("curingTime"),
+        ambientTemperature = m.num("ambientTemperature"),
+        humidity = m.num("humidity")
+    )
+    QcDiscipline.SITE_WORKS -> QualityControlEngineNew.siteWorksQc(
+        gradingLevel = m.num("gradingLevel"),
+        slope = m.num("slope"),
+        fenceType = m.str("fenceType"),
+        gateType = m.str("gateType"),
+        lightingType = m.str("lightingType"),
+        landscapingType = m.str("landscapingType"),
+        pavementType = m.str("pavementType"),
+        drainageSystem = m.bool("drainageSystem"),
+        safetySigns = m.bool("safetySigns"),
+        fireExtinguishers = m.bool("fireExtinguishers"),
+        firstAidKit = m.bool("firstAidKit")
+    )
+    QcDiscipline.FIRE_PROTECTION -> QualityControlEngineNew.fireProtectionQc(
+        protectionType = m.str("protectionType"),
+        coatingThickness = m.num("coatingThickness"),
+        adhesionStrength = m.num("adhesionStrength"),
+        fireRating = m.str("fireRating"),
+        coverageArea = m.num("coverageArea"),
+        applicationMethod = m.str("applicationMethod"),
+        curingTime = m.num("curingTime"),
+        ambientTemperature = m.num("ambientTemperature"),
+        humidity = m.num("humidity"),
+        surfacePreparation = m.str("surfacePreparation")
+    )
+}
+
+@Composable
+private fun DisciplineQcTab(
+    viewModel: QualityEngineerViewModel,
+    discipline: QcDiscipline,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val context = LocalContext.current
+    var designCode by remember(discipline) { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    val values = remember(discipline) {
+        mutableStateMapOf<String, String>().apply {
+            discipline.fields.forEach { put(it.key, it.default) }
+        }
+    }
+    var outcome by remember(discipline) { mutableStateOf<QualityControlEngine.QcOutcome?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        DesignCodeSelectorRow(
+            selectedCode = designCode,
+            onCodeSelected = { designCode = it }
+        )
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    discipline.subtitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                discipline.fields.forEach { field ->
+                    when (field.type) {
+                        QcFieldType.NUMBER -> OutlinedTextField(
+                            value = values[field.key] ?: "",
+                            onValueChange = { values[field.key] = it },
+                            label = { Text(field.label) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        QcFieldType.TEXT -> OutlinedTextField(
+                            value = values[field.key] ?: "",
+                            onValueChange = { values[field.key] = it },
+                            label = { Text(field.label) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        QcFieldType.BOOL -> Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(field.label, style = MaterialTheme.typography.bodyMedium)
+                            Switch(
+                                checked = (values[field.key] ?: "false").equals("true", true),
+                                onCheckedChange = { values[field.key] = it.toString() }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+                val result = computeDisciplineOutcome(discipline, values)
+                outcome = result
+                viewModel.persistDisciplineOutcome(discipline.category, discipline.elementId, designCode, result)
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        if (result.passed) "الفحص ناجح — تم حفظ السجل" else "الفحص يحتاج مراجعة — تم حفظ السجل"
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Calculate, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تنفيذ الفحص")
+        }
+
+        Button(
+            onClick = {
+                viewModel.exportDisciplineReport(
+                    context = context,
+                    title = discipline.title,
+                    subtitle = discipline.subtitle,
+                    outcome = outcome
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("تصدير تقرير PDF")
+        }
+
+        QcOutcomeCard(outcome)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // TAB 9: Quality Reports
 // ══════════════════════════════════════════════════════════════════════
 
@@ -1368,6 +2032,31 @@ private fun QualityReportsTab(
 
         // الاتجاه التاريخي
         DailyTrendChart(trend = uiState.dailyTrend, modifier = Modifier.fillMaxWidth())
+
+        ItpSection(
+            uiState = uiState,
+            onLoadDefault = { viewModel.loadDefaultItp() },
+            onClear = { viewModel.clearItp() },
+            onUpdateStatus = { id, status -> viewModel.updateItpStatus(id, status, "", "", "") },
+            onExport = { viewModel.exportItpCsv(context) }
+        )
+
+        NcrSection(
+            uiState = uiState,
+            onCreate = { discipline, element, desc, ref, severity ->
+                viewModel.createNcr(discipline, element, desc, ref, severity)
+            },
+            onClose = { id -> viewModel.closeNcr(id, "", "") },
+            onExport = {
+                viewModel.exportNcrCsv(context) { file ->
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (file != null) "تم تصدير تقرير NCR" else "فشل التصدير"
+                        )
+                    }
+                }
+            }
+        )
 
         // Search & Filter Bar
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -1616,6 +2305,179 @@ private fun QualityReportsTab(
         }
     }
 
+
+@Composable
+private fun ItpSection(
+    uiState: com.civileg.app.viewmodel.ReportsQCState,
+    onLoadDefault: () -> Unit,
+    onClear: () -> Unit,
+    onUpdateStatus: (Long, String) -> Unit,
+    onExport: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("خطة الفحص والاختبار (ITP)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("${uiState.itpItems.size}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onLoadDefault, modifier = Modifier.weight(1f)) { Text("تحميل ITP", fontSize = 12.sp) }
+                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text("مسح", fontSize = 12.sp) }
+            }
+            if (uiState.itpItems.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("تصدير ITP (CSV)", fontSize = 12.sp)
+                }
+            }
+            if (uiState.itpItems.isEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("لا توجد بنود ITP. حمّل القالب القياسي للبدء.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                uiState.itpItems.take(40).forEach { item ->
+                    val statusColor = when (item.status) {
+                        "passed" -> Color(0xFF4CAF50)
+                        "failed" -> Color(0xFFF44336)
+                        "in_progress" -> Color(0xFFFF9800)
+                        else -> Color.Gray
+                    }
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text("${item.discipline} — ${item.inspectionItem}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(item.acceptanceCriteria, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text("المرجع: ${item.referenceCode}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                item.status,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = statusColor,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { onUpdateStatus(item.id, "passed") }) { Text("ناجح", fontSize = 11.sp) }
+                            TextButton(onClick = { onUpdateStatus(item.id, "failed") }) { Text("فاشل", fontSize = 11.sp) }
+                        }
+                    }
+                    Divider()
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NcrSection(
+    uiState: com.civileg.app.viewmodel.ReportsQCState,
+    onCreate: (String, String, String, String, String) -> Unit,
+    onClose: (Long) -> Unit,
+    onExport: () -> Unit
+) {
+    var discipline by remember { mutableStateOf("CONCRETE") }
+    var elementId by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var reference by remember { mutableStateOf("") }
+    var severity by remember { mutableStateOf("minor") }
+    var severityExpanded by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("تقارير عدم المطابقة (NCR)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("${uiState.openNcrCount} مفتوح", fontWeight = FontWeight.Bold, color = Color(0xFFF44336))
+            }
+            if (uiState.ncrItems.isNotEmpty()) {
+                TextButton(onClick = onExport, contentPadding = PaddingValues(0.dp)) {
+                    Text("تصدير CSV", fontSize = 12.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(value = discipline, onValueChange = { discipline = it }, label = { Text("التخصص") }, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text("العنصر") }, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("وصف عدم المطابقة") }, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text("المرجع / الكود") }, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(6.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = severityExpanded,
+                onExpandedChange = { severityExpanded = !severityExpanded }
+            ) {
+                OutlinedTextField(
+                    value = severity,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("الخطورة") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = severityExpanded) },
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded = severityExpanded, onDismissRequest = { severityExpanded = false }) {
+                    listOf("minor", "major", "critical").forEach { s ->
+                        DropdownMenuItem(text = { Text(s) }, onClick = { severity = s; severityExpanded = false })
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    if (description.isNotBlank()) {
+                        onCreate(discipline, elementId, description, reference, severity)
+                        elementId = ""; description = ""; reference = ""
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("فتح تقرير عدم مطابقة")
+            }
+
+            if (uiState.ncrItems.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("تصدير تقرير NCR (CSV)")
+                }
+            }
+
+            if (uiState.ncrItems.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                uiState.ncrItems.take(30).forEach { ncr ->
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text("${ncr.ncrNumber} • ${ncr.discipline}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(ncr.description, style = MaterialTheme.typography.bodySmall)
+                        val sevColor = when (ncr.severity) {
+                            "critical" -> Color(0xFFF44336)
+                            "major" -> Color(0xFFFF9800)
+                            else -> Color.Gray
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${ncr.severity} • ${ncr.status}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = sevColor,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (ncr.status != "closed") {
+                                TextButton(onClick = { onClose(ncr.id) }) { Text("إغلاق", fontSize = 11.sp) }
+                            }
+                        }
+                    }
+                    Divider()
+                }
+            }
+        }
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // Inspection detail dialog

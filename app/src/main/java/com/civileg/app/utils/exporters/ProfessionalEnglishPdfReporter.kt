@@ -67,7 +67,8 @@ object ProfessionalEnglishPdfReporter {
         val calculated: Double,
         val limit: Double,
         val unit: String,
-        val passed: Boolean
+        val passed: Boolean,
+        val reference: String? = null
     )
 
     data class CalculationStep(
@@ -84,7 +85,8 @@ object ProfessionalEnglishPdfReporter {
         val companyName: String = "Civil EG",
         val projectNumber: String = "",
         val date: String = SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()),
-        val revision: String = "Rev. A"
+        val revision: String = "Rev. A",
+        val showSignature: Boolean = false
     )
 
     // ==================== Font Helpers (English Only) ====================
@@ -641,7 +643,12 @@ object ProfessionalEnglishPdfReporter {
             // Data Rows
             safetyChecks.forEachIndexed { i, check ->
                 val bg = if (i % 2 == 0) null else ROW_ALT
-                table.addCell(dataCell(check.name, 9f, false, bg, TextAlignment.LEFT))
+                val nameCell = dataCell(check.name, 9f, false, bg, TextAlignment.LEFT)
+                if (!check.reference.isNullOrBlank()) {
+                    nameCell.add(Paragraph().add(text(check.reference, createPdfFont(), 7f, SECONDARY))
+                        .setTextAlignment(TextAlignment.LEFT))
+                }
+                table.addCell(nameCell)
 
                 val calcStr = if (check.calculated.isNaN() || check.calculated.isInfinite()) "---"
                 else String.format(Locale.US, "%.2f", check.calculated)
@@ -705,6 +712,48 @@ object ProfessionalEnglishPdfReporter {
             font, 7f, LIGHT_GRAY)).setTextAlignment(TextAlignment.CENTER))
     }
 
+    private fun addPhotoGallery(document: Document, photos: List<Bitmap>, title: String = "Site Inspection Photographs") {
+        if (photos.isEmpty()) return
+        document.add(AreaBreak())
+        document.add(sectionTitle("Site Inspection Photographs"))
+        document.add(separator())
+        photos.forEachIndexed { i, bitmap ->
+            try {
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                val img = Image(ImageDataFactory.create(stream.toByteArray()))
+                img.setAutoScale(true)
+                img.setMaxWidth(380f)
+                img.setHorizontalAlignment(HorizontalAlignment.CENTER)
+                document.add(img)
+                document.add(Paragraph().add(text("Figure ${i + 1}", createPdfFont(), 8f, SECONDARY))
+                    .setTextAlignment(TextAlignment.CENTER))
+                document.add(emptyLine())
+            } catch (e: Exception) {
+                Log.e(TAG, "Photo render error: ${e.message}")
+            }
+        }
+    }
+
+    private fun addSignatureBlock(document: Document, config: ReportConfig) {
+        document.add(emptyLine())
+        document.add(sectionTitle("Approval & Signature"))
+        document.add(separator())
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
+        table.addCell(signatureCell("Prepared by (Inspector)", config.engineerName))
+        table.addCell(signatureCell("Reviewed / Approved by (Engineer)", ""))
+        document.add(table)
+    }
+
+    private fun signatureCell(role: String, name: String): Cell {
+        val cell = Cell().setPadding(8f).setBorder(com.itextpdf.layout.borders.SolidBorder(LIGHT_GRAY, 0.5f))
+        cell.add(Paragraph().add(text(role, createBoldFont(), 9f, PRIMARY)))
+        cell.add(Paragraph().add(text("Name: $name", createPdfFont(), 9f)))
+        cell.add(Paragraph().add(text("\n________________________", createPdfFont(), 9f)))
+        cell.add(Paragraph().add(text("Signature / Date", createPdfFont(), 8f, SECONDARY)))
+        return cell
+    }
+
     // ==================== Main Report Generation Method ====================
 
     /**
@@ -734,6 +783,7 @@ object ProfessionalEnglishPdfReporter {
         safetyChecks: List<SafetyCheck>,
         isSafe: Boolean,
         drawingBitmap: Bitmap? = null,
+        photos: List<Bitmap> = emptyList(),
         calculationSteps: List<CalculationStep> = emptyList(),
         config: ReportConfig = ReportConfig(),
         outputPath: String
@@ -766,7 +816,15 @@ object ProfessionalEnglishPdfReporter {
             }
             addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
 
-            // 7. Footer
+            // 7. Site Photographs (optional)
+            addPhotoGallery(document, photos)
+
+            // 8. Approval & Signature (optional)
+            if (config.showSignature) {
+                addSignatureBlock(document, config)
+            }
+
+            // 9. Footer
             addFooter(document, config)
 
             document.close()
@@ -800,7 +858,7 @@ object ProfessionalEnglishPdfReporter {
         outputPath: String
     ): File? {
         val convertedChecks = safetyChecks.map {
-            SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed)
+            SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
         }
 
         // Determine report type from designType string

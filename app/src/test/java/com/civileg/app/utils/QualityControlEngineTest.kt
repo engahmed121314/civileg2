@@ -38,7 +38,7 @@ class QualityControlEngineTest {
             strength28DaysMpa = 30.0
         )
         assertTrue(outcome.passed)
-        assertEquals(4, outcome.checks.size)
+        assertEquals(6, outcome.checks.size)
         // utilization = 30 / 25 = 1.2
         assertEquals(1.2, outcome.utilizationRatio, 1e-6)
     }

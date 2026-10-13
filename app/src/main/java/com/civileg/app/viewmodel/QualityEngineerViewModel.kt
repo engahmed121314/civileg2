@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.data.local.PreferencesManager
 import com.civileg.app.db.CategorySummary
 import com.civileg.app.db.DailyTrend
+import com.civileg.app.db.InspectionTestPlan
+import com.civileg.app.db.NonConformity
 import com.civileg.app.db.QualityDao
 import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.calculations.InputGuard
@@ -15,6 +17,7 @@ import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
+import com.civileg.app.utils.ItpTemplates
 import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.SoilBearingCalculator
 import com.civileg.app.utils.SoilBearingInput
@@ -90,16 +93,20 @@ data class SteelQCState(
 )
 
 data class RoadsQCState(
+    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
     val surfaceLayerThickness: String = "50",
     val baseLayerThickness: String = "150",
     val subbaseLayerThickness: String = "200",
     val compactionPercent: String = "97",
     val asphaltDensity: String = "23",
     val airVoids: String = "4",
+    val gmb: String = "2.35",
+    val gmm: String = "2.45",
     val outcome: QualityControlEngine.QcOutcome? = null
 )
 
 data class BridgesQCState(
+    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
     val concreteStrength: String = "30",
     val span: String = "20",
     val naturalFrequency: String = "2.5",
@@ -107,6 +114,7 @@ data class BridgesQCState(
 )
 
 data class TunnelsQCState(
+    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
     val rockClass: String = "III",
     val tunnelConvergence: String = "20",
     val tunnelDiameter: String = "6",
@@ -135,7 +143,10 @@ data class ReportsQCState(
     val successRate: Double = 0.0,
     val records: List<QualityRecord> = emptyList(),
     val categorySummary: List<CategorySummary> = emptyList(),
-    val dailyTrend: List<DailyTrend> = emptyList()
+    val dailyTrend: List<DailyTrend> = emptyList(),
+    val itpItems: List<InspectionTestPlan> = emptyList(),
+    val ncrItems: List<NonConformity> = emptyList(),
+    val openNcrCount: Int = 0
 )
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -201,6 +212,78 @@ class QualityEngineerViewModel @Inject constructor(
                 )
             }.collect { _reportsState.value = it }
         }
+        viewModelScope.launch {
+            qualityDao.getAllItp().collect { items ->
+                _reportsState.value = _reportsState.value.copy(itpItems = items)
+            }
+        }
+        viewModelScope.launch {
+            qualityDao.getAllNcr().collect { items ->
+                _reportsState.value = _reportsState.value.copy(
+                    ncrItems = items,
+                    openNcrCount = items.count { it.status != "closed" }
+                )
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // ITP (Inspection & Test Plan) actions
+    // ---------------------------------------------------------------
+    fun loadDefaultItp() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { qualityDao.insertItpList(ItpTemplates.defaultTemplate()) }
+        }
+    }
+
+    fun updateItpStatus(id: Long, status: String, resultValue: String, checkedBy: String, remarks: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { qualityDao.updateItpStatus(id, status, resultValue, checkedBy, remarks) }
+        }
+    }
+
+    fun deleteItp(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) { runCatching { qualityDao.deleteItp(id) } }
+    }
+
+    fun clearItp() {
+        viewModelScope.launch(Dispatchers.IO) { runCatching { qualityDao.deleteAllItp() } }
+    }
+
+    // ---------------------------------------------------------------
+    // NCR (Non-Conformity Report) actions
+    // ---------------------------------------------------------------
+    fun createNcr(
+        discipline: String,
+        elementId: String,
+        description: String,
+        referenceCode: String,
+        severity: String
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                qualityDao.insertNcr(
+                    NonConformity(
+                        ncrNumber = "NCR-${System.currentTimeMillis().toString().takeLast(6)}",
+                        discipline = discipline,
+                        elementId = elementId,
+                        description = description,
+                        referenceCode = referenceCode,
+                        severity = severity
+                    )
+                )
+            }
+        }
+    }
+
+    fun closeNcr(id: Long, correctiveAction: String, closedBy: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { qualityDao.updateNcrStatus(id, "closed", correctiveAction, closedBy) }
+        }
+    }
+
+    fun deleteNcr(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) { runCatching { qualityDao.deleteNcr(id) } }
     }
 
     // ---------------------------------------------------------------
@@ -211,6 +294,9 @@ class QualityEngineerViewModel @Inject constructor(
         _soilState.value = _soilState.value.copy(designCode = code)
         _rebarState.value = _rebarState.value.copy(designCode = code)
         _steelState.value = _steelState.value.copy(designCode = code)
+        _roadsState.value = _roadsState.value.copy(designCode = code)
+        _bridgesState.value = _bridgesState.value.copy(designCode = code)
+        _tunnelsState.value = _tunnelsState.value.copy(designCode = code)
         _buildingsState.value = _buildingsState.value.copy(designCode = code)
     }
 
@@ -276,6 +362,8 @@ class QualityEngineerViewModel @Inject constructor(
             "compactionPercent" -> _roadsState.value.copy(compactionPercent = value)
             "asphaltDensity" -> _roadsState.value.copy(asphaltDensity = value)
             "airVoids" -> _roadsState.value.copy(airVoids = value)
+            "gmb" -> _roadsState.value.copy(gmb = value)
+            "gmm" -> _roadsState.value.copy(gmm = value)
             else -> _roadsState.value
         }
     }
@@ -384,7 +472,7 @@ class QualityEngineerViewModel @Inject constructor(
                 "Settlement" to "%.1f mm".format(result.settlement)
             ),
             passed = result.isSafe,
-            utilizationRatio = 0.0,
+            utilizationRatio = if (result.allowableBearingCapacity > 0) result.netBearingCapacity / result.allowableBearingCapacity else 0.0,
             summary = "Soil bearing capacity (${method.name}) — ${if (result.isSafe) "safe" else "unsafe"}"
         )
         _soilState.value = s.copy(soilResult = result, outcome = outcome)
@@ -476,7 +564,7 @@ class QualityEngineerViewModel @Inject constructor(
             airVoidsPercent = voids
         )
         _roadsState.value = s.copy(outcome = outcome)
-        persist(QualityControlEngine.Category.ROADS, "PAVEMENT", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
+        persist(QualityControlEngine.Category.ROADS, "PAVEMENT", s.designCode, outcome)
     }
 
     // ---------------------------------------------------------------
@@ -495,7 +583,7 @@ class QualityEngineerViewModel @Inject constructor(
             naturalFrequencyHz = freq
         )
         _bridgesState.value = s.copy(outcome = outcome)
-        persist(QualityControlEngine.Category.BRIDGES, "BRIDGE", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
+        persist(QualityControlEngine.Category.BRIDGES, "BRIDGE", s.designCode, outcome)
     }
 
     // ---------------------------------------------------------------
@@ -514,7 +602,7 @@ class QualityEngineerViewModel @Inject constructor(
             supportThicknessMm = support
         )
         _tunnelsState.value = s.copy(outcome = outcome)
-        persist(QualityControlEngine.Category.TUNNELS, "TUNNEL-${s.rockClass}", CalculatorEngine.DesignCode.EGYPTIAN, outcome)
+        persist(QualityControlEngine.Category.TUNNELS, "TUNNEL-${s.rockClass}", s.designCode, outcome)
     }
 
     // ---------------------------------------------------------------
@@ -556,7 +644,13 @@ class QualityEngineerViewModel @Inject constructor(
         category: String,
         elementId: String,
         code: CalculatorEngine.DesignCode,
-        outcome: QualityControlEngine.QcOutcome
+        outcome: QualityControlEngine.QcOutcome,
+        inspectorName: String = "",
+        location: String = "",
+        weatherConditions: String = "",
+        complianceStandard: String = "",
+        inspectionType: String = "routine",
+        notes: String = ""
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val record = QualityRecord(
@@ -572,10 +666,50 @@ class QualityEngineerViewModel @Inject constructor(
                         "details" to outcome.details.toMap(),
                         "checks" to outcome.checks
                     )
-                )
+                ),
+                inspectorName = inspectorName,
+                location = location,
+                weatherConditions = weatherConditions,
+                complianceStandard = complianceStandard,
+                inspectionType = inspectionType,
+                notes = notes
             )
             runCatching { qualityDao.insertRecord(record) }
+
+            if (!outcome.passed) {
+                runCatching {
+                    val existing = qualityDao.countOpenNcrFor(category, elementId)
+                    if (existing == 0) {
+                        val failedChecks = outcome.checks.filter { !it.passed }
+                        val severity = when {
+                            outcome.utilizationRatio >= 1.5 -> "critical"
+                            failedChecks.size > 1 -> "major"
+                            else -> "minor"
+                        }
+                        qualityDao.insertNcr(
+                            NonConformity(
+                                ncrNumber = "NCR-${System.currentTimeMillis().toString().takeLast(6)}",
+                                discipline = category,
+                                elementId = elementId,
+                                description = "Failed checks: " +
+                                    failedChecks.joinToString("; ") { it.name },
+                                referenceCode = failedChecks.firstOrNull()?.reference ?: complianceStandard,
+                                severity = severity
+                            )
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    fun persistDisciplineOutcome(
+        category: String,
+        elementId: String,
+        code: CalculatorEngine.DesignCode,
+        outcome: QualityControlEngine.QcOutcome
+    ) {
+        persist(category, elementId, code, outcome)
     }
 
     fun clearAllRecords() {
@@ -602,9 +736,18 @@ class QualityEngineerViewModel @Inject constructor(
 
                 val records = qualityDao.getAllRecords().first()
                 val sb = StringBuilder()
-                sb.appendLine("ID,Category,Element ID,Design Code,Passed,Utilization Ratio,Summary,Created At,Notes")
+                sb.appendLine(
+                    "ID,Category,Element ID,Design Code,Passed,Utilization Ratio,Summary," +
+                        "Inspector,Location,Weather,Compliance Standard,Inspection Type,Created At,Notes"
+                )
                 records.forEach { r ->
-                    sb.append("${r.id},${r.category},${r.elementId},${r.designCode},${r.passed},${r.utilizationRatio},${r.summary.replace(",", ";")},${r.createdAt.time},${r.notes.replace(",", ";")}")
+                    sb.append(
+                        "${r.id},${r.category},${r.elementId},${r.designCode},${r.passed}," +
+                            "${r.utilizationRatio},${r.summary.replace(",", ";")}," +
+                            "${r.inspectorName.replace(",", ";")},${r.location.replace(",", ";")}," +
+                            "${r.weatherConditions.replace(",", ";")},${r.complianceStandard.replace(",", ";")}," +
+                            "${r.inspectionType},${r.createdAt.time},${r.notes.replace(",", ";")}"
+                    )
                     sb.appendLine()
                 }
                 file.writeText(sb.toString())
@@ -623,9 +766,92 @@ class QualityEngineerViewModel @Inject constructor(
         }
     }
 
+    fun exportItpCsv(
+        context: Context,
+        onComplete: (File?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, "ITP_Report_${System.currentTimeMillis()}.csv")
+                val items = qualityDao.getAllItp().first()
+                val sb = StringBuilder()
+                sb.appendLine(
+                    "Discipline,Activity,Inspection Item,Reference,Acceptance Criteria," +
+                        "Frequency,Responsible,Status,Result,Checked By,Witness,Date,Remarks"
+                )
+                items.forEach { t ->
+                    sb.append(
+                        "${t.discipline},${t.activity.replace(",", ";")},${t.inspectionItem.replace(",", ";")}," +
+                            "${t.referenceCode.replace(",", ";")},${t.acceptanceCriteria.replace(",", ";")}," +
+                            "${t.frequency.replace(",", ";")},${t.responsibleParty.replace(",", ";")}," +
+                            "${t.status},${t.resultValue.replace(",", ";")},${t.checkedBy.replace(",", ";")}," +
+                            "${t.witness.replace(",", ";")},${t.inspectionDate.time},${t.remarks.replace(",", ";")}"
+                    )
+                    sb.appendLine()
+                }
+                file.writeText(sb.toString())
+                withContext(Dispatchers.Main) {
+                    ExportUtils.openFile(context, file, "text/csv")
+                    _isExporting.value = false
+                    onComplete(file)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    fun exportNcrCsv(
+        context: Context,
+        onComplete: (File?) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isExporting.value = true
+            try {
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, "NCR_Report_${System.currentTimeMillis()}.csv")
+                val items = qualityDao.getAllNcr().first()
+                val sb = StringBuilder()
+                sb.appendLine(
+                    "NCR Number,Discipline,Element,Severity,Status,Reference,Description," +
+                        "Root Cause,Corrective Action,Responsible,Target Date,Closed By,Created At"
+                )
+                items.forEach { n ->
+                    sb.append(
+                        "${n.ncrNumber},${n.discipline},${n.elementId},${n.severity},${n.status}," +
+                            "${n.referenceCode.replace(",", ";")},${n.description.replace(",", ";")}," +
+                            "${n.rootCause.replace(",", ";")},${n.correctiveAction.replace(",", ";")}," +
+                            "${n.responsibleParty.replace(",", ";")},${n.targetDate.time}," +
+                            "${n.closedBy.replace(",", ";")},${n.createdAt.time}"
+                    )
+                    sb.appendLine()
+                }
+                file.writeText(sb.toString())
+                withContext(Dispatchers.Main) {
+                    ExportUtils.openFile(context, file, "text/csv")
+                    _isExporting.value = false
+                    onComplete(file)
+                }
+            } catch (e: Throwable) {
+                withContext(Dispatchers.Main) {
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
     // ---------------------------------------------------------------
     // JSON Backup / Restore
     // ---------------------------------------------------------------
+
     fun exportQualityBackup(
         context: Context,
         onComplete: (File?) -> Unit = {}
@@ -857,7 +1083,8 @@ class QualityEngineerViewModel @Inject constructor(
                                 calculated = c.calculated,
                                 limit = c.limit,
                                 unit = c.unit,
-                                passed = c.passed
+                                passed = c.passed,
+                                reference = c.reference
                             )
                         )
                     }
@@ -891,6 +1118,11 @@ class QualityEngineerViewModel @Inject constructor(
                 resultMap["Session · Passed"] = stats.passedInspections.toString()
                 resultMap["Session · Failed"] = stats.failedInspections.toString()
                 resultMap["Session · Success rate"] = "%.1f %%".format(stats.successRate)
+                resultMap["ITP · Total items"] = stats.itpItems.size.toString()
+                resultMap["ITP · Passed"] = stats.itpItems.count { it.status == "passed" }.toString()
+                resultMap["ITP · Failed"] = stats.itpItems.count { it.status == "failed" }.toString()
+                resultMap["NCR · Open"] = stats.openNcrCount.toString()
+                resultMap["NCR · Total"] = stats.ncrItems.size.toString()
 
                 if (inputMap.isEmpty() && safetyChecks.isEmpty() && stats.records.isEmpty()) {
                     withContext(Dispatchers.Main) { _isExporting.value = false }
@@ -898,20 +1130,24 @@ class QualityEngineerViewModel @Inject constructor(
                     return@launch
                 }
 
-                val isSafe = safetyChecks.all { it.passed } && stats.failedInspections == 0
+                val isSafe = safetyChecks.all { it.passed } && stats.failedInspections == 0 &&
+                    stats.openNcrCount == 0
+                val photos = loadRecordPhotos(stats.records)
                 val generated = ProfessionalEnglishPdfReporter.generateReport(
                     reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
                     title = "Site Quality Control Report",
-                    subtitle = "Concrete · Soil · Rebar · Steel · Roads · Bridges · Tunnels · Buildings",
+                    subtitle = "Concrete · Soil · Rebar · Steel · Roads · Bridges · Tunnels · Buildings · ITP · NCR",
                     designCode = "ECP 203-2020 / ACI 318-19 / SBC 304-2018",
                     inputs = inputMap,
                     results = resultMap,
                     safetyChecks = safetyChecks,
                     isSafe = isSafe,
+                    photos = photos,
                     config = ProfessionalEnglishPdfReporter.ReportConfig(
                         projectName = projectName,
                         engineerName = engineerName,
-                        companyName = companyName
+                        companyName = companyName,
+                        showSignature = true
                     ),
                     outputPath = file.absolutePath
                 )
@@ -965,7 +1201,8 @@ class QualityEngineerViewModel @Inject constructor(
                                 calculated = c.calculated,
                                 limit = c.limit,
                                 unit = c.unit,
-                                passed = c.passed
+                                passed = c.passed,
+                                reference = c.reference
                             )
                         )
                     }
@@ -985,7 +1222,8 @@ class QualityEngineerViewModel @Inject constructor(
                     config = ProfessionalEnglishPdfReporter.ReportConfig(
                         projectName = projectName,
                         engineerName = engineerName,
-                        companyName = companyName
+                        companyName = companyName,
+                        showSignature = true
                     ),
                     outputPath = file.absolutePath
                 )
@@ -1002,6 +1240,26 @@ class QualityEngineerViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Load inspection photos from records (decode file paths to bitmaps)
+    // ---------------------------------------------------------------
+    private fun loadRecordPhotos(records: List<QualityRecord>): List<android.graphics.Bitmap> {
+        val bitmaps = mutableListOf<android.graphics.Bitmap>()
+        records.forEach { r ->
+            if (r.photoPathsJson.isBlank()) return@forEach
+            val paths = runCatching {
+                gson.fromJson(r.photoPathsJson, Array<String>::class.java)?.toList()
+            }.getOrNull() ?: return@forEach
+            paths.forEach { path ->
+                runCatching {
+                    android.graphics.BitmapFactory.decodeFile(path)
+                }.getOrNull()?.let { bitmaps.add(it) }
+                if (bitmaps.size >= 12) return bitmaps
+            }
+        }
+        return bitmaps
     }
 
     // ---------------------------------------------------------------
