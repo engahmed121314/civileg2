@@ -90,11 +90,12 @@ fun ProfessionalHordiSlabDrawing(
 
         // ── Layout zones (viewMode-aware) ────────────────────────
         val margin = cfg.margin
-        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * cfg.planHeightFraction; else -> h * 0.10f }
-        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * cfg.planHeightFraction; else -> h * 0.10f }
-        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
+        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.35f; else -> h * 0.10f }
+        val secH = when (viewMode) { 2 -> h * 0.55f; 0 -> h * 0.33f; else -> h * 0.10f }
+        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.22f; else -> h * 0.10f }
 
-        val planTop = h * 0.05f
+        val headerH = cfg.headerHeight + 12f
+        val planTop = headerH + 16f
         val planBottom = planTop + planH
         val secTop = planBottom + h * 0.02f
         val secBottom = secTop + secH
@@ -236,11 +237,11 @@ fun ProfessionalHordiSlabDrawing(
 
             drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
-            // Scale section
-            val ribSpacingPx = maxSecW * 0.3f
-            val ribWPx = ribSpacingPx * (safeRibWidth / safeRibSpacing).toFloat().coerceIn(0.15f, 0.5f)
-            val toppingPx = ribSpacingPx * (safeTopping / safeRibSpacing).toFloat().coerceIn(10f, ribSpacingPx * 0.25f)
-            val ribHPx = ribSpacingPx * (ribHeight / safeRibSpacing).toFloat().coerceIn(25f, ribSpacingPx * 0.55f)
+            // Scale section - clear, prominent engineering proportions
+            val ribSpacingPx = (maxSecW * 0.22f).coerceIn(80f, 150f)
+            val ribWPx = (ribSpacingPx * (safeRibWidth / safeRibSpacing).toFloat()).coerceIn(20f, ribSpacingPx * 0.45f)
+            val toppingPx = (ribSpacingPx * (safeTopping / safeRibSpacing).toFloat()).coerceIn(14f, 32f)
+            val ribHPx = (ribSpacingPx * (ribHeight / safeRibSpacing).toFloat()).coerceIn(32f, 85f)
             val totalHPx = toppingPx + ribHPx
 
             val tCenterX = secLeft + maxSecW / 2f

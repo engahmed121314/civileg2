@@ -37,6 +37,11 @@ import com.civileg.app.ui.compose.components.DesignStatusBanner
 import com.civileg.app.ui.compose.components.UtilizationGauge
 import com.civileg.app.ui.components.drawings.ProfessionalShearWallDrawing
 import com.civileg.app.viewmodel.ShearWallViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.launch
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +52,13 @@ fun ShearWallScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     Scaffold(
         topBar = {
@@ -473,10 +485,48 @@ fun ShearWallScreen(
                     }
                 }
 
+                // Invisible capture layer for PDF export
+                item {
+                    ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                        captureLayer = pdfCaptureLayer,
+                        widthPx = screenWidthPx,
+                        heightPx = screenHeightPx
+                    ) {
+                        Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                            ProfessionalShearWallDrawing(
+                                wallLength = uiState.wallLength.toDoubleOrNull() ?: 4000.0,
+                                wallThickness = uiState.wallThickness.toDoubleOrNull() ?: 300.0,
+                                totalHeight = (uiState.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0 *
+                                    (uiState.numberOfStories.toIntOrNull() ?: 10),
+                                storyHeight = (uiState.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
+                                verticalRebar = uiState.result?.verticalReinforcement ?: RebarResult(10, 16, 200, 1000.0, 800.0, 0.8),
+                                horizontalRebar = uiState.result?.horizontalReinforcement ?: RebarResult(5, 10, 200, 500.0, 400.0, 0.8),
+                                boundaryElementType = uiState.result?.boundaryElementType ?: BoundaryElementType.NONE,
+                                boundaryRebar = uiState.result?.boundaryElementReinforcement,
+                                couplingBeamResult = uiState.result?.couplingBeamResult,
+                                wallType = uiState.wallType,
+                                wallShape = uiState.wallShape,
+                                axialLoad = uiState.axialLoad.toDoubleOrNull() ?: 0.0,
+                                shearForce = uiState.shearForce.toDoubleOrNull() ?: 0.0,
+                                bendingMoment = uiState.bendingMoment.toDoubleOrNull() ?: 0.0,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+
                 // Export Button
                 item {
                     Button(
-                        onClick = { viewModel.exportToPdf(context) { /* done */ } },
+                        onClick = {
+                            scope.launch {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
+                                viewModel.exportToPdf(context) { /* done */ }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)

@@ -50,7 +50,7 @@ object ComposeDrawingCaptureUtil {
                     val placeable = measurable.measure(
                         Constraints.fixed(widthPx, heightPx)
                     )
-                    layout(widthPx, heightPx) {
+                    layout(0, 0) {
                         placeable.place(0, 0)
                     }
                 }

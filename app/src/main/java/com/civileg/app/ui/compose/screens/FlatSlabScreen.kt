@@ -26,8 +26,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
 import com.civileg.app.viewmodel.FlatSlabViewModel
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +41,13 @@ fun FlatSlabScreen(
     viewModel: FlatSlabViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+
     val context = LocalContext.current
 
     // ── Input state ────────────────────────────────────────────────
@@ -464,30 +477,64 @@ item {
                     }
 
                     // Drawing
-                    item { PremiumSectionHeader(stringResource(R.string.fs_panel_plan), icon = Icons.Default.Draw) }
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().height(320.dp),
-                            shape = PremiumDesignSystem.CardShape,
-                            elevation = CardDefaults.cardElevation(4.dp)
+                        var selectedViewMode by remember { mutableStateOf(0) }
+                        val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
+                        InteractiveDrawingScreen(
+                            title = stringResource(R.string.fs_title),
+                            subtitle = "Flat Slab Panel Plan",
+                            drawingHeightDp = drawingHeight,
+                            viewModes = listOf("All", "Plan", "Strips"),
+                            selectedViewMode = selectedViewMode,
+                            onViewModeChanged = { selectedViewMode = it },
+                            drawingContent = {
+                                ProfessionalFlatSlabDrawing(
+                                    lx = lx.toDoubleOrNull() ?: 6.0,
+                                    ly = ly.toDoubleOrNull() ?: 7.5,
+                                    slabThickness = slabThickness.toDoubleOrNull() ?: 250.0,
+                                    columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
+                                    columnDepth = columnDepth.toDoubleOrNull() ?: 400.0,
+                                    dropSizeX = if (showDropInputs) (dropSizeX.toDoubleOrNull() ?: 0.0) else 0.0,
+                                    dropSizeY = if (showDropInputs) (dropSizeY.toDoubleOrNull() ?: 0.0) else 0.0,
+                                    colStripWidthX = res.columnStripWidthX,
+                                    colStripWidthY = res.columnStripWidthY,
+                                    colTopRebar = res.columnStripTopRebar,
+                                    colBotRebar = res.columnStripBotRebar,
+                                    midTopRebar = res.middleStripTopRebar,
+                                    midBotRebar = res.middleStripBotRebar,
+                                    isSafe = res.isSafe, panelType = panelType,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        )
+                    }
+
+                    // Invisible capture layer for PDF export
+                    item {
+                        ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                            captureLayer = pdfCaptureLayer,
+                            widthPx = screenWidthPx,
+                            heightPx = screenHeightPx
                         ) {
-                            ProfessionalFlatSlabDrawing(
-                                lx = lx.toDoubleOrNull() ?: 6.0,
-                                ly = ly.toDoubleOrNull() ?: 7.5,
-                                slabThickness = slabThickness.toDoubleOrNull() ?: 250.0,
-                                columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                                columnDepth = columnDepth.toDoubleOrNull() ?: 400.0,
-                                dropSizeX = if (showDropInputs) (dropSizeX.toDoubleOrNull() ?: 0.0) else 0.0,
-                                dropSizeY = if (showDropInputs) (dropSizeY.toDoubleOrNull() ?: 0.0) else 0.0,
-                                colStripWidthX = res.columnStripWidthX,
-                                colStripWidthY = res.columnStripWidthY,
-                                colTopRebar = res.columnStripTopRebar,
-                                colBotRebar = res.columnStripBotRebar,
-                                midTopRebar = res.middleStripTopRebar,
-                                midBotRebar = res.middleStripBotRebar,
-                                isSafe = res.isSafe, panelType = panelType,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                                ProfessionalFlatSlabDrawing(
+                                    lx = lx.toDoubleOrNull() ?: 6.0,
+                                    ly = ly.toDoubleOrNull() ?: 7.5,
+                                    slabThickness = slabThickness.toDoubleOrNull() ?: 250.0,
+                                    columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
+                                    columnDepth = columnDepth.toDoubleOrNull() ?: 400.0,
+                                    dropSizeX = if (showDropInputs) (dropSizeX.toDoubleOrNull() ?: 0.0) else 0.0,
+                                    dropSizeY = if (showDropInputs) (dropSizeY.toDoubleOrNull() ?: 0.0) else 0.0,
+                                    colStripWidthX = res.columnStripWidthX,
+                                    colStripWidthY = res.columnStripWidthY,
+                                    colTopRebar = res.columnStripTopRebar,
+                                    colBotRebar = res.columnStripBotRebar,
+                                    midTopRebar = res.middleStripTopRebar,
+                                    midBotRebar = res.middleStripBotRebar,
+                                    isSafe = res.isSafe, panelType = panelType,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
 
@@ -499,7 +546,15 @@ item {
                     // Export
                     item {
                         PremiumActionButtons(
-                            onExportPdf = { viewModel.exportToPdf(context) {} },
+                            onExportPdf = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) {}
+                                }
+                            },
                             onSave = {}, isExporting = isExporting
                         )
                     }

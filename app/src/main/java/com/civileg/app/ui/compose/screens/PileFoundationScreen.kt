@@ -780,14 +780,7 @@ fun PileFoundationScreen(
                 // ─── DRAWING ────────────────────────────────────
                 item { var selectedViewMode by remember { mutableStateOf(0) }
                     val configuration = LocalConfiguration.current
-                    val screenW = configuration.screenWidthDp.dp
-                    val wRatio = screenW.value / 360f
-                    val drawingHeight = when (selectedViewMode) {
-                        1 -> (450 * wRatio).toInt().coerceIn(300, 600)
-                        2 -> (450 * wRatio).toInt().coerceIn(300, 600)
-                        3 -> (500 * wRatio).toInt().coerceIn(350, 650)
-                        else -> (750 * wRatio).toInt().coerceIn(500, 1000)
-                    }
+                    val drawingHeight = if (configuration.smallestScreenWidthDp >= 600) 580 else 480
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.pile_detail_drawing),
                         subtitle = stringResource(R.string.pile_drawing_sub),

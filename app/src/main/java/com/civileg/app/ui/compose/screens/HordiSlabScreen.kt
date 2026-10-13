@@ -29,6 +29,7 @@ import com.civileg.app.R
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.ui.compose.components.*
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.viewmodel.HordiSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -353,66 +354,43 @@ fun HordiSlabScreen(
                     }
 
                     // ── Drawing Section ────────────────────────────────
-                    item { PremiumSectionHeader(stringResource(R.string.hordi_slab_engineering_drawing), icon = Icons.Default.Draw) }
-
-                    // View mode selector
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            viewModeLabels.forEachIndexed { idx, label ->
-                                val selected = idx == viewMode
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(36.dp),
-                                    shape = PremiumDesignSystem.ChipShape,
-                                    color = if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    shadowElevation = if (selected) 4.dp else 0.dp
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.clickable { viewMode = idx }
-                                    ) {
-                                        Text(
-                                            label,
-                                            color = if (selected) MaterialTheme.colorScheme.onPrimary
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                        val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
+                        InteractiveDrawingScreen(
+                            title = stringResource(R.string.hordi_slab_title),
+                            subtitle = "Ribbed Slab Detail",
+                            viewModes = viewModeLabels,
+                            selectedViewMode = viewMode,
+                            onViewModeChanged = { viewMode = it },
+                            drawingHeightDp = drawingHeight,
+                            onExportPdf = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file -> }
                                 }
+                            },
+                            designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
+                            drawingContent = {
+                                ProfessionalHordiSlabDrawing(
+                                    span = span.toDoubleOrNull() ?: 6000.0,
+                                    ribWidth = ribWidth.toDoubleOrNull() ?: 120.0,
+                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                    totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
+                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
+                                    ribBottomDia = res.barDiameter,
+                                    ribBottomCount = if (res.barDiameter > 0) maxOf(2, (res.providedReinforcement / (kotlin.math.PI / 4.0 * res.barDiameter * res.barDiameter)).toInt()) else 2,
+                                    stirrupDia = 8.0,
+                                    stirrupSpacing = 200.0,
+                                    cover = cover.toDoubleOrNull() ?: 25.0,
+                                    viewMode = viewMode,
+                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
-                        }
-                    }
-
-                    // Drawing canvas
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().height(360.dp),
-                            shape = PremiumDesignSystem.CardShape,
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            ProfessionalHordiSlabDrawing(
-                                span = span.toDoubleOrNull() ?: 6000.0,
-                                ribWidth = ribWidth.toDoubleOrNull() ?: 120.0,
-                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
-                                totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
-                                toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                ribBottomDia = res.barDiameter,
-                                ribBottomCount = if (res.barDiameter > 0) maxOf(2, (res.providedReinforcement / (kotlin.math.PI / 4.0 * res.barDiameter * res.barDiameter)).toInt()) else 2,
-                                stirrupDia = 8.0,
-                                stirrupSpacing = 200.0,
-                                cover = cover.toDoubleOrNull() ?: 25.0,
-                                viewMode = viewMode,
-                                designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                        )
                     }
 
                     // Invisible capture layer for PDF export

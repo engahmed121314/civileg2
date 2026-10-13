@@ -10,11 +10,13 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 // ============================================================================
 // RESPONSIVE DRAWING DIMENSIONS CONFIG
@@ -138,18 +140,18 @@ data class DrawingDimensionsConfig(
                 isTablet = isTablet,
                 isLargeTablet = isLargeTablet,
                 // Text sizes
-                dimTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
-                annotationTextSmall = (if (isLargeTablet) 9f else if (isTablet) 8f else 7f) * sp,
-                headerTextSize = (if (isLargeTablet) 15f else if (isTablet) 14f else 13f) * sp,
-                tableTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
-                sectionLabelTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
-                valueLabelTextSize = (if (isLargeTablet) 10f else if (isTablet) 9f else 8f) * sp,
+                dimTextSize = (if (isLargeTablet) 12f else if (isTablet) 11f else 10f) * sp,
+                annotationTextSmall = (if (isLargeTablet) 10f else if (isTablet) 9f else 8.5f) * sp,
+                headerTextSize = (if (isLargeTablet) 16f else if (isTablet) 15f else 14f) * sp,
+                tableTextSize = (if (isLargeTablet) 12f else if (isTablet) 11f else 10f) * sp,
+                sectionLabelTextSize = (if (isLargeTablet) 12f else if (isTablet) 11f else 10.5f) * sp,
+                valueLabelTextSize = (if (isLargeTablet) 11f else if (isTablet) 10f else 9f) * sp,
                 // Stroke widths
-                strokeDefault = if (isTablet) 1.5f else 1f,
-                strokeBold = if (isTablet) 3.5f else 2.5f,
-                strokeRebar = if (isTablet) 2.2f else 1.8f,
-                strokeDimension = if (isTablet) 1.8f else 1.5f,
-                strokeTable = if (isTablet) 2f else 1.5f,
+                strokeDefault = if (isTablet) 1.8f else 1.2f,
+                strokeBold = if (isTablet) 3.8f else 2.8f,
+                strokeRebar = if (isTablet) 2.5f else 2.0f,
+                strokeDimension = if (isTablet) 2.0f else 1.6f,
+                strokeTable = if (isTablet) 2.2f else 1.6f,
                 // Spacing
                 margin = if (isLargeTablet) 40f else if (isTablet) 35f else 30f,
                 headerHeight = if (isTablet) 48f else 40f,
@@ -474,7 +476,7 @@ fun DrawScope.drawVerticalDimension(
 
 /**
  * Draw engineering hatch pattern (diagonal lines for cut concrete/soil).
- * Uses manual bounds-coercion instead of clipPath for compatibility.
+ * Uses native [clipRect] to ensure hatch lines stay 100% inside the specified area.
  */
 fun DrawScope.drawHatchPattern(
     x: Float, y: Float, w: Float, h: Float,
@@ -482,24 +484,26 @@ fun DrawScope.drawHatchPattern(
     angleDeg: Float = 45f,
     color: Color = DrawingColorDefaults.HatchColor
 ) {
-    val rad = Math.toRadians(angleDeg.toDouble())
-    val cosA = cos(rad).toFloat()
-    val sinA = sin(rad).toFloat()
-    val maxDiag = w + h
-    var i = 0
-    while (i * spacing < maxDiag) {
-        val startX = x + i * spacing * cosA
-        val startY = y + i * spacing * sinA
-        val endX = startX + h * sinA
-        val endY = y + h - i * spacing * cosA
-        // Clip to bounds manually
-        drawLine(
-            color,
-            Offset(startX.coerceIn(x, x + w), startY.coerceIn(y, y + h)),
-            Offset(endX.coerceIn(x, x + w), endY.coerceIn(y, y + h)),
-            0.8f
-        )
-        i++
+    if (w <= 0f || h <= 0f) return
+    clipRect(x, y, x + w, y + h) {
+        val rad = Math.toRadians(angleDeg.toDouble())
+        val cosA = cos(rad).toFloat()
+        val sinA = sin(rad).toFloat()
+        val diag = sqrt((w * w + h * h).toDouble()).toFloat()
+        val numLines = (diag / spacing).toInt() + 2
+        for (i in -numLines..numLines) {
+            val offset = i * spacing
+            val x0 = x + offset * cosA
+            val y0 = y + offset * sinA
+            val dx = diag * sinA
+            val dy = -diag * cosA
+            drawLine(
+                color = color,
+                start = Offset(x0 - dx, y0 - dy),
+                end = Offset(x0 + dx, y0 + dy),
+                strokeWidth = 0.8f
+            )
+        }
     }
 }
 

@@ -411,10 +411,16 @@ fun ProfessionalStrapFootingDrawing(
 
                 drawTextAnnotated("STRAP BEAM X-SECTION", detLeft, detTop + 2f, C.ExtensionGray, cfg.valueLabelTextSize, bold = true)
 
-                val beamW = min(detW * 0.3f, detailH * 0.7f)
-                val beamH = beamW * (safeStrapT / safeStrapW).toFloat().coerceIn(0.5f, 2.5f)
-                val beamLeft = detLeft + detW * 0.2f
-                val beamTopY = detTop + (detailH - beamH) / 2f + 6f
+                val maxBeamH = detailH * 0.60f
+                val aspect = (safeStrapT / safeStrapW).toFloat().coerceIn(0.5f, 2.5f)
+                var beamW = min(detW * 0.35f, detailH * 0.60f)
+                var beamH = beamW * aspect
+                if (beamH > maxBeamH) {
+                    beamH = maxBeamH
+                    beamW = beamH / aspect
+                }
+                val beamLeft = detLeft + (detW - beamW) / 2f
+                val beamTopY = detTop + (detailH - beamH) / 2f + 4f
 
                 // Beam section
                 drawRect(color = strapFill, topLeft = Offset(beamLeft, beamTopY), size = Size(beamW, beamH))

@@ -503,18 +503,14 @@ fun SlabScreen(
 
                 item {
                     var selectedViewMode by remember { mutableStateOf(0) }
-                    // Responsive height: scale proportionally to screen width
-                    val wRatio = screenW.value / 360f  // baseline 360dp
-                    val drawingHeight = when (selectedViewMode) {
-                        1 -> (380 * wRatio).toInt().coerceIn(250, 500)
-                        2 -> (280 * wRatio).toInt().coerceIn(200, 400)
-                        3 -> (520 * wRatio).toInt().coerceIn(350, 700)
-                        else -> (1000 * wRatio).toInt().coerceIn(600, 1400)
-                    }
+                    val drawingHeight = if (configuration.smallestScreenWidthDp >= 600) 580 else 480
                     InteractiveDrawingScreen(
                         title = stringResource(R.string.slab_drawing_title),
                         subtitle = stringResource(R.string.slab_reinforcement_subtitle),
-                        viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),
+                        viewModes = when (selectedType) {
+                            CalculatorEngine.SlabType.WAFFLE, CalculatorEngine.SlabType.HOLLOW_BLOCK -> listOf("All", "Plan", "Section", "Detail")
+                            else -> listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement))
+                        },
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
                         drawingHeightDp = drawingHeight,

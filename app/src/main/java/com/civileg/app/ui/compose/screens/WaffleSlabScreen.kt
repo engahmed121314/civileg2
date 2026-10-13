@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
 import com.civileg.app.viewmodel.WaffleSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -411,71 +412,48 @@ fun WaffleSlabScreen(
                     }
 
                     // ── Drawing Section ────────────────────────────────
-                    item { PremiumSectionHeader(stringResource(R.string.waffle_slab_engineering_drawing), icon = Icons.Default.Draw) }
-
-                    // View mode selector
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            viewModeLabels.forEachIndexed { idx, label ->
-                                val selected = idx == viewMode
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(36.dp),
-                                    shape = PremiumDesignSystem.ChipShape,
-                                    color = if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    shadowElevation = if (selected) 4.dp else 0.dp
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.clickable { viewMode = idx }
-                                    ) {
-                                        Text(
-                                            label,
-                                            color = if (selected) MaterialTheme.colorScheme.onPrimary
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                        val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
+                        InteractiveDrawingScreen(
+                            title = stringResource(R.string.waffle_slab_title),
+                            subtitle = "Two-Way Ribbed Slab Detail",
+                            viewModes = viewModeLabels,
+                            selectedViewMode = viewMode,
+                            onViewModeChanged = { viewMode = it },
+                            drawingHeightDp = drawingHeight,
+                            onExportPdf = {
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { file -> }
                                 }
+                            },
+                            designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
+                            drawingContent = {
+                                ProfessionalWaffleSlabDrawing(
+                                    lx = lx.toDoubleOrNull() ?: 6000.0,
+                                    ly = ly.toDoubleOrNull() ?: 7500.0,
+                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 600.0,
+                                    ribWidth = ribWidth.toDoubleOrNull() ?: 150.0,
+                                    ribHeight = ribHeight.toDoubleOrNull() ?: 300.0,
+                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
+                                    solidHeadSize = solidHeadSize.toDoubleOrNull() ?: 1000.0,
+                                    columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
+                                    ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                    ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
+                                    ribTopDia = res.ribDesign?.shearReinforcement?.stirrupDiameter ?: 10.0,
+                                    ribTopCount = res.ribDesign?.shearReinforcement?.numLegs ?: 2,
+                                    headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                    headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
+                                    cover = clearCover.toDoubleOrNull() ?: 25.0,
+                                    viewMode = viewMode,
+                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
-                        }
-                    }
-
-                    // Drawing canvas
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().height(360.dp),
-                            shape = PremiumDesignSystem.CardShape,
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            ProfessionalWaffleSlabDrawing(
-                                lx = lx.toDoubleOrNull() ?: 6000.0,
-                                ly = ly.toDoubleOrNull() ?: 7500.0,
-                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 600.0,
-                                ribWidth = ribWidth.toDoubleOrNull() ?: 150.0,
-                                ribHeight = ribHeight.toDoubleOrNull() ?: 300.0,
-                                toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                solidHeadSize = solidHeadSize.toDoubleOrNull() ?: 1000.0,
-                                columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                                ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
-                                ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
-                                ribTopDia = res.ribDesign?.shearReinforcement?.stirrupDiameter ?: 10.0,
-                                ribTopCount = res.ribDesign?.shearReinforcement?.numLegs ?: 2,
-                                headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
-                                headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
-                                cover = clearCover.toDoubleOrNull() ?: 25.0,
-                                viewMode = viewMode,
-                                designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                        )
                     }
 
                     // Invisible capture layer for PDF export

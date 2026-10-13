@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -104,18 +105,19 @@ fun ProfessionalWaffleSlabDrawing(
 
         // ── Layout zones (viewMode-aware) ────────────────────────
         val margin = cfg.margin
-        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * cfg.planHeightFraction; else -> h * 0.10f }
-        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * cfg.sectionHeightFraction; else -> h * 0.10f }
-        val headH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.12f; else -> 0f }
+        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.24f; else -> h * 0.10f }
+        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.22f; else -> h * 0.10f }
+        val headH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.14f; else -> 0f }
         val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.20f; else -> h * 0.10f }
 
-        val planTop = h * 0.05f
+        val headerH = cfg.headerHeight + 12f
+        val planTop = headerH + 16f
         val planBottom = planTop + planH
-        val secTop = planBottom + h * 0.02f
+        val secTop = planBottom + h * 0.015f
         val secBottom = secTop + secH
-        val headTop = secBottom + h * 0.01f
+        val headTop = secBottom + h * 0.015f
         val headBottom = headTop + headH
-        val tblTop = if (viewMode == 0 && headH > 0f) headBottom + h * 0.02f else secBottom + h * 0.02f
+        val tblTop = headBottom + h * 0.015f
 
         // ══════════════════════════════════════════════════════════
         // HEADER
@@ -265,11 +267,11 @@ fun ProfessionalWaffleSlabDrawing(
 
             drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
 
-            // Scale rib profile
-            val ribSpacingPx = maxSecW * 0.35f
-            val ribWPx = ribSpacingPx * (safeRibWidth / safeRibSpacing).toFloat().coerceIn(0.1f, 0.6f)
-            val toppingPx = ribSpacingPx * (safeTopping / safeRibSpacing).toFloat().coerceIn(8f, ribSpacingPx * 0.3f)
-            val ribHPx = ribSpacingPx * (safeRibHeight / safeRibSpacing).toFloat().coerceIn(20f, ribSpacingPx * 0.7f)
+            // Scale rib profile - clear, prominent engineering proportions
+            val ribSpacingPx = (maxSecW * 0.22f).coerceIn(80f, 150f)
+            val ribWPx = (ribSpacingPx * (safeRibWidth / safeRibSpacing).toFloat()).coerceIn(20f, ribSpacingPx * 0.45f)
+            val toppingPx = (ribSpacingPx * (safeTopping / safeRibSpacing).toFloat()).coerceIn(14f, 32f)
+            val ribHPx = (ribSpacingPx * (safeRibHeight / safeRibSpacing).toFloat()).coerceIn(32f, 85f)
             val totalHPx = ribHPx + toppingPx
 
             // Center the T-section

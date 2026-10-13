@@ -151,10 +151,13 @@ fun ProfessionalPileDrawing(
         val tblTop: Float
         val tblW: Float
 
+        val headerH = cfg.headerHeight + 12f
+        val startTop = headerH + 16f
+
         when (viewMode) {
             1 -> { // Plan View
                 planLeft = margin + 20f
-                planTop = 75f
+                planTop = startTop + 10f
                 planMaxW = w - 2 * margin - 40f
                 planMaxH = h * 0.82f
                 secLeft = 0f; secTop = 0f; secMaxSize = 0f
@@ -164,7 +167,7 @@ fun ProfessionalPileDrawing(
             2 -> { // Section View
                 planLeft = 0f; planTop = 0f; planMaxW = 0f; planMaxH = 0f
                 secLeft = margin + 20f
-                secTop = 75f
+                secTop = startTop + 10f
                 secMaxSize = min(w - 2 * margin - 40f, h * 0.82f)
                 elevTop = 0f; elevLeft = 0f; elevW = 0f; elevH = 0f
                 tblLeft = 0f; tblTop = 0f; tblW = 0f
@@ -172,23 +175,23 @@ fun ProfessionalPileDrawing(
             3 -> { // Elevation & Table View
                 planLeft = 0f; planTop = 0f; planMaxW = 0f; planMaxH = 0f
                 secLeft = 0f; secTop = 0f; secMaxSize = 0f
-                elevTop = 75f
+                elevTop = startTop + 10f
                 elevLeft = margin + 20f
                 elevW = w * 0.50f
                 elevH = h * 0.82f
                 tblLeft = w * 0.54f
-                tblTop = 75f
+                tblTop = startTop + 10f
                 tblW = w * 0.42f
             }
             else -> { // All (0)
                 planLeft = margin + 40f
-                planTop = 75f
+                planTop = startTop + 10f
                 planMaxW = w * 0.48f
                 planMaxH = h * 0.36f
                 secLeft = w * 0.52f
-                secTop = 75f
+                secTop = startTop + 10f
                 secMaxSize = min(w * 0.44f, h * 0.36f)
-                elevTop = planTop + planMaxH + 30f
+                elevTop = planTop + planMaxH + 20f
                 elevLeft = margin + 40f
                 elevW = w * 0.48f
                 elevH = h * 0.42f
@@ -362,15 +365,26 @@ fun ProfessionalPileDrawing(
             }
             drawZoneLabel(elevLeft, elevTop + 10f, "ELEVATION", cfg)
 
+            // Convert mm to meters to match pileLength (in meters)
+            val capThickM = safeCapT / 1000.0
+            val capLenM = safeCapL / 1000.0
+            val colLenM = safeColL / 1000.0
+            val pileDiaM = safeDia / 1000.0
+
             // Pile length to drawing height
-            val pileDrawLength = (elevH - 50f) * 0.75f
+            val pileDrawLength = (elevH - 60f) * 0.65f
             val elevScale = (pileDrawLength / pileLength).toFloat()
 
             val eCenterX = (elevLeft + elevW / 2f).toFloat()
-            val groundY = (elevTop + 20f).toFloat()
-            val pileTopY = groundY + (safeCapT * elevScale * 0.3f).toFloat()
+            val groundY = (elevTop + 30f).toFloat()
+
+            val capDrawH = (capThickM * elevScale).toFloat().coerceIn(12f, 35f)
+            val capDrawW_elev = (capLenM * elevScale).toFloat().coerceIn(30f, elevW * 0.65f)
+            val colDrawW2 = (colLenM * elevScale).toFloat().coerceIn(12f, capDrawW_elev * 0.6f)
+            val pileDrawW = (pileDiaM * elevScale).toFloat().coerceIn(10f, 30f)
+
+            val pileTopY = groundY + capDrawH
             val pileBottomY = pileTopY + pileDrawLength
-            val pileDrawW = (safeDia * elevScale).toFloat().coerceIn(10f, 30f)
 
             // Ground surface line
             drawLine(dimColor, Offset(elevLeft, groundY), Offset(elevLeft + elevW, groundY), 1.5f)
@@ -426,8 +440,6 @@ fun ProfessionalPileDrawing(
             )
 
             // Pile cap
-            val capDrawW_elev = (safeCapL * elevScale * 0.25f).toFloat()
-            val capDrawH = (safeCapT * elevScale * 0.3f).toFloat()
             drawRect(
                 color = concreteFill,
                 topLeft = Offset(eCenterX - capDrawW_elev / 2f, pileTopY - capDrawH),
@@ -435,13 +447,12 @@ fun ProfessionalPileDrawing(
             )
             drawRect(
                 color = capStroke,
-                topLeft = Offset(eCenterX - pileDrawW / 2f, pileTopY - capDrawH),
-                size = Size(pileDrawW, capDrawH),
+                topLeft = Offset(eCenterX - capDrawW_elev / 2f, pileTopY - capDrawH),
+                size = Size(capDrawW_elev, capDrawH),
                 style = Stroke(width = 2.5f)
             )
 
             // Column on top of cap
-            val colDrawW2 = (safeColL * elevScale * 0.25f).toFloat().coerceAtLeast(12f)
             val colH = 28f
             drawRect(
                 color = columnFill,
