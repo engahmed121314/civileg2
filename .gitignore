@@ -58,3 +58,15 @@ yarn-error.log*
 temp/
 backup/
 core/calculations/build/
+
+# Build output logs (not matched by *.log)
+build.release.out
+build.release.err
+
+# Local SQLite database
+/db/custom.db
+
+# Python
+__pycache__/
+*.pyc
+

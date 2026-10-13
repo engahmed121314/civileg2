@@ -7,8 +7,6 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
-    // alias(libs.plugins.google.services)
-    // alias(libs.plugins.firebase.crashlytics)
     id("kotlin-parcelize")
 }
 
@@ -142,6 +140,13 @@ android {
         }
     }
 
+    // Unit test configuration (Robolectric needs Android resources)
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     // Lint configuration for Play Store compliance
     lint {
         abortOnError = true
@@ -207,11 +212,6 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
-    // Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.crashlytics)
-
     // Play Billing
     implementation(libs.play.billing)
     implementation(libs.play.billing.ktx)
@@ -237,6 +237,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

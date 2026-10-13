@@ -5,6 +5,8 @@ coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 mockk = "1.13.13"
+robolectric = "4.14.1"
+androidxTestCore = "1.6.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 room = "2.7.1"
@@ -29,7 +31,6 @@ play-services-ads = "23.6.0"
 play-integrity = "1.6.0"
 ump = "3.2.0"
 play-billing = "7.1.1"
-firebase-bom = "34.19.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,6 +45,9 @@ androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lif
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
@@ -64,9 +68,6 @@ play-integrity = { group = "com.google.android.play", name = "integrity", versio
 user-messaging-platform = { group = "com.google.android.ump", name = "user-messaging-platform", version.ref = "ump" }
 play-billing = { group = "com.android.billingclient", name = "billing", version.ref = "play-billing" }
 play-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "play-billing" }
-firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
-firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
-firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -89,5 +90,4 @@ navigation-safeargs = { id = "androidx.navigation.safeargs.kotlin", version.ref 
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.1" }
 google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
