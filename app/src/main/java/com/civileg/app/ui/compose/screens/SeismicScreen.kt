@@ -37,16 +37,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.db.Project
-import com.civileg.app.domain.calculations.aci.ACISeismic
 import com.civileg.app.domain.calculations.base.*
-import com.civileg.app.domain.calculations.ecp.ECPSeismic
-import com.civileg.app.domain.calculations.sbc.SBCSeismic
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.ui.compose.components.charts.SeismicResponseChart
 import com.civileg.app.utils.PdfExportHelper
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.viewmodel.SeismicViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSeismicDrawing
 import com.civileg.app.ui.compose.components.drawings.FloorForce
@@ -115,11 +113,7 @@ fun SeismicScreen(
 
     // ── Helpers ─────────────────────────────────────────────────────────────
     val getDesigner: () -> SeismicDesign = {
-        when (selectedCode) {
-            SeismicCodeOption.ECP_201 -> ECPSeismic()
-            SeismicCodeOption.ASCE_7 -> ACISeismic()
-            SeismicCodeOption.SBC_301 -> SBCSeismic()
-        }
+        CalculationFactory.getSeismicDesign(selectedCode.designCode)
     }
 
     val totalHeight = (numFloors.toIntOrNull() ?: 5) * (avgFloorHeight.toDoubleOrNull() ?: 3.0)

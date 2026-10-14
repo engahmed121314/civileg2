@@ -273,6 +273,13 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   (both AISC 360 lineage, identical), ECP → `ecp.SteelConnectionDesign` (threaded bolt area +
   ECP factors). Added public `calculateFilletWeldCapacity` / `calculateBoltShearCapacity` to the
   AISC and SBC engines (SBC already had private equivalents). `SteelConnectionToolTest` (4 tests).
+- **P0-1 (partial)** — `SeismicScreen` no longer instantiates `ECPSeismic`/`ACISeismic`/`SBCSeismic`
+  directly; its `getDesigner()` now routes through `CalculationFactory.getSeismicDesign(
+  selectedCode.designCode)` (the screen's `SeismicCodeOption` already carries a domain `DesignCode`).
+  This removes the third source of truth for seismic-engine selection. Full deletion of the nested
+  `CalculatorEngine.DesignCode` enum (≈40 ViewModel/Activity/Screen files map between it and
+  `domain.DesignCode`) is deferred as a separate mechanical refactor — too broad to change safely
+  without UI-level tests.
 - **CodeReference resolution test** (`CodeReferenceTest`, 3 tests): asserts the three code objects
   expose the same key set and that every key resolves for every code (no silent
   "Reference not found" reaching the UI).
