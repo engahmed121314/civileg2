@@ -922,6 +922,7 @@ class ACIAdvancedColumn : ColumnDesign {
         codeNotes: MutableList<String>
     ): ReinforcementResult {
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+        val alpha = if (isSpiral) 0.85 else 0.80 // ACI 22.4.2.2 Pn,max limit
         val Pu_N = Pu * 1000.0 // Convert to N
 
         // Check if compression controls
@@ -937,7 +938,7 @@ class ACIAdvancedColumn : ColumnDesign {
         // Estimate required steel area
         // ACI simplified: Pu = φ × [0.85×fc'×(Ag - Ast) + fy×Ast]
         // Solving for Ast: Ast = (Pu/φ - 0.85×fc'×Ag) / (fy - 0.85×fc')
-        val numerator = Pu_N / phi - 0.85 * fcPrime * Ag
+        val numerator = Pu_N / (phi * alpha) - 0.85 * fcPrime * Ag
         val denominator = fy - 0.85 * fcPrime
         val AsRequired = if (abs(denominator) > 1.0) numerator / denominator else 0.0
 
@@ -1350,7 +1351,8 @@ class ACIAdvancedColumn : ColumnDesign {
         val steelCapacity = fy * AsCapped
         val nominalCapacity = concreteCapacity + steelCapacity
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
-        return phi * nominalCapacity / 1000.0 // kN
+        val alpha = if (isSpiral) 0.85 else 0.80 // ACI 22.4.2.2
+        return phi * alpha * nominalCapacity / 1000.0 // kN
     }
 
     /**

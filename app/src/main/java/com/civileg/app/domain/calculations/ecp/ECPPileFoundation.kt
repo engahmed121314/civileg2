@@ -554,8 +554,8 @@ class ECPPileFoundation : PileFoundationDesign {
         val K = Mu / (fcu * b * d * d)
         val K_bal = 0.186
 
-        // z = d * (0.5 + sqrt(0.25 - K/1.25))
-        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 1.25)))
+        // z = d * (0.5 + sqrt(0.25 - K/0.893))
+        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
 
         // As = Mu / (fy/gamma_s * z)
         val asRequired = Mu / (fy / GAMMA_S * z)

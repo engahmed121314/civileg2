@@ -207,8 +207,9 @@ class SBCAdvancedColumn : ColumnDesign {
         if (hasCap) codeNotes.add("رأس عمود مُقدم — مقاومة قص اختراق محسنة")
 
         // حساب الوزن
-        val steelWeightPerMeter = (inventoryAnalysis?.totalWeight
-            ?: (reinforcementResult.astProvided * 7850.0 / 1e6)) / unsupportedLength.coerceAtLeast(1.0)
+        val steelWeightPerMeter = inventoryAnalysis?.totalWeight
+            ?.div(unsupportedLength.coerceAtLeast(1.0))
+            ?: (reinforcementResult.astProvided * 7850.0 / 1e6)
         val concreteVolumePerMeter = Ag / 1e6
 
         // ===== 9. حساب قدرة العزم =====
@@ -1047,6 +1048,7 @@ class SBCAdvancedColumn : ColumnDesign {
     ): Double {
         val fcPrime = 0.8 * fcu
         val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+        val alpha = if (isSpiral) 0.85 else 0.80 // SBC 304 / ACI 22.4.2.2 Pn,max limit
         val ast = if (As > 0.0) As.coerceAtMost(Ag * 0.08) else 0.01 * Ag
 
         // SBC/ACI: Pn = 0.85×fc'×(Ag-Ast) + fy×Ast
@@ -1054,7 +1056,7 @@ class SBCAdvancedColumn : ColumnDesign {
         val steelCapacity = fy * ast
         val nominalCapacity = concreteCapacity + steelCapacity
 
-        return phi * nominalCapacity / 1000.0 // kN
+        return phi * alpha * nominalCapacity / 1000.0 // kN
     }
 
     /**

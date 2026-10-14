@@ -122,7 +122,7 @@ class ACIDoublyReinforcedBeam {
             val k = Mu / (PHI_FLEXURE * 0.85 * fcPrime * b * d * d)
             val discriminant = 1.0 - 2.0 * k
             val z = if (discriminant >= 0) {
-                d * (1.0 - sqrt(discriminant)) / k.coerceAtLeast(1e-6)
+                d * (0.5 + 0.5 * sqrt(discriminant))
             } else {
                 d * 0.85
             }.coerceIn(0.7 * d, 0.95 * d)
@@ -166,10 +166,13 @@ class ACIDoublyReinforcedBeam {
         warnings.add("Mu > φMn_max: Compression steel required per ACI 318-19")
 
         val leverArmExcess = d - dPrime
-        val muExcess = (mu - muMaxSingle) * 1e6 // N.mm
+        val beta1 = if (fcPrime <= 28.0) 0.85 else (0.85 - 0.05 * (fcPrime - 28.0) / 7.0).coerceAtLeast(0.65)
+        val a1 = beta1 * (EPSILON_CU / (EPSILON_CU + 0.005)) * d  // stress block depth at tension-controlled limit
+        val asTensionConcrete = 0.85 * fcPrime * b * a1 / fy
+        val mn1 = asTensionConcrete * fy * (d - a1 / 2.0)  // N.mm
+        val muExcess = Mu - PHI_FLEXURE * mn1  // N.mm
 
-        val asCompressionValue = muExcess / (PHI_FLEXURE * fy * leverArmExcess)
-        val asTensionConcrete = (muMaxSingle * 1e6) / (PHI_FLEXURE * fy * 0.85 * d)
+        val asCompressionValue = if (leverArmExcess > 0) muExcess / (PHI_FLEXURE * fy * leverArmExcess) else 0.0
         val asTensionFromCompValue = asCompressionValue
         var asTotal = asTensionConcrete + asTensionFromCompValue
         if (asTotal < asMinValue) asTotal = asMinValue
@@ -205,8 +208,11 @@ class ACIDoublyReinforcedBeam {
         // Neutral Axis at Balanced Condition
         val na = EPSILON_CU / (EPSILON_CU + fy / E_S) * d
 
-        // Capacity Check
-        val capacityNmm = asTensionProvided * fy * d * (1.0 - 0.5 * asCompProvided / max(1.0, asTensionProvided)) + asCompProvided * fy * (d - dPrime)
+        // Capacity Check (provided steel, ACI stress block)
+        val netTension = (asTensionProvided - asCompProvided).coerceAtLeast(0.0)
+        val ablock = 0.85 * fcPrime * b
+        val aDepth = if (ablock > 0) netTension * fy / ablock else 0.0
+        val capacityNmm = PHI_FLEXURE * (netTension * fy * (d - aDepth / 2.0) + asCompProvided * fy * (d - dPrime))
         val capacity = capacityNmm / 1e6  // kN.m
         val utilizationRatio = if (capacity > 0) mu / capacity else 2.0
 

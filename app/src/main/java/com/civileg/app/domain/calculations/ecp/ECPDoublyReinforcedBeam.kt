@@ -164,10 +164,10 @@ class ECPDoublyReinforcedBeam {
         val rBal = calculateRBal(kBal)
 
         // ==================== Check if Compression Steel Needed ====================
-        val needsCompressionSteel = r > rBal
+        val needsCompressionSteel = k > kBal
 
         // Max moment for singly reinforced section
-        val muMaxSingle = rBal * fcReduced * b * d * d / 1e6  // N.mm -> kN.m
+        val muMaxSingle = kBal * fcu * b * d * d / 1e6  // N.mm -> kN.m
 
         // ==================== Min/Max Steel ====================
         // ECP 203 Clause 4-2-1-2: As_min = max(0.26*fcu/fy, 0.0013) * b * d
@@ -248,12 +248,10 @@ class ECPDoublyReinforcedBeam {
         }
 
         // Balanced moment capacity (moment resisted by concrete alone at balance)
-        val MuBalanced = rBal * fcReduced * b * d * d  // N.mm
+        val MuBalanced = kBal * fcu * b * d * d  // N.mm
 
-        // Lever arm at balanced condition
-        // From R_bal = K_bal * (1 - K_bal/2), the neutral axis ratio is K_bal
-        // z_bal = d * (1 - K_bal / 2)
-        val zBalanced = d * (1.0 - kBal / 2.0)
+        // Lever arm at balanced condition (0.893 = γc/(2×0.67))
+        val zBalanced = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
 
         // ===== Tension steel from concrete (balanced portion) =====
         // As1 = Mu_balanced / (fs * z_balanced)

@@ -285,8 +285,8 @@ class SBCSlabTest {
     }
 
     @Test
-    fun `min slab thickness - cantilever is span_div_8`() {
+    fun `min slab thickness - cantilever is span_div_10`() {
         val minT = engine.getMinSlabThickness(3000.0, SupportCondition.CANTILEVER)
-        assertEquals("Cantilever: L/8", 375.0, minT, 0.1)
+        assertEquals("Cantilever: L/10", 300.0, minT, 0.1)
     }
 }

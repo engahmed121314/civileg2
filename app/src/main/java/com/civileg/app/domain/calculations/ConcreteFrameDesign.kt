@@ -138,7 +138,7 @@ object ConcreteFrameDesign {
 
         if (K <= Kbal) {
             // Singly reinforced
-            val z = d * (0.5 + sqrt(0.25 - K / (1.5 * if (code == DesignCode.ECP) 1.0 else 1.0)))
+            val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
             val zClamped = min(z, 0.95 * d)
             val As = Mu * 1e6 / (0.87 * fy * zClamped)
             return Triple(As, true, Kbal)

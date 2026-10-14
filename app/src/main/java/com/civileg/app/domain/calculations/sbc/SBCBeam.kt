@@ -250,7 +250,7 @@ class SBCBeam : BeamDesign {
         // تأثير الحمل المحوري على مقاومة القص — SBC 304 §11.2.1.2
         val VcWithAxial = if (axialLoad > 0) {
             val Nu = axialLoad * 1000.0  // N (ضغط)
-            Vc * (1.0 + Nu / (14.0 * fc * width * effectiveDepth).coerceAtLeast(1.0))
+            Vc * (1.0 + Nu / (14.0 * width * effectiveDepth).coerceAtLeast(1.0))
         } else {
             Vc
         }

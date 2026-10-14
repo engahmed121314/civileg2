@@ -597,8 +597,8 @@ class SteelConnectionDesign {
         // Rn = 0.6 × Fy × Agv + Ubs × Fu × Ant
         val yieldStrength = 0.6 * fy * shearAreaGross + ubs * fu * tensionAreaNet
 
-        // المقاومة التصميمية = φ × max(Case1, Case2)
-        val capacity = PHI_BLOCK_SHEAR * max(ruptureStrength, yieldStrength)
+        // المقاومة التصميمية = φ × min(Case1, Case2)
+        val capacity = PHI_BLOCK_SHEAR * min(ruptureStrength, yieldStrength)
 
         // حساب نسبة الاستخدام (يحتاج القوة المطبقة من خارج الدالة)
         // هنا نُرجع المقاومة فقط - نسبة الاستخدام تُحسب عند الاستخدام

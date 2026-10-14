@@ -483,7 +483,7 @@ class ACIFlatSlab : FlatSlabDesign {
             return FlatSlabDesign.ReinforcementDesign(minAs, minAs, 12.0, spacing, 1, true)
         }
 
-        val Mu = moment * 1e6 * PHI_FLEXURE  // factored N.mm (with φ)
+        val Mu = moment * 1e6 / PHI_FLEXURE  // nominal N.mm (divide by φ, consistent with Rn = Mu/(φbd²))
         val b = stripWidth
         val d = effectiveDepth
 

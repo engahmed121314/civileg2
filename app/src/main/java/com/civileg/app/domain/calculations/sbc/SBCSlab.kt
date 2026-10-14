@@ -202,7 +202,7 @@ class SBCSlab : SlabDesign {
         return when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> span / 20.0
             SupportCondition.CONTINUOUS -> span / 28.0
-            SupportCondition.CANTILEVER -> span / 8.0
+            SupportCondition.CANTILEVER -> span / 10.0
         }
     }
 

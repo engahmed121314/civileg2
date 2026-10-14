@@ -77,7 +77,7 @@ class SBCSeismic : SeismicDesign {
         InputGuard.notNull("soilType", soilType)
         InputGuard.positive("importanceFactor", importanceFactor)
         InputGuard.positive("responseModificationFactor", responseModificationFactor)
-        InputGuard.positive("buildingHeight", buildingHeight)
+        InputGuard.nonNegative("buildingHeight", buildingHeight)
 
         val warnings = mutableListOf<String>()
 
@@ -102,7 +102,7 @@ class SBCSeismic : SeismicDesign {
 
         // ── SBC 301 §4.4.1: حدود Cs ──
         // Cs,max = SD1 / (T × (R / Ie)) لـ T ≤ TL
-        val T = estimatePeriod(buildingHeight)
+        val T = if (buildingHeight > 0) estimatePeriod(buildingHeight) else 0.0
         val csMax = if (T > 0) SD1 / (T * (responseModificationFactor / importanceFactor)) else cs * 2
 
         // Cs,min = max(0.044 × SDS × Ie, 0.01)
@@ -183,9 +183,7 @@ class SBCSeismic : SeismicDesign {
 
         // ── معامل التخميد — SBC 301 §4.3.4 ──
         // للمنشآت ذات تخميد ≠ 5%: ضرب في عامل تعديل
-        val dampingFactor = if (dampingRatio != REFERENCE_DAMPING && dampingRatio > 0) {
-            sqrt(2.0 / (1.0 + 3.0 * dampingRatio / REFERENCE_DAMPING))
-        } else 1.0
+        val dampingFactor = if (dampingRatio > 0) sqrt(10.0 / (5.0 + 100.0 * dampingRatio)) else 1.0
 
         val saAdjusted = sa * dampingFactor
 
@@ -225,32 +223,28 @@ class SBCSeismic : SeismicDesign {
 
         val whSum = floorWeights.zip(floorHeights).sumOf { (w, h) -> w * h.pow(k) }
 
-        val results = mutableListOf<SeismicForceDistribution>()
-        var storyShear = baseShear
-        var accumulatedOTM = 0.0
+        if (n != floorHeights.size) return emptyList()
 
-        for (i in n - 1 downTo 0) {
-            val force = if (whSum > 0) {
-                (floorWeights[i] * floorHeights[i].pow(k) / whSum) * baseShear
-            } else 0.0
-
-            val storyHeight = if (i > 0) floorHeights[i] - floorHeights[i - 1] else floorHeights[i]
-            accumulatedOTM += storyShear * storyHeight
-
-            results.add(
-                SeismicForceDistribution(
-                    floorIndex = i,
-                    floorWeight = floorWeights[i],
-                    floorHeight = floorHeights[i],
-                    lateralForce = force,
-                    storyShear = storyShear,
-                    overturningMoment = accumulatedOTM
-                )
-            )
-            storyShear -= force
+        val forces = DoubleArray(n) { i ->
+            if (whSum > 0) (floorWeights[i] * floorHeights[i].pow(k) / whSum) * baseShear else 0.0
         }
 
-        return results.reversed()
+        return List(n) { i ->
+            var storyShear = 0.0
+            var otm = 0.0
+            for (j in i until n) {
+                storyShear += forces[j]
+                otm += forces[j] * floorHeights[j]
+            }
+            SeismicForceDistribution(
+                floorIndex = i,
+                floorWeight = floorWeights[i],
+                floorHeight = floorHeights[i],
+                lateralForce = forces[i],
+                storyShear = storyShear,
+                overturningMoment = otm
+            )
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════

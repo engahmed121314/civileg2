@@ -380,7 +380,7 @@ class SBCPileFoundation : PileFoundationDesign {
 
         // K-method with fcu directly (SBC approach)
         val K = MuNmm / (input.fcu * b * dCap * dCap)
-        val leverArm = dCap * (0.5 + sqrt(max(0.0, 0.25 - K / 1.25)))
+        val leverArm = dCap * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
         val AsRequired = MuNmm / (fsDesign * leverArm)
         val AsMin = 0.0018 * b * dCap  // SBC min for foundations
         val AsDesign = max(AsRequired, AsMin)

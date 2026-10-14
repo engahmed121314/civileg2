@@ -118,6 +118,7 @@ class AISCSteelDesignEngine {
         const val PHI_FLEXURE = 0.90        // AISC F1
         const val PHI_SHEAR = 0.90          // AISC G1
         const val PHI_BEARING = 0.75        // AISC J3.10
+        const val PHI_RUPTURE = 0.75        // AISC D2-2 net-section rupture & J4.3 block shear
 
         // Material Properties
         const val E_STEEL = 200000.0         // MPa (29,000 ksi)
@@ -638,7 +639,7 @@ class AISCSteelDesignEngine {
         // Ae = An × U (effective net area)
         val (An, U, Ae) = calculateNetArea(section, connectionType, Fy)
         val PnNet = Fu * Ae / 1000.0  // kN
-        val phiPnNet = PHI_TENSION * PnNet
+        val phiPnNet = PHI_RUPTURE * PnNet
 
         // --- J4.3: Block Shear Strength ---
         // Two cases: (a) yielding on shear + rupture on tension
@@ -841,20 +842,20 @@ class AISCSteelDesignEngine {
                 val Rn_b = 0.6 * Fu * Anv + Ubs * Fu * Ant
 
                 val Rn = minOf(Rn_a, Rn_b)
-                return PHI_TENSION * Rn / 1000.0  // kN
+                return PHI_RUPTURE * Rn / 1000.0  // kN
             }
             is ConnectionType.Welded -> {
                 // For welded connections, block shear is not typically governing
                 // Return a high value (not applicable)
                 val Ag = section.area
-                return PHI_TENSION * 0.6 * grade.fy * Ag / 1000.0
+                return PHI_RUPTURE * 0.6 * grade.fy * Ag / 1000.0
             }
             is ConnectionType.Hybrid -> {
                 return calculateBlockShear(section, grade, connectionType.bolted, warnings)
             }
             is ConnectionType.Pressed -> {
                 val Ag = section.area
-                return PHI_TENSION * 0.6 * grade.fy * Ag / 1000.0
+                return PHI_RUPTURE * 0.6 * grade.fy * Ag / 1000.0
             }
         }
     }
@@ -1177,7 +1178,7 @@ class AISCSteelDesignEngine {
         val Lm = span / 1000.0
         val Im4 = Ix / 1e12
         val delta = if (Im4 > 0) {
-            5.0 * wRef * Lm.pow(4) / (384.0 * (E_STEEL / 1e6) * Im4) * 1000.0
+            5.0 * wRef * Lm.pow(4) / (384.0 * (E_STEEL * 1000.0) * Im4) * 1000.0
         } else 0.0
         val deflectionRatio = if (deltaMax > 0) delta / deltaMax else 0.0
 

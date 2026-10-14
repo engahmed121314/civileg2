@@ -56,7 +56,9 @@ class ACISeismic : SeismicDesign {
         var cs = sds / (responseModificationFactor / importanceFactor)
         
         // الحدود (ASCE 7-16 Section 12.8.1.1)
-        val csMax = sd1 / (0.1 * (responseModificationFactor / importanceFactor)) // لـ T = 0.1s كمثال
+        // Cs,max = SD1 / (T·(R/Ie)); approximate period Ta = Ct·h^x (ASCE 12.8.2.1)
+        val ta = (0.0488 * buildingHeight.coerceAtLeast(0.0).pow(0.75)).coerceAtLeast(0.1)
+        val csMax = sd1 / (ta * (responseModificationFactor / importanceFactor))
         val csMin = max(0.044 * sds * importanceFactor, 0.01)
         
         val finalCs = cs.coerceIn(csMin, csMax)
@@ -138,41 +140,34 @@ class ACISeismic : SeismicDesign {
         InputGuard.notEmpty("floorHeights", floorHeights)
 
         val n = floorWeights.size
-        if (n == 0) return emptyList()
-        
+        if (n == 0 || n != floorHeights.size) return emptyList()
+
         // ASCE 7: Fx = Cvx * V
         // Cvx = (Wx * hx^k) / Σ(Wi * hi^k)
         val k = 1.0 // لـ T ≤ 0.5s
-        
+
         val wh_sum = floorWeights.zip(floorHeights).sumOf { (w, h) -> w * h.pow(k) }
-        
-        val results = mutableListOf<SeismicForceDistribution>()
-        var storyShear = baseShear
-        var accumulatedOTM = 0.0 // إصلاح: تجميع عزوم الانقلاب من الأعلى للأسفل / Fix: accumulate OTM from top to bottom
-        
-        for (i in n - 1 downTo 0) {
-            val force = if (wh_sum > 0) {
-                (floorWeights[i] * floorHeights[i].pow(k) / wh_sum) * baseShear
-            } else 0.0
-            
-            // إصلاح: حساب ارتفاع الطابق الحالي / Fix: compute current story height
-            val storyHeight = if (i > 0) floorHeights[i] - floorHeights[i-1] else floorHeights[i]
-            accumulatedOTM += storyShear * storyHeight // إصلاح: تجميع عزم الانقلاب التراكمي / Fix: cumulative OTM
-            
-            results.add(
-                SeismicForceDistribution(
-                    floorIndex = i,
-                    floorWeight = floorWeights[i],
-                    floorHeight = floorHeights[i],
-                    lateralForce = force,
-                    storyShear = storyShear,
-                    overturningMoment = accumulatedOTM
-                )
-            )
-            storyShear -= force
+
+        val forces = DoubleArray(n) { i ->
+            if (wh_sum > 0) (floorWeights[i] * floorHeights[i].pow(k) / wh_sum) * baseShear else 0.0
         }
-        
-        return results.reversed()
+
+        return List(n) { i ->
+            var storyShear = 0.0
+            var otm = 0.0
+            for (j in i until n) {
+                storyShear += forces[j]
+                otm += forces[j] * floorHeights[j]
+            }
+            SeismicForceDistribution(
+                floorIndex = i,
+                floorWeight = floorWeights[i],
+                floorHeight = floorHeights[i],
+                lateralForce = forces[i],
+                storyShear = storyShear,
+                overturningMoment = otm
+            )
+        }
     }
 
     override fun getCodeName(): DesignCode = DesignCode.ACI
@@ -180,11 +175,5 @@ class ACISeismic : SeismicDesign {
     override fun getZoneFactors(): Map<SeismicZone, Double> = ZONE_FACTORS
     // إصلاح: إضافة معاملات التربة Fa/Fv لجميع أنواع التربة حسب ASCE 7-16 الجدول 11.4-1
     // Fix: Added Fa/Fv site coefficients for all soil types per ASCE 7-16 Table 11.4-1
-    override fun getSoilFactors(): Map<SoilType, Double> = mapOf(
-        SoilType.A to 1.0,
-        SoilType.B to 1.2,
-        SoilType.C to 1.2,
-        SoilType.D to 1.6,
-        SoilType.E to 2.5
-    )
+    override fun getSoilFactors(): Map<SoilType, Double> = SOIL_FACTORS
 }

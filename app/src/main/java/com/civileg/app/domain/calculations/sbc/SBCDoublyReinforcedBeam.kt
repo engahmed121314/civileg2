@@ -80,8 +80,8 @@ class SBCDoublyReinforcedBeam {
         InputGuard.positive("fy", fy)
 
         val epsilonY = fy / (E_S * GAMMA_S)
-        val aOverDBal = ALPHA * EPSILON_CU / (EPSILON_CU + fy / (E_S * GAMMA_S))
-        val kBal = ALPHA * aOverDBal * (1.0 - 0.5 * ALPHA * aOverDBal)
+        val aOverDBal = ALPHA * EPSILON_CU / (EPSILON_CU + epsilonY)
+        val kBal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
         return kBal
     }
 
@@ -141,17 +141,16 @@ class SBCDoublyReinforcedBeam {
         // ==================== K and R Factors ====================
         // K = Mu / (fcu * b * d^2) - standard K-factor per SBC
         val k = Mu / (fcu * b * d * d)
-        val kMax = 0.194 // Max K-factor for singly reinforced section per SBC 304
 
-        // K_bal dynamic per SBC 304
+        // K_bal dynamic per SBC 304 (strain compatibility)
         val kBal = calculateKBal(fcu, fy)
         val rBal = calculateRBal(kBal)
 
         // ==================== Check if compression steel needed ====================
-        val needsCompSteel = k > kMax
+        val needsCompSteel = k > kBal
 
         // ==================== Maximum singly reinforced moment ====================
-        val muMaxSingle = kMax * fcu * b * d * d / 1e6  // kN.m
+        val muMaxSingle = kBal * fcu * b * d * d / 1e6  // kN.m
 
         // ==================== Calculate Steel Areas ====================
         var asTensionFromConcrete = 0.0
@@ -160,36 +159,33 @@ class SBCDoublyReinforcedBeam {
         var asTotal = 0.0
 
         if (needsCompSteel) {
-            // Moment carried by concrete in max singly reinforced section
-            val muBal = kMax * fcu * b * d * d / 1e6  // kN.m
-            val muExcess = mu - muBal  // kN.m
-            val MuExcess = muExcess * 1e6  // N.mm
+            // Balanced moment resisted by concrete alone (K-method)
+            val MuBalanced = kBal * fcu * b * d * d  // N.mm
+            val zBalanced = d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
+            val asTensionConcrete = MuBalanced / (fs * zBalanced)  // mm^2
 
-            // Compression steel force
-            // Check if compression steel yields
-            val epsilonSPrime = EPSILON_CU * (1.0 - dPrime / (kMax * d / ALPHA))
-            val fsPrime = minOf(epsilonSPrime * E_S, fs)
+            // Excess moment resisted by the compression/tension steel couple
+            val MuExcess = Mu - MuBalanced  // N.mm
+            val leverArmExcess = d - dPrime
+            // Compression steel stress by strain compatibility at balanced NA
+            val cBalanced = (EPSILON_CU / (EPSILON_CU + fy / (E_S * GAMMA_S))) * d
+            val fsPrime = minOf(EPSILON_CU * (1.0 - dPrime / cBalanced) * E_S, fs)
 
-            // Compression steel area
-            asCompression = MuExcess / (fsPrime * (d - dPrime)) / 100.0  // cm^2
+            val asComp = if (leverArmExcess > 0) MuExcess / (fsPrime * leverArmExcess) else 0.0  // mm^2
 
-            // Additional tension steel to balance compression steel
-            asTensionFromCompression = asCompression * fsPrime / fs
-
-            // Tension steel for concrete balanced moment
-            asTensionFromConcrete = rBal * fcu * b * d / fs / 100.0  // cm^2
-
+            asCompression = asComp / 100.0                              // cm^2
+            asTensionFromCompression = (asComp * fsPrime / fs) / 100.0  // cm^2
+            asTensionFromConcrete = asTensionConcrete / 100.0           // cm^2
             asTotal = asTensionFromConcrete + asTensionFromCompression
         } else {
-            // Singly reinforced - use standard design
-            val aOverD = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * k / ALPHA))) / ALPHA
-            val na = aOverD * d / ALPHA
-            asTotal = k * fcu * b * d / fs / 100.0  // cm^2
+            // Singly reinforced - lever arm per SBC K-method (0.893 = γc/(2×0.67))
+            val z = d * (0.5 + sqrt(max(0.0, 0.25 - k / 0.893)))
+            asTotal = Mu / (fs * z) / 100.0  // cm^2
             asTensionFromConcrete = asTotal
         }
 
         // ==================== Min/Max Steel ====================
-        val asMin = max(0.15 / 100.0 * b * d, 0.13 * fy / fcu * b * d / 100.0)  // cm^2
+        val asMin = max(0.26 * sqrt(fcu) / fy, 0.0013) * b * d / 100.0  // cm^2 (SBC 304 flexural minimum)
         val asMax = 0.04 * b * d / 100.0  // cm^2 (4% limit)
 
         // Adjust if below min
@@ -214,13 +210,15 @@ class SBCDoublyReinforcedBeam {
         val tensionBars = "${nTension}Ø${tensionBarDia}"
         val compressionBars = if (needsCompSteel) "${nComp}Ø${compBarDia}" else "None"
 
-        // ==================== Neutral Axis ====================
-        val aOverD = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * k / ALPHA))) / ALPHA
-        val na = aOverD * d / ALPHA
+        // ==================== Neutral Axis (from concrete stress block) ====================
+        val fcd = 0.67 * fcu / GAMMA_C  // design concrete strength (MPa)
+        val compressionForce = if (needsCompSteel) asProvidedComp * 100.0 * fs else 0.0
+        val netTensionForce = asProvidedTension * 100.0 * fs - compressionForce
+        val na = max(0.0, netTensionForce / (fcd * b)) / 0.8
 
         // ==================== Safety Check ====================
         val utilizationRatio = if (kBal > 0) k / kBal else 2.0
-        val isSafe = k <= kBal || needsCompSteel
+        val isSafe = asTotal <= asMax
 
         if (!isSafe) {
             warnings.add("Section over-reinforced: K > K_bal")

@@ -74,7 +74,9 @@ class SBCColumn : ColumnDesign {
         // fc' = 0.8 × fcu
         val fc_prime = 0.8 * fcu
         val phi = 0.65
-        var requiredSteelArea = (Pu / phi - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
+        // SBC 304 / ACI 318: As = (Pu/(φ·α) − 0.85·fc'·Ag) / (fy − 0.85·fc')
+        val alpha = 0.80
+        var requiredSteelArea = (Pu / (phi * alpha) - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
         
         // ── Moment consideration: increase As when eccentricity is significant ──
         val Mu = sqrt(momentX.pow(2) + momentY.pow(2)) * 1e6 // N.mm

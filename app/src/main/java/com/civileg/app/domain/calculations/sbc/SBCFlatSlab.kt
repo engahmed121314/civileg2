@@ -498,8 +498,8 @@ class SBCFlatSlab : FlatSlabDesign {
         val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
 
         // Lever arm
-        val leverArm = if (0.25 - K / 1.25 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 1.25))
+        val leverArm = if (0.25 - K / 0.893 > 0) {
+            d * (0.5 + sqrt(0.25 - K / 0.893))
         } else d * 0.7
 
         // As = Mu / (fs × z)

@@ -133,7 +133,8 @@ class ACIColumn : ColumnDesign {
         // fc' = 0.8 × fcu (cube to cylinder)
         val fc_prime = 0.8 * fcu
         val phi = 0.65
-        var requiredSteelArea = (Pu / phi - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
+        val alpha = 0.80
+        var requiredSteelArea = (Pu / (phi * alpha) - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
         
         // ── Moment consideration: increase As when eccentricity is significant ──
         val Mu = sqrt(momentX.pow(2) + momentY.pow(2)) * 1e6 // N.mm
@@ -185,7 +186,7 @@ class ACIColumn : ColumnDesign {
         val barDiameter = selectedBarDia
         
         // Ties per ACI 318-25.7.2
-        val tiesDiameter = if (barDiameter <= 25.0) 10.0 else 12.0
+        val tiesDiameter = if (barDiameter <= 32.0) 10.0 else 12.0
         val tiesSpacing = minOf(
             16 * barDiameter,           // 16 x longitudinal bar diameter
             48 * tiesDiameter,          // 48 x tie bar diameter

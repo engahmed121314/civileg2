@@ -53,6 +53,10 @@ class SBCSteelDesignEngine {
         private const val PHI_BEARING_CONCRETE = 0.65   // معامل مقاومة تحمل الخرسانة (AISC J8 / SBC 306)
         private const val PHI_TENSION_BOLT = 0.75      // معامل مقاومة شد البراغي (AISC J3.2)
         private const val PHI_WELD = 0.75              // معامل مقاومة اللحام (AISC J2.4)
+        private const val PHI_RUPTURE = 0.75           // AISC D2-2 تمزق المقطع الصافي
+        private const val PHI_BEARING = 0.75           // AISC J3.10 تحمل الصفائح
+        private const val PHI_BLOCK_SHEAR = 0.75       // AISC J4.3 القص الكتلي
+        private const val PHI_BOLT_SHEAR = 0.75        // AISC J3.2 قص البراغي
         private const val MIN_PLATE_THICKNESS = 12.0   // mm - أقل سماكة للوح القاعدة
     }
 
@@ -314,7 +318,7 @@ class SBCSteelDesignEngine {
         // 5. فحص الانحراف - AISC 360-16 Chapter L / SBC 306
         val L_m = span / 1000.0
         val I_m4 = Ix / 1e12
-        val deflection = 5 * w_LL * L_m.pow(4) / (384 * E_STEEL / 1e6 * I_m4.coerceAtLeast(1e-12)) * 1000  // mm
+        val deflection = 5 * w_LL * L_m.pow(4) / (384 * E_STEEL * 1000.0 * I_m4.coerceAtLeast(1e-12)) * 1000  // mm
         val deflectionAllowable = span / 360.0
         val deflectionRatio = deflection / deflectionAllowable.coerceAtLeast(0.001)
 
@@ -752,12 +756,12 @@ class SBCSteelDesignEngine {
 
         // مقاومة القص للمسمار الواحد - AISC J3-1
         // φRn = φ × 0.6 × Fu × Ab (إذا كانت مُخدّمة)
-        val singleBoltShear = PHI_SHEAR * 0.6 * fuBolt * Ab / 1000.0  // kN
+        val singleBoltShear = PHI_BOLT_SHEAR * 0.45 * fuBolt * Ab / 1000.0  // kN
         val totalBoltShear = singleBoltShear * n
 
         // مقاومة التحمل - AISC J3-6
         val lc = 3.0 * db  // مسافة حافة تقريبية (3 × db)
-        val rnBearing = PHI_SHEAR * 2.4 * grade.fu * db * plateThickness / 1000.0  // kN لكل مسمار
+        val rnBearing = PHI_BEARING * 2.4 * grade.fu * db * plateThickness / 1000.0  // kN لكل مسمار
         val totalBearing = rnBearing * n
 
         // مقاومة الشد - AISC J3-1
@@ -771,7 +775,7 @@ class SBCSteelDesignEngine {
 
         val Rn_bs_yield = 0.6 * grade.fy * Agv + grade.fu * Ant
         val Rn_bs_rupture = 0.6 * grade.fu * Anv + grade.fu * Ant
-        val Rn_bs = min(Rn_bs_yield, Rn_bs_rupture) / 1000.0  // kN
+        val Rn_bs = PHI_BLOCK_SHEAR * min(Rn_bs_yield, Rn_bs_rupture) / 1000.0  // kN
 
         // السعة الحاكمة
         val capacity = min(min(totalBoltShear, totalBearing), min(totalTension, Rn_bs))
@@ -1107,7 +1111,7 @@ class SBCSteelDesignEngine {
             // فحص الشد على المساحة الصافية - AISC D3
             val An = Ag * 0.85  // تقريبي (خصم ثقوب المسامير)
             val Pn_rupture = grade.fu * An / 1000.0  // kN
-            Pn = min(PHI_TENSION * Pn_yield, PHI_TENSION * Pn_rupture)
+            Pn = min(PHI_TENSION * Pn_yield, PHI_RUPTURE * Pn_rupture)
             phiPn = Pn
 
             codeNotes.add("عنصر شد: φFyAg=${String.format("%.1f", PHI_TENSION * Pn_yield)} kN, φFuAn=${String.format("%.1f", PHI_TENSION * Pn_rupture)} kN")

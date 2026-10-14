@@ -258,9 +258,9 @@ class ACISlabTest {
     }
 
     @Test
-    fun getMinSlabThickness_cantilever_isSpanOver8() {
+    fun getMinSlabThickness_cantilever_isSpanOver10() {
         val minT = slab.getMinSlabThickness(CLEAR_SPAN, SupportCondition.CANTILEVER)
-        assertEquals(CLEAR_SPAN / 8.0, minT, 1e-6)
+        assertEquals(CLEAR_SPAN / 10.0, minT, 1e-6)
     }
 
     @Test
