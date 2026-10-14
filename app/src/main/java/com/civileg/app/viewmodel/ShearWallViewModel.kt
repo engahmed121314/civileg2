@@ -287,6 +287,7 @@ class ShearWallViewModel @Inject constructor(
                     drawingBitmap = pendingDrawingBitmap,
                     outputPath = file.absolutePath
                 )
+                pendingDrawingBitmap = null  // consume after use
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }

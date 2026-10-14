@@ -189,7 +189,20 @@ class SeismicViewModel @Inject constructor(
                 )
                 val safetyChecks = emptyList<GenericSafetyCheck>()
 
-                val drawingBitmap = pendingDrawingBitmap
+                val drawingBitmap = pendingDrawingBitmap ?: try {
+                    val fundPeriod = state.spectrumValues.maxByOrNull { it.spectralAcceleration }?.period ?: 0.0
+                    val spectralAccel = state.spectrumValues.maxOfOrNull { it.spectralAcceleration } ?: 0.0
+                    com.civileg.app.utils.PdfDrawingGenerator.generateSeismicDrawing(
+                        totalHeight = state.buildingHeight.toDoubleOrNull() ?: 0.0,
+                        numFloors = state.floorHeights.size,
+                        floorForces = state.forceDistribution,
+                        spectrumValues = state.spectrumValues,
+                        baseShear = res.baseShear,
+                        fundamentalPeriod = fundPeriod,
+                        spectralAccel = spectralAccel,
+                        isSafe = res.warnings.isEmpty()
+                    )
+                } catch (_: Exception) { null }
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when (DesignCode.valueOf(state.designCode)) {

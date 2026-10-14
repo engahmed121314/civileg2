@@ -185,6 +185,7 @@ class FlatSlabViewModel @Inject constructor(
                     safetyChecks = safetyChecks, isSafe = res.isSafe,
                     drawingBitmap = pendingDrawingBitmap, outputPath = file.absolutePath
                 )
+                pendingDrawingBitmap = null  // consume after use
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

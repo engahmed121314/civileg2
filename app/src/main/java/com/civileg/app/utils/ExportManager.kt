@@ -14,6 +14,8 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 /**
  * Unified Export Manager — Single entry point for all exports (PDF, DXF, IFC, CSV).
@@ -153,6 +155,93 @@ class ExportManager(private val context: Context) {
     }
 
     // ───────────────────────────────────────────────────────────────────────────
+    // PUBLIC API: Combined PDF + DXF export & packaging
+    // ───────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Export a design result to BOTH PDF and DXF in one call.
+     *
+     * PDF is generated with NativePdfExporter (EN-only, ADR-005/009).
+     * DXF is generated with DxfExporter (AC1027/R2007+, ADR-004) when a
+     * [DxfDrawable] is supplied; otherwise only the PDF is produced.
+     *
+     * Files are written into [outputDir] as `<baseName>.pdf` and `<baseName>.dxf`.
+     *
+     * @return [ExportBundle] holding whichever artifacts were produced (never throws).
+     */
+    fun exportBoth(
+        title: String,
+        subtitle: String = "",
+        designType: String = "",
+        inputs: Map<String, String> = emptyMap(),
+        results: Map<String, String> = emptyMap(),
+        safetyChecks: List<NativePdfSafetyCheck> = emptyList(),
+        isSafe: Boolean = true,
+        drawingBitmap: Bitmap? = null,
+        drawing: DxfDrawable? = null,
+        outputDir: File,
+        baseName: String,
+        openPdfOnComplete: Boolean = false
+    ): ExportBundle {
+        outputDir.mkdirs()
+
+        val pdfFile = NativePdfExporter(context).generateReport(
+            title = title,
+            subtitle = subtitle,
+            designType = designType,
+            inputs = inputs,
+            results = results,
+            safetyChecks = safetyChecks,
+            isSafe = isSafe,
+            drawingBitmap = drawingBitmap,
+            outputPath = File(outputDir, "$baseName.pdf").absolutePath
+        )
+
+        val dxfFile = drawing?.let {
+            DxfExporter(context).exportDxf(it, File(outputDir, "$baseName.dxf").absolutePath)
+        }
+
+        if (openPdfOnComplete && pdfFile != null) {
+            ExportUtils.openFile(context, pdfFile, "application/pdf")
+        }
+        return ExportBundle(pdfFile = pdfFile, dxfFile = dxfFile)
+    }
+
+    /**
+     * Package the artifacts of an [ExportBundle] into a single ZIP archive.
+     *
+     * @return the ZIP [File] if at least one artifact existed, else null.
+     */
+    fun exportPackage(bundle: ExportBundle, outputZip: File): File? =
+        exportPackage(listOfNotNull(bundle.pdfFile, bundle.dxfFile), outputZip)
+
+    /**
+     * Package an arbitrary list of files into a single ZIP archive.
+     * Non-existent files are skipped.
+     *
+     * @return the ZIP [File] if at least one file existed, else null.
+     */
+    fun exportPackage(files: List<File>, outputZip: File): File? {
+        val present = files.filter { it.isFile }
+        if (present.isEmpty()) return null
+        outputZip.parentFile?.mkdirs()
+        return try {
+            ZipOutputStream(FileOutputStream(outputZip)).use { zos ->
+                present.forEach { f ->
+                    zos.putNextEntry(ZipEntry(f.name))
+                    f.inputStream().use { it.copyTo(zos) }
+                    zos.closeEntry()
+                }
+            }
+            Log.i(TAG, "Export package created: ${outputZip.absolutePath} (${outputZip.length()} bytes)")
+            outputZip
+        } catch (e: Exception) {
+            Log.e(TAG, "Export packaging failed: ${e.message}", e)
+            null
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
     // PUBLIC API: IFC Export (BIM)
     // ───────────────────────────────────────────────────────────────────────────
 
@@ -216,6 +305,18 @@ class ExportManager(private val context: Context) {
 // ───────────────────────────────────────────────────────────────────────────────
 // INTERFACES & DATA CLASSES
 // ───────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Result of a combined export — holds whichever artifacts were produced.
+ * Any field may be null if that artifact failed or was not requested.
+ */
+data class ExportBundle(
+    val pdfFile: File? = null,
+    val dxfFile: File? = null,
+    val zipFile: File? = null
+) {
+    val isEmpty: Boolean get() = pdfFile == null && dxfFile == null && zipFile == null
+}
 
 /**
  * Interface for objects that can be exported to DXF.

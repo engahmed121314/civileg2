@@ -13,19 +13,21 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * PdfExportHelper — Robust PDF export helper using ComprehensivePdfExporter (iText 8).
+ * PdfExportHelper — Robust PDF export helper.
  *
  * ********************************************************************************
- * CRITICAL FIX (2026-07-27 v4): Switched back from NativePdfExporter to iText 8
+ * Delegate to ProfessionalEnglishPdfReporter (iText 8)
  * ********************************************************************************
  * NativePdfExporter (Android-native android.graphics.pdf.PdfDocument + Canvas)
  * was triggering NATIVE crashes (SIGSEGV in Skia) that could NOT be caught by
  * Java try/catch — killing the app process on every PDF export.
  *
- * ComprehensivePdfExporter uses iText 8 (PdfWriter/PdfDocument/Document) — the
- * same safe path used by FrameAnalysisPdfExporter which never crashes.
+ * This helper therefore delegates to
+ * [com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy]
+ * (iText 8, PDFWriter/PdfDocument) — the same safe path used by
+ * FrameAnalysisPdfExporter which never crashes.
  *
- * Arabic shaping is handled by PdfTextSegmenter inside ComprehensivePdfExporter:
+ * Arabic shaping is handled by PdfTextSegmenter inside ProfessionalEnglishPdfReporter:
  * Arabic base letters (0600-06FF) are converted to Presentation Forms (FE70-FEFF)
  * before being passed to iText, producing correctly connected Arabic letters
  * WITHOUT needing the commercial pdfCalligraph module.
@@ -101,7 +103,7 @@ object PdfExportHelper {
     /**
      * Generate a complete structural design report PDF with drawing and safety checks.
      *
-     * Uses ComprehensivePdfExporter (iText 8) for safe, crash-free PDF generation
+     * Uses ProfessionalEnglishPdfReporter (iText 8) for safe, crash-free PDF generation
      * with proper Arabic shaping via PdfTextSegmenter.
      */
     fun exportDesignReport(
